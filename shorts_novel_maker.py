@@ -5121,7 +5121,8 @@ class App(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("쇼츠 스크롤 영상 메이커 PRO (Claude Max) — 소설 · 실화 · 과학 · 자연현상")
-        self.geometry("1460x980")
+        sh_ = self.winfo_screenheight()
+        self.geometry(f"1460x{min(980, max(760, sh_ - 90))}")   # 화면이 작으면 창도 거기에 맞춤
         self.minsize(1200, 760)
         self.q = queue.Queue()
         self.renderer = None
@@ -5408,12 +5409,13 @@ class App(tk.Tk):
         self.status = ttk.Label(s4, text="준비")
         self.status.pack(side="left")
 
-        # 미리보기
-        self.canvas = tk.Canvas(right, width=PREVIEW_W, height=PREVIEW_H, bg="black", highlightthickness=0)
+        # 미리보기 (화면 높이에 맞춰 줄여서 표시 - 아래 소리 슬라이더가 가려지지 않게)
+        dw, dh = self.disp_size()
+        self.canvas = tk.Canvas(right, width=dw, height=dh, bg="black", highlightthickness=0)
         self.canvas.pack()
         self.img_id = self.canvas.create_image(0, 0, anchor="nw")
         self.tvar = tk.DoubleVar(value=0)
-        self.tscale = ttk.Scale(right, from_=0, to=10, variable=self.tvar, command=self.show_frame, length=PREVIEW_W)
+        self.tscale = ttk.Scale(right, from_=0, to=10, variable=self.tvar, command=self.show_frame, length=dw)
         self.tscale.pack(pady=4)
         pr = ttk.Frame(right)
         pr.pack()
@@ -5436,8 +5438,9 @@ class App(tk.Tk):
             lab.grid(row=row, column=2)
             self.vol_scales[key] = (dv, lab, mx)
         ttk.Label(vol, text="'▶ 재생'을 다시 누르면 바뀐 크기로 들립니다", foreground="gray").grid(row=4, column=0, columnspan=3, sticky="w")
-        self.info = ttk.Label(right, text="", wraplength=PREVIEW_W, justify="left")
+        self.info = ttk.Label(right, text="", wraplength=dw, justify="left")
         self.info.pack(pady=4)
+        self.bind("<Configure>", self._on_resize)
 
         # 하단 AI 명령어
         bot = ttk.LabelFrame(self, text="AI 명령어 (Claude로 수정)", padding=6)
@@ -5668,9 +5671,10 @@ class App(tk.Tk):
             return
         prev = (W, H)
         set_format(name)
-        self.canvas.config(width=PREVIEW_W, height=PREVIEW_H)
-        self.tscale.config(length=PREVIEW_W)
-        self.info.config(wraplength=PREVIEW_W)
+        dw, dh = self.disp_size()
+        self.canvas.config(width=dw, height=dh)
+        self.tscale.config(length=dw)
+        self.info.config(wraplength=dw)
         if (W, H) != prev:
             if W > H:   # 가로: 글이 너무 길게 퍼지지 않게 좌우 여백 넓힘
                 self.vars["margin_x"].set("280")
@@ -7347,6 +7351,25 @@ class App(tk.Tk):
                               f"배경음: {snd}{hit}" + (f" | 사진 {nph}장" if nph else ""))
         self.show_frame()
 
+    def disp_size(self):
+        """미리보기 표시 크기: 창 높이에서 아래 조작부(약 400px)를 뺀 만큼만 쓰고, 그 비율로 줄임"""
+        try:
+            avail = max(300, (self.winfo_height() if self.winfo_height() > 200 else self.winfo_screenheight() - 120) - 400)
+        except Exception:
+            avail = PREVIEW_H
+        k = min(1.0, avail / PREVIEW_H, 0.92)
+        return max(160, int(PREVIEW_W * k)), max(160, int(PREVIEW_H * k))
+
+    def _on_resize(self, e):
+        if e.widget is not self or not hasattr(self, "canvas"):
+            return
+        dw, dh = self.disp_size()
+        if (dw, dh) != (int(self.canvas.cget("width")), int(self.canvas.cget("height"))):
+            self.canvas.config(width=dw, height=dh)
+            self.tscale.config(length=dw)
+            self.info.config(wraplength=dw)
+            self.show_frame()
+
     def show_frame(self, *_):
         if not self.renderer:
             return
@@ -7356,6 +7379,9 @@ class App(tk.Tk):
             # 쇼츠 UI가 가리는 영역: 오른쪽 버튼 열, 아래 제목/채널 영역
             d.rectangle([PREVIEW_W - 50, 0, PREVIEW_W, PREVIEW_H], fill=(255, 0, 0, 60))
             d.rectangle([0, int(PREVIEW_H * 0.80), PREVIEW_W, PREVIEW_H], fill=(255, 0, 0, 60))
+        dw, dh = self.disp_size()
+        if (dw, dh) != im.size:
+            im = im.resize((dw, dh), Image.BILINEAR)
         self.photo = ImageTk.PhotoImage(im)
         self.canvas.itemconfig(self.img_id, image=self.photo)
 
