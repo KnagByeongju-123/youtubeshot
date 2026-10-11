@@ -59,6 +59,7 @@ def set_format(name):
     else:
         PREVIEW_W, PREVIEW_H = 360, 640
 BASE = os.path.dirname(os.path.abspath(__file__))
+TAB_BG = "#FFF8D6"   # 디자인·영상 설정 탭 배경(연노랑)
 CONFIG_PATH = os.path.join(BASE, "shorts_novel_config.json")
 CONFIG_PATH2 = os.path.join(os.path.expanduser("~"), "shorts_novel_config.json")  # 프로그램 폴더에 못 쓸 때 대신 저장
 SECRET_KEYS = {"openai_key", "gemini_key"}                       # 프로젝트 파일에는 안 넣음
@@ -5417,12 +5418,15 @@ class App(tk.Tk):
         ttk.Button(tr, text="■ 소리 정지", command=stop_wav).pack(side="left", padx=4)
         ttk.Button(tr, text="💾 배경음 저장(이름 지정 → MP4에 사용)", command=self.save_bgm_named).pack(side="left")
         ttk.Button(tr, text="라이브용 긴 버전", command=self.save_bgm_wav).pack(side="left", padx=(4, 0))
+        st_ = ttk.Style(self)
+        st_.configure("Tab.TFrame", background=TAB_BG)          # 설정 탭 영역은 연노랑으로 구분
+        st_.configure("Tab.TLabel", background=TAB_BG)
         nb = ttk.Notebook(s2)
         nb.pack(fill="x", pady=(4, 0))
         tabs = {}
         for sec, k, lb, t, _ in FIELDS:
             if sec not in tabs:
-                tabs[sec] = ttk.Frame(nb, padding=4)
+                tabs[sec] = ttk.Frame(nb, padding=6, style="Tab.TFrame")
                 nb.add(tabs[sec], text=sec)
                 tabs[sec].n = 0
             fr = tabs[sec]
@@ -5503,10 +5507,10 @@ class App(tk.Tk):
         self.busy_since, self.busy_label = 0.0, ""
 
     def make_field(self, parent, key, label, t, r, c):
-        ttk.Label(parent, text=label).grid(row=r, column=c * 2, sticky="e", padx=(8, 2), pady=2)
+        ttk.Label(parent, text=label, style="Tab.TLabel").grid(row=r, column=c * 2, sticky="e", padx=(8, 2), pady=2)
         v = tk.StringVar()
         self.vars[key] = v
-        cell = ttk.Frame(parent)
+        cell = ttk.Frame(parent, style="Tab.TFrame")
         cell.grid(row=r, column=c * 2 + 1, sticky="w", pady=2)
         if t.startswith("choice:"):
             cb = ttk.Combobox(cell, textvariable=v, values=t[7:].split(","), width=(22 if key in ("format", "narr_voice", "audio_out") else 10), state="readonly")
