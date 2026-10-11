@@ -183,7 +183,10 @@ FIELDS = [
     ("영상", "out_dir", "저장 폴더", "dir", os.path.join(BASE, "output")),
     ("나레이션", "narration", "나레이션(음성 읽기)", "choice:on,off", "off"),
     ("나레이션", "narr_voice", "성우", "voice", "선히 (여성, 차분)"),
-    ("나레이션", "narr_pitch", "음 높낮이(Hz, -40~+40)", "float", 0),
+    ("나레이션", "narr_pitch", "음 높낮이(Hz, 엣지 음성만)", "float", 0),
+    ("나레이션", "narr_style", "연기 지시(ChatGPT·Gemini 음성)", "str", "차분하고 또렷한 다큐멘터리 내레이터처럼. 반전 부분은 긴장감 있게."),
+    ("나레이션", "openai_tts_model", "ChatGPT 음성 모델", "str", "gpt-4o-mini-tts"),
+    ("나레이션", "gemini_tts_model", "Gemini 음성 모델", "str", "gemini-2.5-flash-preview-tts"),
     ("나레이션", "narr_rate", "말 속도(%, -30~+40)", "float", 5),
     ("나레이션", "narr_volume", "나레이션 볼륨(0~2)", "float", 1.0),
     ("나레이션", "narr_gap", "문단 사이 쉼(초)", "float", 0.5),
@@ -2364,18 +2367,34 @@ def tts_clean(text):
 
 
 VOICE_CACHE_FILE = os.path.join(BASE, "voices_cache.json")
-VOICE_LOCALES = {"ko-KR": "한국어", "en-US": "영어(미국)", "en-GB": "영어(영국)", "ja-JP": "일본어"}
+VOICE_LOCALES = {"ko-KR": "한국어", "en-US": "영어(미국)", "en-GB": "영어(영국)", "ja-JP": "일본어", "openai": "ChatGPT 음성", "gemini": "Gemini 음성"}
 VOICE_KO_NAMES = {"SunHi": "선히", "InJoon": "인준", "Hyunsu": "현수", "BongJin": "봉진", "GookMin": "국민", "JiMin": "지민",
                   "SeoHyeon": "서현", "SoonBok": "순복", "YuJin": "유진", "Aria": "아리아", "Guy": "가이", "Jenny": "제니",
                   "Christopher": "크리스토퍼", "Ana": "아나", "Andrew": "앤드루", "Emma": "엠마", "Brian": "브라이언",
                   "Nanami": "나나미", "Keita": "케이타", "Sonia": "소니아", "Ryan": "라이언"}
 
 
+OPENAI_VOICES = [("alloy", "중성, 차분"), ("ash", "남성, 또렷"), ("ballad", "남성, 부드러움"), ("coral", "여성, 밝음"),
+                 ("echo", "남성, 낮음"), ("fable", "중성, 이야기꾼"), ("nova", "여성, 친근"), ("onyx", "남성, 깊음"),
+                 ("sage", "여성, 차분"), ("shimmer", "여성, 맑음"), ("verse", "남성, 다정")]
+GEMINI_VOICES = [("Zephyr", "밝음"), ("Puck", "경쾌"), ("Charon", "설명형"), ("Kore", "단단함"), ("Fenrir", "들뜸"), ("Leda", "젊음"),
+                 ("Orus", "단호"), ("Aoede", "산뜻"), ("Callirrhoe", "편안"), ("Autonoe", "밝음"), ("Enceladus", "숨소리"),
+                 ("Iapetus", "또렷"), ("Umbriel", "편안"), ("Algieba", "부드러움"), ("Despina", "부드러움"), ("Erinome", "또렷"),
+                 ("Algenib", "거친 목소리"), ("Rasalgethi", "설명형"), ("Laomedeia", "경쾌"), ("Achernar", "부드러움"),
+                 ("Alnilam", "단단함"), ("Schedar", "고름"), ("Gacrux", "성숙"), ("Pulcherrima", "적극적"), ("Achird", "친근"),
+                 ("Zubenelgenubi", "캐주얼"), ("Vindemiatrix", "온화"), ("Sadachbia", "활기"), ("Sadaltager", "박식"), ("Sulafat", "따뜻")]
+
+
+def ai_voice_list():
+    return ([{"short": f"openai:{v}", "gender": d, "locale": "openai", "name": f"ChatGPT {v} ({d}) [openai:{v}]"} for v, d in OPENAI_VOICES]
+            + [{"short": f"gemini:{v}", "gender": d, "locale": "gemini", "name": f"Gemini {v} ({d}) [gemini:{v}]"} for v, d in GEMINI_VOICES])
+
+
 def voice_code(voice_name):
-    """설정에 적힌 성우 이름 → 엣지 음성 코드. '… [ko-KR-XxxNeural]' 형식이면 괄호 안을 씀"""
+    """설정에 적힌 성우 이름 → 음성 코드. '[ko-KR-XxxNeural]' '[openai:nova]' '[gemini:Kore]' 형식이면 괄호 안을 씀"""
     if voice_name in TTS_VOICES:
         return TTS_VOICES[voice_name]
-    m = re.search(r"\[([a-z]{2}-[A-Z]{2}-[A-Za-z0-9]+)\]", voice_name or "")
+    m = re.search(r"\[((?:openai|gemini):[A-Za-z]+|[a-z]{2}-[A-Z]{2}-[A-Za-z0-9]+)\]", voice_name or "")
     if m:
         return m.group(1)
     if re.fullmatch(r"[a-z]{2}-[A-Z]{2}-[A-Za-z0-9]+", (voice_name or "").strip()):
@@ -2447,6 +2466,51 @@ def tts_edge(text, voice, rate_pct, out_mp3, pitch_hz=0):
         raise RuntimeError(f"엣지 음성 실패({type(e).__name__}): {str(e)[:120]}")
 
 
+def tts_openai(text, voice, rate_pct, style, out_mp3, key, model):
+    """ChatGPT 음성 API (gpt-4o-mini-tts: 연기 지시 가능)"""
+    import urllib.request, urllib.error
+    payload = {"model": model or "gpt-4o-mini-tts", "input": text, "voice": voice, "response_format": "mp3",
+               "speed": max(0.5, min(2.0, 1 + rate_pct / 100))}
+    if style and "4o" in (model or "gpt-4o-mini-tts"):
+        payload["instructions"] = style
+    req = urllib.request.Request("https://api.openai.com/v1/audio/speech", data=json.dumps(payload).encode("utf-8"),
+                                 headers={"Content-Type": "application/json", "Authorization": "Bearer " + key}, method="POST")
+    try:
+        with urllib.request.urlopen(req, timeout=120) as r:
+            data = r.read()
+    except urllib.error.HTTPError as e:
+        raise RuntimeError(f"ChatGPT 음성 실패 HTTP {e.code}: {e.read().decode('utf-8', 'ignore')[:200]}")
+    with open(out_mp3, "wb") as f:
+        f.write(data)
+
+
+def tts_gemini(text, voice, rate_pct, style, out_wav, key, model):
+    """Gemini 음성 API (연기 지시를 글로 줌). 결과는 24kHz PCM → WAV"""
+    import base64, wave
+    hint = (style + " ") if style else ""
+    if rate_pct >= 15:
+        hint += "조금 빠르게 읽어줘. "
+    elif rate_pct <= -15:
+        hint += "조금 천천히 읽어줘. "
+    prompt = (hint + "다음 문장을 읽어줘: " + text) if hint else text
+    m = model or "gemini-2.5-flash-preview-tts"
+    out = _http_json(f"https://generativelanguage.googleapis.com/v1beta/models/{m}:generateContent?key={key}",
+                     {"contents": [{"parts": [{"text": prompt}]}],
+                      "generationConfig": {"responseModalities": ["AUDIO"],
+                                           "speechConfig": {"voiceConfig": {"prebuiltVoiceConfig": {"voiceName": voice}}}}}, {})
+    try:
+        part = out["candidates"][0]["content"]["parts"][0]["inlineData"]
+        pcm = base64.b64decode(part["data"])
+        rate = int(re.search(r"rate=(\d+)", part.get("mimeType", "")).group(1)) if "rate=" in part.get("mimeType", "") else 24000
+    except (KeyError, IndexError, TypeError) as e:
+        raise RuntimeError("Gemini 음성 응답 형식 오류: " + str(out)[:200])
+    with wave.open(out_wav, "wb") as w:
+        w.setnchannels(1)
+        w.setsampwidth(2)
+        w.setframerate(rate)
+        w.writeframes(pcm)
+
+
 def tts_sapi(text, rate_pct, out_wav):
     """윈도우 내장 음성 (오프라인). 한국어 음성(Heami)이 설치돼 있어야 함"""
     if os.name != "nt":
@@ -2468,21 +2532,42 @@ def tts_key(voice, rate_pct, pitch_hz, text):
     return hashlib.md5(f"{voice}|{float(rate_pct)}|{float(pitch_hz)}|{text}".encode("utf-8")).hexdigest()[:16]
 
 
+TTS_CFG = {"style": "", "openai_key": "", "gemini_key": "", "openai_tts_model": "", "gemini_tts_model": ""}
+
+
+def set_tts_cfg(s):
+    """App 설정에서 AI 음성에 필요한 값만 꺼내 둠 (백그라운드에서 위젯을 읽지 않기 위해)"""
+    TTS_CFG.update(style=str(s.get("narr_style", "")).strip(),
+                   openai_key=(s.get("openai_key") or os.environ.get("OPENAI_API_KEY", "")).strip(),
+                   gemini_key=(s.get("gemini_key") or os.environ.get("GEMINI_API_KEY", "")).strip(),
+                   openai_tts_model=str(s.get("openai_tts_model", "")).strip(),
+                   gemini_tts_model=str(s.get("gemini_tts_model", "")).strip())
+
+
 def tts_clip(text, voice_name, rate_pct, cache_dir, pitch_hz=0):
     """문장 하나 → (소리 배열 mono float32, 길이초). 같은 문장은 캐시에서 재사용"""
     text = tts_clean(text)
     if not text:
         return np.zeros(1, np.float32), 0.0
     voice = voice_code(voice_name)
-    key = tts_key(voice, rate_pct, pitch_hz, text)
+    ai = voice.startswith(("openai:", "gemini:"))
+    key = tts_key(voice, rate_pct, pitch_hz, (TTS_CFG["style"] + "|" if ai else "") + text)
     os.makedirs(cache_dir, exist_ok=True)
     npy = os.path.join(cache_dir, key + ".npy")
     if os.path.exists(npy):
         a = np.load(npy)
         return a, len(a) / SR
-    src = os.path.join(cache_dir, key + (".wav" if voice == "sapi" else ".mp3"))
+    src = os.path.join(cache_dir, key + (".wav" if voice == "sapi" or voice.startswith("gemini:") else ".mp3"))
     if voice == "sapi":
         tts_sapi(text, rate_pct, src)
+    elif voice.startswith("openai:"):
+        if not TTS_CFG["openai_key"]:
+            raise RuntimeError("ChatGPT 음성에는 API 키가 필요합니다 (AI 엔진 탭에 입력)")
+        tts_openai(text, voice.split(":", 1)[1], rate_pct, TTS_CFG["style"], src, TTS_CFG["openai_key"], TTS_CFG["openai_tts_model"])
+    elif voice.startswith("gemini:"):
+        if not TTS_CFG["gemini_key"]:
+            raise RuntimeError("Gemini 음성에는 API 키가 필요합니다 (AI 엔진 탭에 입력)")
+        tts_gemini(text, voice.split(":", 1)[1], rate_pct, TTS_CFG["style"], src, TTS_CFG["gemini_key"], TTS_CFG["gemini_tts_model"])
     else:
         try:
             tts_edge(text, voice, rate_pct, src, pitch_hz)
@@ -3107,7 +3192,8 @@ class App(tk.Tk):
             if not t:
                 res.append((i, np.zeros(1, np.float32), 0.0))
                 continue
-            key = tts_key(voice, s["narr_rate"], s.get("narr_pitch", 0), t)
+            ai = voice.startswith(("openai:", "gemini:"))
+            key = tts_key(voice, s["narr_rate"], s.get("narr_pitch", 0), (str(s.get("narr_style", "")).strip() + "|" if ai else "") + t)
             npy = os.path.join(cache, key + ".npy")
             if not os.path.exists(npy):
                 return None
@@ -3158,6 +3244,10 @@ class App(tk.Tk):
         rate_var.trace_add("write", upd)
         pitch_var.trace_add("write", upd)
         upd()
+        ttk.Label(ctl, text="연기 지시").grid(row=2, column=0, sticky="e", pady=(6, 0))
+        style_var = tk.StringVar(value=self.vars["narr_style"].get())
+        ttk.Entry(ctl, textvariable=style_var, width=70).grid(row=2, column=1, columnspan=5, sticky="w", pady=(6, 0))
+        ttk.Label(ctl, text="(ChatGPT·Gemini 음성만 적용. 예: 공포 라디오 DJ처럼 낮고 느리게 / 밝은 아나운서처럼)", foreground="gray").grid(row=3, column=1, columnspan=5, sticky="w")
         ttk.Label(ctl, text="샘플 문장").grid(row=1, column=0, sticky="e", pady=(6, 0))
         sample_var = tk.StringVar(value="안녕하세요. 오늘은 아무도 몰랐던 이야기를 들려드릴게요. 끝까지 보시면 소름이 돋을 겁니다.")
         ttk.Entry(ctl, textvariable=sample_var, width=70).grid(row=1, column=1, columnspan=5, sticky="w", pady=(6, 0))
@@ -3173,7 +3263,7 @@ class App(tk.Tk):
 
         def fill(data):
             voices.clear()
-            voices.extend(data)
+            voices.extend(data + ai_voice_list())
             show()
             status.config(text=f"성우 {len(data)}명" + ("" if os.path.exists(VOICE_CACHE_FILE) else " (기본 목록 - 인터넷 연결 시 새로고침)"))
 
@@ -3207,11 +3297,21 @@ class App(tk.Tk):
                 messagebox.showinfo("성우", "목록에서 성우를 고르세요.", parent=dlg)
                 return
             text, rate, pitch = sample_var.get().strip(), rate_var.get(), pitch_var.get()
-            if voice_code(name).startswith(("en-", "ja-")) and re.search(r"[가-힣]", text):
+            if voice_code(name)[:3] in ("en-", "ja-") and re.search(r"[가-힣]", text):
                 text = {"en": "Hello. Today I will tell you a story nobody knew. Stay until the end.",
                         "ja": "こんにちは。今日は誰も知らなかった話をお届けします。最後までご覧ください。"}[voice_code(name)[:2]]
             status.config(text="샘플 만드는 중...")
-            cache = os.path.join(self.get_settings()["out_dir"], "tts_cache")
+            s_now = self.get_settings()
+            s_now["narr_style"] = style_var.get()
+            set_tts_cfg(s_now)
+            code = voice_code(name)
+            if code.startswith("openai:") and not TTS_CFG["openai_key"]:
+                status.config(text="ChatGPT API 키가 없습니다 (AI 엔진 탭)")
+                return
+            if code.startswith("gemini:") and not TTS_CFG["gemini_key"]:
+                status.config(text="Gemini API 키가 없습니다 (AI 엔진 탭)")
+                return
+            cache = os.path.join(s_now["out_dir"], "tts_cache")
 
             def worker():
                 try:
@@ -3230,6 +3330,7 @@ class App(tk.Tk):
             self.vars["narr_voice"].set(name)
             self.vars["narr_rate"].set(f"{rate_var.get():.0f}")
             self.vars["narr_pitch"].set(f"{pitch_var.get():.0f}")
+            self.vars["narr_style"].set(style_var.get())
             self.vars["narration"].set("on")
             self.bgm_made = None
             self.write_log(f"🎤 성우 선택: {name} (속도 {rate_var.get():+.0f}%, 높낮이 {pitch_var.get():+.0f}Hz) → 나레이션을 다시 만들면 적용됩니다")
@@ -3333,6 +3434,7 @@ class App(tk.Tk):
         self.cancel.clear()
         self.status.config(text=label)
         SCRIPT_ENGINE["s"] = self.get_settings()
+        set_tts_cfg(SCRIPT_ENGINE["s"])
 
         def worker():
             try:
