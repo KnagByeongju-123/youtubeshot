@@ -5391,7 +5391,6 @@ class App(tk.Tk):
         ttk.Label(r4, text="근거 사진").pack(side="left")
         ttk.Button(r4, text="파일에서 넣기", command=self.add_photo_file).pack(side="left", padx=4)
         ttk.Button(r4, text="붙여넣기 (Ctrl+V)", command=lambda: self.on_paste(from_button=True)).pack(side="left")
-        ttk.Button(r4, text="🎨 그림 프롬프트 만들기", command=self.img_prompts_make).pack(side="left", padx=4)
         ttk.Button(r4, text="📑 문단별 정리(그림·음성)", command=self.para_board).pack(side="left", padx=4)
         ttk.Label(r4, text="사진·이미지 주소·파일을 복사해서 본문에 Ctrl+V → 커서 위치에 들어감",
                   foreground="gray").pack(side="left", padx=6)
@@ -6016,7 +6015,7 @@ class App(tk.Tk):
             img_l.grid(row=1, column=0, sticky="w", pady=(4, 0))
             pr = img_prompt_for(text)
             ttk.Button(fr, text="📋 그림 프롬프트", command=(lambda pr=pr: copy(pr, "그림 프롬프트")) if pr else
-                       (lambda: (win.destroy(), self.img_prompts_make()))).grid(row=1, column=1, padx=2)
+                       (lambda: (win.destroy(), self.img_prompts_make(after=self.para_board)))).grid(row=1, column=1, padx=2)
             ttk.Button(fr, text="📥 그림 붙여넣기", command=lambda i=i, text=text: paste_img(i, text)).grid(row=1, column=2, padx=2)
             ttk.Separator(fr, orient="vertical").grid(row=1, column=3, sticky="ns", padx=10)
             aud_l = ttk.Label(fr, text="", width=26)
@@ -6031,11 +6030,14 @@ class App(tk.Tk):
         bf.pack(fill="x")
         n_img = sum(1 for i in range(len(items)) if "있음" in rows[i]["img"].cget("text"))
         n_aud = sum(1 for k_, _ in items if self.para_audio.get(str(k_)))
-        ttk.Label(bf, text=f"문단 {len(items)}개 · 그림 {n_img}개 · 문단 음성 {n_aud}개" + (
-            "" if style_en else "  (성우 지시가 없어요 → '🗣 AI 성우 프롬프트'를 한 번 만들면 줄마다 지시+대본을 복사할 수 있어요)"),
+        ttk.Label(bf, text=f"문단 {len(items)}개 · 그림 {n_img}개 · 문단 음성 {n_aud}개"
+                  + ("" if prompts else "  · 그림 프롬프트 없음 → 오른쪽 '🎨 만들기'")
+                  + ("" if style_en else "  · 성우 지시 없음 → '🗣 만들기'"),
                   foreground="#555").pack(side="left")
         ttk.Button(bf, text="닫기", command=win.destroy).pack(side="right")
         ttk.Button(bf, text="🗣 AI 성우 프롬프트 만들기", command=lambda: (win.destroy(), self.narr_prompt())).pack(side="right", padx=6)
+        ttk.Button(bf, text="🎨 그림 프롬프트 " + ("다시 만들기" if prompts else "만들기(전체)"),
+                   command=lambda: (win.destroy(), self.img_prompts_make(force=bool(prompts), after=self.para_board))).pack(side="right")
 
     def narr_prompt(self):
         """🗣 AI 성우 서비스용 연기 지시 + 읽기 대본 → 복사해서 성우 사이트에서 음성 받기 → 📥 파일로 넣기"""
@@ -6912,7 +6914,7 @@ class App(tk.Tk):
         return None
 
     # ---- 그림 프롬프트 (ChatGPT 웹에 붙여넣어 그리고, 그림을 복사해 와서 붙여넣기) ----
-    def img_prompts_make(self, force=False):
+    def img_prompts_make(self, force=False, after=None):
         story = self.get_story()
         paras = prompt_paras(story)
         if not paras:
@@ -6920,7 +6922,7 @@ class App(tk.Tk):
             return
         old = getattr(self, "img_prompts", [])
         if old and not force and [x.get("text") for x in old] == paras and old[0].get("ratio", "세로 9:16") == ratio_ko():
-            self.img_prompts_window()     # 대본이 그대로면 저장된 프롬프트를 바로 보여줌
+            (after or self.img_prompts_window)()     # 대본이 그대로면 저장된 프롬프트를 바로 보여줌
             return
         model, title, cat = self.model_var.get().strip(), self.title_var.get(), self.cat_var.get()
         style = self.vars["image_style"].get().strip() if "image_style" in self.vars else ""
@@ -6948,7 +6950,7 @@ class App(tk.Tk):
             self.img_prompts = res
             self.save_cfg()
             self.write_log(f"🎨 그림 프롬프트 {sum(1 for x in res if x['prompt'])}개 완성")
-            self.img_prompts_window()
+            (after or self.img_prompts_window)()
         self.write_log(f"🎨 문단 {len(paras)}개의 그림 프롬프트 만드는 중...")
         self.run_bg("그림 프롬프트 만드는 중...", job, done)
 
