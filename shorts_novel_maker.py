@@ -198,7 +198,7 @@ FIELDS = [
     ("AI 엔진", "openai_key", "ChatGPT API 키", "secret", ""),
     ("AI 엔진", "openai_model", "ChatGPT 모델", "str", "gpt-4o-mini"),
     ("AI 엔진", "gemini_key", "Gemini API 키", "secret", ""),
-    ("AI 엔진", "gemini_model", "Gemini 모델", "str", "gemini-1.5-flash"),
+    ("AI 엔진", "gemini_model", "Gemini 모델", "str", "gemini-2.5-flash"),
     ("소리", "bgm_mode", "배경음", "choice:자동생성,파일,없음", "자동생성"),
     ("소리", "bgm_style", "배경음 스타일", "choice:" + ",".join(["자동(소재별)"] + SOUND_STYLE_NAMES), "자동(소재별)"),
     ("소리", "bgm_volume", "배경음 볼륨(0~2)", "float", 0.5),
@@ -659,7 +659,39 @@ def ask_json(model, system, user, tools=None, timeout=None):
     return parse_json(ask_claude(model, system, user, tools, timeout))
 
 
-def _http_json(url, payload, headers, timeout=180):
+def explain_api_error(code, body, who=""):
+    """API 오류를 쉬운 한국어로"""
+    msg = body
+    try:
+        j = json.loads(body)
+        msg = (j.get("error") or {}).get("message") or body
+    except Exception:
+        pass
+    low = (msg or "").lower()
+    if "api key not valid" in low or "api_key_invalid" in low or "invalid api key" in low or "incorrect api key" in low:
+        tip = f"{who} API 키가 올바르지 않습니다. 키를 다시 복사해서 붙여넣으세요 (앞뒤 공백·줄바꿈 없이)."
+    elif "expired" in low:
+        tip = f"{who} API 키가 만료됐습니다. 새 키를 만들어 넣으세요."
+    elif code == 429 or "quota" in low or "rate limit" in low or "resource_exhausted" in low:
+        tip = f"{who} 사용량 한도를 넘었습니다 (무료 한도 포함). 잠시 뒤 다시 하거나 다른 성우·엔진을 쓰세요."
+    elif code == 404 or "not found" in low or "is not supported" in low:
+        tip = f"{who} 모델 이름을 찾을 수 없습니다. AI 엔진/나레이션 탭의 모델 이름을 확인하세요."
+    elif code in (401, 403) or "permission" in low or "billing" in low:
+        tip = f"{who} 권한이 없습니다. 키 권한이나 결제 설정(유료 기능)을 확인하세요."
+    elif "location" in low or "region" in low:
+        tip = f"{who} 이 지역에서는 이 기능을 쓸 수 없습니다."
+    else:
+        tip = f"{who} 요청이 거절됐습니다 (HTTP {code})."
+    return tip.strip() + "\n\n[상세] " + (msg or "")[:400]
+
+
+class APIError(RuntimeError):
+    def __init__(self, short, detail=""):
+        super().__init__(short + ("\n\n" + detail if detail else ""))
+        self.short = short
+
+
+def _http_json(url, payload, headers, timeout=180, who=""):
     import urllib.request, urllib.error
     req = urllib.request.Request(url, data=json.dumps(payload).encode("utf-8"),
                                  headers={"Content-Type": "application/json", **headers}, method="POST")
@@ -667,8 +699,40 @@ def _http_json(url, payload, headers, timeout=180):
         with urllib.request.urlopen(req, timeout=timeout) as r:
             return json.loads(r.read().decode("utf-8"))
     except urllib.error.HTTPError as e:
-        body = e.read().decode("utf-8", "ignore")[:300]
-        raise RuntimeError(f"HTTP {e.code}: {body}")
+        body = e.read().decode("utf-8", "ignore")[:1500]
+        full = explain_api_error(e.code, body, who)
+        raise APIError(full.split("\n\n")[0], full.split("\n\n", 1)[1] if "\n\n" in full else "")
+    except urllib.error.URLError as e:
+        raise APIError(f"{who} 서버에 연결하지 못했습니다 (인터넷 연결 확인)", str(e.reason)[:200])
+
+
+def check_api_key(kind, key):
+    """키 확인: 모델 목록을 불러와 본다 → (성공 여부, 메시지)"""
+    import urllib.request, urllib.error
+    key = (key or "").strip()
+    if not key:
+        return False, "키가 비어 있습니다."
+    if kind == "gemini":
+        req = urllib.request.Request("https://generativelanguage.googleapis.com/v1beta/models?pageSize=200", headers={"x-goog-api-key": key})
+    else:
+        req = urllib.request.Request("https://api.openai.com/v1/models", headers={"Authorization": "Bearer " + key})
+    who = "Gemini" if kind == "gemini" else "ChatGPT"
+    try:
+        with urllib.request.urlopen(req, timeout=30) as r:
+            data = json.loads(r.read().decode("utf-8"))
+    except urllib.error.HTTPError as e:
+        return False, explain_api_error(e.code, e.read().decode("utf-8", "ignore")[:1500], who)
+    except urllib.error.URLError as e:
+        return False, f"{who} 서버에 연결하지 못했습니다: {e.reason}"
+    if kind == "gemini":
+        names = [m_.get("name", "").split("/")[-1] for m_ in data.get("models", [])]
+        tts = [n for n in names if "tts" in n]
+        txt = [n for n in names if n.startswith("gemini-") and "tts" not in n and ("flash" in n or "pro" in n)]
+        return True, (f"✅ Gemini 키 정상 (모델 {len(names)}개)\n음성 모델: {', '.join(tts[:4]) or '없음 - 이 키로는 Gemini 음성을 쓸 수 없음'}\n"
+                      f"글 모델 예: {', '.join(txt[:4])}")
+    names = [m_.get("id", "") for m_ in data.get("data", [])]
+    tts = [n for n in names if "tts" in n]
+    return True, f"✅ ChatGPT 키 정상 (모델 {len(names)}개)\n음성 모델: {', '.join(tts[:4]) or '없음'}"
 
 
 def ask_openai(key, model, system, user):
@@ -676,17 +740,17 @@ def ask_openai(key, model, system, user):
     out = _http_json("https://api.openai.com/v1/chat/completions",
                      {"model": model or "gpt-4o-mini", "temperature": 0.4,
                       "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}]},
-                     {"Authorization": "Bearer " + key})
+                     {"Authorization": "Bearer " + key}, who="ChatGPT")
     return out["choices"][0]["message"]["content"]
 
 
 def ask_gemini(key, model, system, user):
     """Gemini API"""
-    m = model or "gemini-1.5-flash"
-    out = _http_json(f"https://generativelanguage.googleapis.com/v1beta/models/{m}:generateContent?key={key}",
+    m = model or "gemini-2.5-flash"
+    out = _http_json(f"https://generativelanguage.googleapis.com/v1beta/models/{m}:generateContent",
                      {"system_instruction": {"parts": [{"text": system}]},
                       "contents": [{"role": "user", "parts": [{"text": user}]}],
-                      "generationConfig": {"temperature": 0.4}}, {})
+                      "generationConfig": {"temperature": 0.4}}, {"x-goog-api-key": key}, who="Gemini")
     return out["candidates"][0]["content"]["parts"][0]["text"]
 
 
@@ -702,13 +766,13 @@ def pick_engine(s, key="trans_engine"):
     if want == "Gemini":
         if not gk:
             raise RuntimeError("Gemini API 키가 없습니다. 번역 탭에 키를 넣거나 GEMINI_API_KEY 환경변수를 설정하세요.")
-        return "gemini", "Gemini " + (s.get("gemini_model") or "gemini-1.5-flash")
+        return "gemini", "Gemini " + (s.get("gemini_model") or "gemini-2.5-flash")
     if want == "Claude":
         return "claude", "Claude"
     if ok_key:
         return "chatgpt", "ChatGPT " + (s.get("openai_model") or "gpt-4o-mini")
     if gk:
-        return "gemini", "Gemini " + (s.get("gemini_model") or "gemini-1.5-flash")
+        return "gemini", "Gemini " + (s.get("gemini_model") or "gemini-2.5-flash")
     return "claude", "Claude"
 
 
@@ -2479,7 +2543,8 @@ def tts_openai(text, voice, rate_pct, style, out_mp3, key, model):
         with urllib.request.urlopen(req, timeout=120) as r:
             data = r.read()
     except urllib.error.HTTPError as e:
-        raise RuntimeError(f"ChatGPT 음성 실패 HTTP {e.code}: {e.read().decode('utf-8', 'ignore')[:200]}")
+        full = explain_api_error(e.code, e.read().decode("utf-8", "ignore")[:1500], "ChatGPT 음성")
+        raise APIError(full.split("\n\n")[0], full.split("\n\n", 1)[1] if "\n\n" in full else "")
     with open(out_mp3, "wb") as f:
         f.write(data)
 
@@ -2494,10 +2559,11 @@ def tts_gemini(text, voice, rate_pct, style, out_wav, key, model):
         hint += "조금 천천히 읽어줘. "
     prompt = (hint + "다음 문장을 읽어줘: " + text) if hint else text
     m = model or "gemini-2.5-flash-preview-tts"
-    out = _http_json(f"https://generativelanguage.googleapis.com/v1beta/models/{m}:generateContent?key={key}",
+    out = _http_json(f"https://generativelanguage.googleapis.com/v1beta/models/{m}:generateContent",
                      {"contents": [{"parts": [{"text": prompt}]}],
                       "generationConfig": {"responseModalities": ["AUDIO"],
-                                           "speechConfig": {"voiceConfig": {"prebuiltVoiceConfig": {"voiceName": voice}}}}}, {})
+                                           "speechConfig": {"voiceConfig": {"prebuiltVoiceConfig": {"voiceName": voice}}}}}, {"x-goog-api-key": key},
+                     who="Gemini 음성")
     try:
         part = out["candidates"][0]["content"]["parts"][0]["inlineData"]
         pcm = base64.b64decode(part["data"])
@@ -2853,7 +2919,7 @@ class App(tk.Tk):
             return {}
 
     def project_dict(self):
-        return {"ver": 3, "model": self.model_var.get(), "category": self.cat_var.get(), "topic": self.topic_var.get(), "genre": self.genre_var.get(),
+        return {"ver": 4, "model": self.model_var.get(), "category": self.cat_var.get(), "topic": self.topic_var.get(), "genre": self.genre_var.get(),
                 "sources": getattr(self, "sources", []), "notes": getattr(self, "notes", ""),
                 "song": getattr(self, "song", None), "melody": getattr(self, "melody", ""), "bpm": getattr(self, "bpm", 90),
                 "artwork": getattr(self, "artwork", None),
@@ -2895,6 +2961,8 @@ class App(tk.Tk):
         s.update(c.get("settings", {}))
         if c.get("settings") and c.get("ver", 1) < 2 and int(float(s.get("fps", 30))) == 30:
             s["fps"] = 60  # 부드러운 스크롤 기본값으로 올림
+        if c.get("settings") and c.get("ver", 1) < 4 and str(s.get("gemini_model", "")).startswith("gemini-1."):
+            s["gemini_model"] = "gemini-2.5-flash"   # 1.x 모델은 종료됨
         if c.get("settings") and c.get("ver", 1) < 3:
             s["grain"] = 0          # 노이즈는 용량을 크게 키움 → 끔
             if int(float(s.get("quality", 23))) < 23:
@@ -3004,7 +3072,7 @@ class App(tk.Tk):
         ttk.Button(r4, text="🔎 AI 근거사진 찾기", command=self.ai_photos).pack(side="left", padx=4)
         ttk.Label(r4, text="사진·이미지 주소·파일을 복사해서 본문에 Ctrl+V → 커서 위치에 들어감",
                   foreground="gray").pack(side="left", padx=6)
-        self.story = ScrolledText(s1, height=8, wrap="word", font=("맑은 고딕", 11), undo=True)
+        self.story = ScrolledText(s1, height=5, wrap="word", font=("맑은 고딕", 11), undo=True)   # 창이 크면 자동으로 늘어남
         self.story.pack(fill="both", expand=True)
         self.story.bind("<<Paste>>", self.on_paste)
 
@@ -3071,7 +3139,7 @@ class App(tk.Tk):
 
         # 하단 AI 명령어
         bot = ttk.LabelFrame(self, text="AI 명령어 (Claude로 수정)", padding=6)
-        bot.pack(fill="x", padx=8, pady=8)
+        bot.pack(side="bottom", fill="x", padx=8, pady=(4, 8), before=main)   # 창이 작아도 항상 보이게
         r3 = ttk.Frame(bot)
         r3.pack(fill="x")
         self.cmd_var = tk.StringVar()
@@ -3081,8 +3149,14 @@ class App(tk.Tk):
         ttk.Button(r3, text="실행", command=self.ai_command).pack(side="left", padx=6)
         ttk.Label(bot, foreground="gray",
                   text='예) "글자 더 크게"  "공포 레드 테마로"  "결말을 더 소름돋게"  "45초에 맞춰줘"  "배경음 빗소리로"  "사진을 결말 앞으로 옮겨줘"').pack(anchor="w")
-        self.log = ScrolledText(bot, height=4, state="disabled", font=("맑은 고딕", 10))
-        self.log.pack(fill="x")
+        sr = ttk.Frame(bot)
+        sr.pack(fill="x", pady=(4, 0))
+        self.now_var = tk.StringVar(value="준비")
+        tk.Label(sr, textvariable=self.now_var, anchor="w", justify="left", font=("맑은 고딕", 11, "bold"),
+                 fg="#1565C0", wraplength=1100).pack(side="left", fill="x", expand=True)
+        ttk.Button(sr, text="📜 전체 기록", command=self.show_log).pack(side="right")
+        self.log = ScrolledText(self, height=4, state="disabled", font=("맑은 고딕", 10))   # 화면에는 안 보임 (전체 기록 창에서 봄)
+        self.busy_since, self.busy_label = 0.0, ""
 
     def make_field(self, parent, key, label, t, r, c):
         ttk.Label(parent, text=label).grid(row=r, column=c * 2, sticky="e", padx=(8, 2), pady=2)
@@ -3120,7 +3194,9 @@ class App(tk.Tk):
         elif t == "str":
             ttk.Entry(cell, textvariable=v, width=28).pack(side="left")
         elif t == "secret":
-            ttk.Entry(cell, textvariable=v, width=28, show="*").pack(side="left")
+            ttk.Entry(cell, textvariable=v, width=24, show="*").pack(side="left")
+            kind = "gemini" if "gemini" in key else "openai"
+            ttk.Button(cell, text="키 확인", command=lambda: self.check_key_ui(kind, v.get())).pack(side="left", padx=2)
         elif t == "voice":
             ttk.Entry(cell, textvariable=v, width=26, state="readonly").pack(side="left")
             ttk.Button(cell, text="🎤 성우 선택…", command=self.voice_picker).pack(side="left", padx=2)
@@ -3200,6 +3276,15 @@ class App(tk.Tk):
             a = np.load(npy)
             res.append((i, a, len(a) / SR))
         return res
+
+    def check_key_ui(self, kind, key):
+        self.set_status("🔑 키 확인 중...")
+
+        def worker():
+            ok, msg = check_api_key(kind, key)
+            self.q.put(lambda: (self.write_log(msg.splitlines()[0]), self.set_status(msg.splitlines()[0]),
+                                (messagebox.showinfo if ok else messagebox.showerror)("키 확인", msg)))
+        threading.Thread(target=worker, daemon=True).start()
 
     def voice_picker(self):
         """🎤 성우 선택: 목록에서 고르고 샘플 문장으로 미리듣기, 속도·높낮이 조절"""
@@ -3320,7 +3405,9 @@ class App(tk.Tk):
                     write_wav(p, np.stack([a, a], 1))
                     self.q.put(lambda: (status.config(text=f"재생 중 ({d:.1f}초)"), play_wav(p)))
                 except Exception as e:
-                    self.q.put(lambda e=e: status.config(text="실패: " + str(e)[:60]))
+                    short = getattr(e, "short", str(e).splitlines()[0] if str(e) else "실패")
+                    self.q.put(lambda e=e, short=short: (status.config(text="❌ " + short[:40] + ("…" if len(short) > 40 else "")),
+                                                         messagebox.showerror("미리듣기 실패", str(e), parent=dlg)))
             threading.Thread(target=worker, daemon=True).start()
 
         def choose():
@@ -3374,10 +3461,60 @@ class App(tk.Tk):
         self.story.insert("1.0", txt)
 
     def write_log(self, msg):
+        line = time.strftime("[%H:%M:%S] ") + msg + "\n"
         self.log.config(state="normal")
-        self.log.insert("end", time.strftime("[%H:%M:%S] ") + msg + "\n")
+        self.log.insert("end", line)
         self.log.see("end")
         self.log.config(state="disabled")
+        head = msg.strip().splitlines()[0] if msg.strip() else ""
+        if head and not msg.startswith(" "):      # 들여쓴 줄(세부 내용)은 기록에만
+            self.now_line = head
+            self.set_status(head)
+        lv = getattr(self, "_log_view", None)
+        if lv is not None:
+            try:
+                lv.config(state="normal")
+                lv.insert("end", line)
+                lv.see("end")
+                lv.config(state="disabled")
+            except tk.TclError:
+                self._log_view = None
+
+    def set_status(self, text):
+        """아래 진행 상황 한 줄 (작업 중이면 걸린 시간 표시)"""
+        self._status_text = text
+        if self.busy and self.busy_since:
+            sec = int(time.time() - self.busy_since)
+            text = f"⏳ {text}  ({sec // 60}분 {sec % 60:02d}초)" if sec >= 60 else f"⏳ {text}  ({sec}초)"
+        self.now_var.set(text)
+
+    def show_log(self):
+        """📜 전체 기록 창"""
+        win = tk.Toplevel(self)
+        win.title("전체 기록")
+        win.geometry("900x500")
+        box = ScrolledText(win, font=("맑은 고딕", 10), wrap="word")
+        box.pack(fill="both", expand=True)
+        box.insert("1.0", self.log.get("1.0", "end"))
+        box.see("end")
+        box.config(state="disabled")
+        bf = ttk.Frame(win, padding=4)
+        bf.pack(fill="x")
+
+        def copy():
+            self.clipboard_clear()
+            self.clipboard_append(self.log.get("1.0", "end"))
+
+        def clear():
+            for b in (self.log, box):
+                b.config(state="normal")
+                b.delete("1.0", "end")
+                b.config(state="disabled")
+        ttk.Button(bf, text="복사", command=copy).pack(side="left")
+        ttk.Button(bf, text="지우기", command=clear).pack(side="left", padx=4)
+        ttk.Button(bf, text="닫기", command=win.destroy).pack(side="right")
+        self._log_view = box
+        win.protocol("WM_DELETE_WINDOW", lambda: (setattr(self, "_log_view", None), win.destroy()))
 
     def apply_theme(self, name):
         if name in THEMES:
@@ -3424,6 +3561,9 @@ class App(tk.Tk):
     def poll(self):
         while not self.q.empty():
             self.q.get()()
+        if self.busy and time.time() - getattr(self, "_last_tick", 0) >= 1:   # 작업 중 경과 시간 갱신
+            self._last_tick = time.time()
+            self.set_status(getattr(self, "_status_text", self.busy_label))
         self.after(100, self.poll)
 
     def run_bg(self, label, job, done):
@@ -3431,8 +3571,10 @@ class App(tk.Tk):
             messagebox.showinfo("알림", "다른 작업이 진행 중입니다.")
             return
         self.busy = True
+        self.busy_since, self.busy_label = time.time(), label
         self.cancel.clear()
         self.status.config(text=label)
+        self.set_status(label)
         SCRIPT_ENGINE["s"] = self.get_settings()
         set_tts_cfg(SCRIPT_ENGINE["s"])
 
@@ -3445,8 +3587,15 @@ class App(tk.Tk):
         threading.Thread(target=worker, daemon=True).start()
 
     def end_busy(self, txt):
+        took = int(time.time() - self.busy_since) if self.busy_since else 0
         self.busy = False
+        self.busy_since = 0.0
         self.status.config(text=txt)
+        last = getattr(self, "_status_text", "")
+        if txt == "완료":
+            self.set_status(f"✅ {last}" + (f"  (걸린 시간 {took // 60}분 {took % 60:02d}초)" if took >= 60 else f"  ({took}초)" if took else ""))
+        elif txt == "오류":
+            self.set_status("❌ 오류 - 내용은 오류 창 또는 📜 전체 기록에서 확인")
 
     def on_err(self, e):
         msg = str(e)
@@ -3454,6 +3603,7 @@ class App(tk.Tk):
             msg += f'\n\n명령 프롬프트(cmd)에서 실행:\n"{sys.executable}" -m pip install pillow numpy imageio-ffmpeg'
 
         self.write_log("오류: " + (msg.splitlines()[0] if msg else ""))
+        self.set_status("❌ " + (msg.splitlines()[0] if msg else "오류"))
         if msg != "취소됨":
             messagebox.showerror("오류", msg)
 
