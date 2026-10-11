@@ -7,3 +7,5 @@ __pycache__/
 gui_out/
 gui_out*/
 voices_cache.json
+fonts/
+fonts_cache.json
