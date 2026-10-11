@@ -173,7 +173,10 @@ FIELDS = [
     ("자막형", "sub_size", "자막 크기", "int", 64),
     ("자막형", "sub_style", "자막 스타일", "choice:흰글자+검은테두리,노란글자+검은테두리,검은띠 위 흰글자", "흰글자+검은테두리"),
     ("자막형", "sub_max_chars", "자막 한 번에 글자 수", "int", 28),
-    ("자막형", "img_zoom", "사진 천천히 확대", "choice:on,off", "on"),
+    ("자막형", "img_motion", "사진 움직임", "choice:영상처럼(확대·이동·전환),천천히 확대만,없음", "영상처럼(확대·이동·전환)"),
+    ("자막형", "shot_sec", "한 장면 최대 길이(초)", "float", 4.5),
+    ("자막형", "img_bg", "뒤 배경을 사진 흐림으로", "choice:on,off", "on"),
+    ("자막형", "photo_count", "사진 장 수(0=자동: 문단 수에 맞춤)", "int", 0),
     ("자막형", "img_radius", "사진 모서리 둥글기", "int", 28),
     ("자막형", "sec_per_char", "나레이션 없을 때 글자당 초", "float", 0.12),
     ("영상", "speed", "스크롤 속도(px/초)", "float", 70),
@@ -933,6 +936,33 @@ def ask_engine_json(s, claude_model, system, user, key="trans_engine"):
 
 
 SCRIPT_ENGINE = {"s": None}   # 대본 작성에 쓸 설정 (App 이 작업 전에 넣음)
+PHOTO_PLAN = {"sub": False, "n": 0}   # 자막형이면 사진을 많이 (App 이 작업 전에 넣음)
+
+
+def photo_target(story="", sec=40):
+    """찾을 사진 수: 스크롤형 3장, 자막형은 문단 수·길이에 맞춰 많이"""
+    if not PHOTO_PLAN.get("sub"):
+        return 3
+    if PHOTO_PLAN.get("n"):
+        return max(1, min(20, int(PHOTO_PLAN["n"])))
+    paras = len([p for p in split_paras(story_text_only(story)) if p.strip()]) if story else 0
+    n = round(paras / 1.5) if paras else round(float(sec) / 6)
+    return max(5, min(16 if float(sec) > 120 else 9, n))
+
+
+def photo_note(n, category=""):
+    """자막형일 때 AI에게 붙이는 사진 지시"""
+    if not PHOTO_PLAN.get("sub"):
+        return ""
+    fiction = not cat_info(category)[0] if category else False
+    s = (f"\n\n[사진 수 - 위의 1~3장 규칙 대신 이걸 따름] 자막형 영상이라 화면이 사진 위주다. 사진을 {n}장 찾는다. "
+         "문단 1~2개마다 한 장씩 고르게 배치(첫 문단 바로 뒤도 가능). 같은 사진 반복 금지, 장면마다 다른 사진. "
+         "가로·세로 상관없이 해상도 큰 것(가로 1000px 이상)을 고른다.")
+    if fiction:
+        s += (" 허구 이야기이므로 실제 사건 사진이 아니라 장면 분위기를 보여주는 사진을 고른다 "
+              "(Wikimedia Commons 의 퍼블릭 도메인·CC0·CC BY·CC BY-SA 사진. 예: 밤의 버스 정류장, 빈 복도, 비 오는 거리). "
+              "알아볼 수 있는 실존 인물 얼굴 사진·상표가 크게 보이는 사진 금지. caption 은 장면 설명.")
+    return s
 
 
 def ask_script_json(model, system, user):
@@ -1212,7 +1242,11 @@ def insert_photo_near(paras, marker, after):
             best, best_i = sc, i
     idx = best_i if best >= 0.35 else (text_idx[len(text_idx) // 2] if text_idx else len(paras) - 1)
     if len(paras) >= 3:
-        idx = min(max(idx, 1), len(paras) - 2)
+        idx = min(max(idx, 0 if PHOTO_PLAN.get("sub") else 1), len(paras) - 2)
+    if PHOTO_PLAN.get("sub") and best < 0.35:   # 자막형: 위치 못 찾으면 사진이 없는 곳 중 가운데
+        free = [i for i in text_idx if not (i + 1 < len(paras) and parse_media(paras[i + 1]))]
+        if free:
+            idx = free[len(free) // 2]
     while idx + 1 < len(paras) and parse_media(paras[idx + 1]):  # 사진끼리 붙지 않게
         idx += 1
     paras.insert(idx + 1, marker)
@@ -1235,7 +1269,7 @@ def _split_inline_ph(text):
 
 def place_photos(story, photos):
     """본문의 [사진N] 자리표시를 실제 사진 줄로 바꾸고, 자리표시가 없는 사진은 알맞은 곳에 끼움 (최대 5장)"""
-    photos = list(photos or [])[:5]
+    photos = list(photos or [])[:20]
     paras = split_paras(_split_inline_ph(story))
     used = set()
     for i, p in enumerate(paras):
@@ -1892,6 +1926,7 @@ class SubtitleRenderer:
         self.duration = self.intro + self.hs + self.scroll_t + self.he
         self.dist, self.speed = 0, 0.0
         self.paras = [(0, (sg["text"] if sg["kind"] != "chapter" else "## " + sg["text"])) for sg in self.segs]
+        self.shots = self._make_shots()
         self.narr_at = []
         for sg in self.segs:
             if sg["i"] in clips:
@@ -1992,24 +2027,126 @@ class SubtitleRenderer:
         self._sub_cache[key] = layer
         return layer
 
-    # --- 사진 ---
-    def _img_frame(self, idx, prog):
-        """idx 사진을 사진 상자에 꽉 채워(가운데 잘라) 넣고 prog(0~1) 만큼 확대"""
-        x0, y0, x1, y1 = self.img_box
-        bw, bh = x1 - x0, y1 - y0
+    # --- 사진 (장면) ---
+    MOTIONS = [  # (확대 시작, 확대 끝, 가로 시작, 가로 끝, 세로 시작, 세로 끝)  위치는 -1~1 (여유 공간 기준)
+        (1.04, 1.22, 0.0, 0.0, -0.2, 0.0),     # 천천히 다가가기
+        (1.24, 1.04, 0.3, 0.0, 0.0, 0.0),      # 물러나기
+        (1.18, 1.18, 0.9, -0.9, 0.0, 0.0),     # 오른쪽 → 왼쪽
+        (1.18, 1.18, -0.9, 0.9, 0.0, 0.0),     # 왼쪽 → 오른쪽
+        (1.18, 1.18, 0.0, 0.0, 0.9, -0.9),     # 아래 → 위
+        (1.18, 1.18, 0.0, 0.0, -0.9, 0.9),     # 위 → 아래
+        (1.06, 1.30, -0.6, 0.5, -0.5, 0.4),    # 대각선으로 다가가기
+        (1.30, 1.08, 0.6, -0.3, 0.5, -0.2),    # 대각선으로 물러나기
+    ]
+
+    def _make_shots(self):
+        """문단·사진에 맞춰 장면 목록 만들기. 영상처럼 모드: 문단마다(긴 문단은 나눠서) 다른 움직임으로 컷"""
+        mode = str(self.s.get("img_motion", "영상처럼"))
+        if not self.images or not self.segs:
+            return []
+        end_t = self.duration
+        shots = []
+        if mode.startswith("영상"):
+            mx = max(2.0, float(self.s.get("shot_sec", 4.5) or 4.5))
+            rng = np.random.default_rng(len(self.images) * 131 + len(self.segs))
+            last = -1
+            for k, sg in enumerate(self.segs):
+                if sg["img"] < 0:
+                    continue
+                t0 = sg["t0"] if shots else 0.0
+                t1 = self.segs[k + 1]["t0"] if k + 1 < len(self.segs) else end_t
+                n = max(1, int(np.ceil((t1 - t0) / mx)))
+                for j in range(n):
+                    a, b = t0 + (t1 - t0) * j / n, t0 + (t1 - t0) * (j + 1) / n
+                    if shots and shots[-1]["img"] == sg["img"] and shots[-1]["t1"] - shots[-1]["t0"] < 1.2:
+                        shots[-1]["t1"] = b          # 너무 짧은 장면은 앞 장면에 붙임
+                        continue
+                    m = int(rng.integers(len(self.MOTIONS)))
+                    if m == last:
+                        m = (m + 1 + int(rng.integers(len(self.MOTIONS) - 1))) % len(self.MOTIONS)
+                    last = m
+                    shots.append({"img": sg["img"], "t0": a, "t1": b, "m": self.MOTIONS[m]})
+        else:   # 사진이 바뀔 때만 장면 전환
+            for k, sg in enumerate(self.segs):
+                if sg["img"] < 0:
+                    continue
+                t1 = self.segs[k + 1]["t0"] if k + 1 < len(self.segs) else end_t
+                if shots and shots[-1]["img"] == sg["img"]:
+                    shots[-1]["t1"] = t1
+                else:
+                    zm = (1.0, 1.12, 0, 0, 0, 0) if mode.startswith("천천히") else (1.06, 1.06, 0, 0, 0, 0)
+                    shots.append({"img": sg["img"], "t0": sg["t0"] if shots else 0.0, "t1": t1, "m": zm})
+        if shots:
+            shots[-1]["t1"] = max(shots[-1]["t1"], end_t)
+        return shots
+
+    def _img_src(self, idx):
+        """사진을 사진 상자보다 넉넉하게(1.32배) 키워 둠 + 둥근 모서리 마스크 + 흐린 배경"""
         if idx not in self._img_cache:
-            im = self.images[idx][0]
-            sc = max(bw / im.width, bh / im.height) * 1.12
-            big = im.resize((int(im.width * sc) + 1, int(im.height * sc) + 1), Image.LANCZOS)
+            x0, y0, x1, y1 = self.img_box
+            bw, bh = x1 - x0, y1 - y0
+            im = self.images[idx][0].convert("RGB")
+            sc = max(bw / im.width, bh / im.height) * 1.32
+            big = im.resize((max(bw, int(im.width * sc) + 1), max(bh, int(im.height * sc) + 1)), Image.LANCZOS)
             mask = Image.new("L", (bw, bh), 0)
             ImageDraw.Draw(mask).rounded_rectangle([0, 0, bw - 1, bh - 1], radius=int(self.s["img_radius"]), fill=255)
-            self._img_cache[idx] = (big, mask)
-        big, mask = self._img_cache[idx]
-        z = 1.0 + (0.12 * smoothstep(prog) if self.s["img_zoom"] == "on" else 0.06)
-        cw, ch = bw * 1.12 / z, bh * 1.12 / z
-        l, t = (big.width - cw) / 2, (big.height - ch) / 2
-        crop = big.transform((bw, bh), Image.EXTENT, (l, t, l + cw, t + ch), Image.BILINEAR)
+            blur = None
+            if self.s.get("img_bg", "on") == "on":
+                k = max(W / im.width, H / im.height)
+                small = im.resize((max(1, int(im.width * k / 8)) + 1, max(1, int(im.height * k / 8)) + 1), Image.BILINEAR)
+                small = small.filter(ImageFilter.GaussianBlur(4))
+                bl = small.resize((int(small.width * 8), int(small.height * 8)), Image.BILINEAR)
+                l, tp = (bl.width - W) // 2, (bl.height - H) // 2
+                blur = Image.fromarray((np.asarray(bl.crop((l, tp, l + W, tp + H))).astype(np.float32) * 0.42).astype(np.uint8)).convert("RGBA")
+            self._img_cache[idx] = (big, mask, blur)
+        return self._img_cache[idx]
+
+    def _shot_crop(self, sh, t):
+        """장면 sh 의 t 시점 사진 (움직임 적용)"""
+        x0, y0, x1, y1 = self.img_box
+        bw, bh = x1 - x0, y1 - y0
+        big, mask, _ = self._img_src(sh["img"])
+        z0, z1, ax, bx, ay, by = sh["m"]
+        p = min(1.0, max(0.0, (t - sh["t0"]) / max(0.1, sh["t1"] - sh["t0"])))
+        p = 0.5 - 0.5 * np.cos(np.pi * p)             # 부드럽게 시작·끝
+        z = z0 + (z1 - z0) * p
+        base = 1.32
+        cw, ch = bw * base / z, bh * base / z         # big 안에서 잘라낼 크기
+        cw, ch = min(cw, big.width), min(ch, big.height)
+        sx, sy = (big.width - cw) / 2, (big.height - ch) / 2
+        cx = big.width / 2 + (ax + (bx - ax) * p) * sx
+        cy = big.height / 2 + (ay + (by - ay) * p) * sy
+        l, tp = cx - cw / 2, cy - ch / 2
+        crop = big.transform((bw, bh), Image.EXTENT, (l, tp, l + cw, tp + ch), Image.BILINEAR)
         return crop, mask
+
+    def shot_at(self, t):
+        for k, sh in enumerate(self.shots):
+            if t < sh["t1"]:
+                return k
+        return len(self.shots) - 1 if self.shots else -1
+
+    def _paint_images(self, canvas, t):
+        """사진 장면 그리기 (+ 장면 사이 0.35초 겹쳐 바뀜, 흐린 사진 배경)"""
+        k = self.shot_at(t)
+        if k < 0:
+            return canvas
+        sh = self.shots[k]
+        fade = 0.35
+        prev = self.shots[k - 1] if k > 0 and t - sh["t0"] < fade else None
+        a = smoothstep((t - sh["t0"]) / fade) if prev is not None else 1.0
+        if self.s.get("img_bg", "on") == "on":
+            cur_b = self._img_src(sh["img"])[2]
+            if cur_b is not None:
+                if prev is not None and prev["img"] != sh["img"]:
+                    cur_b = Image.blend(self._img_src(prev["img"])[2], cur_b, float(a))
+                canvas = cur_b.copy()
+        crop, mask = self._shot_crop(sh, t)
+        if prev is not None:
+            pc, _ = self._shot_crop(prev, t)
+            crop = Image.blend(pc, crop, float(a))
+        canvas.paste(crop, (self.img_box[0], self.img_box[1]), mask)
+        return canvas
 
     def seg_at(self, t):
         for sg in self.segs:
@@ -2018,7 +2155,12 @@ class SubtitleRenderer:
         return self.segs[-1] if self.segs else None
 
     def _compose_pil(self, t):
-        bg = Image.fromarray(np.clip(self.bg.frame(t), 0, 255).astype(np.uint8)).convert("RGBA")
+        sg0 = self.seg_at(t)
+        if (t >= self.intro and self.s.get("img_bg", "on") == "on" and self.shots
+                and sg0 is not None and sg0["img"] >= 0):
+            bg = Image.new("RGBA", (W, H))     # 흐린 사진 배경이 덮으므로 테마 배경은 건너뜀
+        else:
+            bg = Image.fromarray(np.clip(self.bg.frame(t), 0, 255).astype(np.uint8)).convert("RGBA")
         if self.card is not None and t < self.intro:
             k = smoothstep(t / 0.5) * smoothstep((self.intro - t) / 0.5)
             a = (self.card[1] * k)[..., None]
@@ -2029,12 +2171,7 @@ class SubtitleRenderer:
         canvas = bg
         if sg is not None:
             if sg["img"] >= 0 and self.images:
-                # 같은 사진이 보이는 전체 시간 기준으로 확대 진행
-                same = [x for x in self.segs if x["img"] == sg["img"]]
-                t_a, t_b = same[0]["t0"], same[-1]["t0"] + same[-1]["dur"]
-                prog = (t - t_a) / max(0.1, t_b - t_a)
-                crop, mask = self._img_frame(sg["img"], prog)
-                canvas.paste(crop, (self.img_box[0], self.img_box[1]), mask)
+                canvas = self._paint_images(canvas, t)
             canvas.alpha_composite(self.head_layer)
             if sg["kind"] == "chapter":
                 lay = self._sub_layer(("ch", sg["i"]), "— " + sg["text"] + " —")
@@ -3289,6 +3426,8 @@ class App(tk.Tk):
             s["grain"] = 0          # 노이즈는 용량을 크게 키움 → 끔
             if int(float(s.get("quality", 23))) < 23:
                 s["quality"] = 23
+        if c.get("settings", {}).get("img_zoom") == "off" and "img_motion" not in c.get("settings", {}):
+            s["img_motion"] = "없음"
         if s.get("bgm_path") and "bgm_mode" not in c.get("settings", {}):
             s["bgm_mode"] = "파일"  # 예전 설정 호환
         self.set_settings(s)
@@ -3381,7 +3520,7 @@ class App(tk.Tk):
         self.research_var = tk.BooleanVar(value=True)
         ttk.Checkbutton(r1, text="🔎 웹 검색으로 조사", variable=self.research_var).pack(side="left", padx=4)
         self.autophoto_var = tk.BooleanVar(value=True)
-        ttk.Checkbutton(r1, text="근거 사진 자동(사실일 때)", variable=self.autophoto_var).pack(side="left", padx=4)
+        ttk.Checkbutton(r1, text="사진 자동(사실·자막형)", variable=self.autophoto_var).pack(side="left", padx=4)
         ttk.Button(r1, text="참고자료 붙여넣기", command=self.edit_reference).pack(side="left", padx=4)
         self.ref_label = ttk.Label(r1, text="", foreground="gray")
         self.ref_label.pack(side="left")
@@ -3949,6 +4088,8 @@ class App(tk.Tk):
         self.status.config(text=label)
         self.set_status(label)
         SCRIPT_ENGINE["s"] = self.get_settings()
+        PHOTO_PLAN.update(sub=str(SCRIPT_ENGINE["s"].get("layout", "")).startswith("자막형"),
+                          n=int(float(SCRIPT_ENGINE["s"].get("photo_count", 0) or 0)))
         RATE_HOOK["cancel"] = self.cancel
         RATE_HOOK["status"] = lambda msg: self.q.put(lambda m_=msg: self.set_status(m_))
         RATE_HOOK["log"] = lambda msg: self.q.put(lambda m_=msg: self.write_log(m_))
@@ -4040,12 +4181,14 @@ class App(tk.Tk):
         info, photos, sources = None, [], []
         if research:
             log("🔎 웹 검색으로 조사 중... (1~4분)")
-            info = ask_json(model, RESEARCH_SYSTEM, self.story_prompt(category, topic, genre, sec, reference=reference), tools=WEB_TOOLS)
+            n_ph = photo_target(sec=sec)
+            info = ask_json(model, RESEARCH_SYSTEM, self.story_prompt(category, topic, genre, sec, reference=reference)
+                            + (photo_note(n_ph, category) if factual and autophoto else ""), tools=WEB_TOOLS)
             topic = info.get("topic") or topic
             sources = [str(x) for x in info.get("sources") or []]
             log(f"  조사 완료: {topic}  (사실 {len(info.get('facts') or [])}개, 출처 {len(sources)}개)")
             if factual and autophoto and info.get("photos"):
-                photos = fetch_photos(info.get("photos"), media_dir, log)
+                photos = fetch_photos(info.get("photos"), media_dir, log, limit=n_ph)
         user = self.story_prompt(category, topic, genre, sec, info, reference, photos)
         single_sys, multi_sys = systems_for(category)
         note = ""
@@ -4086,12 +4229,14 @@ class App(tk.Tk):
             if category == ART_CATEGORY and details and not _artist_recent(artwork):
                 photos = photos[:1] + crop_details(photos[0]["path"], details, media_dir, log) + photos[1:]
             story = place_photos(story, photos)
-        elif factual and autophoto and not (category == ART_CATEGORY and _artist_recent(artwork)):
-            log("🔎 근거 사진 찾는 중...")
+        elif (factual or PHOTO_PLAN.get("sub")) and autophoto and not (category == ART_CATEGORY and _artist_recent(artwork)):
+            n_ph = photo_target(story, sec)
+            log(f"🔎 {'근거 ' if factual else '분위기 '}사진 찾는 중... (목표 {n_ph}장)")
             try:
                 extra_info = ("\n[그림 정보] " + json.dumps(artwork, ensure_ascii=False)) if artwork else ""
-                d = ask_json(model, PHOTO_SYSTEM, f"콘텐츠 종류: {category}{extra_info}\n[제목] {title}\n\n[본문]\n{story}", tools=WEB_TOOLS)
-                photos = fetch_photos(d.get("photos"), media_dir, log)
+                d = ask_json(model, PHOTO_SYSTEM, f"콘텐츠 종류: {category}{extra_info}\n[제목] {title}\n\n[본문]\n{story}"
+                             + photo_note(n_ph, category), tools=WEB_TOOLS)
+                photos = fetch_photos(d.get("photos"), media_dir, log, limit=n_ph)
                 if photos and category == ART_CATEGORY and details:
                     photos = photos[:1] + crop_details(photos[0]["path"], details, media_dir, log) + photos[1:]
                 if photos:
@@ -4335,8 +4480,12 @@ class App(tk.Tk):
         text = story_text_only(story)
 
         def job():
-            d = ask_json(model, PHOTO_SYSTEM, f"콘텐츠 종류: {cat}\n[제목] {title}\n\n[본문]\n{text}", tools=WEB_TOOLS)
-            return fetch_photos(d.get("photos"), media, self.log_bg)
+            n_ph = photo_target(text)
+            have = len([ln for ln in story.split("\n") if parse_media(ln)])
+            n_ph = max(1, n_ph - have) if PHOTO_PLAN.get("sub") else n_ph
+            self.log_bg(f"  목표 {n_ph}장" + (f" (이미 {have}장 있음)" if have else ""))
+            d = ask_json(model, PHOTO_SYSTEM, f"콘텐츠 종류: {cat}\n[제목] {title}\n\n[본문]\n{text}" + photo_note(n_ph, cat), tools=WEB_TOOLS)
+            return fetch_photos(d.get("photos"), media, self.log_bg, limit=n_ph)
 
         def done(photos):
             if not photos:
