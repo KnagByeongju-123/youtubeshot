@@ -206,6 +206,7 @@ FIELDS = [
     ("영상", "audio_out", "소리 저장 방식", "choice:MP4에 포함,MP4에 포함+MP3 따로,MP3만 따로(무음 MP4)", "MP4에 포함+MP3 따로"),
     ("영상", "out_dir", "저장 폴더", "dir", os.path.join(BASE, "output")),
     ("나레이션", "narration", "나레이션(음성 읽기)", "choice:on,off", "off"),
+    ("나레이션", "narr_file", "외부 나레이션 파일(AI 성우에서 받은 mp3·wav, 비우면 프로그램 성우)", "audio", ""),
     ("나레이션", "narr_voice", "성우", "voice", "선히 (여성, 차분)"),
     ("나레이션", "narr_pitch", "음 높낮이(Hz, 엣지 음성만)", "float", 0),
     ("나레이션", "narr_style", "연기 지시(ChatGPT·Gemini 음성)", "str", "차분하고 또렷한 다큐멘터리 내레이터처럼. 반전 부분은 긴장감 있게."),
@@ -239,7 +240,7 @@ FIELDS = [
 FTYPE = {k: t for _, k, _, t, _ in FIELDS}
 LABEL = {k: l for _, k, l, _, _ in FIELDS}
 DEFAULTS = {k: v for _, k, _, _, v in FIELDS}
-FILE_KEYS = {"font_path", "title_font_path", "sub_font_path", "bg_image", "bgm_path", "out_dir", "safe_guide", "openai_key", "gemini_key"}
+FILE_KEYS = {"narr_file", "font_path", "title_font_path", "sub_font_path", "bg_image", "bgm_path", "out_dir", "safe_guide", "openai_key", "gemini_key"}
 
 # 테마 프리셋 (장르에 맞는 색·분위기)
 THEMES = {
@@ -3893,6 +3894,80 @@ def narration_paras(story):
     return out
 
 
+_EXT_NARR = {}
+
+
+def split_external_narration(story, path):
+    """통째로 녹음된 나레이션 파일을 문단(줄)별로 나누기: 글자 수 비율로 예상한 경계 근처의 '쉬는 구간'에서 자름
+    → [(문단 인덱스, 소리, 길이)] (프로그램 성우와 같은 형식이라 스크롤·자막 맞추기가 그대로 동작)"""
+    items = [(i, tts_clean(x)) for i, x in narration_paras(story)]
+    key = (os.path.abspath(path), os.path.getmtime(path), tuple(x for _, x in items))
+    if key in _EXT_NARR:
+        return _EXT_NARR[key]
+    a = _decode_full(path)
+    pk = float(np.abs(a).max()) or 1.0
+    a = a / pk * 0.9
+    hop = int(0.02 * SR)
+    nfr = len(a) // hop
+    rms = np.sqrt((a[:nfr * hop].reshape(nfr, hop) ** 2).mean(1) + 1e-12)
+    thr = max(float(np.percentile(rms, 95)) * 0.06, 2e-3)
+    voiced = rms > thr
+    if not voiced.any() or not items:
+        return []
+    f0, f1 = int(np.argmax(voiced)), int(nfr - np.argmax(voiced[::-1]))
+    runs, k = [], f0                # 말 사이 쉬는 구간 (0.16초 이상)
+    while k < f1:
+        if not voiced[k]:
+            e = k
+            while e < f1 and not voiced[e]:
+                e += 1
+            if e - k >= 8:
+                runs.append((k, e))
+            k = e
+        else:
+            k += 1
+    lens = np.array([max(1, len(x)) for _, x in items], float)
+    cum = np.cumsum(lens) / lens.sum()
+    span = f1 - f0
+    avg = span / len(items)
+    bounds, used, prev = [f0], set(), f0
+    for j in range(len(items) - 1):
+        target = f0 + span * cum[j]
+        best, bd = None, max(75, avg * 0.45)   # 예상 위치에서 너무 멀면 쓰지 않음
+        for r_i, (s0, s1) in enumerate(runs):
+            c = (s0 + s1) / 2
+            dist = abs(c - target) - (s1 - s0) * 0.6   # 긴 쉼일수록 문단 경계일 가능성 큼
+            if r_i not in used and c > prev and dist < bd:
+                best, bd = r_i, dist
+        if best is not None:
+            used.add(best)
+            cut = int((runs[best][0] + runs[best][1]) / 2)
+        else:
+            cut = int(target)
+        cut = max(cut, prev + 1)
+        bounds.append(cut)
+        prev = cut
+    bounds.append(f1)
+    res = []
+    for j, (i, _) in enumerate(items):
+        clip = a[bounds[j] * hop:bounds[j + 1] * hop].astype(np.float32)
+        nz = np.nonzero(np.abs(clip) > 0.01)[0]
+        if len(nz):
+            clip = clip[max(0, nz[0] - int(0.05 * SR)): nz[-1] + int(0.15 * SR)]
+        res.append((i, clip, len(clip) / SR))
+    _EXT_NARR.clear()
+    _EXT_NARR[key] = res
+    return res
+
+
+NARR_PROMPT_SYSTEM = """너는 유튜브 나레이션 디렉터다. AI 성우 서비스(Google AI Studio 음성, ElevenLabs, 클로바더빙, 타입캐스트 등)에 붙여넣을 연기 지시와 읽기용 대본을 만든다.
+- style_ko: 한국어 연기 지시 2~4줄 (목소리 나이·성별 느낌, 톤, 속도, 감정 흐름, 반전·펀치라인에서의 쉼과 강조).
+- style_en: 같은 지시를 영어로 (Google AI Studio·ElevenLabs 용, 1~3문장).
+- script: 읽기용 대본. 원본과 줄 수·순서를 정확히 같게(한 줄 = 한 줄). 숫자·영어·기호는 읽는 소리대로 한글로(예: 1911년 → 천구백십일 년, AI → 에이아이).
+  사진 줄·괄호 설명은 빼되 줄 수는 유지(그 줄은 빈 줄 대신 원문 그대로). 각 줄 사이에는 빈 줄 하나.
+반드시 JSON만 출력: {"style_ko": "...", "style_en": "...", "script": "..."}"""
+
+
 def build_narration(story, s, cache_dir, log=None, cancel=None):
     """본문 전체 나레이션 → [(문단 인덱스, 소리, 길이)]"""
     items = narration_paras(story)
@@ -4870,6 +4945,76 @@ MUSIC_PACKAGE_SYSTEM = """너는 구독자 100만 명상·수면·공부 음악 
 반드시 JSON만 출력: {"titles": ["..."], "description": "...", "hashtags": "#... #...", "tags": "a, b, c", "pinned_comment": "..."}"""
 
 
+def media_duration(path):
+    """영상 길이(초) - ffmpeg 정보에서 읽음"""
+    p = subprocess.run([get_ffmpeg(), "-i", path], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, errors="replace",
+                       creationflags=(subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0))
+    m = re.search(r"Duration:\s*(\d+):(\d+):(\d+(?:\.\d+)?)", p.stderr or "")
+    if not m:
+        raise RuntimeError("영상 길이를 읽지 못했습니다: " + os.path.basename(path))
+    return int(m.group(1)) * 3600 + int(m.group(2)) * 60 + float(m.group(3))
+
+
+def media_size(path):
+    p = subprocess.run([get_ffmpeg(), "-i", path], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, errors="replace",
+                       creationflags=(subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0))
+    m = re.search(r"Video:.*?(\d{3,5})x(\d{3,5})", p.stderr or "")
+    return (int(m.group(1)), int(m.group(2))) if m else (1920, 1080)
+
+
+def shorts_overlay(top, bottom, s, path):
+    """쇼츠 위·아래 글자 (1080×1920 투명 PNG)"""
+    layer = Image.new("RGBA", (1080, 1920), (0, 0, 0, 0))
+    d = ImageDraw.Draw(layer)
+    fp = s.get("title_font_path") or s.get("font_path")
+    if top.strip():
+        size = 92
+        f = load_font(fp, size)
+        lines = wrap(top.strip(), f, 960)
+        while len(lines) > 3 and size > 50:
+            size -= 6
+            f = load_font(fp, size)
+            lines = wrap(top.strip(), f, 960)
+        y = 260 - (len(lines) - 1) * size * 0.6
+        for ln in lines:
+            x = (1080 - f.getlength(ln)) / 2
+            d.text((x, y), ln, font=f, fill="#FFFFFF", stroke_width=max(5, size // 12), stroke_fill="#000000")
+            y += size * 1.2
+    if bottom.strip():
+        f2 = load_font(s.get("font_path") or fp, 50)
+        for i, ln in enumerate(wrap(bottom.strip(), f2, 960)[:2]):
+            x = (1080 - f2.getlength(ln)) / 2
+            d.text((x, 1560 + i * 64), ln, font=f2, fill="#FFE135", stroke_width=4, stroke_fill="#000000")
+    layer.save(path)
+
+
+def cut_short(src, out, start, length, top, bottom, s, mode="가운데"):
+    """롱폼 영상의 한 구간 → 세로 쇼츠 (가운데 맞춤 + 흐린 배경, 또는 꽉 채우기) + 위·아래 글자 + 소리 페이드"""
+    png = out + ".ov.png"
+    shorts_overlay(top, bottom, s, png)
+    w, h = media_size(src)
+    if h >= w:   # 이미 세로 영상
+        base = "[0:v]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,setsar=1[v1]"
+    elif mode.startswith("꽉"):
+        base = "[0:v]scale=-2:1920,crop=1080:1920,setsar=1[v1]"
+    else:
+        base = ("[0:v]split=2[a][b];[a]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,boxblur=24:2,eq=brightness=-0.12[bg];"
+                "[b]scale=1080:-2[fg];[bg][fg]overlay=(W-w)/2:(H-h)/2,setsar=1[v1]")
+    fc = base + ";[v1][1:v]overlay=0:0,format=yuv420p[v]"
+    fo = max(0.0, length - 1.2)
+    cmd = [get_ffmpeg(), "-y", "-v", "error", "-ss", f"{start:.2f}", "-t", f"{length:.2f}", "-i", src, "-i", png,
+           "-filter_complex", fc, "-map", "[v]", "-map", "0:a?", "-af", f"afade=t=in:st=0:d=0.6,afade=t=out:st={fo:.2f}:d=1.2",
+           "-c:v", "libx264", "-preset", "fast", "-crf", "23", "-r", "30", "-c:a", "aac", "-b:a", "160k", "-movflags", "+faststart", out]
+    p = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, errors="replace",
+                       creationflags=(subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0))
+    try:
+        os.remove(png)
+    except OSError:
+        pass
+    if p.returncode != 0:
+        raise RuntimeError("쇼츠 만들기 실패: " + (p.stderr or "")[-400:])
+
+
 def hms(sec):
     sec = int(sec)
     return f"{sec // 3600}:{sec % 3600 // 60:02d}:{sec % 60:02d}" if sec >= 3600 else f"{sec // 60:02d}:{sec % 60:02d}"
@@ -5154,6 +5299,7 @@ class App(tk.Tk):
         ttk.Label(tr, text="  (소재를 고르면 테마·배경음 자동)", foreground="gray").pack(side="left")
         ttk.Separator(tr, orient="vertical").pack(side="left", fill="y", padx=8)
         ttk.Button(tr, text="🎙 나레이션 만들기", command=self.prepare_narration).pack(side="left", padx=(0, 6))
+        ttk.Button(tr, text="🗣 AI 성우 프롬프트", command=self.narr_prompt).pack(side="left", padx=(0, 6))
         ttk.Button(tr, text="🎵 배경음 만들기", command=self.make_bgm).pack(side="left")
         ttk.Button(tr, text="▶ 다시 듣기", command=self.replay_bgm).pack(side="left", padx=(4, 0))
         ttk.Button(tr, text="■ 소리 정지", command=stop_wav).pack(side="left", padx=4)
@@ -5180,6 +5326,7 @@ class App(tk.Tk):
         ttk.Button(s4, text="📺 롱폼 만들기(챕터 묶음)", command=self.longform).pack(side="left", padx=(6, 0))
         ttk.Button(s4, text="🌐 영어·일본어 버전", command=self.lang_versions_dialog).pack(side="left", padx=(6, 0))
         ttk.Button(s4, text="🎵 음악 영상(명상·집중·수면)", command=self.music_dialog).pack(side="left", padx=(6, 0))
+        ttk.Button(s4, text="✂ 롱폼→쇼츠", command=self.shorts_cutter).pack(side="left", padx=(6, 0))
         ttk.Button(s4, text="취소", command=self.cancel.set).pack(side="left", padx=6)
         ttk.Button(s4, text="저장 폴더 열기", command=self.open_folder).pack(side="left")
         self.prog = ttk.Progressbar(s4, length=220)
@@ -5468,16 +5615,90 @@ class App(tk.Tk):
     def narr_cache_dir(self):
         return os.path.join(self.get_settings()["out_dir"], "tts_cache")
 
+    def narr_prompt(self):
+        """🗣 AI 성우 서비스용 연기 지시 + 읽기 대본 → 복사해서 성우 사이트에서 음성 받기 → 📥 파일로 넣기"""
+        story = self.get_story()
+        if not narration_paras(story):
+            messagebox.showinfo("AI 성우", "먼저 대본을 만들거나 입력하세요.")
+            return
+        model, title, cat, genre = self.model_var.get().strip(), self.title_var.get(), self.cat_var.get(), self.genre_var.get()
+        lines = [x for _, x in narration_paras(story)]
+
+        def job():
+            return ask_script_json(model, NARR_PROMPT_SYSTEM, f"콘텐츠 종류: {cat} / 소재: {genre}\n[제목] {title}\n[원본 {len(lines)}줄]\n" + "\n".join(lines))
+
+        def done(d):
+            win = tk.Toplevel(self)
+            win.title("🗣 AI 성우 프롬프트 - 복사 → 성우 사이트에서 음성 받기 → 📥 나레이션 파일 넣기")
+            win.geometry("860x760")
+            f = ttk.Frame(win, padding=10)
+            f.pack(fill="both", expand=True)
+            ttk.Label(f, text="① 지시 + 대본을 복사해 AI 성우 사이트(예: Google AI Studio 음성 생성, ElevenLabs, 클로바더빙)에 붙여넣기 → "
+                              "② 음성 파일(mp3·wav) 내려받기 → ③ 📥 나레이션 파일 넣기", wraplength=820, foreground="#444").pack(anchor="w")
+            boxes = {}
+            for key, lab, h in (("style_ko", "연기 지시 (한국어)", 4), ("style_en", "연기 지시 (영어 - AI Studio·ElevenLabs용)", 3), ("script", "읽기용 대본", 16)):
+                lf = ttk.LabelFrame(f, text=" " + lab + " ", padding=5)
+                lf.pack(fill="both" if key == "script" else "x", expand=key == "script", pady=4)
+                tb = tk.Text(lf, height=h, wrap="word", font=("맑은 고딕", 10))
+                tb.insert("1.0", str(d.get(key, "")) or ("\n\n".join(lines) if key == "script" else ""))
+                tb.pack(fill="both", expand=True)
+                boxes[key] = tb
+
+            def cp(txt, what):
+                self.clipboard_clear()
+                self.clipboard_append(txt)
+                self.set_status(f"📋 {what} 복사됨")
+            g = lambda k: boxes[k].get("1.0", "end").strip()
+            bf = ttk.Frame(f)
+            bf.pack(fill="x", pady=(6, 0))
+            ttk.Button(bf, text="📋 한국어 지시 + 대본", command=lambda: cp(g("style_ko") + "\n\n[대본]\n" + g("script"), "지시+대본")).pack(side="left")
+            ttk.Button(bf, text="📋 영어 지시 + 대본", command=lambda: cp(g("style_en") + "\n\n" + g("script"), "영어 지시+대본")).pack(side="left", padx=4)
+            ttk.Button(bf, text="📋 대본만", command=lambda: cp(g("script"), "대본")).pack(side="left")
+
+            def load_file():
+                p_ = filedialog.askopenfilename(filetypes=[("음성", "*.mp3 *.wav *.m4a *.ogg *.flac")], parent=win)
+                if not p_:
+                    return
+                self.vars["narr_file"].set(p_)
+                self.vars["narration"].set("on")
+                try:
+                    res = split_external_narration(self.get_story(), p_)
+                    tot = sum(x[2] for x in res)
+                    self.write_log(f"🎙 외부 나레이션 적용: {os.path.basename(p_)} → {len(res)}줄로 나눔 (말하는 시간 {tot:.0f}초)")
+                except Exception as e:
+                    messagebox.showerror("나레이션", str(e), parent=win)
+                    return
+                self.bgm_made = None
+                self.save_cfg()
+                self.refresh_preview()
+                self.set_status("🎙 외부 나레이션 적용됨 - 미리보기 ▶ 재생으로 확인하세요 (해제: 나레이션 탭의 파일 칸 x)")
+            ttk.Button(bf, text="📥 나레이션 파일 넣기", command=load_file).pack(side="right")
+            ttk.Label(f, text="※ 대본 줄 수·순서를 바꾸지 마세요. 프로그램이 말 사이 쉬는 곳을 찾아 줄마다 나눠 자막·스크롤을 맞춥니다.\n"
+                              "※ 사이트마다 상업적 이용 조건이 다르니 유료/무료 약관을 확인하세요.", foreground="gray").pack(anchor="w", pady=(6, 0))
+        self.write_log("🗣 AI 성우용 연기 지시·대본 만드는 중...")
+        self.run_bg("성우 프롬프트 만드는 중...", job, done)
+
     def narration_for(self, story, s, log=None, cancel=None):
         """설정이 켜져 있으면 나레이션 목록 반환 (캐시 활용). 백그라운드에서 호출 (화면 위젯을 읽지 않음)"""
         if s.get("narration") != "on":
             return None
+        nf = str(s.get("narr_file", "")).strip()
+        if nf and os.path.exists(nf):
+            if log:
+                log("🎙 외부 나레이션 파일을 문단별로 나누는 중: " + os.path.basename(nf))
+            return split_external_narration(story, nf)
         return build_narration(story, s, os.path.join(s["out_dir"], "tts_cache"), log, cancel)
 
     def narration_cached(self, story, s):
         """이미 만들어 둔 나레이션이 전부 있으면 바로 반환, 아니면 None (미리보기용, 느린 작업 안 함)"""
         if s.get("narration") != "on":
             return None
+        nf = str(s.get("narr_file", "")).strip()
+        if nf and os.path.exists(nf):
+            try:
+                return split_external_narration(story, nf)
+            except Exception:
+                return None
         import hashlib
         cache = os.path.join(s["out_dir"], "tts_cache")
         voice = voice_code(s["narr_voice"])
@@ -7819,8 +8040,130 @@ class App(tk.Tk):
         mb.pack(fill="x", pady=(4, 0))
         ttk.Button(mb, text="📚 고른 것 이어 붙여 롱폼 만들기(챕터)", command=bundle).pack(side="left")
         ttk.Button(mb, text="새로고침", command=refresh_made).pack(side="left", padx=4)
+
+        def to_shorts():
+            sel = mlist.curselection()
+            if not sel:
+                messagebox.showinfo("쇼츠", "목록에서 영상을 하나 고르세요.", parent=win)
+                return
+            x = items[sel[0]]
+            self.shorts_cutter(x[0], re.sub(r"[|｜].*$", "", x[1]).strip(), music=True)
+        ttk.Button(mb, text="✂ 쇼츠 만들기", command=to_shorts).pack(side="left")
         ttk.Button(mb, text="폴더 열기", command=lambda: (os.makedirs(out_dir, exist_ok=True), os.startfile(out_dir) if os.name == "nt" else None)).pack(side="left")
         on_sel()
+
+    def shorts_cutter(self, src=None, title="", music=False):
+        """✂ 롱폼(이야기·음악) 영상에서 쇼츠 여러 개 잘라 만들기"""
+        win = tk.Toplevel(self)
+        win.title("✂ 롱폼 → 쇼츠 만들기")
+        win.geometry("760x470")
+        f = ttk.Frame(win, padding=12)
+        f.pack(fill="both", expand=True)
+        s = self.get_settings()
+        src_v = tk.StringVar(value=src or "")
+        info = ttk.Label(f, text="", foreground="#555")
+        ttk.Label(f, text="롱폼 영상").grid(row=0, column=0, sticky="e")
+        ttk.Entry(f, textvariable=src_v, width=60).grid(row=0, column=1, columnspan=3, sticky="w", padx=4)
+        dur = {"sec": 0.0}
+
+        def load_info(*_):
+            p_ = src_v.get().strip()
+            if p_ and os.path.exists(p_):
+                try:
+                    dur["sec"] = media_duration(p_)
+                    w_, h_ = media_size(p_)
+                    info.config(text=f"길이 {hms(dur['sec'])} · {w_}×{h_}")
+                except Exception as e:
+                    info.config(text=str(e)[:80])
+
+        def browse():
+            p_ = filedialog.askopenfilename(filetypes=[("영상", "*.mp4 *.mov *.mkv")], parent=win, initialdir=s["out_dir"])
+            if p_:
+                src_v.set(p_)
+                if not top_v.get().strip():
+                    top_v.set(re.sub(r"_\d+분$|_롱폼$", "", os.path.splitext(os.path.basename(p_))[0]).replace("_", " ")[:40])
+                load_info()
+        ttk.Button(f, text="…", width=3, command=browse).grid(row=0, column=4)
+        info.grid(row=1, column=1, columnspan=3, sticky="w", padx=4)
+        ttk.Label(f, text="쇼츠 개수").grid(row=2, column=0, sticky="e", pady=6)
+        cnt_v = tk.StringVar(value="3")
+        ttk.Combobox(f, textvariable=cnt_v, values=[str(i) for i in range(1, 11)], width=5).grid(row=2, column=1, sticky="w", padx=4)
+        ttk.Label(f, text="한 개 길이(초, 최대 180)").grid(row=2, column=2, sticky="e")
+        len_v = tk.StringVar(value="45" if music else "58")
+        ttk.Combobox(f, textvariable=len_v, values=["15", "30", "45", "58", "90", "120", "180"], width=6).grid(row=2, column=3, sticky="w", padx=4)
+        ttk.Label(f, text="시작 위치").grid(row=3, column=0, sticky="e")
+        start_v = tk.StringVar(value="자동(골고루)")
+        ttk.Combobox(f, textvariable=start_v, values=["자동(골고루)", "0:00", "1:00", "5:00", "10:00"], width=12).grid(row=3, column=1, sticky="w", padx=4)
+        ttk.Label(f, text="(직접 입력: 분:초 - 개수가 여러 개면 그 지점부터 이어서)", foreground="gray").grid(row=3, column=2, columnspan=3, sticky="w")
+        ttk.Label(f, text="화면 배치").grid(row=4, column=0, sticky="e", pady=6)
+        mode_v = tk.StringVar(value="가운데 맞춤 + 흐린 배경")
+        ttk.Combobox(f, textvariable=mode_v, values=["가운데 맞춤 + 흐린 배경", "꽉 채우기(양옆 잘라냄)"], width=22, state="readonly").grid(row=4, column=1, columnspan=2, sticky="w", padx=4)
+        ttk.Label(f, text="위 제목").grid(row=5, column=0, sticky="e")
+        top_v = tk.StringVar(value=title)
+        ttk.Entry(f, textvariable=top_v, width=50).grid(row=5, column=1, columnspan=3, sticky="w", padx=4, pady=4)
+        ttk.Label(f, text="아래 문구").grid(row=6, column=0, sticky="e")
+        bot_v = tk.StringVar(value=("▶ 1시간 풀버전은 '관련 동영상'에서" if music else "▶ 전체 이야기는 '관련 동영상'에서"))
+        ttk.Entry(f, textvariable=bot_v, width=50).grid(row=6, column=1, columnspan=3, sticky="w", padx=4)
+        num_v = tk.BooleanVar(value=True)
+        ttk.Checkbutton(f, text="여러 개면 제목 뒤에 (1), (2)… 붙이기", variable=num_v).grid(row=7, column=1, columnspan=3, sticky="w", pady=4)
+        ttk.Label(f, text="쇼츠를 올릴 때 '관련 동영상'에 롱폼 원본을 연결하면 쇼츠 시청자가 롱폼으로 넘어와요.",
+                  foreground="#555").grid(row=8, column=0, columnspan=5, sticky="w", pady=(8, 0))
+
+        def parse_t(x):
+            m_ = re.match(r"^\s*(?:(\d+):)?(\d+):(\d+(?:\.\d+)?)\s*$", x) or re.match(r"^\s*()(\d+)()\s*$", x)
+            if not m_:
+                return None
+            hh = int(m_.group(1) or 0)
+            mm = int(m_.group(2) or 0)
+            ss = float(m_.group(3) or 0)
+            return hh * 3600 + mm * 60 + ss
+
+        def make():
+            p_ = src_v.get().strip()
+            if not (p_ and os.path.exists(p_)):
+                messagebox.showinfo("쇼츠", "롱폼 영상 파일을 고르세요.", parent=win)
+                return
+            load_info()
+            total = dur["sec"]
+            try:
+                n = max(1, min(10, int(cnt_v.get())))
+                ln = max(5.0, min(180.0, float(len_v.get())))
+            except ValueError:
+                messagebox.showinfo("쇼츠", "개수와 길이는 숫자로 넣어 주세요.", parent=win)
+                return
+            ln = min(ln, max(5.0, total - 1))
+            st = parse_t(start_v.get()) if not start_v.get().startswith("자동") else None
+            if st is None:   # 골고루: 앞 3%·끝 부분은 피함
+                a, b = total * 0.03, max(total * 0.03, total - ln - 2)
+                starts = [a + (b - a) * (i + 0.5) / n for i in range(n)] if n > 1 else [min(b, max(a, total * 0.15))]
+            else:
+                starts = [min(max(0, total - ln), st + i * ln) for i in range(n)]
+            jobs = []
+            base = os.path.splitext(p_)[0]
+            for i, st_ in enumerate(starts):
+                ttl = top_v.get().strip() + (f" ({i + 1})" if n > 1 and num_v.get() else "")
+                jobs.append((st_, base + f"_쇼츠{i + 1}.mp4", ttl))
+            bottom, mode = bot_v.get(), mode_v.get()
+
+            def job():
+                for k, (st_, out, ttl) in enumerate(jobs):
+                    self.q.put(lambda k=k: self.set_status(f"✂ 쇼츠 {k + 1}/{len(jobs)} 만드는 중..."))
+                    cut_short(p_, out, st_, ln, ttl, bottom, s, mode)
+                with open(base + "_쇼츠_업로드문구.txt", "w", encoding="utf-8") as fw:
+                    for st_, out, ttl in jobs:
+                        fw.write(f"[{os.path.basename(out)}]  (원본 {hms(st_)}부터)\n제목: {ttl} #shorts\n"
+                                 f"설명: {ttl}\n{bottom}\n#shorts\n\n")
+                return jobs
+
+            def done(js):
+                self.write_log(f"✂ 쇼츠 {len(js)}개 완성: " + ", ".join(os.path.basename(o) for _, o, _ in js) + " (+ _쇼츠_업로드문구.txt)")
+                self.set_status(f"✂ 쇼츠 {len(js)}개 완성 → 원본과 같은 폴더")
+            self.run_bg("쇼츠 만드는 중...", job, done)
+        bb = ttk.Frame(f)
+        bb.grid(row=9, column=0, columnspan=5, sticky="we", pady=(14, 0))
+        ttk.Button(bb, text="✂ 쇼츠 만들기", command=make).pack(side="left")
+        ttk.Button(bb, text="닫기", command=win.destroy).pack(side="right")
+        load_info()
 
     def longform(self):
         """📺 롱폼: 챕터 N개를 AI로 만들어 하나의 대본으로 묶음 (가로 화면·나레이션 권장)"""
