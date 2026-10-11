@@ -2526,7 +2526,8 @@ class SubtitleRenderer:
         self.card = None
         if self.intro > 0:
             ft = load_font(s["title_font_path"] or s["font_path"], int(s["title_size"] * 1.15))
-            self.card = build_card([title.strip()], ft, s["title_color"], s, H * 0.46)
+            sz = int(s["title_size"] * 1.15)
+            self.card = build_card([title.strip()], ft, s["title_color"], dict(s, shadow="on", stroke_width=max(6, sz // 11)), H * 0.46)
         self.outro = s["outro_sec"] if s["outro_text"].strip() else 0
         fo = load_font(s["font_path"], int(s["font_size"] * 0.85))
         self.outro_layer = build_card([s["outro_text"].strip()], fo, s["accent_color"], s, H * 0.72) if self.outro > 0 else None
@@ -2798,6 +2799,20 @@ class SubtitleRenderer:
         sg["chunks"] = merged or [sg["text"]]
         return sg["chunks"]
 
+    def _intro_bg(self, t):
+        if getattr(self, "_intro_arr", None) is None:
+            im = self.images[self.shots[0]["img"]][0].convert("RGB")
+            k = max(W / im.width, H / im.height) * 1.1
+            big = im.resize((int(im.width * k) + 1, int(im.height * k) + 1), Image.LANCZOS)
+            self._intro_big = big
+            self._intro_arr = True
+        big = self._intro_big
+        z = 1 + 0.04 * min(1.0, t / max(0.1, self.intro))
+        cw, ch = W * 1.1 / z, H * 1.1 / z
+        l, tp = (big.width - cw) / 2, (big.height - ch) / 2
+        fr = big.transform((W, H), Image.EXTENT, (l, tp, l + cw, tp + ch), Image.BILINEAR)
+        return np.asarray(fr).astype(np.float32) * 0.5
+
     def _animate_sub(self, lay, age):
         """자막 등장 효과: 팝(살짝 크게 나타났다 제자리) / 올라옴 / 페이드"""
         kind = str(self.s.get("sub_anim", "팝"))
@@ -2842,9 +2857,12 @@ class SubtitleRenderer:
         else:
             bg = Image.fromarray(np.clip(self.bg.frame(t), 0, 255).astype(np.uint8)).convert("RGBA")
         if self.card is not None and t < self.intro:
-            k = smoothstep(t / 0.5) * smoothstep((self.intro - t) / 0.5)
+            k = smoothstep((self.intro - t) / 0.5)        # 첫 프레임부터 제목이 보이게 (끝에서만 사라짐)
             a = (self.card[1] * k)[..., None]
-            arr = np.asarray(bg).astype(np.float32)[..., :3]
+            if self.images and self.shots:                # 제목 뒤에 첫 사진을 어둡게 깔기 (빈 배경 대신)
+                arr = self._intro_bg(t)
+            else:
+                arr = np.asarray(bg).astype(np.float32)[..., :3]
             out = arr + (self.card[0] - arr) * a
             return Image.fromarray(np.clip(out, 0, 255).astype(np.uint8))
         sg = self.seg_at(t)
