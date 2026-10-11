@@ -175,7 +175,8 @@ FIELDS = [
     ("자막형", "sub_max_chars", "자막 한 번에 글자 수", "int", 28),
     ("자막형", "img_motion", "사진 움직임", "choice:영상처럼(확대·이동·전환),천천히 확대만,없음", "영상처럼(확대·이동·전환)"),
     ("자막형", "shot_sec", "한 장면 최대 길이(초)", "float", 4.5),
-    ("자막형", "img_bg", "뒤 배경을 사진 흐림으로", "choice:on,off", "on"),
+    ("자막형", "img_fill", "사진 배치", "choice:전체 화면(글자가 사진 위에),가운데 상자", "전체 화면(글자가 사진 위에)"),
+    ("자막형", "img_bg", "상자 모드: 뒤 배경을 사진 흐림으로", "choice:on,off", "on"),
     ("자막형", "photo_count", "사진 장 수(0=자동: 문단 수에 맞춤)", "int", 0),
     ("자막형", "img_radius", "사진 모서리 둥글기", "int", 28),
     ("자막형", "sec_per_char", "나레이션 없을 때 글자당 초", "float", 0.12),
@@ -2016,7 +2017,12 @@ class SubtitleRenderer:
         # 레이아웃
         self.port = H > W
         m = int(W * 0.045)
-        if self.port:
+        self.full = str(s.get("img_fill", "전체")).startswith("전체")
+        if self.full:   # 사진이 화면 전체, 글자는 사진 위에 바로
+            self.img_box = (0, 0, W, H)
+            self.head_box = (m, int(H * 0.07), W - m, int(H * 0.24))
+            self.sub_box = (m, int(H * 0.72), W - m, int(H * 0.92)) if self.port else (m, int(H * 0.78), W - m, int(H * 0.96))
+        elif self.port:
             self.head_box = (m, int(H * 0.06), W - m, int(H * 0.23))
             self.img_box = (m, int(H * 0.25), W - m, int(H * 0.74))
             self.sub_box = (m, int(H * 0.76), W - m, int(H * 0.93))
@@ -2168,10 +2174,12 @@ class SubtitleRenderer:
             im = self.images[idx][0].convert("RGB")
             sc = max(bw / im.width, bh / im.height) * 1.32
             big = im.resize((max(bw, int(im.width * sc) + 1), max(bh, int(im.height * sc) + 1)), Image.LANCZOS)
-            mask = Image.new("L", (bw, bh), 0)
-            ImageDraw.Draw(mask).rounded_rectangle([0, 0, bw - 1, bh - 1], radius=int(self.s["img_radius"]), fill=255)
+            mask = None
+            if not self.full:
+                mask = Image.new("L", (bw, bh), 0)
+                ImageDraw.Draw(mask).rounded_rectangle([0, 0, bw - 1, bh - 1], radius=int(self.s["img_radius"]), fill=255)
             blur = None
-            if self.s.get("img_bg", "on") == "on":
+            if self.s.get("img_bg", "on") == "on" and not self.full:
                 k = max(W / im.width, H / im.height)
                 small = im.resize((max(1, int(im.width * k / 8)) + 1, max(1, int(im.height * k / 8)) + 1), Image.BILINEAR)
                 small = small.filter(ImageFilter.GaussianBlur(4))
@@ -2215,7 +2223,7 @@ class SubtitleRenderer:
         fade = 0.35
         prev = self.shots[k - 1] if k > 0 and t - sh["t0"] < fade else None
         a = smoothstep((t - sh["t0"]) / fade) if prev is not None else 1.0
-        if self.s.get("img_bg", "on") == "on":
+        if self.s.get("img_bg", "on") == "on" and not self.full:
             cur_b = self._img_src(sh["img"])[2]
             if cur_b is not None:
                 if prev is not None and prev["img"] != sh["img"]:
@@ -2236,7 +2244,7 @@ class SubtitleRenderer:
 
     def _compose_pil(self, t):
         sg0 = self.seg_at(t)
-        if (t >= self.intro and self.s.get("img_bg", "on") == "on" and self.shots
+        if (t >= self.intro and (self.full or self.s.get("img_bg", "on") == "on") and self.shots
                 and sg0 is not None and sg0["img"] >= 0):
             bg = Image.new("RGBA", (W, H))     # 흐린 사진 배경이 덮으므로 테마 배경은 건너뜀
         else:
