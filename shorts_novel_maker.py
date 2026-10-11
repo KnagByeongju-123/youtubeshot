@@ -2626,12 +2626,14 @@ VOICE_KO_NAMES = {"SunHi": "선히", "InJoon": "인준", "Hyunsu": "현수", "Bo
 OPENAI_VOICES = [("alloy", "중성, 차분"), ("ash", "남성, 또렷"), ("ballad", "남성, 부드러움"), ("coral", "여성, 밝음"),
                  ("echo", "남성, 낮음"), ("fable", "중성, 이야기꾼"), ("nova", "여성, 친근"), ("onyx", "남성, 깊음"),
                  ("sage", "여성, 차분"), ("shimmer", "여성, 맑음"), ("verse", "남성, 다정")]
-GEMINI_VOICES = [("Zephyr", "밝음"), ("Puck", "경쾌"), ("Charon", "설명형"), ("Kore", "단단함"), ("Fenrir", "들뜸"), ("Leda", "젊음"),
-                 ("Orus", "단호"), ("Aoede", "산뜻"), ("Callirrhoe", "편안"), ("Autonoe", "밝음"), ("Enceladus", "숨소리"),
-                 ("Iapetus", "또렷"), ("Umbriel", "편안"), ("Algieba", "부드러움"), ("Despina", "부드러움"), ("Erinome", "또렷"),
-                 ("Algenib", "거친 목소리"), ("Rasalgethi", "설명형"), ("Laomedeia", "경쾌"), ("Achernar", "부드러움"),
-                 ("Alnilam", "단단함"), ("Schedar", "고름"), ("Gacrux", "성숙"), ("Pulcherrima", "적극적"), ("Achird", "친근"),
-                 ("Zubenelgenubi", "캐주얼"), ("Vindemiatrix", "온화"), ("Sadachbia", "활기"), ("Sadaltager", "박식"), ("Sulafat", "따뜻")]
+GEMINI_VOICES = [("Zephyr", "여성, 밝음"), ("Puck", "남성, 경쾌"), ("Charon", "남성, 설명형"), ("Kore", "여성, 단단함"),
+                 ("Fenrir", "남성, 들뜸"), ("Leda", "여성, 젊음"), ("Orus", "남성, 단호"), ("Aoede", "여성, 산뜻"),
+                 ("Callirrhoe", "여성, 편안"), ("Autonoe", "여성, 밝음"), ("Enceladus", "남성, 숨소리"), ("Iapetus", "남성, 또렷"),
+                 ("Umbriel", "남성, 편안"), ("Algieba", "남성, 부드러움"), ("Despina", "여성, 부드러움"), ("Erinome", "여성, 또렷"),
+                 ("Algenib", "남성, 거친 목소리"), ("Rasalgethi", "남성, 설명형"), ("Laomedeia", "여성, 경쾌"),
+                 ("Achernar", "여성, 부드러움"), ("Alnilam", "남성, 단단함"), ("Schedar", "남성, 고름"), ("Gacrux", "여성, 성숙"),
+                 ("Pulcherrima", "여성, 적극적"), ("Achird", "남성, 친근"), ("Zubenelgenubi", "남성, 캐주얼"),
+                 ("Vindemiatrix", "여성, 온화"), ("Sadachbia", "남성, 활기"), ("Sadaltager", "남성, 박식"), ("Sulafat", "여성, 따뜻")]
 
 
 def ai_voice_list():
@@ -2847,9 +2849,7 @@ def set_tts_cfg(s):
                    gemini_tts_model=str(s.get("gemini_tts_model", "")).strip())
 
 
-AI_VOICE_MALE = {"puck", "charon", "fenrir", "orus", "enceladus", "iapetus", "umbriel", "algieba", "algenib", "rasalgethi",
-                 "alnilam", "schedar", "achird", "zubenelgenubi", "sadachbia", "sadaltager",
-                 "echo", "onyx", "ash", "ballad", "verse", "fable"}
+AI_VOICE_MALE = {v.lower() for v, d in OPENAI_VOICES + GEMINI_VOICES if d.startswith("남성")}
 _FALLBACK_SAID = set()
 
 
@@ -2861,6 +2861,10 @@ def fallback_voice(voice, text):
     if re.search(r"[぀-ヿ]", text):
         return "ja-JP-KeitaNeural" if male else "ja-JP-NanamiNeural"
     return "en-US-AndrewNeural" if male else "en-US-AriaNeural"
+
+
+_EDGE_UPGRADED = {"done": False}
+LAST_TTS = {"voice": ""}   # 마지막으로 실제 읽은 성우 (대체됐는지 확인용)
 
 
 def tts_clip(text, voice_name, rate_pct, cache_dir, pitch_hz=0):
@@ -2879,7 +2883,9 @@ def tts_clip(text, voice_name, rate_pct, cache_dir, pitch_hz=0):
         if svc not in _FALLBACK_SAID:
             _FALLBACK_SAID.add(svc)
             notify(f"⚠ {'Gemini' if svc == 'gemini' else 'ChatGPT'} 음성 오늘 한도 소진 → 무료 성우 {fb} 로 자동 전환해서 계속 만듭니다")
+        LAST_TTS["voice"] = fb
         return _tts_clip(text, fb, rate_pct, cache_dir, pitch_hz)
+    LAST_TTS["voice"] = voice
     return _tts_clip(text, voice_name, rate_pct, cache_dir, pitch_hz)
 
 
@@ -2910,10 +2916,26 @@ def _tts_clip(text, voice_name, rate_pct, cache_dir, pitch_hz=0):
         try:
             tts_edge(text, voice, rate_pct, src, pitch_hz)
         except Exception as e:
-            if os.name == "nt":
-                tts_sapi(text, rate_pct, src := os.path.join(cache_dir, key + ".wav"))
-            else:
-                raise e
+            err = e
+            if not _EDGE_UPGRADED["done"]:      # 엣지 음성 서버가 바뀌면 옛 버전이 막힘 → 한 번 업데이트 후 다시
+                _EDGE_UPGRADED["done"] = True
+                notify("엣지 음성 실패 → edge-tts 업데이트 후 다시 시도합니다")
+                pip_install("-U", "edge-tts")
+                for mod in [k for k in sys.modules if k == "edge_tts" or k.startswith("edge_tts.")]:
+                    sys.modules.pop(mod, None)
+                importlib.invalidate_caches()
+                try:
+                    tts_edge(text, voice, rate_pct, src, pitch_hz)
+                    err = None
+                except Exception as e2:
+                    err = e2
+            if err is not None:
+                if os.name == "nt":
+                    notify(f"⚠ 엣지 성우({voice}) 연결 실패 → 윈도우 내장 음성(여성)으로 대신 읽습니다: {str(err)[:80]}")
+                    tts_sapi(text, rate_pct, src := os.path.join(cache_dir, key + ".wav"))
+                    LAST_TTS["voice"] = "sapi"
+                else:
+                    raise err
     a = _decode_full(src)
     # 앞뒤 무음 다듬기 + 크기 맞추기
     thr = 0.01
@@ -3630,7 +3652,7 @@ class App(tk.Tk):
         ttk.Button(top, text="목록 새로고침(서버)", command=lambda: load(True)).pack(side="right", padx=4)
         mid = ttk.Frame(f)
         mid.pack(fill="both", expand=True, pady=6)
-        lst = tk.Listbox(mid, font=("맑은 고딕", 11), activestyle="none")
+        lst = tk.Listbox(mid, font=("맑은 고딕", 11), activestyle="none", exportselection=False)
         sb = ttk.Scrollbar(mid, orient="vertical", command=lst.yview)
         lst.config(yscrollcommand=sb.set)
         lst.pack(side="left", fill="both", expand=True)
@@ -3728,7 +3750,13 @@ class App(tk.Tk):
                     a, d = tts_clip(text, name, rate, cache, pitch)
                     p = os.path.join(tempfile.gettempdir(), "shorts_voice_sample.wav")
                     write_wav(p, np.stack([a, a], 1))
-                    self.q.put(lambda: (status.config(text=f"재생 중 ({d:.1f}초)"), play_wav(p)))
+                    real = LAST_TTS["voice"]
+                    msg = f"재생 중 ({d:.1f}초)"
+                    if real == "sapi" and code != "sapi":
+                        msg = "⚠ 엣지 성우 연결 실패 → 윈도우 내장 음성(여성)으로 대신 들려줌 (작업 기록 확인)"
+                    elif real != code:
+                        msg = f"⚠ {'Gemini' if code.startswith('gemini') else 'ChatGPT'} 오늘 한도 소진 → 대신 {real} 로 들려줌"
+                    self.q.put(lambda msg=msg: (status.config(text=msg), play_wav(p)))
                 except Exception as e:
                     short = getattr(e, "short", str(e).splitlines()[0] if str(e) else "실패")
                     self.q.put(lambda e=e, short=short: (status.config(text="❌ " + short[:40] + ("…" if len(short) > 40 else "")),
