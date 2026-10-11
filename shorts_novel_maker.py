@@ -217,7 +217,7 @@ FIELDS = [
     ("AI 엔진", "openai_model", "ChatGPT 모델", "str", "gpt-4o-mini"),
     ("AI 엔진", "gemini_key", "Gemini API 키", "secret", ""),
     ("AI 엔진", "gemini_model", "Gemini 모델", "str", "gemini-2.5-flash"),
-    ("AI 엔진", "fiction_image", "사실이 아닌 주제 이미지", "choice:웹 사진(Claude 검색),ChatGPT 그림 생성,둘 다(그림+웹 사진)", "웹 사진(Claude 검색)"),
+    ("AI 엔진", "fiction_image", "허구·만화: 대본 쓸 때 이미지 자동", "choice:안 함(그림 프롬프트로 직접),분위기 웹 사진 찾기,ChatGPT 그림 생성(API),둘 다(그림+웹 사진)", "안 함(그림 프롬프트로 직접)"),
     ("AI 엔진", "image_model", "ChatGPT 그림 모델", "str", "gpt-image-2"),
     ("AI 엔진", "image_quality", "그림 품질(low=약 7원, medium=약 55원/장)", "choice:low,medium,high", "medium"),
     ("AI 엔진", "image_style", "그림 스타일", "str", "영화 장면 같은 사실적인 사진, 분위기 있는 조명"),
@@ -3931,7 +3931,7 @@ class App(tk.Tk):
         return best
 
     def project_dict(self):
-        return {"ver": 6, "model": self.model_var.get(), "category": self.cat_var.get(), "topic": self.topic_var.get(), "genre": self.genre_var.get(),
+        return {"ver": 7, "model": self.model_var.get(), "category": self.cat_var.get(), "topic": self.topic_var.get(), "genre": self.genre_var.get(),
                 "sources": getattr(self, "sources", []), "notes": getattr(self, "notes", ""),
                 "song": getattr(self, "song", None), "melody": getattr(self, "melody", ""), "bpm": getattr(self, "bpm", 90),
                 "artwork": getattr(self, "artwork", None),
@@ -3987,6 +3987,10 @@ class App(tk.Tk):
         s.update(c.get("settings", {}))
         if c.get("settings") and c.get("ver", 1) < 2 and int(float(s.get("fps", 30))) == 30:
             s["fps"] = 60  # 부드러운 스크롤 기본값으로 올림
+        if c.get("settings") and c.get("ver", 1) < 7:   # 허구 분위기 사진 자동 찾기는 옵션으로
+            fi = str(s.get("fiction_image", ""))
+            s["fiction_image"] = ("ChatGPT 그림 생성(API)" if fi.startswith("ChatGPT") else fi if fi.startswith("둘 다")
+                                  else DEFAULTS["fiction_image"])
         if c.get("settings") and c.get("ver", 1) < 6:   # 자막형도 '글자' 탭 색을 따르게
             if s.get("head_style") == "흰색+하늘색":
                 s["head_style"] = "글자 탭 제목색"
@@ -4097,7 +4101,7 @@ class App(tk.Tk):
         self.research_var = tk.BooleanVar(value=True)
         ttk.Checkbutton(r1, text="🔎 웹 검색으로 조사", variable=self.research_var).pack(side="left", padx=4)
         self.autophoto_var = tk.BooleanVar(value=True)
-        ttk.Checkbutton(r1, text="사진 자동(사실·자막형)", variable=self.autophoto_var).pack(side="left", padx=4)
+        ttk.Checkbutton(r1, text="근거 사진 자동(사실일 때)", variable=self.autophoto_var).pack(side="left", padx=4)
         ttk.Button(r1, text="참고자료 붙여넣기", command=self.edit_reference).pack(side="left", padx=4)
         self.ref_label = ttk.Label(r1, text="", foreground="gray")
         self.ref_label.pack(side="left")
@@ -4952,7 +4956,8 @@ class App(tk.Tk):
             if category == ART_CATEGORY and details and not _artist_recent(artwork):
                 photos = photos[:1] + crop_details(photos[0]["path"], details, media_dir, log) + photos[1:]
             story = place_photos(story, photos)
-        elif not factual and autophoto and "ChatGPT" in str((SCRIPT_ENGINE.get("s") or {}).get("fiction_image", "")):
+        elif not factual and autophoto and "ChatGPT" in str((SCRIPT_ENGINE.get("s") or {}).get("fiction_image", "")) \
+                or not factual and autophoto and str((SCRIPT_ENGINE.get("s") or {}).get("fiction_image", "")).startswith("둘 다"):
             s_ = SCRIPT_ENGINE.get("s") or {}
             n_ph = photo_target(story, sec)
             try:
@@ -4971,7 +4976,8 @@ class App(tk.Tk):
             except Exception as e:
                 log("  그림 만들기 실패: " + str(e).splitlines()[0][:120])
             story = strip_placeholders(story)
-        elif (factual or PHOTO_PLAN.get("sub")) and autophoto and not (category == ART_CATEGORY and _artist_recent(artwork)):
+        elif autophoto and (factual or str((SCRIPT_ENGINE.get("s") or {}).get("fiction_image", "")).startswith("분위기")) \
+                and not (category == ART_CATEGORY and _artist_recent(artwork)):
             n_ph = photo_target(story, sec)
             log(f"🔎 {'근거 ' if factual else '분위기 '}사진 찾는 중... (목표 {n_ph}장)")
             try:
