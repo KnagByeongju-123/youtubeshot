@@ -155,12 +155,14 @@ FIELDS = [
     ("배경", "bg_blur", "이미지 흐림(px)", "int", 6),
     ("배경", "ken_burns", "이미지 천천히 확대", "choice:on,off", "on"),
     ("배경", "vignette", "가장자리 어둡게", "float", 0.45),
+    ("배경", "bg_pattern", "배경 무늬", "choice:없음,하프톤 점(웹툰),대각선 빗금,집중선(만화)", "없음"),
     ("배경", "grain", "필름 노이즈(0~1, 켜면 용량 5~8배↑)", "float", 0),
     ("효과", "fade", "위아래 흐림", "choice:on,off", "on"),
     ("효과", "focus", "읽는 줄 강조", "choice:on,off", "on"),
     ("효과", "focus_dim", "나머지 줄 밝기(0~1)", "float", 0.45),
     ("효과", "focus_y", "강조 위치(화면 비율)", "float", 0.42),
     ("효과", "progress_bar", "진행바", "choice:on,off", "on"),
+    ("효과", "reveal_fx", "반전 순간 화면 효과(펀치 줌·흔들림·플래시)", "choice:on,off", "on"),
     ("효과", "ease", "부드러운 시작/끝", "choice:on,off", "on"),
     ("효과", "intro_sec", "제목 카드(초, 0=없음)", "float", 1.8),
     ("효과", "outro_sec", "마무리 문구(초, 0=없음)", "float", 2.5),
@@ -168,11 +170,14 @@ FIELDS = [
     ("효과", "safe_guide", "미리보기에 안전영역 표시", "choice:on,off", "off"),
     ("영상", "format", "화면 형식", "choice:" + ",".join(FORMATS), "쇼츠 세로(1080×1920)"),
     ("영상", "layout", "표현 방식", "choice:스크롤형(글이 흐름),자막형(큰 제목+사진+자막)", "스크롤형(글이 흐름)"),
-    ("자막형", "head_style", "제목 색", "choice:글자 탭 제목색,글자 탭 제목색+강조색,노란색,흰색+하늘색,흰색,강조색", "글자 탭 제목색"),
+    ("자막형", "head_style", "제목 색", "choice:글자 탭 제목색,글자 탭 제목색+강조색,웹툰(흰+검정 이중 테두리),노란색,흰색+하늘색,흰색,강조색", "글자 탭 제목색"),
     ("자막형", "head_size", "제목 크기", "int", 96),
     ("자막형", "sub_size", "자막 크기", "int", 64),
     ("자막형", "sub_font_path", "자막 글꼴(비우면 제목 글꼴)", "font", ""),
-    ("자막형", "sub_style", "자막 스타일", "choice:글자 탭 글자색+검은테두리,글자 탭 글자색+검은띠,흰글자+검은테두리,노란글자+검은테두리,검은띠 위 흰글자", "글자 탭 글자색+검은테두리"),
+    ("자막형", "sub_style", "자막 스타일", "choice:글자 탭 글자색+검은테두리,글자 탭 글자색+검은띠,말풍선(웹툰),흰글자+검은테두리,노란글자+검은테두리,검은띠 위 흰글자", "글자 탭 글자색+검은테두리"),
+    ("자막형", "sub_anim", "자막 등장 효과", "choice:팝(튀어나옴),올라옴,페이드,없음", "팝(튀어나옴)"),
+    ("자막형", "punch_in", "장면 시작 펀치 줌", "choice:on,off", "on"),
+    ("자막형", "img_frame", "사진 테두리(상자 모드)", "choice:없음,만화 테두리(검정),흰 테두리", "없음"),
     ("자막형", "sub_max_chars", "자막 한 번에 글자 수", "int", 28),
     ("자막형", "img_motion", "사진 움직임", "choice:영상처럼(확대·이동·전환),천천히 확대만,없음", "영상처럼(확대·이동·전환)"),
     ("자막형", "shot_sec", "한 장면 최대 길이(초)", "float", 4.5),
@@ -238,7 +243,16 @@ THEMES = {
                   title_color="#00E5FF", accent_color="#FF2BD6", vignette=0.5, grain=0),
     "로맨스 핑크": dict(bg_mode="그라데이션", bg_color="#2A0F1E", bg_color2="#4A1A35", text_color="#FFF0F5",
                     title_color="#FF8FB1", accent_color="#FFB3C6", vignette=0.4, grain=0),
+    "웹툰": dict(bg_mode="그라데이션", bg_color="#FFFDF5", bg_color2="#FFF1C9", text_color="#111111",
+               title_color="#FFD600", accent_color="#FF4D6D", vignette=0, grain=0, shadow="off", stroke_width=0,
+               bg_pattern="하프톤 점(웹툰)", head_style="웹툰(흰+검정 이중 테두리)", sub_style="말풍선(웹툰)",
+               img_frame="만화 테두리(검정)", sub_anim="팝(튀어나옴)", img_bg="off"),
+    "웹툰 다크": dict(bg_mode="그라데이션", bg_color="#1B1B2A", bg_color2="#2C2C44", text_color="#FFFFFF",
+                  title_color="#FFD600", accent_color="#FF4D6D", vignette=0.3, grain=0, shadow="off", stroke_width=0,
+                  bg_pattern="집중선(만화)", head_style="웹툰(흰+검정 이중 테두리)", sub_style="말풍선(웹툰)",
+                  img_frame="흰 테두리", sub_anim="팝(튀어나옴)"),
 }
+THEME_RESET = ("bg_pattern", "head_style", "sub_style", "img_frame", "shadow", "stroke_width", "img_bg")   # 테마에 없으면 기본값으로
 
 SAMPLE_TITLE = "마지막 버스"
 SAMPLE_STORY = """밤 11시 58분, 정류장에는 나 혼자였다.
@@ -260,7 +274,7 @@ GENRES = {
     "공포 괴담": ("실화처럼 1인칭으로, 장소·시간을 구체적으로. 조용히 이상한 점이 쌓이다가 마지막 줄에서 오싹하게 끝낸다. 잔인한 묘사는 하지 않는다.", "공포 레드"),
     "설렘 로맨스": ("짧은 순간의 설렘, 짝사랑, 오래된 인연. 대사 위주로 가볍게, 마지막에 심쿵 포인트.", "로맨스 핑크"),
     "미스터리 추리": ("작은 단서들을 앞에 흘리고, 마지막에 '그래서 그랬구나' 하고 맞춰지는 구조.", "시네마 다크"),
-    "웃긴 일상썰": ("회사, 학교, 가족 사이의 황당한 실수나 오해. 짧은 문장으로 빠르게 치고 빠지는 웃음, 마지막에 한 번 더 빵 터뜨린다.", "종이 노트"),
+    "웃긴 일상썰": ("회사, 학교, 가족 사이의 황당한 실수나 오해. 짧은 문장으로 빠르게 치고 빠지는 웃음, 마지막에 한 번 더 빵 터뜨린다.", "웹툰"),
     "직장 썰": ("회사 생활의 공감 가는 상황(신입, 팀장, 회식, 퇴사)에서 생긴 반전이나 사이다.", "네온 시티"),
 }
 
@@ -1799,6 +1813,53 @@ def build_card(lines, font, color, s, y_center):
     return arr[..., :3].astype(np.float32), arr[..., 3].astype(np.float32) / 255.0
 
 
+_PATTERN_CACHE = {}
+
+
+def pattern_mask(kind, w, h):
+    """배경 무늬 밝기 곱(0.85~1). 하프톤 점·빗금·집중선"""
+    key = (kind, w, h)
+    if key in _PATTERN_CACHE:
+        return _PATTERN_CACHE[key]
+    yy, xx = np.mgrid[0:h, 0:w].astype(np.float32)
+    m = np.ones((h, w), np.float32)
+    if kind.startswith("하프톤"):
+        sp = 26.0
+        gx, gy = (xx % sp) - sp / 2, (yy % sp) - sp / 2
+        # 아래로 갈수록 점이 커지는 하프톤
+        r = 2.0 + 4.0 * (yy / h)
+        d = np.sqrt(gx ** 2 + gy ** 2)
+        m = 1 - 0.13 * np.clip(r - d + 0.5, 0, 1)
+    elif kind.startswith("대각선"):
+        m = 1 - 0.07 * (((xx + yy) % 18) < 2)
+    elif kind.startswith("집중선"):
+        ang = np.arctan2(yy - h / 2, xx - w / 2)
+        rad = np.sqrt((xx - w / 2) ** 2 + (yy - h / 2) ** 2) / (0.5 * np.hypot(w, h))
+        lines = (np.sin(ang * 90) > 0.93).astype(np.float32)
+        m = 1 - 0.22 * lines * np.clip((rad - 0.35) / 0.5, 0, 1)
+    _PATTERN_CACHE[key] = m.astype(np.float32)
+    return _PATTERN_CACHE[key]
+
+
+def reveal_punch(img, age, rng_seed=3):
+    """반전 순간(0~0.5초): 펀치 줌 + 흔들림 + 짧은 흰 플래시. img: PIL RGB"""
+    if age < 0 or age > 0.5:
+        return img
+    w, h = img.size
+    k = 1 - smoothstep(age / 0.45)
+    z = 1 + 0.08 * k
+    rng = np.random.default_rng(rng_seed + int(age * 60))
+    sh = 14 * k
+    dx, dy = rng.uniform(-sh, sh), rng.uniform(-sh, sh)
+    cw, ch = w / z, h / z
+    l, tp = (w - cw) / 2 + dx, (h - ch) / 2 + dy
+    out = img.transform((w, h), Image.EXTENT, (l, tp, l + cw, tp + ch), Image.BILINEAR)
+    if age < 0.14:
+        a = 0.55 * (1 - age / 0.14)
+        out = Image.blend(out, Image.new("RGB", (w, h), (255, 255, 255)), a)
+    return out
+
+
 class Background:
     def __init__(self, s, duration):
         self.s, self.duration = s, duration
@@ -1823,6 +1884,10 @@ class Background:
             self.static = np.broadcast_to(c1 + (c2 - c1) * t, (H, W, 3)).copy()
         else:
             self.static = np.full((H, W, 3), hex_rgb(s["bg_color"]), np.float32)
+        # 배경 무늬 (웹툰 하프톤 / 빗금 / 집중선)
+        pat = str(s.get("bg_pattern", "없음"))
+        if self.static is not None and pat != "없음":
+            self.static = self.static * pattern_mask(pat, W, H)[..., None]
         # 비네트
         v = min(max(s["vignette"], 0), 1)
         if v > 0:
@@ -2162,14 +2227,19 @@ class Renderer:
                 out[0:bh, full] = (out[0:bh, full] * (1 - fr) + self.accent * fr).astype(np.uint8)
         return out
 
+    def _fx(self, arr, t):
+        if self.s.get("reveal_fx", "on") == "on" and self.reveal_t and 0 <= t - self.reveal_t <= 0.5:
+            return np.asarray(reveal_punch(Image.fromarray(arr), t - self.reveal_t)).copy()
+        return arr
+
     def frame(self, t):
-        return self._compose(t, self.L)
+        return self._fx(self._compose(t, self.L), t)
 
     def frame_preview(self, t):
         """미리보기용 작은 화면 (360×640) - 빨라서 재생이 부드러움"""
         if self._small is None:
             self._small = self._make_small()
-        return self._compose(t, self._small)
+        return self._fx(self._compose(t, self._small), t)
 
     def thumbnail(self):
         """제목 카드(있으면) 또는 첫 장면"""
@@ -2297,7 +2367,9 @@ class SubtitleRenderer:
         st = s["head_style"]
         sw, shadow = self._stroke(size), s.get("shadow", "on") == "on"
         for i, ln in enumerate(lines):
-            if st.startswith("글자 탭"):
+            if st.startswith("웹툰"):
+                col = s["title_color"]
+            elif st.startswith("글자 탭"):
                 col = s["accent_color"] if ("강조색" in st and i > 0) else s["title_color"]
             elif st == "노란색":
                 col = "#FFE135"
@@ -2308,6 +2380,12 @@ class SubtitleRenderer:
             else:
                 col = "#FFFFFF"
             x = x0 + ((x1 - x0) - font.getlength(ln)) / 2
+            if st.startswith("웹툰"):   # 검정 바깥 테두리 + 흰 안쪽 테두리 (만화 제목 느낌)
+                d.text((x + 4, y + 6), ln, font=font, fill=(0, 0, 0, 120), stroke_width=sw + 8, stroke_fill=(0, 0, 0, 120))
+                d.text((x, y), ln, font=font, fill="#000000", stroke_width=sw + 8, stroke_fill="#000000")
+                d.text((x, y), ln, font=font, fill=col, stroke_width=sw, stroke_fill="#FFFFFF")
+                y += lh
+                continue
             if shadow:
                 d.text((x + size // 18, y + size // 14), ln, font=font, fill=(0, 0, 0, 150), stroke_width=sw, stroke_fill=(0, 0, 0, 150))
             d.text((x, y), ln, font=font, fill=col, stroke_width=sw, stroke_fill="#000000")
@@ -2338,7 +2416,17 @@ class SubtitleRenderer:
         y = y1 - lh * len(lines)
         st = s["sub_style"]
         band = "검은띠" in st
-        if st.startswith("글자 탭"):
+        bubble = st.startswith("말풍선")
+        if bubble:
+            col = "#111111"
+            tw = max(font.getlength(ln) for ln in lines)
+            bx0, bx1 = (x0 + x1) / 2 - tw / 2 - 34, (x0 + x1) / 2 + tw / 2 + 34
+            by0, by1 = y - 22, y1 + 14
+            d.rounded_rectangle([bx0, by0, bx1, by1], radius=30, fill="#FFFFFF", outline="#111111", width=6)
+            tip = ((x0 + x1) / 2 - 70, by0 + 2)   # 위쪽(사진 쪽)으로 향하는 꼬리
+            d.polygon([(tip[0], tip[1]), (tip[0] + 44, tip[1]), (tip[0] + 10, tip[1] - 34)], fill="#FFFFFF", outline="#111111")
+            d.line([(tip[0] + 2, tip[1] + 3), (tip[0] + 40, tip[1] + 3)], fill="#FFFFFF", width=8)
+        elif st.startswith("글자 탭"):
             col = s["text_color"]
             if s.get("quote_color", "on") == "on" and text.strip()[:1] in "\"“'‘「":
                 col = s["accent_color"]     # 따옴표 대사는 강조색
@@ -2346,8 +2434,8 @@ class SubtitleRenderer:
             col = "#FFE135" if st.startswith("노란") else "#FFFFFF"
         if band:
             d.rounded_rectangle([x0 - 10, y - 14, x1 + 10, y1 + 6], radius=16, fill=(0, 0, 0, 185))
-        sw = 0 if band else self._stroke(size)
-        shadow = s.get("shadow", "on") == "on" and not band
+        sw = 0 if (band or bubble) else self._stroke(size)
+        shadow = s.get("shadow", "on") == "on" and not (band or bubble)
         for ln in lines:
             x = x0 + ((x1 - x0) - font.getlength(ln)) / 2
             if shadow:
@@ -2451,6 +2539,8 @@ class SubtitleRenderer:
         p = min(1.0, max(0.0, (t - sh["t0"]) / max(0.1, sh["t1"] - sh["t0"])))
         p = 0.5 - 0.5 * np.cos(np.pi * p)             # 부드럽게 시작·끝
         z = z0 + (z1 - z0) * p
+        if self.s.get("punch_in", "on") == "on" and str(self.s.get("img_motion", "영상")).startswith("영상"):
+            z *= 1 + 0.05 * (1 - smoothstep((t - sh["t0"]) / 0.3))     # 장면 시작에 살짝 펀치 줌
         base = 1.32
         cw, ch = bw * base / z, bh * base / z         # big 안에서 잘라낼 크기
         cw, ch = min(cw, big.width), min(ch, big.height)
@@ -2487,7 +2577,43 @@ class SubtitleRenderer:
             pc, _ = self._shot_crop(prev, t)
             crop = Image.blend(pc, crop, float(a))
         canvas.paste(crop, (self.img_box[0], self.img_box[1]), mask)
+        fr = str(self.s.get("img_frame", "없음"))
+        if not self.full and fr != "없음":
+            d = ImageDraw.Draw(canvas)
+            col = (17, 17, 17, 255) if "검정" in fr else (255, 255, 255, 255)
+            x0, y0, x1, y1 = self.img_box
+            d.rounded_rectangle([x0 - 4, y0 - 4, x1 + 4, y1 + 4], radius=int(self.s["img_radius"]) + 4, outline=col, width=10)
         return canvas
+
+    def _animate_sub(self, lay, age):
+        """자막 등장 효과: 팝(살짝 크게 나타났다 제자리) / 올라옴 / 페이드"""
+        kind = str(self.s.get("sub_anim", "팝"))
+        dur = 0.22
+        if kind.startswith("없음") or age >= dur or age < 0:
+            return lay
+        p = smoothstep(age / dur)
+        bbox = lay.getbbox()
+        if not bbox:
+            return lay
+        x0, y0, x1, y1 = bbox
+        part = lay.crop(bbox)
+        out = Image.new("RGBA", lay.size, (0, 0, 0, 0))
+        alpha = min(1.0, age / 0.12)
+        if kind.startswith("팝"):
+            k = 1 + 0.22 * (1 - p)
+            nw, nh = max(1, int(part.width * k)), max(1, int(part.height * k))
+            part = part.resize((nw, nh), Image.BILINEAR)
+            cx, cy = (x0 + x1) // 2, (y0 + y1) // 2
+            pos = (cx - nw // 2, cy - nh // 2)
+        elif kind.startswith("올라옴"):
+            pos = (x0, y0 + int(46 * (1 - p)))
+        else:
+            pos = (x0, y0)
+        if alpha < 1:
+            a = part.getchannel("A").point(lambda v: int(v * alpha))
+            part.putalpha(a)
+        out.paste(part, pos, part)
+        return out
 
     def seg_at(self, t):
         for sg in self.segs:
@@ -2520,6 +2646,7 @@ class SubtitleRenderer:
                 lay = self._sub_layer(("ly", sg["i"]), sg.get("sub", ""), lyric=sg["text"])
             else:
                 lay = self._sub_layer(("tx", sg["i"]), sg["text"])
+            lay = self._animate_sub(lay, t - sg["t0"])
             canvas.alpha_composite(lay)
         else:
             canvas.alpha_composite(self.head_layer)
@@ -2534,11 +2661,16 @@ class SubtitleRenderer:
             d.rectangle([0, 0, int(W * min(1, t / self.duration)), 7], fill=tuple(int(v) for v in self.accent))
         return out
 
+    def _fx(self, im, t):
+        if self.s.get("reveal_fx", "on") == "on" and self.reveal_t and 0 <= t - self.reveal_t <= 0.5:
+            return reveal_punch(im, t - self.reveal_t)
+        return im
+
     def frame(self, t):
-        return np.asarray(self._compose_pil(t)).copy()
+        return np.asarray(self._fx(self._compose_pil(t), t)).copy()
 
     def frame_preview(self, t):
-        return np.asarray(self._compose_pil(t).resize((PREVIEW_W, PREVIEW_H), Image.BILINEAR)).copy()
+        return np.asarray(self._fx(self._compose_pil(t), t).resize((PREVIEW_W, PREVIEW_H), Image.BILINEAR)).copy()
 
     def thumbnail(self):
         t = self.segs[0]["t0"] + 0.2 if self.segs else 0.1
@@ -4539,7 +4671,10 @@ class App(tk.Tk):
 
     def apply_theme(self, name):
         if name in THEMES:
-            self.set_settings(THEMES[name])
+            th = dict(THEMES[name])
+            for k in THEME_RESET:
+                th.setdefault(k, DEFAULTS[k])
+            self.set_settings(th)
             self.theme_var.set(name)
             self.refresh_preview()
 
