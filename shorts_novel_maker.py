@@ -3986,14 +3986,42 @@ NARR_PROMPT_SYSTEM = """너는 유튜브 나레이션 디렉터다. AI 성우 �
 반드시 JSON만 출력: {"style_ko": "...", "style_en": "...", "script": "..."}"""
 
 
-def build_narration(story, s, cache_dir, log=None, cancel=None):
-    """본문 전체 나레이션 → [(문단 인덱스, 소리, 길이)]"""
+_PARA_AUDIO_CACHE = {}
+
+
+def load_para_audio(path):
+    """문단 하나짜리 음성 파일 → (mono float32, 길이초). 앞뒤 무음 다듬고 크기 맞춤"""
+    key = (os.path.abspath(path), os.path.getmtime(path))
+    if key in _PARA_AUDIO_CACHE:
+        a = _PARA_AUDIO_CACHE[key]
+        return a, len(a) / SR
+    a = _decode_full(path)
+    nz = np.nonzero(np.abs(a) > 0.01)[0]
+    if len(nz):
+        a = a[max(0, nz[0] - int(0.05 * SR)): nz[-1] + int(0.15 * SR)]
+    peak = float(np.abs(a).max()) if len(a) else 0
+    if peak > 0:
+        a = a * (0.7 / peak)
+    a = a.astype(np.float32)
+    if len(_PARA_AUDIO_CACHE) > 60:
+        _PARA_AUDIO_CACHE.clear()
+    _PARA_AUDIO_CACHE[key] = a
+    return a, len(a) / SR
+
+
+def build_narration(story, s, cache_dir, log=None, cancel=None, para_audio=None):
+    """본문 전체 나레이션 → [(문단 인덱스, 소리, 길이)]. para_audio={문단번호: 음성파일} 가 있으면 그 문단은 파일을 씀"""
     items = narration_paras(story)
     res = []
+    pa = para_audio or {}
     for k, (i, text) in enumerate(items):
         if cancel and cancel.is_set():
             raise RuntimeError("취소됨")
-        a, d = tts_clip(text, s["narr_voice"], float(s["narr_rate"]), cache_dir, float(s.get("narr_pitch", 0)))
+        f_ = pa.get(str(i)) or pa.get(i)
+        if f_ and os.path.exists(f_):
+            a, d = load_para_audio(f_)
+        else:
+            a, d = tts_clip(text, s["narr_voice"], float(s["narr_rate"]), cache_dir, float(s.get("narr_pitch", 0)))
         res.append((i, a, d))
         if log and (k % 5 == 0 or k == len(items) - 1):
             log(f"  🎙 나레이션 {k + 1}/{len(items)}")
@@ -5113,6 +5141,7 @@ class App(tk.Tk):
                 "length": self.len_var.get(), "judge": self.judge_var.get(), "theme": self.theme_var.get(),
                 "research": self.research_var.get(), "autophoto": self.autophoto_var.get(),
                 "reference": getattr(self, "reference", ""), "img_prompts": getattr(self, "img_prompts", []),
+                "para_audio": getattr(self, "para_audio", {}), "narr_style": getattr(self, "narr_style_cache", {}),
                 "title": self.title_var.get(), "story": self.get_story(), "settings": self.get_settings()}
 
     def save_cfg(self, show=False):
@@ -5149,6 +5178,8 @@ class App(tk.Tk):
         self.autophoto_var.set(bool(c.get("autophoto", True)))
         self.set_reference(c.get("reference", ""))
         self.img_prompts = list(c.get("img_prompts") or [])
+        self.para_audio = {str(k): v for k, v in (c.get("para_audio") or {}).items()}
+        self.narr_style_cache = dict(c.get("narr_style") or {})
         self.set_sources(c.get("sources", []), c.get("notes", ""))
         self.song, self.melody, self.bpm = c.get("song"), c.get("melody", ""), c.get("bpm", 90)
         self.artwork = c.get("artwork")
@@ -5298,6 +5329,7 @@ class App(tk.Tk):
         ttk.Button(r4, text="붙여넣기 (Ctrl+V)", command=lambda: self.on_paste(from_button=True)).pack(side="left")
         ttk.Button(r4, text="🔎 AI 근거사진 찾기", command=self.ai_photos).pack(side="left", padx=4)
         ttk.Button(r4, text="🎨 그림 프롬프트 만들기", command=self.img_prompts_make).pack(side="left")
+        ttk.Button(r4, text="📑 문단별 정리(그림·음성)", command=self.para_board).pack(side="left", padx=4)
         ttk.Label(r4, text="사진·이미지 주소·파일을 복사해서 본문에 Ctrl+V → 커서 위치에 들어감",
                   foreground="gray").pack(side="left", padx=6)
         self.story = ScrolledText(s1, height=5, wrap="word", font=("맑은 고딕", 11), undo=True)   # 창이 크면 자동으로 늘어남
@@ -5633,6 +5665,173 @@ class App(tk.Tk):
     def narr_cache_dir(self):
         return os.path.join(self.get_settings()["out_dir"], "tts_cache")
 
+    # ---- 📑 문단별 정리: 문단마다 그림·음성을 한 줄씩 ----
+    def para_board(self):
+        story = self.get_story()
+        items = narration_paras(story)
+        if not items:
+            messagebox.showinfo("문단별 정리", "먼저 대본을 만들거나 입력하세요.")
+            return
+        if not hasattr(self, "para_audio"):
+            self.para_audio = {}
+        paras = split_paras(story)
+        # 문단 번호 → 바로 앞에 있는 사진 줄
+        img_of = {}
+        idx = 0
+        for k, p_ in enumerate(paras):
+            if parse_media(p_) or PH_RE.match(p_):
+                continue
+            if k >= 1 and parse_media(paras[k - 1]):
+                img_of[idx] = parse_media(paras[k - 1])[0]
+            idx += 1
+        prompts = {x.get("text"): x for x in getattr(self, "img_prompts", [])}
+        style_en = (getattr(self, "narr_style_cache", {}) or {}).get("style_en", "")
+        script_lines = [x.strip() for x in re.split(r"\n\s*\n", (getattr(self, "narr_style_cache", {}) or {}).get("script", "")) if x.strip()]
+        win = tk.Toplevel(self)
+        win.title("📑 문단별 정리 - 문단마다 그림·음성을 따로 넣기")
+        win.geometry("1120x760")
+        top = ttk.Frame(win, padding=(10, 8))
+        top.pack(fill="x")
+        ttk.Label(top, text="그림: 📋 프롬프트 복사 → ChatGPT 그림 → 📥 붙여넣기(그 문단 앞에)      음성: 📋 지시+이 줄 복사 → AI 성우 사이트 → 📂 파일 넣기 (여러 파일을 한 번에 고르면 순서대로 들어감)",
+                  foreground="#444", wraplength=1080).pack(side="left")
+        outer = ttk.Frame(win)
+        outer.pack(fill="both", expand=True)
+        cv = tk.Canvas(outer, highlightthickness=0)
+        sb = ttk.Scrollbar(outer, orient="vertical", command=cv.yview)
+        body = ttk.Frame(cv)
+        body.bind("<Configure>", lambda e: cv.configure(scrollregion=cv.bbox("all")))
+        cv.create_window((0, 0), window=body, anchor="nw")
+        cv.configure(yscrollcommand=sb.set)
+        cv.pack(side="left", fill="both", expand=True)
+        sb.pack(side="right", fill="y")
+        win.bind("<MouseWheel>", lambda e: cv.yview_scroll(int(-e.delta / 120), "units"))
+        rows = {}
+
+        def copy(txt, what):
+            self.clipboard_clear()
+            self.clipboard_append(txt)
+            self.set_status(f"📋 {what} 복사됨")
+
+        def img_prompt_for(text):
+            x = prompts.get(text)
+            if x and x.get("prompt"):
+                return x["prompt"] + f"\n\n({ratio_ko()} 비율로, 글자·워터마크 없이 그려줘)"
+            return None
+
+        def voice_text_for(i, text):
+            line = script_lines[i] if i < len(script_lines) else tts_clean(text)
+            return (style_en + "\n\n" if style_en else "") + line
+
+        def grab_image():
+            try:
+                from PIL import ImageGrab
+                clip = ImageGrab.grabclipboard()
+                if isinstance(clip, Image.Image):
+                    return clip
+                if isinstance(clip, list):
+                    fs = [f_ for f_ in clip if str(f_).lower().endswith(IMG_EXT)]
+                    if fs:
+                        im = Image.open(fs[0])
+                        im.load()
+                        return im
+            except Exception:
+                pass
+            return None
+
+        def paste_img(i, text):
+            im = grab_image()
+            if im is None:
+                messagebox.showinfo("그림", "클립보드에 그림이 없어요. (ChatGPT 그림 → 마우스 오른쪽 → 이미지 복사)", parent=win)
+                return
+            path = save_media_image(im, self.media_dir(), time.strftime("aiimg_%Y%m%d_%H%M%S") + f"_{i}")
+            marker = make_marker(path, (prompts.get(text) or {}).get("ko") or "장면", "AI 생성 이미지")
+            if not self.insert_before_para(text, marker):
+                self.insert_marker(marker)
+            self.save_cfg()
+            refresh_row(i)
+
+        def set_audio(i, files):
+            keys = [k_ for k_, _ in items]
+            for off, f_ in enumerate(files):
+                j = i + off
+                if j < len(keys):
+                    self.para_audio[str(keys[j])] = f_
+            self.vars["narration"].set("on")
+            self.bgm_made = None
+            self.save_cfg()
+            for off in range(len(files)):
+                if i + off < len(keys):
+                    refresh_row(i + off)
+            self.refresh_preview()
+            self.set_status(f"🎙 문단 음성 {len(files)}개 넣음 → 미리보기 ▶ 재생으로 확인")
+
+        def pick_audio(i):
+            fs = filedialog.askopenfilenames(filetypes=[("음성", "*.mp3 *.wav *.m4a *.ogg *.flac")], parent=win)
+            if fs:
+                set_audio(i, list(fs))
+
+        def play_audio(i):
+            f_ = self.para_audio.get(str(items[i][0]))
+            if f_ and os.path.exists(f_):
+                try:
+                    a, _ = load_para_audio(f_)
+                    p_ = os.path.join(tempfile.gettempdir(), "shorts_para_play.wav")
+                    write_wav(p_, np.stack([a, a], 1))
+                    play_wav(p_)
+                except Exception as e:
+                    messagebox.showerror("재생", str(e), parent=win)
+
+        def clear_audio(i):
+            self.para_audio.pop(str(items[i][0]), None)
+            self.save_cfg()
+            refresh_row(i)
+            self.refresh_preview()
+
+        def refresh_row(i):
+            k_, text = items[i]
+            # 그림 상태 (본문을 다시 읽음)
+            cur = self.get_story()
+            ps = split_paras(cur)
+            has_img = False
+            try:
+                pos = ps.index(text)
+                has_img = pos >= 1 and bool(parse_media(ps[pos - 1]))
+            except ValueError:
+                pass
+            f_ = self.para_audio.get(str(k_))
+            rows[i]["img"].config(text="🖼 있음" if has_img else "🖼 없음", foreground="#080" if has_img else "#a00")
+            rows[i]["aud"].config(text=("🎙 " + os.path.basename(f_)[:22]) if f_ and os.path.exists(f_) else "🎙 없음(프로그램 성우)",
+                                  foreground="#080" if f_ and os.path.exists(f_) else "#666")
+        for i, (k_, text) in enumerate(items):
+            fr = ttk.LabelFrame(body, text=f" {i + 1} ", padding=6)
+            fr.pack(fill="x", padx=10, pady=3)
+            short = text.replace("\n", " ")
+            ttk.Label(fr, text=short[:80] + ("…" if len(short) > 80 else ""), wraplength=1000).grid(row=0, column=0, columnspan=8, sticky="w")
+            img_l = ttk.Label(fr, text="", width=10)
+            img_l.grid(row=1, column=0, sticky="w", pady=(4, 0))
+            pr = img_prompt_for(text)
+            ttk.Button(fr, text="📋 그림 프롬프트", command=(lambda pr=pr: copy(pr, "그림 프롬프트")) if pr else
+                       (lambda: (win.destroy(), self.img_prompts_make()))).grid(row=1, column=1, padx=2)
+            ttk.Button(fr, text="📥 그림 붙여넣기", command=lambda i=i, text=text: paste_img(i, text)).grid(row=1, column=2, padx=2)
+            ttk.Separator(fr, orient="vertical").grid(row=1, column=3, sticky="ns", padx=10)
+            aud_l = ttk.Label(fr, text="", width=26)
+            aud_l.grid(row=1, column=4, sticky="w")
+            ttk.Button(fr, text="📋 지시+이 줄", command=lambda i=i, text=text: copy(voice_text_for(i, text), "성우 지시+대본 한 줄")).grid(row=1, column=5, padx=2)
+            ttk.Button(fr, text="📂 음성 파일", command=lambda i=i: pick_audio(i)).grid(row=1, column=6, padx=2)
+            ttk.Button(fr, text="▶", width=3, command=lambda i=i: play_audio(i)).grid(row=1, column=7, padx=2)
+            ttk.Button(fr, text="x", width=2, command=lambda i=i: clear_audio(i)).grid(row=1, column=8)
+            rows[i] = {"img": img_l, "aud": aud_l}
+            refresh_row(i)
+        bf = ttk.Frame(win, padding=(10, 6))
+        bf.pack(fill="x")
+        n_img = sum(1 for i in range(len(items)) if "있음" in rows[i]["img"].cget("text"))
+        n_aud = sum(1 for k_, _ in items if self.para_audio.get(str(k_)))
+        ttk.Label(bf, text=f"문단 {len(items)}개 · 그림 {n_img}개 · 문단 음성 {n_aud}개" + (
+            "" if style_en else "  (성우 지시가 없어요 → '🗣 AI 성우 프롬프트'를 한 번 만들면 줄마다 지시+대본을 복사할 수 있어요)"),
+                  foreground="#555").pack(side="left")
+        ttk.Button(bf, text="닫기", command=win.destroy).pack(side="right")
+        ttk.Button(bf, text="🗣 AI 성우 프롬프트 만들기", command=lambda: (win.destroy(), self.narr_prompt())).pack(side="right", padx=6)
+
     def narr_prompt(self):
         """🗣 AI 성우 서비스용 연기 지시 + 읽기 대본 → 복사해서 성우 사이트에서 음성 받기 → 📥 파일로 넣기"""
         story = self.get_story()
@@ -5646,6 +5845,8 @@ class App(tk.Tk):
             return ask_script_json(model, NARR_PROMPT_SYSTEM, f"콘텐츠 종류: {cat} / 소재: {genre}\n[제목] {title}\n[원본 {len(lines)}줄]\n" + "\n".join(lines))
 
         def done(d):
+            self.narr_style_cache = {"style_ko": str(d.get("style_ko", "")), "style_en": str(d.get("style_en", "")), "script": str(d.get("script", ""))}
+            self.save_cfg()
             win = tk.Toplevel(self)
             win.title("🗣 AI 성우 프롬프트 - 복사 → 성우 사이트에서 음성 받기 → 📥 나레이션 파일 넣기")
             win.geometry("860x760")
@@ -5705,7 +5906,7 @@ class App(tk.Tk):
             if log:
                 log("🎙 외부 나레이션 파일을 문단별로 나누는 중: " + os.path.basename(nf))
             return split_external_narration(story, nf)
-        return build_narration(story, s, os.path.join(s["out_dir"], "tts_cache"), log, cancel)
+        return build_narration(story, s, os.path.join(s["out_dir"], "tts_cache"), log, cancel, dict(getattr(self, "para_audio", {}) or {}))
 
     def narration_cached(self, story, s):
         """이미 만들어 둔 나레이션이 전부 있으면 바로 반환, 아니면 None (미리보기용, 느린 작업 안 함)"""
@@ -5721,11 +5922,20 @@ class App(tk.Tk):
         cache = os.path.join(s["out_dir"], "tts_cache")
         voice = voice_code(s["narr_voice"])
         res = []
+        pa = getattr(self, "para_audio", {}) or {}
         for i, text in narration_paras(story):
             t = tts_clean(text)
             if not t:
                 res.append((i, np.zeros(1, np.float32), 0.0))
                 continue
+            f_ = pa.get(str(i))
+            if f_ and os.path.exists(f_):
+                try:
+                    a = load_para_audio(f_)[0]
+                    res.append((i, a, len(a) / SR))
+                    continue
+                except Exception:
+                    return None
             ai = voice.startswith(("openai:", "gemini:"))
             key = tts_key(voice, s["narr_rate"], s.get("narr_pitch", 0), (str(s.get("narr_style", "")).strip() + "|" if ai else "") + t)
             npy = os.path.join(cache, key + ".npy")
@@ -6348,6 +6558,7 @@ class App(tk.Tk):
         CURRENT_MELODY["melody"], CURRENT_MELODY["bpm"] = "", 90
         self.set_reference("")
         self.img_prompts = []
+        self.para_audio = {}
         self.cmd_var.set("")
         self.last_review = self.last_verify = None
         self.bgm_made = None
