@@ -1110,7 +1110,72 @@ def parse_json(text):
             i = text.find("{", i + 1)
     if found:
         return max(found, key=lambda f: f[0])[1]
+    for fixed in _json_repairs(text):     # 깨진 JSON 고쳐서 다시 시도 (따옴표·쉼표·잘림)
+        try:
+            obj = json.loads(fixed, strict=False)
+            if isinstance(obj, dict):
+                return obj
+        except Exception:
+            continue
     raise ValueError("AI 응답에서 JSON을 찾지 못했습니다:\n" + text[:300])
+
+
+def _fix_inner_quotes(s_):
+    """문자열 안에 그대로 들어간 \" 를 ' 로. 닫는 따옴표는 뒤에 , ] } : 가 와야 진짜 닫는 것으로 봄"""
+    out, in_str, esc, n = [], False, False, len(s_)
+    for i, ch in enumerate(s_):
+        if in_str:
+            if esc:
+                esc = False
+            elif ch == "\\":
+                esc = True
+            elif ch == '"':
+                j = i + 1
+                while j < n and s_[j] in " \t\r\n":
+                    j += 1
+                if j >= n or s_[j] in ",]}:":
+                    in_str = False
+                else:
+                    out.append("'")
+                    continue
+        elif ch == '"':
+            in_str = True
+        out.append(ch)
+    return "".join(out)
+
+
+def _json_repairs(text):
+    """흔한 오류를 고친 후보들: 뒤 쉼표 제거, 문자열 안의 따옴표 → ', 잘린 끝 닫기, 그 조합"""
+    i = text.find("{")
+    base = text[i:] if i >= 0 else text
+    cands = []
+    no_comma = re.sub(r",\s*([\]}])", r"\1", base)
+    cands.append(no_comma)
+    inner = _fix_inner_quotes(no_comma)   # 문자열 안의 따옴표 → 작은따옴표
+    cands.append(inner)
+    for c in (no_comma, inner):   # 잘린 응답: 열린 문자열·괄호 닫기
+        s_ = c.rstrip()
+        if s_.count('"') % 2 == 1:
+            s_ += '"'
+        s_ = re.sub(r",\s*$", "", s_)
+        stack = []
+        in_str, esc = False, False
+        for ch in s_:
+            if in_str:
+                if esc:
+                    esc = False
+                elif ch == "\\":
+                    esc = True
+                elif ch == '"':
+                    in_str = False
+            elif ch == '"':
+                in_str = True
+            elif ch in "[{":
+                stack.append("]" if ch == "[" else "}")
+            elif ch in "]}" and stack:
+                stack.pop()
+        cands.append(s_ + "".join(reversed(stack)))
+    return cands
 
 
 # ---------------- ffmpeg (MP4 만들기) ----------------
