@@ -691,19 +691,125 @@ class APIError(RuntimeError):
         self.short = short
 
 
+# ---- 사용량 한도(429) 자동 대기 ----
+RATE_HOOK = {"cancel": None, "status": None}   # App 이 작업 시작 때 채움 (취소 신호, 진행 표시)
+_RATE_GAP = {}      # 주소별 최소 요청 간격(초) - 한 번 한도에 걸리면 자동으로 설정
+_RATE_LAST = {}     # 주소별 마지막 요청 시각
+RATE_MAX_WAIT = 150     # 한 번에 최대 기다리는 시간(초)
+RATE_MAX_RETRY = 15
+
+
+def parse_rate_limit(code, body, headers=None):
+    """429 응답 분석 → (기다릴 초 또는 None, 분당 한도 또는 None, 하루 한도인지)"""
+    wait, limit, daily = None, None, False
+    txt = body or ""
+    try:
+        j = json.loads(txt)
+        err = j.get("error") or {}
+        for d in err.get("details") or []:
+            t = d.get("@type", "")
+            if t.endswith("RetryInfo") and d.get("retryDelay"):
+                m = re.match(r"([\d.]+)s", str(d["retryDelay"]))
+                if m:
+                    wait = float(m.group(1))
+            if t.endswith("QuotaFailure"):
+                for v in d.get("violations") or []:
+                    qid = (v.get("quotaId") or "") + " " + (v.get("quotaMetric") or "")
+                    if "PerDay" in qid or "per_day" in qid.lower():
+                        daily = True
+                    if v.get("quotaValue"):
+                        try:
+                            limit = int(v["quotaValue"])
+                        except ValueError:
+                            pass
+        txt = (err.get("message") or "") + " " + txt
+    except Exception:
+        pass
+    if wait is None:
+        m = re.search(r"(?:retry|try again) in ([\d.]+)\s*(ms|s)", txt, re.I)
+        if m:
+            wait = float(m.group(1)) / (1000 if m.group(2).lower() == "ms" else 1)
+    if wait is None and headers is not None:
+        try:
+            ra = headers.get("Retry-After")
+            if ra:
+                wait = float(ra)
+        except (TypeError, ValueError):
+            pass
+    if limit is None:
+        m = re.search(r"limit:\s*(\d+)", txt)
+        if m:
+            limit = int(m.group(1))
+    if re.search(r"per ?day|daily|PerDay", txt):
+        daily = True
+    return wait, limit, daily
+
+
+def _rate_sleep(sec, who, note=""):
+    """sec 초 기다리기 (1초마다 남은 시간 표시, 취소 누르면 멈춤)"""
+    end = time.time() + sec
+    while True:
+        left = end - time.time()
+        if left <= 0:
+            break
+        cancel = RATE_HOOK.get("cancel")
+        if cancel is not None and cancel.is_set():
+            raise RuntimeError("취소됨")
+        st = RATE_HOOK.get("status")
+        if st:
+            st(f"{who} 사용량 한도 → {int(left) + 1}초 뒤 이어서 만듭니다{note}")
+        time.sleep(min(1.0, left))
+
+
+def _rate_pace(key, who):
+    """한도에 걸렸던 주소면 최소 간격만큼 띄워서 요청"""
+    gap = _RATE_GAP.get(key, 0)
+    if gap:
+        left = gap - (time.time() - _RATE_LAST.get(key, 0))
+        if left > 0:
+            _rate_sleep(left, who, " (한도에 맞춰 간격 조절 중)")
+    _RATE_LAST[key] = time.time()
+
+
+def _rate_handle(key, code, body, headers, who, attempt):
+    """429 면 기다린 뒤 True(다시 시도), 아니면 False"""
+    if code != 429 or attempt >= RATE_MAX_RETRY:
+        return False
+    wait, limit, daily = parse_rate_limit(code, body, headers)
+    if daily and (wait is None or wait > RATE_MAX_WAIT):
+        return False                    # 하루 한도는 기다려도 소용없음
+    if limit:
+        _RATE_GAP[key] = max(_RATE_GAP.get(key, 0), 60.0 / limit + 0.5)
+    else:
+        _RATE_GAP[key] = max(_RATE_GAP.get(key, 0), 20.0)
+    wait = min(RATE_MAX_WAIT, (wait if wait is not None else 20.0) + 1.0)
+    _rate_sleep(wait, who, f" ({attempt + 1}번째 재시도)")
+    _RATE_LAST[key] = time.time() - _RATE_GAP[key]   # 서버가 말한 만큼 기다렸으니 바로 다시 요청
+    return True
+
+
 def _http_json(url, payload, headers, timeout=180, who=""):
     import urllib.request, urllib.error
-    req = urllib.request.Request(url, data=json.dumps(payload).encode("utf-8"),
-                                 headers={"Content-Type": "application/json", **headers}, method="POST")
-    try:
-        with urllib.request.urlopen(req, timeout=timeout) as r:
-            return json.loads(r.read().decode("utf-8"))
-    except urllib.error.HTTPError as e:
-        body = e.read().decode("utf-8", "ignore")[:1500]
-        full = explain_api_error(e.code, body, who)
-        raise APIError(full.split("\n\n")[0], full.split("\n\n", 1)[1] if "\n\n" in full else "")
-    except urllib.error.URLError as e:
-        raise APIError(f"{who} 서버에 연결하지 못했습니다 (인터넷 연결 확인)", str(e.reason)[:200])
+    key = url.split("?")[0]
+    attempt = 0
+    while True:
+        _rate_pace(key, who)
+        req = urllib.request.Request(url, data=json.dumps(payload).encode("utf-8"),
+                                     headers={"Content-Type": "application/json", **headers}, method="POST")
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as r:
+                return json.loads(r.read().decode("utf-8"))
+        except urllib.error.HTTPError as e:
+            body = e.read().decode("utf-8", "ignore")[:3000]
+            if _rate_handle(key, e.code, body, e.headers, who, attempt):
+                attempt += 1
+                continue
+            full = explain_api_error(e.code, body, who)
+            if e.code == 429 and parse_rate_limit(e.code, body, e.headers)[2]:
+                full = f"{who} 오늘 사용량을 다 썼습니다 (하루 한도). 내일 다시 하거나 결제(유료 등급)를 켜세요.\n\n" + full.split("\n\n", 1)[-1]
+            raise APIError(full.split("\n\n")[0], full.split("\n\n", 1)[1] if "\n\n" in full else "")
+        except urllib.error.URLError as e:
+            raise APIError(f"{who} 서버에 연결하지 못했습니다 (인터넷 연결 확인)", str(e.reason)[:200])
 
 
 def check_api_key(kind, key):
@@ -2537,14 +2643,23 @@ def tts_openai(text, voice, rate_pct, style, out_mp3, key, model):
                "speed": max(0.5, min(2.0, 1 + rate_pct / 100))}
     if style and "4o" in (model or "gpt-4o-mini-tts"):
         payload["instructions"] = style
-    req = urllib.request.Request("https://api.openai.com/v1/audio/speech", data=json.dumps(payload).encode("utf-8"),
-                                 headers={"Content-Type": "application/json", "Authorization": "Bearer " + key}, method="POST")
-    try:
-        with urllib.request.urlopen(req, timeout=120) as r:
-            data = r.read()
-    except urllib.error.HTTPError as e:
-        full = explain_api_error(e.code, e.read().decode("utf-8", "ignore")[:1500], "ChatGPT 음성")
-        raise APIError(full.split("\n\n")[0], full.split("\n\n", 1)[1] if "\n\n" in full else "")
+    url = "https://api.openai.com/v1/audio/speech"
+    attempt = 0
+    while True:
+        _rate_pace(url, "ChatGPT 음성")
+        req = urllib.request.Request(url, data=json.dumps(payload).encode("utf-8"),
+                                     headers={"Content-Type": "application/json", "Authorization": "Bearer " + key}, method="POST")
+        try:
+            with urllib.request.urlopen(req, timeout=120) as r:
+                data = r.read()
+            break
+        except urllib.error.HTTPError as e:
+            body = e.read().decode("utf-8", "ignore")[:3000]
+            if _rate_handle(url, e.code, body, e.headers, "ChatGPT 음성", attempt):
+                attempt += 1
+                continue
+            full = explain_api_error(e.code, body, "ChatGPT 음성")
+            raise APIError(full.split("\n\n")[0], full.split("\n\n", 1)[1] if "\n\n" in full else "")
     with open(out_mp3, "wb") as f:
         f.write(data)
 
@@ -2943,6 +3058,8 @@ class App(tk.Tk):
         self.vars = {}
         self.cfg = self.load_cfg()
         self.build_ui()
+        RATE_HOOK["cancel"] = self.cancel      # 성우 미리듣기처럼 따로 도는 작업도 한도 대기 표시
+        RATE_HOOK["status"] = lambda msg: self.q.put(lambda m_=msg: self.set_status(m_))
         self.apply_cfg()
         self.after(100, self.poll)
         self.after(300, self.refresh_preview)
@@ -3616,6 +3733,8 @@ class App(tk.Tk):
         self.status.config(text=label)
         self.set_status(label)
         SCRIPT_ENGINE["s"] = self.get_settings()
+        RATE_HOOK["cancel"] = self.cancel
+        RATE_HOOK["status"] = lambda msg: self.q.put(lambda m_=msg: self.set_status(m_))
         set_tts_cfg(SCRIPT_ENGINE["s"])
 
         def worker():
