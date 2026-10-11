@@ -4462,6 +4462,33 @@ def render_music_track(name, minutes, seed, wav_path, progress=None, cancel=None
     return written / SR
 
 
+def trim_borders(im, max_frac=0.12):
+    """그림 가장자리의 검은 띠·점선(AI 그림에 가끔 생김)을 잘라냄"""
+    a = np.asarray(im.convert("L")).astype(np.float32)
+    h, w = a.shape
+
+    def is_border(v):
+        return v.mean() < 28 and np.percentile(v, 80) < 60
+    l = 0
+    while l < int(w * max_frac) and is_border(a[:, l]):
+        l += 1
+    r = w
+    while w - r < int(w * max_frac) and is_border(a[:, r - 1]):
+        r -= 1
+    t_ = 0
+    while t_ < int(h * max_frac) and is_border(a[t_, :]):
+        t_ += 1
+    b = h
+    while h - b < int(h * max_frac) and is_border(a[b - 1, :]):
+        b -= 1
+    if (l, t_, r, b) != (0, 0, w, h):
+        m = 2   # 띠와 맞닿은 줄까지 조금 더 잘라냄 (잘라낸 쪽만)
+        l, t_ = (l + m if l else 0), (t_ + m if t_ else 0)
+        r, b = (r - m if r < w else w), (b - m if b < h else h)
+        return im.crop((min(l, w // 2), min(t_, h // 2), max(r, w // 2), max(b, h // 2)))
+    return im
+
+
 class MusicLoop:
     """음악 영상의 그림 부분: 배경 그림이 천천히 줌인·줌아웃(끊김 없이 반복) + 입자 효과 + 제목. duration 초짜리 반복 조각"""
 
@@ -4469,7 +4496,7 @@ class MusicLoop:
         self.s, self.duration, self.L, self.motion = s, L, L, motion
         self.overlay, self.title, self.sub, self.show_text = overlay, title, sub, show_text
         if bg_image is not None:
-            im = bg_image.convert("RGB")
+            im = trim_borders(bg_image.convert("RGB"))
         else:
             c1, c2 = np.array(hex_rgb(colors[0]), np.float32), np.array(hex_rgb(colors[1]), np.float32)
             g = np.linspace(0, 1, H, dtype=np.float32)[:, None, None]
@@ -4649,6 +4676,17 @@ def concat_videos(mp4s, out_mp4):
         pass
     if p.returncode != 0:
         raise RuntimeError("이어 붙이기 실패(화면 크기·fps가 같은 영상끼리만 됩니다): " + (p.stderr or "")[-400:])
+
+
+MUSIC_PACKAGE_SYSTEM = """너는 구독자 100만 명상·수면·공부 음악 유튜브 채널 운영자다. 음악 영상 업로드 문구를 만든다.
+- titles: 5개. 검색에 잘 걸리는 키워드(예: 파도소리, 수면음악, 백색소음, 공부음악, ASMR)를 앞쪽에, 길이(예: 1시간, 3시간)를 넣고, 이모지 0~2개, 45자 이내.
+  서로 다른 각도: 상황형(잠 안 올 때·공부할 때) / 감성형 / 키워드 나열형(| 로 구분) / 질문·권유형 / 장소·장면형.
+- description: 6~10줄. 첫 줄은 검색 미리보기에 보이는 핵심 한 줄. 어떤 소리인지 감각적으로 2~3줄, 이럴 때 들으세요(수면·공부·명상·휴식) 목록 3~4개(이모지 머리표),
+  구독·좋아요 부탁 한 줄. 의학적 효과를 단정하지 말 것('도움이 될 수 있어요' 정도). 바이노럴이면 헤드폰 안내.
+- hashtags: 10~15개, 띄어쓰기로 구분, 한국어+영어 섞어서(#파도소리 #oceanwaves 등).
+- tags: 유튜브 '태그' 칸용 키워드 15~25개를 쉼표로 구분(# 없이).
+- pinned_comment: 시청자가 댓글 달고 싶어지는 한 줄 질문.
+반드시 JSON만 출력: {"titles": ["..."], "description": "...", "hashtags": "#... #...", "tags": "a, b, c", "pinned_comment": "..."}"""
 
 
 def hms(sec):
@@ -6336,7 +6374,7 @@ class App(tk.Tk):
         self.write_log("📝 제목·업로드 문구 만드는 중...")
         self.run_bg("문구 작성 중...", job, done)
 
-    def package_window(self, pkg, story, out_dir, cat):
+    def package_window(self, pkg, story, out_dir, cat, title_get=None, title_set=None):
         win = tk.Toplevel(self)
         win.title("제목·업로드 문구 - 고르고 복사해서 유튜브에 붙여넣기")
         win.geometry("880x820")
@@ -6366,9 +6404,12 @@ class App(tk.Tk):
         tr = ttk.Frame(tf)
         tr.pack(fill="x", pady=(4, 0))
 
+        tget = title_get or self.title_var.get
+        tset = title_set or self.title_var.set
+
         def apply_title():
             if tsel.get():
-                self.title_var.set(tsel.get())
+                tset(tsel.get())
                 self.refresh_preview()
                 self.save_cfg()
                 self.set_status("✅ 영상 제목을 바꿨어요 (제목 카드·썸네일에 반영)")
@@ -6422,9 +6463,9 @@ class App(tk.Tk):
 
         def save_txt():
             os.makedirs(out_dir, exist_ok=True)
-            base = os.path.join(out_dir, safe_name(self.title_var.get()))
+            base = os.path.join(out_dir, safe_name(tget()))
             p2 = dict(pkg, description=dt.get("1.0", "end").strip(), hashtags=hv.get(), pinned_comment=cv.get())
-            write_package(base, self.title_var.get(), story, p2)
+            write_package(base, tget(), story, p2)
             self.write_log("업로드 문구 저장: " + base + "_업로드문구.txt")
             self.set_status("💾 업로드 문구 저장됨")
         ttk.Button(bf, text="📋 제목+설명 한 번에 복사",
@@ -7554,6 +7595,45 @@ class App(tk.Tk):
         ttk.Button(bf, text="🎧 30초 미리듣기", command=listen).pack(side="left")
         ttk.Button(bf, text="■ 소리 정지", command=stop_wav).pack(side="left", padx=4)
         ttk.Button(bf, text="🎬 음악 영상 만들기 (MP4 + WAV + 썸네일 + 업로드 문구)", command=make).pack(side="left", padx=10)
+
+        def music_pkg():
+            name, title = cur(), title_v.get().strip() or MUSIC_PRESETS[cur()]["title"]
+            try:
+                mn = float(mins.get())
+            except ValueError:
+                mn = 10
+            model = self.model_var.get().strip()
+            P = MUSIC_PRESETS[name]
+            sel = mlist.curselection()
+            picks = [items[i] for i in sel] if len(sel) >= 2 else []
+            chapters, t_ = [], 0.0
+            for x in picks:
+                chapters.append((t_, x[1]))
+                t_ += x[2]
+            length = hms(t_) if picks else (f"{int(mn // 60)}시간" if mn >= 60 and mn % 60 == 0 else f"{int(mn)}분")
+
+            def job():
+                base_pkg = music_upload_text(title, [x[3] for x in picks] or [name], chapters=chapters or None, minutes=(t_ / 60 if picks else mn))
+                try:
+                    d = ask_script_json(model, MUSIC_PACKAGE_SYSTEM,
+                                        f"음악 종류: {', '.join(x[3] for x in picks) if picks else name} ({P['desc']})\n영상 길이: {length}\n지금 제목: {title}"
+                                        + ("\n묶음(여러 곡) 영상이며 목차가 붙음" if picks else ""))
+                except Exception as e:
+                    self.log_bg("AI 문구 실패 → 기본 문구 사용: " + str(e)[:80])
+                    return base_pkg
+                desc = str(d.get("description", "")).strip()
+                if chapters:
+                    desc += "\n\n⏱ 목차\n" + "\n".join(f"{hms(a)} {b}" for a, b in chapters)
+                desc += "\n\n※ 이 영상의 음악은 프로그램으로 직접 만든 창작 음악입니다."
+                if d.get("tags"):
+                    desc += "\n\n[태그 칸용 - 설명에는 지우고 '자세히 보기 > 태그'에 붙여넣기]\n" + str(d["tags"])
+                return dict(base_pkg, titles=d.get("titles") or base_pkg["titles"], description=desc,
+                            hashtags=d.get("hashtags") or base_pkg["hashtags"], pinned_comment=d.get("pinned_comment") or base_pkg["pinned_comment"])
+
+            def done(pkg):
+                self.package_window(pkg, "", out_dir, "음악", title_get=lambda: title_v.get().strip() or title, title_set=title_v.set)
+            self.run_bg("음악 업로드 문구 만드는 중...", job, done)
+        ttk.Button(bf, text="📝 제목·업로드 문구", command=music_pkg).pack(side="left")
         mb = ttk.Frame(made)
         mb.pack(fill="x", pady=(4, 0))
         ttk.Button(mb, text="📚 고른 것 이어 붙여 롱폼 만들기(챕터)", command=bundle).pack(side="left")
