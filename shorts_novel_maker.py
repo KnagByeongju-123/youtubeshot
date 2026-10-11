@@ -108,7 +108,7 @@ FIELDS = [
     ("배경", "bg_blur", "이미지 흐림(px)", "int", 6),
     ("배경", "ken_burns", "이미지 천천히 확대", "choice:on,off", "on"),
     ("배경", "vignette", "가장자리 어둡게", "float", 0.45),
-    ("배경", "grain", "필름 노이즈(0~1)", "float", 0.06),
+    ("배경", "grain", "필름 노이즈(0~1, 켜면 용량 5~8배↑)", "float", 0),
     ("효과", "fade", "위아래 흐림", "choice:on,off", "on"),
     ("효과", "focus", "읽는 줄 강조", "choice:on,off", "on"),
     ("효과", "focus_dim", "나머지 줄 밝기(0~1)", "float", 0.45),
@@ -124,7 +124,8 @@ FIELDS = [
     ("영상", "hold_start", "시작 정지(초)", "float", 1.5),
     ("영상", "hold_end", "끝 정지(초)", "float", 3.0),
     ("영상", "fps", "FPS(60=부드러움, 30=빠른 제작)", "int", 60),
-    ("영상", "quality", "화질(crf, 낮을수록 좋음)", "int", 18),
+    ("영상", "quality", "화질(crf 18=최고·23=권장·28=작게)", "int", 23),
+    ("영상", "audio_out", "소리 저장 방식", "choice:MP4에 포함,MP4에 포함+MP3 따로,MP3만 따로(무음 MP4)", "MP4에 포함+MP3 따로"),
     ("영상", "out_dir", "저장 폴더", "dir", os.path.join(BASE, "output")),
     ("소리", "bgm_mode", "배경음", "choice:자동생성,파일,없음", "자동생성"),
     ("소리", "bgm_style", "배경음 스타일", "choice:" + ",".join(["자동(소재별)"] + SOUND_STYLE_NAMES), "자동(소재별)"),
@@ -142,17 +143,17 @@ FILE_KEYS = {"font_path", "title_font_path", "bg_image", "bgm_path", "out_dir", 
 # 테마 프리셋 (장르에 맞는 색·분위기)
 THEMES = {
     "시네마 다크": dict(bg_mode="그라데이션", bg_color="#0B0F1A", bg_color2="#1A1030", text_color="#F5F5F5",
-                    title_color="#FFD54F", accent_color="#FF6B6B", vignette=0.45, grain=0.06),
+                    title_color="#FFD54F", accent_color="#FF6B6B", vignette=0.45, grain=0),
     "공포 레드": dict(bg_mode="그라데이션", bg_color="#000000", bg_color2="#2A0000", text_color="#E8E0E0",
-                  title_color="#FF3B3B", accent_color="#FF3B3B", vignette=0.7, grain=0.12),
+                  title_color="#FF3B3B", accent_color="#FF3B3B", vignette=0.7, grain=0),
     "감동 웜톤": dict(bg_mode="그라데이션", bg_color="#2B1D14", bg_color2="#4A2E1C", text_color="#FFF3E0",
-                  title_color="#FFB74D", accent_color="#FFAB91", vignette=0.4, grain=0.04),
+                  title_color="#FFB74D", accent_color="#FFAB91", vignette=0.4, grain=0),
     "종이 노트": dict(bg_mode="그라데이션", bg_color="#F6F1E7", bg_color2="#EDE3D1", text_color="#2B2B2B",
-                  title_color="#8B2E2E", accent_color="#C0392B", vignette=0.25, grain=0.05, shadow="off"),
+                  title_color="#8B2E2E", accent_color="#C0392B", vignette=0.25, grain=0, shadow="off"),
     "네온 시티": dict(bg_mode="그라데이션", bg_color="#05030F", bg_color2="#120A2E", text_color="#E0F7FF",
-                  title_color="#00E5FF", accent_color="#FF2BD6", vignette=0.5, grain=0.08),
+                  title_color="#00E5FF", accent_color="#FF2BD6", vignette=0.5, grain=0),
     "로맨스 핑크": dict(bg_mode="그라데이션", bg_color="#2A0F1E", bg_color2="#4A1A35", text_color="#FFF0F5",
-                    title_color="#FF8FB1", accent_color="#FFB3C6", vignette=0.4, grain=0.04),
+                    title_color="#FF8FB1", accent_color="#FFB3C6", vignette=0.4, grain=0),
 }
 
 SAMPLE_TITLE = "마지막 버스"
@@ -1769,8 +1770,36 @@ def build_audio(r, s, style):
     return out
 
 
+def has_audio(path):
+    """MP4에 소리가 들어 있는지 확인"""
+    try:
+        p = subprocess.run([get_ffmpeg(), "-i", path], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, errors="replace",
+                           creationflags=(subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0))
+        return "Audio:" in (p.stderr or "")
+    except Exception:
+        return False
+
+
+def write_mp3(path, x):
+    """소리 배열 → MP3 (192kbps)"""
+    tmp = path + ".tmp.wav"
+    write_wav(tmp, x)
+    try:
+        p = subprocess.run([get_ffmpeg(), "-y", "-v", "error", "-i", tmp, "-c:a", "libmp3lame", "-b:a", "192k", path],
+                           stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, errors="replace",
+                           creationflags=(subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0))
+        if p.returncode != 0:
+            raise RuntimeError("MP3 저장 실패: " + (p.stderr or "")[-200:])
+    finally:
+        try:
+            os.remove(tmp)
+        except OSError:
+            pass
+
+
 def write_wav(path, x):
     import wave
+    os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
     d = (np.clip(x, -1, 1) * 32767).astype("<i2")
     with wave.open(path, "wb") as w:
         w.setnchannels(2)
@@ -1935,7 +1964,7 @@ class App(tk.Tk):
             return {}
 
     def project_dict(self):
-        return {"ver": 2, "model": self.model_var.get(), "category": self.cat_var.get(), "topic": self.topic_var.get(), "genre": self.genre_var.get(),
+        return {"ver": 3, "model": self.model_var.get(), "category": self.cat_var.get(), "topic": self.topic_var.get(), "genre": self.genre_var.get(),
                 "sources": getattr(self, "sources", []), "notes": getattr(self, "notes", ""),
                 "song": getattr(self, "song", None), "melody": getattr(self, "melody", ""), "bpm": getattr(self, "bpm", 90),
                 "artwork": getattr(self, "artwork", None),
@@ -1977,6 +2006,10 @@ class App(tk.Tk):
         s.update(c.get("settings", {}))
         if c.get("settings") and c.get("ver", 1) < 2 and int(float(s.get("fps", 30))) == 30:
             s["fps"] = 60  # 부드러운 스크롤 기본값으로 올림
+        if c.get("settings") and c.get("ver", 1) < 3:
+            s["grain"] = 0          # 노이즈는 용량을 크게 키움 → 끔
+            if int(float(s.get("quality", 23))) < 23:
+                s["quality"] = 23
         if s.get("bgm_path") and "bgm_mode" not in c.get("settings", {}):
             s["bgm_mode"] = "파일"  # 예전 설정 호환
         self.set_settings(s)
@@ -3029,33 +3062,117 @@ class App(tk.Tk):
                                 self.status.config(text=f"{prefix}만드는 중 {i}/{n}")))
         return prog
 
+    def ask_audio_choice(self, s):
+        """MP4 만들기 전 배경음을 직접 고르는 창. 반환: 수정된 설정 또는 None(취소)"""
+        dlg = tk.Toplevel(self)
+        dlg.title("MP4 만들기 - 배경음 선택")
+        dlg.transient(self)
+        dlg.grab_set()
+        made = getattr(self, "bgm_made", None)
+        cur = (f"지금 설정 배경음: {self.cur_style()} #{s['bgm_seed']}" if s["bgm_mode"] == "자동생성" and s["bgm_seed"]
+               else f"지금 설정 배경음: {self.cur_style()} (새로 만듦)" if s["bgm_mode"] == "자동생성"
+               else f"지금 설정 배경음: 파일 {os.path.basename(s['bgm_path'])}" if s["bgm_mode"] == "파일" and s["bgm_path"]
+               else "지금 설정 배경음: 없음")
+        choice = tk.StringVar(value="current" if s["bgm_mode"] != "없음" else "none")
+        file_var = tk.StringVar(value=s["bgm_path"] if s["bgm_mode"] == "파일" else "")
+        out_var = tk.StringVar(value=s["audio_out"])
+        hit_var = tk.BooleanVar(value=s["reveal_hit"] == "on")
+        f = ttk.Frame(dlg, padding=12)
+        f.pack(fill="both", expand=True)
+        ttk.Label(f, text="영상에 넣을 배경음", font=("맑은 고딕", 10, "bold")).grid(row=0, column=0, columnspan=3, sticky="w", pady=(0, 6))
+        ttk.Radiobutton(f, text=cur, variable=choice, value="current").grid(row=1, column=0, columnspan=3, sticky="w")
+        ttk.Radiobutton(f, text="음악 파일 직접 선택:", variable=choice, value="file").grid(row=2, column=0, sticky="w")
+        ttk.Entry(f, textvariable=file_var, width=38).grid(row=2, column=1, sticky="w", padx=4)
+
+        def pick():
+            p = filedialog.askopenfilename(parent=dlg, filetypes=[("오디오", "*.mp3 *.wav *.m4a *.ogg *.flac")])
+            if p:
+                file_var.set(p)
+                choice.set("file")
+        ttk.Button(f, text="…", width=3, command=pick).grid(row=2, column=2)
+        ttk.Radiobutton(f, text="소리 없음", variable=choice, value="none").grid(row=3, column=0, columnspan=3, sticky="w")
+        ttk.Checkbutton(f, text="반전 효과음(쿵) 넣기", variable=hit_var).grid(row=4, column=0, columnspan=3, sticky="w", pady=(6, 0))
+        ttk.Label(f, text="소리 저장 방식", font=("맑은 고딕", 10, "bold")).grid(row=5, column=0, columnspan=3, sticky="w", pady=(10, 4))
+        for i, (v, desc) in enumerate((("MP4에 포함", "MP4 안에 소리가 들어감 (그대로 업로드)"),
+                                       ("MP4에 포함+MP3 따로", "MP4에도 넣고, 같은 이름의 MP3도 따로 저장 (편집 프로그램용)"),
+                                       ("MP3만 따로(무음 MP4)", "MP4는 소리 없이 작게, 소리는 MP3로만 저장"))):
+            ttk.Radiobutton(f, text=f"{v}  —  {desc}", variable=out_var, value=v).grid(row=6 + i, column=0, columnspan=3, sticky="w")
+        ttk.Label(f, text="용량 참고: 1분 영상 ≈ 8MB (소리 포함 시 +1.4MB). '필름 노이즈'는 꺼 두세요 (용량 5~8배).",
+                  foreground="gray").grid(row=9, column=0, columnspan=3, sticky="w", pady=(10, 0))
+        res = {}
+        bf = ttk.Frame(f)
+        bf.grid(row=10, column=0, columnspan=3, sticky="e", pady=(10, 0))
+
+        def ok():
+            if choice.get() == "file" and not (file_var.get() and os.path.exists(file_var.get())):
+                messagebox.showwarning("배경음", "음악 파일을 선택하세요.", parent=dlg)
+                return
+            res["v"] = (choice.get(), file_var.get(), out_var.get(), hit_var.get())
+            dlg.destroy()
+        ttk.Button(bf, text="취소", command=dlg.destroy).pack(side="right")
+        ttk.Button(bf, text="MP4 만들기", command=ok).pack(side="right", padx=6)
+        dlg.bind("<Return>", lambda _: ok())
+        self.wait_window(dlg)
+        if "v" not in res:
+            return None
+        ch, fp, outm, hit = res["v"]
+        s = dict(s)
+        if ch == "file":
+            s["bgm_mode"], s["bgm_path"] = "파일", fp
+            self.vars["bgm_mode"].set("파일")
+            self.vars["bgm_path"].set(fp)
+        elif ch == "none":
+            s["bgm_mode"] = "없음"
+        s["reveal_hit"] = "on" if hit else "off"
+        s["audio_out"] = outm
+        self.vars["audio_out"].set(outm)
+        self.vars["reveal_hit"].set(s["reveal_hit"])
+        return s
+
     def make_mp4(self):
         self.playing = False
         self.refresh_preview()
         if not self.renderer:
             return
         r = self.renderer
-        s = self.get_settings()
-        style = self.cur_style()
+        s = self.ask_audio_choice(self.get_settings())
+        if s is None:
+            return
+        style = resolve_style(s, self.genre_var.get())
         base = os.path.join(s["out_dir"], safe_name(self.title_var.get()))
         out = base + ".mp4"
         self.prog["value"] = 0
         prog = self.progress_cb()
-
         if s["bgm_mode"] == "자동생성" and s["bgm_seed"] == 0:
-            self.write_log("  (배경음 번호가 0이라 이번에 새 소리로 만듭니다. 먼저 '🎵 배경음 만들기'로 들어보고 고르면 그 소리가 그대로 들어갑니다)")
+            seed = int(np.random.default_rng().integers(1, 100000))
+            s["bgm_seed"] = seed
+            self.vars["bgm_seed"].set(str(seed))
+            self.write_log(f"  배경음 번호가 없어 새 번호 #{seed}로 만듭니다 (소리 탭에 저장됨)")
 
         def job():
             self.q.put(lambda: self.status.config(text="배경음 만드는 중..."))
             audio = build_audio(r, s, style)
-            export_mp4(r, out, prog, self.cancel, audio)
+            mp3 = ""
+            if audio is not None and "MP3" in s["audio_out"]:
+                mp3 = base + "_배경음.mp3"
+                write_mp3(mp3, audio)
+            in_video = audio if "MP4에 포함" in s["audio_out"] else None
+            export_mp4(r, out, prog, self.cancel, in_video)
             r.thumbnail().save(base + "_썸네일.png")
-            return out
+            return out, mp3, in_video is not None and has_audio(out), os.path.getsize(out) / 1e6
 
-        def done(p):
-            what = ((f"{style} #{s['bgm_seed']}" if s["bgm_seed"] else f"{style} (새로 만듦)") if s["bgm_mode"] == "자동생성"
-                    else ("파일 " + os.path.basename(s["bgm_path"]) if s["bgm_mode"] == "파일" else "없음"))
-            self.write_log(f"MP4 저장 완료: {p}  (썸네일 PNG 같이 저장 · 배경음 {what})")
+        def done(res):
+            p, mp3, snd, mb = res
+            what = ((f"{style} #{s['bgm_seed']}") if s["bgm_mode"] == "자동생성"
+                    else ("파일 " + os.path.basename(s["bgm_path"]) if s["bgm_mode"] == "파일"
+                          else ("반전 효과음만" if s["reveal_hit"] == "on" else "없음")))
+            self.write_log(f"MP4 저장 완료: {p}  ({mb:.1f}MB · 썸네일 PNG 같이 저장)")
+            if "MP4에 포함" in s["audio_out"]:
+                self.write_log("  MP4 소리: " + ("✅ 포함됨 (" + what + ")" if snd else "❌ 포함 안 됨 - 소리 탭 설정을 확인하세요"))
+            else:
+                self.write_log("  MP4 소리: 없음 (무음으로 저장)")
+            if mp3:
+                self.write_log(f"  🎵 배경음 MP3 따로 저장: {mp3}")
             self.save_cfg()
         self.run_bg("영상 만드는 중...", job, done)
 
@@ -3111,7 +3228,10 @@ class App(tk.Tk):
                 r = Renderer(title, story, s)
                 style = resolve_style(s, genre)
                 audio = build_audio(r, s, style)
-                export_mp4(r, base + ".mp4", self.progress_cb(f"[{i + 1}/{n}] "), self.cancel, audio)
+                if audio is not None and "MP3" in s["audio_out"]:
+                    write_mp3(base + "_배경음.mp3", audio)
+                export_mp4(r, base + ".mp4", self.progress_cb(f"[{i + 1}/{n}] "), self.cancel,
+                           audio if "MP4에 포함" in s["audio_out"] else None)
                 r.thumbnail().save(base + "_썸네일.png")
                 try:
                     pkg = ask_json(model, PACKAGE_SYSTEM, f"콘텐츠 종류: {cat}\n소재: {genre}\n[제목] {title}\n\n[본문]\n{story_text_only(story)}")
