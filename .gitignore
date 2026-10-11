@@ -4,3 +4,5 @@ ffmpeg_log.txt
 __pycache__/
 *.mp4
 *.wav
+gui_out/
+gui_out*/
