@@ -2908,6 +2908,9 @@ def list_voices(refresh=False):
     return [{"short": c, "gender": "", "locale": c[:5], "name": n} for n, c in TTS_VOICES.items() if c != "sapi"]
 
 
+_EDGE_PLAIN_DNS = {"on": os.name == "nt"}   # 윈도우는 처음부터 기본 DNS 방식
+
+
 def tts_edge(text, voice, rate_pct, out_mp3, pitch_hz=0):
     """마이크로소프트 엣지 음성 (인터넷 필요, 무료)"""
     try:
@@ -2922,12 +2925,29 @@ def tts_edge(text, voice, rate_pct, out_mp3, pitch_hz=0):
     rate = f"{'+' if rate_pct >= 0 else ''}{int(rate_pct)}%"
     pitch = f"{'+' if pitch_hz >= 0 else ''}{int(pitch_hz)}Hz"
 
-    async def run():
-        await edge_tts.Communicate(text, voice, rate=rate, pitch=pitch).save(out_mp3)
+    async def run(plain_dns):
+        kw = {}
+        if plain_dns:
+            # 윈도우에서 aiodns(c-ares)가 깔려 있으면 주소 찾기(DNS)가 실패하는 경우가 있음
+            # → 윈도우 기본 방식(ThreadedResolver) + IPv4 로 접속
+            import aiohttp, socket
+            kw["connector"] = aiohttp.TCPConnector(resolver=aiohttp.ThreadedResolver(), family=socket.AF_INET)
+        try:
+            await edge_tts.Communicate(text, voice, rate=rate, pitch=pitch, **kw).save(out_mp3)
+        except TypeError:
+            if not kw:
+                raise
+            await edge_tts.Communicate(text, voice, rate=rate, pitch=pitch).save(out_mp3)   # 옛 edge-tts (connector 없음)
     try:
         loop = asyncio.new_event_loop()
         try:
-            loop.run_until_complete(run())
+            try:
+                loop.run_until_complete(run(_EDGE_PLAIN_DNS["on"]))
+            except Exception as e:
+                if _EDGE_PLAIN_DNS["on"] or "DNS" not in type(e).__name__ + str(e):
+                    raise
+                _EDGE_PLAIN_DNS["on"] = True            # 주소 찾기 실패 → 기본 방식으로 다시
+                loop.run_until_complete(run(True))
         finally:
             loop.close()
     except Exception as e:
