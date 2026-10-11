@@ -2971,6 +2971,8 @@ def tts_sapi(text, rate_pct, out_wav):
 
 def tts_key(voice, rate_pct, pitch_hz, text):
     import hashlib
+    if not (voice == "sapi" or voice.startswith(("openai:", "gemini:"))):
+        voice = "e2|" + voice     # 엣지 성우: 예전에 윈도우 음성이 잘못 저장된 캐시를 버리기 위해 새 이름
     return hashlib.md5(f"{voice}|{float(rate_pct)}|{float(pitch_hz)}|{text}".encode("utf-8")).hexdigest()[:16]
 
 
@@ -3001,6 +3003,7 @@ def fallback_voice(voice, text):
 
 
 _EDGE_UPGRADED = {"done": False}
+EDGE_FAIL_TO_SAPI = False   # 엣지 실패 시 몰래 윈도우 음성으로 바꾸지 않고 오류를 보여줌
 LAST_TTS = {"voice": ""}   # 마지막으로 실제 읽은 성우 (대체됐는지 확인용)
 
 
@@ -3067,12 +3070,13 @@ def _tts_clip(text, voice_name, rate_pct, cache_dir, pitch_hz=0):
                 except Exception as e2:
                     err = e2
             if err is not None:
-                if os.name == "nt":
+                if os.name == "nt" and EDGE_FAIL_TO_SAPI:
                     notify(f"⚠ 엣지 성우({voice}) 연결 실패 → 윈도우 내장 음성(여성)으로 대신 읽습니다: {str(err)[:80]}")
-                    tts_sapi(text, rate_pct, src := os.path.join(cache_dir, key + ".wav"))
                     LAST_TTS["voice"] = "sapi"
-                else:
-                    raise err
+                    return _tts_clip(text, "윈도우 내장 음성", rate_pct, cache_dir, pitch_hz)   # 엣지 이름으로 저장하지 않음
+                raise RuntimeError(f"엣지 성우({voice})로 읽기 실패\n\n{err}\n\n"
+                                   "인터넷 연결·백신/방화벽(speech.platform.bing.com)을 확인하거나, "
+                                   "명령 프롬프트에서 'pip install -U edge-tts' 를 실행해 보세요.")
     a = _decode_full(src)
     # 앞뒤 무음 다듬기 + 크기 맞추기
     thr = 0.01
