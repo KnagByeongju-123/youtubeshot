@@ -4123,6 +4123,10 @@ MUSIC_PRESETS = {   # 이름: 설정 (gen=생성 방식, title=기본 제목, de
     "빗소리 (자연)": dict(gen="rain", title="빗소리 ASMR 🌧 잠잘 때·공부할 때", tags="#빗소리 #ASMR #백색소음 #수면 #공부 #빗소리asmr",
                      desc="지붕과 창에 떨어지는 빗소리, 가끔 먼 천둥", overlay="빗줄기", colors=("#0D1218", "#22303C"),
                      prompt="heavy rain in a quiet forest cabin porch at night, wet wooden planks, lantern glow, misty trees, cinematic, no people"),
+    "빗소리 · 지붕 위": dict(gen="roof", title="지붕 위로 떨어지는 빗소리 🌧 잠잘 때 듣는 시골 빗소리",
+                       tags="#빗소리 #지붕빗소리 #빗소리asmr #백색소음 #수면 #시골 #rainonroof #rainsounds",
+                       desc="기와·양철 지붕에 톡톡 떨어지는 빗방울, 처마 끝 낙숫물, 멀리 쏟아지는 비", overlay="없음", colors=("#0C1014", "#26303A"),
+                       prompt="a quiet korean countryside village in heavy evening rain, tiled roofs, warm lights in windows, misty mountains, dark clouds, cinematic, no people"),
     "파도 소리": dict(gen="waves", title="파도 소리 🌊 바다 백색소음", tags="#파도소리 #바다 #ASMR #백색소음 #힐링 #수면",
                   desc="밀려왔다 부서지는 잔잔한 파도", overlay="먼지 빛", colors=("#0A1A2A", "#1F4A6A"),
                   prompt="calm ocean waves at sunset on a quiet beach, soft foam, golden hour, wide peaceful view, no people"),
@@ -4425,6 +4429,35 @@ def music_chunk(P, n, tail, rng, ci):
             tt = np.arange(int(d * SR)) / SR
             th = band(colored_noise(len(tt), rng, 2.0), hi=180) * np.minimum(1, tt / 0.6) * np.exp(-tt / 2.2)
             place(ev, (_norm(th) * 0.5).astype(np.float32), rng.uniform(5, max(6, tsec - 8)), rng.uniform(0.3, 0.7))
+    elif g == "roof":
+        # 바탕: 멀리 쏟아지는 비 (부드럽게)
+        bed = gen_rain(L, rng) * 0.45
+        # 지붕에 맞는 빗방울: 톡·탁 (울림 있는 짧은 소리)
+        drops = np.zeros((L, 2), np.float32)
+        rate = 9.0 * (0.75 + 0.5 * smooth_lfo(n, 20, rng))     # 초당 빗방울 수가 천천히 바뀜
+        cnt = int(n / SR * 9)
+        pos = np.sort(rng.uniform(0, n / SR, cnt))
+        keep = rng.random(cnt) < rate[np.minimum((pos * SR).astype(int), n - 1)] / 13.5
+        kinds = []
+        for f0 in (650, 900, 1250, 1800, 2400):    # 기와·양철에 따라 다른 높이
+            tt = np.arange(int(0.05 * SR)) / SR
+            kinds.append((np.sin(2 * np.pi * f0 * tt) * np.exp(-tt / 0.008) + rng.standard_normal(len(tt)) * np.exp(-tt / 0.002) * 0.6).astype(np.float32))
+        for ps in pos[keep]:
+            k = kinds[int(rng.integers(len(kinds)))] * rng.uniform(0.15, 0.6)
+            place(drops, k, ps, rng.uniform(0.1, 0.9))
+        drops = np.stack([band(drops[:, c], lo=400, hi=6000) for c in range(2)], 1)
+        # 처마 끝 낙숫물: 일정한 간격으로 똑… 똑
+        drip = np.zeros((L, 2), np.float32)
+        for side in (0.25, 0.75):
+            t_ = rng.uniform(0, 1.0)
+            per = rng.uniform(0.6, 1.4)
+            while t_ < n / SR:
+                tt = np.arange(int(0.12 * SR)) / SR
+                f = rng.uniform(1100, 1500) * (1 + 0.6 * np.exp(-tt / 0.01))
+                d_ = (np.sin(2 * np.pi * np.cumsum(f) / SR) * np.exp(-tt / 0.03) * rng.uniform(0.2, 0.35)).astype(np.float32)
+                place(drip, d_, t_, side)
+                t_ += per * rng.uniform(0.85, 1.15)
+        ev = reverb(drops * 0.9 + drip, rng, 1.2, 0.25)
     elif g == "waves":
         bed = gen_waves(L, rng)
     elif g == "forest":
@@ -4802,7 +4835,7 @@ def video_loop(src, out_mp4, text_layer, fps, quality, sec=32.0):
 def mux_music_video(loop_mp4, wav, out_mp4, sec):
     """그림 반복 조각 + 음악 → 최종 MP4 (그림은 다시 인코딩하지 않아 빠름). sec 초에서 정확히 끝냄"""
     cmd = [get_ffmpeg(), "-y", "-v", "error", "-stream_loop", "-1", "-i", loop_mp4, "-i", wav,
-           "-map", "0:v:0", "-map", "1:a:0", "-c:v", "copy", "-c:a", "aac", "-b:a", "192k", "-t", f"{sec:.3f}", "-movflags", "+faststart", out_mp4]
+           "-map", "0:v:0", "-map", "1:a:0", "-c:v", "copy", "-c:a", "aac", "-b:a", "160k", "-t", f"{sec:.3f}", "-movflags", "+faststart", out_mp4]
     p = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, errors="replace",
                        creationflags=(subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0))
     if p.returncode != 0:
