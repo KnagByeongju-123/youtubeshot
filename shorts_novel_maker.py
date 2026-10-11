@@ -497,9 +497,10 @@ REVIEW_SYSTEM = """너는 유튜브 쇼츠 썰 채널의 베테랑 편집장이�
 명화 콘텐츠면 expertise(큐레이터 수준 전문성: 기법·구도·빛과 색·도상·시대 맥락·소장 이력이 구체적 관찰로 들어갔는지) 항목을 추가해 60점 만점으로 채점하고, fixes 에 빠진 해설 요소를 적는다.
 반드시 JSON만 출력: {"scores": {"hook": 0, "pacing": 0, "ending": 0, "readability": 0, "share": 0}, "total": 0~50, "grade": "S/A/B/C", "strengths": ["..."], "fixes": ["구체적인 수정 제안 (어느 줄을 어떻게)", "..."]}"""
 
-PACKAGE_SYSTEM = """너는 유튜브 쇼츠 채널 운영 전문가다. 소설을 읽고 업로드에 필요한 문구를 만든다.
-- 제목 후보 5개: 결말을 밝히지 않고 궁금하게, 25자 이내, 이모지 0~1개
-- 설명: 2~3줄, 마지막 줄에 "다음 이야기는 구독하고 받아보세요" 류 문구
+PACKAGE_SYSTEM = """너는 구독자 100만 유튜브 쇼츠 채널 운영 전문가다. 대본을 읽고 업로드에 필요한 문구를 만든다.
+- 제목 후보 5개: 결말을 밝히지 않고 궁금하게, 25자 이내, 이모지 0~1개. 서로 다른 각도(대사 인용형 / 궁금증형 / 숫자·사실형 / 감정형 / 질문형). 끝에 #shorts 붙이지 말 것(프로그램이 붙임)
+- 설명: 4~7줄. 첫 줄은 영상 첫 문장급 훅(검색·미리보기에 보이는 부분), 이어서 상황 2~3줄(결말 금지), "끝까지 보면…" 류 한 줄, 시청자에게 묻는 질문 한 줄 + 👇 댓글 유도.
+  허구 이야기면 끝에 "※ 이 영상은 창작된 이야기(픽션)입니다." 사실 기반이면 끝에 "※ 출처는 아래에 정리했습니다."
 - 해시태그 8~12개: 허구면 #쇼츠 #썰 #단편소설, 명화면 #명화 #미술 #그림이야기 #화가, 옛 노래면 #올드팝 #팝송 #노래비화 #명곡, 실화·과학이면 #쇼츠 #실화 #미스터리 #과학 #상식 등 종류와 소재 포함, 띄어쓰기로 구분
 - 고정댓글: 시청자에게 결말에 대한 의견을 묻는 한 줄 질문
 반드시 JSON만 출력: {"titles": ["..."], "description": "...", "hashtags": "#... #...", "pinned_comment": "..."}"""
@@ -4039,7 +4040,7 @@ class App(tk.Tk):
         ttk.Entry(r2, textvariable=self.title_var, width=40).pack(side="left", padx=4)
         ttk.Button(r2, text="대본 평가", command=self.ai_review).pack(side="left", padx=(12, 4))
         ttk.Button(r2, text="사실 검증", command=self.ai_verify).pack(side="left", padx=4)
-        ttk.Button(r2, text="업로드 문구 만들기", command=self.ai_package).pack(side="left", padx=4)
+        ttk.Button(r2, text="📝 제목·업로드 문구", command=self.ai_package).pack(side="left", padx=4)
         self.src_label = ttk.Label(r2, text="", foreground="gray")
         self.src_label.pack(side="left", padx=8)
         r4 = ttk.Frame(s1)
@@ -5413,33 +5414,130 @@ class App(tk.Tk):
         self.run_bg("사실 검증 중...", job, done)
 
     def ai_package(self):
+        """📝 제목 후보 + 업로드 문구(설명·해시태그·고정댓글)를 AI로 만들고 창에서 고르기·복사·적용"""
+        story = self.get_story()
+        if not story_text_only(story).strip():
+            messagebox.showinfo("업로드 문구", "먼저 대본을 만들거나 입력하세요.")
+            return
         model = self.model_var.get().strip()
-        title, story = self.title_var.get(), self.get_story()
-        user = f"콘텐츠 종류: {self.cat_var.get()}\n소재: {self.genre_var.get()}\n[제목] {title}\n\n[본문]\n{story_text_only(story)}"
+        title = self.title_var.get()
+        cat, genre = self.cat_var.get(), self.genre_var.get()
+        user = f"콘텐츠 종류: {cat}\n소재: {genre}\n[지금 제목] {title}\n\n[본문]\n{story_text_only(story)}"
         out_dir = self.get_settings()["out_dir"]
         sources = list(getattr(self, "sources", []))
+        chapters = self.renderer.chapter_times() if self.renderer else []
 
         def job():
-            pkg = ask_json(model, PACKAGE_SYSTEM, user)
+            pkg = ask_script_json(model, PACKAGE_SYSTEM, user)
             pkg["sources"] = sources
             pkg["song"] = getattr(self, "song", None)
             pkg["artwork"] = getattr(self, "artwork", None)
-            pkg["chapters"] = self.renderer.chapter_times() if self.renderer else []
+            pkg["chapters"] = chapters
             pkg["melody_used"] = bool(parse_melody(getattr(self, "melody", "")))
-            os.makedirs(out_dir, exist_ok=True)
-            base = os.path.join(out_dir, safe_name(title))
-            write_package(base, title, story, pkg)
-            return pkg, base
+            return pkg
 
-        def done(res):
-            pkg, base = res
-            self.write_log("업로드 문구 저장: " + base + "_업로드문구.txt")
-            for i, t in enumerate(pkg.get("titles", [])):
-                self.write_log(f"  제목{i + 1}: {t}")
-            self.write_log("  해시태그: " + str(pkg.get("hashtags", "")))
-            self.write_log("  고정댓글: " + str(pkg.get("pinned_comment", "")))
-        self.write_log("업로드 문구 만드는 중...")
+        def done(pkg):
+            self.package_window(pkg, story, out_dir, cat)
+        self.write_log("📝 제목·업로드 문구 만드는 중...")
         self.run_bg("문구 작성 중...", job, done)
+
+    def package_window(self, pkg, story, out_dir, cat):
+        win = tk.Toplevel(self)
+        win.title("제목·업로드 문구 - 고르고 복사해서 유튜브에 붙여넣기")
+        win.geometry("880x820")
+        f = ttk.Frame(win, padding=10)
+        f.pack(fill="both", expand=True)
+        is_short = H > W
+        ai_img = "AI 생성 이미지" in story
+
+        def copy(txt, what):
+            self.clipboard_clear()
+            self.clipboard_append(txt)
+            self.set_status(f"📋 {what} 복사됨")
+        # 제목
+        tf = ttk.LabelFrame(f, text=" 제목 후보 (골라서 '영상 제목에 적용' 또는 복사) ", padding=6)
+        tf.pack(fill="x")
+        tsel = tk.StringVar(value="")
+        titles = [str(x).strip() for x in pkg.get("titles", []) if str(x).strip()]
+        for k, t_ in enumerate(titles):
+            r = ttk.Frame(tf)
+            r.pack(fill="x", pady=1)
+            ttk.Radiobutton(r, text=t_, value=t_, variable=tsel).pack(side="left")
+            ttk.Label(r, text=f"{len(t_)}자", foreground="gray").pack(side="left", padx=6)
+            ttk.Button(r, text="복사", width=5,
+                       command=lambda t_=t_: copy(t_ + (" #shorts" if is_short else ""), "제목")).pack(side="right")
+        if titles:
+            tsel.set(titles[0])
+        tr = ttk.Frame(tf)
+        tr.pack(fill="x", pady=(4, 0))
+
+        def apply_title():
+            if tsel.get():
+                self.title_var.set(tsel.get())
+                self.refresh_preview()
+                self.save_cfg()
+                self.set_status("✅ 영상 제목을 바꿨어요 (제목 카드·썸네일에 반영)")
+        ttk.Button(tr, text="✔ 선택한 제목을 영상 제목에 적용", command=apply_title).pack(side="left")
+        ttk.Label(tr, text="(쇼츠는 복사할 때 끝에 #shorts 가 붙어요)" if is_short else "", foreground="gray").pack(side="left", padx=8)
+        # 설명 (해시태그·출처 포함 완성본)
+        desc = str(pkg.get("description", "")).strip()
+        if ai_img and "AI" not in desc:
+            desc += "\n※ 일부 이미지는 AI로 생성되었습니다."
+        extra = []
+        if pkg.get("chapters"):
+            extra += ["", "00:00 오프닝"] + [f"{int(t_ // 60):02d}:{int(t_ % 60):02d} {n}" for t_, n in pkg["chapters"]]
+        if pkg.get("sources"):
+            extra += ["", "📚 출처"] + [f"- {x}" for x in pkg["sources"]]
+        credits = [c for c in photo_credits(story) if "AI 생성 이미지" not in c]
+        if credits:
+            extra += ["", "🖼 사진 출처"] + credits
+        art = pkg.get("artwork")
+        if isinstance(art, dict) and art.get("title"):
+            extra += ["", f"🎨 {art.get('title_ko') or art.get('title')} · {art.get('artist', '')} · {art.get('year', '')} · {art.get('museum', '')}"]
+        tags = str(pkg.get("hashtags", "")).strip()
+        if is_short and "#shorts" not in tags.lower():
+            tags = (tags + " #shorts").strip()
+        full = desc + ("\n" + "\n".join(extra) if extra else "") + "\n\n" + tags
+        df = ttk.LabelFrame(f, text=" 설명 (해시태그·출처 포함 완성본 - 고쳐도 됨) ", padding=6)
+        df.pack(fill="both", expand=True, pady=6)
+        dt = tk.Text(df, height=14, wrap="word", font=("맑은 고딕", 10))
+        dt.insert("1.0", full)
+        dt.pack(fill="both", expand=True)
+        ttk.Button(df, text="📋 설명 복사", command=lambda: copy(dt.get("1.0", "end").strip(), "설명")).pack(anchor="e", pady=(4, 0))
+        # 해시태그 / 고정댓글
+        hf = ttk.LabelFrame(f, text=" 해시태그 / 고정 댓글 ", padding=6)
+        hf.pack(fill="x")
+        hv = tk.StringVar(value=tags)
+        r1 = ttk.Frame(hf)
+        r1.pack(fill="x")
+        ttk.Entry(r1, textvariable=hv).pack(side="left", fill="x", expand=True)
+        ttk.Button(r1, text="복사", width=5, command=lambda: copy(hv.get(), "해시태그")).pack(side="left", padx=4)
+        cv = tk.StringVar(value=str(pkg.get("pinned_comment", "")))
+        r2 = ttk.Frame(hf)
+        r2.pack(fill="x", pady=(4, 0))
+        ttk.Entry(r2, textvariable=cv).pack(side="left", fill="x", expand=True)
+        ttk.Button(r2, text="복사", width=5, command=lambda: copy(cv.get(), "고정 댓글")).pack(side="left", padx=4)
+        # 체크리스트
+        tips = ["업로드 화면 '변경되거나 합성된 콘텐츠' → 예 (AI 그림을 사실처럼 썼다면)" if ai_img else "",
+                "사진 출처(CC 라이선스)는 설명란에 꼭 남겨 두세요" if credits else "",
+                "고정 댓글을 달고 '고정' 해 두면 댓글이 잘 달려요"]
+        ttk.Label(f, text="✔ " + "\n✔ ".join(x for x in tips if x), foreground="#555", justify="left").pack(anchor="w", pady=6)
+        bf = ttk.Frame(f)
+        bf.pack(fill="x")
+
+        def save_txt():
+            os.makedirs(out_dir, exist_ok=True)
+            base = os.path.join(out_dir, safe_name(self.title_var.get()))
+            p2 = dict(pkg, description=dt.get("1.0", "end").strip(), hashtags=hv.get(), pinned_comment=cv.get())
+            write_package(base, self.title_var.get(), story, p2)
+            self.write_log("업로드 문구 저장: " + base + "_업로드문구.txt")
+            self.set_status("💾 업로드 문구 저장됨")
+        ttk.Button(bf, text="📋 제목+설명 한 번에 복사",
+                   command=lambda: copy((tsel.get() + (" #shorts" if is_short else "")) + "\n\n" + dt.get("1.0", "end").strip(), "제목+설명")).pack(side="left")
+        ttk.Button(bf, text="🔄 다시 만들기", command=lambda: (win.destroy(), self.ai_package())).pack(side="left", padx=6)
+        ttk.Button(bf, text="닫기", command=win.destroy).pack(side="right")
+        ttk.Button(bf, text="💾 txt 저장", command=save_txt).pack(side="right", padx=6)
+        save_txt()
 
     def ai_command(self):
         cmd = self.cmd_var.get().strip()
