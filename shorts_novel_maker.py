@@ -164,6 +164,15 @@ FIELDS = [
     ("효과", "outro_text", "마무리 문구", "str", "구독하면 다음 이야기가 이어집니다"),
     ("효과", "safe_guide", "미리보기에 안전영역 표시", "choice:on,off", "off"),
     ("영상", "format", "화면 형식", "choice:" + ",".join(FORMATS), "쇼츠 세로(1080×1920)"),
+    ("영상", "layout", "표현 방식", "choice:스크롤형(글이 흐름),자막형(큰 제목+사진+자막)", "스크롤형(글이 흐름)"),
+    ("자막형", "head_style", "제목 색", "choice:노란색,흰색+하늘색,흰색,강조색", "흰색+하늘색"),
+    ("자막형", "head_size", "제목 크기", "int", 96),
+    ("자막형", "sub_size", "자막 크기", "int", 64),
+    ("자막형", "sub_style", "자막 스타일", "choice:흰글자+검은테두리,노란글자+검은테두리,검은띠 위 흰글자", "흰글자+검은테두리"),
+    ("자막형", "sub_max_chars", "자막 한 번에 글자 수", "int", 28),
+    ("자막형", "img_zoom", "사진 천천히 확대", "choice:on,off", "on"),
+    ("자막형", "img_radius", "사진 모서리 둥글기", "int", 28),
+    ("자막형", "sec_per_char", "나레이션 없을 때 글자당 초", "float", 0.12),
     ("영상", "speed", "스크롤 속도(px/초)", "float", 70),
     ("영상", "target_sec", "목표 길이(초, 0=속도사용)", "float", 0),
     ("영상", "hold_start", "시작 정지(초)", "float", 1.5),
@@ -179,12 +188,13 @@ FIELDS = [
     ("나레이션", "narr_gap", "문단 사이 쉼(초)", "float", 0.5),
     ("나레이션", "narr_photo_pause", "사진 보는 시간(초)", "float", 1.5),
     ("나레이션", "narr_duck", "말할 때 음악 크기(0~1)", "float", 0.35),
-    ("번역", "auto_langs", "MP4 만들 때 다른 언어도", "choice:안 함,영어,일본어,영어+일본어", "안 함"),
-    ("번역", "trans_engine", "번역 AI", "choice:자동(키 있으면 ChatGPT→Gemini→Claude),Claude,ChatGPT,Gemini", "자동(키 있으면 ChatGPT→Gemini→Claude)"),
-    ("번역", "openai_key", "ChatGPT API 키", "secret", ""),
-    ("번역", "openai_model", "ChatGPT 모델", "str", "gpt-4o-mini"),
-    ("번역", "gemini_key", "Gemini API 키", "secret", ""),
-    ("번역", "gemini_model", "Gemini 모델", "str", "gemini-1.5-flash"),
+    ("AI 엔진", "script_engine", "대본 작성 AI", "choice:Claude,ChatGPT,Gemini,자동(키 있으면 ChatGPT→Gemini→Claude)", "Claude"),
+    ("AI 엔진", "trans_engine", "번역 AI", "choice:자동(키 있으면 ChatGPT→Gemini→Claude),Claude,ChatGPT,Gemini", "자동(키 있으면 ChatGPT→Gemini→Claude)"),
+    ("AI 엔진", "auto_langs", "MP4 만들 때 다른 언어도", "choice:안 함,영어,일본어,영어+일본어", "안 함"),
+    ("AI 엔진", "openai_key", "ChatGPT API 키", "secret", ""),
+    ("AI 엔진", "openai_model", "ChatGPT 모델", "str", "gpt-4o-mini"),
+    ("AI 엔진", "gemini_key", "Gemini API 키", "secret", ""),
+    ("AI 엔진", "gemini_model", "Gemini 모델", "str", "gemini-1.5-flash"),
     ("소리", "bgm_mode", "배경음", "choice:자동생성,파일,없음", "자동생성"),
     ("소리", "bgm_style", "배경음 스타일", "choice:" + ",".join(["자동(소재별)"] + SOUND_STYLE_NAMES), "자동(소재별)"),
     ("소리", "bgm_volume", "배경음 볼륨(0~2)", "float", 0.5),
@@ -676,9 +686,9 @@ def ask_gemini(key, model, system, user):
     return out["candidates"][0]["content"]["parts"][0]["text"]
 
 
-def pick_engine(s):
-    """번역에 쓸 AI 고르기 → ('chatgpt'|'gemini'|'claude', 설명)"""
-    want = s.get("trans_engine", "")
+def pick_engine(s, key="trans_engine"):
+    """쓸 AI 고르기 → ('chatgpt'|'gemini'|'claude', 설명)"""
+    want = s.get(key, "")
     ok_key = (s.get("openai_key") or os.environ.get("OPENAI_API_KEY", "")).strip()
     gk = (s.get("gemini_key") or os.environ.get("GEMINI_API_KEY", "")).strip()
     if want == "ChatGPT":
@@ -698,8 +708,8 @@ def pick_engine(s):
     return "claude", "Claude"
 
 
-def ask_engine_json(s, claude_model, system, user):
-    eng, _ = pick_engine(s)
+def ask_engine_json(s, claude_model, system, user, key="trans_engine"):
+    eng, _ = pick_engine(s, key)
     if eng == "chatgpt":
         key = (s.get("openai_key") or os.environ.get("OPENAI_API_KEY", "")).strip()
         return parse_json(ask_openai(key, s.get("openai_model"), system, user))
@@ -707,6 +717,17 @@ def ask_engine_json(s, claude_model, system, user):
         key = (s.get("gemini_key") or os.environ.get("GEMINI_API_KEY", "")).strip()
         return parse_json(ask_gemini(key, s.get("gemini_model"), system, user))
     return ask_json(claude_model, system, user)
+
+
+SCRIPT_ENGINE = {"s": None}   # 대본 작성에 쓸 설정 (App 이 작업 전에 넣음)
+
+
+def ask_script_json(model, system, user):
+    """대본 작성·심사용: 'AI 엔진' 탭의 '대본 작성 AI' 설정을 따름 (웹 검색은 항상 Claude)"""
+    s_ = SCRIPT_ENGINE.get("s")
+    if s_ and s_.get("script_engine") and s_.get("script_engine") != "Claude":
+        return ask_engine_json(s_, model, system, user, "script_engine")
+    return ask_json(model, system, user)
 
 
 def check_claude():
@@ -1592,6 +1613,267 @@ class Renderer:
     def thumbnail(self):
         """제목 카드(있으면) 또는 첫 장면"""
         return Image.fromarray(self.frame(min(0.6, self.duration / 2) if self.card is not None else self.intro + 0.1))
+
+
+class SubtitleRenderer:
+    """자막형: 위 큰 제목 + 가운데 사진(천천히 확대) + 아래 자막. 문단마다 자막이 바뀌고 사진 줄에서 사진이 바뀜.
+    Renderer 와 같은 인터페이스(duration, frame, frame_preview, thumbnail, reveal_t, narr_at, keys, chapter_times ...)"""
+
+    def __init__(self, title, story, s, narration=None):
+        self.s, self.title = s, title
+        self.narration = narration or []
+        self.keys = True if self.narration else None
+        durs = {i: d for i, _, d in self.narration}
+        clips = {i: c for i, c, _ in self.narration}
+        gap = max(0.0, float(s.get("narr_gap", 0.5)))
+        spc = max(0.04, float(s.get("sec_per_char", 0.12)))
+        self.intro = s["intro_sec"] if title.strip() else 0
+        self.hs, self.he = s["hold_start"], s["hold_end"]
+        # 문단 → 구간
+        self.images, segs, idx, cur_img = [], [], 0, -1
+        paras_for_narr = narration_paras(story)
+        for para in story.replace("\r", "").split("\n"):
+            para = para.strip()
+            if not para:
+                continue
+            med = parse_media(para)
+            if med:
+                im = load_media_image(med[0])
+                if im is not None:
+                    self.images.append((im, med[1]))
+                    cur_img = len(self.images) - 1
+                continue
+            if PH_RE.match(para):
+                continue
+            para = PH_INLINE_RE.sub("", para).strip()
+            if not para:
+                continue
+            kind = "chapter" if para.startswith("## ") else ("lyric" if para.startswith("♪") else "text")
+            text = para[3:].strip() if kind == "chapter" else para
+            d = durs.get(idx)
+            if d is None:
+                d = max(1.6, len(tts_clean(text)) * spc + 0.6)
+            d = d + (1.0 if kind == "chapter" else gap)
+            segs.append({"i": idx, "kind": kind, "text": text, "img": cur_img, "dur": d})
+            idx += 1
+        if self.images:   # 첫 사진이 나오기 전 문단들도 첫 사진을 보여줌 (빈 화면 방지)
+            for sg in segs:
+                if sg["img"] < 0:
+                    sg["img"] = 0
+        # 가사(♪) 바로 다음 문단(해석)은 같은 화면에: 가사는 사진 위, 해석은 자막
+        self.segs = []
+        k = 0
+        while k < len(segs):
+            sg = segs[k]
+            if sg["kind"] == "lyric" and k + 1 < len(segs) and segs[k + 1]["kind"] == "text":
+                nxt = segs[k + 1]
+                sg = dict(sg, sub=nxt["text"], dur=sg["dur"] + nxt["dur"], i2=nxt["i"])
+                k += 1
+            self.segs.append(sg)
+            k += 1
+        t = self.intro + self.hs
+        for sg in self.segs:
+            sg["t0"] = t
+            t += sg["dur"]
+        self.scroll_t = max(1.0, t - self.intro - self.hs)
+        self.duration = self.intro + self.hs + self.scroll_t + self.he
+        self.dist, self.speed = 0, 0.0
+        self.paras = [(0, (sg["text"] if sg["kind"] != "chapter" else "## " + sg["text"])) for sg in self.segs]
+        self.narr_at = []
+        for sg in self.segs:
+            if sg["i"] in clips:
+                self.narr_at.append((sg["t0"], clips[sg["i"]]))
+            if "i2" in sg and sg["i2"] in clips:
+                self.narr_at.append((sg["t0"] + durs.get(sg["i"], 0) + gap, clips[sg["i2"]]))
+        # 레이아웃
+        self.port = H > W
+        m = int(W * 0.045)
+        if self.port:
+            self.head_box = (m, int(H * 0.06), W - m, int(H * 0.23))
+            self.img_box = (m, int(H * 0.25), W - m, int(H * 0.74))
+            self.sub_box = (m, int(H * 0.76), W - m, int(H * 0.93))
+        else:
+            self.head_box = (m, int(H * 0.04), W - m, int(H * 0.19))
+            self.img_box = (int(W * 0.18), int(H * 0.21), int(W * 0.82), int(H * 0.80))
+            self.sub_box = (m, int(H * 0.82), W - m, int(H * 0.97))
+        self.bg = Background(s, self.duration)
+        self.head_layer = self._make_head()
+        self._sub_cache, self._img_cache = {}, {}
+        self.accent = np.array(hex_rgb(s["accent_color"]), np.float32)
+        self.card = None
+        if self.intro > 0:
+            ft = load_font(s["title_font_path"] or s["font_path"], int(s["title_size"] * 1.15))
+            self.card = build_card([title.strip()], ft, s["title_color"], s, H * 0.46)
+        self.outro = s["outro_sec"] if s["outro_text"].strip() else 0
+        fo = load_font(s["font_path"], int(s["font_size"] * 0.85))
+        self.outro_layer = build_card([s["outro_text"].strip()], fo, s["accent_color"], s, H * 0.72) if self.outro > 0 else None
+        self.reveal_t = self.find_reveal()
+
+    # --- 제목 ---
+    def _make_head(self):
+        s = self.s
+        layer = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+        if not self.title.strip():
+            return layer
+        d = ImageDraw.Draw(layer)
+        x0, y0, x1, y1 = self.head_box
+        size = int(s["head_size"])
+        font = load_font(s["title_font_path"] or s["font_path"], size)
+        lines = wrap(self.title.strip(), font, x1 - x0)
+        while len(lines) > 2 and size > 40:
+            size -= 6
+            font = load_font(s["title_font_path"] or s["font_path"], size)
+            lines = wrap(self.title.strip(), font, x1 - x0)
+        lines = lines[:2]
+        lh = int(size * 1.2)
+        y = y0 + ((y1 - y0) - lh * len(lines)) // 2
+        st = s["head_style"]
+        for i, ln in enumerate(lines):
+            if st == "노란색":
+                col = "#FFE135"
+            elif st == "흰색+하늘색":
+                col = "#FFFFFF" if i == 0 else "#7FDBFF"
+            elif st == "강조색":
+                col = s["accent_color"]
+            else:
+                col = "#FFFFFF"
+            x = x0 + ((x1 - x0) - font.getlength(ln)) / 2
+            d.text((x, y), ln, font=font, fill=col, stroke_width=max(3, size // 14), stroke_fill="#000000")
+            y += lh
+        return layer
+
+    # --- 자막 ---
+    def _sub_layer(self, key, text, lyric=None):
+        if key in self._sub_cache:
+            return self._sub_cache[key]
+        s = self.s
+        layer = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+        d = ImageDraw.Draw(layer)
+        x0, y0, x1, y1 = self.sub_box
+        size = int(s["sub_size"])
+        font = load_font(s["title_font_path"] or s["font_path"], size)
+        lines = wrap(text, font, x1 - x0)
+        while len(lines) > 3 and size > 34:
+            size -= 4
+            font = load_font(s["title_font_path"] or s["font_path"], size)
+            lines = wrap(text, font, x1 - x0)
+        lh = int(size * 1.3)
+        y = y1 - lh * len(lines)
+        st = s["sub_style"]
+        col = "#FFE135" if st.startswith("노란") else "#FFFFFF"
+        if st.startswith("검은띠"):
+            d.rectangle([x0 - 10, y - 14, x1 + 10, y1 + 6], fill=(0, 0, 0, 185))
+        for ln in lines:
+            x = x0 + ((x1 - x0) - font.getlength(ln)) / 2
+            d.text((x, y), ln, font=font, fill=col, stroke_width=0 if st.startswith("검은띠") else max(3, size // 14), stroke_fill="#000000")
+            y += lh
+        if lyric:   # 가사 원문은 사진 위에 노란 글자로
+            fl = load_font(s["title_font_path"] or s["font_path"], int(size * 0.95))
+            ix0, iy0, ix1, iy1 = self.img_box
+            ll = wrap(lyric.lstrip("♪").strip(), fl, ix1 - ix0 - 40)
+            ly = iy1 - int(fl.size * 1.3) * len(ll) - 30
+            for ln in ll:
+                x = ix0 + ((ix1 - ix0) - fl.getlength(ln)) / 2
+                d.text((x, ly), ln, font=fl, fill="#FFE135", stroke_width=max(3, fl.size // 12), stroke_fill="#000000")
+                ly += int(fl.size * 1.3)
+        self._sub_cache[key] = layer
+        return layer
+
+    # --- 사진 ---
+    def _img_frame(self, idx, prog):
+        """idx 사진을 사진 상자에 꽉 채워(가운데 잘라) 넣고 prog(0~1) 만큼 확대"""
+        x0, y0, x1, y1 = self.img_box
+        bw, bh = x1 - x0, y1 - y0
+        if idx not in self._img_cache:
+            im = self.images[idx][0]
+            sc = max(bw / im.width, bh / im.height) * 1.12
+            big = im.resize((int(im.width * sc) + 1, int(im.height * sc) + 1), Image.LANCZOS)
+            mask = Image.new("L", (bw, bh), 0)
+            ImageDraw.Draw(mask).rounded_rectangle([0, 0, bw - 1, bh - 1], radius=int(self.s["img_radius"]), fill=255)
+            self._img_cache[idx] = (big, mask)
+        big, mask = self._img_cache[idx]
+        z = 1.0 + (0.12 * smoothstep(prog) if self.s["img_zoom"] == "on" else 0.06)
+        cw, ch = bw * 1.12 / z, bh * 1.12 / z
+        l, t = (big.width - cw) / 2, (big.height - ch) / 2
+        crop = big.transform((bw, bh), Image.EXTENT, (l, t, l + cw, t + ch), Image.BILINEAR)
+        return crop, mask
+
+    def seg_at(self, t):
+        for sg in self.segs:
+            if t < sg["t0"] + sg["dur"]:
+                return sg
+        return self.segs[-1] if self.segs else None
+
+    def _compose_pil(self, t):
+        bg = Image.fromarray(np.clip(self.bg.frame(t), 0, 255).astype(np.uint8)).convert("RGBA")
+        if self.card is not None and t < self.intro:
+            k = smoothstep(t / 0.5) * smoothstep((self.intro - t) / 0.5)
+            a = (self.card[1] * k)[..., None]
+            arr = np.asarray(bg).astype(np.float32)[..., :3]
+            out = arr + (self.card[0] - arr) * a
+            return Image.fromarray(np.clip(out, 0, 255).astype(np.uint8))
+        sg = self.seg_at(t)
+        canvas = bg
+        if sg is not None:
+            if sg["img"] >= 0 and self.images:
+                # 같은 사진이 보이는 전체 시간 기준으로 확대 진행
+                same = [x for x in self.segs if x["img"] == sg["img"]]
+                t_a, t_b = same[0]["t0"], same[-1]["t0"] + same[-1]["dur"]
+                prog = (t - t_a) / max(0.1, t_b - t_a)
+                crop, mask = self._img_frame(sg["img"], prog)
+                canvas.paste(crop, (self.img_box[0], self.img_box[1]), mask)
+            canvas.alpha_composite(self.head_layer)
+            if sg["kind"] == "chapter":
+                lay = self._sub_layer(("ch", sg["i"]), "— " + sg["text"] + " —")
+            elif sg["kind"] == "lyric":
+                lay = self._sub_layer(("ly", sg["i"]), sg.get("sub", ""), lyric=sg["text"])
+            else:
+                lay = self._sub_layer(("tx", sg["i"]), sg["text"])
+            canvas.alpha_composite(lay)
+        else:
+            canvas.alpha_composite(self.head_layer)
+        out = canvas.convert("RGB")
+        if self.outro_layer is not None and t > self.duration - self.outro:
+            k = smoothstep((t - (self.duration - self.outro)) / 0.6)
+            arr = np.asarray(out).astype(np.float32)
+            a = (self.outro_layer[1] * k)[..., None]
+            out = Image.fromarray(np.clip(arr + (self.outro_layer[0] - arr) * a, 0, 255).astype(np.uint8))
+        if self.s["progress_bar"] == "on":
+            d = ImageDraw.Draw(out)
+            d.rectangle([0, 0, int(W * min(1, t / self.duration)), 7], fill=tuple(int(v) for v in self.accent))
+        return out
+
+    def frame(self, t):
+        return np.asarray(self._compose_pil(t)).copy()
+
+    def frame_preview(self, t):
+        return np.asarray(self._compose_pil(t).resize((PREVIEW_W, PREVIEW_H), Image.BILINEAR)).copy()
+
+    def thumbnail(self):
+        t = self.segs[0]["t0"] + 0.2 if self.segs else 0.1
+        return self._compose_pil(t)
+
+    def para_time(self, idx):
+        return self.segs[idx]["t0"] if idx < len(self.segs) else self.duration
+
+    def chapter_times(self):
+        return [(sg["t0"], sg["text"]) for sg in self.segs if sg["kind"] == "chapter"]
+
+    def find_reveal(self):
+        texts = [sg for sg in self.segs if sg["kind"] != "chapter"]
+        if len(texts) < 2:
+            return None
+        sg = texts[-2] if texts[-1]["text"].rstrip().endswith("?") else texts[-1]
+        return sg["t0"] if sg["t0"] >= self.intro + 1.0 else None
+
+    def offset(self, t):
+        return 0.0
+
+
+def make_renderer(title, story, s, narration=None):
+    if s.get("layout", "").startswith("자막형"):
+        return SubtitleRenderer(title, story, s, narration)
+    return Renderer(title, story, s, narration)
 
 
 # ---------------- 배경음 합성 (저작권 걱정 없는 자체 제작 소리) ----------------
@@ -2852,6 +3134,7 @@ class App(tk.Tk):
         self.busy = True
         self.cancel.clear()
         self.status.config(text=label)
+        SCRIPT_ENGINE["s"] = self.get_settings()
 
         def worker():
             try:
@@ -2942,19 +3225,19 @@ class App(tk.Tk):
         note = ""
         if not judge:
             log("대본 쓰는 중...")
-            d = ask_json(model, single_sys, user)
+            d = ask_script_json(model, single_sys, user)
             title, story, notes = d.get("title", ""), d.get("story", ""), d.get("notes", "")
             sources = sources or d.get("sources", [])
             song, melody, bpm = d.get("song"), d.get("melody", ""), d.get("bpm", 90)
             artwork, details = d.get("artwork"), d.get("details")
         else:
             log("초안 3개 작성 중...")
-            drafts = ask_json(model, multi_sys, user).get("drafts", [])
+            drafts = ask_script_json(model, multi_sys, user).get("drafts", [])
             drafts = [d for d in drafts if isinstance(d, dict) and d.get("story")]
             if not drafts:
                 raise RuntimeError("초안을 만들지 못했습니다.")
             log("편집장 심사 중... (" + " / ".join(d.get("title", "") for d in drafts) + ")")
-            j = ask_json(model, JUDGE_SYSTEM, f"콘텐츠 종류: {category}\n소재: {genre}\n\n[초안들]\n" + json.dumps(drafts, ensure_ascii=False))
+            j = ask_script_json(model, JUDGE_SYSTEM, f"콘텐츠 종류: {category}\n소재: {genre}\n\n[초안들]\n" + json.dumps(drafts, ensure_ascii=False))
             try:
                 best = int(j.get("best", 0))
             except (TypeError, ValueError):
@@ -3382,7 +3665,7 @@ class App(tk.Tk):
         try:
             s = self.get_settings()
             narr = self.narration_cached(self.get_story(), s)
-            self.renderer = Renderer(self.title_var.get(), self.get_story(), s, narr)
+            self.renderer = make_renderer(self.title_var.get(), self.get_story(), s, narr)
             self.narr_missing = s.get("narration") == "on" and narr is None
         except Exception as e:
             self.on_err(e)
@@ -3413,8 +3696,10 @@ class App(tk.Tk):
         art = getattr(self, "artwork", None)
         if art and self.cat_var.get() == ART_CATEGORY:
             warn += f"\n🖼 {art.get('title_ko') or art.get('title', '')} - {art.get('artist', '')}"
-        self.info.config(text=f"총 {r.duration:.1f}초 (제목카드 {r.intro:.1f} + 정지 {r.hs:.1f} + 스크롤 {r.scroll_t:.1f} + 끝 {r.he:.1f})\n"
-                              f"본문 {chars}자 | 스크롤 {max(0, r.dist)}px | {r.speed:.0f}px/초{warn}\n"
+        mid = (f"자막 {len(r.segs)}장면 · 사진 {len(r.images)}장" if isinstance(r, SubtitleRenderer)
+               else f"스크롤 {max(0, r.dist)}px | {r.speed:.0f}px/초")
+        self.info.config(text=f"총 {r.duration:.1f}초 (제목카드 {r.intro:.1f} + 정지 {r.hs:.1f} + 본편 {r.scroll_t:.1f} + 끝 {r.he:.1f})\n"
+                              f"본문 {chars}자 | {mid}{warn}\n"
                               f"배경음: {snd}{hit}" + (f" | 사진 {nph}장" if nph else ""))
         self.show_frame()
 
@@ -3738,7 +4023,7 @@ class App(tk.Tk):
             if s.get("narration") == "on" and not r.keys:
                 self.q.put(lambda: self.status.config(text="나레이션 만드는 중..."))
                 narr = self.narration_for(story_now, s, self.log_bg, self.cancel)
-                r = Renderer(title_now, story_now, s, narr)
+                r = make_renderer(title_now, story_now, s, narr)
                 self.q.put(lambda: setattr(self, "renderer", r))
             self.q.put(lambda: self.status.config(text="배경음 만드는 중..."))
             audio = build_audio(r, s, style)
@@ -3826,7 +4111,7 @@ class App(tk.Tk):
                 base = os.path.join(out_dir, f"{i + 1:02d}_{safe_name(title)}")
                 CURRENT_MELODY["melody"], CURRENT_MELODY["bpm"] = res.get("melody", ""), res.get("bpm", 90)
                 narr = self.narration_for(story, s, log, self.cancel)
-                r = Renderer(title, story, s, narr)
+                r = make_renderer(title, story, s, narr)
                 style = resolve_style(s, genre)
                 audio = build_audio(r, s, style)
                 if audio is not None and "MP3" in s["audio_out"]:
@@ -3947,7 +4232,7 @@ class App(tk.Tk):
                 if make_mp4:
                     CURRENT_MELODY.update(melody)
                     narr = self.narration_for(t_story, ls, log, self.cancel)
-                    r = Renderer(t_title, t_story, ls, narr)
+                    r = make_renderer(t_title, t_story, ls, narr)
                     audio = build_audio(r, ls, style)
                     if audio is not None and "MP3" in ls["audio_out"]:
                         write_mp3(base + "_배경음.mp3", audio)
