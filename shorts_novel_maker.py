@@ -168,10 +168,10 @@ FIELDS = [
     ("효과", "safe_guide", "미리보기에 안전영역 표시", "choice:on,off", "off"),
     ("영상", "format", "화면 형식", "choice:" + ",".join(FORMATS), "쇼츠 세로(1080×1920)"),
     ("영상", "layout", "표현 방식", "choice:스크롤형(글이 흐름),자막형(큰 제목+사진+자막)", "스크롤형(글이 흐름)"),
-    ("자막형", "head_style", "제목 색", "choice:노란색,흰색+하늘색,흰색,강조색", "흰색+하늘색"),
+    ("자막형", "head_style", "제목 색", "choice:글자 탭 제목색,글자 탭 제목색+강조색,노란색,흰색+하늘색,흰색,강조색", "글자 탭 제목색"),
     ("자막형", "head_size", "제목 크기", "int", 96),
     ("자막형", "sub_size", "자막 크기", "int", 64),
-    ("자막형", "sub_style", "자막 스타일", "choice:흰글자+검은테두리,노란글자+검은테두리,검은띠 위 흰글자", "흰글자+검은테두리"),
+    ("자막형", "sub_style", "자막 스타일", "choice:글자 탭 글자색+검은테두리,글자 탭 글자색+검은띠,흰글자+검은테두리,노란글자+검은테두리,검은띠 위 흰글자", "글자 탭 글자색+검은테두리"),
     ("자막형", "sub_max_chars", "자막 한 번에 글자 수", "int", 28),
     ("자막형", "img_motion", "사진 움직임", "choice:영상처럼(확대·이동·전환),천천히 확대만,없음", "영상처럼(확대·이동·전환)"),
     ("자막형", "shot_sec", "한 장면 최대 길이(초)", "float", 4.5),
@@ -2078,8 +2078,11 @@ class SubtitleRenderer:
         lh = int(size * 1.2)
         y = y0 + ((y1 - y0) - lh * len(lines)) // 2
         st = s["head_style"]
+        sw, shadow = self._stroke(size), s.get("shadow", "on") == "on"
         for i, ln in enumerate(lines):
-            if st == "노란색":
+            if st.startswith("글자 탭"):
+                col = s["accent_color"] if ("강조색" in st and i > 0) else s["title_color"]
+            elif st == "노란색":
                 col = "#FFE135"
             elif st == "흰색+하늘색":
                 col = "#FFFFFF" if i == 0 else "#7FDBFF"
@@ -2088,9 +2091,16 @@ class SubtitleRenderer:
             else:
                 col = "#FFFFFF"
             x = x0 + ((x1 - x0) - font.getlength(ln)) / 2
-            d.text((x, y), ln, font=font, fill=col, stroke_width=max(3, size // 14), stroke_fill="#000000")
+            if shadow:
+                d.text((x + size // 18, y + size // 14), ln, font=font, fill=(0, 0, 0, 150), stroke_width=sw, stroke_fill=(0, 0, 0, 150))
+            d.text((x, y), ln, font=font, fill=col, stroke_width=sw, stroke_fill="#000000")
             y += lh
         return layer
+
+    def _stroke(self, size):
+        """글자 테두리: '글자' 탭 값이 있으면 그 값, 없으면 크기에 맞춰 자동"""
+        v = int(float(self.s.get("stroke_width", 0) or 0))
+        return v if v > 0 else max(3, size // 14)
 
     # --- 자막 ---
     def _sub_layer(self, key, text, lyric=None):
@@ -2110,12 +2120,22 @@ class SubtitleRenderer:
         lh = int(size * 1.3)
         y = y1 - lh * len(lines)
         st = s["sub_style"]
-        col = "#FFE135" if st.startswith("노란") else "#FFFFFF"
-        if st.startswith("검은띠"):
-            d.rectangle([x0 - 10, y - 14, x1 + 10, y1 + 6], fill=(0, 0, 0, 185))
+        band = "검은띠" in st
+        if st.startswith("글자 탭"):
+            col = s["text_color"]
+            if s.get("quote_color", "on") == "on" and text.strip()[:1] in "\"“'‘「":
+                col = s["accent_color"]     # 따옴표 대사는 강조색
+        else:
+            col = "#FFE135" if st.startswith("노란") else "#FFFFFF"
+        if band:
+            d.rounded_rectangle([x0 - 10, y - 14, x1 + 10, y1 + 6], radius=16, fill=(0, 0, 0, 185))
+        sw = 0 if band else self._stroke(size)
+        shadow = s.get("shadow", "on") == "on" and not band
         for ln in lines:
             x = x0 + ((x1 - x0) - font.getlength(ln)) / 2
-            d.text((x, y), ln, font=font, fill=col, stroke_width=0 if st.startswith("검은띠") else max(3, size // 14), stroke_fill="#000000")
+            if shadow:
+                d.text((x + size // 18, y + size // 14), ln, font=font, fill=(0, 0, 0, 150), stroke_width=sw, stroke_fill=(0, 0, 0, 150))
+            d.text((x, y), ln, font=font, fill=col, stroke_width=sw, stroke_fill="#000000")
             y += lh
         if lyric:   # 가사 원문은 사진 위에 노란 글자로
             fl = load_font(s["title_font_path"] or s["font_path"], int(size * 0.95))
@@ -3488,7 +3508,7 @@ class App(tk.Tk):
         return best
 
     def project_dict(self):
-        return {"ver": 5, "model": self.model_var.get(), "category": self.cat_var.get(), "topic": self.topic_var.get(), "genre": self.genre_var.get(),
+        return {"ver": 6, "model": self.model_var.get(), "category": self.cat_var.get(), "topic": self.topic_var.get(), "genre": self.genre_var.get(),
                 "sources": getattr(self, "sources", []), "notes": getattr(self, "notes", ""),
                 "song": getattr(self, "song", None), "melody": getattr(self, "melody", ""), "bpm": getattr(self, "bpm", 90),
                 "artwork": getattr(self, "artwork", None),
@@ -3544,6 +3564,11 @@ class App(tk.Tk):
         s.update(c.get("settings", {}))
         if c.get("settings") and c.get("ver", 1) < 2 and int(float(s.get("fps", 30))) == 30:
             s["fps"] = 60  # 부드러운 스크롤 기본값으로 올림
+        if c.get("settings") and c.get("ver", 1) < 6:   # 자막형도 '글자' 탭 색을 따르게
+            if s.get("head_style") == "흰색+하늘색":
+                s["head_style"] = "글자 탭 제목색"
+            if s.get("sub_style") == "흰글자+검은테두리":
+                s["sub_style"] = "글자 탭 글자색+검은테두리"
         if c.get("settings") and c.get("ver", 1) < 5:
             if float(s.get("narr_duck", 0.5)) < 0.5:
                 s["narr_duck"] = 0.5
