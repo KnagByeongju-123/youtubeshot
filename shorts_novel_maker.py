@@ -589,7 +589,7 @@ def command_system():
     keys = "\n".join(f"- {k}: {LABEL[k]} ({FTYPE[k]})" for k in DEFAULTS if k not in FILE_KEYS)
     return f"""너는 유튜브 쇼츠 단편소설 스크롤 영상 편집 도우미다.
 사용자 명령에 맞춰 제목, 본문, 화면/영상 설정을 고친다.
-영상 크기는 1080x1920 세로 화면이다.
+영상 크기는 {W}x{H} {"가로(롱폼)" if W > H else "세로(쇼츠)"} 화면이다.
 설정 키:
 {keys}
 테마 이름(theme 키로 지정 가능): {", ".join(THEMES)}
@@ -1271,9 +1271,28 @@ def prompt_paras(story):
     return [x for x in split_paras(story) if not parse_media(x) and not PH_RE.match(x) and story_text_only(x).strip()]
 
 
-def openai_image(prompt, key, model="gpt-image-2", quality="medium", size="1024x1536"):
+def is_landscape():
+    return W > H
+
+
+def ratio_ko():
+    """그림 비율 안내 문구 (쇼츠=세로 9:16, 롱폼=가로 16:9)"""
+    return "가로 16:9" if is_landscape() else "세로 9:16"
+
+
+def fit_ratio(text):
+    """프롬프트 속 '세로 9:16' 표현을 지금 화면 형식에 맞게 바꿈"""
+    if not is_landscape():
+        return text
+    return (text.replace("세로 화면(9:16)", "가로 화면(16:9)").replace("세로 9:16", "가로 16:9")
+            .replace("Vertical 9:16", "Horizontal 16:9").replace("유튜브 쇼츠 썸네일", "유튜브 썸네일")
+            .replace("아래쪽 35%는 어둡고 단순하게 비워 둠(글자 자리)", "한쪽(왼쪽 또는 오른쪽) 40%는 어둡고 단순하게 비워 둠(글자 자리), 피사체는 반대쪽"))
+
+
+def openai_image(prompt, key, model="gpt-image-2", quality="medium", size=None):
     """ChatGPT 그림 API → PIL 이미지"""
     import base64
+    size = size or ("1536x1024" if is_landscape() else "1024x1536")
     want = (model or "").strip() or "gpt-image-2"
     models = [m for m in dict.fromkeys([_IMG_OK.get(want, want), want, "gpt-image-1.5", "gpt-image-1-mini"]) if m]
     last = None
@@ -1311,7 +1330,7 @@ def make_ai_images(model, category, title, story, n, s, media_dir, log, cancel=N
         raise RuntimeError("ChatGPT 그림에는 ChatGPT API 키가 필요합니다 (AI 엔진 탭)")
     style = str(s.get("image_style", "")).strip()
     log(f"🎨 그림 {n}장 기획 중...")
-    plan = ask_script_json(model, IMAGE_PLAN_SYSTEM, f"콘텐츠 종류: {category}\n그림 수: {n}장\n그림 스타일(모든 그림 공통): {style or '사실적인 영화 장면'}"
+    plan = ask_script_json(model, fit_ratio(IMAGE_PLAN_SYSTEM), f"화면: {ratio_ko()}\n콘텐츠 종류: {category}\n그림 수: {n}장\n그림 스타일(모든 그림 공통): {style or '사실적인 영화 장면'}"
                            f"\n[제목] {title}\n\n[본문]\n{story_text_only(story)}")
     items = [x for x in (plan.get("images") or []) if isinstance(x, dict) and x.get("prompt")][:n]
     got = []
@@ -1319,7 +1338,7 @@ def make_ai_images(model, category, title, story, n, s, media_dir, log, cancel=N
         if cancel is not None and cancel.is_set():
             raise RuntimeError("취소됨")
         log(f"  🎨 그림 {k + 1}/{len(items)} 그리는 중: {it.get('caption', '')}")
-        prompt = it["prompt"] + (f" Style: {style}." if style else "") + " Vertical 9:16 composition. No text, no letters, no watermark."
+        prompt = it["prompt"] + (f" Style: {style}." if style else "") + fit_ratio(" Vertical 9:16 composition.") + " No text, no letters, no watermark."
         try:
             im = openai_image(prompt, key, s.get("image_model"), s.get("image_quality"))
         except APIError as e:
@@ -1646,7 +1665,11 @@ def render_thumb(v, s, photo_im=None, size=None, font_path=None):
         bg = Image.fromarray(np.clip(Background(s, 2.0).frame(0.0), 0, 255).astype(np.uint8)).convert("RGB")
     arr = np.asarray(bg).astype(np.float32)
     yy = np.linspace(0, 1, h)[:, None, None]
-    shade = 1 - 0.75 * np.clip((yy - 0.52) / 0.48, 0, 1) ** 1.2      # 아래쪽 어둡게 (글자 자리)
+    if port:
+        shade = 1 - 0.75 * np.clip((yy - 0.52) / 0.48, 0, 1) ** 1.2      # 아래쪽 어둡게 (글자 자리)
+    else:
+        xx0 = np.linspace(0, 1, w)[None, :, None]
+        shade = 1 - 0.72 * np.clip((0.62 - xx0) / 0.62, 0, 1) ** 1.1     # 가로: 왼쪽 어둡게 (글자 자리)
     shade = shade * (1 - 0.35 * np.clip((0.18 - yy) / 0.18, 0, 1))  # 위쪽 살짝
     xx = np.linspace(-1, 1, w)[None, :, None]
     vig = 1 - 0.28 * np.clip((xx ** 2 + ((yy - 0.5) * 2) ** 2) - 0.6, 0, 1)
@@ -1668,9 +1691,9 @@ def render_thumb(v, s, photo_im=None, size=None, font_path=None):
         d = ImageDraw.Draw(out)
     lines = [x for x in (str(v.get("big", "")).strip(), str(v.get("big2", "")).strip()) if x]
     emph = str(v.get("emph", "")).strip()
-    if lines:   # 큰 글자 (아래쪽, 가운데, 최대 두 줄)
-        size_ = int(h * (0.105 if port else 0.19))
-        maxw = w - 2 * m
+    if lines:   # 큰 글자 (세로: 아래쪽 가운데 / 가로: 왼쪽, 최대 두 줄)
+        size_ = int(h * (0.105 if port else 0.17))
+        maxw = (w - 2 * m) if port else int(w * 0.58)
         while size_ > 30:
             f_ = load_font(fp, size_)
             if all(f_.getlength(x) <= maxw for x in lines):
@@ -1679,9 +1702,9 @@ def render_thumb(v, s, photo_im=None, size=None, font_path=None):
         f_ = load_font(fp, size_)
         lh = int(size_ * 1.12)
         sw = max(6, size_ // 9)
-        y = int(h * (0.90 if port else 0.93)) - lh * len(lines)
+        y = int(h * 0.90) - lh * len(lines) if port else int(h * 0.88) - lh * len(lines)
         for ln in lines:
-            x = (w - f_.getlength(ln)) / 2
+            x = (w - f_.getlength(ln)) / 2 if port else m
             parts = [(ln, c_big)]
             if emph and emph in ln:
                 i_ = ln.index(emph)
@@ -5181,7 +5204,7 @@ class App(tk.Tk):
             messagebox.showinfo("그림 프롬프트", "먼저 대본을 만들거나 입력하세요.")
             return
         old = getattr(self, "img_prompts", [])
-        if old and not force and [x.get("text") for x in old] == paras:
+        if old and not force and [x.get("text") for x in old] == paras and old[0].get("ratio", "세로 9:16") == ratio_ko():
             self.img_prompts_window()     # 대본이 그대로면 저장된 프롬프트를 바로 보여줌
             return
         model, title, cat = self.model_var.get().strip(), self.title_var.get(), self.cat_var.get()
@@ -5194,7 +5217,7 @@ class App(tk.Tk):
 
         def job():
             numbered = "\n\n".join(f"[{i + 1}] {story_text_only(x).strip()}" for i, x in enumerate(paras))
-            d = ask_script_json(model, PROMPT_SYSTEM, f"콘텐츠 종류: {cat}\n공통 스타일: {style or 'cinematic realistic photo, moody lighting'}"
+            d = ask_script_json(model, fit_ratio(PROMPT_SYSTEM), f"화면: {ratio_ko()} ({'롱폼 가로 영상' if is_landscape() else '쇼츠 세로 영상'})\n콘텐츠 종류: {cat}\n공통 스타일: {style or 'cinematic realistic photo, moody lighting'}"
                                 + (f"\n[인물] {chars[:600]}" if chars else "")
                                 + f"\n[제목] {title}\n\n[문단 {len(paras)}개]\n{numbered}")
             by = {}
@@ -5203,7 +5226,7 @@ class App(tk.Tk):
                     by[int(it.get("para")) - 1] = it
                 except (TypeError, ValueError):
                     continue
-            return [{"text": x, "ko": str(by.get(i, {}).get("ko", "")), "prompt": str(by.get(i, {}).get("prompt", ""))}
+            return [{"text": x, "ko": str(by.get(i, {}).get("ko", "")), "prompt": str(by.get(i, {}).get("prompt", "")), "ratio": ratio_ko()}
                     for i, x in enumerate(paras)]
 
         def done(res):
@@ -5220,7 +5243,7 @@ class App(tk.Tk):
             self._prompt_win.destroy()
         win = tk.Toplevel(self)
         self._prompt_win = win
-        win.title("그림 프롬프트 - 복사 → ChatGPT에 붙여넣기 → 그림 복사 → 📥 붙여넣기")
+        win.title(f"그림 프롬프트 ({ratio_ko()}) - 복사 → ChatGPT에 붙여넣기 → 그림 복사 → 📥 붙여넣기")
         win.geometry("900x720")
         top = ttk.Frame(win, padding=(10, 8))
         top.pack(fill="x")
@@ -5245,7 +5268,7 @@ class App(tk.Tk):
 
         def full_text(k):
             p_ = boxes[k].get("1.0", "end").strip()
-            return p_ + "\n\n(세로 9:16 비율로, 글자·워터마크 없이 그려줘)"
+            return p_ + f"\n\n({ratio_ko()} 비율로, 글자·워터마크 없이 그려줘)"
 
         def copy(k, lab):
             self.clipboard_clear()
@@ -5886,7 +5909,7 @@ class App(tk.Tk):
             except Exception:
                 pass
             plist = "\n".join(f"{i + 1}. {cap}" for i, (_, cap) in enumerate(photos)) or "(사진 없음)"
-            d = ask_script_json(model, THUMB_SYSTEM, f"콘텐츠 종류: {cat}\n[제목] {title}\n\n[본문]\n{story_text_only(story)[:3000]}\n\n[사진 목록]\n{plist}")
+            d = ask_script_json(model, fit_ratio(THUMB_SYSTEM), f"화면: {ratio_ko()}\n콘텐츠 종류: {cat}\n[제목] {title}\n\n[본문]\n{story_text_only(story)[:3000]}\n\n[사진 목록]\n{plist}")
             vs = [x for x in (d.get("variants") or []) if isinstance(x, dict) and x.get("big")][:3]
             if not vs:
                 raise RuntimeError("썸네일 문구를 만들지 못했습니다")
@@ -5994,7 +6017,8 @@ class App(tk.Tk):
             txt = pt.get("1.0", "end").strip()
             variants[sel.get()]["prompt"] = txt
             self.clipboard_clear()
-            self.clipboard_append(txt + "\n\n(유튜브 쇼츠 썸네일용. 세로 9:16. 글자·워터마크 없이. 아래쪽은 글자를 넣을 수 있게 단순하고 어둡게.)")
+            self.clipboard_append(txt + ("\n\n(유튜브 썸네일용. 가로 16:9. 글자·워터마크 없이. 한쪽은 글자를 넣을 수 있게 단순하고 어둡게.)" if is_landscape()
+                                         else "\n\n(유튜브 쇼츠 썸네일용. 세로 9:16. 글자·워터마크 없이. 아래쪽은 글자를 넣을 수 있게 단순하고 어둡게.)"))
             pstat.config(text="📋 복사됨 → ChatGPT에 붙여넣기")
 
         def got(im):
