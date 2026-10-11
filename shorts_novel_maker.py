@@ -1535,6 +1535,120 @@ def list_pc_fonts():
     return res
 
 
+# ---------------- AI 썸네일 ----------------
+THUMB_SYSTEM = """너는 구독자 100만 유튜브 채널의 썸네일 디자이너다. 아래 영상의 썸네일 문구 시안 3개를 만든다.
+인기 썸네일 공식: 한눈에 읽히는 아주 짧은 문구 + 궁금증(결과를 말하지 않음) + 숫자·반전·금기어("아무도", "사실은", "절대", "진짜 이유").
+- big: 가장 큰 글자. 2~7자. 띄어쓰기 포함 8자 이내. 명사형으로 끝내도 됨.
+- big2: 둘째 줄(없으면 빈 문자열). 2~8자.
+- emph: big 또는 big2 안에 실제로 들어 있는 단어 하나(색을 다르게 칠함). 없으면 빈 문자열.
+- small: 위쪽 작은 띠 문구 4~10자 (예: "실화", "명화의 비밀", "1911년 루브르").
+- mood: 충격 | 감동 | 미스터리 | 정보 중 하나.
+- prompt: 썸네일 그림 생성용 영어 프롬프트(60~90단어). 인기 썸네일 공식대로: 피사체 하나(인물 얼굴 클로즈업·감정이 보이는 표정, 또는 상징물)가 화면을 크게 채우고,
+  극적인 조명·강한 색 대비, 배경은 단순하게, 세로 9:16, 아래쪽 35%는 어둡고 단순하게 비워 둠(글자 자리). 글자·워터마크 금지(no text).
+  실존 인물 얼굴 재현·유명 캐릭터·상표 금지. 명화 이야기면 그 그림을 베끼지 말고 그 시대 분위기의 장면으로.
+세 시안은 서로 다른 각도(궁금증형 / 숫자·사실형 / 감정형)로.
+반드시 JSON만 출력: {"variants": [{"big": "...", "big2": "...", "emph": "...", "small": "...", "mood": "...", "prompt": "..."}]}"""
+
+THUMB_MOODS = {   # mood: (큰 글자색, 강조색, 작은 띠 배경, 작은 띠 글자)
+    "충격": ("#FFE135", "#FF3B3B", "#E53935", "#FFFFFF"),
+    "감동": ("#FFFFFF", "#FFD54F", "#FF8F00", "#FFFFFF"),
+    "미스터리": ("#FFFFFF", "#4FE3FF", "#1E88E5", "#FFFFFF"),
+    "정보": ("#FFFFFF", "#FFE135", "#1565C0", "#FFFFFF"),
+}
+
+
+def save_auto_thumb(r, base):
+    """첫 장면 썸네일 저장 - AI 썸네일을 이미 만들어 둔 제목이면 덮어쓰지 않음"""
+    if os.path.exists(base + "_썸네일_AI.png"):
+        return
+    r.thumbnail().save(base + "_썸네일.png")
+
+
+def story_photos(story):
+    """본문의 사진 줄 → [(경로, 설명)]"""
+    out = []
+    for ln in (story or "").split("\n"):
+        m = parse_media(ln)
+        if m:
+            out.append((m[0], m[1] or os.path.basename(m[0])))
+    return out
+
+
+def thumb_font_path(s):
+    """썸네일 글꼴: 검은고딕(받아져 있으면) → 제목 글꼴"""
+    p = free_font_path("ofl/blackhansans/BlackHanSans-Regular.ttf")
+    return p if os.path.exists(p) else (s.get("title_font_path") or s.get("font_path"))
+
+
+def render_thumb(v, s, photo_im=None, size=None, font_path=None):
+    """썸네일 시안 v(dict) → PIL 이미지. 인기 스타일: 사진 꽉 채움 + 아래 어둡게 + 아주 큰 글자(검은 테두리) + 강조 단어 색 + 위 작은 띠"""
+    w, h = size or (W, H)
+    port = h > w
+    mood = v.get("mood") if v.get("mood") in THUMB_MOODS else "충격"
+    c_big, c_emph, c_band, c_band_t = THUMB_MOODS[mood]
+    if photo_im is not None:
+        im = photo_im.convert("RGB")
+        k = max(w / im.width, h / im.height) * 1.08
+        im = im.resize((int(im.width * k) + 1, int(im.height * k) + 1), Image.LANCZOS)
+        fx = {"left": 0.3, "right": 0.7}.get(v.get("face", "center"), 0.5)
+        l = int(min(max((im.width - w) * fx, 0), im.width - w))
+        tp = int(min(max((im.height - h) * 0.35, 0), im.height - h))
+        bg = im.crop((l, tp, l + w, tp + h))
+    else:
+        bg = Image.fromarray(np.clip(Background(s, 2.0).frame(0.0), 0, 255).astype(np.uint8)).convert("RGB")
+    arr = np.asarray(bg).astype(np.float32)
+    yy = np.linspace(0, 1, h)[:, None, None]
+    shade = 1 - 0.75 * np.clip((yy - 0.52) / 0.48, 0, 1) ** 1.2      # 아래쪽 어둡게 (글자 자리)
+    shade = shade * (1 - 0.35 * np.clip((0.18 - yy) / 0.18, 0, 1))  # 위쪽 살짝
+    xx = np.linspace(-1, 1, w)[None, :, None]
+    vig = 1 - 0.28 * np.clip((xx ** 2 + ((yy - 0.5) * 2) ** 2) - 0.6, 0, 1)
+    out = Image.fromarray(np.clip(arr * shade * vig, 0, 255).astype(np.uint8)).convert("RGBA")
+    d = ImageDraw.Draw(out)
+    fp = font_path or thumb_font_path(s)
+    m = int(w * 0.05)
+    small = str(v.get("small", "")).strip()
+    if small:   # 위 작은 띠
+        fs = load_font(fp, int(h * (0.042 if port else 0.07)))
+        tw = fs.getlength(small)
+        pad = int(fs.size * 0.45)
+        band = Image.new("RGBA", (int(tw + pad * 2 + 24), int(fs.size * 1.5)), (0, 0, 0, 0))
+        bd = ImageDraw.Draw(band)
+        bd.polygon([(12, 0), (band.width, 0), (band.width - 12, band.height), (0, band.height)], fill=tuple(hex_rgb(c_band)) + (235,))
+        bd.text((pad + 6, int(fs.size * 0.15)), small, font=fs, fill=c_band_t)
+        band = band.rotate(2.5 if mood == "충격" else 0, expand=True, resample=Image.BICUBIC)
+        out.alpha_composite(band, (m, int(h * (0.075 if port else 0.07))))
+        d = ImageDraw.Draw(out)
+    lines = [x for x in (str(v.get("big", "")).strip(), str(v.get("big2", "")).strip()) if x]
+    emph = str(v.get("emph", "")).strip()
+    if lines:   # 큰 글자 (아래쪽, 가운데, 최대 두 줄)
+        size_ = int(h * (0.105 if port else 0.19))
+        maxw = w - 2 * m
+        while size_ > 30:
+            f_ = load_font(fp, size_)
+            if all(f_.getlength(x) <= maxw for x in lines):
+                break
+            size_ -= 6
+        f_ = load_font(fp, size_)
+        lh = int(size_ * 1.12)
+        sw = max(6, size_ // 9)
+        y = int(h * (0.90 if port else 0.93)) - lh * len(lines)
+        for ln in lines:
+            x = (w - f_.getlength(ln)) / 2
+            parts = [(ln, c_big)]
+            if emph and emph in ln:
+                i_ = ln.index(emph)
+                parts = [(ln[:i_], c_big), (emph, c_emph), (ln[i_ + len(emph):], c_big)]
+            cx = x
+            for seg, col in parts:
+                if not seg:
+                    continue
+                d.text((cx + sw * 0.6, y + sw * 0.8), seg, font=f_, fill=(0, 0, 0, 170), stroke_width=sw, stroke_fill=(0, 0, 0, 170))
+                d.text((cx, y), seg, font=f_, fill=col, stroke_width=sw, stroke_fill="#000000")
+                cx += f_.getlength(seg)
+            y += lh
+    return out.convert("RGB")
+
+
 def load_font(path, size):
     for p in (path, find_font()):
         try:
@@ -3863,6 +3977,7 @@ class App(tk.Tk):
         self.sound_var = tk.BooleanVar(value=True)
         ttk.Checkbutton(pr, text="소리", variable=self.sound_var).pack(side="left", padx=(4, 0))
         ttk.Button(pr, text="썸네일 PNG 저장", command=self.save_thumb).pack(side="left", padx=4)
+        ttk.Button(pr, text="🎯 AI 썸네일", command=self.ai_thumb).pack(side="left")
         vol = ttk.LabelFrame(right, text="🔊 소리 크기 (바로 적용)", padding=(6, 2))
         vol.pack(fill="x", pady=(4, 0))
         self.vol_scales = {}
@@ -5477,6 +5592,181 @@ class App(tk.Tk):
         spent = int((time.time() - t0) * 1000)
         self.after(max(5, 16 - spent), self.tick)  # 가능하면 초당 60장, 최소 5ms 간격
 
+    def ai_thumb(self):
+        """🎯 AI 썸네일: 문구 시안 3개(AI) → 인기 스타일로 그려서 고르기/수정/저장"""
+        story = self.get_story()
+        title = self.title_var.get().strip()
+        if not title and not story_text_only(story).strip():
+            messagebox.showinfo("AI 썸네일", "먼저 대본을 만들거나 입력하세요.")
+            return
+        model, cat = self.model_var.get().strip(), self.cat_var.get()
+        photos = story_photos(story)
+        s = self.get_settings()
+
+        def job():
+            try:
+                download_free_font("ofl/blackhansans/BlackHanSans-Regular.ttf")   # 썸네일용 굵은 글꼴 (없으면 제목 글꼴)
+            except Exception:
+                pass
+            plist = "\n".join(f"{i + 1}. {cap}" for i, (_, cap) in enumerate(photos)) or "(사진 없음)"
+            d = ask_script_json(model, THUMB_SYSTEM, f"콘텐츠 종류: {cat}\n[제목] {title}\n\n[본문]\n{story_text_only(story)[:3000]}\n\n[사진 목록]\n{plist}")
+            vs = [x for x in (d.get("variants") or []) if isinstance(x, dict) and x.get("big")][:3]
+            if not vs:
+                raise RuntimeError("썸네일 문구를 만들지 못했습니다")
+            return vs
+
+        def done(vs):
+            self.thumb_window(vs, photos, s)
+        self.write_log("🎯 AI가 썸네일 문구 시안을 만드는 중...")
+        self.run_bg("썸네일 시안 만드는 중...", job, done)
+
+    def thumb_window(self, variants, photos, s):
+        """썸네일 창: 시안 고르기 → 프롬프트 복사 → ChatGPT 그림 붙여넣기 → 문구 입혀서 저장"""
+        win = tk.Toplevel(self)
+        win.title("AI 썸네일 - ① 프롬프트 복사 → ② ChatGPT에서 그림 → ③ 그림 붙여넣기 → ④ 저장")
+        win.geometry("1100x760")
+        port = H > W
+        pw, ph = (360, 640) if port else (640, 360)
+        self._thumb_img = None
+        pasted = {"im": None}
+        sel = tk.IntVar(value=0)
+        left = ttk.Frame(win, padding=8)
+        left.pack(side="left", fill="both", expand=True)
+        right = ttk.Frame(win, padding=8)
+        right.pack(side="left", fill="y")
+        ttk.Label(left, text="① 시안을 고르고 📋 복사 → ChatGPT 대화창에 붙여넣어 그림을 받으세요 → 그림 위 마우스 오른쪽 '이미지 복사' → ③ 📥 붙여넣기",
+                  foreground="#444", wraplength=680).pack(anchor="w")
+        vr = ttk.Frame(left)
+        vr.pack(fill="x", pady=4)
+        for k, v in enumerate(variants):
+            ttk.Radiobutton(vr, text=f"시안 {k + 1}: {v.get('big', '')} {v.get('big2', '')}  ({v.get('mood', '')})", value=k, variable=sel,
+                            command=lambda: load_fields()).pack(anchor="w")
+        ttk.Label(left, text="썸네일 그림 프롬프트 (고쳐도 됨)").pack(anchor="w", pady=(6, 0))
+        pt = tk.Text(left, height=7, wrap="word", font=("맑은 고딕", 10))
+        pt.pack(fill="x")
+        pb = ttk.Frame(left)
+        pb.pack(fill="x", pady=4)
+        ttk.Button(pb, text="📋 프롬프트 복사", command=lambda: copy_prompt()).pack(side="left")
+        ttk.Button(pb, text="📥 그림 붙여넣기", command=lambda: paste_bg()).pack(side="left", padx=6)
+        ttk.Button(pb, text="📂 그림 파일 열기", command=lambda: open_file()).pack(side="left")
+        pstat = ttk.Label(pb, text="", foreground="#06c")
+        pstat.pack(side="left", padx=8)
+        ed = ttk.LabelFrame(left, text="④ 문구 (프로그램이 그림 위에 입힘)", padding=8)
+        ed.pack(fill="x", pady=6)
+        overlay = tk.BooleanVar(value=True)
+        ttk.Checkbutton(ed, text="문구 입히기 (끄면 붙여넣은 그림 그대로 저장)", variable=overlay, command=lambda: render()).grid(row=0, column=0, columnspan=6, sticky="w")
+        fv = {k_: tk.StringVar() for k_ in ("big", "big2", "emph", "small", "mood")}
+        ttk.Label(ed, text="큰 글자").grid(row=1, column=0, sticky="e", pady=3)
+        ttk.Entry(ed, textvariable=fv["big"], width=16).grid(row=1, column=1, padx=4)
+        ttk.Label(ed, text="둘째 줄").grid(row=1, column=2, sticky="e")
+        ttk.Entry(ed, textvariable=fv["big2"], width=16).grid(row=1, column=3, padx=4)
+        ttk.Label(ed, text="강조 단어").grid(row=1, column=4, sticky="e")
+        ttk.Entry(ed, textvariable=fv["emph"], width=10).grid(row=1, column=5, padx=4)
+        ttk.Label(ed, text="위 띠 문구").grid(row=2, column=0, sticky="e")
+        ttk.Entry(ed, textvariable=fv["small"], width=16).grid(row=2, column=1, padx=4)
+        ttk.Label(ed, text="분위기(색)").grid(row=2, column=2, sticky="e")
+        ttk.Combobox(ed, textvariable=fv["mood"], values=list(THUMB_MOODS), width=10, state="readonly").grid(row=2, column=3, padx=4, sticky="w")
+        ttk.Button(ed, text="🔄 다시 그리기", command=lambda: render()).grid(row=2, column=4, columnspan=2, sticky="w")
+        bb = ttk.Frame(left)
+        bb.pack(fill="x", pady=(8, 0))
+        ttk.Button(bb, text="💾 썸네일 저장 (PNG)", command=lambda: save()).pack(side="right")
+        ttk.Button(bb, text="닫기", command=win.destroy).pack(side="right", padx=6)
+        ttk.Label(right, text="미리보기").pack()
+        pv = tk.Label(right, bd=2, relief="solid", bg="#111", width=pw, height=ph)
+        pv.pack()
+        pstat2 = ttk.Label(right, text="아직 그림이 없어요 → 대본 사진 또는 테마 배경으로 미리 보여줌", foreground="gray", wraplength=pw)
+        pstat2.pack(pady=4)
+
+        def cur_v():
+            v = dict(variants[sel.get()])
+            for k_ in fv:
+                v[k_] = fv[k_].get().strip()
+            return v
+
+        def load_fields():
+            v = variants[sel.get()]
+            for k_ in ("big", "big2", "emph", "small"):
+                fv[k_].set(str(v.get(k_, "")))
+            fv["mood"].set(v.get("mood") if v.get("mood") in THUMB_MOODS else "충격")
+            pt.delete("1.0", "end")
+            pt.insert("1.0", str(v.get("prompt", "")))
+            render()
+
+        def base_image():
+            if pasted["im"] is not None:
+                return pasted["im"]
+            return load_media_image(photos[0][0]) if photos else None
+
+        def render():
+            im = base_image()
+            if overlay.get() or im is None:
+                out = render_thumb(cur_v(), s, im)
+            else:
+                w_, h_ = W, H
+                k = max(w_ / im.width, h_ / im.height)
+                big = im.convert("RGB").resize((int(im.width * k) + 1, int(im.height * k) + 1), Image.LANCZOS)
+                l, tp = (big.width - w_) // 2, (big.height - h_) // 2
+                out = big.crop((l, tp, l + w_, tp + h_))
+            self._thumb_img = out
+            tk_ = ImageTk.PhotoImage(out.resize((pw, ph), Image.LANCZOS))
+            pv._img = tk_
+            pv.config(image=tk_, width=pw, height=ph)
+            pstat2.config(text=("ChatGPT 그림" if pasted["im"] is not None else "대본 사진" if photos else "테마 배경") + (" + 문구" if overlay.get() else " 그대로"))
+
+        def copy_prompt():
+            txt = pt.get("1.0", "end").strip()
+            variants[sel.get()]["prompt"] = txt
+            self.clipboard_clear()
+            self.clipboard_append(txt + "\n\n(유튜브 쇼츠 썸네일용. 세로 9:16. 글자·워터마크 없이. 아래쪽은 글자를 넣을 수 있게 단순하고 어둡게.)")
+            pstat.config(text="📋 복사됨 → ChatGPT에 붙여넣기")
+
+        def got(im):
+            pasted["im"] = im.convert("RGB")
+            pstat.config(text=f"✅ 그림 받음 ({im.width}×{im.height})")
+            render()
+
+        def paste_bg():
+            im = None
+            try:
+                from PIL import ImageGrab
+                clip = ImageGrab.grabclipboard()
+                if isinstance(clip, Image.Image):
+                    im = clip
+                elif isinstance(clip, list):
+                    fs = [f for f in clip if str(f).lower().endswith(IMG_EXT)]
+                    if fs:
+                        im = Image.open(fs[0])
+                        im.load()
+            except Exception:
+                im = None
+            if im is None:
+                messagebox.showinfo("그림 붙여넣기", "클립보드에 그림이 없어요.\nChatGPT 그림 위에서 마우스 오른쪽 → '이미지 복사'를 한 뒤 눌러 주세요.", parent=win)
+                return
+            got(im)
+
+        def open_file():
+            f = filedialog.askopenfilename(filetypes=[("이미지", "*.png *.jpg *.jpeg *.webp")], parent=win)
+            if f:
+                try:
+                    im = Image.open(f)
+                    im.load()
+                    got(im)
+                except Exception as e:
+                    messagebox.showerror("그림", str(e), parent=win)
+
+        def save():
+            if self._thumb_img is None:
+                return
+            os.makedirs(s["out_dir"], exist_ok=True)
+            base = os.path.join(s["out_dir"], safe_name(self.title_var.get()))
+            self._thumb_img.save(base + "_썸네일.png")
+            self._thumb_img.save(base + "_썸네일_AI.png")
+            v = cur_v()
+            self.write_log(f"🎯 썸네일 저장: {base}_썸네일.png  (문구: {v.get('big', '')} {v.get('big2', '')})")
+            self.set_status("🎯 썸네일 저장됨 → MP4 만들 때 이 썸네일을 씁니다")
+            win.destroy()
+        load_fields()
+
     def save_thumb(self):
         if not self.renderer:
             return
@@ -5615,7 +5905,7 @@ class App(tk.Tk):
                 write_mp3(mp3, audio)
             in_video = audio if "MP4에 포함" in s["audio_out"] else None
             export_mp4(r, out, prog, self.cancel, in_video)
-            r.thumbnail().save(base + "_썸네일.png")
+            save_auto_thumb(r, base)
             ch = r.chapter_times()
             if ch:
                 with open(base + "_타임스탬프.txt", "w", encoding="utf-8") as f:
@@ -5700,7 +5990,7 @@ class App(tk.Tk):
                     write_mp3(base + "_배경음.mp3", audio)
                 export_mp4(r, base + ".mp4", self.progress_cb(f"[{i + 1}/{n}] "), self.cancel,
                            audio if "MP4에 포함" in s["audio_out"] else None)
-                r.thumbnail().save(base + "_썸네일.png")
+                save_auto_thumb(r, base)
                 try:
                     pkg = ask_json(model, PACKAGE_SYSTEM, f"콘텐츠 종류: {cat}\n소재: {genre}\n[제목] {title}\n\n[본문]\n{story_text_only(story)}")
                     pkg["sources"], pkg["notes"], pkg["song"], pkg["artwork"] = sources, notes, res.get("song"), res.get("artwork")
@@ -5821,7 +6111,7 @@ class App(tk.Tk):
                         write_mp3(base + "_배경음.mp3", audio)
                     export_mp4(r, base + ".mp4", self.progress_cb(f"[{name}] "), self.cancel,
                                audio if "MP4에 포함" in ls["audio_out"] else None)
-                    r.thumbnail().save(base + "_썸네일.png")
+                    save_auto_thumb(r, base)
                     pkg["chapters"] = r.chapter_times()
                     log(f"  {name} MP4 저장: {base}.mp4 ({os.path.getsize(base + '.mp4') / 1e6:.1f}MB)")
                 write_package(base, t_title, t_story, pkg)
