@@ -62,7 +62,7 @@ BASE = os.path.dirname(os.path.abspath(__file__))
 CONFIG_PATH = os.path.join(BASE, "shorts_novel_config.json")
 CONFIG_PATH2 = os.path.join(os.path.expanduser("~"), "shorts_novel_config.json")  # 프로그램 폴더에 못 쓸 때 대신 저장
 SECRET_KEYS = {"openai_key", "gemini_key"}                       # 프로젝트 파일에는 안 넣음
-KEEP_KEYS = SECRET_KEYS | {"script_engine", "trans_engine", "openai_model", "gemini_model"}  # 프로젝트 열어도 유지
+KEEP_KEYS = SECRET_KEYS | {"script_engine", "trans_engine", "openai_model", "gemini_model", "image_model", "image_quality"}  # 프로젝트 열어도 유지
 PREVIEW_W, PREVIEW_H = 360, 640
 
 
@@ -205,6 +205,10 @@ FIELDS = [
     ("AI 엔진", "openai_model", "ChatGPT 모델", "str", "gpt-4o-mini"),
     ("AI 엔진", "gemini_key", "Gemini API 키", "secret", ""),
     ("AI 엔진", "gemini_model", "Gemini 모델", "str", "gemini-2.5-flash"),
+    ("AI 엔진", "fiction_image", "사실이 아닌 주제 이미지", "choice:웹 사진(Claude 검색),ChatGPT 그림 생성,둘 다(그림+웹 사진)", "웹 사진(Claude 검색)"),
+    ("AI 엔진", "image_model", "ChatGPT 그림 모델", "str", "gpt-image-2"),
+    ("AI 엔진", "image_quality", "그림 품질(low=약 7원, medium=약 55원/장)", "choice:low,medium,high", "medium"),
+    ("AI 엔진", "image_style", "그림 스타일", "str", "영화 장면 같은 사실적인 사진, 분위기 있는 조명"),
     ("소리", "bgm_mode", "배경음", "choice:자동생성,파일,없음", "자동생성"),
     ("소리", "bgm_style", "배경음 스타일", "choice:" + ",".join(["자동(소재별)"] + SOUND_STYLE_NAMES), "자동(소재별)"),
     ("소리", "bgm_volume", "배경음 볼륨(0~2)", "float", 0.5),
@@ -1189,6 +1193,82 @@ def fetch_photos(items, media_dir, log, limit=3):
             log(f"  사진 받음: {it.get('caption', '')} ({it.get('credit', '')})")
         except Exception as e:
             log(f"  사진 받기 실패: {str(it.get('url'))[:60]} ({str(e)[:40]})")
+    return got
+
+
+IMAGE_PLAN_SYSTEM = """너는 유튜브 쇼츠 영상의 아트 디렉터다. 아래 이야기의 장면마다 들어갈 그림을 기획한다.
+- 그림 수: 사용자가 정한 수만큼. 이야기 흐름 순서대로, 문단 1~2개마다 한 장. 같은 장면 반복 금지.
+- prompt: 이미지 생성 AI에 줄 영어 프롬프트(60~90단어). 장소·시간·빛·구도(클로즈업/와이드)·분위기를 구체적으로.
+  등장인물은 매번 같은 외모 설명(나이·머리·옷)을 그대로 반복해서 넣어 일관되게. 세로 화면(9:16)에 맞는 구도.
+  글자·간판 문구·자막·워터마크 넣지 말 것(no text). 실존 인물·유명 캐릭터·상표 금지. 잔인하거나 선정적인 묘사 금지.
+- after: 그림이 들어갈 위치 = 본문에서 그림 바로 앞 문장의 일부(원문 그대로 10~20자)
+- caption: 15자 이내 한국어 장면 설명
+반드시 JSON만 출력: {"images": [{"after": "...", "prompt": "...", "caption": "..."}]}"""
+
+
+_IMG_OK = {}
+
+
+def openai_image(prompt, key, model="gpt-image-2", quality="medium", size="1024x1536"):
+    """ChatGPT 그림 API → PIL 이미지"""
+    import base64
+    want = (model or "").strip() or "gpt-image-2"
+    models = [m for m in dict.fromkeys([_IMG_OK.get(want, want), want, "gpt-image-1.5", "gpt-image-1-mini"]) if m]
+    last = None
+    for mdl in models:
+        try:
+            out = _http_json("https://api.openai.com/v1/images/generations",
+                             {"model": mdl, "prompt": prompt, "size": size, "quality": quality or "medium", "n": 1},
+                             {"Authorization": "Bearer " + key}, timeout=240, who="ChatGPT 그림")
+            d = (out.get("data") or [{}])[0]
+            _IMG_OK[want] = mdl          # 다음 그림부터 바로 이 모델
+            if d.get("b64_json"):
+                return Image.open(io.BytesIO(base64.b64decode(d["b64_json"]))).convert("RGB")
+            if d.get("url"):
+                import urllib.request
+                with urllib.request.urlopen(d["url"], timeout=60) as r:
+                    return Image.open(io.BytesIO(r.read())).convert("RGB")
+            raise APIError("ChatGPT 그림: 결과에 이미지가 없습니다")
+        except APIError as e:
+            last = e
+            low = str(e).lower()
+            if e.quota or "verif" in low or "safety" in low or "moderation" in low or "billing" in low:
+                break           # 모델을 바꿔도 같은 결과
+            if "model" not in low and "404" not in low and "400" not in low:
+                break
+    if last and "verif" in str(last).lower():
+        raise APIError("ChatGPT 그림 모델을 쓰려면 OpenAI 조직 인증이 필요합니다",
+                       "platform.openai.com → Settings → Organization → General → 'Verify Organization' 을 한 번 하면 됩니다.\n\n" + str(last))
+    raise last or APIError("ChatGPT 그림 실패")
+
+
+def make_ai_images(model, category, title, story, n, s, media_dir, log, cancel=None):
+    """이야기에 맞는 그림을 기획(대본 AI) → ChatGPT로 그려서 저장 → [{path, caption, credit, after}]"""
+    key = (s.get("openai_key") or os.environ.get("OPENAI_API_KEY", "")).strip()
+    if not key:
+        raise RuntimeError("ChatGPT 그림에는 ChatGPT API 키가 필요합니다 (AI 엔진 탭)")
+    style = str(s.get("image_style", "")).strip()
+    log(f"🎨 그림 {n}장 기획 중...")
+    plan = ask_script_json(model, IMAGE_PLAN_SYSTEM, f"콘텐츠 종류: {category}\n그림 수: {n}장\n그림 스타일(모든 그림 공통): {style or '사실적인 영화 장면'}"
+                           f"\n[제목] {title}\n\n[본문]\n{story_text_only(story)}")
+    items = [x for x in (plan.get("images") or []) if isinstance(x, dict) and x.get("prompt")][:n]
+    got = []
+    for k, it in enumerate(items):
+        if cancel is not None and cancel.is_set():
+            raise RuntimeError("취소됨")
+        log(f"  🎨 그림 {k + 1}/{len(items)} 그리는 중: {it.get('caption', '')}")
+        prompt = it["prompt"] + (f" Style: {style}." if style else "") + " Vertical 9:16 composition. No text, no letters, no watermark."
+        try:
+            im = openai_image(prompt, key, s.get("image_model"), s.get("image_quality"))
+        except APIError as e:
+            if e.quota or "인증" in e.short or not got and k == 0:
+                raise
+            log(f"  그림 실패(건너뜀): {e.short}")
+            continue
+        path = save_media_image(im, media_dir, time.strftime("aiimg_%Y%m%d_%H%M%S") + f"_{k}")
+        got.append({"path": path, "caption": it.get("caption", ""), "credit": "AI 생성 이미지 (ChatGPT)", "page": "",
+                    "after": it.get("after", "")})
+    log(f"  그림 {len(got)}장 완성")
     return got
 
 
@@ -3545,6 +3625,7 @@ class App(tk.Tk):
         ttk.Button(r4, text="파일에서 넣기", command=self.add_photo_file).pack(side="left", padx=4)
         ttk.Button(r4, text="붙여넣기 (Ctrl+V)", command=lambda: self.on_paste(from_button=True)).pack(side="left")
         ttk.Button(r4, text="🔎 AI 근거사진 찾기", command=self.ai_photos).pack(side="left", padx=4)
+        ttk.Button(r4, text="🎨 ChatGPT 그림 만들기", command=self.ai_images).pack(side="left")
         ttk.Label(r4, text="사진·이미지 주소·파일을 복사해서 본문에 Ctrl+V → 커서 위치에 들어감",
                   foreground="gray").pack(side="left", padx=6)
         self.story = ScrolledText(s1, height=5, wrap="word", font=("맑은 고딕", 11), undo=True)   # 창이 크면 자동으로 늘어남
@@ -4233,6 +4314,25 @@ class App(tk.Tk):
             if category == ART_CATEGORY and details and not _artist_recent(artwork):
                 photos = photos[:1] + crop_details(photos[0]["path"], details, media_dir, log) + photos[1:]
             story = place_photos(story, photos)
+        elif not factual and autophoto and "ChatGPT" in str((SCRIPT_ENGINE.get("s") or {}).get("fiction_image", "")):
+            s_ = SCRIPT_ENGINE.get("s") or {}
+            n_ph = photo_target(story, sec)
+            try:
+                photos = make_ai_images(model, category, title, story, n_ph, s_, media_dir, log, RATE_HOOK.get("cancel"))
+                if "둘 다" in str(s_.get("fiction_image")):
+                    log("🔎 분위기 웹 사진도 찾는 중...")
+                    try:
+                        n_w = max(1, n_ph // 2)
+                        d = ask_json(model, PHOTO_SYSTEM, f"콘텐츠 종류: {category}\n[제목] {title}\n\n[본문]\n{story}"
+                                     + photo_note(n_w, category), tools=WEB_TOOLS)
+                        photos += fetch_photos(d.get("photos"), media_dir, log, limit=n_w)
+                    except Exception as e:
+                        log("  웹 사진 찾기 실패: " + str(e)[:80])
+                if photos:
+                    story = place_photos(story, photos)
+            except Exception as e:
+                log("  그림 만들기 실패: " + str(e).splitlines()[0][:120])
+            story = strip_placeholders(story)
         elif (factual or PHOTO_PLAN.get("sub")) and autophoto and not (category == ART_CATEGORY and _artist_recent(artwork)):
             n_ph = photo_target(story, sec)
             log(f"🔎 {'근거 ' if factual else '분위기 '}사진 찾는 중... (목표 {n_ph}장)")
@@ -4473,6 +4573,37 @@ class App(tk.Tk):
             return "break"
         self.after(50, self.refresh_preview)
         return None
+
+    def ai_images(self):
+        """ChatGPT로 이야기 장면 그림을 그려서 본문에 넣기"""
+        story = self.get_story()
+        if not story_text_only(story).strip():
+            messagebox.showinfo("그림", "먼저 대본을 만들거나 입력하세요.")
+            return
+        s = self.get_settings()
+        if not (s.get("openai_key") or os.environ.get("OPENAI_API_KEY", "")).strip():
+            messagebox.showinfo("그림", "ChatGPT API 키가 필요합니다. 「AI 엔진」 탭에 넣어 주세요.")
+            return
+        model, title, cat = self.model_var.get().strip(), self.title_var.get(), self.cat_var.get()
+        media = self.media_dir()
+
+        def job():
+            n = photo_target(story)
+            have = len([ln for ln in story.split("\n") if parse_media(ln)])
+            if PHOTO_PLAN.get("sub"):
+                n = max(1, n - have)
+            return make_ai_images(model, cat, title, story, n, SCRIPT_ENGINE["s"], media, self.log_bg, self.cancel)
+
+        def done(photos):
+            if not photos:
+                self.write_log("그림을 만들지 못했습니다.")
+                return
+            self.set_story(place_photos(self.get_story(), photos))
+            self.write_log(f"🎨 그림 {len(photos)}장 배치 완료 (위치는 본문에서 [사진: ...] 줄을 옮겨 조정)")
+            self.refresh_preview()
+            self.save_cfg()
+        self.write_log("🎨 ChatGPT가 장면 그림을 그리는 중... (장당 10~40초)")
+        self.run_bg("그림 만드는 중...", job, done)
 
     def ai_photos(self):
         story = self.get_story()
