@@ -75,7 +75,7 @@ SOUND_BY_TOPIC = {
     "생존 실화": "바람", "세계의 기이한 장소": "바람",
     "우주": "우주", "인체": "잔잔한 패드", "동물·생물": "밝은 오르골", "물리·화학": "잔잔한 패드", "심리·뇌": "긴장 펄스",
     "지구·환경": "바람",
-    "명화 탄생 비화": "잔잔한 패드", "그림 속 숨은 비밀": "긴장 펄스", "화가의 실화": "슬픈 패드", "한국 명화": "감성 오르골",
+    "명화 탄생 비화": "감성 오르골", "그림 속 숨은 비밀": "긴장 펄스", "화가의 실화": "슬픈 패드", "한국 명화": "감성 오르골",
     "도난·위작·사건": "긴장 펄스", "그림 속 인물의 실화": "감성 오르골",
     "가사 원문+해석": "노래 멜로디(오르골)", "가수·작곡가 실화": "노래 멜로디(오르골)", "노래 탄생 비화": "노래 멜로디(오르골)",
     "노래에 숨은 비밀": "노래 멜로디(오르골)", "크리스마스·캐럴 가사": "노래 멜로디(오르골)", "세계 각국의 옛 노래": "노래 멜로디(오르골)",
@@ -1440,7 +1440,7 @@ PROGS = {
 }
 
 
-def gen_pad(n, rng, mood="warm", chord_sec=8.0, bright=2500):
+def gen_pad(n, rng, mood="warm", chord_sec=8.0, bright=3400):
     """화음이 천천히 바뀌는 부드러운 패드"""
     prog, fade = PROGS[mood], 3.0
     seg = int((chord_sec + fade) * SR)
@@ -1793,7 +1793,7 @@ def build_audio(r, s, style):
     out = np.zeros((n, 2), np.float32)
     if music is not None:
         rms = float(np.sqrt((music ** 2).mean())) + 1e-9
-        music = music * (0.12 / rms) * max(0, s["bgm_volume"])
+        music = music * (0.24 / rms) * max(0, s["bgm_volume"])   # 볼륨 0.5 기준 약 -18dB (작은 스피커에서도 들리게)
         t = np.arange(n) / SR
         g = np.minimum(1, t / 1.5) * np.clip((r.duration - t) / 2.5, 0, 1)
         if hit_t:  # 반전 직전 음악을 줄였다가 다시 올림
@@ -1802,7 +1802,7 @@ def build_audio(r, s, style):
             g = g * np.interp(t, [0, a, b, hit_t + 1.5, hit_t + 4.5, 1e9], [1, 1, 0.25, 0.25, 1, 1])
         out += music * g[:, None].astype(np.float32)
     if hit_t:
-        out += reveal_fx(n, hit_t, rng) * 0.5 * max(0, s["hit_volume"])
+        out += reveal_fx(n, hit_t, rng) * 0.4 * max(0, s["hit_volume"])
     peak = float(np.abs(out).max())
     if peak > 0.95:
         out *= 0.95 / peak
@@ -1861,6 +1861,29 @@ def play_wav(path):
         if shutil.which(cmd[0]):
             _player = subprocess.Popen(cmd)
             return
+
+
+def play_wav_from(path, start_sec):
+    """start_sec 초 지점부터 재생 (앞부분을 잘라낸 임시 파일을 만들어 재생)"""
+    if start_sec < 0.3:
+        play_wav(path)
+        return
+    import wave
+    try:
+        with wave.open(path, "rb") as w:
+            fr, ch, sw = w.getframerate(), w.getnchannels(), w.getsampwidth()
+            skip = min(w.getnframes(), int(start_sec * fr))
+            w.setpos(skip)
+            data = w.readframes(w.getnframes() - skip)
+        tmp = os.path.join(tempfile.gettempdir(), "shorts_play_from.wav")
+        with wave.open(tmp, "wb") as o:
+            o.setnchannels(ch)
+            o.setsampwidth(sw)
+            o.setframerate(fr)
+            o.writeframes(data)
+        play_wav(tmp)
+    except Exception:
+        play_wav(path)
 
 
 def stop_wav():
@@ -2210,6 +2233,8 @@ class App(tk.Tk):
         pr = ttk.Frame(right)
         pr.pack()
         ttk.Button(pr, text="▶ 재생 / ■ 정지", command=self.toggle_play).pack(side="left")
+        self.sound_var = tk.BooleanVar(value=True)
+        ttk.Checkbutton(pr, text="소리", variable=self.sound_var).pack(side="left", padx=(4, 0))
         ttk.Button(pr, text="썸네일 PNG 저장", command=self.save_thumb).pack(side="left", padx=4)
         self.info = ttk.Label(right, text="", wraplength=PREVIEW_W, justify="left")
         self.info.pack(pady=4)
@@ -2959,25 +2984,30 @@ class App(tk.Tk):
         self.write_log("🎵 배경음 만드는 중...")
         self.run_bg("배경음 만드는 중...", job, done)
 
+    def bgm_ready(self):
+        """지금 설정과 맞는 배경음 파일이 준비돼 있으면 경로, 소리가 없는 설정이면 "", 만들어야 하면 None"""
+        s = self.get_settings()
+        if s["bgm_mode"] == "없음" and s["reveal_hit"] != "on":
+            return ""
+        made = getattr(self, "bgm_made", None)
+        if not made or not os.path.exists(made["path"]):
+            return None
+        if made["mode"] != s["bgm_mode"]:
+            return None
+        if s["bgm_mode"] == "파일" and made.get("src") != s["bgm_path"]:
+            return None
+        if s["bgm_mode"] == "자동생성" and str(made["seed"]) != str(s["bgm_seed"]):
+            return None
+        if self.renderer and abs(self.renderer.duration - made["dur"]) > 0.05:
+            return None
+        return made["path"]
+
     def replay_bgm(self):
         """만든 배경음을 화면과 같이 처음부터 재생"""
-        made = getattr(self, "bgm_made", None)
-        s = self.get_settings()
-        changed = made and (made["mode"] != s["bgm_mode"] or (s["bgm_mode"] == "파일" and made.get("src") != s["bgm_path"])
-                            or (s["bgm_mode"] == "자동생성" and str(made["seed"]) != str(s["bgm_seed"])))
-        if not made or not os.path.exists(made["path"]) or changed:
-            self.make_bgm()
-            return
-        if self.renderer and abs(self.renderer.duration - made["dur"]) > 0.05:
-            self.write_log("  영상 길이가 바뀌어서 같은 번호로 다시 만듭니다.")
-            s = self.get_settings()
-            if s["bgm_mode"] == "자동생성":
-                self.vars["bgm_seed"].set(str(made["seed"]))
-            self._remake_same()
-            return
-        play_wav(made["path"])
         self.playing = False
+        stop_wav()
         self.tvar.set(0)
+        self.sound_var.set(True)
         self.toggle_play()
 
     def _remake_same(self):
@@ -3063,14 +3093,38 @@ class App(tk.Tk):
         self.run_bg("배경음 만드는 중...", job, done)
 
     def toggle_play(self):
-        self.playing = not self.playing
-        if not self.playing:
+        """▶ 재생: 화면과 배경음을 같이 재생 (배경음이 아직 없으면 먼저 만들고 자동 재생)"""
+        if self.playing:
+            self.playing = False
             stop_wav()
-        if self.playing and self.renderer:
-            if self.tvar.get() >= self.renderer.duration - 0.1 or self.tvar.get() <= self.renderer.intro + 0.35:
-                self.tvar.set(0)
-            self.t0 = time.time() - float(self.tvar.get())
-            self.tick()
+            return
+        if not self.renderer:
+            return
+        if self.tvar.get() >= self.renderer.duration - 0.1 or self.tvar.get() <= self.renderer.intro + 0.35:
+            self.tvar.set(0)
+        if self.sound_var.get():
+            path = self.bgm_ready()
+            if path is None:
+                if self.busy:
+                    self.write_log("다른 작업이 끝나면 다시 ▶ 재생을 누르세요.")
+                    return
+                made = getattr(self, "bgm_made", None)
+                s = self.get_settings()
+                same = made and os.path.exists(made["path"]) and made["mode"] == s["bgm_mode"] and \
+                    (s["bgm_mode"] != "자동생성" or str(made["seed"]) == str(s["bgm_seed"])) and \
+                    (s["bgm_mode"] != "파일" or made.get("src") == s["bgm_path"])
+                if same:
+                    self.write_log("  영상 길이가 바뀌어서 배경음을 길이에 맞춰 다시 만든 뒤 재생합니다.")
+                    self._remake_same()
+                else:
+                    self.write_log("  배경음을 먼저 만든 뒤 재생합니다...")
+                    self.make_bgm()
+                return   # 만들기가 끝나면 자동으로 재생됨
+            if path:
+                play_wav_from(path, float(self.tvar.get()))
+        self.playing = True
+        self.t0 = time.time() - float(self.tvar.get())
+        self.tick()
 
     def tick(self):
         if not self.playing or not self.renderer:
@@ -3078,12 +3132,13 @@ class App(tk.Tk):
         t = time.time() - self.t0
         if t > self.renderer.duration:
             self.playing = False
+            stop_wav()
             return
         t0 = time.time()
         self.tvar.set(t)
         self.show_frame()
         spent = int((time.time() - t0) * 1000)
-        self.after(max(1, 16 - spent), self.tick)  # 가능하면 초당 60장
+        self.after(max(5, 16 - spent), self.tick)  # 가능하면 초당 60장, 최소 5ms 간격
 
     def save_thumb(self):
         if not self.renderer:
