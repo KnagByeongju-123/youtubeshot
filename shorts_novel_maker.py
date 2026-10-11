@@ -46,7 +46,18 @@ from tkinter.scrolledtext import ScrolledText
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont, ImageTk, ImageFilter
 
-W, H = 1080, 1920
+W, H = 1080, 1920            # 현재 화면 크기 (set_format 으로 바뀜)
+FORMATS = {"쇼츠 세로(1080×1920)": (1080, 1920), "롱폼 가로(1920×1080)": (1920, 1080)}
+
+
+def set_format(name):
+    """화면 형식 바꾸기 (쇼츠 세로 / 롱폼 가로). 미리보기 크기도 같이 바뀜"""
+    global W, H, PREVIEW_W, PREVIEW_H
+    W, H = FORMATS.get(name, FORMATS["쇼츠 세로(1080×1920)"])
+    if W > H:
+        PREVIEW_W, PREVIEW_H = 640, 360
+    else:
+        PREVIEW_W, PREVIEW_H = 360, 640
 BASE = os.path.dirname(os.path.abspath(__file__))
 CONFIG_PATH = os.path.join(BASE, "shorts_novel_config.json")
 PREVIEW_W, PREVIEW_H = 360, 640
@@ -62,6 +73,13 @@ def find_font(bold=False):
             return p
     return ""
 
+
+TTS_VOICES = {
+    "선히 (여성, 차분)": "ko-KR-SunHiNeural",
+    "인준 (남성, 안정)": "ko-KR-InJoonNeural",
+    "현수 (남성, 자연스러움)": "ko-KR-HyunsuMultilingualNeural",
+    "윈도우 내장 음성": "sapi",
+}
 
 # 자체 합성 배경음 스타일 (아래 SOUND_STYLES 와 이름이 같아야 함)
 SOUND_STYLE_NAMES = ["노래 멜로디(오르골)", "잔잔한 패드", "슬픈 패드", "감성 오르골", "밝은 오르골", "긴장 펄스", "어두운 드론",
@@ -119,6 +137,7 @@ FIELDS = [
     ("효과", "outro_sec", "마무리 문구(초, 0=없음)", "float", 2.5),
     ("효과", "outro_text", "마무리 문구", "str", "구독하면 다음 이야기가 이어집니다"),
     ("효과", "safe_guide", "미리보기에 안전영역 표시", "choice:on,off", "off"),
+    ("영상", "format", "화면 형식", "choice:" + ",".join(FORMATS), "쇼츠 세로(1080×1920)"),
     ("영상", "speed", "스크롤 속도(px/초)", "float", 70),
     ("영상", "target_sec", "목표 길이(초, 0=속도사용)", "float", 0),
     ("영상", "hold_start", "시작 정지(초)", "float", 1.5),
@@ -127,6 +146,13 @@ FIELDS = [
     ("영상", "quality", "화질(crf 18=최고·23=권장·28=작게)", "int", 23),
     ("영상", "audio_out", "소리 저장 방식", "choice:MP4에 포함,MP4에 포함+MP3 따로,MP3만 따로(무음 MP4)", "MP4에 포함+MP3 따로"),
     ("영상", "out_dir", "저장 폴더", "dir", os.path.join(BASE, "output")),
+    ("나레이션", "narration", "나레이션(음성 읽기)", "choice:on,off", "off"),
+    ("나레이션", "narr_voice", "목소리", "choice:" + ",".join(TTS_VOICES), "선히 (여성, 차분)"),
+    ("나레이션", "narr_rate", "말 속도(%, -30~+40)", "float", 5),
+    ("나레이션", "narr_volume", "나레이션 볼륨(0~2)", "float", 1.0),
+    ("나레이션", "narr_gap", "문단 사이 쉼(초)", "float", 0.5),
+    ("나레이션", "narr_photo_pause", "사진 보는 시간(초)", "float", 1.5),
+    ("나레이션", "narr_duck", "말할 때 음악 크기(0~1)", "float", 0.35),
     ("소리", "bgm_mode", "배경음", "choice:자동생성,파일,없음", "자동생성"),
     ("소리", "bgm_style", "배경음 스타일", "choice:" + ",".join(["자동(소재별)"] + SOUND_STYLE_NAMES), "자동(소재별)"),
     ("소리", "bgm_volume", "배경음 볼륨(0~2)", "float", 0.5),
@@ -437,6 +463,15 @@ def systems_for(category):
     if category == ART_CATEGORY:
         return ART_SYSTEM, ART_MULTI_SYSTEM
     return (FACT_SYSTEM, FACT_MULTI_SYSTEM) if factual else (STORY_SYSTEM, MULTI_SYSTEM)
+
+
+LONGFORM_SYSTEM = """너는 유튜브 롱폼(8~15분) 채널의 구성작가다. 여러 개의 짧은 이야기(챕터)를 하나의 영상으로 묶는다.
+아래 챕터 제목·본문을 읽고 전체 영상의 제목, 오프닝, 클로징, 다듬은 챕터 제목을 만든다.
+- 전체 제목: 25자 이내, 궁금증 + 숫자 (예: "세계를 뒤흔든 미제사건 7가지")
+- 오프닝: 2~4문장, 첫 문장은 가장 강한 훅, 마지막은 "끝까지 보면 ..." 식의 기대감. 문단 사이 빈 줄.
+- 클로징: 2~3문장, 가장 인상적인 챕터를 다시 한 줄로 되짚고, 댓글 질문 + 구독 유도. 문단 사이 빈 줄.
+- 챕터 제목: 각 12자 이내, 번호 없이 (프로그램이 번호를 붙임)
+반드시 JSON만 출력: {"title": "전체 제목", "opening": "오프닝", "closing": "클로징", "chapter_titles": ["..."]}"""
 
 
 def command_system():
@@ -1015,6 +1050,18 @@ def build_text_layer(title, story, s):
         para = PH_INLINE_RE.sub("", para).strip()
         if not para:
             continue
+        if para.startswith("## "):          # 챕터 제목 (롱폼)
+            head = para[3:].strip()
+            y += int(s["font_size"] * 1.2)
+            paras.append((y, "## " + head))
+            fch = load_font(s["title_font_path"] or s["font_path"], int(s["title_size"] * 0.9))
+            d_line_y = y + int(fch.size * 1.35) * len(wrap(head, fch, maxw))
+            for ln in wrap(head, fch, maxw):
+                items.append((y, ln, fch, s["title_color"], "center"))
+                y += int(fch.size * 1.35)
+            items.append((d_line_y, "─" * 12, fcap, tuple(hex_rgb(s["accent_color"])) + (200,), "center"))
+            y = d_line_y + int(fcap.size * 1.6) + int(s["font_size"] * 0.6)
+            continue
         paras.append((y, para))
         is_quote = s["quote_color"] == "on" and (para[:1] in "\"“'‘" or para.startswith("♪"))
         col = s["accent_color"] if is_quote else s["text_color"]
@@ -1175,9 +1222,11 @@ class Renderer:
     - 속도가 0에서 서서히 올라갔다가 서서히 멈춤 (가속도가 끊기지 않는 곡선)
     - 글자는 '미리 곱한 알파'로 저장해서 섞을 때 가장자리가 번지지 않음"""
 
-    def __init__(self, title, story, s):
+    def __init__(self, title, story, s, narration=None):
+        """narration: [(문단 인덱스, 소리 배열, 길이초)] - 있으면 스크롤이 읽는 속도에 맞춰 움직임"""
         self.s = s
         self.title = title
+        self.narration = narration or []
         rgb, a, self.paras = build_text_layer(title, story, s)
         self.layer_h = rgb.shape[0]
         self.dist = self.layer_h - H
@@ -1187,7 +1236,11 @@ class Renderer:
         del rgb
         self.intro = s["intro_sec"] if title.strip() else 0
         self.hs, self.he = s["hold_start"], s["hold_end"]
-        if s["target_sec"] > 0 and self.dist > 0:
+        self.keys = None            # 나레이션 타임라인 [(t, y)]
+        self.narr_at = []           # [(시작 시각, 소리 배열)]
+        if self.narration and self.dist > 0:
+            self._build_timeline()
+        elif s["target_sec"] > 0 and self.dist > 0:
             self.scroll_t = max(1.0, s["target_sec"] - self.intro - self.hs - self.he)
         else:
             self.scroll_t = self.dist / max(1.0, s["speed"])
@@ -1195,7 +1248,7 @@ class Renderer:
         # 가속/감속 구간 (스크롤 시간의 15%, 최대 1.2초)
         self.ramp = min(1.2, self.scroll_t * 0.15) if s["ease"] == "on" else 0.0
         self.vmax = self.dist / max(1e-6, self.scroll_t - self.ramp) if self.dist > 0 else 0.0
-        self.speed = self.vmax
+        self.speed = self.vmax if not self.keys else (self.dist / max(1.0, self.scroll_t))
         self.bg = Background(s, self.duration)
         # 화면 고정 마스크 (위아래 흐림 + 읽는 줄 강조)
         m = np.ones(H, np.float32)
@@ -1224,13 +1277,91 @@ class Renderer:
         self._small = None
         self.reveal_t = self.find_reveal()
 
+    def focus_line(self):
+        return H * (self.s["focus_y"] if self.s["focus"] == "on" else 0.55)
+
+    def _build_timeline(self):
+        """나레이션 길이에 맞춰 '문단 i는 T_i 초에 읽는 줄에 온다'는 지점들을 만든다"""
+        s, line = self.s, self.focus_line()
+        gap = max(0.0, float(s.get("narr_gap", 0.5)))
+        photo_pause = max(0.0, float(s.get("narr_photo_pause", 1.5)))
+        durs = {i: d for i, _, d in self.narration}
+        keys, t = [], 0.0
+        prev_y = None
+        for i, (py, text) in enumerate(self.paras):
+            y = max(0.0, min(float(self.dist), py - line))
+            if prev_y is not None and y > prev_y:
+                # 문단 사이에 사진이 끼어 있으면(간격이 크면) 보는 시간 추가
+                if (y - prev_y) > H * 0.25:
+                    t += photo_pause
+            y = max(y, prev_y or 0.0)
+            keys.append((t, y))
+            d = durs.get(i, max(1.2, len(text) * 0.11))
+            t += d + (1.2 if text.startswith("## ") else gap)
+            prev_y = y
+        # 마지막: 끝까지 스크롤
+        if keys and keys[-1][1] < self.dist:
+            keys.append((t, float(self.dist)))
+        else:
+            t = max(t, keys[-1][0] + 0.5) if keys else 1.0
+        self.keys = keys
+        self.scroll_t = max(1.0, t)
+        base = self.intro + self.hs
+        self.narr_at = [(base + keys[i][0] if i < len(keys) else base, clip) for i, clip, _ in self.narration]
+
+    def _timeline_offset(self, t):
+        """지점들 사이를 부드럽게(단조 3차) 이어서 위치 계산"""
+        ks = self.keys
+        if t <= ks[0][0]:
+            return ks[0][1]
+        if t >= ks[-1][0]:
+            return ks[-1][1]
+        if not hasattr(self, "_tl"):
+            xs = np.array([k[0] for k in ks], float)
+            ys = np.array([k[1] for k in ks], float)
+            dx = np.diff(xs); dy = np.diff(ys)
+            dx[dx <= 0] = 1e-6
+            m = dy / dx
+            d = np.zeros(len(xs))
+            for i in range(1, len(xs) - 1):
+                if m[i - 1] * m[i] > 0:
+                    d[i] = 2 / (1 / m[i - 1] + 1 / m[i])   # Fritsch-Carlson (단조 유지)
+            self._tl = (xs, ys, m, d)
+        xs, ys, m, d = self._tl
+        i = int(np.searchsorted(xs, t) - 1)
+        i = max(0, min(i, len(xs) - 2))
+        h = xs[i + 1] - xs[i]
+        u = (t - xs[i]) / h
+        h00 = 2 * u ** 3 - 3 * u ** 2 + 1; h10 = u ** 3 - 2 * u ** 2 + u
+        h01 = -2 * u ** 3 + 3 * u ** 2; h11 = u ** 3 - u ** 2
+        return float(h00 * ys[i] + h10 * h * d[i] + h01 * ys[i + 1] + h11 * h * d[i + 1])
+
+    def para_time(self, idx):
+        """문단 idx 가 읽는 줄에 오는 시각 (타임스탬프·효과음용)"""
+        if self.keys and idx < len(self.keys):
+            return self.intro + self.hs + self.keys[idx][0]
+        py = self.paras[idx][0]
+        line = self.focus_line()
+        for i in range(int(self.duration * 20)):
+            t = i / 20
+            if t >= self.intro and py - self.offset(t) <= line + 2:
+                return t
+        return self.intro + self.hs + self.scroll_t
+
+    def chapter_times(self):
+        """[(시각, 챕터 제목)] - 롱폼 타임스탬프용"""
+        return [(self.para_time(i), text[3:].strip()) for i, (_, text) in enumerate(self.paras) if text.startswith("## ")]
+
     def find_reveal(self):
         """반전 문단(마지막 문단, 마지막이 질문이면 그 앞)이 읽는 줄에 닿는 시각"""
         if not self.paras or self.dist <= 0:
             return None
         idx = -2 if len(self.paras) >= 2 and self.paras[-1][1].rstrip().endswith("?") else -1
         py = self.paras[idx][0]
-        line = H * (self.s["focus_y"] if self.s["focus"] == "on" else 0.55)
+        line = self.focus_line()
+        if self.keys:
+            t = self.para_time(len(self.paras) + idx)
+            return t if t >= self.intro + 1.0 else None
         for i in range(int(self.duration * 20)):
             t = i / 20
             if t >= self.intro and py - self.offset(t) <= line + 2:
@@ -1243,6 +1374,8 @@ class Renderer:
         t -= self.intro + self.hs
         if self.dist <= 0 or t <= 0:
             return 0.0
+        if self.keys:
+            return self._timeline_offset(t)
         T, r = self.scroll_t, self.ramp
         if t >= T:
             return float(self.dist)
@@ -1788,25 +1921,177 @@ def build_audio(r, s, style):
     rng = np.random.default_rng(None if s["bgm_seed"] == 0 else s["bgm_seed"])
     music = make_music(s, style, n)
     hit_t = r.reveal_t if s["reveal_hit"] == "on" else None
-    if music is None and hit_t is None:
+    narr = getattr(r, "narr_at", []) if s.get("narration", "off") == "on" else []
+    if music is None and hit_t is None and not narr:
         return None
     out = np.zeros((n, 2), np.float32)
+    t = np.arange(n) / SR
     if music is not None:
         rms = float(np.sqrt((music ** 2).mean())) + 1e-9
         music = music * (0.24 / rms) * max(0, s["bgm_volume"])   # 볼륨 0.5 기준 약 -18dB (작은 스피커에서도 들리게)
-        t = np.arange(n) / SR
         g = np.minimum(1, t / 1.5) * np.clip((r.duration - t) / 2.5, 0, 1)
         if hit_t:  # 반전 직전 음악을 줄였다가 다시 올림
             a = max(0.01, hit_t - 1.2)
             b = max(a + 0.01, hit_t - 0.1)
             g = g * np.interp(t, [0, a, b, hit_t + 1.5, hit_t + 4.5, 1e9], [1, 1, 0.25, 0.25, 1, 1])
+        if narr:   # 말하는 동안 음악을 낮춤 (더킹)
+            duck = float(s.get("narr_duck", 0.35))
+            env = np.ones(n, np.float32)
+            for st, clip in narr:
+                i0, i1 = int(max(0, st - 0.3) * SR), int(min(r.duration, st + len(clip) / SR + 0.3) * SR)
+                env[i0:i1] = duck
+            k = int(0.4 * SR)
+            env = np.convolve(env, np.ones(k, np.float32) / k, mode="same")
+            g = g * env
         out += music * g[:, None].astype(np.float32)
+    for st, clip in narr:
+        vol = max(0, float(s.get("narr_volume", 1.0)))
+        i0 = int(st * SR)
+        seg = clip[: max(0, n - i0)]
+        if len(seg):
+            out[i0:i0 + len(seg)] += seg[:, None] * vol if seg.ndim == 1 else seg * vol
     if hit_t:
         out += reveal_fx(n, hit_t, rng) * 0.4 * max(0, s["hit_volume"])
     peak = float(np.abs(out).max())
     if peak > 0.95:
         out *= 0.95 / peak
     return out
+
+
+# ---------------- 나레이션 (TTS) ----------------
+
+
+def tts_clean(text):
+    """읽기 좋게 정리: ♪, 따옴표, 챕터 표시 제거"""
+    t = text.strip()
+    if t.startswith("## "):
+        t = t[3:]
+    t = t.lstrip("♪").strip()
+    t = re.sub(r"[\"“”'‘’]", "", t)
+    t = re.sub(r"\s+", " ", t)
+    return t
+
+
+def tts_edge(text, voice, rate_pct, out_mp3):
+    """마이크로소프트 엣지 음성 (인터넷 필요, 무료)"""
+    try:
+        import edge_tts
+    except ImportError:
+        ok, _ = pip_install("edge-tts")
+        importlib.invalidate_caches()
+        if not ok:
+            raise RuntimeError("edge-tts 설치 실패")
+        import edge_tts
+    import asyncio
+    rate = f"{'+' if rate_pct >= 0 else ''}{int(rate_pct)}%"
+
+    async def run():
+        await edge_tts.Communicate(text, voice, rate=rate).save(out_mp3)
+    try:
+        loop = asyncio.new_event_loop()
+        try:
+            loop.run_until_complete(run())
+        finally:
+            loop.close()
+    except Exception as e:
+        raise RuntimeError(f"엣지 음성 실패({type(e).__name__}): {str(e)[:120]}")
+
+
+def tts_sapi(text, rate_pct, out_wav):
+    """윈도우 내장 음성 (오프라인). 한국어 음성(Heami)이 설치돼 있어야 함"""
+    if os.name != "nt":
+        raise RuntimeError("윈도우 내장 음성은 윈도우에서만 됩니다")
+    rate = max(-10, min(10, int(round(rate_pct / 10))))
+    safe = text.replace("'", "''")
+    ps = (f"Add-Type -AssemblyName System.Speech; $s = New-Object System.Speech.Synthesis.SpeechSynthesizer; "
+          f"$v = $s.GetInstalledVoices() | Where-Object {{ $_.VoiceInfo.Culture.Name -eq 'ko-KR' }} | Select-Object -First 1; "
+          f"if ($v) {{ $s.SelectVoice($v.VoiceInfo.Name) }}; $s.Rate = {rate}; "
+          f"$s.SetOutputToWaveFile('{out_wav}'); $s.Speak('{safe}'); $s.Dispose()")
+    p = subprocess.run(["powershell", "-NoProfile", "-Command", ps], stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                       text=True, errors="replace", creationflags=subprocess.CREATE_NO_WINDOW)
+    if p.returncode != 0 or not os.path.exists(out_wav):
+        raise RuntimeError("윈도우 음성 실패: " + (p.stderr or "")[-200:])
+
+
+def tts_clip(text, voice_name, rate_pct, cache_dir):
+    """문장 하나 → (소리 배열 mono float32, 길이초). 같은 문장은 캐시에서 재사용"""
+    import hashlib
+    text = tts_clean(text)
+    if not text:
+        return np.zeros(1, np.float32), 0.0
+    voice = TTS_VOICES.get(voice_name, "ko-KR-SunHiNeural")
+    key = hashlib.md5(f"{voice}|{rate_pct}|{text}".encode("utf-8")).hexdigest()[:16]
+    os.makedirs(cache_dir, exist_ok=True)
+    npy = os.path.join(cache_dir, key + ".npy")
+    if os.path.exists(npy):
+        a = np.load(npy)
+        return a, len(a) / SR
+    src = os.path.join(cache_dir, key + (".wav" if voice == "sapi" else ".mp3"))
+    if voice == "sapi":
+        tts_sapi(text, rate_pct, src)
+    else:
+        try:
+            tts_edge(text, voice, rate_pct, src)
+        except Exception as e:
+            if os.name == "nt":
+                tts_sapi(text, rate_pct, src := os.path.join(cache_dir, key + ".wav"))
+            else:
+                raise e
+    a = _decode_full(src)
+    # 앞뒤 무음 다듬기 + 크기 맞추기
+    thr = 0.01
+    nz = np.nonzero(np.abs(a) > thr)[0]
+    if len(nz):
+        a = a[max(0, nz[0] - int(0.05 * SR)): nz[-1] + int(0.15 * SR)]
+    peak = float(np.abs(a).max()) if len(a) else 0
+    if peak > 0:
+        a = a * (0.7 / peak)
+    a = a.astype(np.float32)
+    np.save(npy, a)
+    try:
+        os.remove(src)
+    except OSError:
+        pass
+    return a, len(a) / SR
+
+
+def _decode_full(path):
+    """오디오 파일 전체를 mono float32 로"""
+    p = subprocess.run([get_ffmpeg(), "-v", "error", "-i", path, "-f", "f32le", "-ac", "1", "-ar", str(SR), "-"],
+                       stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                       creationflags=(subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0))
+    if p.returncode != 0 or not p.stdout:
+        raise RuntimeError("음성 파일을 읽지 못했습니다: " + p.stderr.decode("utf-8", "ignore")[:200])
+    return np.frombuffer(p.stdout, np.float32).copy()
+
+
+def narration_paras(story):
+    """나레이션으로 읽을 문단 목록 [(문단 인덱스, 글)] - build_text_layer 의 paras 순서와 같음"""
+    out, idx = [], 0
+    for para in (story or "").replace("\r", "").split("\n"):
+        para = para.strip()
+        if not para or parse_media(para) or PH_RE.match(para):
+            continue
+        para = PH_INLINE_RE.sub("", para).strip()
+        if not para:
+            continue
+        out.append((idx, para))
+        idx += 1
+    return out
+
+
+def build_narration(story, s, cache_dir, log=None, cancel=None):
+    """본문 전체 나레이션 → [(문단 인덱스, 소리, 길이)]"""
+    items = narration_paras(story)
+    res = []
+    for k, (i, text) in enumerate(items):
+        if cancel and cancel.is_set():
+            raise RuntimeError("취소됨")
+        a, d = tts_clip(text, s["narr_voice"], float(s["narr_rate"]), cache_dir)
+        res.append((i, a, d))
+        if log and (k % 5 == 0 or k == len(items) - 1):
+            log(f"  🎙 나레이션 {k + 1}/{len(items)}")
+    return res
 
 
 def has_audio(path):
@@ -1970,6 +2255,9 @@ def write_package(path_base, title, story, pkg):
               "", "[고정댓글]", pkg.get("pinned_comment", "")]
     if pkg.get("sources"):
         lines += ["", "[출처 (설명란에 넣으면 신뢰도 상승)]"] + [f"- {x}" for x in pkg["sources"]]
+    if pkg.get("chapters"):
+        lines += ["", "[챕터 타임스탬프 (설명란에 그대로 붙여넣기)]", "00:00 오프닝"]
+        lines += [f"{int(t // 60):02d}:{int(t % 60):02d} {n}" for t, n in pkg["chapters"]]
     art = pkg.get("artwork")
     if isinstance(art, dict):
         lines += ["", "[그림 정보 (설명란에 넣으면 좋음)]",
@@ -2193,6 +2481,7 @@ class App(tk.Tk):
         ttk.Button(tr, text="테마 적용", command=lambda: self.apply_theme(self.theme_var.get())).pack(side="left")
         ttk.Label(tr, text="  (소재를 고르면 테마·배경음 자동)", foreground="gray").pack(side="left")
         ttk.Separator(tr, orient="vertical").pack(side="left", fill="y", padx=8)
+        ttk.Button(tr, text="🎙 나레이션 만들기", command=self.prepare_narration).pack(side="left", padx=(0, 6))
         ttk.Button(tr, text="🎵 배경음 만들기", command=self.make_bgm).pack(side="left")
         ttk.Button(tr, text="▶ 다시 듣기", command=self.replay_bgm).pack(side="left", padx=(4, 0))
         ttk.Button(tr, text="■ 소리 정지", command=stop_wav).pack(side="left", padx=4)
@@ -2216,6 +2505,7 @@ class App(tk.Tk):
         ttk.Button(s4, text="미리보기 새로고침", command=self.refresh_preview).pack(side="left")
         ttk.Button(s4, text="MP4 만들기", command=self.make_mp4).pack(side="left", padx=6)
         ttk.Button(s4, text="연속 제작(여러 편 자동)", command=self.batch).pack(side="left")
+        ttk.Button(s4, text="📺 롱폼 만들기(챕터 묶음)", command=self.longform).pack(side="left", padx=(6, 0))
         ttk.Button(s4, text="취소", command=self.cancel.set).pack(side="left", padx=6)
         ttk.Button(s4, text="저장 폴더 열기", command=self.open_folder).pack(side="left")
         self.prog = ttk.Progressbar(s4, length=220)
@@ -2261,7 +2551,10 @@ class App(tk.Tk):
         cell = ttk.Frame(parent)
         cell.grid(row=r, column=c * 2 + 1, sticky="w", pady=2)
         if t.startswith("choice:"):
-            ttk.Combobox(cell, textvariable=v, values=t[7:].split(","), width=10, state="readonly").pack(side="left")
+            cb = ttk.Combobox(cell, textvariable=v, values=t[7:].split(","), width=(22 if key in ("format", "narr_voice", "audio_out") else 10), state="readonly")
+            cb.pack(side="left")
+            if key == "format":
+                cb.bind("<<ComboboxSelected>>", self.on_format_change)
         elif t == "color":
             ttk.Entry(cell, textvariable=v, width=9).pack(side="left")
             sw = tk.Label(cell, width=2, relief="solid")
@@ -2305,6 +2598,81 @@ class App(tk.Tk):
         for k, v in d.items():
             if k in self.vars:
                 self.vars[k].set(str(cast(k, v)))
+        if "format" in d:
+            self.apply_format(d["format"])
+
+    def apply_format(self, name):
+        """화면 형식(세로/가로) 적용: 렌더 크기·미리보기 크기·여백 기본값"""
+        if name not in FORMATS:
+            return
+        prev = (W, H)
+        set_format(name)
+        self.canvas.config(width=PREVIEW_W, height=PREVIEW_H)
+        self.tscale.config(length=PREVIEW_W)
+        self.info.config(wraplength=PREVIEW_W)
+        if (W, H) != prev:
+            if W > H:   # 가로: 글이 너무 길게 퍼지지 않게 좌우 여백 넓힘
+                self.vars["margin_x"].set("280")
+                self.vars["margin_right"].set("280")
+                self.vars["photo_h"].set("0.6")
+                self.vars["fps"].set("30")
+            else:
+                self.vars["margin_x"].set("90")
+                self.vars["margin_right"].set("150")
+                self.vars["fps"].set("60")
+
+    def on_format_change(self, *_):
+        self.apply_format(self.vars["format"].get())
+        self.refresh_preview()
+
+    def narr_cache_dir(self):
+        return os.path.join(self.get_settings()["out_dir"], "tts_cache")
+
+    def narration_for(self, story, s, log=None, cancel=None):
+        """설정이 켜져 있으면 나레이션 목록 반환 (캐시 활용). 백그라운드에서 호출 (화면 위젯을 읽지 않음)"""
+        if s.get("narration") != "on":
+            return None
+        return build_narration(story, s, os.path.join(s["out_dir"], "tts_cache"), log, cancel)
+
+    def narration_cached(self, story, s):
+        """이미 만들어 둔 나레이션이 전부 있으면 바로 반환, 아니면 None (미리보기용, 느린 작업 안 함)"""
+        if s.get("narration") != "on":
+            return None
+        import hashlib
+        cache = os.path.join(s["out_dir"], "tts_cache")
+        voice = TTS_VOICES.get(s["narr_voice"], "")
+        res = []
+        for i, text in narration_paras(story):
+            t = tts_clean(text)
+            if not t:
+                res.append((i, np.zeros(1, np.float32), 0.0))
+                continue
+            key = hashlib.md5(f"{voice}|{float(s['narr_rate'])}|{t}".encode("utf-8")).hexdigest()[:16]
+            npy = os.path.join(cache, key + ".npy")
+            if not os.path.exists(npy):
+                return None
+            a = np.load(npy)
+            res.append((i, a, len(a) / SR))
+        return res
+
+    def prepare_narration(self):
+        """🎙 나레이션 만들기: 모든 문단 음성 생성 → 미리보기가 읽는 속도에 맞춰짐"""
+        s = self.get_settings()
+        if s["narration"] != "on":
+            self.vars["narration"].set("on")
+            s["narration"] = "on"
+        story = self.get_story()
+
+        def job():
+            return self.narration_for(story, s, self.log_bg, self.cancel)
+
+        def done(narr):
+            total = sum(d for _, _, d in narr)
+            self.write_log(f"🎙 나레이션 완료: {len(narr)}문단, 말하는 시간 {total:.0f}초 ({s['narr_voice']}) → 스크롤이 읽는 속도에 맞춰집니다")
+            self.bgm_made = None
+            self.refresh_preview()
+        self.write_log(f"🎙 나레이션 만드는 중... ({s['narr_voice']}, 문단마다 음성 생성)")
+        self.run_bg("나레이션 만드는 중...", job, done)
 
     def get_story(self):
         return self.story.get("1.0", "end-1c")
@@ -2844,6 +3212,7 @@ class App(tk.Tk):
             pkg["sources"] = sources
             pkg["song"] = getattr(self, "song", None)
             pkg["artwork"] = getattr(self, "artwork", None)
+            pkg["chapters"] = self.renderer.chapter_times() if self.renderer else []
             pkg["melody_used"] = bool(parse_melody(getattr(self, "melody", "")))
             os.makedirs(out_dir, exist_ok=True)
             base = os.path.join(out_dir, safe_name(title))
@@ -2900,7 +3269,10 @@ class App(tk.Tk):
     # ---- 미리보기 ----
     def refresh_preview(self):
         try:
-            self.renderer = Renderer(self.title_var.get(), self.get_story(), self.get_settings())
+            s = self.get_settings()
+            narr = self.narration_cached(self.get_story(), s)
+            self.renderer = Renderer(self.title_var.get(), self.get_story(), s, narr)
+            self.narr_missing = s.get("narration") == "on" and narr is None
         except Exception as e:
             self.on_err(e)
             return
@@ -2910,7 +3282,7 @@ class App(tk.Tk):
             self.tvar.set(0)
         if not self.playing and self.tvar.get() < 0.05:
             self.tvar.set(min(r.duration, r.intro + 0.3))  # 제목 카드가 사라지고 글이 보이는 시점
-        warn = "\n⚠ 3분 넘음 (쇼츠 제한)" if r.duration > 180 else ""
+        warn = "\n⚠ 3분 넘음 (쇼츠 제한)" if r.duration > 180 and W < H else ""
         body = story_text_only(self.get_story())
         chars = len(body.replace(" ", "").replace("\n", ""))
         nph = len(photo_credits(self.get_story()))
@@ -2919,6 +3291,11 @@ class App(tk.Tk):
                if self.vars["bgm_mode"].get() == "자동생성"
                else ("파일 " + os.path.basename(self.vars["bgm_path"].get()) if self.vars["bgm_mode"].get() == "파일" else "없음"))
         hit = f" | 반전 효과음 {r.reveal_t:.1f}초" if r.reveal_t and self.vars["reveal_hit"].get() == "on" else ""
+        if self.vars["narration"].get() == "on":
+            warn += ("\n🎙 나레이션: 준비됨 (읽는 속도에 맞춰 스크롤)" if r.keys else "\n🎙 나레이션: 아직 안 만듦 → '🎙 나레이션 만들기' 누르면 속도가 맞춰짐")
+        ch = r.chapter_times()
+        if ch:
+            warn += f"\n📑 챕터 {len(ch)}개: " + " · ".join(f"{int(t // 60)}:{int(t % 60):02d} {n[:8]}" for t, n in ch[:6]) + (" …" if len(ch) > 6 else "")
         song = getattr(self, "song", None)
         if song and self.cat_var.get() == SONG_CATEGORY:
             warn += f"\n🎼 {song.get('title_ko') or song.get('title', '')} ({song.get('year', '?')})"
@@ -2934,7 +3311,7 @@ class App(tk.Tk):
         if not self.renderer:
             return
         im = Image.fromarray(self.renderer.frame_preview(float(self.tvar.get())))
-        if self.vars["safe_guide"].get() == "on":
+        if self.vars["safe_guide"].get() == "on" and H > W:
             d = ImageDraw.Draw(im, "RGBA")
             # 쇼츠 UI가 가리는 영역: 오른쪽 버튼 열, 아래 제목/채널 영역
             d.rectangle([PREVIEW_W - 50, 0, PREVIEW_W, PREVIEW_H], fill=(255, 0, 0, 60))
@@ -3243,7 +3620,15 @@ class App(tk.Tk):
             self.vars["bgm_seed"].set(str(seed))
             self.write_log(f"  배경음 번호가 없어 새 번호 #{seed}로 만듭니다 (소리 탭에 저장됨)")
 
+        story_now, title_now = self.get_story(), self.title_var.get()
+
         def job():
+            nonlocal r
+            if s.get("narration") == "on" and not r.keys:
+                self.q.put(lambda: self.status.config(text="나레이션 만드는 중..."))
+                narr = self.narration_for(story_now, s, self.log_bg, self.cancel)
+                r = Renderer(title_now, story_now, s, narr)
+                self.q.put(lambda: setattr(self, "renderer", r))
             self.q.put(lambda: self.status.config(text="배경음 만드는 중..."))
             audio = build_audio(r, s, style)
             mp3 = ""
@@ -3253,6 +3638,10 @@ class App(tk.Tk):
             in_video = audio if "MP4에 포함" in s["audio_out"] else None
             export_mp4(r, out, prog, self.cancel, in_video)
             r.thumbnail().save(base + "_썸네일.png")
+            ch = r.chapter_times()
+            if ch:
+                with open(base + "_타임스탬프.txt", "w", encoding="utf-8") as f:
+                    f.write("\n".join(f"{int(t // 60):02d}:{int(t % 60):02d} {n}" for t, n in [(0, "오프닝")] + ch))
             return out, mp3, in_video is not None and has_audio(out), os.path.getsize(out) / 1e6
 
         def done(res):
@@ -3267,6 +3656,8 @@ class App(tk.Tk):
                 self.write_log("  MP4 소리: 없음 (무음으로 저장)")
             if mp3:
                 self.write_log(f"  🎵 배경음 MP3 따로 저장: {mp3}")
+            if os.path.exists(base + "_타임스탬프.txt"):
+                self.write_log("  📑 챕터 타임스탬프 저장: " + base + "_타임스탬프.txt (설명란에 붙여넣으면 챕터로 표시됨)")
             self.save_cfg()
         self.run_bg("영상 만드는 중...", job, done)
 
@@ -3319,7 +3710,8 @@ class App(tk.Tk):
                         log("  검증 실패: " + str(e)[:80])
                 base = os.path.join(out_dir, f"{i + 1:02d}_{safe_name(title)}")
                 CURRENT_MELODY["melody"], CURRENT_MELODY["bpm"] = res.get("melody", ""), res.get("bpm", 90)
-                r = Renderer(title, story, s)
+                narr = self.narration_for(story, s, log, self.cancel)
+                r = Renderer(title, story, s, narr)
                 style = resolve_style(s, genre)
                 audio = build_audio(r, s, style)
                 if audio is not None and "MP3" in s["audio_out"]:
@@ -3343,6 +3735,108 @@ class App(tk.Tk):
         self.write_log(f"연속 제작 시작: {n}편, {cat} · {genre}, {sec:.0f}초" + (" · 웹 조사" if research else "")
                        + (" · 근거 사진" if factual and autophoto else "") + (" · 사실 검증" if factual else ""))
         self.run_bg("연속 제작 중...", job, done)
+
+    def longform(self):
+        """📺 롱폼: 챕터 N개를 AI로 만들어 하나의 대본으로 묶음 (가로 화면·나레이션 권장)"""
+        dlg = tk.Toplevel(self)
+        dlg.title("롱폼 만들기 (챕터 묶음)")
+        dlg.transient(self)
+        dlg.grab_set()
+        f = ttk.Frame(dlg, padding=12)
+        f.pack(fill="both", expand=True)
+        ttk.Label(f, text=f"종류 '{self.cat_var.get()}' · 소재 '{self.genre_var.get()}' 로 챕터를 만듭니다.", font=("맑은 고딕", 10, "bold")).grid(row=0, column=0, columnspan=2, sticky="w")
+        ttk.Label(f, text="챕터 수").grid(row=1, column=0, sticky="e", pady=4)
+        n_var = tk.StringVar(value="7")
+        ttk.Spinbox(f, from_=2, to=20, textvariable=n_var, width=5).grid(row=1, column=1, sticky="w")
+        ttk.Label(f, text="챕터당 길이(초)").grid(row=2, column=0, sticky="e", pady=4)
+        sec_var = tk.StringVar(value="75")
+        ttk.Spinbox(f, from_=30, to=240, increment=5, textvariable=sec_var, width=5).grid(row=2, column=1, sticky="w")
+        ttk.Label(f, text="전체 주제(비우면 AI가 정함)").grid(row=3, column=0, sticky="e", pady=4)
+        theme_var = tk.StringVar(value=self.topic_var.get())
+        ttk.Entry(f, textvariable=theme_var, width=40).grid(row=3, column=1, sticky="w")
+        ttk.Label(f, text="챕터 주제 직접 입력 (한 줄에 하나, 비우면 AI 추천)").grid(row=4, column=0, columnspan=2, sticky="w", pady=(8, 0))
+        box = ScrolledText(f, height=6, width=60, font=("맑은 고딕", 10))
+        box.grid(row=5, column=0, columnspan=2)
+        land_var = tk.BooleanVar(value=True)
+        ttk.Checkbutton(f, text="가로 화면(1920×1080)으로 전환", variable=land_var).grid(row=6, column=0, columnspan=2, sticky="w", pady=(8, 0))
+        narr_var = tk.BooleanVar(value=True)
+        ttk.Checkbutton(f, text="나레이션 켜기 (롱폼은 음성이 있어야 끝까지 봅니다)", variable=narr_var).grid(row=7, column=0, columnspan=2, sticky="w")
+        ttk.Label(f, text="예상: 7챕터 × 75초 ≈ 9분 (8분 이상이면 중간 광고 가능). 챕터마다 AI 호출이 있어 20~40분 걸릴 수 있습니다.",
+                  foreground="gray").grid(row=8, column=0, columnspan=2, sticky="w", pady=(8, 0))
+        res = {}
+
+        def ok():
+            try:
+                res["n"], res["sec"] = int(n_var.get()), float(sec_var.get())
+            except ValueError:
+                return
+            res["theme"] = theme_var.get().strip()
+            res["topics"] = [l.strip() for l in box.get("1.0", "end").split("\n") if l.strip()]
+            res["land"], res["narr"] = land_var.get(), narr_var.get()
+            dlg.destroy()
+        bf = ttk.Frame(f)
+        bf.grid(row=9, column=0, columnspan=2, sticky="e", pady=(10, 0))
+        ttk.Button(bf, text="취소", command=dlg.destroy).pack(side="right")
+        ttk.Button(bf, text="만들기 시작", command=ok).pack(side="right", padx=6)
+        self.wait_window(dlg)
+        if "n" not in res:
+            return
+        if res["land"]:
+            self.vars["format"].set("롱폼 가로(1920×1080)")
+            self.apply_format("롱폼 가로(1920×1080)")
+        if res["narr"]:
+            self.vars["narration"].set("on")
+        self.vars["intro_sec"].set("2.5")
+        self.vars["hold_end"].set("4")
+        n, sec, theme, topics = res["n"], res["sec"], res["theme"], res["topics"]
+        model, cat, genre, judge = self.model_var.get().strip(), self.cat_var.get(), self.genre_var.get(), self.judge_var.get()
+        research, autophoto = self.research_var.get(), self.autophoto_var.get()
+        factual, tmap = cat_info(cat)
+        media_dir = self.media_dir()
+        log = self.log_bg
+
+        def job():
+            ideas = list(topics)
+            if len(ideas) < n:
+                iu = (f"콘텐츠 종류: {cat}" + (" (실제 사건·사실만)" if factual else "") + f"\n소재: {genre}\n소재 공식: {tmap.get(genre, ('', ''))[0]}"
+                      + (f"\n전체 영상 주제: {theme}" if theme else "") + f"\n이 소재로 롱폼 영상의 챕터 주제 {n - len(ideas)}개를 만들어줘. 서로 겹치지 않고 점점 더 놀라운 순서로.")
+                if research:
+                    iu += "\n[웹 검색 모드] WebSearch 로 실제 사건·발견·현상을 찾아 고른다."
+                ideas += [str(x) for x in ask_json(model, IDEA_SYSTEM, iu, tools=WEB_TOOLS if research else None).get("ideas", [])]
+            ideas = ideas[:n]
+            chapters = []
+            for i, topic in enumerate(ideas):
+                if self.cancel.is_set():
+                    raise RuntimeError("취소됨")
+                log(f"📑 챕터 {i + 1}/{n}: {topic}")
+                r_ = self.generate_story(model, cat, topic, genre, sec, judge, log, research, autophoto, "", media_dir)
+                chapters.append(r_)
+            log("전체 구성(제목·오프닝·클로징) 만드는 중...")
+            summary = json.dumps([{"title": c["title"], "story": story_text_only(c["story"])[:600]} for c in chapters], ensure_ascii=False)
+            plan = ask_json(model, LONGFORM_SYSTEM, f"콘텐츠 종류: {cat}\n소재: {genre}" + (f"\n전체 주제: {theme}" if theme else "") + f"\n\n[챕터들]\n{summary}")
+            ctitles = plan.get("chapter_titles") or []
+            parts = [strip_placeholders(str(plan.get("opening", "")).strip())]
+            for i, c in enumerate(chapters):
+                t = ctitles[i] if i < len(ctitles) and str(ctitles[i]).strip() else c["title"]
+                parts.append(f"## {i + 1}. {t}\n\n" + c["story"].strip())
+            parts.append(strip_placeholders(str(plan.get("closing", "")).strip()))
+            story = "\n\n".join(p for p in parts if p)
+            sources = [x for c in chapters for x in (c.get("sources") or [])]
+            return plan.get("title") or (theme or chapters[0]["title"]), story, sources, chapters
+
+        def done(resu):
+            title, story, sources, chapters = resu
+            self.title_var.set(title)
+            self.set_story(story)
+            self.set_sources(sources[:12], "")
+            self.vars["target_sec"].set("0")
+            self.bgm_made = None
+            self.write_log(f"📺 롱폼 대본 완성: {title} · 챕터 {len(chapters)}개 · 본문 {len(story_text_only(story))}자")
+            self.write_log("  → '🎙 나레이션 만들기'로 음성을 만든 뒤 MP4를 만드세요 (MP4 만들기를 바로 눌러도 자동으로 만듭니다)")
+            self.refresh_preview()
+            self.save_cfg()
+        self.write_log(f"📺 롱폼 만들기 시작: {n}챕터 × {sec:.0f}초, {cat} · {genre}")
+        self.run_bg("롱폼 만드는 중...", job, done)
 
     def open_folder(self):
         folder = self.get_settings()["out_dir"]
