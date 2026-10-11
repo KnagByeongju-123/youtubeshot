@@ -3948,6 +3948,568 @@ def write_package(path_base, title, story, pkg):
         f.write("\n".join(lines))
 
 
+# ---------------- 음악 채널 (명상·집중·수면) ----------------
+BRAHMS_LULLABY = ("E4:0.5 E4:0.5 G4:2 E4:0.5 E4:0.5 G4:2 E4:0.5 G4:0.5 C5:1 B4:1.5 A4:0.5 A4:1 G4:1 "
+                  "D4:0.5 E4:0.5 F4:1 D4:1 D4:0.5 E4:0.5 F4:2 D4:0.5 F4:0.5 B4:0.5 A4:0.5 G4:1 B4:1 C5:2 "
+                  "C4:0.5 C4:0.5 C5:2 A4:0.5 F4:0.5 G4:2 E4:0.5 C4:0.5 F4:1 G4:1 A4:1 G4:2 "
+                  "C4:0.5 C4:0.5 C5:2 A4:0.5 F4:0.5 G4:2 E4:0.5 C4:0.5 F4:1 E4:0.5 D4:0.5 C4:3")   # 브람스 자장가(1868, 퍼블릭 도메인)
+TWINKLE = ("C4 C4 G4 G4 A4 A4 G4:2 F4 F4 E4 E4 D4 D4 C4:2 G4 G4 F4 F4 E4 E4 D4:2 "
+           "G4 G4 F4 F4 E4 E4 D4:2 C4 C4 G4 G4 A4 A4 G4:2 F4 F4 E4 E4 D4 D4 C4:2")              # 반짝반짝 작은 별(18세기 프랑스 민요)
+
+MUSIC_PRESETS = {   # 이름: 설정 (gen=생성 방식, title=기본 제목, desc=설명, prompt=배경 그림 프롬프트, overlay=화면 효과, colors=그림 없을 때 배경)
+    "명상 · 싱잉볼": dict(gen="bowls", title="마음이 고요해지는 싱잉볼 명상 음악", tags="#명상음악 #싱잉볼 #힐링음악 #마음챙김 #요가음악 #명상",
+                     desc="은은한 싱잉볼 울림과 잔잔한 공기 소리", overlay="먼지 빛", colors=("#141626", "#3A2E4F"),
+                     prompt="a peaceful meditation space at dawn, tibetan singing bowl on a wooden floor, soft golden light through mist, calm minimal composition, cinematic, no people"),
+    "깊은 수면 · 잔잔한 패드": dict(gen="sleep", title="눕자마자 편안해지는 깊은 수면 음악", tags="#수면음악 #잠잘때듣는음악 #힐링음악 #숙면 #자장가 #수면",
+                          desc="아주 느리게 바뀌는 따뜻한 화음과 낮은 바람 소리", overlay="반딧불", colors=("#06081A", "#16204A"),
+                          prompt="a quiet night sky over a calm lake, soft moonlight, gentle stars, deep blue tones, dreamy and peaceful, no people"),
+    "공부 집중 · 로파이": dict(gen="lofi", title="공부할 때 듣는 로파이 음악 📚 집중력 플레이리스트", tags="#로파이 #공부음악 #집중음악 #lofi #스터디윗미 #노동요",
+                        desc="잔잔한 로파이 비트, 따뜻한 일렉트릭 피아노와 LP 잡음", overlay="먼지 빛", colors=("#1F1A2E", "#4A3A5C"),
+                        prompt="cozy lofi anime-style illustration, a student studying at a desk by the window at night, warm desk lamp, rain outside, plants, books, cat sleeping, soft purple and orange tones"),
+    "공부 집중 · 앰비언트 피아노": dict(gen="piano", title="집중이 잘 되는 잔잔한 피아노 음악", tags="#피아노 #공부음악 #집중음악 #잔잔한음악 #카페음악 #독서음악",
+                             desc="부드러운 피아노 아르페지오와 넓은 공간감", overlay="먼지 빛", colors=("#1A1E26", "#3C4656"),
+                             prompt="a calm minimalist study room with a grand piano, morning sunlight, sheer curtains, plants, warm neutral tones, peaceful, no people"),
+    "비 오는 밤 · 피아노": dict(gen="rain_piano", title="비 오는 밤 피아노 🌧 잠 안 올 때 듣는 음악", tags="#빗소리 #피아노 #수면음악 #감성음악 #힐링 #비오는날",
+                          desc="창밖 빗소리와 쓸쓸하고 따뜻한 피아노", overlay="빗줄기", colors=("#0B1018", "#1E2A3A"),
+                          prompt="rainy night city view from a cozy window, raindrops on glass, blurred warm street lights, a cup of tea on the windowsill, moody blue and amber, no people"),
+    "빗소리 (자연)": dict(gen="rain", title="빗소리 ASMR 🌧 잠잘 때·공부할 때", tags="#빗소리 #ASMR #백색소음 #수면 #공부 #빗소리asmr",
+                     desc="지붕과 창에 떨어지는 빗소리, 가끔 먼 천둥", overlay="빗줄기", colors=("#0D1218", "#22303C"),
+                     prompt="heavy rain in a quiet forest cabin porch at night, wet wooden planks, lantern glow, misty trees, cinematic, no people"),
+    "파도 소리": dict(gen="waves", title="파도 소리 🌊 바다 백색소음", tags="#파도소리 #바다 #ASMR #백색소음 #힐링 #수면",
+                  desc="밀려왔다 부서지는 잔잔한 파도", overlay="먼지 빛", colors=("#0A1A2A", "#1F4A6A"),
+                  prompt="calm ocean waves at sunset on a quiet beach, soft foam, golden hour, wide peaceful view, no people"),
+    "숲속 아침 · 새소리": dict(gen="forest", title="숲속 아침 새소리와 시냇물 🌿 자연의 소리", tags="#자연의소리 #새소리 #시냇물 #힐링 #ASMR #명상",
+                        desc="맑은 시냇물과 여러 새소리", overlay="먼지 빛", colors=("#0F1E14", "#2E4A2E"),
+                        prompt="sunlit forest stream in the morning, moss covered rocks, light rays through green leaves, small birds, peaceful and fresh, no people"),
+    "모닥불 · 장작 소리": dict(gen="fire", title="모닥불 장작 타는 소리 🔥 불멍 ASMR", tags="#모닥불 #불멍 #장작소리 #ASMR #캠핑 #힐링",
+                        desc="탁탁 튀는 장작과 낮은 불꽃 소리", overlay="반딧불", colors=("#140A06", "#3A1A0C"),
+                        prompt="a crackling campfire at night in the woods, glowing embers and sparks, starry sky, warm orange light, cozy, no people"),
+    "브라운 노이즈": dict(gen="brown", title="브라운 노이즈 🤎 집중·수면·아기 재우기", tags="#브라운노이즈 #백색소음 #집중 #수면 #아기수면 #ADHD",
+                    desc="낮고 부드러운 웅- 소리(브라운 노이즈)", overlay="없음", colors=("#1A120C", "#3A2A1E"),
+                    prompt="abstract soft warm brown gradient with gentle flowing texture, calm minimal background, no text"),
+    "바이노럴 알파 10Hz (집중·헤드폰)": dict(gen="binaural", beat=10.0, carrier=220.0, title="알파파 10Hz 바이노럴 비트 🎧 집중력 음악",
+                                   tags="#바이노럴비트 #알파파 #집중음악 #공부음악 #헤드폰", desc="왼쪽 220Hz·오른쪽 230Hz(차이 10Hz) + 잔잔한 패드. 헤드폰으로 들으세요",
+                                   overlay="호흡 가이드", colors=("#081420", "#18344A"),
+                                   prompt="abstract calm blue waves of light, gentle symmetrical glow, minimal and futuristic, no text"),
+    "바이노럴 세타 6Hz (명상·헤드폰)": dict(gen="binaural", beat=6.0, carrier=200.0, title="세타파 6Hz 바이노럴 비트 🎧 명상 음악",
+                                  tags="#바이노럴비트 #세타파 #명상음악 #힐링 #헤드폰", desc="왼쪽 200Hz·오른쪽 206Hz(차이 6Hz) + 잔잔한 패드. 헤드폰으로 들으세요",
+                                  overlay="호흡 가이드", colors=("#120A20", "#30204A"),
+                                  prompt="abstract purple nebula with soft glowing mandala light, calm and deep, no text"),
+    "바이노럴 델타 2Hz (수면·헤드폰)": dict(gen="binaural", beat=2.0, carrier=150.0, title="델타파 2Hz 바이노럴 비트 🎧 깊은 잠",
+                                  tags="#바이노럴비트 #델타파 #수면음악 #숙면 #헤드폰", desc="왼쪽 150Hz·오른쪽 152Hz(차이 2Hz) + 낮은 바람. 헤드폰으로 들으세요",
+                                  overlay="반딧불", colors=("#04060E", "#10183A"),
+                                  prompt="deep night sky with a soft crescent moon over quiet clouds, dark blue, very calm, no text"),
+    "오르골 자장가 · 브람스": dict(gen="lullaby", melody=BRAHMS_LULLABY, bpm=66, title="브람스 자장가 오르골 🎵 아기 재우는 음악",
+                          tags="#자장가 #오르골 #아기수면 #브람스자장가 #태교음악 #수면음악", desc="브람스 자장가(1868) 오르골 연주 + 따뜻한 패드",
+                          overlay="반딧불", colors=("#140E20", "#3A2A50"),
+                          prompt="a cozy nursery at night, a small music box on a shelf, soft star night-light, plush toys, pastel colors, dreamy, no people"),
+    "오르골 자장가 · 작은 별": dict(gen="lullaby", melody=TWINKLE, bpm=72, title="반짝반짝 작은 별 오르골 ⭐ 아기 수면 자장가",
+                           tags="#자장가 #오르골 #아기수면 #작은별 #태교음악 #수면음악", desc="반짝반짝 작은 별 오르골 연주 + 은은한 패드",
+                           overlay="반딧불", colors=("#0A0E24", "#26305A"),
+                           prompt="a dreamy night sky full of twinkling stars above a small sleeping town, soft pastel blue and gold, storybook illustration, no people"),
+    "우주 앰비언트": dict(gen="space", title="우주를 떠다니는 앰비언트 음악 🌌 휴식·수면", tags="#앰비언트 #우주 #힐링음악 #수면음악 #명상",
+                     desc="넓게 퍼지는 패드와 반짝이는 종소리", overlay="먼지 빛", colors=("#03040C", "#141A3A"),
+                     prompt="a vast calm nebula with distant stars and a small planet, deep blue and violet, cinematic space art, no text"),
+}
+MUSIC_OVERLAYS = ["없음", "먼지 빛", "반딧불", "눈", "빗줄기", "호흡 가이드"]
+MUSIC_TAIL = 12.0   # 덩어리 사이 겹치는 길이(초)
+
+
+def piano_note(freq, dur=3.0, vel=0.8, soft=1.0):
+    """부드러운 피아노 한 음 (배음 + 높은 배음이 먼저 사라짐)"""
+    t = np.arange(int(dur * SR)) / SR
+    tau = min(4.0, 1.6 * (262 / freq) ** 0.35)
+    s = np.zeros_like(t)
+    for k in range(1, 8):
+        fk = freq * k * np.sqrt(1 + 0.0004 * k * k)
+        if fk > 9000:
+            break
+        s += np.exp(-(k - 1) * 0.7 * soft) / k * np.sin(2 * np.pi * fk * t) * np.exp(-t * k ** 0.7 / tau)
+    s *= np.minimum(1, t / 0.004) * np.clip((dur - t) / 0.3, 0, 1)
+    return (s / 1.6 * vel).astype(np.float32)
+
+
+def epiano_note(freq, dur=2.5, vel=0.8):
+    """일렉트릭 피아노(로파이) - FM 방식"""
+    t = np.arange(int(dur * SR)) / SR
+    idx = 1.4 * np.exp(-t / 0.3) + 0.25
+    s = np.sin(2 * np.pi * freq * t + idx * np.sin(2 * np.pi * freq * t)) * np.exp(-t / 1.3)
+    s += 0.12 * np.sin(2 * np.pi * 2 * freq * t) * np.exp(-t / 0.35)
+    s *= np.minimum(1, t / 0.003) * np.clip((dur - t) / 0.25, 0, 1) * (1 + 0.06 * np.sin(2 * np.pi * 4.5 * t))
+    return (s * 0.55 * vel).astype(np.float32)
+
+
+def bowl_note(freq, dur=11.0, vel=0.8, rng=None):
+    """싱잉볼: 비정수 배음 + 맥놀이(두 음이 살짝 어긋나 우웅우웅)"""
+    t = np.arange(int(dur * SR)) / SR
+    s = np.zeros_like(t)
+    for ratio, amp, dec in ((1, 1.0, 8.0), (2.71, 0.45, 5.0), (5.15, 0.22, 3.0), (8.5, 0.1, 1.6)):
+        f = freq * ratio
+        d = 0.35 + 0.2 * ratio
+        s += amp * (np.sin(2 * np.pi * f * t) + np.sin(2 * np.pi * (f + d) * t)) * 0.5 * np.exp(-t / dec)
+    s *= np.minimum(1, t / 0.006) * np.clip((dur - t) / 1.5, 0, 1)
+    return (s * 0.5 * vel).astype(np.float32)
+
+
+def bird_call(rng):
+    """새소리 한 번 (짹짹 / 휘파람 / 떨림)"""
+    kind = rng.integers(3)
+    out = []
+    if kind == 0:
+        for _ in range(rng.integers(3, 7)):
+            d = rng.uniform(0.05, 0.11)
+            t = np.arange(int(d * SR)) / SR
+            f0, f1 = rng.uniform(3800, 5200), rng.uniform(2600, 3600)
+            ph = 2 * np.pi * np.cumsum(f0 + (f1 - f0) * t / d) / SR
+            out.append(np.sin(ph) * np.sin(np.pi * t / d) ** 2)
+            out.append(np.zeros(int(rng.uniform(0.05, 0.1) * SR)))
+    elif kind == 1:
+        for f0, f1 in ((rng.uniform(2000, 2500), rng.uniform(2700, 3200)), (rng.uniform(2600, 3000), rng.uniform(2000, 2400))):
+            d = rng.uniform(0.18, 0.32)
+            t = np.arange(int(d * SR)) / SR
+            ph = 2 * np.pi * np.cumsum(f0 + (f1 - f0) * (t / d) ** 2) / SR
+            out.append(np.sin(ph) * np.sin(np.pi * t / d))
+            out.append(np.zeros(int(0.06 * SR)))
+    else:
+        d = rng.uniform(0.4, 0.8)
+        t = np.arange(int(d * SR)) / SR
+        f = rng.uniform(3800, 4800)
+        out.append(np.sin(2 * np.pi * f * t) * (0.5 + 0.5 * np.sin(2 * np.pi * rng.uniform(14, 22) * t)) * np.sin(np.pi * t / d))
+    return np.concatenate(out).astype(np.float32)
+
+
+def _music_setup(name, seed):
+    """곡 전체에서 바뀌지 않는 값(조성·빠르기 등)"""
+    P = dict(MUSIC_PRESETS[name])
+    rng = np.random.default_rng(seed)
+    P["key"] = int(rng.integers(-3, 4))
+    if P["gen"] == "lofi":
+        P["bpm"] = float(rng.uniform(70, 84))
+        P["bar"] = 4 * 60 / P["bpm"]
+    elif P["gen"] in ("piano", "rain_piano"):
+        P["bpm"] = 64.0 if P["gen"] == "piano" else 56.0
+        P["bar"] = 4 * 60 / P["bpm"]
+    elif P["gen"] == "lullaby":
+        notes = parse_melody(P["melody"])
+        beat = 60 / P["bpm"]
+        P["notes"] = notes
+        P["loop"] = (sum(b for _, b in notes) + 4) * beat
+        P["bar"] = P["loop"]
+    else:
+        P["bar"] = 1.0
+    return P
+
+
+LOFI_PROG = [[50, 53, 57, 60, 64], [43, 53, 57, 59, 64], [48, 52, 55, 59, 62], [45, 55, 59, 60, 64]]   # ii9 V13 Imaj9 vi9
+PIANO_PROG = {"warm": [[48, 55, 64, 67, 71], [53, 57, 64, 69, 72], [45, 52, 60, 64, 67], [43, 50, 59, 62, 67]],
+              "sad": [[45, 52, 60, 64, 67], [41, 48, 57, 60, 65], [48, 55, 64, 67, 72], [43, 50, 59, 62, 67]]}
+
+
+def _drum(kind, rng):
+    if kind == "kick":
+        t = np.arange(int(0.35 * SR)) / SR
+        f = 45 + 75 * np.exp(-t / 0.04)
+        return (np.sin(2 * np.pi * np.cumsum(f) / SR) * np.exp(-t / 0.18)).astype(np.float32)
+    if kind == "snare":
+        t = np.arange(int(0.25 * SR)) / SR
+        nz = band(rng.standard_normal(len(t)).astype(np.float32), lo=1200, hi=6000)
+        return (_norm(nz) * np.exp(-t / 0.07) * 0.6 + np.sin(2 * np.pi * 185 * t) * np.exp(-t / 0.05) * 0.4).astype(np.float32)
+    t = np.arange(int(0.06 * SR)) / SR
+    return (band(rng.standard_normal(len(t)).astype(np.float32), lo=6000) * np.exp(-t / 0.015) * 3).astype(np.float32)
+
+
+def music_chunk(P, n, tail, rng, ci):
+    """음악 한 덩어리 → (사건 소리, 바탕 소리) 둘 다 (n+tail, 2). 사건은 [0, n) 안에서 시작해 tail 안에서 끝남"""
+    g, L = P["gen"], n + tail
+    T0 = ci * n / SR
+    ev = np.zeros((L, 2), np.float32)
+    bed = None
+    tsec = n / SR
+    if g == "bowls":
+        roots = [midi_hz(m + P["key"]) for m in (57, 60, 62, 64, 67, 69)]
+        pos = rng.uniform(0.5, 3)
+        while pos < tsec:
+            place(ev, bowl_note(rng.choice(roots) * rng.choice([0.5, 1, 1]), 11, rng.uniform(0.5, 0.9)), pos, rng.uniform(0.25, 0.75))
+            pos += rng.uniform(7, 14)
+        ev = reverb(ev, rng, 4.0, 0.4)
+        bed = gen_pad(L, rng, "space", 14, 700) * 0.35 + np.stack([_norm(band(colored_noise(L, rng, 1.0), lo=200, hi=1800)) for _ in range(2)], 1) * 0.06
+    elif g == "sleep":
+        bed = gen_pad(L, rng, "warm", 14, 900) * 0.8 + np.stack([_norm(band(colored_noise(L, rng, 2.0), hi=300)) for _ in range(2)], 1) * 0.12
+        pos = rng.uniform(2, 6)
+        while pos < tsec:
+            m = rng.choice([60, 64, 67, 69, 72]) + P["key"]
+            place(ev, piano_note(midi_hz(m), 6, rng.uniform(0.15, 0.3), 1.6), pos, rng.uniform(0.3, 0.7))
+            pos += rng.uniform(6, 13)
+        ev = reverb(ev, rng, 4.0, 0.5)
+    elif g == "lofi":
+        beat = 60 / P["bpm"]
+        bars = int(round(tsec / P["bar"]))
+        sw = 0.58
+        kick, snare = _drum("kick", rng), _drum("snare", rng)
+        mel = np.zeros((L, 2), np.float32)
+        drums = np.zeros((L, 2), np.float32)
+        for b in range(bars):
+            bt = b * P["bar"]
+            gb = ci * bars + b
+            ch = [m + P["key"] for m in LOFI_PROG[gb % 4]]
+            for j, m in enumerate(ch):
+                place(mel, epiano_note(midi_hz(m), P["bar"] * 0.95, rng.uniform(0.45, 0.6)), bt + j * 0.012, 0.35 + 0.075 * j)
+            if rng.random() < 0.5:
+                for j, m in enumerate(ch[1:]):
+                    place(mel, epiano_note(midi_hz(m), beat * 1.5, 0.28), bt + 2.5 * beat + j * 0.01, 0.4 + 0.07 * j)
+            root = midi_hz(ch[0] - 12)
+            for bb in (0, 2.5):
+                tt = np.arange(int(beat * 1.4 * SR)) / SR
+                bass = (np.sin(2 * np.pi * root * tt) * np.exp(-tt / 0.6) * np.minimum(1, tt / 0.01)).astype(np.float32)
+                place(mel, bass * 0.5, bt + bb * beat, 0.5)
+            if rng.random() < 0.35:   # 짧은 피아노 멜로디
+                scale = [ch[0] + 24 + x for x in (0, 2, 4, 7, 9, 12)]
+                tt = bt + rng.choice([1, 2]) * beat
+                for _ in range(rng.integers(3, 6)):
+                    place(mel, piano_note(midi_hz(rng.choice(scale)), 1.8, rng.uniform(0.18, 0.3)), tt, rng.uniform(0.4, 0.7))
+                    tt += rng.choice([0.5, 0.5, 1]) * beat
+            for k in (0, 2.5):
+                place(drums, kick * 0.9, bt + k * beat, 0.5)
+            if rng.random() < 0.3:
+                place(drums, kick * 0.5, bt + 1.75 * beat, 0.5)
+            for k in (1, 3):
+                place(drums, snare * 0.45, bt + k * beat + rng.uniform(0, 0.012), 0.5)
+            for e in range(8):
+                if rng.random() < 0.9:
+                    off = (e // 2) * beat + (sw * beat if e % 2 else 0)
+                    place(drums, _drum("hat", rng) * rng.uniform(0.12, 0.22), bt + off, 0.62)
+        mel = reverb(mel, rng, 1.8, 0.22)
+        ev = np.stack([band(mel[:, c], hi=6500) for c in range(2)], 1) * 0.9 + np.stack([band(drums[:, c], hi=8000) for c in range(2)], 1) * 0.7
+        crk = np.zeros(L, np.float32)
+        k = int(L / SR * 6)
+        crk[rng.integers(0, L, k)] = rng.uniform(0.2, 1, k)
+        vinyl = band(crk + colored_noise(L, rng, 1.0) * 0.02, lo=800, hi=5000)
+        bed = np.stack([vinyl, vinyl], 1) * 0.08
+    elif g in ("piano", "rain_piano"):
+        beat = 60 / P["bpm"]
+        prog = PIANO_PROG["warm" if g == "piano" else "sad"]
+        bars = int(round(tsec / P["bar"]))
+        for b in range(bars):
+            bt = b * P["bar"]
+            gb = ci * bars + b
+            ch = [m + P["key"] for m in prog[(gb // 2) % 4]]
+            place(ev, piano_note(midi_hz(ch[0] - 12), P["bar"] * 1.6, 0.45), bt, 0.45)
+            dens = 0.75 if g == "piano" else 0.5
+            for e in range(8):
+                if rng.random() < dens:
+                    m = ch[1:][e % 4] + (12 if rng.random() < 0.2 else 0)
+                    place(ev, piano_note(midi_hz(m), 3.0, rng.uniform(0.25, 0.42)), bt + e * beat / 2 + rng.uniform(0, 0.015), rng.uniform(0.3, 0.7))
+        ev = reverb(ev, rng, 3.2, 0.38)
+        if g == "rain_piano":
+            bed = gen_rain(L, rng) * 0.42
+    elif g == "rain":
+        bed = gen_rain(L, rng)
+        if rng.random() < 0.35:   # 먼 천둥
+            d = 6.0
+            tt = np.arange(int(d * SR)) / SR
+            th = band(colored_noise(len(tt), rng, 2.0), hi=180) * np.minimum(1, tt / 0.6) * np.exp(-tt / 2.2)
+            place(ev, (_norm(th) * 0.5).astype(np.float32), rng.uniform(5, max(6, tsec - 8)), rng.uniform(0.3, 0.7))
+    elif g == "waves":
+        bed = gen_waves(L, rng)
+    elif g == "forest":
+        lfo = smooth_lfo(L, 0.4, rng, 0.6, 1.0)
+        bed = np.stack([_norm(band(colored_noise(L, rng, 1.0), lo=300, hi=3000)) * lfo * 0.35
+                        + _norm(band(colored_noise(L, rng, 2.0), hi=250)) * 0.15 for _ in range(2)], 1)
+        pos = rng.uniform(0.5, 2)
+        while pos < tsec:
+            c = bird_call(rng)
+            dist = rng.uniform(0.25, 1.0)
+            if dist < 0.5:
+                c = band(c, hi=3500)
+            place(ev, c * 0.35 * dist, pos, rng.uniform(0.1, 0.9))
+            pos += rng.uniform(1.2, 5.5)
+        ev = reverb(ev, rng, 1.8, 0.3)
+    elif g == "fire":
+        bed = np.stack([_norm(band(colored_noise(L, rng, 2.0), hi=300)) * (0.7 + 0.3 * smooth_lfo(L, 1.5, rng)) * 0.6
+                        + _norm(band(colored_noise(L, rng, 1.0), lo=900, hi=4000)) * 0.08 for _ in range(2)], 1)
+        imp = np.zeros((L, 2), np.float32)
+        pos = 0.0
+        while pos < tsec:
+            burst = rng.integers(1, 6)
+            for _ in range(burst):
+                i = int((pos + rng.uniform(0, 0.25)) * SR)
+                if i < n:
+                    p_ = rng.uniform(0.2, 0.8)
+                    a = rng.uniform(0.3, 1.0) * (1.8 if rng.random() < 0.06 else 1)
+                    imp[i, 0] += a * (1 - p_)
+                    imp[i, 1] += a * p_
+            pos += rng.exponential(0.5)
+        kl = int(0.012 * SR)
+        kern = (rng.standard_normal(kl) * np.exp(-np.arange(kl) / (0.002 * SR))).astype(np.float32)
+        ev = np.stack([band(ola_conv(imp[:, c], kern), lo=1200, hi=7000) for c in range(2)], 1) * 0.6
+    elif g == "brown":
+        bed = np.stack([_norm(band(colored_noise(L, rng, 2.0), hi=500)) * (0.92 + 0.08 * smooth_lfo(L, 6, rng)) for _ in range(2)], 1)
+    elif g == "binaural":
+        t = (np.arange(L) / SR + T0)       # 전체 시간 기준 → 덩어리가 바뀌어도 위상이 이어짐
+        fc, fb = P["carrier"], P["beat"]
+        tone = np.stack([np.sin(2 * np.pi * fc * t), np.sin(2 * np.pi * (fc + fb) * t)], 1).astype(np.float32) * 0.3
+        bed = tone + gen_pad(L, rng, "space", 14, 800) * 0.35 + np.stack([_norm(band(colored_noise(L, rng, 1.0), hi=1200)) for _ in range(2)], 1) * 0.05
+    elif g == "lullaby":
+        beat = 60 / P["bpm"]
+        loop = P["loop"]
+        PROGS["_lull"] = _melody_chords(P["notes"])
+        bed = gen_pad(L, rng, "_lull", 8 * beat, 1300) * 0.3
+        k0 = int(T0 // loop)
+        cache = {}
+        for k in range(k0, k0 + int(tsec // loop) + 2):
+            t = k * loop + beat
+            for midi, b in P["notes"]:
+                if midi is not None and T0 <= t < T0 + tsec:
+                    m = midi + 12 + P["key"]
+                    if m not in cache:
+                        cache[m] = pluck(midi_hz(m), 2.2)
+                    place(ev, cache[m] * rng.uniform(0.6, 0.85), t - T0, 0.5 + 0.2 * np.sin(t))
+                t += b * beat
+        ev = reverb(ev, rng, 2.8, 0.35)
+    elif g == "space":
+        bed = gen_space(L, rng)
+    return ev, bed
+
+
+def render_music_track(name, minutes, seed, wav_path, progress=None, cancel=None):
+    """음악 트랙을 덩어리(약 90초)씩 만들어 이어 붙여 WAV로 저장 (긴 곡도 메모리 적게). 반환: 길이(초)"""
+    import wave
+    P = _music_setup(name, seed)
+    bar = P.get("bar", 1.0)
+    N = int(round(max(1, round(90 / bar)) * bar * SR))
+    tail = int(MUSIC_TAIL * SR)
+    total = int(max(0.2, float(minutes)) * 60 * SR)
+    nch = int(np.ceil(total / N))
+    carry = np.zeros((tail, 2), np.float32)
+    fade_in, fade_out = int(3 * SR), int(min(10, total / SR / 4) * SR)
+    gain = None
+    os.makedirs(os.path.dirname(os.path.abspath(wav_path)), exist_ok=True)
+    written = 0
+    with wave.open(wav_path, "wb") as w:
+        w.setnchannels(2)
+        w.setsampwidth(2)
+        w.setframerate(SR)
+        for ci in range(nch):
+            if cancel is not None and cancel.is_set():
+                raise RuntimeError("취소됨")
+            rng = np.random.default_rng(seed * 1009 + ci)
+            ev, bed = music_chunk(P, N, tail, rng, ci)
+            buf = ev.astype(np.float32)
+            if bed is not None:
+                win = np.ones(N + tail, np.float32)
+                if ci > 0:
+                    win[:tail] = np.linspace(0, 1, tail)
+                win[N:] = np.linspace(1, 0, tail)
+                buf = buf + bed.astype(np.float32) * win[:, None]
+            buf[:tail] += carry
+            carry = buf[N:].copy()
+            out = buf[:N]
+            if gain is None:   # 첫 덩어리로 소리 크기를 정하고 끝까지 같은 크기 유지
+                rms = float(np.sqrt((out ** 2).mean())) + 1e-9
+                target = 0.09 if P["gen"] in ("bowls", "sleep", "binaural", "lullaby", "space") else 0.12
+                gain = target / rms
+            out = out * gain
+            a = ci * N
+            idx = np.arange(a, a + N)
+            env = np.minimum(1, idx / fade_in) * np.clip((total - idx) / fade_out, 0, 1)
+            out = out * env[:, None]
+            out = np.where(np.abs(out) > 0.8, np.sign(out) * (0.8 + 0.15 * np.tanh((np.abs(out) - 0.8) / 0.15)), out)
+            k = min(N, total - written)
+            if k <= 0:
+                break
+            w.writeframes((np.clip(out[:k], -1, 1) * 32767).astype("<i2").tobytes())
+            written += k
+            if progress:
+                progress(ci + 1, nch)
+    return written / SR
+
+
+class MusicLoop:
+    """음악 영상의 그림 부분: 배경 그림이 천천히 줌인·줌아웃(끊김 없이 반복) + 입자 효과 + 제목. duration 초짜리 반복 조각"""
+
+    def __init__(self, s, bg_image, overlay, title, sub, colors, show_text=True, L=32.0):
+        self.s, self.duration, self.L = s, L, L
+        self.overlay, self.title, self.sub, self.show_text = overlay, title, sub, show_text
+        if bg_image is not None:
+            im = bg_image.convert("RGB")
+        else:
+            c1, c2 = np.array(hex_rgb(colors[0]), np.float32), np.array(hex_rgb(colors[1]), np.float32)
+            g = np.linspace(0, 1, H, dtype=np.float32)[:, None, None]
+            im = Image.fromarray(np.broadcast_to(c1 + (c2 - c1) * g, (H, W, 3)).astype(np.uint8))
+        k = max(W / im.width, H / im.height) * 1.12
+        self.big = im.resize((int(im.width * k) + 2, int(im.height * k) + 2), Image.LANCZOS)
+        yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
+        r = np.sqrt(((xx - W / 2) / (W / 2)) ** 2 + ((yy - H / 2) / (H / 2)) ** 2) / 1.42
+        self.vig = (1 - 0.35 * np.clip(r, 0, 1) ** 2)[..., None].astype(np.float32)
+        rng = np.random.default_rng(5)
+        self.parts = rng.uniform(0, 1, (160, 6))
+        self.glow = {}
+        self.text_layer = self._make_text()
+
+    def _sprite(self, r, col):
+        key = (r, col)
+        if key not in self.glow:
+            sz = r * 6
+            yy, xx = np.mgrid[0:sz, 0:sz].astype(np.float32) - sz / 2
+            a = np.exp(-(xx ** 2 + yy ** 2) / (2 * (r * 0.9) ** 2))
+            arr = np.zeros((sz, sz, 4), np.uint8)
+            arr[..., :3] = col
+            arr[..., 3] = np.clip(a * 255, 0, 255).astype(np.uint8)
+            self.glow[key] = Image.fromarray(arr, "RGBA")
+        return self.glow[key]
+
+    def _make_text(self):
+        layer = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+        if not self.show_text or not self.title.strip():
+            return layer
+        d = ImageDraw.Draw(layer)
+        port = H > W
+        fp = self.s.get("title_font_path") or self.s.get("font_path")
+        size = int(H * (0.034 if port else 0.05))
+        f1 = load_font(fp, size)
+        f2 = load_font(self.s.get("font_path"), int(size * 0.6))
+        clean = re.sub(r"[\U0001F000-\U0001FFFF\u2600-\u27BF\uFE0F]", "", self.title).strip()   # 이모지는 화면 글꼴에 없음
+        clean = re.sub(r"\s+", " ", clean)
+        lines = wrap(clean, f1, W * (0.86 if port else 0.6))[:2]
+        m = int(W * 0.06)
+        y = int(H * (0.8 if port else 0.74))
+        for ln in lines:
+            x = (W - f1.getlength(ln)) / 2 if port else m
+            d.text((x + 2, y + 3), ln, font=f1, fill=(0, 0, 0, 140))
+            d.text((x, y), ln, font=f1, fill=(255, 255, 255, 235))
+            y += int(size * 1.25)
+        if self.sub:
+            x = (W - f2.getlength(self.sub)) / 2 if port else m
+            d.text((x, y + 6), self.sub, font=f2, fill=(255, 255, 255, 170))
+        return layer
+
+    def frame(self, t):
+        L = self.L
+        ph = (t % L) / L
+        z = 1.0 + 0.07 * (0.5 - 0.5 * np.cos(2 * np.pi * ph))      # 천천히 다가갔다 물러남 → 끝과 처음이 이어짐
+        cw, ch = W * 1.12 / z, H * 1.12 / z
+        cx = self.big.width / 2 + np.sin(2 * np.pi * ph) * (self.big.width - cw) * 0.25
+        cy = self.big.height / 2 + np.sin(4 * np.pi * ph) * (self.big.height - ch) * 0.1
+        bg = self.big.transform((W, H), Image.EXTENT, (cx - cw / 2, cy - ch / 2, cx + cw / 2, cy + ch / 2), Image.BILINEAR)
+        arr = (np.asarray(bg).astype(np.float32) * self.vig * 0.92).astype(np.uint8)
+        im = Image.fromarray(arr).convert("RGBA")
+        ov = self.overlay
+        P = self.parts
+        if ov in ("먼지 빛", "반딧불"):
+            cnt = 45 if ov == "먼지 빛" else 35
+            col = (255, 240, 200) if ov == "먼지 빛" else (255, 220, 120)
+            for i in range(cnt):
+                x0, y0, a1, a2, p1, p2 = P[i]
+                kx, ky = 1 + int(a1 * 2), 1 + int(a2 * 2)
+                x = (x0 + 0.04 * np.sin(2 * np.pi * (ph * kx + p1))) * W
+                y = ((y0 - ph * (1 if ov == "먼지 빛" else 0)) % 1.0 + 0.03 * np.sin(2 * np.pi * (ph * ky + p2))) * H
+                br = 0.5 + 0.5 * np.sin(2 * np.pi * (ph * (2 + int(p1 * 3)) + p2))
+                r = 3 + int(a1 * 4) if ov == "먼지 빛" else 4 + int(a2 * 5)
+                sp = self._sprite(r, col)
+                if br > 0.05:
+                    a = sp.getchannel("A").point(lambda v, br=br: int(v * br * (0.7 if ov == "먼지 빛" else 1)))
+                    s2 = sp.copy()
+                    s2.putalpha(a)
+                    im.alpha_composite(s2, (int(x - sp.width / 2), int(y - sp.height / 2)))
+        elif ov == "눈":
+            for i in range(120):
+                x0, y0, a1, a2, p1, p2 = P[i]
+                y = ((y0 + ph * (1 + int(a2 * 2))) % 1.0) * (H + 20) - 10
+                x = (x0 + 0.02 * np.sin(2 * np.pi * (ph * 3 + p1))) * W
+                r = 2 + int(a1 * 4)
+                im.alpha_composite(self._sprite(r, (255, 255, 255)), (int(x - r * 3), int(y - r * 3)))
+        elif ov == "빗줄기":
+            d = ImageDraw.Draw(im)
+            for i in range(150):
+                x0, y0, a1, a2, p1, p2 = P[i]
+                y = ((y0 + ph * (6 + int(a2 * 4))) % 1.0) * (H + 80) - 40
+                x = x0 * (W + 60) - 30
+                ln = 25 + a1 * 35
+                d.line([(x, y), (x - ln * 0.18, y + ln)], fill=(200, 220, 255, int(40 + 50 * a1)), width=2)
+        elif ov == "호흡 가이드":   # 4초 들이쉬기 - 4초 멈춤 - 4초 내쉬기 - 4초 멈춤 (반복)
+            tc = t % 16
+            if tc < 4:
+                k_, lab = smoothstep(tc / 4), "들이쉬기"
+            elif tc < 8:
+                k_, lab = 1.0, "멈춤"
+            elif tc < 12:
+                k_, lab = 1 - smoothstep((tc - 8) / 4), "내쉬기"
+            else:
+                k_, lab = 0.0, "멈춤"
+            r = int(min(W, H) * (0.08 + 0.1 * k_))
+            cx_, cy_ = W // 2, int(H * (0.42 if H > W else 0.42))
+            ring = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+            d = ImageDraw.Draw(ring)
+            d.ellipse([cx_ - r, cy_ - r, cx_ + r, cy_ + r], fill=(255, 255, 255, 38), outline=(255, 255, 255, 160), width=4)
+            f = load_font(self.s.get("font_path"), int(min(W, H) * 0.035))
+            d.text((cx_ - f.getlength(lab) / 2, cy_ - f.size * 0.6), lab, font=f, fill=(255, 255, 255, 220))
+            im.alpha_composite(ring)
+        im.alpha_composite(self.text_layer)
+        return np.asarray(im.convert("RGB")).copy()
+
+    def frame_preview(self, t):
+        return np.asarray(Image.fromarray(self.frame(t)).resize((PREVIEW_W, PREVIEW_H), Image.BILINEAR)).copy()
+
+
+def mux_music_video(loop_mp4, wav, out_mp4, sec):
+    """그림 반복 조각 + 음악 → 최종 MP4 (그림은 다시 인코딩하지 않아 빠름). sec 초에서 정확히 끝냄"""
+    cmd = [get_ffmpeg(), "-y", "-v", "error", "-stream_loop", "-1", "-i", loop_mp4, "-i", wav,
+           "-map", "0:v:0", "-map", "1:a:0", "-c:v", "copy", "-c:a", "aac", "-b:a", "192k", "-t", f"{sec:.3f}", "-movflags", "+faststart", out_mp4]
+    p = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, errors="replace",
+                       creationflags=(subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0))
+    if p.returncode != 0:
+        raise RuntimeError("음악 영상 합치기 실패: " + (p.stderr or "")[-400:])
+
+
+def concat_videos(mp4s, out_mp4):
+    """같은 설정으로 만든 MP4 여러 개를 다시 인코딩 없이 이어 붙이기"""
+    lst = out_mp4 + ".list.txt"
+    with open(lst, "w", encoding="utf-8") as f:
+        for p in mp4s:
+            f.write("file '" + os.path.abspath(p).replace("'", "'\\''") + "'\n")
+    cmd = [get_ffmpeg(), "-y", "-v", "error", "-f", "concat", "-safe", "0", "-i", lst, "-c", "copy", "-movflags", "+faststart", out_mp4]
+    p = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, errors="replace",
+                       creationflags=(subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0))
+    try:
+        os.remove(lst)
+    except OSError:
+        pass
+    if p.returncode != 0:
+        raise RuntimeError("이어 붙이기 실패(화면 크기·fps가 같은 영상끼리만 됩니다): " + (p.stderr or "")[-400:])
+
+
+def hms(sec):
+    sec = int(sec)
+    return f"{sec // 3600}:{sec % 3600 // 60:02d}:{sec % 60:02d}" if sec >= 3600 else f"{sec // 60:02d}:{sec % 60:02d}"
+
+
+def music_upload_text(title, preset_names, chapters=None, minutes=None):
+    """음악 영상 업로드 문구 (제목 후보·설명·해시태그·고정 댓글)"""
+    P = [MUSIC_PRESETS[n] for n in preset_names if n in MUSIC_PRESETS]
+    tags = []
+    for p in P:
+        for tg in p["tags"].split():
+            if tg not in tags:
+                tags.append(tg)
+    length = (f"{int(minutes // 60)}시간" if minutes and minutes >= 60 and minutes % 60 == 0
+              else f"{int(minutes)}분" if minutes else "")
+    titles = [f"{title}" + (f" | {length}" if length else ""),
+              f"{(P[0]['desc'] if P else title).split(',')[0]} | " + (length or "") + " 🎧",
+              f"[{length or 'Playlist'}] {title}"]
+    lines = [title, ""]
+    for p in P[:3]:
+        lines.append("🎵 " + p["desc"])
+    lines += ["", "공부할 때, 일할 때, 쉬거나 잠들기 전에 편하게 틀어 두세요.",
+              "좋았다면 구독과 좋아요로 응원해 주세요 🙏", ""]
+    if any(p["gen"] == "binaural" for p in P):
+        lines += ["🎧 바이노럴 비트는 헤드폰(이어폰)으로 들어야 왼쪽·오른쪽 소리 차이가 전달됩니다. 운전 중에는 듣지 마세요.", ""]
+    if chapters:
+        lines += ["⏱ 목차"] + [f"{hms(t)} {n}" for t, n in chapters] + [""]
+    lines += ["※ 이 영상의 음악은 프로그램으로 직접 만든 창작 음악입니다.", "※ 의학적 치료 효과를 보장하지 않습니다.", "", " ".join(tags[:12])]
+    return {"titles": titles, "description": "\n".join(lines), "hashtags": " ".join(tags[:12]),
+            "pinned_comment": "오늘 어떤 순간에 이 음악을 틀어 두셨나요? 🎧 (공부·일·잠들기 전·명상)"}
+
+
 # ---------------- 화면(GUI) ----------------
 class App(tk.Tk):
     def __init__(self):
@@ -4225,6 +4787,7 @@ class App(tk.Tk):
         ttk.Button(s4, text="연속 제작(여러 편 자동)", command=self.batch).pack(side="left")
         ttk.Button(s4, text="📺 롱폼 만들기(챕터 묶음)", command=self.longform).pack(side="left", padx=(6, 0))
         ttk.Button(s4, text="🌐 영어·일본어 버전", command=self.lang_versions_dialog).pack(side="left", padx=(6, 0))
+        ttk.Button(s4, text="🎵 음악 영상(명상·집중·수면)", command=self.music_dialog).pack(side="left", padx=(6, 0))
         ttk.Button(s4, text="취소", command=self.cancel.set).pack(side="left", padx=6)
         ttk.Button(s4, text="저장 폴더 열기", command=self.open_folder).pack(side="left")
         self.prog = ttk.Progressbar(s4, length=220)
@@ -6517,6 +7080,240 @@ class App(tk.Tk):
                 after()
         self.write_log("🌐 다른 언어 버전 만들기: " + ", ".join(LANGS[c][0] for c in langs))
         self.run_bg("번역 중...", job, done)
+
+    # ---- 🎵 음악 영상 (명상·집중·수면 채널) ----
+    def music_dialog(self):
+        win = tk.Toplevel(self)
+        win.title("🎵 음악 영상 만들기 - 명상·집중·수면·자연의 소리 (프로그램이 직접 작곡)")
+        win.geometry("1120x760")
+        s = self.get_settings()
+        out_dir = os.path.join(s["out_dir"], "music")
+        left = ttk.Frame(win, padding=10)
+        left.pack(side="left", fill="both", expand=True)
+        right = ttk.Frame(win, padding=10)
+        right.pack(side="left", fill="y")
+        ttk.Label(left, text="① 음악 종류").pack(anchor="w")
+        lst = tk.Listbox(left, height=17, font=("맑은 고딕", 10), exportselection=False)
+        for n in MUSIC_PRESETS:
+            lst.insert("end", n)
+        lst.selection_set(0)
+        lst.pack(fill="x")
+        desc = ttk.Label(left, text="", foreground="#555", wraplength=520)
+        desc.pack(anchor="w", pady=(2, 6))
+        f = ttk.Frame(left)
+        f.pack(fill="x")
+        ttk.Label(f, text="길이(분)").grid(row=0, column=0, sticky="e")
+        mins = tk.StringVar(value="10")
+        ttk.Combobox(f, textvariable=mins, values=["1", "3", "5", "10", "15", "20", "30", "45", "60", "90", "120", "180"], width=6).grid(row=0, column=1, padx=4)
+        ttk.Label(f, text="곡 번호(같으면 같은 곡)").grid(row=0, column=2, sticky="e", padx=(10, 0))
+        seed = tk.StringVar(value=str(int(np.random.default_rng().integers(1, 9999))))
+        ttk.Entry(f, textvariable=seed, width=7).grid(row=0, column=3, padx=4)
+        ttk.Button(f, text="새 곡", command=lambda: seed.set(str(int(np.random.default_rng().integers(1, 9999))))).grid(row=0, column=4)
+        ttk.Label(f, text="화면 효과").grid(row=1, column=0, sticky="e", pady=4)
+        ov = tk.StringVar(value="먼지 빛")
+        ttk.Combobox(f, textvariable=ov, values=MUSIC_OVERLAYS, width=10, state="readonly").grid(row=1, column=1, padx=4, sticky="w")
+        show_text = tk.BooleanVar(value=True)
+        ttk.Checkbutton(f, text="화면에 제목 표시", variable=show_text).grid(row=1, column=2, columnspan=2, sticky="w", padx=(10, 0))
+        ttk.Label(f, text="영상 제목").grid(row=2, column=0, sticky="e")
+        title_v = tk.StringVar()
+        ttk.Entry(f, textvariable=title_v, width=46).grid(row=2, column=1, columnspan=4, sticky="w", padx=4)
+        ttk.Label(f, text="작은 글").grid(row=3, column=0, sticky="e", pady=4)
+        sub_v = tk.StringVar(value="편하게 틀어 두세요 · 구독하면 다음 음악이 이어집니다")
+        ttk.Entry(f, textvariable=sub_v, width=46).grid(row=3, column=1, columnspan=4, sticky="w", padx=4)
+        bgf = ttk.LabelFrame(left, text="② 배경 그림 (없으면 색 배경) ", padding=6)
+        bgf.pack(fill="x", pady=6)
+        bg = {"im": None}
+        bstat = ttk.Label(bgf, text="그림 없음 → 은은한 색 배경", foreground="gray")
+
+        def copy_prompt():
+            P = MUSIC_PRESETS[cur()]
+            self.clipboard_clear()
+            self.clipboard_append(P["prompt"] + f"\n\n({ratio_ko()} 비율, 글자·워터마크 없이, 아주 잔잔하고 고요한 분위기로 그려줘)")
+            self.set_status("📋 배경 그림 프롬프트 복사됨 → ChatGPT에 붙여넣기")
+
+        def got(im):
+            bg["im"] = im.convert("RGB")
+            bstat.config(text=f"✅ 그림 받음 ({im.width}×{im.height})", foreground="#080")
+            preview()
+
+        def paste_bg():
+            im = None
+            try:
+                from PIL import ImageGrab
+                clip = ImageGrab.grabclipboard()
+                if isinstance(clip, Image.Image):
+                    im = clip
+                elif isinstance(clip, list):
+                    fs = [f_ for f_ in clip if str(f_).lower().endswith(IMG_EXT)]
+                    if fs:
+                        im = Image.open(fs[0])
+                        im.load()
+            except Exception:
+                im = None
+            if im is None:
+                messagebox.showinfo("그림 붙여넣기", "클립보드에 그림이 없어요. (ChatGPT 그림 → 마우스 오른쪽 → 이미지 복사)", parent=win)
+                return
+            got(im)
+
+        def open_file():
+            f_ = filedialog.askopenfilename(filetypes=[("이미지", "*.png *.jpg *.jpeg *.webp")], parent=win)
+            if f_:
+                try:
+                    im = Image.open(f_)
+                    im.load()
+                    got(im)
+                except Exception as e:
+                    messagebox.showerror("그림", str(e), parent=win)
+        ttk.Button(bgf, text="📋 그림 프롬프트 복사(ChatGPT용)", command=copy_prompt).pack(side="left")
+        ttk.Button(bgf, text="📥 그림 붙여넣기", command=paste_bg).pack(side="left", padx=6)
+        ttk.Button(bgf, text="📂 파일", command=open_file).pack(side="left")
+        bstat.pack(side="left", padx=8)
+        bf = ttk.Frame(left)
+        bf.pack(fill="x", pady=(8, 0))
+        ttk.Label(right, text="미리보기").pack()
+        port = H > W
+        pw, ph = (270, 480) if port else (480, 270)
+        pv = tk.Label(right, bd=2, relief="solid", bg="#111", width=pw, height=ph)
+        pv.pack()
+        made = ttk.LabelFrame(right, text="③ 만든 음악 영상 (묶어서 롱폼 만들기) ", padding=6)
+        made.pack(fill="both", expand=True, pady=(10, 0))
+        mlist = tk.Listbox(made, height=9, font=("맑은 고딕", 9), selectmode="extended", exportselection=False)
+        mlist.pack(fill="both", expand=True)
+        items = []   # (mp4 경로, 제목, 길이초, 종류)
+
+        def refresh_made():
+            mlist.delete(0, "end")
+            items.clear()
+            if os.path.isdir(out_dir):
+                for f_ in sorted(os.listdir(out_dir)):
+                    if f_.endswith(".mp4") and not f_.endswith("_loop.mp4") and not f_.startswith("묶음_"):
+                        meta = {}
+                        try:
+                            with open(os.path.join(out_dir, f_[:-4] + ".json"), encoding="utf-8") as jf:
+                                meta = json.load(jf)
+                        except Exception:
+                            pass
+                        items.append((os.path.join(out_dir, f_), meta.get("title", f_[:-4]), float(meta.get("sec", 0)), meta.get("preset", "")))
+                        mlist.insert("end", f"{hms(items[-1][2])}  {items[-1][1]}")
+        refresh_made()
+
+        def cur():
+            i = lst.curselection()
+            return lst.get(i[0]) if i else list(MUSIC_PRESETS)[0]
+
+        def on_sel(*_):
+            P = MUSIC_PRESETS[cur()]
+            desc.config(text=P["desc"] + ("  🎧 헤드폰 필요" if P["gen"] == "binaural" else ""))
+            ov.set(P.get("overlay", "먼지 빛"))
+            if not title_v.get().strip() or title_v.get() in [x["title"] for x in MUSIC_PRESETS.values()]:
+                title_v.set(P["title"])
+            preview()
+        lst.bind("<<ListboxSelect>>", on_sel)
+
+        def loop_for():
+            P = MUSIC_PRESETS[cur()]
+            return MusicLoop(s, bg["im"], ov.get(), title_v.get(), sub_v.get(), P["colors"], show_text.get())
+
+        def preview():
+            try:
+                im = Image.fromarray(loop_for().frame(3.0)).resize((pw, ph), Image.LANCZOS)
+                pv._img = ImageTk.PhotoImage(im)
+                pv.config(image=pv._img)
+            except Exception as e:
+                self.write_log("미리보기 실패: " + str(e)[:100])
+        for v_ in (ov, title_v, sub_v, show_text):
+            v_.trace_add("write", lambda *_: preview())
+
+        def listen():
+            name, sd = cur(), int(float(seed.get() or 1))
+            p_ = os.path.join(tempfile.gettempdir(), "shorts_music_preview.wav")
+
+            def job():
+                render_music_track(name, 0.5, sd, p_)
+                return p_
+
+            def done(p2):
+                play_wav(p2)
+                self.set_status(f"🎧 {name} 30초 미리듣기 (■ 소리 정지로 멈춤)")
+            self.run_bg("미리듣기 음악 만드는 중...", job, done)
+
+        def make():
+            name, sd = cur(), int(float(seed.get() or 1))
+            try:
+                mn = float(mins.get())
+            except ValueError:
+                messagebox.showinfo("길이", "길이(분)를 숫자로 넣어 주세요.", parent=win)
+                return
+            title = title_v.get().strip() or MUSIC_PRESETS[name]["title"]
+            loop = loop_for()
+            base = os.path.join(out_dir, safe_name(title) + f"_{int(mn)}분")
+            os.makedirs(out_dir, exist_ok=True)
+            fps_now = s["fps"]
+            loop.s = dict(s, fps=min(30, int(fps_now)))   # 음악 영상은 30fps면 충분
+
+            def job():
+                wav = base + ".wav"
+                self.q.put(lambda: self.set_status("🎼 음악 만드는 중... (10분 = 약 2~4분 소요)"))
+                sec = render_music_track(name, mn, sd, wav, progress=self.progress_cb("음악 "), cancel=self.cancel)
+                self.q.put(lambda: self.set_status("🎬 화면 그리는 중 (32초 반복 조각)..."))
+                loop_mp4 = base + "_loop.mp4"
+                export_mp4(loop, loop_mp4, self.progress_cb("화면 "), self.cancel, None)
+                self.q.put(lambda: self.set_status("🎞 음악과 화면 합치는 중..."))
+                mux_music_video(loop_mp4, wav, base + ".mp4", sec)
+                try:
+                    os.remove(loop_mp4)
+                except OSError:
+                    pass
+                Image.fromarray(loop.frame(3.0)).save(base + "_썸네일.png")
+                with open(base + ".json", "w", encoding="utf-8") as jf:
+                    json.dump({"title": title, "sec": sec, "preset": name, "seed": sd}, jf, ensure_ascii=False)
+                pkg = music_upload_text(title, [name], minutes=mn)
+                write_package(base, title, "", pkg)
+                return base, sec
+
+            def done(res):
+                b_, sec = res
+                self.write_log(f"🎵 음악 영상 완성: {b_}.mp4 ({hms(sec)}) · 음악 파일 {b_}.wav · 썸네일 · 업로드문구")
+                self.set_status("🎵 음악 영상 완성 → 아래 목록에서 묶어 롱폼으로 만들 수 있어요")
+                refresh_made()
+            self.run_bg("음악 영상 만드는 중...", job, done)
+
+        def bundle():
+            sel = mlist.curselection()
+            if len(sel) < 2:
+                messagebox.showinfo("묶음", "목록에서 2개 이상 고르세요 (Ctrl 누르고 클릭). 고른 순서대로가 아니라 목록 순서대로 이어집니다.", parent=win)
+                return
+            picks = [items[i] for i in sel]
+            title = simpledialog.askstring("묶음 제목", "롱폼 전체 제목:", initialvalue=f"{picks[0][1].split('|')[0].strip()} 외 {len(picks) - 1}곡 | {hms(sum(x[2] for x in picks))}", parent=win)
+            if not title:
+                return
+            base = os.path.join(out_dir, "묶음_" + safe_name(title))
+
+            def job():
+                concat_videos([x[0] for x in picks], base + ".mp4")
+                ch, t_ = [], 0.0
+                for x in picks:
+                    ch.append((t_, x[1]))
+                    t_ += x[2]
+                pkg = music_upload_text(title, [x[3] for x in picks], chapters=ch, minutes=t_ / 60)
+                write_package(base, title, "", pkg)
+                shutil.copy(picks[0][0][:-4] + "_썸네일.png", base + "_썸네일.png") if os.path.exists(picks[0][0][:-4] + "_썸네일.png") else None
+                return base, ch
+
+            def done(res):
+                b_, ch = res
+                self.write_log(f"📚 묶음 완성: {b_}.mp4  (챕터 {len(ch)}개, 업로드 문구에 목차 포함)")
+                self.set_status("📚 묶음 롱폼 완성")
+            self.run_bg("묶는 중...", job, done)
+        ttk.Button(bf, text="🎧 30초 미리듣기", command=listen).pack(side="left")
+        ttk.Button(bf, text="■ 소리 정지", command=stop_wav).pack(side="left", padx=4)
+        ttk.Button(bf, text="🎬 음악 영상 만들기 (MP4 + WAV + 썸네일 + 업로드 문구)", command=make).pack(side="left", padx=10)
+        mb = ttk.Frame(made)
+        mb.pack(fill="x", pady=(4, 0))
+        ttk.Button(mb, text="📚 고른 것 이어 붙여 롱폼 만들기(챕터)", command=bundle).pack(side="left")
+        ttk.Button(mb, text="새로고침", command=refresh_made).pack(side="left", padx=4)
+        ttk.Button(mb, text="폴더 열기", command=lambda: (os.makedirs(out_dir, exist_ok=True), os.startfile(out_dir) if os.name == "nt" else None)).pack(side="left")
+        on_sel()
 
     def longform(self):
         """📺 롱폼: 챕터 N개를 AI로 만들어 하나의 대본으로 묶음 (가로 화면·나레이션 권장)"""
