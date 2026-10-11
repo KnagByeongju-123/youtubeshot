@@ -171,6 +171,7 @@ FIELDS = [
     ("자막형", "head_style", "제목 색", "choice:글자 탭 제목색,글자 탭 제목색+강조색,노란색,흰색+하늘색,흰색,강조색", "글자 탭 제목색"),
     ("자막형", "head_size", "제목 크기", "int", 96),
     ("자막형", "sub_size", "자막 크기", "int", 64),
+    ("자막형", "sub_font_path", "자막 글꼴(비우면 제목 글꼴)", "font", ""),
     ("자막형", "sub_style", "자막 스타일", "choice:글자 탭 글자색+검은테두리,글자 탭 글자색+검은띠,흰글자+검은테두리,노란글자+검은테두리,검은띠 위 흰글자", "글자 탭 글자색+검은테두리"),
     ("자막형", "sub_max_chars", "자막 한 번에 글자 수", "int", 28),
     ("자막형", "img_motion", "사진 움직임", "choice:영상처럼(확대·이동·전환),천천히 확대만,없음", "영상처럼(확대·이동·전환)"),
@@ -221,7 +222,7 @@ FIELDS = [
 FTYPE = {k: t for _, k, _, t, _ in FIELDS}
 LABEL = {k: l for _, k, l, _, _ in FIELDS}
 DEFAULTS = {k: v for _, k, _, _, v in FIELDS}
-FILE_KEYS = {"font_path", "title_font_path", "bg_image", "bgm_path", "out_dir", "safe_guide", "openai_key", "gemini_key"}
+FILE_KEYS = {"font_path", "title_font_path", "sub_font_path", "bg_image", "bgm_path", "out_dir", "safe_guide", "openai_key", "gemini_key"}
 
 # 테마 프리셋 (장르에 맞는 색·분위기)
 THEMES = {
@@ -1432,6 +1433,108 @@ def photo_credits(story):
 
 
 # ---------------- 렌더링 ----------------
+FONT_DIR = os.path.join(BASE, "fonts")
+FREE_FONTS = [   # (이름, 설명, google/fonts 저장소 경로) - 모두 OFL(상업적 사용 가능)
+    ("검은고딕", "아주 굵은 제목 - 쇼츠 제목 인기", "ofl/blackhansans/BlackHanSans-Regular.ttf"),
+    ("도현", "깔끔하고 굵은 제목", "ofl/dohyeon/DoHyeon-Regular.ttf"),
+    ("주아", "둥글고 귀여운 굵은 글씨", "ofl/jua/Jua-Regular.ttf"),
+    ("가석원", "아주 두꺼운 임팩트 제목", "ofl/gasoekone/GasoekOne-Regular.ttf"),
+    ("나눔고딕 ExtraBold", "또렷한 고딕 - 자막에 좋음", "ofl/nanumgothic/NanumGothic-ExtraBold.ttf"),
+    ("나눔고딕 Bold", "또렷한 고딕 - 본문·자막", "ofl/nanumgothic/NanumGothic-Bold.ttf"),
+    ("IBM Plex Sans KR Bold", "현대적·정보 채널 느낌", "ofl/ibmplexsanskr/IBMPlexSansKR-Bold.ttf"),
+    ("고운돋움", "부드럽고 단정한 본문", "ofl/gowundodum/GowunDodum-Regular.ttf"),
+    ("나눔명조 ExtraBold", "감성·명화·역사 제목", "ofl/nanummyeongjo/NanumMyeongjo-ExtraBold.ttf"),
+    ("고운바탕 Bold", "감성 명조 - 사연·소설", "ofl/gowunbatang/GowunBatang-Bold.ttf"),
+    ("송명", "옛 책 느낌 명조", "ofl/songmyung/SongMyung-Regular.ttf"),
+    ("나눔손글씨 펜", "손으로 쓴 일기 느낌", "ofl/nanumpenscript/NanumPenScript-Regular.ttf"),
+    ("나눔손글씨 붓", "붓글씨 - 한국화·옛 이야기", "ofl/nanumbrushscript/NanumBrushScript-Regular.ttf"),
+    ("개구 Bold", "귀여운 손글씨", "ofl/gaegu/Gaegu-Bold.ttf"),
+    ("동해독도", "거친 손글씨 - 공포·미스터리", "ofl/eastseadokdo/EastSeaDokdo-Regular.ttf"),
+    ("해바라기 Bold", "가늘고 세련된 굵은 글씨", "ofl/sunflower/Sunflower-Bold.ttf"),
+    ("구기", "개성 있는 제목", "ofl/gugi/Gugi-Regular.ttf"),
+    ("연성", "부드러운 손글씨 제목", "ofl/yeonsung/YeonSung-Regular.ttf"),
+]
+
+
+def free_font_path(repo_path):
+    return os.path.join(FONT_DIR, os.path.basename(repo_path))
+
+
+def download_free_font(repo_path):
+    """무료 글꼴 받기 (google/fonts 저장소) → 파일 경로"""
+    import urllib.request
+    dst = free_font_path(repo_path)
+    if os.path.exists(dst) and os.path.getsize(dst) > 10000:
+        return dst
+    os.makedirs(FONT_DIR, exist_ok=True)
+    url = "https://raw.githubusercontent.com/google/fonts/main/" + urllib.request.quote(repo_path)
+    req = urllib.request.Request(url, headers={"User-Agent": "shorts-maker"})
+    with urllib.request.urlopen(req, timeout=60) as r:
+        data = r.read()
+    if len(data) < 10000:
+        raise RuntimeError("글꼴 파일을 받지 못했습니다")
+    with open(dst + ".tmp", "wb") as f:
+        f.write(data)
+    os.replace(dst + ".tmp", dst)
+    return dst
+
+
+def has_hangul(font):
+    """글꼴에 한글이 있는지 (없는 글자는 빈칸/네모로 그려짐 → 비교)"""
+    try:
+        a = font.getmask("가")
+        if a.getbbox() is None:
+            return False
+        b = font.getmask("\uffff")
+        return bytes(a) != bytes(b) or a.size != b.size
+    except Exception:
+        return False
+
+
+def list_pc_fonts():
+    """내 PC의 한글 글꼴 목록 [(표시 이름, 경로)] - 처음 한 번 검사 후 캐시"""
+    dirs = [os.path.join(os.environ.get("WINDIR", r"C:\Windows"), "Fonts"),
+            os.path.join(os.environ.get("LOCALAPPDATA", ""), "Microsoft", "Windows", "Fonts"), FONT_DIR,
+            "/usr/share/fonts", "/System/Library/Fonts", "/Library/Fonts", os.path.expanduser("~/Library/Fonts")]
+    files = []
+    for d in dirs:
+        if d and os.path.isdir(d):
+            for root, _, fs in os.walk(d):
+                files += [os.path.join(root, f) for f in fs if f.lower().endswith((".ttf", ".otf", ".ttc"))]
+    cache_p = os.path.join(BASE, "fonts_cache.json")
+    try:
+        with open(cache_p, encoding="utf-8") as f:
+            cache = json.load(f)
+    except Exception:
+        cache = {}
+    out, changed = [], False
+    for p in sorted(set(files)):
+        key = f"{p}|{int(os.path.getmtime(p))}"
+        if key not in cache:
+            changed = True
+            try:
+                ft = ImageFont.truetype(p, 40)
+                fam, sty = ft.getname()
+                cache[key] = [f"{fam} {sty}".replace(" Regular", "").strip(), has_hangul(ft)]
+            except Exception:
+                cache[key] = ["", False]
+        name, ok = cache[key]
+        if ok and name:
+            out.append((name, p))
+    if changed:
+        try:
+            with open(cache_p, "w", encoding="utf-8") as f:
+                json.dump(cache, f, ensure_ascii=False)
+        except Exception:
+            pass
+    seen, res = set(), []
+    for n, p in sorted(out, key=lambda x: x[0].lower()):
+        if n not in seen:
+            seen.add(n)
+            res.append((n, p))
+    return res
+
+
 def load_font(path, size):
     for p in (path, find_font()):
         try:
@@ -2111,11 +2214,11 @@ class SubtitleRenderer:
         d = ImageDraw.Draw(layer)
         x0, y0, x1, y1 = self.sub_box
         size = int(s["sub_size"])
-        font = load_font(s["title_font_path"] or s["font_path"], size)
+        font = load_font(s.get("sub_font_path") or s["title_font_path"] or s["font_path"], size)
         lines = wrap(text, font, x1 - x0)
         while len(lines) > 3 and size > 34:
             size -= 4
-            font = load_font(s["title_font_path"] or s["font_path"], size)
+            font = load_font(s.get("sub_font_path") or s["title_font_path"] or s["font_path"], size)
             lines = wrap(text, font, x1 - x0)
         lh = int(size * 1.3)
         y = y1 - lh * len(lines)
@@ -2138,7 +2241,7 @@ class SubtitleRenderer:
             d.text((x, y), ln, font=font, fill=col, stroke_width=sw, stroke_fill="#000000")
             y += lh
         if lyric:   # 가사 원문은 사진 위에 노란 글자로
-            fl = load_font(s["title_font_path"] or s["font_path"], int(size * 0.95))
+            fl = load_font(s.get("sub_font_path") or s["title_font_path"] or s["font_path"], int(size * 0.95))
             ix0, iy0, ix1, iy1 = self.img_box
             ll = wrap(lyric.lstrip("♪").strip(), fl, ix1 - ix0 - 40)
             ly = iy1 - int(fl.size * 1.3) * len(ll) - 30
@@ -3826,7 +3929,11 @@ class App(tk.Tk):
                     pass
             v.trace_add("write", upd)
             ttk.Button(cell, text="선택", width=4, command=pick).pack(side="left")
-        elif t in ("font", "image", "audio", "dir"):
+        elif t == "font":
+            ttk.Entry(cell, textvariable=v, width=16).pack(side="left")
+            ttk.Button(cell, text="🔤 고르기", command=lambda: self.font_picker(key)).pack(side="left", padx=1)
+            ttk.Button(cell, text="…", width=3, command=lambda: self.browse(key, t)).pack(side="left")
+        elif t in ("image", "audio", "dir"):
             ttk.Entry(cell, textvariable=v, width=18).pack(side="left")
             ttk.Button(cell, text="…", width=3, command=lambda: self.browse(key, t)).pack(side="left")
             if t in ("image", "audio"):
@@ -3842,6 +3949,138 @@ class App(tk.Tk):
             ttk.Button(cell, text="🎤 성우 선택…", command=self.voice_picker).pack(side="left", padx=2)
         else:
             ttk.Entry(cell, textvariable=v, width=8).pack(side="left")
+
+    def font_picker(self, key="title_font_path"):
+        """🔤 글꼴 고르기: 무료 글꼴(받기) + 내 PC 한글 글꼴, 미리보기 후 제목/본문/자막에 적용"""
+        dlg = tk.Toplevel(self)
+        dlg.title("글꼴 고르기")
+        dlg.transient(self)
+        dlg.geometry("900x600")
+        f = ttk.Frame(dlg, padding=10)
+        f.pack(fill="both", expand=True)
+        top = ttk.Frame(f)
+        top.pack(fill="x")
+        ttk.Label(top, text="어디에 쓸까요:").pack(side="left")
+        where = tk.StringVar(value=key)
+        for k_, lab_ in (("title_font_path", "제목"), ("font_path", "본문(스크롤형)"), ("sub_font_path", "자막(자막형)")):
+            ttk.Radiobutton(top, text=lab_, value=k_, variable=where).pack(side="left", padx=4)
+        status = ttk.Label(top, text="내 PC 글꼴 찾는 중...", foreground="gray")
+        status.pack(side="right")
+        mid = ttk.Frame(f)
+        mid.pack(fill="both", expand=True, pady=6)
+        lst = tk.Listbox(mid, font=("맑은 고딕", 11), activestyle="none", exportselection=False, width=42)
+        sb = ttk.Scrollbar(mid, orient="vertical", command=lst.yview)
+        lst.config(yscrollcommand=sb.set)
+        lst.pack(side="left", fill="y")
+        sb.pack(side="left", fill="y")
+        right = ttk.Frame(mid, padding=(10, 0))
+        right.pack(side="left", fill="both", expand=True)
+        sample = tk.StringVar(value=self.title_var.get().strip() or "그날 밤, 아무도 몰랐다")
+        ttk.Entry(right, textvariable=sample, width=40).pack(fill="x")
+        pv = tk.Label(right, bg="#111")
+        pv.pack(fill="both", expand=True, pady=6)
+        desc = ttk.Label(right, text="", foreground="#555", wraplength=460)
+        desc.pack(anchor="w")
+        entries = []    # (표시, 경로 또는 None, repo_path 또는 None, 설명)
+        for n, d_, rp in FREE_FONTS:
+            have = os.path.exists(free_font_path(rp))
+            entries.append((f"★ {n}" + ("" if have else "  (무료·받기)"), free_font_path(rp) if have else None, rp, d_ + " · 무료(OFL, 상업 이용 가능)"))
+
+        def fill(pc):
+            free_files = {free_font_path(rp) for _, _, rp in FREE_FONTS}
+            for n, p in pc:
+                if p not in free_files:
+                    entries.append((f"   {n}", p, None, "내 PC 글꼴: " + p))
+            lst.delete(0, "end")
+            for e in entries:
+                lst.insert("end", e[0])
+            status.config(text=f"무료 {len(FREE_FONTS)}개 + 내 PC {len(entries) - len(FREE_FONTS)}개")
+            cur = self.vars[where.get()].get()
+            for i, e in enumerate(entries):
+                if e[1] and os.path.normcase(e[1]) == os.path.normcase(cur):
+                    lst.selection_set(i)
+                    lst.see(i)
+                    show()
+                    break
+
+        def worker():
+            pc = list_pc_fonts()
+            self.q.put(lambda: dlg.winfo_exists() and fill(pc))
+        threading.Thread(target=worker, daemon=True).start()
+        for e in entries:
+            lst.insert("end", e[0])
+
+        def draw(path):
+            im = Image.new("RGB", (480, 300), (17, 17, 17))
+            d = ImageDraw.Draw(im)
+            y = 30
+            for txt, sz, col in ((sample.get(), 46, "#FFD54F"), ("자막은 이렇게 보여요.", 34, "#FFFFFF"), ("ABC abc 123 !?", 30, "#9ad")):
+                ft = load_font(path, sz)
+                for ln in wrap(txt, ft, 440)[:2]:
+                    d.text((20, y), ln, font=ft, fill=col, stroke_width=2, stroke_fill="#000")
+                    y += int(sz * 1.3)
+                y += 10
+            pv._img = ImageTk.PhotoImage(im)
+            pv.config(image=pv._img)
+
+        def sel():
+            i = lst.curselection()
+            return entries[i[0]] if i else None
+
+        def show(*_):
+            e = sel()
+            if not e:
+                return
+            desc.config(text=e[3])
+            if e[1]:
+                draw(e[1])
+            else:
+                pv.config(image="", text="'적용' 또는 '받기'를 누르면 내려받아 미리 보여줍니다", fg="#ccc")
+        lst.bind("<<ListboxSelect>>", show)
+        sample.trace_add("write", lambda *_: show())
+
+        def ensure(e, then):
+            if e[1]:
+                then(e[1])
+                return
+            status.config(text="글꼴 받는 중...")
+
+            def w():
+                try:
+                    p_ = download_free_font(e[2])
+                    self.q.put(lambda: (status.config(text="받기 완료"), refresh_entry(e, p_), then(p_)))
+                except Exception as ex:
+                    self.q.put(lambda ex=ex: (status.config(text="받기 실패"),
+                                              messagebox.showerror("글꼴 받기 실패", f"{ex}\n\n인터넷 연결을 확인하세요.", parent=dlg)))
+            threading.Thread(target=w, daemon=True).start()
+
+        def refresh_entry(e, p_):
+            k = entries.index(e)
+            entries[k] = (e[0].replace("  (무료·받기)", ""), p_, e[2], e[3])
+            lst.delete(k)
+            lst.insert(k, entries[k][0])
+            lst.selection_set(k)
+
+        def apply():
+            e = sel()
+            if not e:
+                messagebox.showinfo("글꼴", "목록에서 글꼴을 고르세요.", parent=dlg)
+                return
+
+            def done(p_):
+                self.vars[where.get()].set(p_)
+                draw(p_)
+                names = {"title_font_path": "제목", "font_path": "본문", "sub_font_path": "자막"}
+                self.write_log(f"🔤 {names[where.get()]} 글꼴: {e[0].strip('★ ').replace('  (무료·받기)', '')}")
+                self.save_cfg()
+                self.refresh_preview()
+            ensure(e, done)
+        bf = ttk.Frame(f)
+        bf.pack(fill="x")
+        ttk.Button(bf, text="받기/미리보기", command=lambda: (sel() and ensure(sel(), draw))).pack(side="left")
+        ttk.Button(bf, text="닫기", command=dlg.destroy).pack(side="right")
+        ttk.Button(bf, text="✔ 적용", command=apply).pack(side="right", padx=6)
+        lst.bind("<Double-Button-1>", lambda _: apply())
 
     def browse(self, key, t):
         types = {"font": [("글꼴", "*.ttf *.otf *.ttc")],
@@ -5560,7 +5799,7 @@ class App(tk.Tk):
                 ls["narr_voice"] = voice
                 fp, fb = find_font_lang(code), find_font_lang(code, True)
                 if fp:
-                    ls["font_path"], ls["title_font_path"] = fp, (fb or fp)
+                    ls["font_path"], ls["title_font_path"], ls["sub_font_path"] = fp, (fb or fp), ""
                 ls["auto_langs"] = "안 함"
                 base = os.path.join(s["out_dir"], safe_name(title) + tag)
                 os.makedirs(s["out_dir"], exist_ok=True)
