@@ -275,27 +275,39 @@ SONG_MULTI_SYSTEM = SONG_SYSTEM.replace(
 ART_RULES = """[명화 규칙 - 저작권 안전 기준, 반드시 지킬 것]
 - 그림 이미지를 보여주려면 화가가 """ + str(ART_SAFE_DEATH_YEAR) + """년 이전에 사망한 작품이어야 한다(사후 70년 경과). 그 이후 사망한 화가(예: 피카소 1973, 박수근 1965, 이중섭 1956, 달리 1989)는 이야기만 쓰고 photos 는 빈 배열, pd_reason 에 "저작권 유효 - 이미지 미사용"이라고 적는다.
 - 화가 사후 70년이 지난 2차원 회화의 사진은 Wikimedia Commons 에서 퍼블릭 도메인(PD-Art)으로 제공된다. 그 파일을 쓴다. 미술관 공식 공개 이미지(국립중앙박물관 e뮤지엄 공공누리 1유형, Met Museum Open Access, Rijksmuseum 등)도 좋다.
-- 사진 순서: 첫 번째는 그림 전체(첫 문단 바로 뒤), 그 다음은 이야기에서 말하는 부분의 확대(detail)나 화가 초상. 1~3장.
-- 대본 구조: 첫 줄은 그 그림에 얽힌 가장 놀라운 사실 → 그림이 그려진 상황 → '자세히 보면' 그림 속 포인트 1~3개 → '그런데 더 놀라운 건' 반전 → 지금 그림이 어디에 있고 가치가 얼마인지 → 댓글 질문
-- artwork 정보를 꼭 채운다: title(원제 또는 한국어 제목), title_ko, artist(화가), artist_death(사망 연도, 숫자), year(제작 연도), museum(소장처), pd_reason(이미지 사용 가능 이유 또는 "저작권 유효 - 이미지 미사용")
-- 실존 인물(화가·모델)은 널리 알려진 사실만. 질병·사생활은 기록으로 확인된 것만 간단히."""
+- 실존 인물(화가·모델)은 널리 알려진 사실만. 질병·사생활은 기록으로 확인된 것만 간단히.
+- artwork 정보를 꼭 채운다: title(원제), title_ko, artist, artist_death(사망 연도, 숫자), year(제작 연도), medium(재료·기법, 예: 캔버스에 유채 / 비단에 수묵담채), size(크기 cm), museum(소장처), movement(사조·시대), pd_reason(이미지 사용 가능 이유 또는 "저작권 유효 - 이미지 미사용")
 
-ART_SYSTEM = """너는 한국 유튜브 쇼츠 '명화 이야기' 채널의 전문 작가다. 전 세계 명화와 한국 명화에 얽힌 실제 이야기를 쉽고 흥미롭게 들려준다.
-영상은 글이 위로 천천히 스크롤되는 형식이고, 중간에 그림 사진이 크게 들어간다. 시청자는 그림을 보면서 글을 읽는다.
-문체는 1~2문장 짧은 문단, 쉬운 단어, 문단 사이 빈 줄. 한 줄 40자 이내. 미술 용어는 쉬운 말로 풀어쓴다. 제목은 15자 이내로 궁금하게.
+[큐레이터 수준 해설 - 반드시 포함할 요소]
+미술관 큐레이터가 관람객 앞에서 그 그림 하나를 10분 설명하듯, 아래 요소가 모두 들어가야 한다. 단, 쇼츠이므로 각 요소는 1~2문장, 쉬운 말로. 어려운 용어는 괄호 없이 풀어 쓴다(예: '키아로스쿠로' 대신 '빛과 어둠을 강하게 맞세우는 기법').
+1. 훅: 그 그림에 얽힌 가장 놀라운 사실 한 줄 (연도·숫자·사건)
+2. 기본 정보: 언제, 어디서, 무엇으로(재료), 얼마나 큰 그림인지 — 숫자는 확인된 것만
+3. 시대 맥락: 그 시절 세상(전쟁·종교·돈·유행)이 이 그림에 어떻게 들어왔는지, 사조(인상주의, 진경산수 등)가 왜 생겼는지
+4. 구도와 시선: 눈이 어디서 시작해 어디로 가게 그렸는지, 중심은 무엇인지, 왜 그 위치에 뒀는지
+5. 빛과 색: 어디서 빛이 들어오는지, 어떤 색을 왜 썼는지(당시 그 물감이 귀했는지, 상징인지)
+6. 붓질·기법: 붓 자국, 물감 두께, 선의 성격(한국화면 먹의 농담·여백·준법을 쉬운 말로)
+7. 도상(숨은 뜻): 물건·동물·손짓·배경 하나하나가 무엇을 뜻하는지 — '자세히 보면'으로 시작하는 문단 2~3개, 각 문단은 그림의 어느 부분인지 명확히
+8. 비교: 같은 화가의 다른 작품이나 다른 화가의 비슷한 그림과 무엇이 다른지 한 문장
+9. 소장 이력: 누가 주문했고 어떻게 지금 미술관까지 왔는지(도난·경매·기증 등), 지금 어디서 볼 수 있는지
+10. 마무리: 이 그림이 왜 지금도 중요한지 한 줄 + 댓글 질문
+'자세히 보면' 문단에는 그 부분의 확대 사진이 붙는다. details 에 각 문단이 가리키는 부분을 그림 전체 기준 비율 상자로 적는다: {"after": "그 문단 앞부분 10~20자(원문 그대로)", "box": [왼쪽x, 위y, 너비w, 높이h] (0~1 비율), "caption": "15자 이내"}. 2~3개. 위치가 확실하지 않으면 넣지 않는다."""
+
+ART_SYSTEM = """너는 국립 미술관의 수석 큐레이터이자 한국 유튜브 쇼츠 '명화 이야기' 채널의 작가다. 전 세계 명화와 한국 명화를 전문가 수준의 깊이로, 그러나 중학생도 알아듣는 말로 해설한다.
+영상은 글이 위로 천천히 스크롤되는 형식이고, 그림 전체 사진이 크게 들어간 뒤 '자세히 보면' 문단마다 그 부분의 확대 사진이 붙는다. 시청자는 그림을 보면서 글을 읽는다.
+문체는 1~2문장 짧은 문단, 문단 사이 빈 줄. 한 줄 40자 이내. 제목은 15자 이내로 궁금하게. 감탄사·과장 대신 구체적 관찰로 설득한다.
 
 """ + FACT_RULES + """
 
 """ + ART_RULES + """
 
-반드시 JSON만 출력: {"title": "제목", "story": "본문", "sources": ["출처1", "출처2"], "confidence": "high", "notes": "확인 필요한 부분", "artwork": {"title": "", "title_ko": "", "artist": "", "artist_death": 1890, "year": "", "museum": "", "pd_reason": ""}}"""
+반드시 JSON만 출력: {"title": "제목", "story": "본문", "sources": ["출처1", "출처2"], "confidence": "high", "notes": "확인 필요한 부분", "artwork": {"title": "", "title_ko": "", "artist": "", "artist_death": 1890, "year": "", "medium": "", "size": "", "museum": "", "movement": "", "pd_reason": ""}, "details": [{"after": "", "box": [0.1, 0.2, 0.3, 0.3], "caption": ""}]}"""
 ART_MULTI_SYSTEM = ART_SYSTEM.replace(
-    "반드시 JSON만 출력:", "같은 그림으로 서로 다른 접근(훅 방식, 강조하는 비밀, 전개 순서)의 초안 3개를 쓴다. 각 초안마다 sources/notes/artwork 포함.\n반드시 JSON만 출력: {\"drafts\": [초안1, 초안2, 초안3]} 각 초안 형식:")
+    "반드시 JSON만 출력:", "같은 그림으로 서로 다른 접근(훅 방식, 강조하는 해설 요소, 전개 순서)의 초안 3개를 쓴다. 각 초안마다 sources/notes/artwork/details 포함.\n반드시 JSON만 출력: {\"drafts\": [초안1, 초안2, 초안3]} 각 초안 형식:")
 
 FACT_MULTI_SYSTEM = FACT_SYSTEM.replace(
     "반드시 JSON만 출력:", "같은 소재로 서로 다른 접근(훅 방식, 강조하는 사실, 전개 순서)의 초안 3개를 쓴다. 각 초안마다 sources/confidence/notes 포함.\n반드시 JSON만 출력: {{\"drafts\": [초안1, 초안2, 초안3]}} 각 초안 형식:")
 
-VERIFY_SYSTEM = """너는 과학·역사·음악사 팩트체커다. 명화 대본이면 화가 사망 연도와 제작 연도, 소장처가 맞는지 확인한다.
+VERIFY_SYSTEM = """너는 과학·역사·음악사 팩트체커다. 명화 대본이면 화가 사망 연도, 제작 연도, 재료, 크기, 소장처, 사조, 도상 해석이 미술사 통설과 맞는지 확인한다. 통설이 아닌 개인 해석은 '~로 해석된다'로 고치게 한다.
 올드 팝송 대본에 가사(♪ 줄)나 멜로디가 있으면 발표 연도가 1929년 이전인지 반드시 확인하고, 1930년 이후면 verdict 를 risky 로 하고 가사를 빼거나 다른 곡으로 바꾸라고 적는다. 가사 원문이 실제 가사와 맞는지도 확인한다. 아래 쇼츠 대본의 모든 사실 주장(숫자, 날짜, 이름, 장소, 인과관계)을 하나씩 점검한다.
 기준: 널리 검증된 사실=ok, 과장되거나 틀림=wrong, 논란·불확실=unsure
 틀리거나 불확실한 부분은 어떻게 고쳐야 안전한지 구체적으로 쓴다. 고친 전체 본문(corrected_story)은 원래 분량과 재미를 유지하되 틀린 부분만 바로잡는다.
@@ -344,6 +356,8 @@ PHOTO_RULES = """[사진 규칙]
 RESEARCH_SYSTEM = """너는 유튜브 쇼츠 대본을 위한 자료조사원이다. WebSearch 로 주제를 검색하고, 중요한 내용은 WebFetch 로 원문을 열어 확인한다.
 주제가 비어 있으면 해당 소재에서 쇼츠로 반응이 좋을 실제 주제를 하나 골라서 조사한다.
 
+[명화일 때] 소장 미술관 공식 페이지와 백과사전 항목을 열어 제작 연도·재료·크기·소장 경로·기법 설명을 확인하고, 미술사학자의 해설(도상·구도·색)을 facts 에 넣는다. photos 첫 번째는 그림 전체(Wikimedia Commons PD-Art 원본, 가장 큰 해상도).
+
 [사실 기반(실화·과학·자연현상)일 때]
 - 공식 기관·백과사전·주요 언론·논문 등 신뢰할 수 있는 자료를 우선한다. 여러 자료가 일치하는 내용만 facts 에 넣는다.
 - facts: 대본에 쓸 핵심 사실 6~12개, 한 줄씩 (숫자·날짜·장소 포함, 확인된 것만)
@@ -372,7 +386,7 @@ WEB_VERIFY_BLOCK = """
 
 JUDGE_SYSTEM = """너는 유튜브 쇼츠 썰 채널의 베테랑 편집장이다. 조회수와 끝까지 보는 비율(시청 지속률)을 기준으로 초안을 심사한다.
 채점 항목(각 10점): 훅(첫 줄에서 멈추게 하는가), 전개(5~7초마다 새 정보가 있는가), 반전/결말(마지막 1~2줄의 충격·감동), 가독성(짧은 문장, 쉬운 단어), 공유욕구(댓글·공유하고 싶은가)
-명화면 artwork 를 그대로 넘기고, 화가 사후 70년이 안 된 작품에 이미지가 있으면 감점.
+명화면 큐레이터 수준인지 본다: 기법·구도·빛과 색·도상·시대 맥락·소장 이력이 모두 구체적 관찰로 들어갔는지, 두루뭉술한 감탄("아름답다", "천재적")만 있으면 크게 감점. artwork/details 를 그대로 넘기고, 화가 사후 70년이 안 된 작품에 이미지가 있으면 감점.
 올드 팝송이면: 가사나 멜로디를 쓴 초안은 1929년 이전 발표곡이어야 한다(아니면 0점). 가사 모드는 원문 줄(♪)과 해석 줄이 짝으로 되어 있는지, 해석이 노래처럼 자연스러운지 본다. polish 에는 song/melody/bpm 도 그대로 넘긴다.
 사실 기반 콘텐츠(실화·과학·자연현상)이면 '정확성'을 최우선으로 본다: 의심스럽거나 과장된 주장이 있는 초안은 크게 감점하고, polish 에서 그 부분을 안전하게 고친다.
 반드시 JSON만 출력: {"best": 가장 좋은 초안 번호(0부터), "scores": [{"total": 합계, "reason": "한 줄 이유"}, ...], "polish": {"title": "최고 초안을 다듬은 제목", "story": "최고 초안을 다듬은 전체 본문", "sources": ["사실 기반일 때 출처"], "notes": "확인 필요한 부분"}}
@@ -381,6 +395,7 @@ polish는 선택된 초안의 약점만 손봐서 완성본을 만든다. 길이
 
 REVIEW_SYSTEM = """너는 유튜브 쇼츠 썰 채널의 베테랑 편집장이다. 아래 소설을 쇼츠 기준으로 냉정하게 평가한다.
 항목(각 10점): hook(첫 줄), pacing(전개 속도), ending(반전/결말), readability(가독성), share(공유욕구)
+명화 콘텐츠면 expertise(큐레이터 수준 전문성: 기법·구도·빛과 색·도상·시대 맥락·소장 이력이 구체적 관찰로 들어갔는지) 항목을 추가해 60점 만점으로 채점하고, fixes 에 빠진 해설 요소를 적는다.
 반드시 JSON만 출력: {"scores": {"hook": 0, "pacing": 0, "ending": 0, "readability": 0, "share": 0}, "total": 0~50, "grade": "S/A/B/C", "strengths": ["..."], "fixes": ["구체적인 수정 제안 (어느 줄을 어떻게)", "..."]}"""
 
 PACKAGE_SYSTEM = """너는 유튜브 쇼츠 채널 운영 전문가다. 소설을 읽고 업로드에 필요한 문구를 만든다.
@@ -730,6 +745,33 @@ def fetch_photos(items, media_dir, log, limit=3):
     return got
 
 
+def crop_details(full_path, details, media_dir, log, limit=3):
+    """그림 전체 사진에서 details 의 상자(비율)를 잘라 확대 사진으로 저장 → [{path, caption, credit, after}]"""
+    im = load_media_image(full_path)
+    if im is None:
+        return []
+    out = []
+    for d in (details or [])[:limit]:
+        try:
+            x, y, w, h = [float(v) for v in d.get("box", [])]
+        except (TypeError, ValueError):
+            continue
+        x, y = min(max(x, 0), 0.95), min(max(y, 0), 0.95)
+        w, h = min(max(w, 0.05), 1 - x), min(max(h, 0.05), 1 - y)
+        box = (int(x * im.width), int(y * im.height), int((x + w) * im.width), int((y + h) * im.height))
+        c = im.crop(box)
+        if c.width < 40 or c.height < 40:
+            continue
+        if c.width < 900:   # 너무 작으면 키워서 또렷하게
+            k = 900 / c.width
+            c = c.resize((int(c.width * k), int(c.height * k)), Image.LANCZOS)
+        path = save_media_image(c, media_dir)
+        cap = str(d.get("caption") or "부분 확대")
+        out.append({"path": path, "caption": "확대: " + cap, "credit": "원작 부분 확대", "after": d.get("after", "")})
+        log(f"  확대 사진: {cap}")
+    return out
+
+
 def split_paras(story):
     return [x.strip() for x in re.split(r"\n\s*\n", (story or "").strip()) if x.strip()]
 
@@ -775,7 +817,8 @@ def _split_inline_ph(text):
 
 
 def place_photos(story, photos):
-    """본문의 [사진N] 자리표시를 실제 사진 줄로 바꾸고, 자리표시가 없는 사진은 알맞은 곳에 끼움"""
+    """본문의 [사진N] 자리표시를 실제 사진 줄로 바꾸고, 자리표시가 없는 사진은 알맞은 곳에 끼움 (최대 5장)"""
+    photos = list(photos or [])[:5]
     paras = split_paras(_split_inline_ph(story))
     used = set()
     for i, p in enumerate(paras):
@@ -1840,6 +1883,7 @@ def write_package(path_base, title, story, pkg):
     if isinstance(art, dict):
         lines += ["", "[그림 정보 (설명란에 넣으면 좋음)]",
                   f"- 작품: {art.get('title', '')} ({art.get('title_ko', '')}) · {art.get('artist', '')} · {art.get('year', '')}",
+                  f"- 재료/크기: {art.get('medium', '')} · {art.get('size', '')}" + (f" · 사조: {art.get('movement')}" if art.get("movement") else ""),
                   f"- 소장: {art.get('museum', '')}" + (f" · 화가 사망 {art.get('artist_death')}" if art.get("artist_death") else ""),
                   f"- 이미지 저작권: {art.get('pd_reason', '')}"]
     song = pkg.get("song")
@@ -2187,6 +2231,8 @@ class App(tk.Tk):
     def on_category(self, *_):
         topics = cat_info(self.cat_var.get())[1]
         self.vars["photo_h"].set("0.5" if self.cat_var.get() == ART_CATEGORY else "0.36")
+        if self.cat_var.get() == ART_CATEGORY and self.len_var.get() in ("", "40"):
+            self.len_var.set("60")   # 큐레이터 해설은 60초 정도 필요
         self.genre_box.config(values=list(topics))
         self.genre_var.set(list(topics)[0])
         self.topic_box.config(values=[])
@@ -2324,7 +2370,7 @@ class App(tk.Tk):
             title, story, notes = d.get("title", ""), d.get("story", ""), d.get("notes", "")
             sources = sources or d.get("sources", [])
             song, melody, bpm = d.get("song"), d.get("melody", ""), d.get("bpm", 90)
-            artwork = d.get("artwork")
+            artwork, details = d.get("artwork"), d.get("details")
         else:
             log("초안 3개 작성 중...")
             drafts = ask_json(model, multi_sys, user).get("drafts", [])
@@ -2350,7 +2396,10 @@ class App(tk.Tk):
             melody = pol.get("melody") or drafts[best].get("melody", "")
             bpm = pol.get("bpm") or drafts[best].get("bpm", 90)
             artwork = pol.get("artwork") or drafts[best].get("artwork")
+            details = pol.get("details") or drafts[best].get("details")
         if photos:
+            if category == ART_CATEGORY and details and not _artist_recent(artwork):
+                photos = photos[:1] + crop_details(photos[0]["path"], details, media_dir, log) + photos[1:]
             story = place_photos(story, photos)
         elif factual and autophoto and not (category == ART_CATEGORY and _artist_recent(artwork)):
             log("🔎 근거 사진 찾는 중...")
@@ -2358,6 +2407,8 @@ class App(tk.Tk):
                 extra_info = ("\n[그림 정보] " + json.dumps(artwork, ensure_ascii=False)) if artwork else ""
                 d = ask_json(model, PHOTO_SYSTEM, f"콘텐츠 종류: {category}{extra_info}\n[제목] {title}\n\n[본문]\n{story}", tools=WEB_TOOLS)
                 photos = fetch_photos(d.get("photos"), media_dir, log)
+                if photos and category == ART_CATEGORY and details:
+                    photos = photos[:1] + crop_details(photos[0]["path"], details, media_dir, log) + photos[1:]
                 if photos:
                     story = place_photos(story, photos)
             except Exception as e:
@@ -2644,9 +2695,10 @@ class App(tk.Tk):
 
         def done(d):
             sc = d.get("scores") or {}
-            names = {"hook": "훅", "pacing": "전개", "ending": "결말", "readability": "가독성", "share": "공유욕구"}
-            line = "  ".join(f"{names.get(k, k)} {sc.get(k, '?')}" for k in names)
-            self.write_log(f"평가 {d.get('grade', '')}등급 {d.get('total', '?')}/50  |  {line}")
+            names = {"hook": "훅", "pacing": "전개", "ending": "결말", "readability": "가독성", "share": "공유욕구", "expertise": "전문성"}
+            line = "  ".join(f"{names.get(k, k)} {sc.get(k, '?')}" for k in names if k in sc)
+            mx = 60 if "expertise" in sc else 50
+            self.write_log(f"평가 {d.get('grade', '')}등급 {d.get('total', '?')}/{mx}  |  {line}")
             for x in d.get("strengths", []):
                 self.write_log("  + " + str(x))
             for x in d.get("fixes", []):
