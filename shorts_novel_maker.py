@@ -182,7 +182,8 @@ FIELDS = [
     ("영상", "audio_out", "소리 저장 방식", "choice:MP4에 포함,MP4에 포함+MP3 따로,MP3만 따로(무음 MP4)", "MP4에 포함+MP3 따로"),
     ("영상", "out_dir", "저장 폴더", "dir", os.path.join(BASE, "output")),
     ("나레이션", "narration", "나레이션(음성 읽기)", "choice:on,off", "off"),
-    ("나레이션", "narr_voice", "목소리", "choice:" + ",".join(TTS_VOICES), "선히 (여성, 차분)"),
+    ("나레이션", "narr_voice", "성우", "voice", "선히 (여성, 차분)"),
+    ("나레이션", "narr_pitch", "음 높낮이(Hz, -40~+40)", "float", 0),
     ("나레이션", "narr_rate", "말 속도(%, -30~+40)", "float", 5),
     ("나레이션", "narr_volume", "나레이션 볼륨(0~2)", "float", 1.0),
     ("나레이션", "narr_gap", "문단 사이 쉼(초)", "float", 0.5),
@@ -2362,7 +2363,65 @@ def tts_clean(text):
     return t
 
 
-def tts_edge(text, voice, rate_pct, out_mp3):
+VOICE_CACHE_FILE = os.path.join(BASE, "voices_cache.json")
+VOICE_LOCALES = {"ko-KR": "한국어", "en-US": "영어(미국)", "en-GB": "영어(영국)", "ja-JP": "일본어"}
+VOICE_KO_NAMES = {"SunHi": "선히", "InJoon": "인준", "Hyunsu": "현수", "BongJin": "봉진", "GookMin": "국민", "JiMin": "지민",
+                  "SeoHyeon": "서현", "SoonBok": "순복", "YuJin": "유진", "Aria": "아리아", "Guy": "가이", "Jenny": "제니",
+                  "Christopher": "크리스토퍼", "Ana": "아나", "Andrew": "앤드루", "Emma": "엠마", "Brian": "브라이언",
+                  "Nanami": "나나미", "Keita": "케이타", "Sonia": "소니아", "Ryan": "라이언"}
+
+
+def voice_code(voice_name):
+    """설정에 적힌 성우 이름 → 엣지 음성 코드. '… [ko-KR-XxxNeural]' 형식이면 괄호 안을 씀"""
+    if voice_name in TTS_VOICES:
+        return TTS_VOICES[voice_name]
+    m = re.search(r"\[([a-z]{2}-[A-Z]{2}-[A-Za-z0-9]+)\]", voice_name or "")
+    if m:
+        return m.group(1)
+    if re.fullmatch(r"[a-z]{2}-[A-Z]{2}-[A-Za-z0-9]+", (voice_name or "").strip()):
+        return voice_name.strip()
+    return "ko-KR-SunHiNeural"
+
+
+def voice_display(short, gender, locale):
+    base = short.split("-")[-1].replace("Neural", "").replace("Multilingual", "")
+    ko = VOICE_KO_NAMES.get(base, base)
+    g = {"Female": "여성", "Male": "남성"}.get(gender, gender)
+    multi = " · 다국어" if "Multilingual" in short else ""
+    return f"{ko} ({g}, {VOICE_LOCALES.get(locale, locale)}{multi}) [{short}]"
+
+
+def list_voices(refresh=False):
+    """엣지 음성 서버에서 성우 목록 받기 (한국어·영어·일본어). 실패하면 캐시/기본 목록"""
+    if not refresh and os.path.exists(VOICE_CACHE_FILE):
+        try:
+            with open(VOICE_CACHE_FILE, encoding="utf-8") as f:
+                data = json.load(f)
+            if data:
+                return data
+        except Exception:
+            pass
+    try:
+        import edge_tts, asyncio
+        loop = asyncio.new_event_loop()
+        try:
+            vs = loop.run_until_complete(edge_tts.list_voices())
+        finally:
+            loop.close()
+        data = [{"short": v["ShortName"], "gender": v.get("Gender", ""), "locale": v.get("Locale", ""),
+                 "name": voice_display(v["ShortName"], v.get("Gender", ""), v.get("Locale", ""))}
+                for v in vs if v.get("Locale") in VOICE_LOCALES]
+        data.sort(key=lambda d: (list(VOICE_LOCALES).index(d["locale"]), d["gender"], d["short"]))
+        if data:
+            with open(VOICE_CACHE_FILE, "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False, indent=1)
+            return data
+    except Exception:
+        pass
+    return [{"short": c, "gender": "", "locale": c[:5], "name": n} for n, c in TTS_VOICES.items() if c != "sapi"]
+
+
+def tts_edge(text, voice, rate_pct, out_mp3, pitch_hz=0):
     """마이크로소프트 엣지 음성 (인터넷 필요, 무료)"""
     try:
         import edge_tts
@@ -2374,9 +2433,10 @@ def tts_edge(text, voice, rate_pct, out_mp3):
         import edge_tts
     import asyncio
     rate = f"{'+' if rate_pct >= 0 else ''}{int(rate_pct)}%"
+    pitch = f"{'+' if pitch_hz >= 0 else ''}{int(pitch_hz)}Hz"
 
     async def run():
-        await edge_tts.Communicate(text, voice, rate=rate).save(out_mp3)
+        await edge_tts.Communicate(text, voice, rate=rate, pitch=pitch).save(out_mp3)
     try:
         loop = asyncio.new_event_loop()
         try:
@@ -2403,14 +2463,18 @@ def tts_sapi(text, rate_pct, out_wav):
         raise RuntimeError("윈도우 음성 실패: " + (p.stderr or "")[-200:])
 
 
-def tts_clip(text, voice_name, rate_pct, cache_dir):
-    """문장 하나 → (소리 배열 mono float32, 길이초). 같은 문장은 캐시에서 재사용"""
+def tts_key(voice, rate_pct, pitch_hz, text):
     import hashlib
+    return hashlib.md5(f"{voice}|{float(rate_pct)}|{float(pitch_hz)}|{text}".encode("utf-8")).hexdigest()[:16]
+
+
+def tts_clip(text, voice_name, rate_pct, cache_dir, pitch_hz=0):
+    """문장 하나 → (소리 배열 mono float32, 길이초). 같은 문장은 캐시에서 재사용"""
     text = tts_clean(text)
     if not text:
         return np.zeros(1, np.float32), 0.0
-    voice = TTS_VOICES.get(voice_name, "ko-KR-SunHiNeural")
-    key = hashlib.md5(f"{voice}|{rate_pct}|{text}".encode("utf-8")).hexdigest()[:16]
+    voice = voice_code(voice_name)
+    key = tts_key(voice, rate_pct, pitch_hz, text)
     os.makedirs(cache_dir, exist_ok=True)
     npy = os.path.join(cache_dir, key + ".npy")
     if os.path.exists(npy):
@@ -2421,7 +2485,7 @@ def tts_clip(text, voice_name, rate_pct, cache_dir):
         tts_sapi(text, rate_pct, src)
     else:
         try:
-            tts_edge(text, voice, rate_pct, src)
+            tts_edge(text, voice, rate_pct, src, pitch_hz)
         except Exception as e:
             if os.name == "nt":
                 tts_sapi(text, rate_pct, src := os.path.join(cache_dir, key + ".wav"))
@@ -2477,7 +2541,7 @@ def build_narration(story, s, cache_dir, log=None, cancel=None):
     for k, (i, text) in enumerate(items):
         if cancel and cancel.is_set():
             raise RuntimeError("취소됨")
-        a, d = tts_clip(text, s["narr_voice"], float(s["narr_rate"]), cache_dir)
+        a, d = tts_clip(text, s["narr_voice"], float(s["narr_rate"]), cache_dir, float(s.get("narr_pitch", 0)))
         res.append((i, a, d))
         if log and (k % 5 == 0 or k == len(items) - 1):
             log(f"  🎙 나레이션 {k + 1}/{len(items)}")
@@ -2972,6 +3036,9 @@ class App(tk.Tk):
             ttk.Entry(cell, textvariable=v, width=28).pack(side="left")
         elif t == "secret":
             ttk.Entry(cell, textvariable=v, width=28, show="*").pack(side="left")
+        elif t == "voice":
+            ttk.Entry(cell, textvariable=v, width=26, state="readonly").pack(side="left")
+            ttk.Button(cell, text="🎤 성우 선택…", command=self.voice_picker).pack(side="left", padx=2)
         else:
             ttk.Entry(cell, textvariable=v, width=8).pack(side="left")
 
@@ -3033,20 +3100,151 @@ class App(tk.Tk):
             return None
         import hashlib
         cache = os.path.join(s["out_dir"], "tts_cache")
-        voice = TTS_VOICES.get(s["narr_voice"], "")
+        voice = voice_code(s["narr_voice"])
         res = []
         for i, text in narration_paras(story):
             t = tts_clean(text)
             if not t:
                 res.append((i, np.zeros(1, np.float32), 0.0))
                 continue
-            key = hashlib.md5(f"{voice}|{float(s['narr_rate'])}|{t}".encode("utf-8")).hexdigest()[:16]
+            key = tts_key(voice, s["narr_rate"], s.get("narr_pitch", 0), t)
             npy = os.path.join(cache, key + ".npy")
             if not os.path.exists(npy):
                 return None
             a = np.load(npy)
             res.append((i, a, len(a) / SR))
         return res
+
+    def voice_picker(self):
+        """🎤 성우 선택: 목록에서 고르고 샘플 문장으로 미리듣기, 속도·높낮이 조절"""
+        dlg = tk.Toplevel(self)
+        dlg.title("성우 선택")
+        dlg.transient(self)
+        dlg.geometry("760x560")
+        f = ttk.Frame(dlg, padding=10)
+        f.pack(fill="both", expand=True)
+        top = ttk.Frame(f)
+        top.pack(fill="x")
+        ttk.Label(top, text="언어").pack(side="left")
+        lang_var = tk.StringVar(value="한국어")
+        lb_lang = ttk.Combobox(top, textvariable=lang_var, values=["전체"] + list(VOICE_LOCALES.values()), width=10, state="readonly")
+        lb_lang.pack(side="left", padx=4)
+        status = ttk.Label(top, text="", foreground="gray")
+        status.pack(side="right")
+        ttk.Button(top, text="목록 새로고침(서버)", command=lambda: load(True)).pack(side="right", padx=4)
+        mid = ttk.Frame(f)
+        mid.pack(fill="both", expand=True, pady=6)
+        lst = tk.Listbox(mid, font=("맑은 고딕", 11), activestyle="none")
+        sb = ttk.Scrollbar(mid, orient="vertical", command=lst.yview)
+        lst.config(yscrollcommand=sb.set)
+        lst.pack(side="left", fill="both", expand=True)
+        sb.pack(side="left", fill="y")
+        ctl = ttk.LabelFrame(f, text="미리듣기 설정", padding=8)
+        ctl.pack(fill="x")
+        rate_var = tk.DoubleVar(value=float(self.vars["narr_rate"].get() or 0))
+        pitch_var = tk.DoubleVar(value=float(self.vars["narr_pitch"].get() or 0))
+        ttk.Label(ctl, text="말 속도(%)").grid(row=0, column=0, sticky="e")
+        ttk.Scale(ctl, from_=-30, to=40, variable=rate_var, length=200).grid(row=0, column=1, padx=4)
+        rl = ttk.Label(ctl, width=5)
+        rl.grid(row=0, column=2)
+        ttk.Label(ctl, text="음 높낮이(Hz)").grid(row=0, column=3, sticky="e", padx=(16, 0))
+        ttk.Scale(ctl, from_=-40, to=40, variable=pitch_var, length=200).grid(row=0, column=4, padx=4)
+        pl = ttk.Label(ctl, width=5)
+        pl.grid(row=0, column=5)
+
+        def upd(*_):
+            rl.config(text=f"{rate_var.get():+.0f}%")
+            pl.config(text=f"{pitch_var.get():+.0f}")
+        rate_var.trace_add("write", upd)
+        pitch_var.trace_add("write", upd)
+        upd()
+        ttk.Label(ctl, text="샘플 문장").grid(row=1, column=0, sticky="e", pady=(6, 0))
+        sample_var = tk.StringVar(value="안녕하세요. 오늘은 아무도 몰랐던 이야기를 들려드릴게요. 끝까지 보시면 소름이 돋을 겁니다.")
+        ttk.Entry(ctl, textvariable=sample_var, width=70).grid(row=1, column=1, columnspan=5, sticky="w", pady=(6, 0))
+        voices = []
+
+        def load(refresh=False):
+            status.config(text="목록 받는 중...")
+
+            def worker():
+                data = list_voices(refresh)
+                self.q.put(lambda: fill(data))
+            threading.Thread(target=worker, daemon=True).start()
+
+        def fill(data):
+            voices.clear()
+            voices.extend(data)
+            show()
+            status.config(text=f"성우 {len(data)}명" + ("" if os.path.exists(VOICE_CACHE_FILE) else " (기본 목록 - 인터넷 연결 시 새로고침)"))
+
+        def show(*_):
+            lst.delete(0, "end")
+            want = lang_var.get()
+            cur = self.vars["narr_voice"].get()
+            sel = None
+            for v in voices:
+                if want != "전체" and VOICE_LOCALES.get(v["locale"]) != want:
+                    continue
+                lst.insert("end", v["name"])
+                if v["name"] == cur or v["short"] == voice_code(cur):
+                    sel = lst.size() - 1
+            lst.insert("end", "윈도우 내장 음성 (오프라인, 품질 낮음)")
+            if sel is not None:
+                lst.selection_set(sel)
+                lst.see(sel)
+        lb_lang.bind("<<ComboboxSelected>>", show)
+
+        def chosen_name():
+            i = lst.curselection()
+            if not i:
+                return None
+            name = lst.get(i[0])
+            return "윈도우 내장 음성" if name.startswith("윈도우") else name
+
+        def preview():
+            name = chosen_name()
+            if not name:
+                messagebox.showinfo("성우", "목록에서 성우를 고르세요.", parent=dlg)
+                return
+            text, rate, pitch = sample_var.get().strip(), rate_var.get(), pitch_var.get()
+            if voice_code(name).startswith(("en-", "ja-")) and re.search(r"[가-힣]", text):
+                text = {"en": "Hello. Today I will tell you a story nobody knew. Stay until the end.",
+                        "ja": "こんにちは。今日は誰も知らなかった話をお届けします。最後までご覧ください。"}[voice_code(name)[:2]]
+            status.config(text="샘플 만드는 중...")
+            cache = os.path.join(self.get_settings()["out_dir"], "tts_cache")
+
+            def worker():
+                try:
+                    a, d = tts_clip(text, name, rate, cache, pitch)
+                    p = os.path.join(tempfile.gettempdir(), "shorts_voice_sample.wav")
+                    write_wav(p, np.stack([a, a], 1))
+                    self.q.put(lambda: (status.config(text=f"재생 중 ({d:.1f}초)"), play_wav(p)))
+                except Exception as e:
+                    self.q.put(lambda e=e: status.config(text="실패: " + str(e)[:60]))
+            threading.Thread(target=worker, daemon=True).start()
+
+        def choose():
+            name = chosen_name()
+            if not name:
+                return
+            self.vars["narr_voice"].set(name)
+            self.vars["narr_rate"].set(f"{rate_var.get():.0f}")
+            self.vars["narr_pitch"].set(f"{pitch_var.get():.0f}")
+            self.vars["narration"].set("on")
+            self.bgm_made = None
+            self.write_log(f"🎤 성우 선택: {name} (속도 {rate_var.get():+.0f}%, 높낮이 {pitch_var.get():+.0f}Hz) → 나레이션을 다시 만들면 적용됩니다")
+            self.save_cfg()
+            stop_wav()
+            dlg.destroy()
+            self.refresh_preview()
+        bf = ttk.Frame(f)
+        bf.pack(fill="x", pady=(8, 0))
+        ttk.Button(bf, text="▶ 들어보기", command=preview).pack(side="left")
+        ttk.Button(bf, text="■ 정지", command=stop_wav).pack(side="left", padx=4)
+        ttk.Button(bf, text="닫기", command=lambda: (stop_wav(), dlg.destroy())).pack(side="right")
+        ttk.Button(bf, text="이 성우로 선택", command=choose).pack(side="right", padx=6)
+        lst.bind("<Double-Button-1>", lambda _: preview())
+        load(False)
 
     def prepare_narration(self):
         """🎙 나레이션 만들기: 모든 문단 음성 생성 → 미리보기가 읽는 속도에 맞춰짐"""
