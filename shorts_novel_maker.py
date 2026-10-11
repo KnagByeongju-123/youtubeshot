@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-쇼츠 스크롤 영상 메이커 PRO (허구 소설 · 기이한 실화 · 과학 사실 · 자연현상)
+쇼츠 스크롤 영상 메이커 PRO (허구 소설 · 기이한 실화 · 과학 사실 · 자연현상 · 올드 팝송 · 명화)
 AI: PC에 설치된 Claude Code(claude -p)를 Max 구독으로 사용 (API 키 불필요)
 설치: pip install pillow numpy imageio-ffmpeg  (빠진 패키지는 처음 실행 때 자동 설치됨)
 기능: AI 대본(3안 심사·웹 조사), 근거 사진(복붙·AI 검색), 자체 합성 배경음, 연속 제작
@@ -75,6 +75,8 @@ SOUND_BY_TOPIC = {
     "생존 실화": "바람", "세계의 기이한 장소": "바람",
     "우주": "우주", "인체": "잔잔한 패드", "동물·생물": "밝은 오르골", "물리·화학": "잔잔한 패드", "심리·뇌": "긴장 펄스",
     "지구·환경": "바람",
+    "명화 탄생 비화": "잔잔한 패드", "그림 속 숨은 비밀": "긴장 펄스", "화가의 실화": "슬픈 패드", "한국 명화": "감성 오르골",
+    "도난·위작·사건": "긴장 펄스", "그림 속 인물의 실화": "감성 오르골",
     "가사 원문+해석": "노래 멜로디(오르골)", "가수·작곡가 실화": "노래 멜로디(오르골)", "노래 탄생 비화": "노래 멜로디(오르골)",
     "노래에 숨은 비밀": "노래 멜로디(오르골)", "크리스마스·캐럴 가사": "노래 멜로디(오르골)", "세계 각국의 옛 노래": "노래 멜로디(오르골)",
     "기상 현상": "비 오는 밤", "지질·화산·지진": "어두운 드론", "바다": "심해", "하늘·빛": "우주", "동식물의 기이한 행동": "밝은 오르골",
@@ -97,6 +99,7 @@ FIELDS = [
     ("글자", "quote_color", "대사(따옴표) 색", "choice:on,off", "on"),
     ("글자", "shadow", "글자 그림자", "choice:on,off", "on"),
     ("글자", "stroke_width", "글자 테두리", "int", 0),
+    ("글자", "photo_h", "사진 최대 높이(화면 비율)", "float", 0.36),
     ("배경", "bg_mode", "배경 종류", "choice:단색,그라데이션,이미지", "그라데이션"),
     ("배경", "bg_color", "배경색(위)", "color", "#0B0F1A"),
     ("배경", "bg_color2", "배경색(아래)", "color", "#1A1030"),
@@ -215,7 +218,18 @@ CATEGORIES = {
     }),
 }
 
+CATEGORIES["명화 이야기"] = (True, {
+    "명화 탄생 비화": ("그림이 그려진 순간의 실제 이야기(장소·사람·사건·돈). 첫 줄은 그 그림에 얽힌 가장 놀라운 사실. 예: 모나리자 도난(1911), 절규의 배경, 별이 빛나는 밤의 정신병원", "종이 노트"),
+    "그림 속 숨은 비밀": ("그림 안에 숨은 상징·인물·오류·수수께끼를 하나씩 짚는다. '자세히 보면'으로 시작하는 문단이 좋다. 예: 아르놀피니 부부의 거울, 최후의 만찬의 손, 모내기 그림 속 양반", "시네마 다크"),
+    "화가의 실화": ("화가의 인생(가난, 사랑, 병, 전쟁, 재기, 죽음)을 3인칭으로. 널리 알려진 사실만, 루머 금지. 예: 고흐의 귀, 신윤복의 정체, 프리다 칼로의 사고", "감동 웜톤"),
+    "한국 명화": ("조선 회화와 근대 한국화(김홍도, 신윤복, 정선, 안견, 장승업, 나혜석 등)의 배경과 그림 읽는 법. 당시 생활상과 연결.", "종이 노트"),
+    "도난·위작·사건": ("실제 미술 사건(도난, 위작, 파괴, 소송, 경매 기록). 범인·수법·결말을 순서대로.", "네온 시티"),
+    "그림 속 인물의 실화": ("모델이 된 실존 인물의 삶. 그 사람에게 그림이 어떤 의미였는지. 예: 진주 귀걸이를 한 소녀, 올랭피아의 모델, 미인도", "로맨스 핑크"),
+})
+
 SONG_CATEGORY = "올드 팝송 이야기"
+ART_CATEGORY = "명화 이야기"
+ART_SAFE_DEATH_YEAR = 1955   # 작가가 이 해 이전에 사망 → 사후 70년 지나 그림 이미지 사용 가능 (한국·EU 기준)
 
 FACT_RULES = """[사실 기반 콘텐츠 규칙 - 반드시 지킬 것]
 - 널리 기록되고 검증된 사실만 쓴다. 확실하지 않은 숫자·이름·날짜는 쓰지 말고 '약', '수십' 처럼 범위로 쓴다.
@@ -258,10 +272,31 @@ SONG_SYSTEM = """너는 한국 유튜브 쇼츠 '옛날 팝송 이야기' 채널
 SONG_MULTI_SYSTEM = SONG_SYSTEM.replace(
     "반드시 JSON만 출력:", "같은 노래로 서로 다른 접근(훅 방식, 강조하는 비화, 전개 순서)의 초안 3개를 쓴다. 각 초안마다 sources/notes/song/melody/bpm 포함.\n반드시 JSON만 출력: {\"drafts\": [초안1, 초안2, 초안3]} 각 초안 형식:")
 
+ART_RULES = """[명화 규칙 - 저작권 안전 기준, 반드시 지킬 것]
+- 그림 이미지를 보여주려면 화가가 """ + str(ART_SAFE_DEATH_YEAR) + """년 이전에 사망한 작품이어야 한다(사후 70년 경과). 그 이후 사망한 화가(예: 피카소 1973, 박수근 1965, 이중섭 1956, 달리 1989)는 이야기만 쓰고 photos 는 빈 배열, pd_reason 에 "저작권 유효 - 이미지 미사용"이라고 적는다.
+- 화가 사후 70년이 지난 2차원 회화의 사진은 Wikimedia Commons 에서 퍼블릭 도메인(PD-Art)으로 제공된다. 그 파일을 쓴다. 미술관 공식 공개 이미지(국립중앙박물관 e뮤지엄 공공누리 1유형, Met Museum Open Access, Rijksmuseum 등)도 좋다.
+- 사진 순서: 첫 번째는 그림 전체(첫 문단 바로 뒤), 그 다음은 이야기에서 말하는 부분의 확대(detail)나 화가 초상. 1~3장.
+- 대본 구조: 첫 줄은 그 그림에 얽힌 가장 놀라운 사실 → 그림이 그려진 상황 → '자세히 보면' 그림 속 포인트 1~3개 → '그런데 더 놀라운 건' 반전 → 지금 그림이 어디에 있고 가치가 얼마인지 → 댓글 질문
+- artwork 정보를 꼭 채운다: title(원제 또는 한국어 제목), title_ko, artist(화가), artist_death(사망 연도, 숫자), year(제작 연도), museum(소장처), pd_reason(이미지 사용 가능 이유 또는 "저작권 유효 - 이미지 미사용")
+- 실존 인물(화가·모델)은 널리 알려진 사실만. 질병·사생활은 기록으로 확인된 것만 간단히."""
+
+ART_SYSTEM = """너는 한국 유튜브 쇼츠 '명화 이야기' 채널의 전문 작가다. 전 세계 명화와 한국 명화에 얽힌 실제 이야기를 쉽고 흥미롭게 들려준다.
+영상은 글이 위로 천천히 스크롤되는 형식이고, 중간에 그림 사진이 크게 들어간다. 시청자는 그림을 보면서 글을 읽는다.
+문체는 1~2문장 짧은 문단, 쉬운 단어, 문단 사이 빈 줄. 한 줄 40자 이내. 미술 용어는 쉬운 말로 풀어쓴다. 제목은 15자 이내로 궁금하게.
+
+""" + FACT_RULES + """
+
+""" + ART_RULES + """
+
+반드시 JSON만 출력: {"title": "제목", "story": "본문", "sources": ["출처1", "출처2"], "confidence": "high", "notes": "확인 필요한 부분", "artwork": {"title": "", "title_ko": "", "artist": "", "artist_death": 1890, "year": "", "museum": "", "pd_reason": ""}}"""
+ART_MULTI_SYSTEM = ART_SYSTEM.replace(
+    "반드시 JSON만 출력:", "같은 그림으로 서로 다른 접근(훅 방식, 강조하는 비밀, 전개 순서)의 초안 3개를 쓴다. 각 초안마다 sources/notes/artwork 포함.\n반드시 JSON만 출력: {\"drafts\": [초안1, 초안2, 초안3]} 각 초안 형식:")
+
 FACT_MULTI_SYSTEM = FACT_SYSTEM.replace(
     "반드시 JSON만 출력:", "같은 소재로 서로 다른 접근(훅 방식, 강조하는 사실, 전개 순서)의 초안 3개를 쓴다. 각 초안마다 sources/confidence/notes 포함.\n반드시 JSON만 출력: {{\"drafts\": [초안1, 초안2, 초안3]}} 각 초안 형식:")
 
-VERIFY_SYSTEM = """너는 과학·역사·음악사 팩트체커다. 올드 팝송 대본에 가사(♪ 줄)나 멜로디가 있으면 발표 연도가 1929년 이전인지 반드시 확인하고, 1930년 이후면 verdict 를 risky 로 하고 가사를 빼거나 다른 곡으로 바꾸라고 적는다. 가사 원문이 실제 가사와 맞는지도 확인한다. 아래 쇼츠 대본의 모든 사실 주장(숫자, 날짜, 이름, 장소, 인과관계)을 하나씩 점검한다.
+VERIFY_SYSTEM = """너는 과학·역사·음악사 팩트체커다. 명화 대본이면 화가 사망 연도와 제작 연도, 소장처가 맞는지 확인한다.
+올드 팝송 대본에 가사(♪ 줄)나 멜로디가 있으면 발표 연도가 1929년 이전인지 반드시 확인하고, 1930년 이후면 verdict 를 risky 로 하고 가사를 빼거나 다른 곡으로 바꾸라고 적는다. 가사 원문이 실제 가사와 맞는지도 확인한다. 아래 쇼츠 대본의 모든 사실 주장(숫자, 날짜, 이름, 장소, 인과관계)을 하나씩 점검한다.
 기준: 널리 검증된 사실=ok, 과장되거나 틀림=wrong, 논란·불확실=unsure
 틀리거나 불확실한 부분은 어떻게 고쳐야 안전한지 구체적으로 쓴다. 고친 전체 본문(corrected_story)은 원래 분량과 재미를 유지하되 틀린 부분만 바로잡는다.
 """ + KEEP_PHOTO_RULE + """ 자리표시 줄은 점검 대상이 아니다.
@@ -300,6 +335,7 @@ PHOTO_RULES = """[사진 규칙]
 - 우선순위: Wikimedia Commons(퍼블릭 도메인·CC 라이선스), NASA·NOAA·USGS·ESA 등 공공기관 공개 이미지
 - url 은 이미지 파일 주소(.jpg/.jpeg/.png). 예: https://upload.wikimedia.org/... 또는 https://commons.wikimedia.org/wiki/File:파일이름.jpg
 - 저작권이 불분명한 뉴스·블로그 사진, AI 생성 이미지, 워터마크 있는 사진은 쓰지 않는다
+- 명화 이야기면 그 그림 자체(Wikimedia Commons 의 PD-Art 파일, 화가 사후 70년 경과작만)를 첫 번째로, 그 다음 이야기에 나오는 부분의 확대 이미지나 화가 초상. 한국 그림은 국립중앙박물관·간송미술관 공개 이미지도 가능.
 - 노래 이야기면 그 곡의 옛 악보 표지(sheet music cover, 1929년 이전 출판물은 퍼블릭 도메인), 작곡가·가수의 옛 사진, 당시 공연장 사진을 고른다.
 - 그 사건·현상·장소를 실제로 보여주는 사진만 고른다. 비슷한 다른 사진 금지. 직접 열어서(WebFetch) 맞는지 확인한다
 - after: 사진이 들어갈 위치 = 본문에서 사진 바로 앞에 올 문장의 일부(원문 그대로 10~20자). 본문이 아직 없으면 그 사진이 보여주는 사실의 핵심 단어
@@ -336,6 +372,7 @@ WEB_VERIFY_BLOCK = """
 
 JUDGE_SYSTEM = """너는 유튜브 쇼츠 썰 채널의 베테랑 편집장이다. 조회수와 끝까지 보는 비율(시청 지속률)을 기준으로 초안을 심사한다.
 채점 항목(각 10점): 훅(첫 줄에서 멈추게 하는가), 전개(5~7초마다 새 정보가 있는가), 반전/결말(마지막 1~2줄의 충격·감동), 가독성(짧은 문장, 쉬운 단어), 공유욕구(댓글·공유하고 싶은가)
+명화면 artwork 를 그대로 넘기고, 화가 사후 70년이 안 된 작품에 이미지가 있으면 감점.
 올드 팝송이면: 가사나 멜로디를 쓴 초안은 1929년 이전 발표곡이어야 한다(아니면 0점). 가사 모드는 원문 줄(♪)과 해석 줄이 짝으로 되어 있는지, 해석이 노래처럼 자연스러운지 본다. polish 에는 song/melody/bpm 도 그대로 넘긴다.
 사실 기반 콘텐츠(실화·과학·자연현상)이면 '정확성'을 최우선으로 본다: 의심스럽거나 과장된 주장이 있는 초안은 크게 감점하고, polish 에서 그 부분을 안전하게 고친다.
 반드시 JSON만 출력: {"best": 가장 좋은 초안 번호(0부터), "scores": [{"total": 합계, "reason": "한 줄 이유"}, ...], "polish": {"title": "최고 초안을 다듬은 제목", "story": "최고 초안을 다듬은 전체 본문", "sources": ["사실 기반일 때 출처"], "notes": "확인 필요한 부분"}}
@@ -349,7 +386,7 @@ REVIEW_SYSTEM = """너는 유튜브 쇼츠 썰 채널의 베테랑 편집장이�
 PACKAGE_SYSTEM = """너는 유튜브 쇼츠 채널 운영 전문가다. 소설을 읽고 업로드에 필요한 문구를 만든다.
 - 제목 후보 5개: 결말을 밝히지 않고 궁금하게, 25자 이내, 이모지 0~1개
 - 설명: 2~3줄, 마지막 줄에 "다음 이야기는 구독하고 받아보세요" 류 문구
-- 해시태그 8~12개: 허구면 #쇼츠 #썰 #단편소설, 옛 노래면 #올드팝 #팝송 #노래비화 #명곡, 실화·과학이면 #쇼츠 #실화 #미스터리 #과학 #상식 등 종류와 소재 포함, 띄어쓰기로 구분
+- 해시태그 8~12개: 허구면 #쇼츠 #썰 #단편소설, 명화면 #명화 #미술 #그림이야기 #화가, 옛 노래면 #올드팝 #팝송 #노래비화 #명곡, 실화·과학이면 #쇼츠 #실화 #미스터리 #과학 #상식 등 종류와 소재 포함, 띄어쓰기로 구분
 - 고정댓글: 시청자에게 결말에 대한 의견을 묻는 한 줄 질문
 반드시 JSON만 출력: {"titles": ["..."], "description": "...", "hashtags": "#... #...", "pinned_comment": "..."}"""
 
@@ -357,8 +394,19 @@ IDEA_SYSTEM = """너는 한국 유튜브 쇼츠 채널 기획자다. (허구 썰
 조회수가 잘 나오는 소재(공감, 궁금증, 반전, 감동, 소름, 놀라움)를 골라
 첫 줄 훅이 강하게 나올 수 있는 주제를 만든다. 사실 기반 종류이면 실제로 존재하고 널리 알려진 사건·현상·사실만 고른다 (지어내지 않는다).
 각 주제는 25자 이내 한 줄로, 결말은 밝히지 않는다.
+명화면 '그림 제목 - 화가(제작 연도)' 형식, 이야기가 있는 유명 그림 위주(한국 명화 포함). 그림 이미지를 쓰려면 화가가 1955년 이전 사망이어야 하므로 그런 작품 위주.
 올드 팝송이면 '노래 제목(발표 연도) - 가수/작곡가' 형식. 소재에 '가사'가 들어가면 1929년 이전 발표곡만, '실화'면 극적인 인생을 산 가수·작곡가 위주(시대 무관).
 반드시 JSON만 출력: {"ideas": ["주제1", "주제2", ...]}"""
+
+
+def _artist_recent(artwork):
+    """화가 사후 70년 미만이면 True (그림 이미지 사용 불가)"""
+    if not isinstance(artwork, dict):
+        return False
+    try:
+        return int(str(artwork.get("artist_death", "")).strip()[:4]) >= ART_SAFE_DEATH_YEAR
+    except ValueError:
+        return False
 
 
 def cat_info(category):
@@ -370,6 +418,8 @@ def systems_for(category):
     factual, _ = cat_info(category)
     if category == SONG_CATEGORY:
         return SONG_SYSTEM, SONG_MULTI_SYSTEM
+    if category == ART_CATEGORY:
+        return ART_SYSTEM, ART_MULTI_SYSTEM
     return (FACT_SYSTEM, FACT_MULTI_SYSTEM) if factual else (STORY_SYSTEM, MULTI_SYSTEM)
 
 
@@ -862,7 +912,7 @@ def build_text_layer(title, story, s):
                 items.append((y + ph_h // 2 - fcap.size // 2, "사진을 찾을 수 없음: " + os.path.basename(path)[:24], fcap, s["accent_color"], "center"))
                 y += ph_h
             else:
-                sc = min(maxw / im.width, H * 0.36 / im.height)
+                sc = min(maxw / im.width, H * min(0.7, max(0.15, s["photo_h"])) / im.height)
                 iw, ih = max(1, int(im.width * sc)), max(1, int(im.height * sc))
                 photos.append((s["margin_x"] + (maxw - iw) // 2, y, im.resize((iw, ih), Image.LANCZOS), iw, ih))
                 y += ih
@@ -1786,6 +1836,12 @@ def write_package(path_base, title, story, pkg):
               "", "[고정댓글]", pkg.get("pinned_comment", "")]
     if pkg.get("sources"):
         lines += ["", "[출처 (설명란에 넣으면 신뢰도 상승)]"] + [f"- {x}" for x in pkg["sources"]]
+    art = pkg.get("artwork")
+    if isinstance(art, dict):
+        lines += ["", "[그림 정보 (설명란에 넣으면 좋음)]",
+                  f"- 작품: {art.get('title', '')} ({art.get('title_ko', '')}) · {art.get('artist', '')} · {art.get('year', '')}",
+                  f"- 소장: {art.get('museum', '')}" + (f" · 화가 사망 {art.get('artist_death')}" if art.get("artist_death") else ""),
+                  f"- 이미지 저작권: {art.get('pd_reason', '')}"]
     song = pkg.get("song")
     if isinstance(song, dict):
         lines += ["", "[노래 정보 (설명란에 넣으면 저작권 문의 예방)]",
@@ -1838,6 +1894,7 @@ class App(tk.Tk):
         return {"ver": 2, "model": self.model_var.get(), "category": self.cat_var.get(), "topic": self.topic_var.get(), "genre": self.genre_var.get(),
                 "sources": getattr(self, "sources", []), "notes": getattr(self, "notes", ""),
                 "song": getattr(self, "song", None), "melody": getattr(self, "melody", ""), "bpm": getattr(self, "bpm", 90),
+                "artwork": getattr(self, "artwork", None),
                 "length": self.len_var.get(), "judge": self.judge_var.get(), "theme": self.theme_var.get(),
                 "research": self.research_var.get(), "autophoto": self.autophoto_var.get(),
                 "reference": getattr(self, "reference", ""),
@@ -1865,6 +1922,7 @@ class App(tk.Tk):
         self.set_reference(c.get("reference", ""))
         self.set_sources(c.get("sources", []), c.get("notes", ""))
         self.song, self.melody, self.bpm = c.get("song"), c.get("melody", ""), c.get("bpm", 90)
+        self.artwork = c.get("artwork")
         CURRENT_MELODY["melody"], CURRENT_MELODY["bpm"] = self.melody or "", self.bpm or 90
         self.len_var.set(c.get("length", "40"))
         self.judge_var.set(bool(c.get("judge", True)))
@@ -2128,6 +2186,7 @@ class App(tk.Tk):
 
     def on_category(self, *_):
         topics = cat_info(self.cat_var.get())[1]
+        self.vars["photo_h"].set("0.5" if self.cat_var.get() == ART_CATEGORY else "0.36")
         self.genre_box.config(values=list(topics))
         self.genre_var.set(list(topics)[0])
         self.topic_box.config(values=[])
@@ -2265,6 +2324,7 @@ class App(tk.Tk):
             title, story, notes = d.get("title", ""), d.get("story", ""), d.get("notes", "")
             sources = sources or d.get("sources", [])
             song, melody, bpm = d.get("song"), d.get("melody", ""), d.get("bpm", 90)
+            artwork = d.get("artwork")
         else:
             log("초안 3개 작성 중...")
             drafts = ask_json(model, multi_sys, user).get("drafts", [])
@@ -2289,12 +2349,14 @@ class App(tk.Tk):
             song = pol.get("song") or drafts[best].get("song")
             melody = pol.get("melody") or drafts[best].get("melody", "")
             bpm = pol.get("bpm") or drafts[best].get("bpm", 90)
+            artwork = pol.get("artwork") or drafts[best].get("artwork")
         if photos:
             story = place_photos(story, photos)
-        elif factual and autophoto:
+        elif factual and autophoto and not (category == ART_CATEGORY and _artist_recent(artwork)):
             log("🔎 근거 사진 찾는 중...")
             try:
-                d = ask_json(model, PHOTO_SYSTEM, f"콘텐츠 종류: {category}\n[제목] {title}\n\n[본문]\n{story}", tools=WEB_TOOLS)
+                extra_info = ("\n[그림 정보] " + json.dumps(artwork, ensure_ascii=False)) if artwork else ""
+                d = ask_json(model, PHOTO_SYSTEM, f"콘텐츠 종류: {category}{extra_info}\n[제목] {title}\n\n[본문]\n{story}", tools=WEB_TOOLS)
                 photos = fetch_photos(d.get("photos"), media_dir, log)
                 if photos:
                     story = place_photos(story, photos)
@@ -2303,6 +2365,16 @@ class App(tk.Tk):
             story = strip_placeholders(story)
         else:
             story = strip_placeholders(story)
+        artwork = artwork if (category == ART_CATEGORY and isinstance(artwork, dict)) else None
+        if artwork:
+            recent = _artist_recent(artwork)
+            if recent and photo_credits(story):
+                story = story_text_only(story).strip()
+                notes = f"⚠ 화가 사망 {artwork.get('artist_death')}년 → 사후 70년 미만이라 그림 이미지를 뺐습니다(이야기만 사용). " + str(notes or "")
+            elif recent:
+                notes = f"화가 사망 {artwork.get('artist_death')}년 → 그림 이미지 미사용(저작권). " + str(notes or "")
+            log(f"  🖼 그림: {artwork.get('title_ko') or artwork.get('title')} - {artwork.get('artist')} ({artwork.get('year')})"
+                + (" · 이미지 미사용(저작권)" if recent else f" · 이미지 사용 가능 ({artwork.get('pd_reason', '')})"))
         song = song if isinstance(song, dict) else None
         if category == SONG_CATEGORY and song:
             try:
@@ -2322,7 +2394,7 @@ class App(tk.Tk):
         else:
             song, melody, bpm = None, "", 90
         return {"title": title, "story": story, "note": note, "sources": sources, "notes": notes, "topic": topic,
-                "song": song, "melody": melody if parse_melody(melody) else "", "bpm": bpm}
+                "song": song, "melody": melody if parse_melody(melody) else "", "bpm": bpm, "artwork": artwork}
 
     def ai_write(self):
         try:
@@ -2343,6 +2415,11 @@ class App(tk.Tk):
                 self.topic_var.set(res["topic"])
             self.set_sources(res["sources"], res["notes"])
             self.set_song(res.get("song"), res.get("melody", ""), res.get("bpm", 90))
+            self.artwork = res.get("artwork")
+            if self.artwork:
+                a = self.artwork
+                self.write_log(f"🖼 그림: {a.get('title_ko') or a.get('title')} - {a.get('artist')} ({a.get('year')}) · {a.get('museum', '')}"
+                               + (f" · {a.get('pd_reason')}" if a.get("pd_reason") else ""))
             if res["sources"]:
                 self.write_log("출처: " + " / ".join(self.sources))
             if res["notes"]:
@@ -2371,6 +2448,7 @@ class App(tk.Tk):
         self.topic_box.config(values=[])
         self.set_sources([], "")
         self.song, self.melody, self.bpm = None, "", 90
+        self.artwork = None
         CURRENT_MELODY["melody"], CURRENT_MELODY["bpm"] = "", 90
         self.set_reference("")
         self.cmd_var.set("")
@@ -2616,6 +2694,7 @@ class App(tk.Tk):
             pkg = ask_json(model, PACKAGE_SYSTEM, user)
             pkg["sources"] = sources
             pkg["song"] = getattr(self, "song", None)
+            pkg["artwork"] = getattr(self, "artwork", None)
             pkg["melody_used"] = bool(parse_melody(getattr(self, "melody", "")))
             os.makedirs(out_dir, exist_ok=True)
             base = os.path.join(out_dir, safe_name(title))
@@ -2694,6 +2773,9 @@ class App(tk.Tk):
         song = getattr(self, "song", None)
         if song and self.cat_var.get() == SONG_CATEGORY:
             warn += f"\n🎼 {song.get('title_ko') or song.get('title', '')} ({song.get('year', '?')})"
+        art = getattr(self, "artwork", None)
+        if art and self.cat_var.get() == ART_CATEGORY:
+            warn += f"\n🖼 {art.get('title_ko') or art.get('title', '')} - {art.get('artist', '')}"
         self.info.config(text=f"총 {r.duration:.1f}초 (제목카드 {r.intro:.1f} + 정지 {r.hs:.1f} + 스크롤 {r.scroll_t:.1f} + 끝 {r.he:.1f})\n"
                               f"본문 {chars}자 | 스크롤 {max(0, r.dist)}px | {r.speed:.0f}px/초{warn}\n"
                               f"배경음: {snd}{hit}" + (f" | 사진 {nph}장" if nph else ""))
@@ -2981,7 +3063,7 @@ class App(tk.Tk):
                 r.thumbnail().save(base + "_썸네일.png")
                 try:
                     pkg = ask_json(model, PACKAGE_SYSTEM, f"콘텐츠 종류: {cat}\n소재: {genre}\n[제목] {title}\n\n[본문]\n{story_text_only(story)}")
-                    pkg["sources"], pkg["notes"], pkg["song"] = sources, notes, res.get("song")
+                    pkg["sources"], pkg["notes"], pkg["song"], pkg["artwork"] = sources, notes, res.get("song"), res.get("artwork")
                     pkg["melody_used"] = bool(parse_melody(res.get("melody", "")))
                     write_package(base, title, story, pkg)
                 except Exception as e:
