@@ -1,0 +1,6 @@
+output/
+shorts_novel_config.json
+ffmpeg_log.txt
+__pycache__/
+*.mp4
+*.wav
