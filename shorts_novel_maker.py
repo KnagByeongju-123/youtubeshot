@@ -2549,27 +2549,67 @@ def tts_openai(text, voice, rate_pct, style, out_mp3, key, model):
         f.write(data)
 
 
+GEMINI_TTS_DEFAULT = "gemini-2.5-flash-preview-tts"
+
+
+def gemini_tts_model(model):
+    """음성은 이름에 'tts'가 들어간 모델만 가능 → 글 모델 이름이 들어오면 음성 모델로 바꿈"""
+    m = (model or "").strip()
+    if not m:
+        return GEMINI_TTS_DEFAULT
+    if "tts" not in m.lower():
+        return "gemini-2.5-pro-preview-tts" if "pro" in m.lower() else GEMINI_TTS_DEFAULT
+    return m
+
+
+def _gemini_audio_part(out):
+    """응답의 모든 후보·parts 를 돌며 소리(inlineData) 찾기 → (pcm bytes, 샘플레이트) 또는 None"""
+    import base64
+    for cand in (out or {}).get("candidates") or []:
+        for p_ in ((cand or {}).get("content") or {}).get("parts") or []:
+            d = (p_ or {}).get("inlineData") or (p_ or {}).get("inline_data")
+            if d and d.get("data"):
+                mime = d.get("mimeType") or d.get("mime_type") or ""
+                mr = re.search(r"rate=(\d+)", mime)
+                return base64.b64decode(d["data"]), (int(mr.group(1)) if mr else 24000)
+    return None
+
+
 def tts_gemini(text, voice, rate_pct, style, out_wav, key, model):
-    """Gemini 음성 API (연기 지시를 글로 줌). 결과는 24kHz PCM → WAV"""
-    import base64, wave
+    """Gemini 음성 API (연기 지시를 글로 줌). 결과는 24kHz 16bit PCM → WAV"""
+    import wave
     hint = (style + " ") if style else ""
     if rate_pct >= 15:
         hint += "조금 빠르게 읽어줘. "
     elif rate_pct <= -15:
         hint += "조금 천천히 읽어줘. "
     prompt = (hint + "다음 문장을 읽어줘: " + text) if hint else text
-    m = model or "gemini-2.5-flash-preview-tts"
-    out = _http_json(f"https://generativelanguage.googleapis.com/v1beta/models/{m}:generateContent",
-                     {"contents": [{"parts": [{"text": prompt}]}],
-                      "generationConfig": {"responseModalities": ["AUDIO"],
-                                           "speechConfig": {"voiceConfig": {"prebuiltVoiceConfig": {"voiceName": voice}}}}}, {"x-goog-api-key": key},
-                     who="Gemini 음성")
-    try:
-        part = out["candidates"][0]["content"]["parts"][0]["inlineData"]
-        pcm = base64.b64decode(part["data"])
-        rate = int(re.search(r"rate=(\d+)", part.get("mimeType", "")).group(1)) if "rate=" in part.get("mimeType", "") else 24000
-    except (KeyError, IndexError, TypeError) as e:
-        raise RuntimeError("Gemini 음성 응답 형식 오류: " + str(out)[:200])
+    m = gemini_tts_model(model)
+    body = {"contents": [{"parts": [{"text": prompt}]}],
+            "generationConfig": {"responseModalities": ["AUDIO"],
+                                 "speechConfig": {"voiceConfig": {"prebuiltVoiceConfig": {"voiceName": voice}}}}}
+    got, out = None, None
+    for attempt in range(2):   # 가끔 소리 없이 끝나는 응답이 와서 한 번 더 시도
+        out = _http_json(f"https://generativelanguage.googleapis.com/v1beta/models/{m}:generateContent",
+                         body, {"x-goog-api-key": key}, who="Gemini 음성")
+        got = _gemini_audio_part(out)
+        if got and len(got[0]) > 200:
+            break
+        if attempt == 0:
+            time.sleep(1.0)
+            body["contents"][0]["parts"][0]["text"] = "다음 문장을 그대로 소리 내어 읽어줘: " + text
+    if not got or len(got[0]) <= 200:
+        reason = ""
+        try:
+            c0 = (out.get("candidates") or [{}])[0]
+            reason = c0.get("finishReason", "")
+            if (out.get("promptFeedback") or {}).get("blockReason"):
+                reason = "차단됨: " + out["promptFeedback"]["blockReason"]
+        except Exception:
+            pass
+        raise APIError(f"Gemini 음성이 소리를 돌려주지 않았습니다{(' (' + reason + ')') if reason else ''}. 다른 성우를 고르거나 연기 지시를 짧게 해보세요.",
+                       "응답 앞부분: " + str(out)[:300])
+    pcm, rate = got
     with wave.open(out_wav, "wb") as w:
         w.setnchannels(1)
         w.setsampwidth(2)
