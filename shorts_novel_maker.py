@@ -2939,8 +2939,25 @@ def midi_hz(m):
     return 440.0 * 2 ** ((m - 69) / 12)
 
 
+def _fast_len(n):
+    """FFT가 빠른 길이(2·3·5의 곱) 중 n 이상인 가장 작은 수"""
+    best = 1 << int(np.ceil(np.log2(max(1, n))))
+    p5 = 1
+    while p5 < best:
+        p35 = p5
+        while p35 < best:
+            q = p35
+            while q < n:
+                q *= 2
+            best = min(best, q)
+            p35 *= 3
+        p5 *= 5
+    return best
+
+
 def colored_noise(n, rng, power=1.0):
     """power 0=백색, 1=핑크(부드러운 쉬익), 2=브라운(낮은 웅웅)"""
+    n0, n = n, _fast_len(n)
     X = np.fft.rfft(rng.standard_normal(n))
     f = np.fft.rfftfreq(n, 1 / SR)
     low = f < 20
@@ -2948,19 +2965,20 @@ def colored_noise(n, rng, power=1.0):
     X /= f ** (power / 2)
     if power >= 2:
         X[low] = 0
-    return _norm(np.fft.irfft(X, n))
+    return _norm(np.fft.irfft(X, n)[:n0])
 
 
 def band(x, lo=None, hi=None):
     """주파수 거르기 (lo 이하·hi 이상을 부드럽게 줄임)"""
-    X = np.fft.rfft(x)
-    f = np.fft.rfftfreq(len(x), 1 / SR)
+    nf = _fast_len(len(x))
+    X = np.fft.rfft(x, nf)
+    f = np.fft.rfftfreq(nf, 1 / SR)
     m = np.ones_like(f)
     if hi:
         m /= 1 + (f / hi) ** 4
     if lo:
         m /= 1 + (lo / np.maximum(f, 1e-3)) ** 4
-    return np.fft.irfft(X * m, len(x)).astype(np.float32)
+    return np.fft.irfft(X * m, nf)[:len(x)].astype(np.float32)
 
 
 def smooth_lfo(n, sec, rng, lo=0.0, hi=1.0):
@@ -4137,6 +4155,19 @@ MUSIC_PRESETS = {   # 이름: 설정 (gen=생성 방식, title=기본 제목, de
                            tags="#자장가 #오르골 #아기수면 #작은별 #태교음악 #수면음악", desc="반짝반짝 작은 별 오르골 연주 + 은은한 패드",
                            overlay="반딧불", colors=("#0A0E24", "#26305A"),
                            prompt="a dreamy night sky full of twinkling stars above a small sleeping town, soft pastel blue and gold, storybook illustration, no people"),
+    "카페 재즈 · 피아노 트리오": dict(gen="jazz", cafe=False, title="카페에서 듣는 잔잔한 재즈 ☕ 피아노 트리오 플레이리스트",
+                             tags="#재즈 #카페음악 #재즈피아노 #jazz #cafemusic #매장음악 #노동요 #공부음악",
+                             desc="스윙 리듬의 피아노 트리오 - 걸어가는 콘트라베이스, 브러시 드럼, 부드러운 재즈 피아노", overlay="먼지 빛",
+                             colors=("#1A120C", "#3E2A1C"),
+                             prompt="a cozy jazz cafe interior at evening, warm amber lights, a grand piano and upright bass in the corner, coffee cups on wooden tables, rain on the window, film photography look, no people"),
+    "카페 재즈 + 카페 소리": dict(gen="jazz", cafe=True, title="재즈 흐르는 카페 ☕ 웅성거림과 커피잔 소리 | 카페 ASMR",
+                            tags="#카페ASMR #재즈 #카페음악 #백색소음 #공부음악 #cafeambience #jazz",
+                            desc="잔잔한 재즈 트리오 + 카페 웅성거림·커피잔 소리 (집중·공부용 카페 분위기)", overlay="먼지 빛",
+                            colors=("#1A140E", "#45301E"),
+                            prompt="a busy but calm cafe with large windows, latte on a wooden table in the foreground, warm bokeh lights, autumn street outside, cozy atmosphere, no faces"),
+    "보사노바 카페": dict(gen="bossa", title="햇살 좋은 오후의 보사노바 🌿 카페 음악", tags="#보사노바 #카페음악 #bossanova #매장음악 #브런치 #힐링음악",
+                     desc="가볍게 흔들리는 보사노바 기타 리듬, 셰이커, 부드러운 피아노 멜로디", overlay="먼지 빛", colors=("#1E1A10", "#4A3E22"),
+                     prompt="a sunny brunch cafe terrace with plants and a acoustic guitar leaning on a chair, coffee and croissant, soft afternoon light, warm summer mood, no people"),
     "우주 앰비언트": dict(gen="space", title="우주를 떠다니는 앰비언트 음악 🌌 휴식·수면", tags="#앰비언트 #우주 #힐링음악 #수면음악 #명상",
                      desc="넓게 퍼지는 패드와 반짝이는 종소리", overlay="먼지 빛", colors=("#03040C", "#141A3A"),
                      prompt="a vast calm nebula with distant stars and a small planet, deep blue and violet, cinematic space art, no text"),
@@ -4227,6 +4258,12 @@ def _music_setup(name, seed):
     elif P["gen"] in ("piano", "rain_piano"):
         P["bpm"] = 64.0 if P["gen"] == "piano" else 56.0
         P["bar"] = 4 * 60 / P["bpm"]
+    elif P["gen"] == "jazz":
+        P["bpm"] = float(rng.uniform(92, 118))
+        P["bar"] = 4 * 60 / P["bpm"]
+    elif P["gen"] == "bossa":
+        P["bpm"] = float(rng.uniform(124, 138))
+        P["bar"] = 4 * 60 / P["bpm"]
     elif P["gen"] == "lullaby":
         notes = parse_melody(P["melody"])
         beat = 60 / P["bpm"]
@@ -4241,6 +4278,47 @@ def _music_setup(name, seed):
 LOFI_PROG = [[50, 53, 57, 60, 64], [43, 53, 57, 59, 64], [48, 52, 55, 59, 62], [45, 55, 59, 60, 64]]   # ii9 V13 Imaj9 vi9
 PIANO_PROG = {"warm": [[48, 55, 64, 67, 71], [53, 57, 64, 69, 72], [45, 52, 60, 64, 67], [43, 50, 59, 62, 67]],
               "sad": [[45, 52, 60, 64, 67], [41, 48, 57, 60, 65], [48, 55, 64, 67, 72], [43, 50, 59, 62, 67]]}
+
+
+JAZZ_FORM = [("maj7", 0), ("7", 9), ("m7", 2), ("7", 7), ("m7", 4), ("7", 9), ("m7", 2), ("7", 7)]   # I VI ii V iii VI ii V
+BOSSA_FORM = [("maj7", 0), ("maj7", 0), ("7", 2), ("7", 2), ("m7", 2), ("7", 7), ("maj7", 0), ("7", 7)]   # I II7 ii V
+CHORD_TONES = {"maj7": [0, 4, 7, 11, 14], "7": [0, 4, 7, 10, 14], "m7": [0, 3, 7, 10, 14]}
+
+
+def upright_bass(freq, dur=0.6, vel=0.8):
+    t = np.arange(int(dur * SR)) / SR
+    s = np.sin(2 * np.pi * freq * t) + 0.35 * np.sin(4 * np.pi * freq * t) * np.exp(-t / 0.12) + 0.1 * np.sin(6 * np.pi * freq * t) * np.exp(-t / 0.05)
+    return (s * np.exp(-t / 0.45) * np.minimum(1, t / 0.006) * np.clip((dur - t) / 0.05, 0, 1) * vel * 0.6).astype(np.float32)
+
+
+def ride_hit(rng, vel=0.5):
+    t = np.arange(int(0.9 * SR)) / SR
+    nz = band(rng.standard_normal(len(t)).astype(np.float32), lo=4000, hi=12000)
+    ping = sum(np.sin(2 * np.pi * f * t) for f in (3150, 4720, 6380)) / 3
+    return ((_norm(nz) * 0.5 + ping * 0.25) * np.exp(-t / 0.35) * np.minimum(1, t / 0.001) * vel).astype(np.float32)
+
+
+def brush(rng, vel=0.3, dur=0.28):
+    t = np.arange(int(dur * SR)) / SR
+    nz = band(rng.standard_normal(len(t)).astype(np.float32), lo=1500, hi=7000)
+    return (_norm(nz) * np.sin(np.pi * t / dur) ** 1.5 * vel).astype(np.float32)
+
+
+def cafe_bed(L, rng):
+    """카페 소리: 웅성거림 + 가끔 커피잔·숟가락 소리"""
+    mur = []
+    for _ in range(2):
+        x = band(colored_noise(L, rng, 1.0), lo=250, hi=2600)
+        mod = smooth_lfo(L, 0.18, rng, 0.5, 1.0) * smooth_lfo(L, 1.7, rng, 0.7, 1.0)
+        mur.append(_norm(x) * mod * 0.55 + _norm(band(colored_noise(L, rng, 2.0), hi=200)) * 0.2)
+    bed = np.stack(mur, 1)
+    pos = rng.uniform(1, 5)
+    while pos < L / SR - 2:
+        f0 = rng.uniform(2400, 4200)
+        clink = (bell(f0, 0.8) * 0.12 + bell(f0 * 1.47, 0.8) * 0.06).astype(np.float32)
+        place(bed, clink, pos, rng.uniform(0.15, 0.85))
+        pos += rng.exponential(5.0) + 1.0
+    return bed
 
 
 def _drum(kind, rng):
@@ -4387,6 +4465,76 @@ def music_chunk(P, n, tail, rng, ci):
         fc, fb = P["carrier"], P["beat"]
         tone = np.stack([np.sin(2 * np.pi * fc * t), np.sin(2 * np.pi * (fc + fb) * t)], 1).astype(np.float32) * 0.3
         bed = tone + gen_pad(L, rng, "space", 14, 800) * 0.35 + np.stack([_norm(band(colored_noise(L, rng, 1.0), hi=1200)) for _ in range(2)], 1) * 0.05
+    elif g == "jazz":
+        beat = 60 / P["bpm"]
+        sw = 0.66          # 스윙 (셋잇단 느낌)
+        bars = int(round(tsec / P["bar"]))
+        root0 = 48 + P["key"]
+        bass, piano, drums = (np.zeros((L, 2), np.float32) for _ in range(3))
+        for b in range(bars):
+            bt = b * P["bar"]
+            gb = ci * bars + b
+            q, r_ = JAZZ_FORM[gb % 8]
+            nq, nr = JAZZ_FORM[(gb + 1) % 8]
+            root = root0 - 12 + r_
+            tones = CHORD_TONES[q]
+            nxt = root0 - 12 + nr
+            walk = [root, root + rng.choice(tones[1:3]), root + rng.choice([7, 12, tones[1]]), nxt + rng.choice([-1, 1, 2])]
+            for k, m in enumerate(walk):
+                place(bass, upright_bass(midi_hz(m), beat * 0.95, 0.85 if k == 0 else 0.7), bt + k * beat + rng.uniform(0, 0.01), 0.45)
+            for k in range(4):   # 라이드 심벌 '칭 칭-가 칭 칭-가'
+                place(drums, ride_hit(rng, 0.32 if k % 2 == 0 else 0.4), bt + k * beat, 0.62)
+                if k % 2 == 1:
+                    place(drums, ride_hit(rng, 0.22), bt + k * beat + sw * beat, 0.62)
+                    place(drums, brush(rng, 0.22), bt + k * beat, 0.45)
+            voic = [root0 + r_ + tones[1], root0 + r_ + tones[3], root0 + r_ + tones[4]]   # 루트 없는 보이싱(3·7·9)
+            for hit in ([1 + sw] if rng.random() < 0.6 else [0]) + ([3] if rng.random() < 0.5 else []):
+                for j, m in enumerate(voic):
+                    place(piano, piano_note(midi_hz(m), beat * 1.6, rng.uniform(0.18, 0.26)), bt + hit * beat + j * 0.008, 0.4 + 0.08 * j)
+            if (gb // 2) % 2 == 1 and rng.random() < 0.85:   # 2마디씩 즉흥 멜로디
+                scale = [root0 + 12 + r_ + x for x in tones] + [root0 + 24 + r_ + tones[0]]
+                tt, idx = bt, int(rng.integers(len(scale)))
+                while tt < bt + P["bar"] - 0.1:
+                    if rng.random() < 0.8:
+                        place(piano, piano_note(midi_hz(scale[idx]), 1.0, rng.uniform(0.22, 0.32), 1.3), tt, 0.55)
+                    idx = int(np.clip(idx + rng.choice([-2, -1, 1, 1, 2]), 0, len(scale) - 1))
+                    step = sw * beat if ((tt - bt) / beat) % 1 < 0.1 else (1 - sw) * beat
+                    tt += step if rng.random() < 0.75 else beat
+        ev = reverb(piano, rng, 1.6, 0.25) + reverb(bass, rng, 1.0, 0.12) * 1.1 + reverb(drums, rng, 1.4, 0.2) * 0.8
+        ev = np.stack([band(ev[:, c], hi=9000) for c in range(2)], 1)
+        if P.get("cafe"):
+            bed = cafe_bed(L, rng) * 0.55
+    elif g == "bossa":
+        beat = 60 / P["bpm"]
+        bars = int(round(tsec / P["bar"]))
+        root0 = 48 + P["key"]
+        gtr, perc, mel = (np.zeros((L, 2), np.float32) for _ in range(3))
+        shaker = brush(rng, 0.12, 0.08)
+        for b in range(bars):
+            bt = b * P["bar"]
+            gb = ci * bars + b
+            q, r_ = BOSSA_FORM[gb % 8]
+            tones = CHORD_TONES[q]
+            root = root0 - 12 + r_
+            for k, m in ((0, root), (1.5, root + 7), (2, root), (3.5, root + 7)):   # 엄지 베이스
+                place(gtr, pluck(midi_hz(m), 1.0) * 0.6, bt + k * beat, 0.45)
+            ch = [root0 + r_ + x for x in (tones[1], tones[2], tones[3], tones[4])]
+            for e in ((0, 1.5, 2.5) if gb % 2 == 0 else (0.5, 1.5, 3)):   # 보사노바 손가락 리듬
+                for j, m in enumerate(ch):
+                    place(gtr, pluck(midi_hz(m), 0.9) * 0.28, bt + e * beat + j * 0.006, 0.55)
+            for e in range(8):
+                place(perc, shaker * (1.2 if e % 2 else 0.8), bt + e * beat / 2, 0.68)
+            for k in ((0, 1.5, 3) if gb % 2 == 0 else (1, 2.5)):   # 림 클릭(클라베)
+                tt_ = np.arange(int(0.05 * SR)) / SR
+                place(perc, (np.sin(2 * np.pi * 1700 * tt_) * np.exp(-tt_ / 0.01) * 0.25).astype(np.float32), bt + k * beat, 0.4)
+            if (gb // 4) % 2 == 1 and rng.random() < 0.8:
+                scale = [root0 + 12 + r_ + x for x in (0, 2, 4, 7, 9, 12)]
+                tt = bt + rng.choice([0, 0.5]) * beat
+                while tt < bt + P["bar"] - 0.2:
+                    place(mel, piano_note(midi_hz(rng.choice(scale)), 1.4, rng.uniform(0.2, 0.3), 1.2), tt, 0.5)
+                    tt += rng.choice([0.5, 1, 1, 1.5]) * beat
+        ev = reverb(gtr, rng, 1.4, 0.18) + reverb(mel, rng, 2.0, 0.3) + perc * 0.8
+        ev = np.stack([band(ev[:, c], hi=10000) for c in range(2)], 1)
     elif g == "lullaby":
         beat = 60 / P["bpm"]
         loop = P["loop"]
