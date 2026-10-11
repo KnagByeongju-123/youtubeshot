@@ -79,7 +79,33 @@ TTS_VOICES = {
     "인준 (남성, 안정)": "ko-KR-InJoonNeural",
     "현수 (남성, 자연스러움)": "ko-KR-HyunsuMultilingualNeural",
     "윈도우 내장 음성": "sapi",
+    "Aria (영어 여성)": "en-US-AriaNeural",
+    "Guy (영어 남성)": "en-US-GuyNeural",
+    "Nanami (일본어 여성)": "ja-JP-NanamiNeural",
+    "Keita (일본어 남성)": "ja-JP-KeitaNeural",
 }
+
+LANGS = {   # 코드: (이름, 기본 목소리, 마무리 문구, 파일 꼬리표)
+    "ko": ("한국어", "선히 (여성, 차분)", "구독하면 다음 이야기가 이어집니다", ""),
+    "en": ("영어", "Aria (영어 여성)", "Subscribe for the next story", "_EN"),
+    "ja": ("일본어", "Nanami (일본어 여성)", "次の話はチャンネル登録で", "_JA"),
+}
+
+
+def find_font_lang(lang, bold=False):
+    """언어별 글꼴 (일본어는 가나·한자가 있는 글꼴 필요)"""
+    if lang == "ja":
+        for p_ in ([r"C:\Windows\Fonts\YuGothB.ttc", r"C:\Windows\Fonts\meiryob.ttc"] if bold else []) + [
+                r"C:\Windows\Fonts\YuGothM.ttc", r"C:\Windows\Fonts\meiryo.ttc", r"C:\Windows\Fonts\msgothic.ttc",
+                "/System/Library/Fonts/ヒラギノ角ゴシック W4.ttc", "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc"]:
+            if os.path.exists(p_):
+                return p_
+    if lang == "en":
+        for p_ in ([r"C:\Windows\Fonts\segoeuib.ttf", r"C:\Windows\Fonts\arialbd.ttf"] if bold else []) + [
+                r"C:\Windows\Fonts\segoeui.ttf", r"C:\Windows\Fonts\arial.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"]:
+            if os.path.exists(p_):
+                return p_
+    return ""
 
 # 자체 합성 배경음 스타일 (아래 SOUND_STYLES 와 이름이 같아야 함)
 SOUND_STYLE_NAMES = ["노래 멜로디(오르골)", "잔잔한 패드", "슬픈 패드", "감성 오르골", "밝은 오르골", "긴장 펄스", "어두운 드론",
@@ -153,6 +179,12 @@ FIELDS = [
     ("나레이션", "narr_gap", "문단 사이 쉼(초)", "float", 0.5),
     ("나레이션", "narr_photo_pause", "사진 보는 시간(초)", "float", 1.5),
     ("나레이션", "narr_duck", "말할 때 음악 크기(0~1)", "float", 0.35),
+    ("번역", "auto_langs", "MP4 만들 때 다른 언어도", "choice:안 함,영어,일본어,영어+일본어", "안 함"),
+    ("번역", "trans_engine", "번역 AI", "choice:자동(키 있으면 ChatGPT→Gemini→Claude),Claude,ChatGPT,Gemini", "자동(키 있으면 ChatGPT→Gemini→Claude)"),
+    ("번역", "openai_key", "ChatGPT API 키", "secret", ""),
+    ("번역", "openai_model", "ChatGPT 모델", "str", "gpt-4o-mini"),
+    ("번역", "gemini_key", "Gemini API 키", "secret", ""),
+    ("번역", "gemini_model", "Gemini 모델", "str", "gemini-1.5-flash"),
     ("소리", "bgm_mode", "배경음", "choice:자동생성,파일,없음", "자동생성"),
     ("소리", "bgm_style", "배경음 스타일", "choice:" + ",".join(["자동(소재별)"] + SOUND_STYLE_NAMES), "자동(소재별)"),
     ("소리", "bgm_volume", "배경음 볼륨(0~2)", "float", 0.5),
@@ -164,7 +196,7 @@ FIELDS = [
 FTYPE = {k: t for _, k, _, t, _ in FIELDS}
 LABEL = {k: l for _, k, l, _, _ in FIELDS}
 DEFAULTS = {k: v for _, k, _, _, v in FIELDS}
-FILE_KEYS = {"font_path", "title_font_path", "bg_image", "bgm_path", "out_dir", "safe_guide"}
+FILE_KEYS = {"font_path", "title_font_path", "bg_image", "bgm_path", "out_dir", "safe_guide", "openai_key", "gemini_key"}
 
 # 테마 프리셋 (장르에 맞는 색·분위기)
 THEMES = {
@@ -474,6 +506,18 @@ LONGFORM_SYSTEM = """너는 유튜브 롱폼(8~15분) 채널의 구성작가다.
 반드시 JSON만 출력: {"title": "전체 제목", "opening": "오프닝", "closing": "클로징", "chapter_titles": ["..."]}"""
 
 
+TRANSLATE_SYSTEM = """You are a professional localizer for YouTube Shorts scripts. Translate the Korean script into {lang_name} so that it reads like a native-written viral short — natural, punchy, same emotional beats — not a literal translation.
+Rules:
+- Keep the exact paragraph structure: one paragraph per block, blank line between blocks. Same number of blocks, same order.
+- Lines that start with "[사진:" (photo lines) must be copied EXACTLY as-is, unchanged.
+- Lines that start with "## " are chapter titles: keep "## " and translate the title. Keep a leading number like "3. " if present.
+- Lines that start with "♪ " are original song lyrics in their original language: copy them unchanged. Translate only the explanation line below each.
+- Keep names, years and numbers accurate. Use the {lang_name} spelling for proper nouns.
+- Keep each line short enough for a phone screen (about 45 characters in English, 25 characters in Japanese per line is ideal).
+- The hook (first line) must stop a scroller; the last line should invite comments.
+Output JSON only: {{"title": "translated title (max 40 chars)", "story": "translated script", "titles": ["5 alternative upload titles"], "description": "2-3 line upload description", "hashtags": "#tag1 #tag2 ... (8-12)", "pinned_comment": "one-line question for viewers"}}"""
+
+
 def command_system():
     keys = "\n".join(f"- {k}: {LABEL[k]} ({FTYPE[k]})" for k in DEFAULTS if k not in FILE_KEYS)
     return f"""너는 유튜브 쇼츠 단편소설 스크롤 영상 편집 도우미다.
@@ -599,6 +643,70 @@ def ask_claude(model, system, user, tools=None, timeout=None):
 
 def ask_json(model, system, user, tools=None, timeout=None):
     return parse_json(ask_claude(model, system, user, tools, timeout))
+
+
+def _http_json(url, payload, headers, timeout=180):
+    import urllib.request, urllib.error
+    req = urllib.request.Request(url, data=json.dumps(payload).encode("utf-8"),
+                                 headers={"Content-Type": "application/json", **headers}, method="POST")
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            return json.loads(r.read().decode("utf-8"))
+    except urllib.error.HTTPError as e:
+        body = e.read().decode("utf-8", "ignore")[:300]
+        raise RuntimeError(f"HTTP {e.code}: {body}")
+
+
+def ask_openai(key, model, system, user):
+    """ChatGPT API (채팅 기록에 남지 않음)"""
+    out = _http_json("https://api.openai.com/v1/chat/completions",
+                     {"model": model or "gpt-4o-mini", "temperature": 0.4,
+                      "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}]},
+                     {"Authorization": "Bearer " + key})
+    return out["choices"][0]["message"]["content"]
+
+
+def ask_gemini(key, model, system, user):
+    """Gemini API"""
+    m = model or "gemini-1.5-flash"
+    out = _http_json(f"https://generativelanguage.googleapis.com/v1beta/models/{m}:generateContent?key={key}",
+                     {"system_instruction": {"parts": [{"text": system}]},
+                      "contents": [{"role": "user", "parts": [{"text": user}]}],
+                      "generationConfig": {"temperature": 0.4}}, {})
+    return out["candidates"][0]["content"]["parts"][0]["text"]
+
+
+def pick_engine(s):
+    """번역에 쓸 AI 고르기 → ('chatgpt'|'gemini'|'claude', 설명)"""
+    want = s.get("trans_engine", "")
+    ok_key = (s.get("openai_key") or os.environ.get("OPENAI_API_KEY", "")).strip()
+    gk = (s.get("gemini_key") or os.environ.get("GEMINI_API_KEY", "")).strip()
+    if want == "ChatGPT":
+        if not ok_key:
+            raise RuntimeError("ChatGPT API 키가 없습니다. 번역 탭에 키를 넣거나 OPENAI_API_KEY 환경변수를 설정하세요.")
+        return "chatgpt", "ChatGPT " + (s.get("openai_model") or "gpt-4o-mini")
+    if want == "Gemini":
+        if not gk:
+            raise RuntimeError("Gemini API 키가 없습니다. 번역 탭에 키를 넣거나 GEMINI_API_KEY 환경변수를 설정하세요.")
+        return "gemini", "Gemini " + (s.get("gemini_model") or "gemini-1.5-flash")
+    if want == "Claude":
+        return "claude", "Claude"
+    if ok_key:
+        return "chatgpt", "ChatGPT " + (s.get("openai_model") or "gpt-4o-mini")
+    if gk:
+        return "gemini", "Gemini " + (s.get("gemini_model") or "gemini-1.5-flash")
+    return "claude", "Claude"
+
+
+def ask_engine_json(s, claude_model, system, user):
+    eng, _ = pick_engine(s)
+    if eng == "chatgpt":
+        key = (s.get("openai_key") or os.environ.get("OPENAI_API_KEY", "")).strip()
+        return parse_json(ask_openai(key, s.get("openai_model"), system, user))
+    if eng == "gemini":
+        key = (s.get("gemini_key") or os.environ.get("GEMINI_API_KEY", "")).strip()
+        return parse_json(ask_gemini(key, s.get("gemini_model"), system, user))
+    return ask_json(claude_model, system, user)
 
 
 def check_claude():
@@ -2506,6 +2614,7 @@ class App(tk.Tk):
         ttk.Button(s4, text="MP4 만들기", command=self.make_mp4).pack(side="left", padx=6)
         ttk.Button(s4, text="연속 제작(여러 편 자동)", command=self.batch).pack(side="left")
         ttk.Button(s4, text="📺 롱폼 만들기(챕터 묶음)", command=self.longform).pack(side="left", padx=(6, 0))
+        ttk.Button(s4, text="🌐 영어·일본어 버전", command=self.lang_versions_dialog).pack(side="left", padx=(6, 0))
         ttk.Button(s4, text="취소", command=self.cancel.set).pack(side="left", padx=6)
         ttk.Button(s4, text="저장 폴더 열기", command=self.open_folder).pack(side="left")
         self.prog = ttk.Progressbar(s4, length=220)
@@ -2579,6 +2688,8 @@ class App(tk.Tk):
                 ttk.Button(cell, text="x", width=2, command=lambda: v.set("")).pack(side="left")
         elif t == "str":
             ttk.Entry(cell, textvariable=v, width=28).pack(side="left")
+        elif t == "secret":
+            ttk.Entry(cell, textvariable=v, width=28, show="*").pack(side="left")
         else:
             ttk.Entry(cell, textvariable=v, width=8).pack(side="left")
 
@@ -3659,6 +3770,10 @@ class App(tk.Tk):
             if os.path.exists(base + "_타임스탬프.txt"):
                 self.write_log("  📑 챕터 타임스탬프 저장: " + base + "_타임스탬프.txt (설명란에 붙여넣으면 챕터로 표시됨)")
             self.save_cfg()
+            auto = s.get("auto_langs", "안 함")
+            if auto != "안 함":
+                langs = [c for c, nm in (("en", "영어"), ("ja", "일본어")) if nm in auto]
+                self.after(300, lambda: self.make_lang_versions(langs, True))
         self.run_bg("영상 만드는 중...", job, done)
 
     def batch(self):
@@ -3735,6 +3850,123 @@ class App(tk.Tk):
         self.write_log(f"연속 제작 시작: {n}편, {cat} · {genre}, {sec:.0f}초" + (" · 웹 조사" if research else "")
                        + (" · 근거 사진" if factual and autophoto else "") + (" · 사실 검증" if factual else ""))
         self.run_bg("연속 제작 중...", job, done)
+
+    def lang_versions_dialog(self):
+        if not story_text_only(self.get_story()).strip():
+            messagebox.showinfo("다른 언어 버전", "먼저 대본을 만들거나 입력하세요.")
+            return
+        dlg = tk.Toplevel(self)
+        dlg.title("다른 언어 버전 만들기")
+        dlg.transient(self)
+        dlg.grab_set()
+        f = ttk.Frame(dlg, padding=12)
+        f.pack(fill="both", expand=True)
+        s = self.get_settings()
+        try:
+            _, eng_name = pick_engine(s)
+        except RuntimeError as e:
+            eng_name = "오류: " + str(e)[:40]
+        ttk.Label(f, text=f"번역 AI: {eng_name}  (번역 탭에서 바꿀 수 있음 · API 방식이라 채팅 기록에 남지 않음)", foreground="gray").grid(row=0, column=0, columnspan=2, sticky="w")
+        en, ja = tk.BooleanVar(value=True), tk.BooleanVar(value=True)
+        ttk.Checkbutton(f, text="영어 (English) — 나레이션: Aria", variable=en).grid(row=1, column=0, sticky="w", pady=(8, 0))
+        ttk.Checkbutton(f, text="일본어 (日本語) — 나레이션: Nanami", variable=ja).grid(row=2, column=0, sticky="w")
+        mp4 = tk.BooleanVar(value=True)
+        ttk.Checkbutton(f, text="번역 후 MP4까지 바로 만들기 (썸네일·업로드 문구 포함)", variable=mp4).grid(row=3, column=0, sticky="w", pady=(8, 0))
+        ttk.Label(f, text="원본(한국어) 대본과 설정은 그대로 두고, 언어별 프로젝트(json)·MP4를 따로 저장합니다.", foreground="gray").grid(row=4, column=0, columnspan=2, sticky="w", pady=(8, 0))
+        res = {}
+
+        def ok():
+            res["langs"] = [c for c, v in (("en", en.get()), ("ja", ja.get())) if v]
+            res["mp4"] = mp4.get()
+            dlg.destroy()
+        bf = ttk.Frame(f)
+        bf.grid(row=5, column=0, columnspan=2, sticky="e", pady=(10, 0))
+        ttk.Button(bf, text="취소", command=dlg.destroy).pack(side="right")
+        ttk.Button(bf, text="만들기", command=ok).pack(side="right", padx=6)
+        self.wait_window(dlg)
+        if res.get("langs"):
+            self.make_lang_versions(res["langs"], res["mp4"])
+
+    def make_lang_versions(self, langs, make_mp4=True, after=None):
+        """영어·일본어 버전: 번역 → 언어별 프로젝트 저장 → (선택) MP4·썸네일·업로드 문구"""
+        s = self.get_settings()
+        try:
+            pick_engine(s)
+        except RuntimeError as e:
+            self.on_err(e)
+            return
+        model, title, story = self.model_var.get().strip(), self.title_var.get(), self.get_story()
+        cat, genre = self.cat_var.get(), self.genre_var.get()
+        style = resolve_style(s, genre)
+        if s["bgm_mode"] == "자동생성" and s["bgm_seed"] == 0:
+            s["bgm_seed"] = int(np.random.default_rng().integers(1, 100000))
+            self.vars["bgm_seed"].set(str(s["bgm_seed"]))
+        proj = self.project_dict()
+        log = self.log_bg
+        melody = dict(CURRENT_MELODY)
+
+        def job():
+            done_files = []
+            for code in langs:
+                if self.cancel.is_set():
+                    raise RuntimeError("취소됨")
+                name, voice, outro, tag = LANGS[code]
+                log(f"🌐 {name} 번역 중... ({pick_engine(s)[1]})")
+                sysmsg = TRANSLATE_SYSTEM.format(lang_name={"en": "English", "ja": "Japanese"}[code])
+                d = ask_engine_json(s, model, sysmsg, f"[Category] {cat} / {genre}\n[Title] {title}\n\n[Script]\n{story}")
+                t_title, t_story = str(d.get("title") or title), str(d.get("story") or "")
+                if not t_story.strip():
+                    raise RuntimeError(f"{name} 번역 결과가 비어 있습니다")
+                # 사진 줄은 원본 그대로 되살리기 (혹시 바뀌었을 때)
+                orig_media = [l for l in story.split("\n") if parse_media(l)]
+                got_media = [l for l in t_story.split("\n") if parse_media(l)]
+                if len(got_media) == len(orig_media):
+                    it = iter(orig_media)      # 번역 AI가 사진 줄을 조금 바꿨어도 원본으로 되돌림
+                    t_story = "\n".join(next(it) if parse_media(l) else l for l in t_story.split("\n"))
+                else:
+                    t_story = "\n\n".join(p for p in split_paras(t_story) if not parse_media(p))
+                    for mk in orig_media:
+                        t_story = "\n\n".join(insert_photo_near(split_paras(t_story), mk, ""))
+                ls = dict(s)
+                ls["outro_text"] = outro
+                ls["narr_voice"] = voice
+                fp, fb = find_font_lang(code), find_font_lang(code, True)
+                if fp:
+                    ls["font_path"], ls["title_font_path"] = fp, (fb or fp)
+                ls["auto_langs"] = "안 함"
+                base = os.path.join(s["out_dir"], safe_name(title) + tag)
+                os.makedirs(s["out_dir"], exist_ok=True)
+                p2 = dict(proj, title=t_title, story=t_story, settings=ls, lang=code)
+                with open(base + ".json", "w", encoding="utf-8") as fjs:
+                    json.dump(p2, fjs, ensure_ascii=False, indent=2)
+                pkg = {"titles": d.get("titles") or [t_title], "description": d.get("description", ""),
+                       "hashtags": d.get("hashtags", ""), "pinned_comment": d.get("pinned_comment", ""),
+                       "sources": proj.get("sources", []), "song": proj.get("song"), "artwork": proj.get("artwork"),
+                       "melody_used": bool(parse_melody(proj.get("melody", "")))}
+                log(f"  {name} 번역 완료: {t_title}")
+                if make_mp4:
+                    CURRENT_MELODY.update(melody)
+                    narr = self.narration_for(t_story, ls, log, self.cancel)
+                    r = Renderer(t_title, t_story, ls, narr)
+                    audio = build_audio(r, ls, style)
+                    if audio is not None and "MP3" in ls["audio_out"]:
+                        write_mp3(base + "_배경음.mp3", audio)
+                    export_mp4(r, base + ".mp4", self.progress_cb(f"[{name}] "), self.cancel,
+                               audio if "MP4에 포함" in ls["audio_out"] else None)
+                    r.thumbnail().save(base + "_썸네일.png")
+                    pkg["chapters"] = r.chapter_times()
+                    log(f"  {name} MP4 저장: {base}.mp4 ({os.path.getsize(base + '.mp4') / 1e6:.1f}MB)")
+                write_package(base, t_title, t_story, pkg)
+                done_files.append(base)
+            return done_files
+
+        def done(files):
+            self.write_log(f"🌐 다른 언어 버전 완료: {len(files)}개 → " + ", ".join(os.path.basename(f) for f in files))
+            self.write_log("  열어보려면 '프로젝트 열기'에서 _EN.json / _JA.json 선택 (원본은 그대로 유지됨)")
+            if after:
+                after()
+        self.write_log("🌐 다른 언어 버전 만들기: " + ", ".join(LANGS[c][0] for c in langs))
+        self.run_bg("번역 중...", job, done)
 
     def longform(self):
         """📺 롱폼: 챕터 N개를 AI로 만들어 하나의 대본으로 묶음 (가로 화면·나레이션 권장)"""
