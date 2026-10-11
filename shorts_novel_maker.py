@@ -2,11 +2,44 @@
 """
 쇼츠 스크롤 영상 메이커 PRO (허구 소설 · 기이한 실화 · 과학 사실 · 자연현상)
 AI: PC에 설치된 Claude Code(claude -p)를 Max 구독으로 사용 (API 키 불필요)
-설치: pip install pillow numpy imageio-ffmpeg
+설치: pip install pillow numpy imageio-ffmpeg  (빠진 패키지는 처음 실행 때 자동 설치됨)
 기능: AI 대본(3안 심사·웹 조사), 근거 사진(복붙·AI 검색), 자체 합성 배경음, 연속 제작
 실행: python shorts_novel_maker.py
 """
-import os, re, io, json, time, queue, shutil, difflib, tempfile, threading, subprocess, math
+import os, re, io, sys, json, time, queue, shutil, difflib, tempfile, threading, subprocess, math
+import importlib
+import importlib.util
+
+
+def pip_install(*pkgs):
+    """지금 실행 중인 파이썬에 패키지 설치 (파이썬이 여러 개 깔려 있어도 맞는 곳에 설치됨)"""
+    cmd = [sys.executable, "-m", "pip", "install", "--disable-pip-version-check", *pkgs]
+    flags = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
+    r = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, errors="replace", creationflags=flags)
+    if r.returncode != 0 and "externally-managed" in (r.stdout or ""):
+        r = subprocess.run(cmd + ["--break-system-packages"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                           text=True, errors="replace", creationflags=flags)
+    if r.returncode != 0 and "Permission" in (r.stdout or ""):
+        r = subprocess.run(cmd + ["--user"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, errors="replace",
+                           creationflags=flags)
+    return r.returncode == 0, (r.stdout or "")[-600:]
+
+
+def ensure_packages():
+    """numpy, pillow 가 없으면 자동 설치 (imageio-ffmpeg 는 MP4 만들 때 확인)"""
+    need = [pk for mod, pk in (("numpy", "numpy"), ("PIL", "pillow")) if importlib.util.find_spec(mod) is None]
+    if need:
+        print("필요한 패키지를 설치합니다:", " ".join(need), flush=True)
+        ok, out = pip_install(*need)
+        if not ok:
+            print(out)
+            print(f'\n자동 설치 실패. 아래 명령을 직접 실행하세요:\n"{sys.executable}" -m pip install {" ".join(need)}')
+            input("엔터를 누르면 종료합니다...")
+            sys.exit(1)
+        importlib.invalidate_caches()
+
+
+ensure_packages()
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox, colorchooser, simpledialog
 from tkinter.scrolledtext import ScrolledText
@@ -497,6 +530,35 @@ def parse_json(text):
     if found:
         return max(found, key=lambda f: f[0])[1]
     raise ValueError("AI 응답에서 JSON을 찾지 못했습니다:\n" + text[:300])
+
+
+# ---------------- ffmpeg (MP4 만들기) ----------------
+_FFMPEG = None
+
+
+def get_ffmpeg():
+    """MP4 압축 프로그램(ffmpeg) 위치. 없으면 imageio-ffmpeg 를 자동 설치"""
+    global _FFMPEG
+    if _FFMPEG and os.path.exists(_FFMPEG):
+        return _FFMPEG
+    for attempt in (1, 2):
+        try:
+            import imageio_ffmpeg
+            _FFMPEG = imageio_ffmpeg.get_ffmpeg_exe()
+            return _FFMPEG
+        except Exception:
+            if attempt == 1:
+                ok, _ = pip_install("imageio-ffmpeg")
+                importlib.invalidate_caches()
+                if not ok:
+                    break
+    sys_ff = shutil.which("ffmpeg")
+    if sys_ff:
+        _FFMPEG = sys_ff
+        return _FFMPEG
+    raise RuntimeError("MP4 압축 프로그램(ffmpeg)을 찾지 못했고 자동 설치도 실패했습니다.\n\n"
+                       "명령 프롬프트(cmd)에서 아래 한 줄을 실행한 뒤 프로그램을 다시 켜세요:\n\n"
+                       f'"{sys.executable}" -m pip install imageio-ffmpeg')
 
 
 # ---------------- 근거 사진 ----------------
@@ -1560,8 +1622,7 @@ def reveal_fx(n, t_hit, rng):
 
 def decode_audio(path, n):
     """음악 파일을 읽어서 길이에 맞게 반복"""
-    import imageio_ffmpeg
-    p = subprocess.run([imageio_ffmpeg.get_ffmpeg_exe(), "-v", "error", "-i", path, "-f", "f32le", "-ac", "2", "-ar", str(SR), "-"],
+    p = subprocess.run([get_ffmpeg(), "-v", "error", "-i", path, "-f", "f32le", "-ac", "2", "-ar", str(SR), "-"],
                        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                        creationflags=(subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0))
     x = np.frombuffer(p.stdout, np.float32).reshape(-1, 2) if p.returncode == 0 else np.zeros((0, 2), np.float32)
@@ -1655,8 +1716,7 @@ def stop_wav():
 
 
 def export_mp4(r, out, progress, cancel=None, audio=None):
-    import imageio_ffmpeg
-    ff = imageio_ffmpeg.get_ffmpeg_exe()
+    ff = get_ffmpeg()
     s = r.s
     fps = max(1, s["fps"])
     dur = r.duration
@@ -1763,6 +1823,7 @@ class App(tk.Tk):
         self.after(100, self.poll)
         self.after(300, self.refresh_preview)
         self.after(500, self.check_claude_ui)
+        self.after(800, self.prepare_ffmpeg)
         self.protocol("WM_DELETE_WINDOW", self.on_close)
 
     # ---- 설정 저장/불러오기 ----
@@ -2126,7 +2187,8 @@ class App(tk.Tk):
     def on_err(self, e):
         msg = str(e)
         if isinstance(e, ModuleNotFoundError):
-            msg += "\n\npip install pillow numpy imageio-ffmpeg"
+            msg += f'\n\n명령 프롬프트(cmd)에서 실행:\n"{sys.executable}" -m pip install pillow numpy imageio-ffmpeg'
+
         self.write_log("오류: " + (msg.splitlines()[0] if msg else ""))
         if msg != "취소됨":
             messagebox.showerror("오류", msg)
@@ -2135,6 +2197,18 @@ class App(tk.Tk):
         self.q.put(lambda: self.write_log(msg))
 
     # ---- AI ----
+    def prepare_ffmpeg(self):
+        """MP4 압축 프로그램을 미리 확인 (없으면 백그라운드에서 자동 설치)"""
+        def worker():
+            try:
+                get_ffmpeg()
+            except Exception as e:
+                self.q.put(lambda e=e: self.write_log("⚠ " + str(e).splitlines()[0] + " → MP4 만들 때 다시 시도합니다"))
+                return
+            if not getattr(self, "_ff_logged", False):
+                self._ff_logged = True
+        threading.Thread(target=worker, daemon=True).start()
+
     def check_claude_ui(self):
         self.claude_lamp.config(fg="orange")
         self.claude_info.config(text="확인 중...")
