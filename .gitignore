@@ -6,3 +6,4 @@ __pycache__/
 *.wav
 gui_out/
 gui_out*/
+voices_cache.json
