@@ -31,7 +31,7 @@ def find_font(bold=False):
 
 
 # 자체 합성 배경음 스타일 (아래 SOUND_STYLES 와 이름이 같아야 함)
-SOUND_STYLE_NAMES = ["잔잔한 패드", "슬픈 패드", "감성 오르골", "밝은 오르골", "긴장 펄스", "어두운 드론",
+SOUND_STYLE_NAMES = ["노래 멜로디(오르골)", "잔잔한 패드", "슬픈 패드", "감성 오르골", "밝은 오르골", "긴장 펄스", "어두운 드론",
                      "공포 심장박동", "비 오는 밤", "빗소리", "심해", "우주", "바람", "파도"]
 
 # 소재별 자동 배경음
@@ -42,6 +42,8 @@ SOUND_BY_TOPIC = {
     "생존 실화": "바람", "세계의 기이한 장소": "바람",
     "우주": "우주", "인체": "잔잔한 패드", "동물·생물": "밝은 오르골", "물리·화학": "잔잔한 패드", "심리·뇌": "긴장 펄스",
     "지구·환경": "바람",
+    "가사 원문+해석": "노래 멜로디(오르골)", "가수·작곡가 실화": "노래 멜로디(오르골)", "노래 탄생 비화": "노래 멜로디(오르골)",
+    "노래에 숨은 비밀": "노래 멜로디(오르골)", "크리스마스·캐럴 가사": "노래 멜로디(오르골)", "세계 각국의 옛 노래": "노래 멜로디(오르골)",
     "기상 현상": "비 오는 밤", "지질·화산·지진": "어두운 드론", "바다": "심해", "하늘·빛": "우주", "동식물의 기이한 행동": "밝은 오르골",
 }
 
@@ -170,7 +172,17 @@ CATEGORIES = {
         "하늘·빛": ("환일, 무지개, 녹색 섬광, 유성우 같은 빛의 현상과 그 원리.", "네온 시티"),
         "동식물의 기이한 행동": ("집단 이동, 대량 발생, 공생 등 실제 기록된 현상.", "감동 웜톤"),
     }),
+    "올드 팝송 이야기": (True, {
+        "가사 원문+해석": ("1929년 이전 발표곡의 가사를 원문 한 줄 → 한국어 해석 한 줄로 번갈아 보여준다. 가장 유명한 부분(1절+후렴) 위주. 첫 줄은 노래를 한 문장으로 소개하는 훅, 마지막은 댓글 질문. 예: Danny Boy(1913), O Sole Mio(1898), Let Me Call You Sweetheart(1910)", "감동 웜톤"),
+        "가수·작곡가 실화": ("노래를 부르거나 만든 사람의 실제 인생 이야기(시대 제한 없음). 가난, 전쟁, 사랑, 요절, 재기 같은 극적인 순간을 1인칭이 아닌 3인칭으로. 1930년 이후 곡이면 가사·멜로디는 쓰지 않고 이야기만.", "시네마 다크"),
+        "노래 탄생 비화": ("곡이 태어난 순간(장소·사람·사건)과 당시 얼마나 유행했는지. '그런데 더 놀라운 건' 반전 비화. 1929년 이전 곡이면 가사 1~4줄 인용 가능.", "감동 웜톤"),
+        "노래에 숨은 비밀": ("가사의 진짜 뜻, 사실은 다른 사람이 쓴 곡, 표절·소송·금지곡 등 반전 있는 비화.", "시네마 다크"),
+        "크리스마스·캐럴 가사": ("오래된 캐럴(Silent Night 1818, Jingle Bells 1857, O Holy Night 1847 등)의 가사 원문+해석과 짧은 탄생 이야기.", "감동 웜톤"),
+        "세계 각국의 옛 노래": ("일본·중남미·러시아·하와이·유럽 민요 등 1929년 이전 노래의 가사 원문+해석. 예: La Cumparsita(1916), Aloha ʻOe(1878), Greensleeves", "로맨스 핑크"),
+    }),
 }
+
+SONG_CATEGORY = "올드 팝송 이야기"
 
 FACT_RULES = """[사실 기반 콘텐츠 규칙 - 반드시 지킬 것]
 - 널리 기록되고 검증된 사실만 쓴다. 확실하지 않은 숫자·이름·날짜는 쓰지 말고 '약', '수십' 처럼 범위로 쓴다.
@@ -191,10 +203,32 @@ FACT_SYSTEM = """너는 한국 유튜브 쇼츠에서 조회수 잘 나오는 '�
 반드시 JSON만 출력: {"title": "제목", "story": "본문", "sources": ["출처1", "출처2"], "confidence": "high", "notes": "확인 필요한 부분(없으면 빈 문자열)"}"""
 FACT_SYSTEM = FACT_SYSTEM.replace("{FACT_RULES}", FACT_RULES)
 
+
+SONG_RULES = """[올드 팝송 규칙 - 저작권 안전 기준, 반드시 지킬 것]
+- 가사를 보여주거나 멜로디를 연주하려면 곡(악보·가사)이 1929년 12월 31일 이전에 발표(출판)된 노래여야 한다. 1930년 이후 곡은 가사·멜로디 금지 (예: Over the Rainbow 1939 ✗, You Are My Sunshine 1939 ✗, Happy Birthday 1893 ✓).
+- '가수·작곡가 실화' 소재는 시대 제한이 없지만, 1930년 이후 곡이면 가사는 한 줄도 인용하지 않고 melody 는 빈 문자열로 둔다. 실존 인물은 널리 알려진 사실만 쓰고 추측·루머는 쓰지 않는다.
+- 특정 가수의 '편곡'이나 '녹음(음원)'은 별개의 저작권이 있으므로 특정 음반을 쓰라고 하지 않는다. 멜로디는 프로그램이 직접 연주한다.
+- [가사 모드] 소재 이름에 '가사'가 들어가면: 본문은 ①훅 1~2줄(노래 소개) ②가사 원문 한 줄 → 바로 아래 줄에 한국어 해석, 이 짝을 문단 하나로(문단 사이 빈 줄) ③마지막 댓글 질문 1줄. 원문 줄은 앞에 '♪ ' 를 붙인다. 해석은 직역이 아니라 노래처럼 자연스럽게. 가사가 길면 목표 길이에 맞게 가장 유명한 부분(1절+후렴)만.
+- [이야기 모드] 그 외 소재: 첫 줄은 가장 놀라운 사실 → 장면 순서대로 → '그런데 더 놀라운 건' 반전 → 지금도 어디서 들리는지 → 댓글 질문. 1929년 이전 곡이면 가사 1~4줄(♪ 표시)과 해석을 넣어도 된다.
+- song 정보를 꼭 채운다: title(원제), title_ko(한국어 제목), year(발표 연도), composer, lyricist, singer(대표 가수, 있으면), composer_death(사망 연도, 모르면 ""), pd_reason(가사·멜로디를 쓸 수 있는 이유 한 줄. 1930년 이후면 "저작권 유효 - 가사·멜로디 미사용")
+- melody: 1929년 이전 곡일 때만, 가장 유명한 부분(후렴 또는 첫 소절) 8~24마디를 음표로. 형식: "C4:1 D4:1 E4:2 R:1" (음이름+옥타브:박자, R=쉼표, 박자 0.25~4). bpm 도 적는다. 멜로디가 확실하지 않으면 빈 문자열 (틀린 멜로디보다 없는 게 낫다)."""
+
+SONG_SYSTEM = """너는 한국 유튜브 쇼츠 '옛날 팝송 이야기' 채널의 전문 작가다. 전 세계의 저작권이 끝난 옛 노래(1929년 이전)에 얽힌 실제 이야기를 들려준다.
+영상은 글이 위로 천천히 스크롤되는 형식이고, 배경에는 프로그램이 직접 연주한 그 노래의 멜로디(오르골)가 깔린다.
+문체는 1~2문장 짧은 문단, 쉬운 단어, 문단 사이 빈 줄. 한 줄 40자 이내. 제목은 15자 이내로 궁금하게.
+
+""" + FACT_RULES + """
+
+""" + SONG_RULES + """
+
+반드시 JSON만 출력: {"title": "제목", "story": "본문", "sources": ["출처1", "출처2"], "confidence": "high", "notes": "확인 필요한 부분", "song": {"title": "", "title_ko": "", "year": 1910, "composer": "", "lyricist": "", "singer": "", "composer_death": "", "pd_reason": ""}, "melody": "C4:1 D4:1 ...", "bpm": 90}"""
+SONG_MULTI_SYSTEM = SONG_SYSTEM.replace(
+    "반드시 JSON만 출력:", "같은 노래로 서로 다른 접근(훅 방식, 강조하는 비화, 전개 순서)의 초안 3개를 쓴다. 각 초안마다 sources/notes/song/melody/bpm 포함.\n반드시 JSON만 출력: {\"drafts\": [초안1, 초안2, 초안3]} 각 초안 형식:")
+
 FACT_MULTI_SYSTEM = FACT_SYSTEM.replace(
     "반드시 JSON만 출력:", "같은 소재로 서로 다른 접근(훅 방식, 강조하는 사실, 전개 순서)의 초안 3개를 쓴다. 각 초안마다 sources/confidence/notes 포함.\n반드시 JSON만 출력: {{\"drafts\": [초안1, 초안2, 초안3]}} 각 초안 형식:")
 
-VERIFY_SYSTEM = """너는 과학·역사 팩트체커다. 아래 쇼츠 대본의 모든 사실 주장(숫자, 날짜, 이름, 장소, 인과관계)을 하나씩 점검한다.
+VERIFY_SYSTEM = """너는 과학·역사·음악사 팩트체커다. 올드 팝송 대본에 가사(♪ 줄)나 멜로디가 있으면 발표 연도가 1929년 이전인지 반드시 확인하고, 1930년 이후면 verdict 를 risky 로 하고 가사를 빼거나 다른 곡으로 바꾸라고 적는다. 가사 원문이 실제 가사와 맞는지도 확인한다. 아래 쇼츠 대본의 모든 사실 주장(숫자, 날짜, 이름, 장소, 인과관계)을 하나씩 점검한다.
 기준: 널리 검증된 사실=ok, 과장되거나 틀림=wrong, 논란·불확실=unsure
 틀리거나 불확실한 부분은 어떻게 고쳐야 안전한지 구체적으로 쓴다. 고친 전체 본문(corrected_story)은 원래 분량과 재미를 유지하되 틀린 부분만 바로잡는다.
 """ + KEEP_PHOTO_RULE + """ 자리표시 줄은 점검 대상이 아니다.
@@ -233,6 +267,7 @@ PHOTO_RULES = """[사진 규칙]
 - 우선순위: Wikimedia Commons(퍼블릭 도메인·CC 라이선스), NASA·NOAA·USGS·ESA 등 공공기관 공개 이미지
 - url 은 이미지 파일 주소(.jpg/.jpeg/.png). 예: https://upload.wikimedia.org/... 또는 https://commons.wikimedia.org/wiki/File:파일이름.jpg
 - 저작권이 불분명한 뉴스·블로그 사진, AI 생성 이미지, 워터마크 있는 사진은 쓰지 않는다
+- 노래 이야기면 그 곡의 옛 악보 표지(sheet music cover, 1929년 이전 출판물은 퍼블릭 도메인), 작곡가·가수의 옛 사진, 당시 공연장 사진을 고른다.
 - 그 사건·현상·장소를 실제로 보여주는 사진만 고른다. 비슷한 다른 사진 금지. 직접 열어서(WebFetch) 맞는지 확인한다
 - after: 사진이 들어갈 위치 = 본문에서 사진 바로 앞에 올 문장의 일부(원문 그대로 10~20자). 본문이 아직 없으면 그 사진이 보여주는 사실의 핵심 단어
 - caption: 15자 이내 한국어 설명 / credit: "작가 또는 기관 / 라이선스" / page: 출처 페이지 URL"""
@@ -268,6 +303,7 @@ WEB_VERIFY_BLOCK = """
 
 JUDGE_SYSTEM = """너는 유튜브 쇼츠 썰 채널의 베테랑 편집장이다. 조회수와 끝까지 보는 비율(시청 지속률)을 기준으로 초안을 심사한다.
 채점 항목(각 10점): 훅(첫 줄에서 멈추게 하는가), 전개(5~7초마다 새 정보가 있는가), 반전/결말(마지막 1~2줄의 충격·감동), 가독성(짧은 문장, 쉬운 단어), 공유욕구(댓글·공유하고 싶은가)
+올드 팝송이면: 가사나 멜로디를 쓴 초안은 1929년 이전 발표곡이어야 한다(아니면 0점). 가사 모드는 원문 줄(♪)과 해석 줄이 짝으로 되어 있는지, 해석이 노래처럼 자연스러운지 본다. polish 에는 song/melody/bpm 도 그대로 넘긴다.
 사실 기반 콘텐츠(실화·과학·자연현상)이면 '정확성'을 최우선으로 본다: 의심스럽거나 과장된 주장이 있는 초안은 크게 감점하고, polish 에서 그 부분을 안전하게 고친다.
 반드시 JSON만 출력: {"best": 가장 좋은 초안 번호(0부터), "scores": [{"total": 합계, "reason": "한 줄 이유"}, ...], "polish": {"title": "최고 초안을 다듬은 제목", "story": "최고 초안을 다듬은 전체 본문", "sources": ["사실 기반일 때 출처"], "notes": "확인 필요한 부분"}}
 polish는 선택된 초안의 약점만 손봐서 완성본을 만든다. 길이는 원본과 비슷하게.
@@ -280,7 +316,7 @@ REVIEW_SYSTEM = """너는 유튜브 쇼츠 썰 채널의 베테랑 편집장이�
 PACKAGE_SYSTEM = """너는 유튜브 쇼츠 채널 운영 전문가다. 소설을 읽고 업로드에 필요한 문구를 만든다.
 - 제목 후보 5개: 결말을 밝히지 않고 궁금하게, 25자 이내, 이모지 0~1개
 - 설명: 2~3줄, 마지막 줄에 "다음 이야기는 구독하고 받아보세요" 류 문구
-- 해시태그 8~12개: 허구면 #쇼츠 #썰 #단편소설, 실화·과학이면 #쇼츠 #실화 #미스터리 #과학 #상식 등 종류와 소재 포함, 띄어쓰기로 구분
+- 해시태그 8~12개: 허구면 #쇼츠 #썰 #단편소설, 옛 노래면 #올드팝 #팝송 #노래비화 #명곡, 실화·과학이면 #쇼츠 #실화 #미스터리 #과학 #상식 등 종류와 소재 포함, 띄어쓰기로 구분
 - 고정댓글: 시청자에게 결말에 대한 의견을 묻는 한 줄 질문
 반드시 JSON만 출력: {"titles": ["..."], "description": "...", "hashtags": "#... #...", "pinned_comment": "..."}"""
 
@@ -288,6 +324,7 @@ IDEA_SYSTEM = """너는 한국 유튜브 쇼츠 채널 기획자다. (허구 썰
 조회수가 잘 나오는 소재(공감, 궁금증, 반전, 감동, 소름, 놀라움)를 골라
 첫 줄 훅이 강하게 나올 수 있는 주제를 만든다. 사실 기반 종류이면 실제로 존재하고 널리 알려진 사건·현상·사실만 고른다 (지어내지 않는다).
 각 주제는 25자 이내 한 줄로, 결말은 밝히지 않는다.
+올드 팝송이면 '노래 제목(발표 연도) - 가수/작곡가' 형식. 소재에 '가사'가 들어가면 1929년 이전 발표곡만, '실화'면 극적인 인생을 산 가수·작곡가 위주(시대 무관).
 반드시 JSON만 출력: {"ideas": ["주제1", "주제2", ...]}"""
 
 
@@ -298,6 +335,8 @@ def cat_info(category):
 
 def systems_for(category):
     factual, _ = cat_info(category)
+    if category == SONG_CATEGORY:
+        return SONG_SYSTEM, SONG_MULTI_SYSTEM
     return (FACT_SYSTEM, FACT_MULTI_SYSTEM) if factual else (STORY_SYSTEM, MULTI_SYSTEM)
 
 
@@ -782,7 +821,7 @@ def build_text_layer(title, story, s):
         if not para:
             continue
         paras.append((y, para))
-        is_quote = s["quote_color"] == "on" and para[:1] in "\"“'‘"
+        is_quote = s["quote_color"] == "on" and (para[:1] in "\"“'‘" or para.startswith("♪"))
         col = s["accent_color"] if is_quote else s["text_color"]
         for ln in wrap(para, fb, maxw):
             items.append((y, ln, fb, col, s["align"]))
@@ -1409,7 +1448,78 @@ def gen_waves(n, rng):
     return _norm(np.stack(ch, 1))
 
 
+NOTE_RE = re.compile(r"^([A-Ga-g])([#b♯♭]?)(\d)$")
+NOTE_BASE = {"C": 0, "D": 2, "E": 4, "F": 5, "G": 7, "A": 9, "B": 11}
+
+
+def parse_melody(text):
+    """'C4:1 D#4:0.5 R:1' → [(midi 또는 None, 박자)]. 음표가 8개 미만이면 None"""
+    notes = []
+    for tok in re.split(r"[\s,]+", (text or "").strip()):
+        if not tok:
+            continue
+        name, _, beat = tok.partition(":")
+        try:
+            b = float(beat) if beat else 1.0
+        except ValueError:
+            continue
+        b = max(0.125, min(4.0, b))
+        if name.upper() in ("R", "REST", "-"):
+            notes.append((None, b))
+            continue
+        m = NOTE_RE.match(name.strip())
+        if not m:
+            continue
+        acc = m.group(2)
+        midi = 12 * (int(m.group(3)) + 1) + NOTE_BASE[m.group(1).upper()] + (1 if acc in ("#", "♯") else 0) - (1 if acc in ("b", "♭") else 0)
+        if 36 <= midi <= 96:
+            notes.append((midi, b))
+    return notes if sum(1 for n in notes if n[0] is not None) >= 8 else None
+
+
+def _melody_chords(notes):
+    """멜로디 음들로 조성을 추정해 단순한 반주 화음(I-IV-V-I-vi-IV-V-I) 만들기"""
+    pcs = [n[0] % 12 for n in notes if n[0] is not None]
+    hist = np.bincount(pcs, minlength=12).astype(float)
+    major = np.array([1, 0, 1, 0, 1, 1, 0, 1, 0, 1, 0, 1], float)
+    key = int(max(range(12), key=lambda k: (np.roll(major, k) * hist).sum()))
+    root = 48 + key
+    I = [root, root + 7, root + 12, root + 16, root + 19]
+    IV = [root + 5, root + 12, root + 17, root + 21, root + 24]
+    V = [root + 7, root + 14, root + 19, root + 23, root + 26]
+    vi = [root + 9, root + 16, root + 21, root + 24, root + 28]
+    return [I, IV, V, I, vi, IV, V, I]
+
+
+def gen_melody_box(n, rng, melody, bpm=90):
+    """노래 멜로디를 오르골로 반복 연주 + 그 조성의 은은한 패드"""
+    notes = parse_melody(melody)
+    if not notes:
+        return gen_musicbox(n, rng, "warm", 84)
+    bpm = max(50, min(160, float(bpm or 90)))
+    beat = 60.0 / bpm
+    PROGS["_song"] = _melody_chords(notes)
+    pad = gen_pad(n, rng, "_song", 8 * beat, 1500) * 0.3
+    mel = np.zeros((n, 2), np.float32)
+    shift = 12 if max(m_ for m_, _ in notes if m_ is not None) < 72 else 0   # 오르골답게 높은 음역으로
+    cache, t = {}, 1.0
+    while t < n / SR - 1.5:
+        for midi, b in notes:
+            if t >= n / SR - 1.5:
+                break
+            if midi is not None:
+                m = midi + shift
+                if m not in cache:
+                    cache[m] = pluck(midi_hz(m), min(2.2, max(0.8, b * beat * 1.6)))
+                vel = 1.0 if (t / beat) % 4 < 0.05 else rng.uniform(0.6, 0.85)
+                place(mel, cache[m] * vel, t, 0.5 + 0.2 * np.sin(t))
+            t += b * beat
+        t += beat * 2   # 한 번 돌고 두 박 쉼
+    return _norm(pad + _norm(reverb(mel, rng, 2.8, 0.35)) * 0.85)
+
+
 SOUND_STYLES = {
+    "노래 멜로디(오르골)": lambda n, r: gen_melody_box(n, r, CURRENT_MELODY.get("melody", ""), CURRENT_MELODY.get("bpm", 90)),
     "잔잔한 패드": lambda n, r: gen_pad(n, r, "warm"),
     "슬픈 패드": lambda n, r: gen_pad(n, r, "sad"),
     "감성 오르골": lambda n, r: gen_musicbox(n, r, "sad", 66),
@@ -1425,6 +1535,7 @@ SOUND_STYLES = {
     "파도": gen_waves,
 }
 assert list(SOUND_STYLES) == SOUND_STYLE_NAMES
+CURRENT_MELODY = {"melody": "", "bpm": 90}   # 현재 대본의 노래 멜로디 (올드 팝송일 때 채워짐)
 
 
 def reveal_fx(n, t_hit, rng):
@@ -1461,7 +1572,10 @@ def decode_audio(path, n):
 
 def resolve_style(s, topic):
     st = s["bgm_style"]
-    return SOUND_BY_TOPIC.get(topic, "잔잔한 패드") if st not in SOUND_STYLES else st
+    st = SOUND_BY_TOPIC.get(topic, "잔잔한 패드") if st not in SOUND_STYLES else st
+    if st == "노래 멜로디(오르골)" and not parse_melody(CURRENT_MELODY.get("melody", "")):
+        return "슬픈 패드" if "실화" in topic else "감성 오르골"   # 멜로디가 없으면 일반 소리로
+    return st
 
 
 def make_music(s, style, n):
@@ -1612,6 +1726,14 @@ def write_package(path_base, title, story, pkg):
               "", "[고정댓글]", pkg.get("pinned_comment", "")]
     if pkg.get("sources"):
         lines += ["", "[출처 (설명란에 넣으면 신뢰도 상승)]"] + [f"- {x}" for x in pkg["sources"]]
+    song = pkg.get("song")
+    if isinstance(song, dict):
+        lines += ["", "[노래 정보 (설명란에 넣으면 저작권 문의 예방)]",
+                  f"- 곡: {song.get('title', '')} ({song.get('title_ko', '')}) · 발표 {song.get('year', '')}년",
+                  f"- 작곡 {song.get('composer', '')} / 작사 {song.get('lyricist', '')}" + (f" / 노래 {song.get('singer')}" if song.get("singer") else "")
+                  + (f" · 작곡가 사망 {song.get('composer_death')}" if song.get("composer_death") else ""),
+                  f"- 저작권: {song.get('pd_reason', '')}",
+                  "- 영상의 멜로디는 원곡 음원이 아니라 프로그램이 직접 연주(합성)한 것입니다." if pkg.get("melody_used") else "- 영상에 원곡 멜로디·음원은 사용하지 않았습니다."]
     credits = photo_credits(story)
     if credits:
         lines += ["", "[사진 출처 (CC 라이선스는 설명란 표기 필수)]"] + credits
@@ -1654,6 +1776,7 @@ class App(tk.Tk):
     def project_dict(self):
         return {"ver": 2, "model": self.model_var.get(), "category": self.cat_var.get(), "topic": self.topic_var.get(), "genre": self.genre_var.get(),
                 "sources": getattr(self, "sources", []), "notes": getattr(self, "notes", ""),
+                "song": getattr(self, "song", None), "melody": getattr(self, "melody", ""), "bpm": getattr(self, "bpm", 90),
                 "length": self.len_var.get(), "judge": self.judge_var.get(), "theme": self.theme_var.get(),
                 "research": self.research_var.get(), "autophoto": self.autophoto_var.get(),
                 "reference": getattr(self, "reference", ""),
@@ -1680,6 +1803,8 @@ class App(tk.Tk):
         self.autophoto_var.set(bool(c.get("autophoto", True)))
         self.set_reference(c.get("reference", ""))
         self.set_sources(c.get("sources", []), c.get("notes", ""))
+        self.song, self.melody, self.bpm = c.get("song"), c.get("melody", ""), c.get("bpm", 90)
+        CURRENT_MELODY["melody"], CURRENT_MELODY["bpm"] = self.melody or "", self.bpm or 90
         self.len_var.set(c.get("length", "40"))
         self.judge_var.set(bool(c.get("judge", True)))
         self.theme_var.set(c.get("theme", "시네마 다크"))
@@ -1953,6 +2078,17 @@ class App(tk.Tk):
         if g in topics:
             self.apply_theme(topics[g][1])
 
+    def set_song(self, song, melody="", bpm=90):
+        self.song = song if isinstance(song, dict) else None
+        self.melody, self.bpm = (melody or ""), (bpm or 90)
+        CURRENT_MELODY["melody"], CURRENT_MELODY["bpm"] = self.melody, self.bpm
+        self.bgm_made = None  # 멜로디가 바뀌면 배경음을 다시 만들어야 함
+        if self.song:
+            t = self.song.get("title_ko") or self.song.get("title", "")
+            self.write_log(f"🎼 노래: {t} ({self.song.get('year', '?')}) 작곡 {self.song.get('composer', '?')}"
+                           + (f" · 저작권: {self.song.get('pd_reason')}" if self.song.get("pd_reason") else "")
+                           + (" · 멜로디 오르골 연주 준비됨" if parse_melody(self.melody) else ""))
+
     def set_sources(self, sources, notes=""):
         self.sources = [str(x) for x in (sources or [])]
         self.notes = str(notes or "")
@@ -2054,6 +2190,7 @@ class App(tk.Tk):
             d = ask_json(model, single_sys, user)
             title, story, notes = d.get("title", ""), d.get("story", ""), d.get("notes", "")
             sources = sources or d.get("sources", [])
+            song, melody, bpm = d.get("song"), d.get("melody", ""), d.get("bpm", 90)
         else:
             log("초안 3개 작성 중...")
             drafts = ask_json(model, multi_sys, user).get("drafts", [])
@@ -2075,6 +2212,9 @@ class App(tk.Tk):
             story = pol.get("story") or drafts[best].get("story", "")
             sources = sources or pol.get("sources") or drafts[best].get("sources", [])
             notes = pol.get("notes") or drafts[best].get("notes", "")
+            song = pol.get("song") or drafts[best].get("song")
+            melody = pol.get("melody") or drafts[best].get("melody", "")
+            bpm = pol.get("bpm") or drafts[best].get("bpm", 90)
         if photos:
             story = place_photos(story, photos)
         elif factual and autophoto:
@@ -2089,7 +2229,26 @@ class App(tk.Tk):
             story = strip_placeholders(story)
         else:
             story = strip_placeholders(story)
-        return {"title": title, "story": story, "note": note, "sources": sources, "notes": notes, "topic": topic}
+        song = song if isinstance(song, dict) else None
+        if category == SONG_CATEGORY and song:
+            try:
+                yr = int(str(song.get("year", "")).strip()[:4])
+            except ValueError:
+                yr = 0
+            has_lyrics = any(l.lstrip().startswith("♪") for l in story.split("\n"))
+            if yr >= 1930:
+                if has_lyrics or "가사" in genre:
+                    notes = f"⚠ 발표 연도 {yr}년 → 가사 저작권이 남아 있음. 1929년 이전 곡으로 바꾸거나 가사를 빼세요. " + str(notes or "")
+                else:
+                    notes = f"{yr}년 곡 → 가사·멜로디 없이 이야기만 사용. " + str(notes or "")
+                melody = ""
+            ok = bool(parse_melody(melody))
+            log(f"  🎼 노래: {song.get('title_ko') or song.get('title')} ({song.get('year')}, {song.get('composer')})"
+                + (" · 멜로디 확보 → 오르골로 연주" if ok else " · 멜로디 없음 → 일반 오르골"))
+        else:
+            song, melody, bpm = None, "", 90
+        return {"title": title, "story": story, "note": note, "sources": sources, "notes": notes, "topic": topic,
+                "song": song, "melody": melody if parse_melody(melody) else "", "bpm": bpm}
 
     def ai_write(self):
         try:
@@ -2109,6 +2268,7 @@ class App(tk.Tk):
             if res.get("topic") and not self.topic_var.get().strip():
                 self.topic_var.set(res["topic"])
             self.set_sources(res["sources"], res["notes"])
+            self.set_song(res.get("song"), res.get("melody", ""), res.get("bpm", 90))
             if res["sources"]:
                 self.write_log("출처: " + " / ".join(self.sources))
             if res["notes"]:
@@ -2136,6 +2296,8 @@ class App(tk.Tk):
         self.topic_var.set("")
         self.topic_box.config(values=[])
         self.set_sources([], "")
+        self.song, self.melody, self.bpm = None, "", 90
+        CURRENT_MELODY["melody"], CURRENT_MELODY["bpm"] = "", 90
         self.set_reference("")
         self.cmd_var.set("")
         self.last_review = self.last_verify = None
@@ -2379,6 +2541,8 @@ class App(tk.Tk):
         def job():
             pkg = ask_json(model, PACKAGE_SYSTEM, user)
             pkg["sources"] = sources
+            pkg["song"] = getattr(self, "song", None)
+            pkg["melody_used"] = bool(parse_melody(getattr(self, "melody", "")))
             os.makedirs(out_dir, exist_ok=True)
             base = os.path.join(out_dir, safe_name(title))
             write_package(base, title, story, pkg)
@@ -2453,6 +2617,9 @@ class App(tk.Tk):
                if self.vars["bgm_mode"].get() == "자동생성"
                else ("파일 " + os.path.basename(self.vars["bgm_path"].get()) if self.vars["bgm_mode"].get() == "파일" else "없음"))
         hit = f" | 반전 효과음 {r.reveal_t:.1f}초" if r.reveal_t and self.vars["reveal_hit"].get() == "on" else ""
+        song = getattr(self, "song", None)
+        if song and self.cat_var.get() == SONG_CATEGORY:
+            warn += f"\n🎼 {song.get('title_ko') or song.get('title', '')} ({song.get('year', '?')})"
         self.info.config(text=f"총 {r.duration:.1f}초 (제목카드 {r.intro:.1f} + 정지 {r.hs:.1f} + 스크롤 {r.scroll_t:.1f} + 끝 {r.he:.1f})\n"
                               f"본문 {chars}자 | 스크롤 {max(0, r.dist)}px | {r.speed:.0f}px/초{warn}\n"
                               f"배경음: {snd}{hit}" + (f" | 사진 {nph}장" if nph else ""))
@@ -2732,6 +2899,7 @@ class App(tk.Tk):
                     except Exception as e:
                         log("  검증 실패: " + str(e)[:80])
                 base = os.path.join(out_dir, f"{i + 1:02d}_{safe_name(title)}")
+                CURRENT_MELODY["melody"], CURRENT_MELODY["bpm"] = res.get("melody", ""), res.get("bpm", 90)
                 r = Renderer(title, story, s)
                 style = resolve_style(s, genre)
                 audio = build_audio(r, s, style)
@@ -2739,7 +2907,8 @@ class App(tk.Tk):
                 r.thumbnail().save(base + "_썸네일.png")
                 try:
                     pkg = ask_json(model, PACKAGE_SYSTEM, f"콘텐츠 종류: {cat}\n소재: {genre}\n[제목] {title}\n\n[본문]\n{story_text_only(story)}")
-                    pkg["sources"], pkg["notes"] = sources, notes
+                    pkg["sources"], pkg["notes"], pkg["song"] = sources, notes, res.get("song")
+                    pkg["melody_used"] = bool(parse_melody(res.get("melody", "")))
                     write_package(base, title, story, pkg)
                 except Exception as e:
                     log("  업로드 문구 실패: " + str(e)[:80])
