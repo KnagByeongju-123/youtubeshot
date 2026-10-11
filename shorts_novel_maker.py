@@ -181,6 +181,8 @@ FIELDS = [
     ("자막형", "sub_size", "자막 크기", "int", 64),
     ("자막형", "sub_font_path", "자막 글꼴(비우면 제목 글꼴)", "font", ""),
     ("자막형", "sub_style", "자막 스타일", "choice:글자 탭 글자색+검은테두리,글자 탭 글자색+검은띠,말풍선(웹툰),흰글자+검은테두리,노란글자+검은테두리,검은띠 위 흰글자", "글자 탭 글자색+검은테두리"),
+    ("자막형", "head_show", "위 큰 제목", "choice:보임,안 보임(제목 카드만)", "보임"),
+    ("자막형", "sub_split", "자막 나누기", "choice:문단 통째로,한 줄씩(문장·쉼표로 나눠 차례로)", "문단 통째로"),
     ("자막형", "sub_anim", "자막 등장 효과", "choice:팝(튀어나옴),올라옴,페이드,없음", "팝(튀어나옴)"),
     ("자막형", "punch_in", "장면 시작 펀치 줌", "choice:on,off", "on"),
     ("자막형", "img_frame", "사진 테두리(상자 모드)", "choice:없음,만화 테두리(검정),흰 테두리", "없음"),
@@ -258,7 +260,17 @@ THEMES = {
                   bg_pattern="집중선(만화)", head_style="웹툰(흰+검정 이중 테두리)", sub_style="말풍선(웹툰)",
                   img_frame="흰 테두리", sub_anim="팝(튀어나옴)"),
 }
-THEME_RESET = ("bg_pattern", "head_style", "sub_style", "img_frame", "shadow", "stroke_width", "img_bg")   # 테마에 없으면 기본값으로
+THEMES["만화 낭독(사극·무협)"] = dict(
+    bg_mode="그라데이션", bg_color="#1A140E", bg_color2="#2A2016", text_color="#FFFFFF", title_color="#FFE9B0",
+    accent_color="#FFD54F", vignette=0.25, grain=0, shadow="on", stroke_width=0, bg_pattern="없음",
+    layout="자막형(큰 제목+사진+자막)", img_fill="전체 화면(글자가 사진 위에)", head_show="안 보임(제목 카드만)",
+    head_style="글자 탭 제목색", sub_style="글자 탭 글자색+검은테두리", sub_split="한 줄씩(문장·쉼표로 나눠 차례로)",
+    sub_anim="페이드", sub_size=88, sub_max_chars=22, img_motion="천천히 확대만", punch_in="off", reveal_fx="off",
+    progress_bar="off", img_frame="없음", img_bg="off",
+    image_style="한국 사극·무협 만화풍 일러스트, 펜 선화와 수채 채색, 따뜻한 세피아·흙빛 색감, 부드러운 햇빛, 인물 표정이 크게 보이는 장면")
+THEME_FONTS = {"만화 낭독(사극·무협)": ("sub_font_path", "ofl/jua/Jua-Regular.ttf")}   # 테마 적용 시 받아서 쓸 글꼴
+THEME_RESET = ("bg_pattern", "head_style", "sub_style", "img_frame", "shadow", "stroke_width", "img_bg",
+               "head_show", "sub_split", "punch_in", "reveal_fx", "progress_bar")   # 테마에 없으면 기본값으로
 
 SAMPLE_TITLE = "마지막 버스"
 SAMPLE_STORY = """밤 11시 58분, 정류장에는 나 혼자였다.
@@ -338,13 +350,13 @@ CATEGORIES[COMIC_CATEGORY] = (False, {
     "헌터·던전": ("하늘에 균열(게이트)이 열리고 던전에서 몬스터가 나오는 현대 세계. 최하급 헌터가 아무도 모르는 힘을 숨기고 있다가 위기 순간에 드러낸다. 등급(E~S)·게이트 색으로 긴장감.", "웹툰 다크"),
     "이세계 전생": ("평범한 직장인·학생이 사고 후 판타지 세계(검과 마법)에서 깨어난다. 현대 지식으로 위기를 뒤집는 통쾌함, 이세계 사람들의 놀란 반응 컷.", "웹툰"),
     "악역 영애 빙의": ("읽던 소설 속 '곧 처형될 악역 귀족 아가씨'에 빙의한다. 원작 결말을 피하려는 몸부림, 원작과 달라지는 남주·주변 인물의 반응이 포인트. 화려한 궁정, 드레스, 무도회.", "로맨스 핑크"),
-    "무협·강호": ("천하제일 고수가 죽어 어린 시절(또는 망한 문파 막내)로 돌아온다. 무시하던 사람들 앞에서 한 수에 정리하는 사이다. 객잔·검기·내공 묘사.", "시네마 다크"),
+    "무협·강호": ("천하제일 고수가 죽어 어린 시절(또는 망한 문파 막내)로 돌아온다. 무시하던 사람들 앞에서 한 수에 정리하는 사이다. 객잔·검기·내공 묘사.", "만화 낭독(사극·무협)"),
     "마법학교": ("마력 0으로 입학한 낙제생이 사실 아무도 못 쓰는 고대 마법의 계승자. 시험·결투 장면으로 반전. 망토·마법진·도서관.", "네온 시티"),
     "드래곤·마왕": ("세계를 멸망시킨다던 마왕(또는 드래곤)이 사실은 엉뚱하고 다정한 존재였다는 반전 코믹. 위엄 있는 등장 → 의외의 대사.", "웹툰 다크"),
     "아포칼립스 생존": ("좀비·괴물·폭설로 무너진 세상에서 살아남기. 편의점·아파트 같은 익숙한 장소, 남은 물자 숫자, 마지막 컷의 문 두드리는 소리.", "공포 레드"),
     "SF·미래 도시": ("AI·로봇·우주정거장이 있는 미래. 인간보다 더 인간적인 로봇, 기억을 사고파는 도시 같은 한 가지 설정으로 반전.", "네온 시티"),
     "타임루프": ("같은 하루가 반복된다. 매번 조금씩 달라지는 단서, 루프를 끝낼 진짜 조건이 마지막 컷에 드러난다.", "시네마 다크"),
-    "사극 웹툰": ("조선 궁궐·저잣거리 배경 창작 사극 웹툰. 궁녀·내관·세자·암행어사 등이 등장하고 사극 말투 대사(~하옵니다). 궁중 음모 반전, 신분을 숨긴 왕, 억울한 누명을 푸는 사이다 중 하나. 실존 왕은 배경으로만.", "감동 웜톤"),
+    "사극 웹툰": ("조선 궁궐·저잣거리 배경 창작 사극 웹툰. 궁녀·내관·세자·암행어사 등이 등장하고 사극 말투 대사(~하옵니다). 궁중 음모 반전, 신분을 숨긴 왕, 억울한 누명을 푸는 사이다 중 하나. 실존 왕은 배경으로만.", "만화 낭독(사극·무협)"),
     "신화·요괴 퓨전": ("구미호·도깨비·저승사자·산신 같은 한국 신화 존재가 현대 서울에 산다. 편의점 알바 도깨비, 계약직 저승사자 같은 생활 코믹 + 한 방 감동.", "웹툰 다크"),
 })
 
@@ -2663,6 +2675,33 @@ class SubtitleRenderer:
             d.rounded_rectangle([x0 - 4, y0 - 4, x1 + 4, y1 + 4], radius=int(self.s["img_radius"]) + 4, outline=col, width=10)
         return canvas
 
+    def _chunks(self, sg):
+        """자막 한 줄씩 나누기: 줄바꿈·문장 끝·쉼표 기준, 한 줄 최대 글자 수(sub_max_chars) 이내로"""
+        if not str(self.s.get("sub_split", "")).startswith("한 줄"):
+            return [sg["text"]]
+        if "chunks" in sg:
+            return sg["chunks"]
+        mx = max(8, int(float(self.s.get("sub_max_chars", 28) or 28)))
+        parts = []
+        for ln in sg["text"].split("\n"):
+            for piece in re.split(r"(?<=[.!?。…])\s+|(?<=[,，])\s+", ln.strip()):
+                piece = piece.strip()
+                while len(piece) > mx:   # 너무 길면 띄어쓰기에서 자름
+                    cut = piece.rfind(" ", 0, mx)
+                    cut = cut if cut > mx // 3 else mx
+                    parts.append(piece[:cut].strip())
+                    piece = piece[cut:].strip()
+                if piece:
+                    parts.append(piece)
+        merged = []   # 너무 짧은 조각은 앞 조각에 붙임
+        for p_ in parts:
+            if merged and (len(p_) < 5 or len(merged[-1]) < 5) and len(merged[-1]) + len(p_) + 1 <= mx:
+                merged[-1] = merged[-1] + " " + p_
+            else:
+                merged.append(p_)
+        sg["chunks"] = merged or [sg["text"]]
+        return sg["chunks"]
+
     def _animate_sub(self, lay, age):
         """자막 등장 효과: 팝(살짝 크게 나타났다 제자리) / 올라옴 / 페이드"""
         kind = str(self.s.get("sub_anim", "팝"))
@@ -2717,14 +2756,29 @@ class SubtitleRenderer:
         if sg is not None:
             if sg["img"] >= 0 and self.images:
                 canvas = self._paint_images(canvas, t)
-            canvas.alpha_composite(self.head_layer)
+            if not str(self.s.get("head_show", "보임")).startswith("안"):
+                canvas.alpha_composite(self.head_layer)
+            age = t - sg["t0"]
             if sg["kind"] == "chapter":
                 lay = self._sub_layer(("ch", sg["i"]), "— " + sg["text"] + " —")
             elif sg["kind"] == "lyric":
                 lay = self._sub_layer(("ly", sg["i"]), sg.get("sub", ""), lyric=sg["text"])
             else:
-                lay = self._sub_layer(("tx", sg["i"]), sg["text"])
-            lay = self._animate_sub(lay, t - sg["t0"])
+                chunks = self._chunks(sg)
+                if len(chunks) > 1:   # 한 줄씩: 글자 수 비율로 시간을 나눠 차례로 보여줌
+                    tot = sum(len(c) for c in chunks)
+                    span = max(0.1, sg["dur"] - float(self.s.get("narr_gap", 0.5)))
+                    acc, j = 0.0, 0
+                    for j, c in enumerate(chunks):
+                        nxt = acc + span * len(c) / tot
+                        if age < nxt or j == len(chunks) - 1:
+                            break
+                        acc = nxt
+                    lay = self._sub_layer(("tx", sg["i"], j), chunks[j])
+                    age = age - acc
+                else:
+                    lay = self._sub_layer(("tx", sg["i"]), sg["text"])
+            lay = self._animate_sub(lay, age)
             canvas.alpha_composite(lay)
         else:
             canvas.alpha_composite(self.head_layer)
@@ -4757,6 +4811,16 @@ class App(tk.Tk):
             for k in THEME_RESET:
                 th.setdefault(k, DEFAULTS[k])
             self.set_settings(th)
+            if name in THEME_FONTS:     # 테마 전용 글꼴(무료) 받아서 적용
+                key_, rp = THEME_FONTS[name]
+
+                def w():
+                    try:
+                        p_ = download_free_font(rp)
+                        self.q.put(lambda: (self.vars[key_].set(p_), self.refresh_preview()))
+                    except Exception:
+                        pass
+                threading.Thread(target=w, daemon=True).start()
             self.theme_var.set(name)
             self.refresh_preview()
 
