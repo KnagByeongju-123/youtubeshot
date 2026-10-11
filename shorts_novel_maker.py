@@ -689,13 +689,32 @@ def explain_api_error(code, body, who=""):
 
 
 class APIError(RuntimeError):
-    def __init__(self, short, detail=""):
+    def __init__(self, short, detail="", quota=False):
         super().__init__(short + ("\n\n" + detail if detail else ""))
         self.short = short
+        self.quota = quota      # 하루 한도/사용량 소진 → 다른 AI로 넘어가도 됨
+
+
+QUOTA_OUT = {}   # {'gemini': True, 'openai': True} 오늘 한도를 다 쓴 서비스 (프로그램 켜져 있는 동안 기억)
+
+
+def _svc(who):
+    return "gemini" if "gemini" in who.lower() else "openai" if ("chatgpt" in who.lower() or "openai" in who.lower()) else who
+
+
+def notify(msg):
+    """작업 기록·상태줄에 알림 (백그라운드에서도 안전)"""
+    for k in ("log", "status"):
+        f = RATE_HOOK.get(k)
+        if f:
+            try:
+                f(msg)
+            except Exception:
+                pass
 
 
 # ---- 사용량 한도(429) 자동 대기 ----
-RATE_HOOK = {"cancel": None, "status": None}   # App 이 작업 시작 때 채움 (취소 신호, 진행 표시)
+RATE_HOOK = {"cancel": None, "status": None, "log": None}   # App 이 작업 시작 때 채움 (취소 신호, 진행 표시)
 _RATE_GAP = {}      # 주소별 최소 요청 간격(초) - 한 번 한도에 걸리면 자동으로 설정
 _RATE_LAST = {}     # 주소별 마지막 요청 시각
 RATE_MAX_WAIT = 150     # 한 번에 최대 기다리는 시간(초)
@@ -810,7 +829,10 @@ def _http_json(url, payload, headers, timeout=180, who=""):
             full = explain_api_error(e.code, body, who)
             if e.code == 429 and parse_rate_limit(e.code, body, e.headers)[2]:
                 full = f"{who} 오늘 사용량을 다 썼습니다 (하루 한도). 내일 다시 하거나 결제(유료 등급)를 켜세요.\n\n" + full.split("\n\n", 1)[-1]
-            raise APIError(full.split("\n\n")[0], full.split("\n\n", 1)[1] if "\n\n" in full else "")
+            quota = e.code == 429 or "insufficient_quota" in body
+            if quota:
+                QUOTA_OUT[_svc(who)] = True
+            raise APIError(full.split("\n\n")[0], full.split("\n\n", 1)[1] if "\n\n" in full else "", quota)
         except urllib.error.URLError as e:
             raise APIError(f"{who} 서버에 연결하지 못했습니다 (인터넷 연결 확인)", str(e.reason)[:200])
 
@@ -886,13 +908,27 @@ def pick_engine(s, key="trans_engine"):
 
 
 def ask_engine_json(s, claude_model, system, user, key="trans_engine"):
+    """설정된 AI로 묻기. 한도를 다 쓴 AI는 건너뛰고 다음 AI(ChatGPT→Gemini→Claude)로 자동 전환"""
     eng, _ = pick_engine(s, key)
-    if eng == "chatgpt":
-        key = (s.get("openai_key") or os.environ.get("OPENAI_API_KEY", "")).strip()
-        return parse_json(ask_openai(key, s.get("openai_model"), system, user))
-    if eng == "gemini":
-        key = (s.get("gemini_key") or os.environ.get("GEMINI_API_KEY", "")).strip()
-        return parse_json(ask_gemini(key, s.get("gemini_model"), system, user))
+    ok_key = (s.get("openai_key") or os.environ.get("OPENAI_API_KEY", "")).strip()
+    gk = (s.get("gemini_key") or os.environ.get("GEMINI_API_KEY", "")).strip()
+    order = [eng] + [e for e, has in (("chatgpt", ok_key), ("gemini", gk), ("claude", True)) if has and e != eng]
+    name = {"chatgpt": "ChatGPT", "gemini": "Gemini", "claude": "Claude"}
+    for i, e in enumerate(order):
+        svc = "openai" if e == "chatgpt" else e
+        nxt = order[i + 1] if i + 1 < len(order) else None
+        if QUOTA_OUT.get(svc) and nxt:
+            continue
+        try:
+            if e == "chatgpt":
+                return parse_json(ask_openai(ok_key, s.get("openai_model"), system, user))
+            if e == "gemini":
+                return parse_json(ask_gemini(gk, s.get("gemini_model"), system, user))
+            return ask_json(claude_model, system, user)
+        except APIError as ex:
+            if not (ex.quota and nxt):
+                raise
+            notify(f"⚠ {name[e]} 오늘 한도 소진 → {name[nxt]}(으)로 자동 전환")
     return ask_json(claude_model, system, user)
 
 
@@ -2702,7 +2738,10 @@ def tts_openai(text, voice, rate_pct, style, out_mp3, key, model):
                 attempt += 1
                 continue
             full = explain_api_error(e.code, body, "ChatGPT 음성")
-            raise APIError(full.split("\n\n")[0], full.split("\n\n", 1)[1] if "\n\n" in full else "")
+            quota = e.code == 429 or "insufficient_quota" in body
+            if quota:
+                QUOTA_OUT["openai"] = True
+            raise APIError(full.split("\n\n")[0], full.split("\n\n", 1)[1] if "\n\n" in full else "", quota)
     with open(out_mp3, "wb") as f:
         f.write(data)
 
@@ -2808,8 +2847,43 @@ def set_tts_cfg(s):
                    gemini_tts_model=str(s.get("gemini_tts_model", "")).strip())
 
 
+AI_VOICE_MALE = {"puck", "charon", "fenrir", "orus", "enceladus", "iapetus", "umbriel", "algieba", "algenib", "rasalgethi",
+                 "alnilam", "schedar", "achird", "zubenelgenubi", "sadachbia", "sadaltager",
+                 "echo", "onyx", "ash", "ballad", "verse", "fable"}
+_FALLBACK_SAID = set()
+
+
+def fallback_voice(voice, text):
+    """AI 음성 한도가 끝났을 때 대신 쓸 무료 성우(edge) - 글 언어와 남/여에 맞춤"""
+    male = voice.split(":", 1)[-1].lower() in AI_VOICE_MALE
+    if re.search(r"[가-힣]", text):
+        return "ko-KR-InJoonNeural" if male else "ko-KR-SunHiNeural"
+    if re.search(r"[぀-ヿ]", text):
+        return "ja-JP-KeitaNeural" if male else "ja-JP-NanamiNeural"
+    return "en-US-AndrewNeural" if male else "en-US-AriaNeural"
+
+
 def tts_clip(text, voice_name, rate_pct, cache_dir, pitch_hz=0):
-    """문장 하나 → (소리 배열 mono float32, 길이초). 같은 문장은 캐시에서 재사용"""
+    """문장 하나 → (소리 배열 mono float32, 길이초). 같은 문장은 캐시에서 재사용
+    ChatGPT·Gemini 음성 한도를 다 쓰면 무료 성우로 자동으로 바꿔 계속 만듦"""
+    voice = voice_code(voice_name)
+    if voice.startswith(("openai:", "gemini:")):
+        svc = voice.split(":", 1)[0]
+        if not QUOTA_OUT.get(svc):
+            try:
+                return _tts_clip(text, voice_name, rate_pct, cache_dir, pitch_hz)
+            except APIError as ex:
+                if not ex.quota:
+                    raise
+        fb = fallback_voice(voice, tts_clean(text))
+        if svc not in _FALLBACK_SAID:
+            _FALLBACK_SAID.add(svc)
+            notify(f"⚠ {'Gemini' if svc == 'gemini' else 'ChatGPT'} 음성 오늘 한도 소진 → 무료 성우 {fb} 로 자동 전환해서 계속 만듭니다")
+        return _tts_clip(text, fb, rate_pct, cache_dir, pitch_hz)
+    return _tts_clip(text, voice_name, rate_pct, cache_dir, pitch_hz)
+
+
+def _tts_clip(text, voice_name, rate_pct, cache_dir, pitch_hz=0):
     text = tts_clean(text)
     if not text:
         return np.zeros(1, np.float32), 0.0
@@ -3103,6 +3177,7 @@ class App(tk.Tk):
         self.build_ui()
         RATE_HOOK["cancel"] = self.cancel      # 성우 미리듣기처럼 따로 도는 작업도 한도 대기 표시
         RATE_HOOK["status"] = lambda msg: self.q.put(lambda m_=msg: self.set_status(m_))
+        RATE_HOOK["log"] = lambda msg: self.q.put(lambda m_=msg: self.write_log(m_))
         self.apply_cfg()
         self.after(100, self.poll)
         self.after(300, self.refresh_preview)
@@ -3848,6 +3923,7 @@ class App(tk.Tk):
         SCRIPT_ENGINE["s"] = self.get_settings()
         RATE_HOOK["cancel"] = self.cancel
         RATE_HOOK["status"] = lambda msg: self.q.put(lambda m_=msg: self.set_status(m_))
+        RATE_HOOK["log"] = lambda msg: self.q.put(lambda m_=msg: self.write_log(m_))
         set_tts_cfg(SCRIPT_ENGINE["s"])
 
         def worker():
