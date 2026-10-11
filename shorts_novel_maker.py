@@ -116,6 +116,8 @@ SOUND_STYLE_NAMES = ["노래 멜로디(오르골)", "잔잔한 패드", "슬픈 
 
 # 소재별 자동 배경음
 SOUND_BY_TOPIC = {
+    "여행 브이로그": "밝은 오르골", "맛집·카페 방문기": "밝은 오르골", "하루 일상 브이로그": "잔잔한 패드", "등산·캠핑·낚시": "바람",
+    "반려동물 일상": "밝은 오르골", "제품 언박싱·사용기": "긴장 펄스", "우리 동네 산책·명소": "잔잔한 패드", "행사·축제·모임": "밝은 오르골",
     "라디오 사연 꽁트": "밝은 오르골", "2인 만담": "밝은 오르골", "상황극 (가게·택시·병원)": "밝은 오르골", "스탠드업 코미디 (한국)": "긴장 펄스",
     "스탠드업 코미디 (해외 스타일)": "긴장 펄스", "영국식 드라이 유머": "잔잔한 패드", "아재개그·말장난": "밝은 오르골",
     "회식·술자리 썰": "밝은 오르골", "동물·육아 코믹": "밝은 오르골",
@@ -340,6 +342,26 @@ CATEGORIES = {
         "세계 각국의 옛 노래": ("일본·중남미·러시아·하와이·유럽 민요 등 1929년 이전 노래의 가사 원문+해석. 예: La Cumparsita(1916), Aloha ʻOe(1878), Greensleeves", "로맨스 핑크"),
     }),
 }
+
+PHOTO_CATEGORY = "사진 블로그(여행·일상)"
+CATEGORIES[PHOTO_CATEGORY] = (False, {
+    "여행 브이로그": ("내 여행 사진으로 만드는 브이로그. 도착→첫인상→먹은 것·본 것→뜻밖의 순간→마무리 소감. 사진마다 한 문단, 1인칭 담담한 말투.", "감동 웜톤"),
+    "맛집·카페 방문기": ("가게 외관→분위기→주문한 메뉴→맛 표현(식감·온도·향)→가격·팁→재방문 의사. 과장 없이 솔직하게.", "종이 노트"),
+    "하루 일상 브이로그": ("아침부터 밤까지 시간 순서. 소소한 순간에 의미를 주는 담백한 문장, 마지막은 하루를 정리하는 한 줄.", "종이 노트"),
+    "등산·캠핑·낚시": ("출발→길·날씨→힘든 구간→정상·캠프의 순간→음식·휴식→하산·정리. 거리·시간·준비물 팁 한 줄.", "감동 웜톤"),
+    "반려동물 일상": ("반려동물 시점 또는 집사 시점. 사진 속 행동에 귀여운 해석을 붙이고 마지막은 웃음 또는 뭉클.", "웹툰"),
+    "제품 언박싱·사용기": ("상자→구성품→첫인상→실제로 써 본 느낌(좋은 점 2, 아쉬운 점 1)→누구에게 추천. 광고 느낌 없이.", "네온 시티"),
+    "우리 동네 산책·명소": ("동네 골목·공원·시장·오래된 가게. 계절·시간대의 분위기, 숨은 이야기, 가는 법 한 줄.", "종이 노트"),
+    "행사·축제·모임": ("현장 분위기→하이라이트→사람들 반응→먹거리·볼거리→팁(주차·시간대). 마지막은 다음에 올 사람에게 한마디.", "네온 시티"),
+})
+
+PHOTO_BLOG_SYSTEM = """너는 사진으로 유튜브 쇼츠·브이로그를 만드는 작가다. 사용자가 올린 사진들을 Read 도구로 직접 열어 본 뒤, 사진 순서대로 이야기를 쓴다.
+- 사진마다 한 문단(1~2문장). 그 사진에 실제로 보이는 것(장소·음식·사람의 행동·날씨·시간대·간판 글씨)을 구체적으로 쓴다. 안 보이는 사실은 지어내지 않는다.
+- 각 문단 바로 앞 줄에 '[사진N]' 자리표시를 한 줄로 넣는다(N은 사진 번호, 사진 → 글 순서). 모든 사진을 한 번씩 쓴다.
+- 첫 문단 앞에는 사진 없이 훅 한 줄(장소·분위기를 한 문장으로), 마지막은 소감·한 줄 팁·댓글 질문으로 끝난다.
+- 말투: 사용자가 고른 말투. 한 줄 35자 이내, 문단 사이 빈 줄. 사람 얼굴이 나오면 외모 평가는 하지 않는다.
+- 사진 속 사람·가게 이름은 사용자가 적어 준 것만 쓴다. 가게 이름이 간판에 보이면 써도 된다.
+반드시 JSON만 출력: {"title": "제목(15자 이내, 장소 포함)", "story": "본문", "captions": ["사진1 한 줄 설명", "..."], "notes": "확인할 점"}"""
 
 COMEDY_CATEGORY = "코미디 꽁트"
 CATEGORIES[COMEDY_CATEGORY] = (False, {
@@ -590,6 +612,7 @@ IDEA_SYSTEM = """너는 한국 유튜브 쇼츠 채널 기획자다. (허구 썰
 각 주제는 25자 이내 한 줄로, 결말은 밝히지 않는다.
 명화면 '그림 제목 - 화가(제작 연도)' 형식, 이야기가 있는 유명 그림 위주(한국 명화 포함). 그림 이미지를 쓰려면 화가가 1955년 이전 사망이어야 하므로 그런 작품 위주.
 만화 소설이면 웹툰 한 편 같은 완전 창작 주제(실존 인물·기존 웹툰 금지), 예: '눈 떠보니 고3 첫날로 돌아왔다'.
+사진 블로그면 '장소 + 한 줄 느낌'(예: '부산 해운대 새벽 산책', '우리 동네 30년 된 떡볶이집').
 코미디 꽁트면 '상황 + 꼬임' 한 줄(펀치라인은 숨김), 예: '택시 기사님이 내 전 애인이었다', '엄마가 ChatGPT를 배우셨다'. 실존 코미디언·방송 이름 금지.
 올드 팝송이면 '노래 제목(발표 연도) - 가수/작곡가' 형식. 소재에 '가사'가 들어가면 1929년 이전 발표곡만, '실화'면 극적인 인생을 산 가수·작곡가 위주(시대 무관).
 반드시 JSON만 출력: {"ideas": ["주제1", "주제2", ...]}"""
@@ -5312,6 +5335,7 @@ class App(tk.Tk):
         self.ref_label = ttk.Label(r1, text="", foreground="gray")
         self.ref_label.pack(side="left")
         ttk.Button(r1, text="✍ AI로 대본 쓰기", command=self.ai_write).pack(side="right", padx=4)
+        ttk.Button(r1, text="📷 사진으로 만들기", command=self.photo_blog).pack(side="right")
         r2 = ttk.Frame(s1)
         r2.pack(fill="x", pady=4)
         ttk.Label(r2, text="제목").pack(side="left")
@@ -5664,6 +5688,143 @@ class App(tk.Tk):
 
     def narr_cache_dir(self):
         return os.path.join(self.get_settings()["out_dir"], "tts_cache")
+
+    # ---- 📷 사진 블로그: 내 사진 여러 장 + 장소 → AI가 사진을 보고 브이로그 대본 ----
+    def photo_blog(self):
+        win = tk.Toplevel(self)
+        win.title("📷 사진으로 만들기 - 사진 몇 장 + 장소만 넣으면 AI가 사진을 보고 대본을 씁니다")
+        win.geometry("760x560")
+        f = ttk.Frame(win, padding=12)
+        f.pack(fill="both", expand=True)
+        if self.cat_var.get() != PHOTO_CATEGORY:
+            self.cat_var.set(PHOTO_CATEGORY)
+            self.on_category()
+        topics = list(cat_info(PHOTO_CATEGORY)[1])
+        ttk.Label(f, text="종류").grid(row=0, column=0, sticky="e")
+        g_v = tk.StringVar(value=self.genre_var.get() if self.genre_var.get() in topics else topics[0])
+        ttk.Combobox(f, textvariable=g_v, values=topics, width=22, state="readonly").grid(row=0, column=1, sticky="w", padx=4)
+        ttk.Label(f, text="말투").grid(row=0, column=2, sticky="e")
+        tone_v = tk.StringVar(value="담담한 1인칭(~했다)")
+        ttk.Combobox(f, textvariable=tone_v, values=["담담한 1인칭(~했다)", "밝은 존댓말(~했어요)", "친구에게 말하듯(~했음, 반말)", "정보형(~입니다)"],
+                     width=22, state="readonly").grid(row=0, column=3, sticky="w", padx=4)
+        ttk.Label(f, text="장소·제목").grid(row=1, column=0, sticky="e", pady=6)
+        place_v = tk.StringVar(value=self.topic_var.get())
+        ttk.Entry(f, textvariable=place_v, width=58).grid(row=1, column=1, columnspan=3, sticky="w", padx=4)
+        ttk.Label(f, text="메모(선택)").grid(row=2, column=0, sticky="ne")
+        memo = tk.Text(f, height=4, width=60, wrap="word", font=("맑은 고딕", 10))
+        memo.grid(row=2, column=1, columnspan=3, sticky="w", padx=4)
+        ttk.Label(f, text="예: 10월 둘째 주 토요일, 엄마랑 둘이. 3번 사진 가게 이름은 '해운대 할매집'. 마지막엔 비가 왔음", foreground="gray").grid(row=3, column=1, columnspan=3, sticky="w", padx=4)
+        ttk.Label(f, text="사진 (순서대로)").grid(row=4, column=0, sticky="ne", pady=6)
+        lst = tk.Listbox(f, height=9, width=60, selectmode="extended")
+        lst.grid(row=4, column=1, columnspan=3, sticky="w", padx=4, pady=6)
+        files = []
+
+        def add():
+            fs = filedialog.askopenfilenames(filetypes=[("사진", "*.jpg *.jpeg *.png *.webp *.heic *.bmp")], parent=win)
+            for p_ in fs:
+                if p_ not in files:
+                    files.append(p_)
+                    lst.insert("end", os.path.basename(p_))
+
+        def move(d):
+            sel = lst.curselection()
+            if not sel:
+                return
+            i = sel[0]
+            j = i + d
+            if 0 <= j < len(files):
+                files[i], files[j] = files[j], files[i]
+                lst.delete(0, "end")
+                for p_ in files:
+                    lst.insert("end", os.path.basename(p_))
+                lst.selection_set(j)
+
+        def remove():
+            for i in reversed(lst.curselection()):
+                files.pop(i)
+                lst.delete(i)
+        bb = ttk.Frame(f)
+        bb.grid(row=5, column=1, columnspan=3, sticky="w", padx=4)
+        ttk.Button(bb, text="📂 사진 추가", command=add).pack(side="left")
+        ttk.Button(bb, text="▲", width=3, command=lambda: move(-1)).pack(side="left", padx=(8, 2))
+        ttk.Button(bb, text="▼", width=3, command=lambda: move(1)).pack(side="left")
+        ttk.Button(bb, text="빼기", command=remove).pack(side="left", padx=8)
+        ttk.Label(f, text="AI(Claude)가 사진을 직접 보고 씁니다. 대본 AI가 ChatGPT·Gemini면 사진을 못 보고 파일 이름·메모만으로 씁니다.\n"
+                          "사진 속 사람 얼굴·차 번호판은 올리기 전에 가려 주세요.", foreground="#555", justify="left").grid(row=6, column=0, columnspan=4, sticky="w", pady=(10, 0))
+
+        def go():
+            if not files:
+                messagebox.showinfo("사진", "사진을 한 장 이상 넣어 주세요.", parent=win)
+                return
+            place = place_v.get().strip()
+            if not place:
+                messagebox.showinfo("사진", "장소나 제목을 적어 주세요.", parent=win)
+                return
+            genre, tone, note = g_v.get(), tone_v.get(), memo.get("1.0", "end").strip()
+            self.genre_var.set(genre)
+            self.on_genre()
+            self.topic_var.set(place)
+            model = self.model_var.get().strip()
+            media = self.media_dir()
+            sec = float(self.len_var.get() or 40)
+            s = self.get_settings()
+            use_claude = str(s.get("script_engine", "Claude")).startswith("Claude")
+            win.destroy()
+
+            def job():
+                os.makedirs(media, exist_ok=True)
+                photos = []
+                for i, p_ in enumerate(files):   # 내 사진을 media 폴더로 복사(크기 줄임)
+                    try:
+                        im = Image.open(p_)
+                        im.load()
+                        try:
+                            from PIL import ImageOps
+                            im = ImageOps.exif_transpose(im)
+                        except Exception:
+                            pass
+                    except Exception as e:
+                        self.log_bg(f"  사진 열기 실패: {os.path.basename(p_)} ({e})")
+                        continue
+                    path = save_media_image(im, media, time.strftime("my_%Y%m%d_%H%M%S") + f"_{i + 1}")
+                    photos.append({"path": path, "src": p_, "caption": "", "credit": "내 사진", "page": ""})
+                if not photos:
+                    raise RuntimeError("쓸 수 있는 사진이 없습니다")
+                rule = cat_info(PHOTO_CATEGORY)[1][genre][0]
+                plist = "\n".join(f"사진{i + 1}: {os.path.abspath(ph['path'])}  (원본 파일명: {os.path.basename(ph['src'])})" for i, ph in enumerate(photos))
+                user = (f"종류: {genre}\n소재 공식: {rule}\n말투: {tone}\n장소·제목: {place}\n"
+                        f"목표 길이: 약 {sec:.0f}초 (본문 약 {int(sec * 6)}자)\n" + (f"사용자 메모: {note}\n" if note else "")
+                        + f"\n[사진 {len(photos)}장 - Read 도구로 각 파일을 열어 본 뒤 쓸 것]\n{plist}")
+                if use_claude:
+                    self.log_bg(f"📷 Claude가 사진 {len(photos)}장을 보고 대본 쓰는 중...")
+                    d = ask_json(model, PHOTO_BLOG_SYSTEM, user, tools=["Read"])
+                else:
+                    self.log_bg("📷 사진 없이 파일 이름·메모로 대본 쓰는 중 (사진 보기는 Claude만 가능)")
+                    d = ask_script_json(model, PHOTO_BLOG_SYSTEM.replace("Read 도구로 직접 열어 본 뒤", "파일 이름과 메모를 바탕으로"), user)
+                caps = d.get("captions") or []
+                for i, ph in enumerate(photos):
+                    ph["caption"] = str(caps[i]) if i < len(caps) else f"사진 {i + 1}"
+                story = str(d.get("story", ""))
+                story = place_photos(story, photos)
+                return str(d.get("title") or place), story, str(d.get("notes", "")), len(photos)
+
+            def done(res):
+                title, story, notes, n = res
+                self.title_var.set(title)
+                self.set_story(story)
+                self.set_sources([], notes)
+                self.img_prompts = []
+                self.vars["layout"].set("자막형(큰 제목+사진+자막)")
+                self.vars["img_fill"].set("전체 화면(글자가 사진 위에)")
+                self.write_log(f"📷 사진 블로그 대본 완성: {title} (사진 {n}장)" + (f"\n   확인: {notes}" if notes else ""))
+                self.refresh_preview()
+                self.save_cfg()
+            self.write_log("📷 사진으로 대본 만드는 중... (1~3분)")
+            self.run_bg("사진 보고 대본 쓰는 중...", job, done)
+        bf = ttk.Frame(f)
+        bf.grid(row=7, column=0, columnspan=4, sticky="we", pady=(14, 0))
+        ttk.Button(bf, text="✍ 사진 보고 대본 쓰기", command=go).pack(side="left")
+        ttk.Button(bf, text="닫기", command=win.destroy).pack(side="right")
 
     # ---- 📑 문단별 정리: 문단마다 그림·음성을 한 줄씩 ----
     def para_board(self):
