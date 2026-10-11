@@ -4077,6 +4077,14 @@ MUSIC_PRESETS = {   # 이름: 설정 (gen=생성 방식, title=기본 제목, de
                      prompt="a vast calm nebula with distant stars and a small planet, deep blue and violet, cinematic space art, no text"),
 }
 MUSIC_OVERLAYS = ["없음", "먼지 빛", "반딧불", "눈", "빗줄기", "호흡 가이드"]
+MUSIC_MOTIONS = ["천천히 줌(기본)", "천천히 줌인만", "숨쉬듯 확대·축소", "좌우로 천천히", "위아래로 천천히", "없음(정지)"]
+
+MUSIC_PROMPT_SYSTEM = """너는 유튜브 명상·집중·수면 음악 채널의 아트 디렉터다. 음악 종류와 제목, 사용자가 적은 분위기에 맞는 배경 이미지 프롬프트를 만든다.
+- images: 3개. 서로 다른 장면(예: 자연 풍경 / 실내 공간 / 추상 빛). 각 prompt 는 영어 50~80단어: 장소·시간·빛·색감·질감·구도, 아주 고요하고 움직임이 적은 장면, 사람 없음(or 뒷모습 실루엣), 글자·워터마크 금지.
+  화면 비율은 사용자가 알려준 비율. 긴 시간 봐도 피로하지 않게 대비가 부드럽고 어두운 톤 위주.
+- video_prompt: 같은 장면을 5~10초짜리 '끊김 없이 반복되는(seamless loop)' 짧은 영상으로 만들 때 쓸 영어 프롬프트 1개(60~90단어). 카메라 고정 또는 아주 느린 줌, 반복 가능한 작은 움직임만(흔들리는 촛불, 떨어지는 비, 흐르는 구름, 반짝이는 별, 물결). 갑작스러운 변화 금지, 글자 금지.
+- ko: 각 프롬프트의 한국어 한 줄 설명
+반드시 JSON만 출력: {"images": [{"ko": "...", "prompt": "..."}], "video_prompt": "...", "video_ko": "..."}"""
 MUSIC_TAIL = 12.0   # 덩어리 사이 겹치는 길이(초)
 
 
@@ -4392,8 +4400,8 @@ def render_music_track(name, minutes, seed, wav_path, progress=None, cancel=None
 class MusicLoop:
     """음악 영상의 그림 부분: 배경 그림이 천천히 줌인·줌아웃(끊김 없이 반복) + 입자 효과 + 제목. duration 초짜리 반복 조각"""
 
-    def __init__(self, s, bg_image, overlay, title, sub, colors, show_text=True, L=32.0):
-        self.s, self.duration, self.L = s, L, L
+    def __init__(self, s, bg_image, overlay, title, sub, colors, show_text=True, L=32.0, motion="천천히 줌"):
+        self.s, self.duration, self.L, self.motion = s, L, L, motion
         self.overlay, self.title, self.sub, self.show_text = overlay, title, sub, show_text
         if bg_image is not None:
             im = bg_image.convert("RGB")
@@ -4451,10 +4459,23 @@ class MusicLoop:
     def frame(self, t):
         L = self.L
         ph = (t % L) / L
-        z = 1.0 + 0.07 * (0.5 - 0.5 * np.cos(2 * np.pi * ph))      # 천천히 다가갔다 물러남 → 끝과 처음이 이어짐
+        mo = self.motion
+        s_, c_ = np.sin(2 * np.pi * ph), 0.5 - 0.5 * np.cos(2 * np.pi * ph)
+        if mo.startswith("없음"):
+            z, dx, dy = 1.06, 0.0, 0.0
+        elif mo.startswith("숨쉬듯"):
+            z, dx, dy = 1.0 + 0.1 * (0.5 - 0.5 * np.cos(4 * np.pi * ph)), 0.0, 0.0
+        elif mo.startswith("좌우"):
+            z, dx, dy = 1.1, s_ * 0.9, 0.0
+        elif mo.startswith("위아래"):
+            z, dx, dy = 1.1, 0.0, s_ * 0.9
+        elif mo.startswith("천천히 줌인"):
+            z, dx, dy = 1.0 + 0.1 * c_, 0.0, 0.0
+        else:   # 천천히 줌 (다가갔다 물러남 + 살짝 흐름) → 끝과 처음이 이어짐
+            z, dx, dy = 1.0 + 0.07 * c_, s_ * 0.25, np.sin(4 * np.pi * ph) * 0.1
         cw, ch = W * 1.12 / z, H * 1.12 / z
-        cx = self.big.width / 2 + np.sin(2 * np.pi * ph) * (self.big.width - cw) * 0.25
-        cy = self.big.height / 2 + np.sin(4 * np.pi * ph) * (self.big.height - ch) * 0.1
+        cx = self.big.width / 2 + dx * (self.big.width - cw) / 2
+        cy = self.big.height / 2 + dy * (self.big.height - ch) / 2
         bg = self.big.transform((W, H), Image.EXTENT, (cx - cw / 2, cy - ch / 2, cx + cw / 2, cy + ch / 2), Image.BILINEAR)
         arr = (np.asarray(bg).astype(np.float32) * self.vig * 0.92).astype(np.uint8)
         im = Image.fromarray(arr).convert("RGBA")
@@ -4514,6 +4535,28 @@ class MusicLoop:
 
     def frame_preview(self, t):
         return np.asarray(Image.fromarray(self.frame(t)).resize((PREVIEW_W, PREVIEW_H), Image.BILINEAR)).copy()
+
+
+def video_loop(src, out_mp4, text_layer, fps, quality, sec=32.0):
+    """짧은 반복 영상 → 화면 크기에 맞게 잘라 sec 초 반복 조각으로 (제목 글자 PNG를 위에 올림)"""
+    png = out_mp4 + ".text.png"
+    cmd = [get_ffmpeg(), "-y", "-v", "error", "-stream_loop", "-1", "-i", src]
+    vf = f"scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H},fps={fps},format=yuv420p"
+    if text_layer is not None:
+        text_layer.save(png)
+        cmd += ["-i", png, "-filter_complex", f"[0:v]{vf}[bg];[bg][1:v]overlay=0:0:format=auto,format=yuv420p[v]", "-map", "[v]"]
+    else:
+        cmd += ["-vf", vf]
+    cmd += ["-an", "-t", f"{sec:.2f}", "-c:v", "libx264", "-preset", "fast", "-crf", str(max(10, min(30, int(quality)))), "-g", str(fps * 2),
+            "-movflags", "+faststart", out_mp4]
+    p = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, errors="replace",
+                       creationflags=(subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0))
+    try:
+        os.remove(png)
+    except OSError:
+        pass
+    if p.returncode != 0:
+        raise RuntimeError("루프 영상 변환 실패: " + (p.stderr or "")[-400:])
 
 
 def mux_music_video(loop_mp4, wav, out_mp4, sec):
@@ -7179,32 +7222,90 @@ class App(tk.Tk):
         seed = tk.StringVar(value=str(int(np.random.default_rng().integers(1, 9999))))
         ttk.Entry(f, textvariable=seed, width=7).grid(row=0, column=3, padx=4)
         ttk.Button(f, text="새 곡", command=lambda: seed.set(str(int(np.random.default_rng().integers(1, 9999))))).grid(row=0, column=4)
-        ttk.Label(f, text="화면 효과").grid(row=1, column=0, sticky="e", pady=4)
+        ttk.Label(f, text="입자 효과").grid(row=1, column=0, sticky="e", pady=4)
         ov = tk.StringVar(value="먼지 빛")
         ttk.Combobox(f, textvariable=ov, values=MUSIC_OVERLAYS, width=10, state="readonly").grid(row=1, column=1, padx=4, sticky="w")
+        ttk.Label(f, text="그림 움직임").grid(row=1, column=2, sticky="e", padx=(10, 0))
+        mo = tk.StringVar(value=MUSIC_MOTIONS[0])
+        ttk.Combobox(f, textvariable=mo, values=MUSIC_MOTIONS, width=14, state="readonly").grid(row=1, column=3, columnspan=2, padx=4, sticky="w")
         show_text = tk.BooleanVar(value=True)
-        ttk.Checkbutton(f, text="화면에 제목 표시", variable=show_text).grid(row=1, column=2, columnspan=2, sticky="w", padx=(10, 0))
+        ttk.Checkbutton(f, text="화면에 제목 표시", variable=show_text).grid(row=4, column=1, columnspan=2, sticky="w", padx=4)
         ttk.Label(f, text="영상 제목").grid(row=2, column=0, sticky="e")
         title_v = tk.StringVar()
         ttk.Entry(f, textvariable=title_v, width=46).grid(row=2, column=1, columnspan=4, sticky="w", padx=4)
         ttk.Label(f, text="작은 글").grid(row=3, column=0, sticky="e", pady=4)
         sub_v = tk.StringVar(value="편하게 틀어 두세요 · 구독하면 다음 음악이 이어집니다")
         ttk.Entry(f, textvariable=sub_v, width=46).grid(row=3, column=1, columnspan=4, sticky="w", padx=4)
-        bgf = ttk.LabelFrame(left, text="② 배경 그림 (없으면 색 배경) ", padding=6)
+        bgf = ttk.LabelFrame(left, text="② 배경 (그림 또는 짧은 반복 영상 · 없으면 색 배경) ", padding=6)
         bgf.pack(fill="x", pady=6)
-        bg = {"im": None}
+        bg = {"im": None, "video": None}
         bstat = ttk.Label(bgf, text="그림 없음 → 은은한 색 배경", foreground="gray")
+        r0 = ttk.Frame(bgf)
+        r0.pack(fill="x")
+        ttk.Label(r0, text="원하는 분위기·장면(선택)").pack(side="left")
+        mood_v = tk.StringVar()
+        ttk.Entry(r0, textvariable=mood_v, width=34).pack(side="left", padx=4)
 
         def copy_prompt():
             P = MUSIC_PRESETS[cur()]
             self.clipboard_clear()
             self.clipboard_append(P["prompt"] + f"\n\n({ratio_ko()} 비율, 글자·워터마크 없이, 아주 잔잔하고 고요한 분위기로 그려줘)")
-            self.set_status("📋 배경 그림 프롬프트 복사됨 → ChatGPT에 붙여넣기")
+            self.set_status("📋 기본 배경 그림 프롬프트 복사됨 → ChatGPT에 붙여넣기")
+
+        def ai_prompts():
+            name, title, mood = cur(), title_v.get().strip(), mood_v.get().strip()
+            model = self.model_var.get().strip()
+            P = MUSIC_PRESETS[name]
+
+            def job():
+                return ask_script_json(model, MUSIC_PROMPT_SYSTEM, f"화면 비율: {ratio_ko()}\n음악 종류: {name} ({P['desc']})\n영상 제목: {title}"
+                                       + (f"\n사용자가 원하는 분위기·장면: {mood}" if mood else "") + f"\n참고(기본 프롬프트): {P['prompt']}")
+
+            def done(d):
+                w2 = tk.Toplevel(win)
+                w2.title("✨ AI가 만든 배경 프롬프트 - 복사해서 ChatGPT(그림) 또는 영상 AI(Sora·Veo 등)에 붙여넣기")
+                w2.geometry("760x640")
+                fr = ttk.Frame(w2, padding=10)
+                fr.pack(fill="both", expand=True)
+                items2 = [(x.get("ko", ""), x.get("prompt", ""), "그림") for x in (d.get("images") or []) if isinstance(x, dict) and x.get("prompt")]
+                if d.get("video_prompt"):
+                    items2.append((d.get("video_ko", "반복 영상"), d["video_prompt"], "루프 영상"))
+                for ko, pr, kind in items2:
+                    lf = ttk.LabelFrame(fr, text=f" {'🎞 ' if kind == '루프 영상' else '🖼 '}{ko} ", padding=6)
+                    lf.pack(fill="x", pady=4)
+                    tb = tk.Text(lf, height=4, wrap="word", font=("맑은 고딕", 9))
+                    tb.insert("1.0", pr)
+                    tb.pack(fill="x")
+                    tail = (f"\n\n({ratio_ko()} 비율, 5~10초, 처음과 끝이 자연스럽게 이어지는 반복 영상, 글자 없이)" if kind == "루프 영상"
+                            else f"\n\n({ratio_ko()} 비율, 글자·워터마크 없이, 아주 잔잔하고 고요하게)")
+                    ttk.Button(lf, text="📋 복사", command=lambda tb=tb, tail=tail: (self.clipboard_clear(), self.clipboard_append(tb.get("1.0", "end").strip() + tail),
+                                                                              self.set_status("📋 프롬프트 복사됨"))).pack(anchor="e", pady=(3, 0))
+                ttk.Label(fr, text="그림은 ChatGPT에서 받아 '📥 그림 붙여넣기', 영상은 영상 AI에서 받은 mp4를 '🎞 루프 영상 파일'로 넣으면 돼요.",
+                          foreground="#555", wraplength=720).pack(anchor="w", pady=6)
+            self.run_bg("AI 프롬프트 만드는 중...", job, done)
 
         def got(im):
             bg["im"] = im.convert("RGB")
+            bg["video"] = None
             bstat.config(text=f"✅ 그림 받음 ({im.width}×{im.height})", foreground="#080")
             preview()
+
+        def open_video():
+            f_ = filedialog.askopenfilename(filetypes=[("영상", "*.mp4 *.mov *.webm *.mkv")], parent=win)
+            if not f_:
+                return
+            try:
+                png = os.path.join(tempfile.gettempdir(), "shorts_music_vframe.png")
+                subprocess.run([get_ffmpeg(), "-y", "-v", "error", "-i", f_, "-frames:v", "1", png], check=True,
+                               creationflags=(subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0))
+                im = Image.open(png)
+                im.load()
+                bg["im"] = im.convert("RGB")
+                bg["video"] = f_
+                bstat.config(text=f"🎞 반복 영상: {os.path.basename(f_)} (입자 효과·움직임은 적용 안 됨, 제목만 올림)", foreground="#06c")
+                preview()
+            except Exception as e:
+                messagebox.showerror("영상", f"영상을 열 수 없습니다: {e}", parent=win)
 
         def paste_bg():
             im = None
@@ -7234,9 +7335,15 @@ class App(tk.Tk):
                     got(im)
                 except Exception as e:
                     messagebox.showerror("그림", str(e), parent=win)
-        ttk.Button(bgf, text="📋 그림 프롬프트 복사(ChatGPT용)", command=copy_prompt).pack(side="left")
-        ttk.Button(bgf, text="📥 그림 붙여넣기", command=paste_bg).pack(side="left", padx=6)
-        ttk.Button(bgf, text="📂 파일", command=open_file).pack(side="left")
+        r1_ = ttk.Frame(bgf)
+        r1_.pack(fill="x", pady=(4, 0))
+        ttk.Button(r1_, text="✨ AI 프롬프트 만들기(그림 3개 + 루프 영상 1개)", command=ai_prompts).pack(side="left")
+        ttk.Button(r1_, text="📋 기본 프롬프트 복사", command=copy_prompt).pack(side="left", padx=6)
+        r2_ = ttk.Frame(bgf)
+        r2_.pack(fill="x", pady=(4, 0))
+        ttk.Button(r2_, text="📥 그림 붙여넣기", command=paste_bg).pack(side="left")
+        ttk.Button(r2_, text="📂 그림 파일", command=open_file).pack(side="left", padx=6)
+        ttk.Button(r2_, text="🎞 루프 영상 파일(mp4)", command=open_video).pack(side="left")
         bstat.pack(side="left", padx=8)
         bf = ttk.Frame(left)
         bf.pack(fill="x", pady=(8, 0))
@@ -7282,7 +7389,7 @@ class App(tk.Tk):
 
         def loop_for():
             P = MUSIC_PRESETS[cur()]
-            return MusicLoop(s, bg["im"], ov.get(), title_v.get(), sub_v.get(), P["colors"], show_text.get())
+            return MusicLoop(s, bg["im"], ov.get(), title_v.get(), sub_v.get(), P["colors"], show_text.get(), motion=mo.get())
 
         def preview():
             try:
@@ -7291,7 +7398,7 @@ class App(tk.Tk):
                 pv.config(image=pv._img)
             except Exception as e:
                 self.write_log("미리보기 실패: " + str(e)[:100])
-        for v_ in (ov, title_v, sub_v, show_text):
+        for v_ in (ov, mo, title_v, sub_v, show_text):
             v_.trace_add("write", lambda *_: preview())
 
         def listen():
@@ -7320,6 +7427,7 @@ class App(tk.Tk):
             os.makedirs(out_dir, exist_ok=True)
             fps_now = s["fps"]
             loop.s = dict(s, fps=min(30, int(fps_now)))   # 음악 영상은 30fps면 충분
+            use_video, text_layer = bg["video"], (loop.text_layer if show_text.get() else None)   # 스레드에서는 위젯을 읽지 않음
 
             def job():
                 wav = base + ".wav"
@@ -7327,7 +7435,10 @@ class App(tk.Tk):
                 sec = render_music_track(name, mn, sd, wav, progress=self.progress_cb("음악 "), cancel=self.cancel)
                 self.q.put(lambda: self.set_status("🎬 화면 그리는 중 (32초 반복 조각)..."))
                 loop_mp4 = base + "_loop.mp4"
-                export_mp4(loop, loop_mp4, self.progress_cb("화면 "), self.cancel, None)
+                if use_video:
+                    video_loop(use_video, loop_mp4, text_layer, min(30, int(fps_now)), s["quality"])
+                else:
+                    export_mp4(loop, loop_mp4, self.progress_cb("화면 "), self.cancel, None)
                 self.q.put(lambda: self.set_status("🎞 음악과 화면 합치는 중..."))
                 mux_music_video(loop_mp4, wav, base + ".mp4", sec)
                 try:
