@@ -449,7 +449,7 @@ PHOTO_RULES = """[사진 규칙]
 - 명화 이야기면 그 그림 자체(Wikimedia Commons 의 PD-Art 파일, 화가 사후 70년 경과작만)를 첫 번째로, 그 다음 이야기에 나오는 부분의 확대 이미지나 화가 초상. 한국 그림은 국립중앙박물관·간송미술관 공개 이미지도 가능.
 - 노래 이야기면 그 곡의 옛 악보 표지(sheet music cover, 1929년 이전 출판물은 퍼블릭 도메인), 작곡가·가수의 옛 사진, 당시 공연장 사진을 고른다.
 - 그 사건·현상·장소를 실제로 보여주는 사진만 고른다. 비슷한 다른 사진 금지. 직접 열어서(WebFetch) 맞는지 확인한다
-- after: 사진이 들어갈 위치 = 본문에서 사진 바로 앞에 올 문장의 일부(원문 그대로 10~20자). 본문이 아직 없으면 그 사진이 보여주는 사실의 핵심 단어
+- after: 그 사진이 보여주는 문단의 앞부분(원문 그대로 10~20자). 사진은 그 문단 **바로 앞 줄**에 들어간다(사진 → 글 순서). 본문이 아직 없으면 그 사진이 보여주는 사실의 핵심 단어
 - caption: 15자 이내 한국어 설명 / credit: "작가 또는 기관 / 라이선스" / page: 출처 페이지 URL"""
 
 RESEARCH_SYSTEM = """너는 유튜브 쇼츠 대본을 위한 자료조사원이다. WebSearch 로 주제를 검색하고, 중요한 내용은 WebFetch 로 원문을 열어 확인한다.
@@ -473,7 +473,7 @@ RESEARCH_SYSTEM = """너는 유튜브 쇼츠 대본을 위한 자료조사원이
 반드시 JSON만 출력: {"topic": "조사한 주제", "facts": ["..."], "hook": "...", "twist": "...", "sources": ["이름 - URL"], "photos": [{"after": "...", "url": "...", "caption": "...", "credit": "...", "page": "..."}]}"""
 
 PHOTO_SYSTEM = """너는 유튜브 쇼츠 사실 콘텐츠의 사진 자료조사원이다. WebSearch/WebFetch 로 아래 대본의 사실을 뒷받침하는 실제 사진을 1~3장 찾는다.
-첫 문단(훅) 바로 뒤와 마지막 문단 뒤에는 넣지 않는다. 사진끼리 붙지 않게 떨어뜨린다.
+사진은 그 장면을 설명하는 문단 바로 앞에 놓인다(사진 → 글). 첫 문단 앞도 좋다. 사진끼리 붙지 않게 떨어뜨린다.
 
 """ + PHOTO_RULES + """
 
@@ -976,7 +976,7 @@ def photo_note(n, category=""):
         return ""
     fiction = not cat_info(category)[0] if category else False
     s = (f"\n\n[사진 수 - 위의 1~3장 규칙 대신 이걸 따름] 자막형 영상이라 화면이 사진 위주다. 사진을 {n}장 찾는다. "
-         "문단 1~2개마다 한 장씩 고르게 배치(첫 문단 바로 뒤도 가능). 같은 사진 반복 금지, 장면마다 다른 사진. "
+         "문단 1~2개마다 한 장씩 고르게 배치(첫 문단 앞부터). 같은 사진 반복 금지, 장면마다 다른 사진. "
          "가로·세로 상관없이 해상도 큰 것(가로 1000px 이상)을 고른다.")
     if fiction:
         s += (" 허구 이야기이므로 실제 사건 사진이 아니라 장면 분위기를 보여주는 사진을 고른다 "
@@ -1345,23 +1345,25 @@ def _bigram_score(key, text):
 
 
 def insert_photo_near(paras, marker, after):
-    """after 문장과 가장 비슷한 문단 뒤에 사진 줄 삽입 (훅 뒤·마지막 문단 뒤는 피함)"""
+    """after 와 가장 비슷한 문단 **바로 앞**에 사진 줄 삽입 (사진 → 글 순서). 못 찾으면 사진 없는 문단 중 가운데"""
     text_idx = [i for i, p in enumerate(paras) if not parse_media(p) and not PH_RE.match(p)]
+    if not text_idx:
+        paras.append(marker)
+        return paras
     best, best_i = 0.0, None
     for i in text_idx:
         sc = _bigram_score(after, paras[i]) if after else 0
         if sc > best:
             best, best_i = sc, i
-    idx = best_i if best >= 0.35 else (text_idx[len(text_idx) // 2] if text_idx else len(paras) - 1)
-    if len(paras) >= 3:
-        idx = min(max(idx, 0 if PHOTO_PLAN.get("sub") else 1), len(paras) - 2)
-    if PHOTO_PLAN.get("sub") and best < 0.35:   # 자막형: 위치 못 찾으면 사진이 없는 곳 중 가운데
-        free = [i for i in text_idx if not (i + 1 < len(paras) and parse_media(paras[i + 1]))]
-        if free:
-            idx = free[len(free) // 2]
-    while idx + 1 < len(paras) and parse_media(paras[idx + 1]):  # 사진끼리 붙지 않게
-        idx += 1
-    paras.insert(idx + 1, marker)
+    if best >= 0.35:
+        idx = best_i
+    else:
+        free = [i for i in text_idx if not (i >= 1 and parse_media(paras[i - 1]))]   # 앞에 사진이 없는 문단
+        idx = (free or text_idx)[len(free or text_idx) // 2]
+    if idx >= 1 and parse_media(paras[idx - 1]):      # 이미 그 문단 앞에 사진이 있으면 → 다음 문단 앞으로
+        nxt = [i for i in text_idx if i > idx and not (i >= 1 and parse_media(paras[i - 1]))]
+        idx = nxt[0] if nxt else idx
+    paras.insert(idx, marker)
     return paras
 
 
@@ -1395,9 +1397,11 @@ def place_photos(story, photos):
             else:
                 paras[i] = ""
     paras = [p for p in paras if p]
-    for k, ph in enumerate(photos):
-        if k not in used:
-            paras = insert_photo_near(paras, make_marker(ph["path"], ph.get("caption"), ph.get("credit"), ph.get("page")), ph.get("after", ""))
+    rest = [k for k in range(len(photos)) if k not in used]
+    rest.sort(key=lambda k: 0 if photos[k].get("after") else 1)     # 위치가 정해진 사진부터 넣고, 나머지는 빈 자리에
+    for k in rest:
+        ph = photos[k]
+        paras = insert_photo_near(paras, make_marker(ph["path"], ph.get("caption"), ph.get("credit"), ph.get("page")), ph.get("after", ""))
     return strip_placeholders("\n\n".join(paras))
 
 
@@ -5233,7 +5237,7 @@ class App(tk.Tk):
                 return
             path = save_media_image(im, self.media_dir(), time.strftime("aiimg_%Y%m%d_%H%M%S") + f"_{k}")
             marker = make_marker(path, items[k].get("ko") or "장면", "AI 생성 이미지 (ChatGPT)")
-            if self.insert_after_para(items[k]["text"], marker):
+            if self.insert_before_para(items[k]["text"], marker):
                 lab.config(text="✅ 넣음", foreground="#080")
                 items[k]["done"] = True
                 self.save_cfg()
@@ -5256,23 +5260,23 @@ class App(tk.Tk):
             row.pack(fill="x")
             lab = ttk.Label(row, text="✅ 넣음" if it.get("done") else "", foreground="#080")
             ttk.Button(row, text="📋 복사", command=lambda k=k, lab=lab: copy(k, lab)).pack(side="left")
-            ttk.Button(row, text="📥 그림 붙여넣기 (이 문단 뒤)", command=lambda k=k, lab=lab: paste(k, lab)).pack(side="left", padx=6)
+            ttk.Button(row, text="📥 그림 붙여넣기 (이 문단 앞)", command=lambda k=k, lab=lab: paste(k, lab)).pack(side="left", padx=6)
             lab.pack(side="left", padx=6)
         if not items:
             ttk.Label(body, text="프롬프트가 없습니다. '다시 만들기'를 누르세요.").pack(pady=20)
 
-    def insert_after_para(self, para_text, marker):
-        """본문에서 para_text 문단의 끝(다음 빈 줄 앞)에 사진 줄 삽입. 이미 바로 뒤에 사진이 있으면 그 뒤에"""
+    def insert_before_para(self, para_text, marker):
+        """본문에서 para_text 문단 바로 앞에 사진 줄 삽입 (사진 → 글). 이미 앞에 사진이 있으면 그 사진을 바꿈"""
         story = self.get_story()
         paras = split_paras(story)
         try:
             k = paras.index(para_text)
         except ValueError:
             return False
-        j = k + 1
-        while j < len(paras) and parse_media(paras[j]):
-            j += 1
-        paras.insert(j, marker)
+        if k >= 1 and parse_media(paras[k - 1]) and "AI 생성 이미지" in paras[k - 1]:
+            paras[k - 1] = marker        # 같은 문단에 다시 붙여넣으면 교체
+        else:
+            paras.insert(k, marker)
         self.set_story("\n\n".join(paras))
         self.refresh_preview()
         self.write_log("그림 넣음: " + marker[:80])
