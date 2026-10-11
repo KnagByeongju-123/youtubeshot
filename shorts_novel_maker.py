@@ -5926,6 +5926,14 @@ class App(tk.Tk):
             line = script_lines[i] if i < len(script_lines) else tts_clean(text)
             return (style_en + "\n\n" if style_en else "") + line
 
+        def copy_voice(i, text):
+            if not style_en:   # 성우 지시가 아직 없으면 먼저 만들고 이 창을 다시 연다
+                win.destroy()
+                self.set_status("🗣 성우 지시를 먼저 만듭니다... 끝나면 문단별 정리 창이 다시 열려요")
+                self.narr_prompt(after=self.para_board)
+                return
+            copy(voice_text_for(i, text), "성우 지시+대본 한 줄")
+
         def grab_image():
             try:
                 from PIL import ImageGrab
@@ -6020,7 +6028,7 @@ class App(tk.Tk):
             ttk.Separator(fr, orient="vertical").grid(row=1, column=3, sticky="ns", padx=10)
             aud_l = ttk.Label(fr, text="", width=26)
             aud_l.grid(row=1, column=4, sticky="w")
-            ttk.Button(fr, text="📋 지시+이 줄", command=lambda i=i, text=text: copy(voice_text_for(i, text), "성우 지시+대본 한 줄")).grid(row=1, column=5, padx=2)
+            ttk.Button(fr, text="📋 지시+이 줄", command=lambda i=i, text=text: copy_voice(i, text)).grid(row=1, column=5, padx=2)
             ttk.Button(fr, text="📂 음성 파일", command=lambda i=i: pick_audio(i)).grid(row=1, column=6, padx=2)
             ttk.Button(fr, text="▶", width=3, command=lambda i=i: play_audio(i)).grid(row=1, column=7, padx=2)
             ttk.Button(fr, text="x", width=2, command=lambda i=i: clear_audio(i)).grid(row=1, column=8)
@@ -6035,11 +6043,32 @@ class App(tk.Tk):
                   + ("" if style_en else "  · 성우 지시 없음 → '🗣 만들기'"),
                   foreground="#555").pack(side="left")
         ttk.Button(bf, text="닫기", command=win.destroy).pack(side="right")
-        ttk.Button(bf, text="🗣 AI 성우 프롬프트 만들기", command=lambda: (win.destroy(), self.narr_prompt())).pack(side="right", padx=6)
+        ttk.Button(bf, text="🗣 AI 성우 프롬프트 " + ("다시 만들기" if style_en else "만들기(전체)"),
+                   command=lambda: (win.destroy(), self.narr_prompt(after=self.para_board))).pack(side="right", padx=6)
+        ttk.Button(bf, text="📋 전체 지시+대본 복사", command=lambda: copy(
+            (style_en + "\n\n" if style_en else "") + "\n\n".join(script_lines or [tts_clean(x) for _, x in items]), "성우 지시+대본 전체")).pack(side="right", padx=6)
+        ttk.Button(bf, text="📥 전체 음성 파일 넣기(한 파일)", command=lambda: load_whole()).pack(side="right")
+
+        def load_whole():
+            p_ = filedialog.askopenfilename(filetypes=[("음성", "*.mp3 *.wav *.m4a *.ogg *.flac")], parent=win)
+            if not p_:
+                return
+            self.vars["narr_file"].set(p_)
+            self.vars["narration"].set("on")
+            try:
+                res = split_external_narration(self.get_story(), p_)
+                self.write_log(f"🎙 전체 나레이션 파일 적용: {os.path.basename(p_)} → {len(res)}줄로 나눔")
+            except Exception as e:
+                messagebox.showerror("나레이션", str(e), parent=win)
+                return
+            self.bgm_made = None
+            self.save_cfg()
+            self.refresh_preview()
+            self.set_status("🎙 전체 나레이션 파일 적용됨 (문단별 파일이 있는 줄은 그 파일이 우선)")
         ttk.Button(bf, text="🎨 그림 프롬프트 " + ("다시 만들기" if prompts else "만들기(전체)"),
                    command=lambda: (win.destroy(), self.img_prompts_make(force=bool(prompts), after=self.para_board))).pack(side="right")
 
-    def narr_prompt(self):
+    def narr_prompt(self, after=None):
         """🗣 AI 성우 서비스용 연기 지시 + 읽기 대본 → 복사해서 성우 사이트에서 음성 받기 → 📥 파일로 넣기"""
         story = self.get_story()
         if not narration_paras(story):
@@ -6054,6 +6083,9 @@ class App(tk.Tk):
         def done(d):
             self.narr_style_cache = {"style_ko": str(d.get("style_ko", "")), "style_en": str(d.get("style_en", "")), "script": str(d.get("script", ""))}
             self.save_cfg()
+            if after:
+                after()
+                return
             win = tk.Toplevel(self)
             win.title("🗣 AI 성우 프롬프트 - 복사 → 성우 사이트에서 음성 받기 → 📥 나레이션 파일 넣기")
             win.geometry("860x760")
@@ -6112,8 +6144,21 @@ class App(tk.Tk):
         if nf and os.path.exists(nf):
             if log:
                 log("🎙 외부 나레이션 파일을 문단별로 나누는 중: " + os.path.basename(nf))
-            return split_external_narration(story, nf)
+            return self._merge_para_audio(split_external_narration(story, nf))
         return build_narration(story, s, os.path.join(s["out_dir"], "tts_cache"), log, cancel, dict(getattr(self, "para_audio", {}) or {}))
+
+    def _merge_para_audio(self, res):
+        """통째 파일을 나눈 결과 위에, 문단별 음성 파일이 있는 줄은 그 파일로 바꿈"""
+        pa = getattr(self, "para_audio", {}) or {}
+        out = []
+        for i, a, d in res:
+            f_ = pa.get(str(i))
+            if f_ and os.path.exists(f_):
+                a2, d2 = load_para_audio(f_)
+                out.append((i, a2, d2))
+            else:
+                out.append((i, a, d))
+        return out
 
     def narration_cached(self, story, s):
         """이미 만들어 둔 나레이션이 전부 있으면 바로 반환, 아니면 None (미리보기용, 느린 작업 안 함)"""
@@ -6122,7 +6167,7 @@ class App(tk.Tk):
         nf = str(s.get("narr_file", "")).strip()
         if nf and os.path.exists(nf):
             try:
-                return split_external_narration(story, nf)
+                return self._merge_para_audio(split_external_narration(story, nf))
             except Exception:
                 return None
         import hashlib
