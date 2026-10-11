@@ -5416,7 +5416,7 @@ class App(tk.Tk):
         ttk.Button(tr, text="🎵 배경음 만들기", command=self.make_bgm).pack(side="left")
         ttk.Button(tr, text="▶ 다시 듣기", command=self.replay_bgm).pack(side="left", padx=(4, 0))
         ttk.Button(tr, text="■ 소리 정지", command=stop_wav).pack(side="left", padx=4)
-        ttk.Button(tr, text="💾 배경음 저장(이름 지정 → MP4에 사용)", command=self.save_bgm_named).pack(side="left")
+        ttk.Button(tr, text="💾 다른 이름으로 저장", command=self.save_bgm_named).pack(side="left")
         ttk.Button(tr, text="라이브용 긴 버전", command=self.save_bgm_wav).pack(side="left", padx=(4, 0))
         st_ = ttk.Style(self)
         st_.configure("Tab.TFrame", background=TAB_BG)          # 설정 탭 영역은 연노랑으로 구분
@@ -7500,6 +7500,8 @@ class App(tk.Tk):
             s["bgm_seed"] = seed
         r, style = self.renderer, self.cur_style()
         media = self.media_dir()
+        music_dir = os.path.join(s["out_dir"], "music")
+        title = safe_name(self.title_var.get()) or "배경음"
 
         def job():
             a = build_audio(r, s, style)
@@ -7510,9 +7512,17 @@ class App(tk.Tk):
                     else f"믹스_{os.path.splitext(os.path.basename(s['bgm_path']))[0]}.wav")
             path = os.path.join(media, name)
             write_wav(path, a)
-            return path
+            saved = ""
+            if s["bgm_mode"] == "자동생성":   # 음악만 따로 저장 (다른 영상에도 쓸 수 있게, 10초 여유)
+                m = make_music(s, style, int((r.duration + 10) * SR))
+                if m is not None:
+                    os.makedirs(music_dir, exist_ok=True)
+                    saved = os.path.join(music_dir, f"{title}_{safe_name(style)}_{s['bgm_seed']}.wav")
+                    write_wav(saved, _norm(m, 0.9))
+            return path, saved
 
-        def done(p):
+        def done(res):
+            p, saved = res
             self.bgm_made = {"path": p, "seed": s["bgm_seed"], "style": style, "dur": round(r.duration, 2),
                              "mode": s["bgm_mode"], "src": s["bgm_path"] if s["bgm_mode"] == "파일" else ""}
             what = f"{style} #{s['bgm_seed']}" if s["bgm_mode"] == "자동생성" else "파일 " + os.path.basename(s["bgm_path"])
@@ -7520,7 +7530,8 @@ class App(tk.Tk):
                            + (f" · 반전 효과음 {r.reveal_t:.1f}초" if r.reveal_t and s["reveal_hit"] == "on" else "")
                            + (" → 이 소리가 MP4에 그대로 들어갑니다 (마음에 안 들면 한 번 더 누르기)" if s["bgm_mode"] == "자동생성"
                               else " → 이 파일이 MP4에 그대로 들어갑니다"))
-            self.write_log("  저장: " + p)
+            self.write_log("  저장: " + p + (f"\n  🎼 음악 파일 저장: {saved}  (소리 탭 '음악 파일'로 다른 영상에도 쓸 수 있어요)" if saved else ""))
+            self.set_status("🎵 배경음 완성 · 저장됨" + (f" → output/music/{os.path.basename(saved)}" if saved else ""))
             self.refresh_preview()
             self.save_cfg()
             self.replay_bgm()
