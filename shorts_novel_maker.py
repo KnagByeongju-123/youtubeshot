@@ -647,7 +647,9 @@ def strip_placeholders(text):
             continue
         out.append(PH_INLINE_RE.sub("", line).rstrip() if PH_INLINE_RE.search(line) else line)
     return re.sub(r"\n{3,}", "\n\n", "\n".join(out)).strip("\n")
-UA = "ShortsNovelMaker/1.0 (personal YouTube Shorts tool)"
+# 위키미디어는 프로그램 이름·연락처가 있는 User-Agent 를 요구함 (없으면 429/403으로 거부)
+UA = "ShortsNovelMaker/1.0 (https://github.com/KnagByeongju-123/youtubeshot; personal YouTube Shorts tool) Python-urllib"
+IMG_WIDTH = 1600   # 받을 사진 폭 (원본은 수십 MB라 축소본으로 받음)
 
 
 def parse_media(line):
@@ -706,19 +708,56 @@ def save_media_image(im, media_dir, stem=None):
 
 
 def fix_image_url(url):
-    """Commons/위키 파일 페이지 주소 → 실제 이미지 주소"""
+    """위키미디어 주소를 '1600px 축소본' 주소로 통일 (원본·파일 페이지·썸네일 주소 모두 처리)"""
+    from urllib.parse import quote, unquote
     url = url.strip()
-    m = re.match(r"https?://(?:commons\.wikimedia\.org|[\w-]+\.wikipedia\.org)/wiki/(?:File|파일|Datei|Fichier):([^?#]+)", url)
+    name = None
+    m = re.match(r"https?://(?:commons\.wikimedia\.org|[\w-]+\.wikipedia\.org)/wiki/(?:File|파일|Datei|Fichier|Archivo|Fichier):([^?#]+)", url)
     if m:
-        return "https://commons.wikimedia.org/wiki/Special:FilePath/" + m.group(1) + "?width=1600"
+        name = m.group(1)
+    m = re.match(r"https?://upload\.wikimedia\.org/wikipedia/(?:commons|[a-z]{2,3})/thumb/[0-9a-f]/[0-9a-f]{2}/([^/?#]+)/\d+px-[^/?#]+", url)
+    if m:
+        name = m.group(1)
+    m = re.match(r"https?://upload\.wikimedia\.org/wikipedia/(?:commons|[a-z]{2,3})/[0-9a-f]/[0-9a-f]{2}/([^/?#]+)$", url)
+    if m:
+        name = m.group(1)
+    if name:
+        return "https://commons.wikimedia.org/wiki/Special:FilePath/" + quote(unquote(name)) + f"?width={IMG_WIDTH}"
     return url
 
 
+_last_dl = [0.0]
+
+
 def download_image(url, media_dir, stem=None):
-    import urllib.request
-    req = urllib.request.Request(fix_image_url(url), headers={"User-Agent": UA})
-    with urllib.request.urlopen(req, timeout=40) as r:
-        data = r.read(25 * 1024 * 1024 + 1)
+    """사진 내려받기. 위키미디어 429(너무 자주 요청)면 잠시 기다렸다 최대 3번 재시도"""
+    import urllib.request, urllib.error
+    target = fix_image_url(url)
+    data = None
+    for attempt in range(3):
+        gap = time.time() - _last_dl[0]
+        if gap < 1.0:                      # 요청 사이 최소 1초 간격
+            time.sleep(1.0 - gap)
+        _last_dl[0] = time.time()
+        req = urllib.request.Request(target, headers={"User-Agent": UA, "Accept": "image/*,*/*;q=0.8"})
+        try:
+            with urllib.request.urlopen(req, timeout=60) as r:
+                data = r.read(25 * 1024 * 1024 + 1)
+            break
+        except urllib.error.HTTPError as e:
+            if e.code in (429, 503) and attempt < 2:
+                wait = 3.0 * (attempt + 1)
+                try:
+                    wait = max(wait, float(e.headers.get("Retry-After", 0)))
+                except (TypeError, ValueError):
+                    pass
+                time.sleep(min(wait, 20))
+                continue
+            if e.code == 429:
+                raise ValueError("위키미디어가 요청을 잠시 막음(429) - 1~2분 뒤 'AI 근거사진 찾기'를 다시 눌러보세요")
+            raise
+    if data is None:
+        raise ValueError("내려받기 실패")
     if len(data) > 25 * 1024 * 1024:
         raise ValueError("파일이 너무 큼")
     im = Image.open(io.BytesIO(data))
