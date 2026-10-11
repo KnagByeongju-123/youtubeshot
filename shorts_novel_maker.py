@@ -740,20 +740,59 @@ def safe_env():
     return env
 
 
+_RUNNING = {"procs": set()}   # 지금 돌고 있는 AI 프로세스 (중지 버튼이 죽임)
+
+
+def kill_running():
+    """돌고 있는 Claude·ffmpeg 등 프로세스를 모두 멈춤"""
+    n = 0
+    for p_ in list(_RUNNING["procs"]):
+        try:
+            if p_.poll() is None:
+                if os.name == "nt":   # 자식(node 등)까지 함께 종료
+                    subprocess.run(["taskkill", "/F", "/T", "/PID", str(p_.pid)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                                   creationflags=subprocess.CREATE_NO_WINDOW)
+                else:
+                    import signal
+                    try:
+                        os.killpg(p_.pid, signal.SIGKILL)
+                    except Exception:
+                        p_.kill()
+                n += 1
+        except Exception:
+            pass
+    return n
+
+
+class _Done:
+    def __init__(self, rc, out, err):
+        self.returncode, self.stdout, self.stderr = rc, out, err
+
+
 def run_cli(args, input_text=None, timeout=CLAUDE_TIMEOUT):
     exe = find_claude()
     if not exe:
         raise RuntimeError("Claude Code가 설치되어 있지 않습니다.\n설치 후 터미널에서 claude 를 실행해 Max 계정으로 로그인하세요.")
     with tempfile.TemporaryDirectory(prefix="shorts_novel_") as work:
         try:
-            return subprocess.run([exe] + args, input=input_text, cwd=work, env=safe_env(),
-                                  stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
-                                  encoding="utf-8", errors="replace", timeout=timeout,
-                                  creationflags=(subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0))
-        except subprocess.TimeoutExpired:
-            raise RuntimeError(f"Claude 응답 시간 초과({timeout}초). 다시 시도하세요.")
+            p = subprocess.Popen([exe] + args, stdin=subprocess.PIPE, cwd=work, env=safe_env(),
+                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+                                 encoding="utf-8", errors="replace", start_new_session=(os.name != "nt"),
+                                 creationflags=(subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0))
         except OSError as ex:
             raise RuntimeError(f"Claude Code 실행 불가: {ex}")
+        _RUNNING["procs"].add(p)
+        try:
+            out, err = p.communicate(input_text, timeout=timeout)
+        except subprocess.TimeoutExpired:
+            p.kill()
+            raise RuntimeError(f"Claude 응답 시간 초과({timeout}초). 다시 시도하세요.")
+        finally:
+            _RUNNING["procs"].discard(p)
+        cancel = RATE_HOOK.get("cancel")
+        if p.returncode != 0 and cancel is not None and cancel.is_set():
+            raise RuntimeError("취소됨")
+        return _Done(p.returncode, out, err)
 
 
 WEB_TOOLS = ["WebSearch", "WebFetch"]
@@ -4165,6 +4204,7 @@ def export_mp4(r, out, progress, cancel=None, audio=None):
     flags = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
     with open(log_path, "w", encoding="utf-8", errors="ignore") as log:
         p = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, stderr=log, creationflags=flags)
+        _RUNNING["procs"].add(p)
         fq = queue.Queue(maxsize=4)          # 그리기와 인코딩을 동시에 (쓰기 스레드)
         werr = []
 
@@ -4197,6 +4237,7 @@ def export_mp4(r, out, progress, cancel=None, audio=None):
         finally:
             fq.put(None)
             wt.join()
+            _RUNNING["procs"].discard(p)
         p.wait()
     shutil.rmtree(tmpdir, ignore_errors=True)
     if p.returncode != 0:
@@ -5399,7 +5440,7 @@ class App(tk.Tk):
         ttk.Button(s4, text="🌐 영어·일본어 버전", command=self.lang_versions_dialog).pack(side="left", padx=(6, 0))
         ttk.Button(s4, text="🎵 음악 영상(명상·집중·수면)", command=self.music_dialog).pack(side="left", padx=(6, 0))
         ttk.Button(s4, text="✂ 롱폼→쇼츠", command=self.shorts_cutter).pack(side="left", padx=(6, 0))
-        ttk.Button(s4, text="취소", command=self.cancel.set).pack(side="left", padx=6)
+        ttk.Button(s4, text="취소", command=self.stop_now).pack(side="left", padx=6)
         ttk.Button(s4, text="저장 폴더 열기", command=self.open_folder).pack(side="left")
         self.prog = ttk.Progressbar(s4, length=220)
         self.prog.pack(side="left", padx=10)
@@ -5457,6 +5498,8 @@ class App(tk.Tk):
         tk.Label(sr, textvariable=self.now_var, anchor="w", justify="left", font=("맑은 고딕", 11, "bold"),
                  fg="#1565C0", wraplength=1100).pack(side="left", fill="x", expand=True)
         ttk.Button(sr, text="📜 전체 기록", command=self.show_log).pack(side="right")
+        self.stop_btn = ttk.Button(sr, text="⏹ 현재 작업 중지", command=self.stop_now)
+        self.stop_btn.pack(side="right", padx=6)
         self.log = ScrolledText(self, height=4, state="disabled", font=("맑은 고딕", 10))   # 화면에는 안 보임 (전체 기록 창에서 봄)
         self.busy_since, self.busy_label = 0.0, ""
 
@@ -6442,6 +6485,15 @@ class App(tk.Tk):
             self._last_tick = time.time()
             self.set_status(getattr(self, "_status_text", self.busy_label))
         self.after(100, self.poll)
+
+    def stop_now(self):
+        """⏹ 현재 작업 중지: 취소 신호 + 돌고 있는 Claude·ffmpeg 프로세스 종료"""
+        if not self.busy:
+            self.set_status("지금 진행 중인 작업이 없어요")
+            return
+        self.cancel.set()
+        n = kill_running()
+        self.set_status(f"⏹ 중지 요청함 ({self.busy_label})" + (f" - 프로세스 {n}개 종료" if n else " - 지금 단계가 끝나면 멈춥니다"))
 
     def run_bg(self, label, job, done):
         if self.busy:
