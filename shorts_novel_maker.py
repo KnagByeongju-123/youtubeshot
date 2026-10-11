@@ -116,6 +116,9 @@ SOUND_STYLE_NAMES = ["노래 멜로디(오르골)", "잔잔한 패드", "슬픈 
 
 # 소재별 자동 배경음
 SOUND_BY_TOPIC = {
+    "라디오 사연 꽁트": "밝은 오르골", "2인 만담": "밝은 오르골", "상황극 (가게·택시·병원)": "밝은 오르골", "스탠드업 코미디 (한국)": "긴장 펄스",
+    "스탠드업 코미디 (해외 스타일)": "긴장 펄스", "영국식 드라이 유머": "잔잔한 패드", "아재개그·말장난": "밝은 오르골",
+    "회식·술자리 썰": "밝은 오르골", "동물·육아 코믹": "밝은 오르골",
     "사극 드라마": "바람", "사극 웹툰": "바람",
     "학교 코믹": "밝은 오르골", "회사 코믹": "밝은 오르골", "회귀·환생 판타지": "긴장 펄스", "로맨스 웹툰": "감성 오르골",
     "공포 웹툰": "공포 심장박동", "사이다 웹툰": "긴장 펄스", "동물·펫 일상툰": "밝은 오르골", "가족 감동툰": "감성 오르골",
@@ -227,7 +230,8 @@ FIELDS = [
     ("소리", "bgm_mode", "배경음", "choice:자동생성,파일,없음", "자동생성"),
     ("소리", "bgm_style", "배경음 스타일", "choice:" + ",".join(["자동(소재별)"] + SOUND_STYLE_NAMES), "자동(소재별)"),
     ("소리", "bgm_volume", "배경음 볼륨(0~2)", "float", 0.5),
-    ("소리", "reveal_hit", "반전 효과음(쿵)", "choice:on,off", "on"),
+    ("소리", "reveal_hit", "반전 효과음", "choice:on,off", "on"),
+    ("소리", "hit_sound", "반전 효과음 종류", "choice:자동(코미디=두둥탁),쿵(반전),두둥탁(개그 드럼),띠링(밝은 종)", "자동(코미디=두둥탁)"),
     ("소리", "hit_volume", "효과음 볼륨(0~2)", "float", 0.6),
     ("소리", "bgm_seed", "배경음 번호(0=만들 때마다 새로)", "int", 0),
     ("소리", "bgm_path", "음악 파일(파일 모드)", "audio", ""),
@@ -335,6 +339,27 @@ CATEGORIES = {
         "세계 각국의 옛 노래": ("일본·중남미·러시아·하와이·유럽 민요 등 1929년 이전 노래의 가사 원문+해석. 예: La Cumparsita(1916), Aloha ʻOe(1878), Greensleeves", "로맨스 핑크"),
     }),
 }
+
+COMEDY_CATEGORY = "코미디 꽁트"
+CATEGORIES[COMEDY_CATEGORY] = (False, {
+    "라디오 사연 꽁트": ("라디오 청취자 사연처럼 '안녕하세요, 저는 ○○에 사는 32살 직장인입니다'로 시작하는 1인칭 웃긴 사연. 평범하게 시작→상황이 꼬임→마지막 한 줄 반전 펀치라인. 사연 속 대사는 따옴표로.", "웹툰"),
+    "2인 만담": ("바보 역(보케)과 태클 역(츳코미) 두 사람의 주고받는 대화만으로 진행. '이름: 대사' 형식. 짧은 대사가 빠르게 오가고, 3번 쌓고 4번째에 터뜨리는 구조. 마지막은 태클 역의 한 마디.", "웹툰"),
+    "상황극 (가게·택시·병원)": ("손님과 직원, 승객과 기사, 환자와 의사처럼 익숙한 장소의 상황극. 한쪽이 말도 안 되는 요구를 하고 다른 쪽이 점점 당황. '이름: 대사' 형식. 마지막은 상황이 완전히 뒤집히는 펀치라인.", "웹툰"),
+    "스탠드업 코미디 (한국)": ("무대에서 혼자 관객에게 말하는 스탠드업. '여러분, 혹시…' 식의 관찰 개그(일상의 이상한 점), 자기 비하, 가족·연애·회사 소재. 셋업→펀치라인 묶음 3~4개, 마지막은 앞 농담을 다시 끌어오는 콜백.", "네온 시티"),
+    "스탠드업 코미디 (해외 스타일)": ("뉴욕 코미디 클럽 스타일을 한국어로. 무심한 말투의 관찰 개그, 과장된 비유, 말끝을 흐리는 드라이 유머, 셀프 디스. 한국 관객도 공감할 보편 소재(공항, 헬스장, 부모님 문자, 배달앱). 셋업→펀치라인 3~4묶음 + 콜백.", "네온 시티"),
+    "영국식 드라이 유머": ("감정 없이 담담하게 말하는데 내용은 황당한 영국식 유머. 과장 대신 절제, 아이러니, 예의 바른 독설. 날씨·줄서기·차·이웃 소재. 마지막 줄은 아주 조용한 한 방.", "시네마 다크"),
+    "아재개그·말장난": ("동음이의어·말장난 개그를 하나의 상황극으로 엮는다. 대사 속에서 자연스럽게 터지게 하고, 듣는 사람의 '하…' 반응까지 묘사. 5~7개를 하나의 이야기로.", "웹툰"),
+    "회식·술자리 썰": ("'진짜 있었던 일인데' 식으로 시작하는 1인칭 웃긴 썰. 회식, 동창회, 소개팅, 가족 모임. 점점 커지는 사고, 마지막 반전. 특정 인물 비하 없이.", "네온 시티"),
+    "동물·육아 코믹": ("강아지·고양이·아기 시점 또는 부모 시점의 웃긴 상황. 의성어와 행동 묘사 위주, 마지막 한 줄은 귀엽거나 황당한 반전.", "웹툰"),
+})
+
+COMEDY_RULES = """[코미디 규칙]
+- 웃음은 '셋업(평범한 기대) → 펀치라인(기대를 비트는 한 줄)' 구조. 펀치라인은 문단의 마지막 줄, 가장 짧게. 설명으로 웃음을 망치지 않는다.
+- 3의 법칙: 비슷한 것 두 개를 쌓고 세 번째에서 비튼다. 마지막 펀치라인은 앞에 나온 농담을 다시 끌어오는 콜백이면 가장 좋다.
+- 대사는 '이름: 대사' 또는 따옴표. 호흡(쉼)이 필요한 곳은 문단을 나눈다(문단 사이 쉼이 타이밍이 된다).
+- 실존 인물·실제 방송·실제 코미디언의 농담을 흉내 내거나 인용하지 않는다. 완전히 새로 만든 농담만.
+- 특정 집단(성별·지역·외모·장애·국적) 비하, 혐오, 욕설, 19금 금지. 자기 비하와 상황의 황당함으로 웃긴다.
+- 제목은 펀치라인을 들키지 않게. notes 에 '관객 웃음 포인트' 위치를 1~3개 적는다."""
 
 COMIC_CATEGORY = "만화 소설"
 CATEGORIES[COMIC_CATEGORY] = (False, {
@@ -564,6 +589,7 @@ IDEA_SYSTEM = """너는 한국 유튜브 쇼츠 채널 기획자다. (허구 썰
 각 주제는 25자 이내 한 줄로, 결말은 밝히지 않는다.
 명화면 '그림 제목 - 화가(제작 연도)' 형식, 이야기가 있는 유명 그림 위주(한국 명화 포함). 그림 이미지를 쓰려면 화가가 1955년 이전 사망이어야 하므로 그런 작품 위주.
 만화 소설이면 웹툰 한 편 같은 완전 창작 주제(실존 인물·기존 웹툰 금지), 예: '눈 떠보니 고3 첫날로 돌아왔다'.
+코미디 꽁트면 '상황 + 꼬임' 한 줄(펀치라인은 숨김), 예: '택시 기사님이 내 전 애인이었다', '엄마가 ChatGPT를 배우셨다'. 실존 코미디언·방송 이름 금지.
 올드 팝송이면 '노래 제목(발표 연도) - 가수/작곡가' 형식. 소재에 '가사'가 들어가면 1929년 이전 발표곡만, '실화'면 극적인 인생을 산 가수·작곡가 위주(시대 무관).
 반드시 JSON만 출력: {"ideas": ["주제1", "주제2", ...]}"""
 
@@ -589,6 +615,9 @@ def systems_for(category):
         return SONG_SYSTEM, SONG_MULTI_SYSTEM
     if category == ART_CATEGORY:
         return ART_SYSTEM, ART_MULTI_SYSTEM
+    if category == COMEDY_CATEGORY:
+        return (STORY_SYSTEM.replace("반드시 JSON만 출력", COMEDY_RULES + "\n\n반드시 JSON만 출력").replace('"story": "본문"}', '"story": "본문", "notes": "웃음 포인트"}'),
+                MULTI_SYSTEM.replace("반드시 JSON만 출력", COMEDY_RULES + "\n\n반드시 JSON만 출력"))
     if category == COMIC_CATEGORY:
         return (STORY_SYSTEM.replace("반드시 JSON만 출력", COMIC_RULES + '\n\n반드시 JSON만 출력').replace('"story": "본문"}', '"story": "본문", "notes": "인물 외모(한 줄씩)"}'),
                 MULTI_SYSTEM.replace("반드시 JSON만 출력", COMIC_RULES + "\n\n반드시 JSON만 출력").replace('"story": "본문"}', '"story": "본문", "notes": "인물 외모"}'))
@@ -1014,6 +1043,7 @@ def ask_engine_json(s, claude_model, system, user, key="trans_engine"):
 
 
 SCRIPT_ENGINE = {"s": None}   # 대본 작성에 쓸 설정 (App 이 작업 전에 넣음)
+HIT_CTX = {"category": ""}    # 효과음 '자동' 판단용 현재 콘텐츠 종류
 PHOTO_PLAN = {"sub": False, "n": 0}   # 자막형이면 사진을 많이 (App 이 작업 전에 넣음)
 
 
@@ -3228,9 +3258,41 @@ assert list(SOUND_STYLES) == SOUND_STYLE_NAMES
 CURRENT_MELODY = {"melody": "", "bpm": 90}   # 현재 대본의 노래 멜로디 (올드 팝송일 때 채워짐)
 
 
-def reveal_fx(n, t_hit, rng):
-    """반전 순간: 1.6초 동안 차오르는 소리 → 쿵"""
+def rimshot(rng):
+    """개그 펀치라인 드럼: 두-둥-탁 (탐 2번 + 심벌)"""
+    def tom(f0, dur=0.35):
+        tt = np.arange(int(dur * SR)) / SR
+        f = f0 * (1 + 0.6 * np.exp(-tt / 0.03))
+        return (np.sin(2 * np.pi * np.cumsum(f) / SR) * np.exp(-tt / 0.12) * np.minimum(1, tt / 0.002)).astype(np.float32)
+    tt = np.arange(int(1.6 * SR)) / SR
+    cym = _norm(band(rng.standard_normal(len(tt)).astype(np.float32), lo=3000, hi=12000)) * np.exp(-tt / 0.5) * (1 - np.exp(-tt / 0.003))
+    out = np.zeros((int(2.4 * SR), 2), np.float32)
+    place(out, tom(170) * 0.9, 0.0, 0.45)
+    place(out, tom(130) * 0.9, 0.17, 0.55)
+    place(out, cym * 0.55, 0.36, 0.5)
+    sn = tom(220, 0.2)
+    place(out, sn * 0.5, 0.36, 0.5)
+    return out
+
+
+def chime_fx(rng):
+    """밝은 반전: 띠링 (종 3개 화음)"""
+    out = np.zeros((int(3.0 * SR), 2), np.float32)
+    for i, m in enumerate((84, 88, 91)):
+        place(out, bell(midi_hz(m), 2.5) * 0.5, i * 0.07, 0.35 + 0.15 * i)
+    return out
+
+
+def reveal_fx(n, t_hit, rng, kind="쿵"):
+    """반전 순간 효과음. kind: 쿵(차오름+쿵) / 두둥탁(개그 드럼) / 띠링(밝은 종)"""
     out = np.zeros((n, 2), np.float32)
+    i = int(t_hit * SR)
+    if kind.startswith("두둥탁") or kind.startswith("띠링"):
+        fx = rimshot(rng) * 1.3 if kind.startswith("두둥탁") else chime_fx(rng)
+        e = min(n, i + len(fx))
+        if i < n:
+            out[i:e] += fx[:e - i]
+        return out
     rl = int(1.6 * SR)
     i = int(t_hit * SR)
     if i - rl > 0:
@@ -3336,7 +3398,10 @@ def build_audio(r, s, style):
         if len(seg):
             out[i0:i0 + len(seg)] += seg[:, None] * vol if seg.ndim == 1 else seg * vol
     if hit_t:
-        out += reveal_fx(n, hit_t, rng) * 0.4 * max(0, s["hit_volume"])
+        kind = str(s.get("hit_sound", "자동"))
+        if kind.startswith("자동"):
+            kind = "두둥탁" if HIT_CTX.get("category") == COMEDY_CATEGORY else "쿵"
+        out += reveal_fx(n, hit_t, rng, kind) * 0.4 * max(0, s["hit_volume"])
     peak = float(np.abs(out).max())
     if peak > 0.95:
         out *= 0.95 / peak
@@ -5038,6 +5103,7 @@ class App(tk.Tk):
 
     # ---- 값 읽기/쓰기 ----
     def get_settings(self):
+        HIT_CTX["category"] = self.cat_var.get() if hasattr(self, "cat_var") else ""
         return {k: cast(k, self.vars[k].get()) for k in DEFAULTS}
 
     def set_settings(self, d):
@@ -5389,6 +5455,9 @@ class App(tk.Tk):
 
     def on_category(self, *_):
         topics = cat_info(self.cat_var.get())[1]
+        HIT_CTX["category"] = self.cat_var.get()
+        if self.cat_var.get() == COMEDY_CATEGORY and self.vars["image_style"].get().strip() in ("", DEFAULTS["image_style"], COMIC_IMAGE_STYLE):
+            self.vars["image_style"].set("밝고 과장된 코믹 일러스트, 굵은 선, 선명한 색, 표정과 몸짓이 크게 보이는 장면")
         if self.cat_var.get() == COMIC_CATEGORY:   # 만화는 자막형(컷 그림 + 말풍선)이 어울림
             self.vars["layout"].set("자막형(큰 제목+사진+자막)")
             self.vars["img_fill"].set("가운데 상자")
@@ -5446,6 +5515,7 @@ class App(tk.Tk):
         self.status.config(text=label)
         self.set_status(label)
         SCRIPT_ENGINE["s"] = self.get_settings()
+        HIT_CTX["category"] = self.cat_var.get()
         PHOTO_PLAN.update(sub=str(SCRIPT_ENGINE["s"].get("layout", "")).startswith("자막형"),
                           n=int(float(SCRIPT_ENGINE["s"].get("photo_count", 0) or 0)))
         RATE_HOOK["cancel"] = self.cancel
