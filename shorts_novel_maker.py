@@ -116,6 +116,8 @@ SOUND_STYLE_NAMES = ["노래 멜로디(오르골)", "잔잔한 패드", "슬픈 
 
 # 소재별 자동 배경음
 SOUND_BY_TOPIC = {
+    "학교 코믹": "밝은 오르골", "회사 코믹": "밝은 오르골", "회귀·환생 판타지": "긴장 펄스", "로맨스 웹툰": "감성 오르골",
+    "공포 웹툰": "공포 심장박동", "사이다 웹툰": "긴장 펄스", "동물·펫 일상툰": "밝은 오르골", "가족 감동툰": "감성 오르골",
     "소름 반전": "어두운 드론", "사이다 참교육": "긴장 펄스", "감동 가족사연": "감성 오르골", "공포 괴담": "공포 심장박동",
     "설렘 로맨스": "밝은 오르골", "미스터리 추리": "긴장 펄스", "웃긴 일상썰": "밝은 오르골", "직장 썰": "긴장 펄스",
     "미제 사건": "어두운 드론", "기묘한 우연": "우주", "사라진 사람·배·비행기": "심해", "역사 속 기이한 일": "슬픈 패드",
@@ -317,6 +319,26 @@ CATEGORIES = {
     }),
 }
 
+COMIC_CATEGORY = "만화 소설"
+CATEGORIES[COMIC_CATEGORY] = (False, {
+    "학교 코믹": ("학교·학원에서 벌어지는 황당한 오해와 실수. 짧은 컷마다 웃음, 마지막 컷에서 한 번 더 빵 터뜨린다.", "웹툰"),
+    "회사 코믹": ("신입·팀장·회식·재택에서 생긴 웃픈 상황. 공감 대사 위주, 마지막 컷 반전 개그.", "웹툰"),
+    "회귀·환생 판타지": ("인기 웹툰 공식: 억울하게 끝난 주인공이 과거로 돌아가거나 다른 세계에서 다시 태어나 되갚는다. 첫 컷부터 '눈을 떠보니'로 강하게.", "웹툰 다크"),
+    "로맨스 웹툰": ("심쿵 포인트가 있는 짧은 로맨스. 대사와 표정 위주, 마지막 컷에서 설렘 폭발.", "웹툰"),
+    "공포 웹툰": ("평범한 컷이 쌓이다 마지막 컷 한 장으로 소름. 잔인한 묘사 금지, 분위기와 반전으로.", "웹툰 다크"),
+    "사이다 웹툰": ("무례한 상대에게 당하다가 통쾌하게 역전하는 참교육. 답답→역전→사이다 컷.", "웹툰"),
+    "동물·펫 일상툰": ("강아지·고양이 시점 또는 집사 시점의 귀여운 일상 에피소드. 의성어·표정 포인트.", "웹툰"),
+    "가족 감동툰": ("가족 사이 오해와 몰랐던 마음. 웃기게 시작해 마지막 컷에서 울컥.", "웹툰"),
+})
+
+COMIC_RULES = """[만화 소설 규칙 - 웹툰 컷 형식]
+- 본문은 '컷' 단위다. 한 문단 = 한 컷. 6~12컷.
+- 각 컷은 1~2줄: 짧은 해설 한 줄 또는 "따옴표 대사" 한 줄(둘 다면 해설 먼저). 대사가 절반 이상이 되게.
+- 의성어·의태어를 살린다(쾅! 두근, 슥-, ...). 감정 표현은 대사와 행동으로.
+- 첫 컷은 바로 사건 한가운데에서 시작, 마지막 컷은 반전·펀치라인·여운.
+- 등장인물은 2~3명, 이름은 짧게. notes 에 인물 외모를 한 줄씩 적는다(그림 일관성용, 예: "민지: 20대, 단발 갈색 머리, 노란 후드티").
+- 실존 인물·유명 웹툰 캐릭터·작품 이름 사용 금지(완전한 창작)."""
+
 CATEGORIES["명화 이야기"] = (True, {
     "명화 탄생 비화": ("그림이 그려진 순간의 실제 이야기(장소·사람·사건·돈). 첫 줄은 그 그림에 얽힌 가장 놀라운 사실. 예: 모나리자 도난(1911), 절규의 배경, 별이 빛나는 밤의 정신병원", "종이 노트"),
     "그림 속 숨은 비밀": ("그림 안에 숨은 상징·인물·오류·수수께끼를 하나씩 짚는다. '자세히 보면'으로 시작하는 문단이 좋다. 예: 아르놀피니 부부의 거울, 최후의 만찬의 손, 모내기 그림 속 양반", "시네마 다크"),
@@ -510,6 +532,7 @@ IDEA_SYSTEM = """너는 한국 유튜브 쇼츠 채널 기획자다. (허구 썰
 첫 줄 훅이 강하게 나올 수 있는 주제를 만든다. 사실 기반 종류이면 실제로 존재하고 널리 알려진 사건·현상·사실만 고른다 (지어내지 않는다).
 각 주제는 25자 이내 한 줄로, 결말은 밝히지 않는다.
 명화면 '그림 제목 - 화가(제작 연도)' 형식, 이야기가 있는 유명 그림 위주(한국 명화 포함). 그림 이미지를 쓰려면 화가가 1955년 이전 사망이어야 하므로 그런 작품 위주.
+만화 소설이면 웹툰 한 편 같은 완전 창작 주제(실존 인물·기존 웹툰 금지), 예: '눈 떠보니 고3 첫날로 돌아왔다'.
 올드 팝송이면 '노래 제목(발표 연도) - 가수/작곡가' 형식. 소재에 '가사'가 들어가면 1929년 이전 발표곡만, '실화'면 극적인 인생을 산 가수·작곡가 위주(시대 무관).
 반드시 JSON만 출력: {"ideas": ["주제1", "주제2", ...]}"""
 
@@ -535,6 +558,9 @@ def systems_for(category):
         return SONG_SYSTEM, SONG_MULTI_SYSTEM
     if category == ART_CATEGORY:
         return ART_SYSTEM, ART_MULTI_SYSTEM
+    if category == COMIC_CATEGORY:
+        return (STORY_SYSTEM.replace("반드시 JSON만 출력", COMIC_RULES + '\n\n반드시 JSON만 출력').replace('"story": "본문"}', '"story": "본문", "notes": "인물 외모(한 줄씩)"}'),
+                MULTI_SYSTEM.replace("반드시 JSON만 출력", COMIC_RULES + "\n\n반드시 JSON만 출력").replace('"story": "본문"}', '"story": "본문", "notes": "인물 외모"}'))
     return (FACT_SYSTEM, FACT_MULTI_SYSTEM) if factual else (STORY_SYSTEM, MULTI_SYSTEM)
 
 
@@ -1226,11 +1252,14 @@ IMAGE_PLAN_SYSTEM = """너는 유튜브 쇼츠 영상의 아트 디렉터다. �
 _IMG_OK = {}
 
 
+COMIC_IMAGE_STYLE = "한국 웹툰 스타일, 깔끔한 선화, 셀 채색, 선명한 색, 표정이 잘 보이는 컷"
+
 PROMPT_SYSTEM = """너는 유튜브 쇼츠 영상의 아트 디렉터다. 이야기의 문단마다 ChatGPT 그림 생성에 붙여넣을 그림 프롬프트를 만든다.
 - 문단 번호마다 정확히 하나씩. 그 문단의 핵심 장면 하나를 보여준다. 앞뒤 문단과 구도가 겹치지 않게(클로즈업/와이드/위에서/손 클로즈업 등 다양하게).
 - prompt: 영어 50~80단어. 장소·시대·시간·빛·색감·구도·분위기를 구체적으로. 세로 9:16 화면 기준.
   등장인물은 처음 정한 외모(나이·머리·옷)를 모든 프롬프트에 똑같이 반복해 일관성을 유지.
   글자·간판 문구·자막·워터마크 금지(no text). 유명 캐릭터·상표·실존 인물의 얼굴 재현 금지(뒷모습·실루엣·손은 가능). 잔인·선정 묘사 금지.
+- 만화 소설이면: 한국 웹툰 한 컷처럼(깨끗한 선화, 셀 채색, 과장된 표정, 컷마다 다른 앵글), 말풍선·글자는 넣지 않는다(프로그램이 자막으로 넣음). 인물 외모는 [인물] 설명을 그대로 반복.
 - 명화·실화 이야기면: 실제 작품이나 사진을 베끼지 말고, 그 시대 분위기를 재현한 장면(화가의 작업실, 그 시대 거리, 도구, 풍경)으로 그린다.
 - 모든 프롬프트 끝에 공통 스타일 문구를 넣는다.
 - ko: 15자 이내 한국어 장면 설명
@@ -4685,6 +4714,11 @@ class App(tk.Tk):
 
     def on_category(self, *_):
         topics = cat_info(self.cat_var.get())[1]
+        if self.cat_var.get() == COMIC_CATEGORY:   # 만화는 자막형(컷 그림 + 말풍선)이 어울림
+            self.vars["layout"].set("자막형(큰 제목+사진+자막)")
+            self.vars["img_fill"].set("가운데 상자")
+            if self.vars["image_style"].get().strip() in ("", DEFAULTS["image_style"]):
+                self.vars["image_style"].set(COMIC_IMAGE_STYLE)
         self.vars["photo_h"].set("0.5" if self.cat_var.get() == ART_CATEGORY else "0.36")
         if self.cat_var.get() == ART_CATEGORY and self.len_var.get() in ("", "40"):
             self.len_var.set("60")   # 큐레이터 해설은 60초 정도 필요
@@ -4815,8 +4849,8 @@ class App(tk.Tk):
             txt += ("\n\n[웹 조사 자료 - " + ("사실은 이 안에서만 쓸 것" if factual else "이야기 재료로 참고") + "]\n"
                     + json.dumps({k: research.get(k) for k in ("topic", "facts", "hook", "twist", "sources")}, ensure_ascii=False))
         if photos:
-            txt += ("\n\n[근거 사진] 아래 사진을 그 사실을 말한 문단 바로 뒤에 '[사진1]' 처럼 한 줄로 넣어라. "
-                    "첫 문단 바로 뒤, 마지막 문단 뒤에는 넣지 말고 사진끼리 붙이지 않는다.\n"
+            txt += ("\n\n[근거 사진] 아래 사진을 그 사실을 말하는 문단 바로 앞에 '[사진1]' 처럼 한 줄로 넣어라(사진 → 글). "
+                    "사진끼리 붙이지 않는다.\n"
                     + "\n".join(f"사진{i + 1}: {p.get('caption', '')} ({p.get('after', '')})" for i, p in enumerate(photos)))
         return txt
 
@@ -5152,11 +5186,17 @@ class App(tk.Tk):
             return
         model, title, cat = self.model_var.get().strip(), self.title_var.get(), self.cat_var.get()
         style = self.vars["image_style"].get().strip() if "image_style" in self.vars else ""
+        chars = ""
+        if cat == COMIC_CATEGORY:
+            if style in ("", DEFAULTS["image_style"]):
+                style = COMIC_IMAGE_STYLE
+            chars = str(getattr(self, "notes", "") or "").strip()
 
         def job():
             numbered = "\n\n".join(f"[{i + 1}] {story_text_only(x).strip()}" for i, x in enumerate(paras))
             d = ask_script_json(model, PROMPT_SYSTEM, f"콘텐츠 종류: {cat}\n공통 스타일: {style or 'cinematic realistic photo, moody lighting'}"
-                                f"\n[제목] {title}\n\n[문단 {len(paras)}개]\n{numbered}")
+                                + (f"\n[인물] {chars[:600]}" if chars else "")
+                                + f"\n[제목] {title}\n\n[문단 {len(paras)}개]\n{numbered}")
             by = {}
             for it in d.get("prompts") or []:
                 try:
