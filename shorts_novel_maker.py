@@ -1210,6 +1210,22 @@ IMAGE_PLAN_SYSTEM = """너는 유튜브 쇼츠 영상의 아트 디렉터다. �
 _IMG_OK = {}
 
 
+PROMPT_SYSTEM = """너는 유튜브 쇼츠 영상의 아트 디렉터다. 이야기의 문단마다 ChatGPT 그림 생성에 붙여넣을 그림 프롬프트를 만든다.
+- 문단 번호마다 정확히 하나씩. 그 문단의 핵심 장면 하나를 보여준다. 앞뒤 문단과 구도가 겹치지 않게(클로즈업/와이드/위에서/손 클로즈업 등 다양하게).
+- prompt: 영어 50~80단어. 장소·시대·시간·빛·색감·구도·분위기를 구체적으로. 세로 9:16 화면 기준.
+  등장인물은 처음 정한 외모(나이·머리·옷)를 모든 프롬프트에 똑같이 반복해 일관성을 유지.
+  글자·간판 문구·자막·워터마크 금지(no text). 유명 캐릭터·상표·실존 인물의 얼굴 재현 금지(뒷모습·실루엣·손은 가능). 잔인·선정 묘사 금지.
+- 명화·실화 이야기면: 실제 작품이나 사진을 베끼지 말고, 그 시대 분위기를 재현한 장면(화가의 작업실, 그 시대 거리, 도구, 풍경)으로 그린다.
+- 모든 프롬프트 끝에 공통 스타일 문구를 넣는다.
+- ko: 15자 이내 한국어 장면 설명
+반드시 JSON만 출력: {"prompts": [{"para": 문단번호, "ko": "...", "prompt": "..."}]}"""
+
+
+def prompt_paras(story):
+    """그림 프롬프트를 만들 글 문단 목록 (사진 줄·자리표시 제외)"""
+    return [x for x in split_paras(story) if not parse_media(x) and not PH_RE.match(x) and story_text_only(x).strip()]
+
+
 def openai_image(prompt, key, model="gpt-image-2", quality="medium", size="1024x1536"):
     """ChatGPT 그림 API → PIL 이미지"""
     import base64
@@ -3478,7 +3494,7 @@ class App(tk.Tk):
                 "artwork": getattr(self, "artwork", None),
                 "length": self.len_var.get(), "judge": self.judge_var.get(), "theme": self.theme_var.get(),
                 "research": self.research_var.get(), "autophoto": self.autophoto_var.get(),
-                "reference": getattr(self, "reference", ""),
+                "reference": getattr(self, "reference", ""), "img_prompts": getattr(self, "img_prompts", []),
                 "title": self.title_var.get(), "story": self.get_story(), "settings": self.get_settings()}
 
     def save_cfg(self, show=False):
@@ -3514,6 +3530,7 @@ class App(tk.Tk):
         self.research_var.set(bool(c.get("research", True)))
         self.autophoto_var.set(bool(c.get("autophoto", True)))
         self.set_reference(c.get("reference", ""))
+        self.img_prompts = list(c.get("img_prompts") or [])
         self.set_sources(c.get("sources", []), c.get("notes", ""))
         self.song, self.melody, self.bpm = c.get("song"), c.get("melody", ""), c.get("bpm", 90)
         self.artwork = c.get("artwork")
@@ -3653,7 +3670,7 @@ class App(tk.Tk):
         ttk.Button(r4, text="파일에서 넣기", command=self.add_photo_file).pack(side="left", padx=4)
         ttk.Button(r4, text="붙여넣기 (Ctrl+V)", command=lambda: self.on_paste(from_button=True)).pack(side="left")
         ttk.Button(r4, text="🔎 AI 근거사진 찾기", command=self.ai_photos).pack(side="left", padx=4)
-        ttk.Button(r4, text="🎨 ChatGPT 그림 만들기", command=self.ai_images).pack(side="left")
+        ttk.Button(r4, text="🎨 그림 프롬프트 만들기", command=self.img_prompts_make).pack(side="left")
         ttk.Label(r4, text="사진·이미지 주소·파일을 복사해서 본문에 Ctrl+V → 커서 위치에 들어감",
                   foreground="gray").pack(side="left", padx=6)
         self.story = ScrolledText(s1, height=5, wrap="word", font=("맑은 고딕", 11), undo=True)   # 창이 크면 자동으로 늘어남
@@ -4464,6 +4481,7 @@ class App(tk.Tk):
         self.artwork = None
         CURRENT_MELODY["melody"], CURRENT_MELODY["bpm"] = "", 90
         self.set_reference("")
+        self.img_prompts = []
         self.cmd_var.set("")
         self.last_review = self.last_verify = None
         self.bgm_made = None
@@ -4601,6 +4619,150 @@ class App(tk.Tk):
             return "break"
         self.after(50, self.refresh_preview)
         return None
+
+    # ---- 그림 프롬프트 (ChatGPT 웹에 붙여넣어 그리고, 그림을 복사해 와서 붙여넣기) ----
+    def img_prompts_make(self, force=False):
+        story = self.get_story()
+        paras = prompt_paras(story)
+        if not paras:
+            messagebox.showinfo("그림 프롬프트", "먼저 대본을 만들거나 입력하세요.")
+            return
+        old = getattr(self, "img_prompts", [])
+        if old and not force and [x.get("text") for x in old] == paras:
+            self.img_prompts_window()     # 대본이 그대로면 저장된 프롬프트를 바로 보여줌
+            return
+        model, title, cat = self.model_var.get().strip(), self.title_var.get(), self.cat_var.get()
+        style = self.vars["image_style"].get().strip() if "image_style" in self.vars else ""
+
+        def job():
+            numbered = "\n\n".join(f"[{i + 1}] {story_text_only(x).strip()}" for i, x in enumerate(paras))
+            d = ask_script_json(model, PROMPT_SYSTEM, f"콘텐츠 종류: {cat}\n공통 스타일: {style or 'cinematic realistic photo, moody lighting'}"
+                                f"\n[제목] {title}\n\n[문단 {len(paras)}개]\n{numbered}")
+            by = {}
+            for it in d.get("prompts") or []:
+                try:
+                    by[int(it.get("para")) - 1] = it
+                except (TypeError, ValueError):
+                    continue
+            return [{"text": x, "ko": str(by.get(i, {}).get("ko", "")), "prompt": str(by.get(i, {}).get("prompt", ""))}
+                    for i, x in enumerate(paras)]
+
+        def done(res):
+            self.img_prompts = res
+            self.save_cfg()
+            self.write_log(f"🎨 그림 프롬프트 {sum(1 for x in res if x['prompt'])}개 완성")
+            self.img_prompts_window()
+        self.write_log(f"🎨 문단 {len(paras)}개의 그림 프롬프트 만드는 중...")
+        self.run_bg("그림 프롬프트 만드는 중...", job, done)
+
+    def img_prompts_window(self):
+        items = getattr(self, "img_prompts", [])
+        if getattr(self, "_prompt_win", None) is not None and self._prompt_win.winfo_exists():
+            self._prompt_win.destroy()
+        win = tk.Toplevel(self)
+        self._prompt_win = win
+        win.title("그림 프롬프트 - 복사 → ChatGPT에 붙여넣기 → 그림 복사 → 📥 붙여넣기")
+        win.geometry("900x720")
+        top = ttk.Frame(win, padding=(10, 8))
+        top.pack(fill="x")
+        ttk.Label(top, text="① 📋 복사 → ② ChatGPT 대화창에 붙여넣기 → ③ 그림을 마우스 오른쪽 '이미지 복사' → ④ 📥 그림 붙여넣기",
+                  foreground="#444").pack(side="left")
+        ttk.Button(top, text="다시 만들기", command=lambda: (win.destroy(), self.img_prompts_make(force=True))).pack(side="right")
+        ttk.Button(top, text="전체 복사", command=lambda: copy_all()).pack(side="right", padx=4)
+        outer = ttk.Frame(win)
+        outer.pack(fill="both", expand=True)
+        cv = tk.Canvas(outer, highlightthickness=0)
+        sb = ttk.Scrollbar(outer, orient="vertical", command=cv.yview)
+        body = ttk.Frame(cv)
+        body.bind("<Configure>", lambda e: cv.configure(scrollregion=cv.bbox("all")))
+        cv.create_window((0, 0), window=body, anchor="nw")
+        cv.configure(yscrollcommand=sb.set)
+        cv.pack(side="left", fill="both", expand=True)
+        sb.pack(side="right", fill="y")
+        win.bind("<MouseWheel>", lambda e: cv.yview_scroll(int(-e.delta / 120), "units"))
+        win.bind("<Button-4>", lambda e: cv.yview_scroll(-2, "units"))
+        win.bind("<Button-5>", lambda e: cv.yview_scroll(2, "units"))
+        boxes = []
+
+        def full_text(k):
+            p_ = boxes[k].get("1.0", "end").strip()
+            return p_ + "\n\n(세로 9:16 비율로, 글자·워터마크 없이 그려줘)"
+
+        def copy(k, lab):
+            self.clipboard_clear()
+            self.clipboard_append(full_text(k))
+            lab.config(text="📋 복사됨", foreground="#06c")
+            items[k]["prompt"] = boxes[k].get("1.0", "end").strip()
+
+        def copy_all():
+            txt = "\n\n".join(f"[{k + 1}] {it.get('ko', '')}\n{boxes[k].get('1.0', 'end').strip()}" for k, it in enumerate(items))
+            self.clipboard_clear()
+            self.clipboard_append(txt)
+            self.set_status("📋 프롬프트 전체 복사됨")
+
+        def paste(k, lab):
+            im = None
+            try:
+                from PIL import ImageGrab
+                clip = ImageGrab.grabclipboard()
+                if isinstance(clip, Image.Image):
+                    im = clip
+                elif isinstance(clip, list):
+                    fs = [f for f in clip if str(f).lower().endswith(IMG_EXT)]
+                    if fs:
+                        im = Image.open(fs[0])
+                        im.load()
+            except Exception:
+                im = None
+            if im is None:
+                messagebox.showinfo("그림 붙여넣기", "클립보드에 그림이 없어요.\nChatGPT에서 그림을 마우스 오른쪽 → '이미지 복사'를 한 뒤 눌러 주세요.", parent=win)
+                return
+            path = save_media_image(im, self.media_dir(), time.strftime("aiimg_%Y%m%d_%H%M%S") + f"_{k}")
+            marker = make_marker(path, items[k].get("ko") or "장면", "AI 생성 이미지 (ChatGPT)")
+            if self.insert_after_para(items[k]["text"], marker):
+                lab.config(text="✅ 넣음", foreground="#080")
+                items[k]["done"] = True
+                self.save_cfg()
+            else:
+                messagebox.showinfo("그림 붙여넣기", "본문에서 이 문단을 찾지 못했어요(문단이 바뀜). 커서 위치에 넣을게요.", parent=win)
+                self.insert_marker(marker)
+                lab.config(text="✅ 커서 위치에 넣음", foreground="#080")
+        story_paras = prompt_paras(self.get_story())
+        for k, it in enumerate(items):
+            fr = ttk.LabelFrame(body, text=f" {k + 1}. {it.get('ko', '')} ", padding=6)
+            fr.pack(fill="x", padx=10, pady=4)
+            short = story_text_only(it["text"]).replace("\n", " ").strip()
+            ttk.Label(fr, text=("" if it["text"] in story_paras else "⚠ 본문이 바뀐 문단  ") + (short[:70] + ("…" if len(short) > 70 else "")),
+                      foreground="#666", wraplength=820).pack(anchor="w")
+            tb = tk.Text(fr, height=4, wrap="word", font=("맑은 고딕", 10))
+            tb.insert("1.0", it.get("prompt") or "(프롬프트 없음 - 다시 만들기)")
+            tb.pack(fill="x", pady=3)
+            boxes.append(tb)
+            row = ttk.Frame(fr)
+            row.pack(fill="x")
+            lab = ttk.Label(row, text="✅ 넣음" if it.get("done") else "", foreground="#080")
+            ttk.Button(row, text="📋 복사", command=lambda k=k, lab=lab: copy(k, lab)).pack(side="left")
+            ttk.Button(row, text="📥 그림 붙여넣기 (이 문단 뒤)", command=lambda k=k, lab=lab: paste(k, lab)).pack(side="left", padx=6)
+            lab.pack(side="left", padx=6)
+        if not items:
+            ttk.Label(body, text="프롬프트가 없습니다. '다시 만들기'를 누르세요.").pack(pady=20)
+
+    def insert_after_para(self, para_text, marker):
+        """본문에서 para_text 문단의 끝(다음 빈 줄 앞)에 사진 줄 삽입. 이미 바로 뒤에 사진이 있으면 그 뒤에"""
+        story = self.get_story()
+        paras = split_paras(story)
+        try:
+            k = paras.index(para_text)
+        except ValueError:
+            return False
+        j = k + 1
+        while j < len(paras) and parse_media(paras[j]):
+            j += 1
+        paras.insert(j, marker)
+        self.set_story("\n\n".join(paras))
+        self.refresh_preview()
+        self.write_log("그림 넣음: " + marker[:80])
+        return True
 
     def ai_images(self):
         """ChatGPT로 이야기 장면 그림을 그려서 본문에 넣기"""
