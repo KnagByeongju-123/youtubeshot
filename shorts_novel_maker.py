@@ -60,6 +60,9 @@ def set_format(name):
         PREVIEW_W, PREVIEW_H = 360, 640
 BASE = os.path.dirname(os.path.abspath(__file__))
 CONFIG_PATH = os.path.join(BASE, "shorts_novel_config.json")
+CONFIG_PATH2 = os.path.join(os.path.expanduser("~"), "shorts_novel_config.json")  # 프로그램 폴더에 못 쓸 때 대신 저장
+SECRET_KEYS = {"openai_key", "gemini_key"}                       # 프로젝트 파일에는 안 넣음
+KEEP_KEYS = SECRET_KEYS | {"script_engine", "trans_engine", "openai_model", "gemini_model"}  # 프로젝트 열어도 유지
 PREVIEW_W, PREVIEW_H = 360, 640
 
 
@@ -191,7 +194,7 @@ FIELDS = [
     ("나레이션", "narr_volume", "나레이션 볼륨(0~2)", "float", 1.0),
     ("나레이션", "narr_gap", "문단 사이 쉼(초)", "float", 0.5),
     ("나레이션", "narr_photo_pause", "사진 보는 시간(초)", "float", 1.5),
-    ("나레이션", "narr_duck", "말할 때 음악 크기(0~1)", "float", 0.35),
+    ("나레이션", "narr_duck", "말할 때 배경음 크기(0~1)", "float", 0.5),
     ("AI 엔진", "script_engine", "대본 작성 AI", "choice:Claude,ChatGPT,Gemini,자동(키 있으면 ChatGPT→Gemini→Claude)", "Claude"),
     ("AI 엔진", "trans_engine", "번역 AI", "choice:자동(키 있으면 ChatGPT→Gemini→Claude),Claude,ChatGPT,Gemini", "자동(키 있으면 ChatGPT→Gemini→Claude)"),
     ("AI 엔진", "auto_langs", "MP4 만들 때 다른 언어도", "choice:안 함,영어,일본어,영어+일본어", "안 함"),
@@ -203,7 +206,7 @@ FIELDS = [
     ("소리", "bgm_style", "배경음 스타일", "choice:" + ",".join(["자동(소재별)"] + SOUND_STYLE_NAMES), "자동(소재별)"),
     ("소리", "bgm_volume", "배경음 볼륨(0~2)", "float", 0.5),
     ("소리", "reveal_hit", "반전 효과음(쿵)", "choice:on,off", "on"),
-    ("소리", "hit_volume", "효과음 볼륨(0~2)", "float", 0.8),
+    ("소리", "hit_volume", "효과음 볼륨(0~2)", "float", 0.6),
     ("소리", "bgm_seed", "배경음 번호(0=만들 때마다 새로)", "int", 0),
     ("소리", "bgm_path", "음악 파일(파일 모드)", "audio", ""),
 ]
@@ -2183,6 +2186,14 @@ def gen_drone(n, rng):
         sig = (np.sin(2 * np.pi * f * tt) + np.sin(2 * np.pi * f * 1.059 * tt)) * np.sin(np.pi * tt / d) ** 2 * 0.06
         place(st, sig.astype(np.float32), pos, rng.uniform(0.2, 0.8))
         pos += rng.uniform(9, 16)
+    # 작은 스피커(노트북·휴대폰)에서도 들리게: 같은 화음의 높은 배음 + 바람 같은 숨소리 층
+    for mul, amp in ((4, 0.30), (6, 0.18), (8, 0.12), (12, 0.06)):
+        a = amp * smooth_lfo(n, 5, rng, 0.3, 1.0)
+        for c, det in enumerate((0.998, 1.003)):
+            st[:, c] += a * np.sin(2 * np.pi * 55 * mul * det * t + rng.uniform(0, 6.28))
+    air = smooth_lfo(n, 7, rng, 0.4, 1.0)
+    for c in range(2):
+        st[:, c] += _norm(band(colored_noise(n, rng, 1.0), lo=500, hi=2500)) * air * 0.12
     return _norm(reverb(st, rng, 4.0, 0.4))
 
 
@@ -2196,15 +2207,24 @@ def heartbeat(n, rng, bpm0=58, bpm1=92):
         f = freq * (1 + 0.6 * np.exp(-tk * 30))
         return (amp * np.sin(2 * np.pi * np.cumsum(f) / SR) * np.exp(-tk / dec)).astype(np.float32)
     lub, dub = thump(55, 0.07, 1.0), thump(48, 0.06, 0.7)
+    # 작은 스피커에서도 '쿵쿵'이 들리게 하는 짧은 두드림 소리(중음)
+    kn = int(0.06 * SR)
+    knock_src = np.random.default_rng(3).standard_normal(kn).astype(np.float32) * np.exp(-np.arange(kn) / (0.012 * SR))
+    knock = _norm(band(knock_src, lo=180, hi=1400)).astype(np.float32) * 0.55
+    low = np.zeros(n, np.float32)
+    mid = np.zeros(n, np.float32)
     dur, t = n / SR, 0.5
     while t < dur - 0.4:
-        for snd, off in ((lub, 0.0), (dub, 0.26)):
+        for snd, off, kv in ((lub, 0.0, 1.0), (dub, 0.26, 0.7)):
             i = int((t + off) * SR)
-            e = min(n, i + kl)
             if i < n:
-                out[i:e] += snd[:e - i]
+                e = min(n, i + kl)
+                low[i:e] += snd[:e - i]
+                e2 = min(n, i + kn)
+                mid[i:e2] += knock[:e2 - i] * kv
         t += 60 / (bpm0 + (bpm1 - bpm0) * (t / dur) ** 1.5)
-    out = _norm(band(out, hi=180))
+    out = _norm(band(low, hi=180)) + mid
+    out = _norm(out)
     return np.stack([out, out], 1)
 
 
@@ -2301,13 +2321,13 @@ def gen_pulse(n, rng, bpm=100):
         m = PROGS["dark"][int(tpos // 8) % 4][0] - 12 + (12 if k % 4 == 3 else 0)
         if m not in cache:
             f = midi_hz(m)
-            cache[m] = (sum(np.sin(2 * np.pi * f * h * tt) / h for h in range(1, 7)) * env).astype(np.float32)
+            cache[m] = (sum(np.sin(2 * np.pi * f * h * tt) / h for h in range(1, 13)) * env).astype(np.float32)
         i = int(tpos * SR)
         e = min(n, i + nl)
         bass[i:e] += cache[m][:e - i] * (1.0 if k % 2 == 0 else 0.7)
         tpos += step
         k += 1
-    bass = _norm(band(bass, hi=900))
+    bass = _norm(band(bass, hi=2400))          # 배음을 살려 작은 스피커에서도 박자가 들리게
     return _norm(pad + np.stack([bass, bass], 1) * 0.5)
 
 
@@ -2479,6 +2499,30 @@ def make_music(s, style, n):
     return None
 
 
+def loudness_fit(music, target=0.16):
+    """작은 스피커가 실제로 내는 대역(250Hz~6kHz) 크기로 음량을 맞춤 (저음이 많아도 비슷하게 들리게)"""
+    mono = music.mean(1) if music.ndim == 2 else music
+    seg = mono[: min(len(mono), SR * 20)]
+    spk = float(np.sqrt((band(seg, lo=250, hi=6000) ** 2).mean())) + 1e-9
+    full = float(np.sqrt((seg ** 2).mean())) + 1e-9
+    if spk / full < 0.5:                   # 저음만 많은 소리 → 중음을 키우고 아주 낮은 저음은 줄임
+        lift = min(2.0, 0.5 * full / spk - 1)
+        music = np.stack([band(music[:, c], lo=40) + lift * band(music[:, c], lo=250, hi=6000)
+                          for c in range(music.shape[1])], 1) if music.ndim == 2 else \
+            band(music, lo=40) + lift * band(music, lo=250, hi=6000)
+        mono = music.mean(1) if music.ndim == 2 else music
+        seg = mono[: min(len(mono), SR * 20)]
+        spk = float(np.sqrt((band(seg, lo=250, hi=6000) ** 2).mean())) + 1e-9
+        full = float(np.sqrt((seg ** 2).mean())) + 1e-9
+    g = target / spk
+    g = min(g, 0.5 / full * 2.2)          # 저음이 너무 커지지 않게 상한
+    out = music * g
+    peak = float(np.abs(out).max())
+    if peak > 0.9:                         # 부드럽게 눌러서 찌그러짐 방지
+        out = np.tanh(out / 0.9) * 0.9
+    return out.astype(np.float32)
+
+
 def build_audio(r, s, style):
     """영상 길이에 맞춘 최종 소리 (배경음 + 반전 효과음). 없으면 None"""
     n = int(r.duration * SR)
@@ -2491,8 +2535,7 @@ def build_audio(r, s, style):
     out = np.zeros((n, 2), np.float32)
     t = np.arange(n) / SR
     if music is not None:
-        rms = float(np.sqrt((music ** 2).mean())) + 1e-9
-        music = music * (0.24 / rms) * max(0, s["bgm_volume"])   # 볼륨 0.5 기준 약 -18dB (작은 스피커에서도 들리게)
+        music = loudness_fit(music) * max(0, s["bgm_volume"])
         g = np.minimum(1, t / 1.5) * np.clip((r.duration - t) / 2.5, 0, 1)
         if hit_t:  # 반전 직전 음악을 줄였다가 다시 올림
             a = max(0.01, hit_t - 1.2)
@@ -3069,14 +3112,21 @@ class App(tk.Tk):
 
     # ---- 설정 저장/불러오기 ----
     def load_cfg(self):
-        try:
-            with open(CONFIG_PATH, encoding="utf-8") as f:
-                return json.load(f)
-        except Exception:
-            return {}
+        best = {}
+        for p in (CONFIG_PATH, CONFIG_PATH2):
+            try:
+                with open(p, encoding="utf-8") as f:
+                    c = json.load(f)
+                if not best or os.path.getmtime(p) > best.get("_mt", 0):
+                    c["_mt"] = os.path.getmtime(p)
+                    best = c
+            except Exception:
+                pass
+        best.pop("_mt", None)
+        return best
 
     def project_dict(self):
-        return {"ver": 4, "model": self.model_var.get(), "category": self.cat_var.get(), "topic": self.topic_var.get(), "genre": self.genre_var.get(),
+        return {"ver": 5, "model": self.model_var.get(), "category": self.cat_var.get(), "topic": self.topic_var.get(), "genre": self.genre_var.get(),
                 "sources": getattr(self, "sources", []), "notes": getattr(self, "notes", ""),
                 "song": getattr(self, "song", None), "melody": getattr(self, "melody", ""), "bpm": getattr(self, "bpm", 90),
                 "artwork": getattr(self, "artwork", None),
@@ -3085,12 +3135,25 @@ class App(tk.Tk):
                 "reference": getattr(self, "reference", ""),
                 "title": self.title_var.get(), "story": self.get_story(), "settings": self.get_settings()}
 
-    def save_cfg(self):
-        try:
-            with open(CONFIG_PATH, "w", encoding="utf-8") as f:
-                json.dump(self.project_dict(), f, ensure_ascii=False, indent=2)
-        except Exception:
-            pass
+    def save_cfg(self, show=False):
+        """설정(키·AI 엔진·디자인·소리 등) 저장. show=True면 결과를 알려줌"""
+        data = self.project_dict()
+        err = ""
+        for p in (CONFIG_PATH, CONFIG_PATH2):
+            try:
+                tmp = p + ".tmp"
+                with open(tmp, "w", encoding="utf-8") as f:
+                    json.dump(data, f, ensure_ascii=False, indent=2)
+                os.replace(tmp, p)
+                if show:
+                    self.write_log("설정 저장: " + p)
+                    self.set_status("💾 설정 저장됨 (API 키·AI 엔진·디자인·소리) → 다음에 켜도 그대로")
+                return True
+            except Exception as e:
+                err = str(e)
+        if show:
+            messagebox.showerror("설정 저장 실패", "설정 파일을 쓸 수 없어요.\n" + err)
+        return False
 
     def apply_cfg(self, c=None):
         c = self.cfg if c is None else c
@@ -3118,6 +3181,11 @@ class App(tk.Tk):
         s.update(c.get("settings", {}))
         if c.get("settings") and c.get("ver", 1) < 2 and int(float(s.get("fps", 30))) == 30:
             s["fps"] = 60  # 부드러운 스크롤 기본값으로 올림
+        if c.get("settings") and c.get("ver", 1) < 5:
+            if float(s.get("narr_duck", 0.5)) < 0.5:
+                s["narr_duck"] = 0.5
+            if float(s.get("hit_volume", 0.6)) == 0.8:
+                s["hit_volume"] = 0.6
         if c.get("settings") and c.get("ver", 1) < 4 and str(s.get("gemini_model", "")).startswith("gemini-1."):
             s["gemini_model"] = "gemini-2.5-flash"   # 1.x 모델은 종료됨
         if c.get("settings") and c.get("ver", 1) < 3:
@@ -3138,15 +3206,24 @@ class App(tk.Tk):
         p = filedialog.askopenfilename(filetypes=[("프로젝트", "*.json")])
         if p:
             with open(p, encoding="utf-8") as f:
-                self.apply_cfg(json.load(f))
+                c = json.load(f)
+            cur = self.get_settings()
+            st = dict(c.get("settings") or {})
+            for k in KEEP_KEYS:               # 내 키·AI 엔진 설정은 프로젝트를 열어도 그대로
+                if not str(st.get(k, "")).strip() or k in SECRET_KEYS:
+                    st[k] = cur.get(k, DEFAULTS.get(k, ""))
+            c["settings"] = st
+            self.apply_cfg(c)
             self.refresh_preview()
 
     def save_project(self):
         p = filedialog.asksaveasfilename(defaultextension=".json", filetypes=[("프로젝트", "*.json")],
                                          initialfile=safe_name(self.title_var.get()) + ".json")
         if p:
+            d = self.project_dict()
+            d["settings"] = {k: v for k, v in d["settings"].items() if k not in SECRET_KEYS}  # 키는 빼고 저장(공유해도 안전)
             with open(p, "w", encoding="utf-8") as f:
-                json.dump(self.project_dict(), f, ensure_ascii=False, indent=2)
+                json.dump(d, f, ensure_ascii=False, indent=2)
             self.write_log("프로젝트 저장: " + p)
 
     # ---- UI ----
@@ -3156,6 +3233,7 @@ class App(tk.Tk):
         ttk.Button(top, text="🆕 새로 만들기", command=self.new_project).pack(side="left", padx=(0, 4))
         ttk.Button(top, text="프로젝트 열기", command=self.open_project).pack(side="left")
         ttk.Button(top, text="프로젝트 저장", command=self.save_project).pack(side="left", padx=4)
+        ttk.Button(top, text="💾 설정 저장", command=lambda: self.save_cfg(show=True)).pack(side="left")
         ttk.Separator(top, orient="vertical").pack(side="left", fill="y", padx=8)
         ttk.Label(top, text="Claude 상태").pack(side="left")
         self.claude_lamp = tk.Label(top, text="●", fg="gray", font=("맑은 고딕", 14))
@@ -3291,6 +3369,20 @@ class App(tk.Tk):
         self.sound_var = tk.BooleanVar(value=True)
         ttk.Checkbutton(pr, text="소리", variable=self.sound_var).pack(side="left", padx=(4, 0))
         ttk.Button(pr, text="썸네일 PNG 저장", command=self.save_thumb).pack(side="left", padx=4)
+        vol = ttk.LabelFrame(right, text="🔊 소리 크기 (바로 적용)", padding=(6, 2))
+        vol.pack(fill="x", pady=(4, 0))
+        self.vol_scales = {}
+        for row, (key, label, mx) in enumerate((("bgm_volume", "배경음", 2.0), ("hit_volume", "효과음", 2.0),
+                                                 ("narr_volume", "나레이션", 2.0), ("narr_duck", "말할 때 배경음", 1.0))):
+            ttk.Label(vol, text=label, width=12).grid(row=row, column=0, sticky="w")
+            dv = tk.DoubleVar(value=0)
+            sc = ttk.Scale(vol, from_=0, to=mx, variable=dv, length=200,
+                           command=lambda _v, k=key, d=dv: self.on_volume(k, d))
+            sc.grid(row=row, column=1, sticky="we", padx=4)
+            lab = ttk.Label(vol, width=5)
+            lab.grid(row=row, column=2)
+            self.vol_scales[key] = (dv, lab, mx)
+        ttk.Label(vol, text="'▶ 재생'을 다시 누르면 바뀐 크기로 들립니다", foreground="gray").grid(row=4, column=0, columnspan=3, sticky="w")
         self.info = ttk.Label(right, text="", wraplength=PREVIEW_W, justify="left")
         self.info.pack(pady=4)
 
@@ -3378,6 +3470,7 @@ class App(tk.Tk):
                 self.vars[k].set(str(cast(k, v)))
         if "format" in d:
             self.apply_format(d["format"])
+        self.sync_volume_sliders()
 
     def apply_format(self, name):
         """화면 형식(세로/가로) 적용: 렌더 크기·미리보기 크기·여백 기본값"""
@@ -3636,6 +3729,26 @@ class App(tk.Tk):
                 lv.config(state="disabled")
             except tk.TclError:
                 self._log_view = None
+
+    def on_volume(self, key, dv):
+        """볼륨 슬라이더 → 설정값 반영 (배경음은 다시 섞어야 하므로 재생 파일 무효화)"""
+        v = round(float(dv.get()), 2)
+        self.vars[key].set(str(v))
+        lab = self.vol_scales[key][1]
+        lab.config(text=f"{int(v * 100)}%")
+        self.bgm_made = None
+        if self.playing:
+            self.playing = False
+            stop_wav()
+
+    def sync_volume_sliders(self):
+        for key, (dv, lab, mx) in getattr(self, "vol_scales", {}).items():
+            try:
+                v = float(self.vars[key].get())
+            except (ValueError, KeyError):
+                continue
+            dv.set(min(mx, max(0, v)))
+            lab.config(text=f"{int(v * 100)}%")
 
     def set_status(self, text):
         """아래 진행 상황 한 줄 (작업 중이면 걸린 시간 표시)"""
@@ -4568,6 +4681,19 @@ class App(tk.Tk):
         ttk.Button(f, text="…", width=3, command=pick).grid(row=2, column=2)
         ttk.Radiobutton(f, text="소리 없음", variable=choice, value="none").grid(row=3, column=0, columnspan=3, sticky="w")
         ttk.Checkbutton(f, text="반전 효과음(쿵) 넣기", variable=hit_var).grid(row=4, column=0, columnspan=3, sticky="w", pady=(6, 0))
+        vf = ttk.Frame(f)
+        vf.grid(row=4, column=1, columnspan=2, sticky="e", pady=(6, 0))
+        bgv = tk.DoubleVar(value=float(s["bgm_volume"]))
+        hv = tk.DoubleVar(value=float(s["hit_volume"]))
+        bl, hl = ttk.Label(vf, width=5), ttk.Label(vf, width=5)
+        ttk.Label(vf, text="배경음").pack(side="left")
+        ttk.Scale(vf, from_=0, to=2, variable=bgv, length=110, command=lambda _v: bl.config(text=f"{int(bgv.get() * 100)}%")).pack(side="left")
+        bl.pack(side="left")
+        ttk.Label(vf, text="효과음").pack(side="left", padx=(8, 0))
+        ttk.Scale(vf, from_=0, to=2, variable=hv, length=110, command=lambda _v: hl.config(text=f"{int(hv.get() * 100)}%")).pack(side="left")
+        hl.pack(side="left")
+        bl.config(text=f"{int(bgv.get() * 100)}%")
+        hl.config(text=f"{int(hv.get() * 100)}%")
         ttk.Label(f, text="소리 저장 방식", font=("맑은 고딕", 10, "bold")).grid(row=5, column=0, columnspan=3, sticky="w", pady=(10, 4))
         for i, (v, desc) in enumerate((("MP4에 포함", "MP4 안에 소리가 들어감 (그대로 업로드)"),
                                        ("MP4에 포함+MP3 따로", "MP4에도 넣고, 같은 이름의 MP3도 따로 저장 (편집 프로그램용)"),
@@ -4584,6 +4710,7 @@ class App(tk.Tk):
                 messagebox.showwarning("배경음", "음악 파일을 선택하세요.", parent=dlg)
                 return
             res["v"] = (choice.get(), file_var.get(), out_var.get(), hit_var.get())
+            res["vol"] = (round(bgv.get(), 2), round(hv.get(), 2))
             dlg.destroy()
         ttk.Button(bf, text="취소", command=dlg.destroy).pack(side="right")
         ttk.Button(bf, text="MP4 만들기", command=ok).pack(side="right", padx=6)
@@ -4593,6 +4720,10 @@ class App(tk.Tk):
             return None
         ch, fp, outm, hit = res["v"]
         s = dict(s)
+        s["bgm_volume"], s["hit_volume"] = res["vol"]
+        self.vars["bgm_volume"].set(str(res["vol"][0]))
+        self.vars["hit_volume"].set(str(res["vol"][1]))
+        self.sync_volume_sliders()
         if ch == "file":
             s["bgm_mode"], s["bgm_path"] = "파일", fp
             self.vars["bgm_mode"].set("파일")
@@ -4830,7 +4961,8 @@ class App(tk.Tk):
                 ls["auto_langs"] = "안 함"
                 base = os.path.join(s["out_dir"], safe_name(title) + tag)
                 os.makedirs(s["out_dir"], exist_ok=True)
-                p2 = dict(proj, title=t_title, story=t_story, settings=ls, lang=code)
+                p2 = dict(proj, title=t_title, story=t_story, lang=code,
+                          settings={k: v for k, v in ls.items() if k not in SECRET_KEYS})
                 with open(base + ".json", "w", encoding="utf-8") as fjs:
                     json.dump(p2, fjs, ensure_ascii=False, indent=2)
                 pkg = {"titles": d.get("titles") or [t_title], "description": d.get("description", ""),
