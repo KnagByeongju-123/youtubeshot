@@ -4547,9 +4547,31 @@ CANON = ("F#4:2 E4:2 D4:2 C#4:2 B3:2 A3:2 B3:2 C#4:2 D4:2 C#4:2 B3:2 A3:2 G3:2 F
          "D4 F#4 A4 G4 F#4 D4 F#4 E4 D4 B3 D4 A4 G4 B4 A4 G4")                                    # 파헬벨 캐논(1680년경)
 
 MUSIC_PRESETS = {   # 이름: 설정 (gen=생성 방식, title=기본 제목, desc=설명, prompt=배경 그림 프롬프트, overlay=화면 효과, colors=그림 없을 때 배경)
-    "명상 · 싱잉볼": dict(gen="bowls", title="마음이 고요해지는 싱잉볼 명상 음악", tags="#명상음악 #싱잉볼 #힐링음악 #마음챙김 #요가음악 #명상",
-                     desc="은은한 싱잉볼 울림과 잔잔한 공기 소리", overlay="먼지 빛", colors=("#141626", "#3A2E4F"),
+    "명상 · 싱잉볼": dict(gen="bowls", mode="strike", tail=45, title="마음이 고요해지는 싱잉볼 명상 음악", tags="#명상음악 #싱잉볼 #힐링음악 #마음챙김 #요가음악 #명상",
+                     desc="크고 작은 싱잉볼을 '똑' 쳐서 수십 초 길게 퍼지는 울림", overlay="먼지 빛", colors=("#141626", "#3A2E4F"),
                      prompt="a peaceful meditation space at dawn, tibetan singing bowl on a wooden floor, soft golden light through mist, calm minimal composition, cinematic, no people"),
+    "싱잉볼 · 노래하는 볼(문지르기)": dict(gen="bowls", mode="rub", tail=45, title="노래하는 싱잉볼 🔔 테두리를 문질러 울리는 명상 음악",
+                              tags="#싱잉볼 #명상음악 #노래하는볼 #힐링음악 #마음챙김 #요가음악", desc="볼 테두리를 천천히 문질러 웅- 하고 노래하는 소리 + 가끔 치는 울림",
+                              overlay="호흡 가이드", colors=("#18120A", "#40301A"),
+                              prompt="close-up of a hand-hammered brass singing bowl with a wooden mallet resting on its rim, warm candlelight, dark wooden table, soft smoke of incense, no people"),
+    "싱잉볼 · 432Hz": dict(gen="bowls", mode="mix", tail=45, freqs=(432.0, 216.0, 324.0, 288.0), weights=(4, 2, 1, 1),
+                       title="432Hz 싱잉볼 🔔 마음이 편안해지는 치유 주파수 명상", tags="#432Hz #싱잉볼 #치유주파수 #명상음악 #힐링음악 #수면음악",
+                       desc="432Hz 싱잉볼을 중심으로 216·288·324Hz 볼이 함께 울림", overlay="먼지 빛", colors=("#0E1420", "#26364E"),
+                       prompt="a golden singing bowl glowing softly in a dark calm space, gentle circular ripples of light around it, minimal and spiritual, no text, no people"),
+    "싱잉볼 · 528Hz": dict(gen="bowls", mode="mix", tail=45, freqs=(528.0, 264.0, 396.0, 352.0), weights=(4, 2, 1, 1),
+                       title="528Hz 싱잉볼 💚 치유 주파수 명상 음악", tags="#528Hz #싱잉볼 #솔페지오 #치유주파수 #명상음악 #힐링음악",
+                       desc="528Hz 싱잉볼을 중심으로 264·352·396Hz 볼이 함께 울림", overlay="먼지 빛", colors=("#0C1812", "#22402E"),
+                       prompt="a singing bowl on moss in a misty green forest, soft rays of light, dew drops, serene and healing atmosphere, no people"),
+    "싱잉볼 · 7 차크라": dict(gen="bowls", mode="chakra", tail=45, step=12.0,
+                         freqs=tuple(midi_hz(m) for m in (60, 62, 64, 65, 67, 69, 71)),
+                         title="7 차크라 싱잉볼 🌈 차크라 순서대로 울리는 명상 음악", tags="#차크라 #싱잉볼 #차크라명상 #명상음악 #요가음악 #힐링음악",
+                         desc="뿌리(도)→천골(레)→태양신경총(미)→심장(파)→목(솔)→제3의 눈(라)→정수리(시) 순서로 12초마다 한 번씩", overlay="호흡 가이드",
+                         colors=("#140C20", "#2E2050"),
+                         prompt="seven singing bowls in a row with rainbow chakra colors from red to violet, soft glowing light, dark peaceful background, minimal, no people"),
+    "싱잉볼 · 깊은 수면": dict(gen="bowls", mode="rub", tail=45, notes=(50, 52, 55), gap=(18, 30),
+                         title="깊은 잠을 위한 싱잉볼 🌙 낮고 느린 수면 명상", tags="#싱잉볼 #수면음악 #숙면 #명상음악 #잠잘때듣는음악 #힐링음악",
+                         desc="큰 볼의 낮은 울림을 아주 느린 간격으로 (문지르기 + 가끔 치기)", overlay="반딧불", colors=("#06081A", "#16204A"),
+                         prompt="a large singing bowl by a window at night, moonlight on calm water outside, deep blue tones, very still and peaceful, no people"),
     "오르골 자장가 · 브람스": dict(gen="lullaby", melody=BRAHMS_LULLABY, bpm=66, title="브람스 자장가 오르골 🎵 아기 재우는 음악",
                           tags="#자장가 #오르골 #아기수면 #브람스자장가 #태교음악 #수면음악", desc="브람스 자장가(1868) 오르골 연주 + 따뜻한 패드",
                           overlay="반딧불", colors=("#140E20", "#3A2A50"),
@@ -4837,7 +4859,183 @@ ORGEL_SONGS = {   # 퍼블릭 도메인 곡 오르골 연주 (멜로디: 웹의 
 }
 _mp = list(MUSIC_PRESETS.items())
 _at = [n for n, _ in _mp].index("오르골 · 캐논") + 1   # 기존 오르골 곡들 바로 뒤에
-MUSIC_PRESETS = dict(_mp[:_at] + list(ORGEL_SONGS.items()) + _mp[_at:])
+ORGEL_WORLD = {   # 일본·중국·러시아 퍼블릭 도메인 곡 오르골 연주 (멜로디: 웹의 악보에서 옮김)
+    '오르골 일본 · 사쿠라 사쿠라(さくらさくら)': dict(gen="lullaby", bpm=66, minor=True, title='사쿠라 사쿠라 오르골 🌸 일본 벚꽃 민요 힐링 음악',
+        tags='#오르골 #사쿠라 #벚꽃 #일본노래 #일본동요 #수면음악 #힐링음악', desc='일본 전통 민요 さくらさくら 오르골 연주 + 은은한 패드',
+        overlay='먼지 빛', colors=('#160E14', '#3E2836'),
+        prompt='cherry blossom petals drifting over a quiet japanese temple garden at dusk, soft pink and lavender light, stone lantern, calm pond, no people',
+        melody=("A4 A4 B4:2 A4 A4 B4:2 A4 B4 C5 B4 A4 B4:0.5 A4:0.5 F4:2 E4 C4 E4 F4 E4 E4:0.5 C4:0.5 B3:2 A4 B4 C5 B4 A4 "
+                "B4:0.5 A4:0.5 F4:2 E4 C4 E4 F4 E4 E4:0.5 C4:0.5 B3:2 A4 A4 B4:2 A4 A4 B4:2 E4 F4 B4:0.5 A4:0.5 F4 E4:2 R:2")),
+    '오르골 일본 · 황성의 달(荒城の月)': dict(gen="lullaby", bpm=60, minor=True, title='황성의 달 오르골 🌕 다키 렌타로 일본 명곡',
+        tags='#오르골 #황성의달 #다키렌타로 #일본노래 #일본동요 #수면음악 #힐링음악', desc='다키 렌타로 荒城の月(1901) 오르골 연주 + 단조 패드',
+        overlay='먼지 빛', colors=('#160E14', '#3E2836'),
+        prompt='ruins of an old japanese castle wall under a full moon, pine trees, soft silver moonlight, misty and quiet, no people',
+        melody=("A4 A4 D5 E5 F5 E5 D5:2 A#4 A#4 A4 G4 A4:3 R A4 A4 D5 E5 F5 E5 D5:2 A#4 G4 A4:1.5 A4:0.5 D4:3 R F4 F4 E4 D4 "
+                "A#4:1.5 A#4:0.5 A4:2 G4 A4 A#4:1.5 A#4:0.5 A4:3 R A4 A4 D5 E5 F5 E5 D5:2 A#4 G4 A4:1.5 A4:0.5 D4:3 R")),
+    '오르골 일본 · 후루사토(故郷)': dict(gen="lullaby", bpm=62, minor=False, title='후루사토(고향) 오르골 🏞 그리운 일본 동요',
+        tags='#오르골 #후루사토 #故郷 #일본노래 #일본동요 #수면음악 #힐링음악', desc='일본 창가 故郷(1914) 오르골 연주 + 따뜻한 패드',
+        overlay='먼지 빛', colors=('#160E14', '#3E2836'),
+        prompt='a peaceful japanese countryside village with rice fields and green mountains, a small river, soft morning light, nostalgic, no people',
+        melody=("G4 G4 G4 A4:1.5 B4:0.5 A4 B4 B4 C5 D5:2 R C5 D5 E5 B4:1.5 C5:0.5 B4 A4 A4 F#4 G4:2 R A4:0.5 G4:0.5 A4 D4 "
+                "G4:0.5 A4:0.5 B4 B4 C5:0.5 B4:0.5 C5:1.5 E5:0.5 D5:0.5 C5:0.5 B4 R D5 D5 D5 G4:1.5 A4:0.5 B4 C5 C5 A4 G4:2 R")),
+    '오르골 일본 · 에도 자장가(江戸子守唄)': dict(gen="lullaby", bpm=60, minor=True, title='에도 자장가 오르골 🎐 일본 전통 자장가',
+        tags='#오르골 #자장가 #일본자장가 #아기수면 #일본노래 #일본동요 #수면음악 #힐링음악', desc='일본 전통 자장가 江戸子守唄 오르골 연주 + 단조 패드',
+        overlay='먼지 빛', colors=('#160E14', '#3E2836'),
+        prompt='a quiet traditional japanese room at night, paper lantern glow, tatami floor, a small futon, soft moonlight through shoji screens, no people',
+        melody=("F4:1.5 F4:0.5 F4 E4 R:0.5 F4:0.5 A4 F4 E4 R:0.5 C4:0.5 E4:0.5 F4:0.5 A4 F4:0.5 A4:0.5 E4:3 R A3:1.5 A3:0.5 B3 "
+                "A3:0.5 B3:0.5 R:0.5 C4:0.5 E4 F4 E4 R:0.5 A3:0.5 B3 C4 A3 B3:3 R")),
+    '오르골 일본 · 일곱 아기 까마귀(七つの子)': dict(gen="lullaby", bpm=64, minor=False, title='일곱 아기 까마귀 오르골 🌇 노을 지는 일본 동요',
+        tags='#오르골 #七つの子 #동요 #일본노래 #일본동요 #수면음악 #힐링음악', desc='일본 동요 七つの子(1921) 오르골 연주 + 따뜻한 패드',
+        overlay='먼지 빛', colors=('#160E14', '#3E2836'),
+        prompt='a warm orange sunset over a quiet japanese mountain village, crows flying home in the distance, soft glowing sky, nostalgic, no people',
+        melody=("B4 A4:0.5 G4:0.5 A4 R B4:0.5 G4:0.5 E4:0.5 G4:0.5 D4 R E4:0.5 D4:0.5 B3:0.5 D4:0.5 E4 G4 A4:3 R B4:1.5 C5:0.5 "
+                "D5 B4 D5 E5:0.5 D5:0.5 B4 G4 A4:0.5 A4:0.5 B4:0.5 G4:0.5 E4 D4 G4:3 R A4 A4 A4 R A4:1.5 A4:0.5 A4 B4 C5 B4 A4 "
+                "A4 A4 B4 E4 R D4 D4 D4 R G4:1.5 G4:0.5 G4 A4 B4 C5 E4 G4 A4:3 R B4 A4:0.5 G4:0.5 A4 R B4:0.5 G4:0.5 E4:0.5 "
+                "G4:0.5 D4 R E4:0.5 D4:0.5 B3:0.5 D4:0.5 E4 G4 A4:3 R B4:1.5 C5:0.5 D5 B4 D5 E5:0.5 D5:0.5 B4 G4 A4 B4:0.5 "
+                "G4:0.5 E4 D4 G4:3 R")),
+    '오르골 일본 · 으스름 달밤(朧月夜)': dict(gen="lullaby", bpm=62, minor=False, title='으스름 달밤 오르골 🌙 일본 봄밤 명곡',
+        tags='#오르골 #朧月夜 #봄밤 #일본노래 #일본동요 #수면음악 #힐링음악', desc='일본 창가 朧月夜(1914) 오르골 연주 + 은은한 패드',
+        overlay='먼지 빛', colors=('#160E14', '#3E2836'),
+        prompt='a hazy spring moon over yellow rapeseed fields at dusk, soft mist, distant mountains, gentle pastel tones, dreamy, no people',
+        melody=("E4:0.5 E4:0.5 C4:1.5 D4:0.5 E4:0.5 G4:0.5 G4:0.5 A4:0.5 G4 D4 E4:1.5 C4:0.5 D4:0.5 G4:0.5 E4:2 G4:0.5 G4:0.5 "
+                "E4:1.5 F4:0.5 G4:0.5 C5:0.5 C5:0.5 D5:0.5 C5 G4 A4:1.5 E4:0.5 D4:0.5 D4:0.5 C4:2 G4:0.5 G4:0.5 C5:1.5 C5:0.5 "
+                "C5:0.5 D5:0.5 C5:0.5 A4:0.5 G4 G4:0.5 E4:0.5 G4:1.5 A4:0.5 E4:0.5 E4:0.5 D4:2 C4:0.5 D4:0.5 E4:1.5 C4:0.5 "
+                "E4:0.5 F4:0.5 G4:0.5 C5:0.5 A4 G4 A4:1.5 E4:0.5 D4:0.5 D4:0.5 C4:3")),
+    '오르골 일본 · 꽃(花, 다키 렌타로)': dict(gen="lullaby", bpm=66, minor=False, title="다키 렌타로 '꽃' 오르골 🌸 봄 강가 일본 명곡",
+        tags='#오르골 #花 #다키렌타로 #일본노래 #일본동요 #수면음악 #힐링음악', desc='다키 렌타로 花(1900) 오르골 연주 + 따뜻한 패드',
+        overlay='먼지 빛', colors=('#160E14', '#3E2836'),
+        prompt='spring cherry trees along a wide calm river, small wooden boats, soft morning light, petals on the water, peaceful, no people',
+        melody=("C4:1.5 C4:0.5 F4 R:0.5 F4:0.5 G4:0.5 F4:0.5 E4:0.5 D4:0.5 C4:2 A3:0.5 C4:0.5 F4:0.5 G4:0.5 A4 C5 G4:2 R:2 "
+                "C4:1.5 C4:0.5 F4 R:0.5 F4:0.5 G4:0.5 F4:0.5 D4:0.5 E4:0.5 C4:2 G4:1.5 G4:0.5 G4 A4 F4:2 R:2 C5:1.5 C5:0.5 "
+                "C5:1.5 A4:0.5 A#4:1.5 A#4:0.5 A#4 R:0.5 G4:0.5 A4:2 D4 G4 C4:3 R C4:1.5 C4:0.5 F4 F4 G4:0.5 F4:0.5 E4:0.5 "
+                "D4:0.5 C4:2 G4 G4:0.75 A4:0.25 A#4 G4 F4:2 R:2")),
+    '오르골 일본 · 바닷가의 노래(浜辺の歌)': dict(gen="lullaby", bpm=62, minor=False, title='바닷가의 노래 오르골 🌊 일본 명곡',
+        tags='#오르골 #浜辺の歌 #바다 #일본노래 #일본동요 #수면음악 #힐링음악', desc='일본 가곡 浜辺の歌(1918) 오르골 연주 + 은은한 패드',
+        overlay='먼지 빛', colors=('#160E14', '#3E2836'),
+        prompt='a quiet japanese seashore at sunrise, gentle waves on the sand, pine trees on the dunes, soft pastel sky, calm, no people',
+        melody=("C4:0.5 C4 F4:0.25 G4:0.25 A4 G4:0.25 F4:0.25 G4 D4:0.5 F4 E4:0.25 D4:0.25 C4 F4:0.5 A4 G4:0.25 F4:0.25 G4:2.5 "
+                "C4:0.5 C4 F4:0.25 G4:0.25 A4 G4:0.25 F4:0.25 G4 D4:0.5 F4 E4:0.25 D4:0.25 C4 A4:0.5 C4 G4:0.5 F4:2.5 C5:0.5 C5 "
+                "G4:0.5 C5 G#4:0.5 C5:1.5 A4 D5:0.5 D5 A#4:0.5 F4 G4:0.5 C5:2.5 C4:0.5 C4 F4:0.25 G4:0.25 A4 G4:0.25 F4:0.25 G4 "
+                "D4:0.5 F4 E4:0.25 D4:0.25 C4 A4:0.5 C4 G4:0.5 F4:2 R:0.5")),
+    '오르골 중국 · 모리화(茉莉花)': dict(gen="lullaby", bpm=64, minor=False, title='모리화 오르골 🌼 재스민 꽃 중국 민요',
+        tags='#오르골 #모리화 #茉莉花 #중국민요 #중국노래 #수면음악 #힐링음악', desc='중국 민요 茉莉花 오르골 연주 + 은은한 패드',
+        overlay='먼지 빛', colors=('#180E0C', '#46261E'),
+        prompt='white jasmine flowers in a classical chinese garden at dusk, round moon gate, soft lantern light, calm pond, no people',
+        melody=("E4 E4:0.5 G4:0.5 A4:0.5 C5:0.5 C5:0.5 A4:0.5 G4 G4:0.5 A4:0.5 G4 R E4 E4:0.5 G4:0.5 A4:0.5 C5:0.5 C5:0.5 "
+                "A4:0.5 G4 G4:0.5 A4:0.5 G4 R G4 G4 G4 E4:0.5 G4:0.5 A4 A4 G4:2 E4 D4:0.5 E4:0.5 G4 E4:0.5 D4:0.5 C4 C4:0.5 "
+                "D4:0.5 C4:2 E4:0.5 D4:0.5 C4:0.5 E4:0.5 D4:1.5 E4:0.5 G4 A4:0.5 C5:0.5 G4:2 D4 E4:0.5 G4:0.5 D4:0.5 E4:0.5 "
+                "C4:0.5 A3:0.5 G3:2 A3 C4 D4:1.5 E4:0.5 C4:0.5 D4:0.5 C4:0.5 A3:0.5 G3:2 R:2")),
+    '오르골 중국 · 송별(送别)': dict(gen="lullaby", bpm=60, minor=False, title='송별 오르골 🍃 이별의 노래 힐링 음악',
+        tags='#오르골 #송별 #送别 #중국민요 #중국노래 #수면음악 #힐링음악', desc='送别(리수퉁 가사, 오드웨이 1851 곡) 오르골 연주 + 따뜻한 패드',
+        overlay='먼지 빛', colors=('#180E0C', '#46261E'),
+        prompt='an old pavilion by a long road outside town at sunset, willow branches swaying, distant hills, soft golden light, nostalgic, no people',
+        melody=("G4 E4:0.5 G4:0.5 C5:2 A4 C5 G4:2 G4 C4:0.5 D4:0.5 E4 D4:0.5 C4:0.5 D4:3 R G4 E4:0.5 G4:0.5 C5:1.5 B4:0.5 A4 C5 "
+                "G4:2 G4 D4:0.5 E4:0.5 F4:1.5 B3:0.5 C4:3 R A4 C5 C5:2 B4 A4:0.5 B4:0.5 C5:2 A4:0.5 B4:0.5 C5:0.5 A4:0.5 A4:0.5 "
+                "G4:0.5 E4:0.5 C4:0.5 D4:3 R G4 E4:0.5 G4:0.5 C5:1.5 B4:0.5 A4 C5 G4:2 G4 D4:0.5 E4:0.5 F4:1.5 B3:0.5 C4:3 R")),
+    '오르골 중국 · 작은 배추(小白菜)': dict(gen="lullaby", bpm=58, minor=False, title='작은 배추 오르골 🌙 애잔한 중국 민요 자장가',
+        tags='#오르골 #小白菜 #자장가 #중국민요 #중국노래 #수면음악 #힐링음악', desc='중국 허베이 민요 小白菜 오르골 연주 + 은은한 패드',
+        overlay='먼지 빛', colors=('#180E0C', '#46261E'),
+        prompt='a small village courtyard in northern china under a quiet night sky, a lone lantern, soft moonlight, gentle and calm, no people',
+        melody=("D5 B4 B4 A4:3 D5 B4 B4:0.5 A4:0.5 G4:3 G4 B4 A4:0.5 G4:0.5 E5:3 A4 G4 G4:0.5 E4:0.5 D4:3 A4 A4 B4 A4:3 D5 B4 "
+                "B4:0.5 A4:0.5 G4:3 G4 B4 A4:0.5 G4:0.5 E4:3 A4 G4 G4:0.5 E4:0.5 D4:3")),
+    '오르골 중국 · 봉양화고(凤阳花鼓)': dict(gen="lullaby", bpm=70, minor=True, title='봉양화고 오르골 🥁 정겨운 중국 민요',
+        tags='#오르골 #凤阳花鼓 #중국민요 #중국노래 #수면음악 #힐링음악', desc='중국 안후이 민요 凤阳花鼓 오르골 연주 + 단조 패드',
+        overlay='먼지 빛', colors=('#180E0C', '#46261E'),
+        prompt='a quiet chinese riverside town at evening, red lanterns and a small flower drum on a wooden table, soft warm light, no people',
+        melody=("E4 E4:0.5 D4:0.5 B3:2 E4 E4:0.5 D4:0.5 B3:2 B3:1.5 D4:0.5 E4 G4 E4:0.5 D4:0.5 B3:0.5 G3:0.5 A3:2 G3:1.5 A3:0.5 "
+                "B3 D4 B3 A3:0.5 G3:0.5 A3:2 E4 E4:0.5 D4:0.5 B3:0.5 D4:0.5 E4:0.5 G4:0.5 E4:0.5 D4:0.5 B3 A3:2 E4:1.5 D4:0.5 "
+                "E4 G4 A4 G4:0.5 E4:0.5 D4:2 E4:1.5 D4:0.5 B3 G4 E4 D4:0.5 B3:0.5 A3:2 G3:1.5 A3:0.5 B3 D4 B3 A3:0.5 G3:0.5 "
+                "A3:2 E4 E4:0.5 D4:0.5 B3:0.5 D4:0.5 E4:0.5 G4:0.5 E4:0.5 D4:0.5 B3 A3:2")),
+    '오르골 중국 · 수하포(绣荷包)': dict(gen="lullaby", bpm=64, minor=True, title='수하포 오르골 🧵 수놓는 주머니 중국 민요',
+        tags='#오르골 #绣荷包 #중국민요 #중국노래 #수면음악 #힐링음악', desc='중국 민요 绣荷包 오르골 연주 + 단조 패드',
+        overlay='먼지 빛', colors=('#180E0C', '#46261E'),
+        prompt='an embroidered silk pouch and threads on a wooden table by a window, moonlight and soft lantern glow, delicate and calm, no people',
+        melody=("D5:0.5 D5:0.25 D5:0.25 G5:0.5 E5:0.5 D5 C5:0.5 A4:0.5 D5:0.5 D5:0.25 D5:0.25 F5:0.5 A4:0.5 G4:0.5 G4:0.25 "
+                "F4:0.25 G4 A4:0.75 C5:0.25 D5:0.5 D5:0.5 C5:0.5 A4:0.5 G4:0.5 F4:0.5 G4:0.5 G4:0.5 F4:0.5 D4:0.5 A4:0.5 C5:0.5 "
+                "G4:0.5 E4:0.5 D4:0.75 C4:0.25 D4")),
+    '오르골 중국 · 자죽조(紫竹调)': dict(gen="lullaby", bpm=66, minor=False, title='자죽조 오르골 🎋 대나무 숲 중국 민요',
+        tags='#오르골 #紫竹调 #대나무 #중국민요 #중국노래 #수면음악 #힐링음악', desc='중국 장쑤 민요 紫竹调 오르골 연주 + 은은한 패드',
+        overlay='먼지 빛', colors=('#180E0C', '#46261E'),
+        prompt='a misty purple-tinted bamboo forest at dawn, soft light rays, a small stone path, serene and quiet, no people',
+        melody=("G4:0.75 A4:0.25 C5:0.5 D5:0.5 A4:0.5 G4:0.5 E4 G4:0.5 D4:0.5 E4:0.5 G4:0.5 G4:0.5 C4:1.5 E4:0.5 G4:0.5 E4:0.5 "
+                "G4:0.5 D4:0.25 E4:0.25 D4:0.25 C4:0.25 C4 C4:0.5 G3:1.5 D5:0.5 D5:0.25 C5:0.25 A4:0.25 G4:0.25 E4:0.5 G4:2 "
+                "E4:0.375 G4:0.125 E4:0.25 G4:0.25 A4:0.25 G4:0.25 A4:0.25 C5:0.25 G4:2 G4:0.75 A4:0.25 C5:0.5 D5:0.5 A4:0.5 "
+                "G4:0.5 G4:0.25 E4:0.25 D4:0.5 G4:0.5 D4:0.5 E4:0.5 G4:0.5 G4:0.5 C4:1.5 C4:0.75 A3:0.25 G4:0.5 G4:0.25 E4:0.25 "
+                "D4:0.25 E4:0.25 D4:0.25 C4:0.25 D4 E4:0.5 E4:0.25 G4:0.25 G4:0.5 A3:0.5 C4:0.75 D4:0.25 B3:0.25 A3:0.25 G3:0.5 "
+                "A3:2 C4:0.75 A3:0.25 G4:0.5 G4:0.25 E4:0.25 D4:0.25 E4:0.25 D4:0.25 C4:0.25 D4 A4:0.5 C5:0.5 A4:0.25 C5:0.75 "
+                "D5 C5:0.5 C5:0.25 G4:0.25 A4:0.5 D5:0.5 D5:0.25 C5:0.25 A4:0.5 G4:2")),
+    '오르골 중국 · 동북 자장가(摇篮曲)': dict(gen="lullaby", bpm=60, minor=False, title='중국 동북 자장가 오르골 🌙 아기 재우는 노래',
+        tags='#오르골 #자장가 #중국자장가 #아기수면 #중국민요 #중국노래 #수면음악 #힐링음악', desc='중국 동북 지방 전통 자장가 오르골 연주 + 은은한 패드',
+        overlay='먼지 빛', colors=('#180E0C', '#46261E'),
+        prompt='a cozy cottage in a snowy northern village at night, a cradle by the warm stove, moonlight through the window, soft and dreamy, no people',
+        melody=("F4:0.5 F4:0.5 F4:0.75 D4:0.25 C4:0.5 F4:0.5 F4 C5:0.5 D5:0.25 F5:0.25 D5:0.25 C5:0.25 A4:0.5 C5:0.25 A4:0.25 "
+                "G4:0.5 G4 G4:0.5 C5:0.5 C5 G4:0.5 A4:0.25 G4:0.25 F4 F4:0.25 D4:0.25 A4:0.25 A4:0.25 G4:0.25 F4:0.25 F4:0.25 "
+                "D4:0.25 C4:0.5 C4:1.5 D4:0.25 F4:0.25 C4:0.25 D4:0.25 F4:0.75 G4:0.25 A4:0.25 G4:0.25 F4:0.25 G4:0.25 C5:0.75 "
+                "A4:0.25 G4:0.5 A4:0.5 A4:0.5 C4:0.25 D4:0.25 G4:0.5 E4:0.5 D4 D5:0.25 C5:0.25 A4:0.25 C5:0.25 D5:0.75 C5:0.25 "
+                "D5:0.25 C5:0.25 A4:0.25 D5:0.25 C5 A4:0.25 C5:0.25 A4:0.25 G4:0.25 F4:0.25 D4:0.25 F4:0.25 D4:0.25 C5:0.5 "
+                "A4:0.25 G4:0.25 G4:0.25 F4:0.25 D4:0.5 C4:2")),
+    '오르골 러시아 · 칼린카(Калинка)': dict(gen="lullaby", bpm=72, minor=True, title='칼린카 오르골 🌺 러시아 민요 힐링 음악',
+        tags='#오르골 #칼린카 #Kalinka #러시아민요 #러시아노래 #수면음악 #힐링음악', desc='러시아 민요 Калинка(라리오노프, 1860) 오르골 연주 + 단조 패드',
+        overlay='눈', colors=('#0C1018', '#26344A'),
+        prompt='a snowy russian birch forest with red viburnum berries, a small wooden house with warm windows, soft winter light, calm, no people',
+        melody=("A4 G4 E4:0.5 F4:0.5 G4 E4:0.5 F4:0.5 G4 F4:0.5 E4:0.5 D4 A4:0.5 A4:0.5 G4:0.75 F4:0.25 E4:0.5 F4:0.5 G4 E4:0.5 "
+                "F4:0.5 G4 F4:0.5 E4:0.5 D4 R D5:2 C5:2 A4:0.5 C5:0.5 A#4:0.5 A4:0.25 G4:0.25 F4 C4 A4:0.5 C5:0.5 A#4:0.5 "
+                "A4:0.25 G4:0.25 F4 C4 D4 D4:0.5 E4:0.5 G4:0.5 F4:0.5 E4:0.5 D4:0.5 C4 C4 C4 C5 A4:0.5 C5:0.5 G4:0.5 A4:0.5 F4 "
+                "C4 A4:0.5 C5:0.5 G4:0.5 A4:0.5 F4 C4 D4 D4:0.5 E4:0.5 G4:0.5 F4:0.5 E4:0.5 D4:0.5 C5 A#4 A4:2 R A4 G4 E4:0.5 "
+                "F4:0.5 G4 E4:0.5 F4:0.5 G4 F4:0.5 E4:0.5 D4 A4:0.5 A4:0.5 G4:0.75 F4:0.25 E4:0.5 F4:0.5 G4 E4:0.5 F4:0.5 G4 "
+                "F4:0.5 E4:0.5 D4 R")),
+    '오르골 러시아 · 코로베이니키(테트리스 음악)': dict(gen="lullaby", bpm=72, minor=True, title='코로베이니키 오르골 🎮 테트리스 그 노래 잔잔한 버전',
+        tags='#오르골 #코로베이니키 #테트리스 #Korobeiniki #러시아민요 #러시아노래 #수면음악 #힐링음악', desc='러시아 민요 Коробейники(테트리스 음악) 느린 오르골 연주 + 단조 패드',
+        overlay='눈', colors=('#0C1018', '#26344A'),
+        prompt='a colorful onion-domed russian cathedral at night in soft snowfall, warm lights, peaceful winter square, no people',
+        melody=("E3:1.5 G#3:0.5 B3 G#3:0.5 E3:0.5 A3:1.5 C4:0.5 E4 D4:0.5 C4:0.5 B3:1.5 C4:0.5 D4 E4 C4 A3 A3:2 F4:1.5 G4:0.5 "
+                "A4 G4:0.5 F4:0.5 E4:1.5 F4:0.5 E4 D4:0.5 C4:0.5 B3:1.5 C4:0.5 D4 E4 C4 A3 A3:2 F4:1.5 G4:0.5 A4 G4:0.5 F4:0.5 "
+                "E4:1.5 F4:0.5 E4 D4:0.5 C4:0.5 B3:1.5 C4:0.5 D4 E4 C4 A3 A3:2")),
+    '오르골 러시아 · 검은 눈동자(Очи чёрные)': dict(gen="lullaby", bpm=62, minor=True, title='검은 눈동자 오르골 🖤 러시아 로망스 힐링 음악',
+        tags='#오르골 #검은눈동자 #OchiChornye #로망스 #러시아민요 #러시아노래 #수면음악 #힐링음악', desc='러시아 로망스 Очи чёрные 오르골 연주 + 단조 패드',
+        overlay='눈', colors=('#0C1018', '#26344A'),
+        prompt='a dim candlelit room with an old samovar and a violin on a table, deep red and gold tones, quiet and romantic, no people',
+        melody=("G#4 A4 A#4:1.5 A4:0.5 A4 R G#4 A4 A#4:1.5 A4:0.5 A4 R A4 D5 D5:1.5 C#5:0.5 C#5 R E5 F5 E5:1.5 D5:0.5 D5 R D5 "
+                "F5 F5:1.5 E5:0.5 A#4 R F5 E5 E5:1.5 D5:0.5 A4 R G#4 A4 A#4:1.5 A4:0.5 A4 R E4 F4 E4:1.5 D4:0.5 D4")),
+    '오르골 러시아 · 가녀린 마가목(Тонкая рябина)': dict(gen="lullaby", bpm=58, minor=True, title='가녀린 마가목 오르골 🍂 애잔한 러시아 민요',
+        tags='#오르골 #러시아민요 #마가목 #러시아민요 #러시아노래 #수면음악 #힐링음악', desc='러시아 민요 Тонкая рябина 오르골 연주 + 단조 패드',
+        overlay='눈', colors=('#0C1018', '#26344A'),
+        prompt='a slender rowan tree with red berries beside an old oak in an autumn field, soft grey sky, quiet and melancholic, no people',
+        melody=("E4:2 G4 B4:2 C5 B4 A4:4 R D#4:2 F#4 C5:2 B4 A4 G4:4 R E4 G4 B4 E5:2 D5 D5 C5:4 R D5:2 C5 B4:2 A4 B4 E4:4 R E4 "
+                "G4 B4 E5:2 D5 D5 C5:4 R D5:2 C5 B4:2 A4 B4 E4:4 R")),
+    '오르골 러시아 · 스텐카 라진': dict(gen="lullaby", bpm=62, minor=False, title='스텐카 라진 오르골 ⛵ 볼가강 러시아 민요',
+        tags='#오르골 #스텐카라진 #볼가강 #러시아민요 #러시아노래 #수면음악 #힐링음악', desc='러시아 민요 Из-за острова на стрежень 오르골 연주 + 은은한 패드',
+        overlay='눈', colors=('#0C1018', '#26344A'),
+        prompt='a wide calm volga river at dawn with an old wooden sailboat, misty island in the distance, soft golden light, no people',
+        melody=("D4:2.5 D4:0.5 G4:1.5 F#4:0.5 A4:0.75 G4:0.25 G4 F#4 D4:0.75 D4:0.25 C5:1.5 A4:0.5 D5:0.5 A4:0.5 B4:2 G4:0.5 "
+                "G4:0.5 E5:1.5 D5:0.5 C5:0.5 E5:0.5 D5 G4 D4:0.5 D4:0.5 B4:1.5 A4:0.5 C5:0.5 F#4:0.5 G4:2 D4:0.5 D4:0.5 G4:1.5 "
+                "F#4:0.5 A4:0.75 G4:0.25 G4 F#4 D4:0.5 D4:0.5 C5:1.5 A4:0.5 D5:0.5 A4:0.5 B4:2 G4:0.5 G4:0.5 E5:1.5 D5:0.5 "
+                "C5:0.5 E5:0.5 D5 G4 D4:0.5 D4:0.5 C5:1.5 A4:0.5 C5:0.5 F#4:0.5 G4:3")),
+    '오르골 러시아 · 들판의 자작나무': dict(gen="lullaby", bpm=66, minor=True, title='들판의 자작나무 오르골 🌳 러시아 민요',
+        tags='#오르골 #자작나무 #러시아민요 #러시아민요 #러시아노래 #수면음악 #힐링음악', desc='러시아 민요 Во поле берёза стояла 오르골 연주 + 단조 패드',
+        overlay='눈', colors=('#0C1018', '#26344A'),
+        prompt='a single white birch tree standing in a wide golden field under a soft summer evening sky, calm and open, no people',
+        melody=("E4:0.5 E4:0.5 E4:0.5 E4:0.5 D4 C4:0.5 C4:0.5 B3 A3 E4:0.5 E4:0.5 G4:0.5 E4:0.5 D4:0.5 D4:0.5 C4:0.5 C4:0.5 B3 "
+                "A3 B3:1.5 C4:0.5 D4 C4:0.5 C4:0.5 B3 A3 B3:1.5 C4:0.5 D4:0.5 E4:0.5 C4:0.5 C4:0.5 B3 A3")),
+    '오르골 러시아 · 볼가강 뱃노래': dict(gen="lullaby", bpm=56, minor=True, title='볼가강 뱃노래 오르골 🌊 느리고 깊은 러시아 민요',
+        tags='#오르골 #볼가강뱃노래 #러시아민요 #러시아민요 #러시아노래 #수면음악 #힐링음악', desc='러시아 민요 Эй, ухнем 느린 오르골 연주 + 단조 패드',
+        overlay='눈', colors=('#0C1018', '#26344A'),
+        prompt='a misty river bank at dusk with an old barge and long ropes, deep blue and grey tones, quiet and heavy atmosphere, no people',
+        melody=("G4 E4 A4:2 E4:4 G4 E4 A4:2 E4:4 G4:2 C5:2 B4:2 A4:2 G4 E4 A4:2 E4:4 G4 E4 A4:2 E4:4 G4 E4 A4:2 E4:4 G4:2 C5:2 "
+                "B4:2 A4:2 G4 E4 A4:2 E4:4")),
+    '오르골 러시아 · 차이콥스키 옛 프랑스 노래': dict(gen="lullaby", bpm=60, minor=True, title="차이콥스키 '옛 프랑스 노래' 오르골 🎼 잔잔한 클래식",
+        tags='#오르골 #차이콥스키 #클래식 #어린이를위한앨범 #러시아민요 #러시아노래 #수면음악 #힐링음악', desc="차이콥스키 어린이를 위한 앨범 Op.39-16 '옛 프랑스 노래'(1878) 오르골 연주 + 단조 패드",
+        overlay='눈', colors=('#0C1018', '#26344A'),
+        prompt='an antique music box on a lace tablecloth in an old european parlor, soft candlelight, winter window, gentle and nostalgic, no people',
+        melody=("D4:0.5 G4:0.5 A4:0.5 A#4:0.5 C5:0.5 D5:1.5 D5:0.5 C5:0.5 D5:0.5 D#5:0.5 C5:0.5 D5:1.5 D5:0.5 C5:0.5 D5:0.5 "
+                "D#5:0.5 C5:0.5 D5:0.5 D#5:0.25 D5:0.25 C5:0.5 A#4:0.5 A4:1.75 G4:0.25 G4:1.5 D4:0.5 G4:0.5 A4:0.5 A#4:0.5 "
+                "C5:0.5 D5:1.5 D5:0.5 C5:0.5 D5:0.5 D#5:0.5 C5:0.5 D5:1.5 D5:0.5 C5:0.5 D5:0.5 D#5:0.5 C5:0.5 D5:0.5 D#5:0.25 "
+                "D5:0.25 C5:0.5 A#4:0.5 A4:1.75 G4:0.25 G4:2 G4 G4:0.5 A4:0.5 A#4:1.5 A#4:0.5 C5 C5 A4:1.5 A4:0.5 D5:1.5 D5:0.5 "
+                "D#5:0.5 F5:0.25 D#5:0.25 D5:0.5 C5:0.5 A#4 A4:0.5 G4:0.5 A4:1.5 D4:0.5 G4:0.5 A4:0.5 A#4:0.5 C5:0.5 D5:1.5 "
+                "D5:0.5 C5:0.5 D5:0.5 D#5:0.5 C5:0.5 D5:1.5 D5:0.5 C5:0.5 D5:0.5 D#5:0.5 C5:0.5 D5:0.5 D#5:0.25 D5:0.25 C5:0.5 "
+                "A#4:0.5 A4:1.75 G4:0.25 G4:2")),
+}
+MUSIC_PRESETS = dict(_mp[:_at] + list(ORGEL_SONGS.items()) + list(ORGEL_WORLD.items()) + _mp[_at:])
 MUSIC_OVERLAYS = ["없음", "먼지 빛", "반딧불", "눈", "빗줄기", "호흡 가이드"]
 MUSIC_MOTIONS = ["천천히 줌(기본)", "천천히 줌인만", "숨쉬듯 확대·축소", "좌우로 천천히", "위아래로 천천히", "없음(정지)"]
 
@@ -4874,16 +5072,70 @@ def epiano_note(freq, dur=2.5, vel=0.8):
     return (s * 0.55 * vel).astype(np.float32)
 
 
-def bowl_note(freq, dur=11.0, vel=0.8, rng=None):
-    """싱잉볼: 비정수 배음 + 맥놀이(두 음이 살짝 어긋나 우웅우웅)"""
-    t = np.arange(int(dur * SR)) / SR
+BOWL_MODES = ((1.0, 1.0, 16.0), (2.76, 0.5, 9.0), (5.08, 0.26, 5.0), (8.2, 0.12, 2.8), (11.8, 0.05, 1.4))   # (배음 비율, 크기, 울림 시간)
+
+
+def _bowl_tone(t, freq, rng, amps=None, decay=True):
+    """싱잉볼 배음들: 각 배음이 두 갈래로 살짝 어긋나 우웅우웅 맥놀이"""
     s = np.zeros_like(t)
-    for ratio, amp, dec in ((1, 1.0, 8.0), (2.71, 0.45, 5.0), (5.15, 0.22, 3.0), (8.5, 0.1, 1.6)):
-        f = freq * ratio
-        d = 0.35 + 0.2 * ratio
-        s += amp * (np.sin(2 * np.pi * f * t) + np.sin(2 * np.pi * (f + d) * t)) * 0.5 * np.exp(-t / dec)
-    s *= np.minimum(1, t / 0.006) * np.clip((dur - t) / 1.5, 0, 1)
+    lb = float(np.clip((260 - freq) / 120, 0, 1))   # 낮은 볼일수록 위 배음을 키움 (작은 스피커에서도 들리게)
+    for i, (ratio, amp, tau) in enumerate(BOWL_MODES):
+        a = amp if amps is None else amps[i] if i < len(amps) else 0
+        a *= 1 + lb * (0, 0.9, 0.8, 0.6, 0.3)[i]
+        f = freq * ratio * (1 if i == 0 else rng.uniform(0.996, 1.004))
+        if a <= 0 or f > 12000:
+            continue
+        d = rng.uniform(0.3, 1.6) * ratio ** 0.5      # 맥놀이 빠르기(Hz)
+        r = rng.uniform(0.5, 0.9)
+        ph = rng.uniform(0, 2 * np.pi, 2)
+        tt = t
+        if decay:
+            tau_f = tau * (220 / freq) ** 0.3              # 작은 볼일수록 빨리 사라짐
+            tt = t[:min(len(t), int(7 * tau_f * SR))]       # 거의 사라진 뒤로는 계산 생략
+        part = (np.sin(2 * np.pi * f * tt + ph[0]) + r * np.sin(2 * np.pi * (f + d) * tt + ph[1])) / (1 + r)
+        if decay:
+            part *= np.exp(-tt / tau_f)
+        s[:len(tt)] += a * part
+    return s
+
+
+_BOWL_CACHE = {}   # 같은 볼의 울림은 다시 계산하지 않음 (볼마다 맥놀이 성격 2가지)
+
+
+def bowl_note(freq, dur=40.0, vel=0.8, rng=None):
+    """싱잉볼을 나무 채로 '똑' 친 소리: 맑은 타격음 + 길게 남는 울림(수십 초)"""
+    rng = rng if rng is not None else np.random.default_rng()
+    key = (round(freq, 2), round(dur, 2), int(rng.integers(2)))
+    if key not in _BOWL_CACHE:
+        if len(_BOWL_CACHE) > 24:
+            _BOWL_CACHE.clear()
+        t = np.arange(int(dur * SR)) / SR
+        base = _bowl_tone(t, freq, np.random.default_rng(abs(hash(key)) % 2 ** 32))
+        base *= np.minimum(1, t / 0.002) * np.clip((dur - t) / 3.0, 0, 1)
+        _BOWL_CACHE[key] = base.astype(np.float32)
+    s = _BOWL_CACHE[key].copy()
+    k = int(0.04 * SR)   # 채가 닿는 순간의 '똑'
+    s[:k] += band((rng.standard_normal(k) * np.exp(-np.arange(k) / (0.006 * SR))).astype(np.float32), lo=900, hi=4500) * 0.25
     return (s * 0.5 * vel).astype(np.float32)
+
+
+def bowl_rub(freq, rub=16.0, dur=40.0, vel=0.8, rng=None):
+    """싱잉볼 테두리를 문질러 '노래하게' 한 소리: 천천히 커지며 웅웅 돌다가 손을 떼면 길게 사라짐"""
+    rng = rng if rng is not None else np.random.default_rng()
+    n = int(dur * SR)
+    t = np.arange(n) / SR
+    swell = 0.5 - 0.5 * np.cos(np.pi * np.minimum(1, t / 6.0))
+    env = swell * np.where(t < rub, 1.0, np.exp(-(np.maximum(t - rub, 0)) / 8.0)) * np.clip((dur - t) / 3.0, 0, 1)
+    rubbing = np.clip((rub - t) / 2.0, 0, 1)                       # 문지르는 동안만 1
+    wob = 1 + 0.22 * rubbing * np.sin(2 * np.pi * rng.uniform(0.6, 1.1) * t + rng.uniform(0, 6.3))   # 채가 한 바퀴 돌 때마다 출렁
+    grow = np.minimum(1, t / 10.0)
+    tone = (_bowl_tone(t, freq, rng, amps=(1.0, 0.0, 0.1), decay=False)
+            + (0.3 + 0.4 * (freq < 260)) * grow * _bowl_tone(t, freq, rng, amps=(0, 0.5), decay=False))
+    fric = band(colored_noise(n, rng, 1.0), lo=freq * 0.85, hi=freq * 1.2) * 0.05 * rubbing
+    s = (tone * wob + fric) * env * 0.45
+    m = min(n, int(20 * SR))
+    s[:m] += bowl_note(freq, 20, 0.25, rng)[:m]   # 시작할 때 살짝 치고 문지르기
+    return (s * vel).astype(np.float32)
 
 
 def bird_call(rng):
@@ -5008,13 +5260,38 @@ def music_chunk(P, n, tail, rng, ci):
     bed = None
     tsec = n / SR
     if g == "bowls":
-        roots = [midi_hz(m + P["key"]) for m in (57, 60, 62, 64, 67, 69)]
-        pos = rng.uniform(0.5, 3)
-        while pos < tsec:
-            place(ev, bowl_note(rng.choice(roots) * rng.choice([0.5, 1, 1]), 11, rng.uniform(0.5, 0.9)), pos, rng.uniform(0.25, 0.75))
-            pos += rng.uniform(7, 14)
-        ev = reverb(ev, rng, 4.0, 0.4)
-        bed = gen_pad(L, rng, "space", 14, 700) * 0.35 + np.stack([_norm(band(colored_noise(L, rng, 1.0), lo=200, hi=1800)) for _ in range(2)], 1) * 0.06
+        ring = tail / SR - 2                       # 한 번 친 볼이 울리는 길이 (덩어리 겹침 안에서 끝나게)
+        if P.get("freqs"):                          # 432Hz·528Hz·차크라처럼 정해진 높이는 그대로
+            fs = list(P["freqs"])
+        else:
+            fs = [midi_hz(m + P["key"]) for m in P.get("notes", (50, 52, 55, 57, 60, 62, 64, 67))]
+        w = np.array(P.get("weights") or [1] * len(fs), float)
+        w /= w.sum()
+        low = sorted(fs)[:max(1, len(fs) // 2)]    # 문지르기는 큰(낮은) 볼로
+        mode = P.get("mode", "strike")
+        if mode == "chakra":                       # 뿌리→정수리 차크라 순서로 하나씩
+            step = P.get("step", 12.0)
+            k = int(np.ceil(T0 / step - 1e-9))
+            while k * step < T0 + tsec:
+                i = k % len(fs)
+                place(ev, bowl_note(fs[i], ring, 0.8, rng), k * step - T0, 0.3 + 0.4 * i / max(1, len(fs) - 1))
+                k += 1
+        else:
+            gap = P.get("gap", (8, 15))
+            p_rub = {"rub": 0.6, "mix": 0.25}.get(mode, 0)
+            pos = rng.uniform(0.5, 3)
+            while pos < tsec:
+                if rng.random() < p_rub:
+                    rub = rng.uniform(12, 20)
+                    place(ev, bowl_rub(rng.choice(low), rub, ring, rng.uniform(0.6, 0.85), rng), pos, rng.uniform(0.35, 0.65))
+                    pos += rub + rng.uniform(4, 10)
+                    continue
+                place(ev, bowl_note(fs[rng.choice(len(fs), p=w)], ring, rng.uniform(0.5, 0.9), rng), pos, rng.uniform(0.25, 0.75))
+                if rng.random() < 0.2 and pos + 3 < tsec:   # 가끔 다른 볼을 이어서 한 번 더
+                    place(ev, bowl_note(rng.choice(fs), ring, rng.uniform(0.35, 0.6), rng), pos + rng.uniform(1.5, 3), rng.uniform(0.25, 0.75))
+                pos += rng.uniform(*gap)
+        ev = reverb(ev, rng, 3.5, 0.3)
+        bed = np.stack([_norm(band(colored_noise(L, rng, 1.0), lo=120, hi=1500)) for _ in range(2)], 1) * 0.012   # 아주 작은 방 공기 소리
     elif g == "sleep":
         bed = gen_pad(L, rng, "warm", 14, 900) * 0.8 + np.stack([_norm(band(colored_noise(L, rng, 2.0), hi=300)) for _ in range(2)], 1) * 0.12
         pos = rng.uniform(2, 6)
@@ -5258,7 +5535,7 @@ def render_music_track(name, minutes, seed, wav_path, progress=None, cancel=None
     P = _music_setup(name, seed)
     bar = P.get("bar", 1.0)
     N = int(round(max(1, round(90 / bar)) * bar * SR))
-    tail = int(MUSIC_TAIL * SR)
+    tail = int(P.get("tail", MUSIC_TAIL) * SR)   # 싱잉볼처럼 길게 울리는 소리는 겹침도 길게
     total = int(max(0.2, float(minutes)) * 60 * SR)
     nch = int(np.ceil(total / N))
     carry = np.zeros((tail, 2), np.float32)
