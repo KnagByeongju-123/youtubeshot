@@ -1,0 +1,100 @@
+﻿Supertonic 3 감정형 나레이션 - 다른 PC 설치용 통합 패키지
+=======================================================
+
+[중요]
+이 패키지에는 정상 작동이 확인된 'UTF-8 한글 오류 수정 프로그램'이 포함되어 있습니다.
+프로그램 원본도 함께 제공하며, 수정 프로그램은 별도 이름으로 실행합니다.
+
+목차
+  1. ZIP 파일로 다른 PC에 설치하기 (인터넷 연결 필요)
+  2. 현재 잘되는 PC의 AI 모델까지 ZIP으로 만들기 (모델 재다운로드 방지)
+  3. 폴더 구성 및 개인정보 보호
+  4. 문제 해결
+
+1. 일반 설치 - 다른 PC에서 최초 1회 인터넷 연결 필요
+--------------------------------------------------
+(1) Windows 10/11 64비트 PC에서 Python 3.11(64비트)을 설치합니다.
+    Python 3.14가 이미 있어도 삭제할 필요가 없습니다.
+    CMD에서 다음 명령으로 확인:
+        py -3.11 --version
+    공식 설치 파일(64비트):
+        https://www.python.org/ftp/python/3.11.9/python-3.11.9-amd64.exe
+
+(2) 이 ZIP을 'C:\shorts_supertonic' 같은 폴더에 전부 압축 해제합니다.
+    ZIP 내부에서 파일을 개별적으로 실행하지 마세요.
+    경로에 특수문자를 넣지 않는 편이 안정적입니다.
+
+(3) setup_supertonic_windows.bat 를 더블클릭합니다.
+    새로운 PC 전용 .supertonic_venv 를 만들고 Python 패키지를 설치합니다.
+    supertonic_assets 가 없으면 AI 모델 약 400MB를 내려받습니다.
+    모델 폴더가 있으면 재다운로드 없이 건너뜁니다.
+    마지막에 voice_samples\M1_neutral.wav 테스트 파일이 생성됩니다.
+    인터넷은 최초 설치 및 필요 패키지를 받을 때 필요합니다.
+
+(4) run_shorts_supertonic.bat 를 더블클릭해 프로그램을 실행합니다.
+    '나레이션' → 나레이션 'on'
+    '성우 선택' → Supertonic F1~F5 / M1~M5 를 선택합니다.
+    미리듣기에서 정상 목소리가 나오는지 확인합니다.
+    글이 깨지는 오류는 수정된 supertonic_local_worker.py 가 해결합니다.
+
+2. 모델 다운로드 없이 전송할 ZIP 만들기 (현재 잘되는 PC에서 실행)
+----------------------------------------------------------------
+이 배포 ZIP에는 실제 AI 모델 파일(약 400MB)이 들어 있지 않습니다.
+정상 작동하는 기존 PC에 이미 다운로드된 모델 파일을 사용하려면:
+
+(1) 현재 잘되는 PC의 shorts_ 작업 폴더에 이 ZIP의 파일을 복사합니다.
+    '기존 수정 프로그램 및 모델 폴더'는 절대 삭제하지 마세요.
+    특히 supertonic_assets 폴더가 존재하는지 확인합니다.
+    새로 받은 수정 프로그램 파일 2개를 덮어써도 기존과 같은 한글 수정본입니다.
+(2) make_model_included_package.bat 를 더블클릭합니다.
+(3) 같은 폴더에 Supertonic_model_included_transfer.zip 이 생성됩니다.
+    이 ZIP은 현재 PC의 모델과 프로그램 코드를 모두 포함합니다.
+    약 400MB 이상일 수 있으므로 생성에 시간이 걸립니다.
+(4) 만들어진 ZIP을 USB나 외장 저장장치로 새 PC에 옮깁니다.
+(5) 새 PC에서도 Python 3.11 설치 후 setup_supertonic_windows.bat 를 실행합니다.
+    모델은 ZIP에 들어 있으므로 다운로드 단계를 건너뛰고,
+    새 PC의 Python 패키지(가상환경)는 별도로 설치합니다.
+    ★ 즉 '모델 포함 ZIP'도 최초 Python/패키지 설치에는 인터넷이 필요합니다.
+
+3. 구성 파일
+-----------
+shorts_novel_maker_supertonic.py : 한글 UTF-8 오류 수정된 통합 제작 프로그램
+supertonic_local_worker.py      : 로컬 TTS 워커(UTF-8 수정본)
+supertonic_voice_test.py        : 무료 성우 테스트 프로그램
+setup_supertonic_windows.bat    : 새 PC 최초 설치
+run_shorts_supertonic.bat       : 프로그램 실행
+make_model_included_package.bat : 현재 PC 모델 포함 ZIP 생성
+make_model_included_package.py  : 모델 포함 ZIP 생성 처리
+shorts_novel_maker.py           : 원본 프로그램 보관용
+README_다른PC_설치방법.txt       : 이 안내서
+
+모델 포함 ZIP에 추가되는 항목:
+supertonic_assets\              : 현재 PC에 내려받은 AI 모델 전체(onnx, voice_styles 등)
+
+포함하지 않는 항목:
+.supertonic_venv\   : 다른 PC로 복사해서 쓰기 적합하지 않음. 새 PC에서 재생성.
+shorts_novel_config.json : API 키와 사용자 설정이 있을 수 있어 개인정보 보호상 제외.
+사용자 대본, 사진, 출력 영상, 생성 캐시 등: 설치에 필수는 아니므로 제외.
+
+기존 작업도 이어가려면 대본/이미지/프로젝트 파일 등은 별도로 이동하세요.
+특히 저장된 API 키와 비밀번호가 포함된 설정 파일을 타인에게 전달하지 마세요.
+
+4. 오류 확인
+-----------
+- 'Python 3.11 not found': py -3.11 --version 확인, 64비트 Python 3.11 설치
+- 'Found unsupported character': supertonic_local_worker.py 가 한글 수정본인지 확인
+- 'Edge 403': Edge 서버 응답 문제. Supertonic 성우 선택 및 Edge 자동 전환 off
+- 모델 없음: supertonic_assets\onnx 와 voice_styles 폴더를 확인
+- 나레이션 오류: supertonic_worker_error.log 마지막 줄을 확인
+- Windows 실행 차단: 파일 속성 > 차단 해제 및 신뢰할 수 있는 다운로드인지 확인
+- 영상 만들기가 느림: FPS 30을 먼저 사용하고 다른 프로그램 종료
+
+[저작권 안내]
+오픈소스 엔진: https://github.com/supertone-oss-archive/supertonic-py
+AI 모델: https://huggingface.co/supertone-oss-archive/supertonic-3
+엔진 MIT / 모델 OpenRAIL-M 적용. 공개/상업 사용 시 모델 이용 조건 확인.
+
+[검증 범위]
+포함된 Python 파일 문법 검사 및 ZIP 내부파일 검사를 수행했습니다.
+실제 사용 중인 Windows PC에서는 한글 수정본이 정상 작동한다고 사용자께서 확인했습니다.
+다른 PC의 Windows/Python/네트워크 환경에서의 설치까지 보장할 수는 없습니다.

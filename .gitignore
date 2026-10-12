@@ -9,3 +9,10 @@ gui_out*/
 voices_cache.json
 fonts/
 fonts_cache.json
+
+.supertonic_venv/
+supertonic_assets/
+voice_samples/
+*.log
+*.bak*
+
