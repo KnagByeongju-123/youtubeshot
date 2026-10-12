@@ -209,7 +209,7 @@ FIELDS = [
     ("영상", "audio_out", "소리 저장 방식", "choice:MP4에 포함,MP4에 포함+MP3 따로,MP3만 따로(무음 MP4)", "MP4에 포함+MP3 따로"),
     ("영상", "out_dir", "저장 폴더", "dir", os.path.join(BASE, "output")),
     ("나레이션", "narration", "나레이션(음성 읽기)", "choice:on,off", "off"),
-    ("나레이션", "narr_file", "외부 나레이션 파일(AI 성우에서 받은 mp3·wav, 비우면 프로그램 성우)", "audio", ""),
+    ("나레이션", "narr_file", "외부 음성 파일(비우면 성우)", "audio", ""),
     ("나레이션", "narr_voice", "성우", "voice", "선히 (여성, 차분)"),
     ("나레이션", "narr_pitch", "음 높낮이(Hz, 엣지 음성만)", "float", 0),
     ("나레이션", "narr_style", "연기 지시(ChatGPT·Gemini 음성)", "str", "차분하고 또렷한 다큐멘터리 내레이터처럼. 반전 부분은 긴장감 있게."),
@@ -5550,8 +5550,8 @@ class App(tk.Tk):
             kind = "gemini" if "gemini" in key else "openai"
             ttk.Button(cell, text="키 확인", command=lambda: self.check_key_ui(kind, v.get())).pack(side="left", padx=2)
         elif t == "voice":
-            ttk.Entry(cell, textvariable=v, width=26, state="readonly").pack(side="left")
-            ttk.Button(cell, text="🎤 성우 선택…", command=self.voice_picker).pack(side="left", padx=2)
+            ttk.Button(cell, text="🎤 성우 선택", command=self.voice_picker).pack(side="left", padx=(0, 2))   # 버튼을 앞에 (좁은 화면에서도 보이게)
+            ttk.Entry(cell, textvariable=v, width=16, state="readonly").pack(side="left")
         else:
             ttk.Entry(cell, textvariable=v, width=8).pack(side="left")
 
