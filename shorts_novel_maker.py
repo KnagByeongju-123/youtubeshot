@@ -3682,17 +3682,33 @@ def tts_edge(text, voice, rate_pct, out_mp3, pitch_hz=0):
 
     async def run(plain_dns):
         kw = {}
+        conn = None
         if plain_dns:
             # 윈도우에서 aiodns(c-ares)가 깔려 있으면 주소 찾기(DNS)가 실패하는 경우가 있음
             # → 윈도우 기본 방식(ThreadedResolver) + IPv4 로 접속
             import aiohttp, socket
-            kw["connector"] = aiohttp.TCPConnector(resolver=aiohttp.ThreadedResolver(), family=socket.AF_INET)
+
+            class _KeepConn(aiohttp.TCPConnector):
+                # 글이 길면 edge-tts가 여러 번 접속하는데, 첫 접속이 끝날 때 연결기를 닫아버려
+                # 두 번째부터 'Session is closed' 오류가 남 → 중간에는 닫지 않고 맨 끝에 닫음
+                async def close(self, *a, **k):
+                    return None
+            conn = _KeepConn(resolver=aiohttp.ThreadedResolver(), family=socket.AF_INET)
+            kw["connector"] = conn
         try:
             await edge_tts.Communicate(text, voice, rate=rate, pitch=pitch, **kw).save(out_mp3)
         except TypeError:
             if not kw:
                 raise
             await edge_tts.Communicate(text, voice, rate=rate, pitch=pitch).save(out_mp3)   # 옛 edge-tts (connector 없음)
+        finally:
+            if conn is not None:
+                try:
+                    r = aiohttp.TCPConnector.close(conn)
+                    if hasattr(r, "__await__"):
+                        await r
+                except Exception:
+                    pass
     try:
         loop = asyncio.new_event_loop()
         try:
