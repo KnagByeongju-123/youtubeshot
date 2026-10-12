@@ -3722,7 +3722,15 @@ def tts_edge(text, voice, rate_pct, out_mp3, pitch_hz=0):
         finally:
             loop.close()
     except Exception as e:
-        raise RuntimeError(f"엣지 음성 실패({type(e).__name__}): {str(e)[:120]}")
+        ver = getattr(edge_tts, "__version__", "?")
+        msg = str(e)[:120]
+        if "403" in msg:
+            # 토큰(Sec-MS-GEC)이 서버와 안 맞을 때 → 보통 마이크로소프트 쪽이 바뀐 것
+            msg += (f"\n\n마이크로소프트 서버가 접속을 거부했습니다(403). 설치된 edge-tts {ver}, 파이썬 {sys.executable}"
+                    "\n· 잠시(수십 분~하루) 뒤 다시 해보거나, 다른 인터넷(휴대폰 핫스팟)으로 시도"
+                    "\n· PC 시계가 맞는지 확인(자동 설정)"
+                    "\n· 급하면 성우를 '윈도우 기본' 또는 ChatGPT/Gemini 음성으로 바꾸세요")
+        raise RuntimeError(f"엣지 음성 실패({type(e).__name__}): {msg}")
 
 
 def tts_openai(text, voice, rate_pct, style, out_mp3, key, model):
