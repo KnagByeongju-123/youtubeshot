@@ -148,7 +148,81 @@ def main():
     log("✅ 전부 완료 → " + out_root)
 
 
+def _job_procs():
+    """지금 돌고 있는 장문 만들기 작업(파이썬·그 창)의 프로세스 번호들"""
+    import subprocess
+    ps = ("Get-CimInstance Win32_Process | Where-Object { ($_.CommandLine -like '*make_longdoc.py*' -and $_.CommandLine -notlike '*--safe-stop*' "
+          "-and $_.CommandLine -notlike '*--pause*' -and $_.CommandLine -notlike '*--resume*') } "
+          "| ForEach-Object { $_.ProcessId }")
+    out = subprocess.run(["powershell", "-NoProfile", "-Command", ps], capture_output=True, text=True).stdout
+    return [int(x) for x in out.split() if x.strip().isdigit() and int(x) != os.getpid()]
+
+
+def _paused_in_log(since=0):
+    """진행 기록에서 since 바이트 이후(또는 마지막 시작 이후)에 '일시정지 중'이 찍히고 그 뒤 '재개'가 없으면 True"""
+    try:
+        with open(LOG_FILE, "rb") as f:
+            f.seek(since)
+            lines = f.read().decode("utf-8", "ignore").splitlines()
+    except OSError:
+        return False
+    st = -1
+    for i, ln in enumerate(lines):
+        if "⏸ 일시정지 중" in ln:
+            st = i
+        elif "▶ 재개" in ln or "▶ 시작" in ln:
+            st = -1
+    return st >= 0
+
+
+def safe_stop():
+    """장문_끄기전_정리.bat: 일시정지 → 실제로 멈출 때까지 기다림 → 작업 종료 → (선택) PC 끄기"""
+    import subprocess
+    procs = _job_procs()
+    if not procs:
+        print("지금 돌고 있는 장문 작업이 없어요. 그냥 전원을 꺼도 됩니다.")
+    else:
+        size = os.path.getsize(LOG_FILE) if os.path.exists(LOG_FILE) else 0
+        already = os.path.exists(PAUSE) and _paused_in_log(0)
+        open(PAUSE, "w").close()
+        if not already:
+            print("⏸ 일시정지를 요청했어요. 지금 하던 작은 단계가 끝날 때까지 기다립니다...")
+            print("   (AI가 글이나 사진을 찾는 중이면 몇 분 걸릴 수 있어요. 기다리기 싫으면 이 창을 닫고 그냥 꺼도 저장된 곳부터 이어집니다)")
+            t0 = time.time()
+            while not _paused_in_log(size):
+                if not _job_procs():
+                    break
+                if time.time() - t0 > 20 * 60:
+                    print("   20분이 지나도 멈추지 않아 지금 상태로 정리합니다 (하던 단계 하나만 다시 하게 돼요).")
+                    break
+                time.sleep(3)
+                print(f"\r   기다리는 중... {int(time.time() - t0)}초", end="", flush=True)
+            print()
+        for pid in procs:
+            subprocess.run(["taskkill", "/F", "/T", "/PID", str(pid)], capture_output=True)
+        with open(LOG_FILE, "a", encoding="utf-8") as f:
+            f.write(f"[{time.strftime('%H:%M')}] ⏹ 끄기 전 정리로 작업을 멈춤 - 다시 켠 뒤 장문_만들기.bat 을 실행하면 이어서 합니다\n")
+        print("✅ 안전하게 멈췄어요. 이제 전원을 꺼도 됩니다.")
+        print("   다시 켠 뒤 '장문_만들기.bat' 을 실행하면 멈춘 곳부터 이어서 만듭니다.")
+    print()
+    print("  1 = 지금 PC 끄기 (시스템 종료)")
+    print("  2 = 최대 절전 모드 (열려 있던 창이 그대로 남음)")
+    print("  그 외 = 아무것도 안 하고 닫기")
+    try:
+        ans = input("선택: ").strip()
+    except EOFError:
+        ans = ""
+    if ans == "1":
+        subprocess.run(["shutdown", "/s", "/t", "5"])
+        print("5초 뒤에 꺼집니다. (취소: 명령 프롬프트에서 shutdown /a)")
+    elif ans == "2":
+        subprocess.run(["shutdown", "/h"])
+
+
 if __name__ == "__main__":
+    if "--safe-stop" in sys.argv:    # 장문_끄기전_정리.bat
+        safe_stop()
+        sys.exit(0)
     if "--pause" in sys.argv:        # 장문_일시정지.bat
         open(PAUSE, "w").close()
         print("⏸ 일시정지 요청함. 지금 하던 작은 단계(문단 하나·장면 하나·AI 답변 하나)가 끝나면 멈춥니다.")
