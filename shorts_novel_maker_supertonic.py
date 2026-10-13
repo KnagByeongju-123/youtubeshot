@@ -3367,21 +3367,29 @@ def parse_melody(text):
     return notes if sum(1 for n in notes if n[0] is not None) >= 8 else None
 
 
-def _melody_chords(notes, minor=False):
-    """멜로디 음들로 조성을 추정해 단순한 반주 화음(I-IV-V-I-vi-IV-V-I, 단조는 i-iv-v-i-VI-iv-V-i) 만들기"""
+def _melody_chords(notes, minor=False, tonic=None, scale=None):
+    """멜로디 음들로 조성을 추정해 단순한 반주 화음(I-IV-V-I-vi-IV-V-I, 단조는 i-iv-v-i-VI-iv-V-i) 만들기.
+    tonic: 악보에 적힌 으뜸음(0=C … 11=B, 있으면 추정 대신 사용), scale="hijaz": 중동 히자즈(I-bII-I-iv) 화음"""
     pcs = [n[0] % 12 for n in notes if n[0] is not None]
     hist = np.bincount(pcs, minlength=12).astype(float)
     major = np.array([1, 0, 1, 0, 1, 1, 0, 1, 0, 1, 0, 1], float)
     key = int(max(range(12), key=lambda k: (np.roll(major, k) * hist).sum()))
+    if scale == "hijaz" and tonic is not None:   # 예: 미 히자즈 = 미-파-솔#-라-시-도-레
+        r = 48 + int(tonic) % 12
+        I = [r, r + 7, r + 12, r + 16, r + 19]
+        bII = [r + 1, r + 8, r + 13, r + 17, r + 20]
+        iv = [r + 5, r + 12, r + 17, r + 20, r + 24]
+        bvii = [r - 2, r + 5, r + 10, r + 13, r + 17]
+        return [I, bII, I, iv, bvii, bII, iv, I]
     if minor:   # 나란한조(장조의 6음)를 으뜸음으로
-        r = 48 + (key + 9) % 12
+        r = 48 + ((key + 9) % 12 if tonic is None else int(tonic) % 12)
         i = [r, r + 7, r + 12, r + 15, r + 19]
         iv = [r + 5, r + 12, r + 17, r + 20, r + 24]
         v = [r + 7, r + 14, r + 19, r + 22, r + 26]
         V = [r + 7, r + 14, r + 19, r + 23, r + 26]
         VI = [r + 8, r + 15, r + 20, r + 24, r + 27]
         return [i, iv, v, i, VI, iv, V, i]
-    root = 48 + key
+    root = 48 + (key if tonic is None else int(tonic) % 12)
     I = [root, root + 7, root + 12, root + 16, root + 19]
     IV = [root + 5, root + 12, root + 17, root + 21, root + 24]
     V = [root + 7, root + 14, root + 19, root + 23, root + 26]
@@ -4707,7 +4715,7 @@ ORGEL_SONGS = {   # 퍼블릭 도메인 곡 오르골 연주 (멜로디: 웹의 
                 "D4:0.5 E4:0.5 F4:1.5 E4:0.5 E4:0.5 D4:0.5 C4:0.5 D4:0.5 C4:0.5 A3:0.5 F3:1.5 C4:0.5 D4:0.5 E4:0.5 F4:1.5 "
                 "E4:0.5 E4:0.5 D4:0.5 C4:0.5 A3:0.5 G3:2 R:0.5 C4:0.5 C4:0.5 C4:0.5 A4:1.5 G4:0.5 G4:0.5 F4:0.5 D4:0.5 F4:0.5 "
                 "C4:0.5 A3:0.5 F3:1.5 E3:0.5 F3:0.5 G3:0.5 A3:0.5 D4:0.5 C4:0.5 A3:0.5 G3:0.5 F3:0.5 D3:0.5 E3:0.5 F3:2 R:0.5")),
-    '오르골 · 그린슬리브스': dict(gen="lullaby", bpm=72, minor=True, title='그린슬리브스 오르골 🌿 잔잔한 영국 민요',
+    '오르골 · 그린슬리브스': dict(gen="lullaby", bpm=72, minor=True, tonic=4, title='그린슬리브스 오르골 🌿 잔잔한 영국 민요',
         tags='#그린슬리브스 #Greensleeves #오르골 #영국민요 #힐링음악 #수면음악', desc='영국 민요 그린슬리브스(16세기) 오르골 연주 + 단조 패드',
         overlay='먼지 빛', colors=('#0C140E', '#24382A'),
         prompt='an old english castle garden at twilight, ivy covered stone walls, soft lantern glow, misty green tones, medieval and calm, no people',
@@ -4715,7 +4723,7 @@ ORGEL_SONGS = {   # 퍼블릭 도메인 곡 오르골 연주 (멜로디: 웹의 
                 "B4:1.5 C5:0.5 B4 A4:2 F#4 D4:1.5 E4:0.5 F#4 G4:1.5 F#4:0.5 E4 D#4:1.5 C#4:0.5 D#4 E4:4 R R D5:3 D5:1.5 C#5:0.5 "
                 "B4 A4:2 F#4 D4:1.5 E4:0.5 F#4 G4:2 E4 E4:1.5 D#4:0.5 E4 F#4:2 D#4 B3:3 D5:3 D5:1.5 C#5:0.5 B4 A4:2 F#4 D4:1.5 "
                 "E4:0.5 F#4 G4:2 E4 D#4:1.5 C#4:0.5 D#4 E4:4 R")),
-    '오르골 · 스카버러 페어': dict(gen="lullaby", bpm=72, minor=True, title='스카버러 페어 오르골 🌾 아련한 영국 민요',
+    '오르골 · 스카버러 페어': dict(gen="lullaby", bpm=72, minor=True, tonic=2, title='스카버러 페어 오르골 🌾 아련한 영국 민요',
         tags='#스카버러페어 #ScarboroughFair #오르골 #영국민요 #힐링음악 #수면음악', desc='영국 민요 스카버러 페어 오르골 연주 + 단조 패드',
         overlay='먼지 빛', colors=('#14120E', '#38322A'),
         prompt='a misty seaside village fair at dawn, herbs of parsley sage rosemary and thyme on a rustic table, soft grey and gold light, nostalgic, no people',
@@ -4860,7 +4868,7 @@ ORGEL_SONGS = {   # 퍼블릭 도메인 곡 오르골 연주 (멜로디: 웹의 
 _mp = list(MUSIC_PRESETS.items())
 _at = [n for n, _ in _mp].index("오르골 · 캐논") + 1   # 기존 오르골 곡들 바로 뒤에
 ORGEL_WORLD = {   # 일본·중국·러시아 퍼블릭 도메인 곡 오르골 연주 (멜로디: 웹의 악보에서 옮김)
-    '오르골 일본 · 사쿠라 사쿠라(さくらさくら)': dict(gen="lullaby", bpm=66, minor=True, title='사쿠라 사쿠라 오르골 🌸 일본 벚꽃 민요 힐링 음악',
+    '오르골 일본 · 사쿠라 사쿠라(さくらさくら)': dict(gen="lullaby", bpm=66, minor=True, tonic=4, title='사쿠라 사쿠라 오르골 🌸 일본 벚꽃 민요 힐링 음악',
         tags='#오르골 #사쿠라 #벚꽃 #일본노래 #일본동요 #수면음악 #힐링음악', desc='일본 전통 민요 さくらさくら 오르골 연주 + 은은한 패드',
         overlay='먼지 빛', colors=('#160E14', '#3E2836'),
         prompt='cherry blossom petals drifting over a quiet japanese temple garden at dusk, soft pink and lavender light, stone lantern, calm pond, no people',
@@ -4878,7 +4886,7 @@ ORGEL_WORLD = {   # 일본·중국·러시아 퍼블릭 도메인 곡 오르골 
         prompt='a peaceful japanese countryside village with rice fields and green mountains, a small river, soft morning light, nostalgic, no people',
         melody=("G4 G4 G4 A4:1.5 B4:0.5 A4 B4 B4 C5 D5:2 R C5 D5 E5 B4:1.5 C5:0.5 B4 A4 A4 F#4 G4:2 R A4:0.5 G4:0.5 A4 D4 "
                 "G4:0.5 A4:0.5 B4 B4 C5:0.5 B4:0.5 C5:1.5 E5:0.5 D5:0.5 C5:0.5 B4 R D5 D5 D5 G4:1.5 A4:0.5 B4 C5 C5 A4 G4:2 R")),
-    '오르골 일본 · 에도 자장가(江戸子守唄)': dict(gen="lullaby", bpm=60, minor=True, title='에도 자장가 오르골 🎐 일본 전통 자장가',
+    '오르골 일본 · 에도 자장가(江戸子守唄)': dict(gen="lullaby", bpm=60, minor=True, tonic=11, title='에도 자장가 오르골 🎐 일본 전통 자장가',
         tags='#오르골 #자장가 #일본자장가 #아기수면 #일본노래 #일본동요 #수면음악 #힐링음악', desc='일본 전통 자장가 江戸子守唄 오르골 연주 + 단조 패드',
         overlay='먼지 빛', colors=('#160E14', '#3E2836'),
         prompt='a quiet traditional japanese room at night, paper lantern glow, tatami floor, a small futon, soft moonlight through shoji screens, no people',
@@ -4946,7 +4954,7 @@ ORGEL_WORLD = {   # 일본·중국·러시아 퍼블릭 도메인 곡 오르골 
                 "B3 D4 B3 A3:0.5 G3:0.5 A3:2 E4 E4:0.5 D4:0.5 B3:0.5 D4:0.5 E4:0.5 G4:0.5 E4:0.5 D4:0.5 B3 A3:2 E4:1.5 D4:0.5 "
                 "E4 G4 A4 G4:0.5 E4:0.5 D4:2 E4:1.5 D4:0.5 B3 G4 E4 D4:0.5 B3:0.5 A3:2 G3:1.5 A3:0.5 B3 D4 B3 A3:0.5 G3:0.5 "
                 "A3:2 E4 E4:0.5 D4:0.5 B3:0.5 D4:0.5 E4:0.5 G4:0.5 E4:0.5 D4:0.5 B3 A3:2")),
-    '오르골 중국 · 수하포(绣荷包)': dict(gen="lullaby", bpm=64, minor=True, title='수하포 오르골 🧵 수놓는 주머니 중국 민요',
+    '오르골 중국 · 수하포(绣荷包)': dict(gen="lullaby", bpm=64, minor=True, tonic=2, title='수하포 오르골 🧵 수놓는 주머니 중국 민요',
         tags='#오르골 #绣荷包 #중국민요 #중국노래 #수면음악 #힐링음악', desc='중국 민요 绣荷包 오르골 연주 + 단조 패드',
         overlay='먼지 빛', colors=('#180E0C', '#46261E'),
         prompt='an embroidered silk pouch and threads on a wooden table by a window, moonlight and soft lantern glow, delicate and calm, no people',
@@ -5017,7 +5025,7 @@ ORGEL_WORLD = {   # 일본·중국·러시아 퍼블릭 도메인 곡 오르골 
         prompt='a single white birch tree standing in a wide golden field under a soft summer evening sky, calm and open, no people',
         melody=("E4:0.5 E4:0.5 E4:0.5 E4:0.5 D4 C4:0.5 C4:0.5 B3 A3 E4:0.5 E4:0.5 G4:0.5 E4:0.5 D4:0.5 D4:0.5 C4:0.5 C4:0.5 B3 "
                 "A3 B3:1.5 C4:0.5 D4 C4:0.5 C4:0.5 B3 A3 B3:1.5 C4:0.5 D4:0.5 E4:0.5 C4:0.5 C4:0.5 B3 A3")),
-    '오르골 러시아 · 볼가강 뱃노래': dict(gen="lullaby", bpm=56, minor=True, title='볼가강 뱃노래 오르골 🌊 느리고 깊은 러시아 민요',
+    '오르골 러시아 · 볼가강 뱃노래': dict(gen="lullaby", bpm=56, minor=True, tonic=4, title='볼가강 뱃노래 오르골 🌊 느리고 깊은 러시아 민요',
         tags='#오르골 #볼가강뱃노래 #러시아민요 #러시아민요 #러시아노래 #수면음악 #힐링음악', desc='러시아 민요 Эй, ухнем 느린 오르골 연주 + 단조 패드',
         overlay='눈', colors=('#0C1018', '#26344A'),
         prompt='a misty river bank at dusk with an old barge and long ropes, deep blue and grey tones, quiet and heavy atmosphere, no people',
@@ -5043,7 +5051,7 @@ ORGEL_WORLD2 = {   # 동유럽·중동·아프리카 퍼블릭 도메인 곡 오
         melody=("A4 A4 A4 A#4 A#4:1.5 A4:0.5 G4 G4 G4 A#4 A4 R F4 F4 F4 G4 G4:1.5 F4:0.5 E4 D4 E4 G4 F4 R C5 C5 C5 D5 D5:1.5 "
                 "C5:0.5 A#4 A#4 D5 D5 C5 R A4 A4 A4 A#4 A#4:1.5 A4:0.5 G4 C5:1.5 A#4:0.5 A#4 A4 R C5 C5 C5 D5 D5:1.5 C5:0.5 A#4 "
                 "A#4 D5 D5 C5 R A4 A4 A4 A#4 A#4:1.5 A4:0.5 G4 C5:1.5 A#4:0.5 A#4 A4 R")),
-    '오르골 동유럽 · 봄바람이 물을 넘치게 하네(헝가리)': dict(gen="lullaby", bpm=62, minor=True, title='헝가리 민요 오르골 🌬 봄바람이 물을 넘치게 하네',
+    '오르골 동유럽 · 봄바람이 물을 넘치게 하네(헝가리)': dict(gen="lullaby", bpm=62, minor=True, tonic=2, title='헝가리 민요 오르골 🌬 봄바람이 물을 넘치게 하네',
         tags='#오르골 #헝가리 #헝가리민요 #동유럽 #동유럽민요 #수면음악 #힐링음악', desc='헝가리 민요 Tavaszi szél vizet áraszt 오르골 연주 + 단조 패드',
         overlay='눈', colors=('#0E1218', '#2A3444'),
         prompt='a spring breeze over a flooded hungarian meadow at dawn, blossoming trees, soft mist, calm water reflections, no people',
@@ -5057,13 +5065,13 @@ ORGEL_WORLD2 = {   # 동유럽·중동·아프리카 퍼블릭 도메인 곡 오
                 "G#4:1.5 A4:2 D#5:2 C#5:0.5 B4:0.5 A4:0.5 B4:0.5 A4:0.5 G#4:1.5 D#4:2 D#4 R D#5 D#5 E5 C#5 B4:0.5 A4:0.5 B4:0.5 "
                 "C#5:0.5 E5 D#5 G#4:0.5 G#4:1.5 A4:0.5 A4:1.5 B4:0.5 A4:0.5 G#4:0.5 F#4:0.5 E4 D#4 D#4 G#4 F#4:0.5 G#4:1.5 A4:2 "
                 "D#5:2 C#5:0.5 B4:0.5 A4:0.5 B4:0.5 A4:0.5 G#4:1.5 D#4:2 D#4 R")),
-    '오르골 동유럽 · 잠이 창가를 지나가네(우크라이나 자장가)': dict(gen="lullaby", bpm=58, minor=True, title='우크라이나 자장가 오르골 🌙 잠이 창가를 지나가네',
+    '오르골 동유럽 · 잠이 창가를 지나가네(우크라이나 자장가)': dict(gen="lullaby", bpm=58, minor=True, tonic=4, title='우크라이나 자장가 오르골 🌙 잠이 창가를 지나가네',
         tags='#오르골 #자장가 #우크라이나 #아기수면 #동유럽 #동유럽민요 #수면음악 #힐링음악', desc='우크라이나 전통 자장가 Ой ходить сон коло вікон 오르골 연주 + 단조 패드',
         overlay='눈', colors=('#0E1218', '#2A3444'),
         prompt='a cozy ukrainian cottage at night with embroidered curtains, a cradle by the window, sunflower fields under the moon outside, soft and dreamy, no people',
         melody=("B4 B4 G4 B4:3 A4 A4 E4 G4:3 B4 B4 G4 B4:3 A4 B4:0.5 A4:0.5 G4:0.5 F#4:0.5 E4:3 G4 G4 A4 A4 G4:0.5 F#4:0.5 E4 "
                 "E4:2 D4:4 G4 G4 A4 A4 G4:0.5 F#4:0.5 E4 E4:4 R:2")),
-    '오르골 동유럽 · 샤드릭(캐럴 오브 더 벨)': dict(gen="lullaby", bpm=66, minor=True, title='캐럴 오브 더 벨 오르골 🔔 샤드릭 잔잔한 버전',
+    '오르골 동유럽 · 샤드릭(캐럴 오브 더 벨)': dict(gen="lullaby", bpm=66, minor=True, tonic=7, title='캐럴 오브 더 벨 오르골 🔔 샤드릭 잔잔한 버전',
         tags='#오르골 #캐럴오브더벨 #샤드릭 #CarolOfTheBells #동유럽 #동유럽민요 #수면음악 #힐링음악', desc='레온토비치 Щедрик(1916, 캐럴 오브 더 벨) 오르골 연주 + 단조 패드',
         overlay='눈', colors=('#0E1218', '#2A3444'),
         prompt='silver bells hanging in a snowy winter night, soft bokeh lights, frosted window, deep blue and gold tones, calm, no people',
@@ -5157,7 +5165,7 @@ ORGEL_WORLD2 = {   # 동유럽·중동·아프리카 퍼블릭 도메인 곡 오
                 "F4:0.5 G4:0.5 A4:0.5 A3:0.5 D4:0.5 F4:0.5 A4:2 F4:1.5 E4:0.5 E4 D4 R:0.5 D4:0.5 F4:0.5 A4:0.5 D5:2 A#4:1.5 "
                 "A4:0.5 A4 G4 R:0.5 G4:0.5 A4:0.5 A#4:0.5 A4:1.5 E4:0.5 A4:1.5 G4:0.5 G4 F4 R:0.5 E4:0.5 F4:0.5 G4:0.5 A4 A4 A4 "
                 "A4 A4:0.75 G4:0.25 F4:0.5 E4:0.5 D4:1.5")),
-    '오르골 중동 · 할라 할라 닌노이(자장가)': dict(gen="lullaby", bpm=58, minor=True, title='중동 자장가 오르골 🌙 할라 할라 닌노이',
+    '오르골 중동 · 할라 할라 닌노이(자장가)': dict(gen="lullaby", bpm=58, minor=True, tonic=2, title='중동 자장가 오르골 🌙 할라 할라 닌노이',
         tags='#오르골 #자장가 #아르메니아 #아기수면 #중동음악 #중동민요 #수면음악 #힐링음악', desc='아르메니아 지역 전통 자장가 Hala, hala ninnoy 오르골 연주 + 단조 패드',
         overlay='먼지 빛', colors=('#1A120A', '#4A341C'),
         prompt='a stone cottage in the caucasus mountains at night, a wooden cradle with a woven blanket, warm oil lamp glow, stars over the peaks, no people',
@@ -5166,7 +5174,7 @@ ORGEL_WORLD2 = {   # 동유럽·중동·아프리카 퍼블릭 도메인 곡 오
                 "F4:0.75 G4:0.25 E4:0.75 D4:0.25 D4:1.5 R:0.5 C5 C5:0.5 B4:0.5 C5:0.75 A4:0.25 A4 A4 A4:0.75 G4:0.25 A4:2 "
                 "F4:0.5 F4:0.5 F4:0.5 G4:0.5 A4 A4:0.75 F4:0.25 G4 G4:0.75 E4:0.25 F4:1.5 G4:0.5 A4 A4:0.5 F4:0.5 G4 G4 F4 E4 "
                 "G4:2 D4:0.5 D4:0.5 D4:0.5 C4:0.5 E4 F4:0.75 E4:0.25 F4:0.5 G4:0.5 E4:0.75 D4:0.25 D4:2")),
-    '오르골 중동 · 사르 겔린(금발의 신부)': dict(gen="lullaby", bpm=60, minor=True, title='사르 겔린 오르골 🍂 애잔한 코카서스 민요',
+    '오르골 중동 · 사르 겔린(금발의 신부)': dict(gen="lullaby", bpm=60, minor=True, tonic=4, title='사르 겔린 오르골 🍂 애잔한 코카서스 민요',
         tags='#오르골 #사르겔린 #SariGelin #민요 #중동음악 #중동민요 #수면음악 #힐링음악', desc='터키·아르메니아·아제르바이잔 전통 민요 Sarı Gelin 오르골 연주 + 단조 패드',
         overlay='먼지 빛', colors=('#1A120A', '#4A341C'),
         prompt='a misty mountain valley in the caucasus at dusk, an old stone bridge over a stream, autumn trees, melancholic and calm, no people',
@@ -5220,7 +5228,136 @@ ORGEL_WORLD2 = {   # 동유럽·중동·아프리카 퍼블릭 도메인 곡 오
                 "F4:0.5 F4:0.5 F4:0.5 R:2 C4 C4:0.5 C4 G4:0.5 F4 D#4 A#4:0.5 A#4 G4:0.5 A#4:0.5 C4:0.5 D#4:0.5 D#4:0.5 D#4:0.5 "
                 "D#4:0.5 R R:0.5 C4:0.5 F4:0.5 F4:0.5 F4:0.5 F4:0.5 R:2 A#4 A#4:0.5 G#4 G4:0.5 F4 D#4 R R:2")),
 }
-MUSIC_PRESETS = dict(_mp[:_at] + list(ORGEL_SONGS.items()) + list(ORGEL_WORLD.items()) + list(ORGEL_WORLD2.items()) + _mp[_at:])
+def music_group_prefix(name):
+    """'오르골 동유럽 · ...' → '동유럽'"""
+    m_ = re.match(r"오르골 (\S+) ·", name)
+    return m_.group(1) if m_ else ""
+
+
+ORGEL_WORLD3 = {   # 중동 추가곡 + 이디시 노래 (퍼블릭 도메인, 멜로디: 웹의 악보에서 옮김)
+    '오르골 중동 · 두르메 두르메(세파르디 자장가)': dict(gen="lullaby", bpm=56, minor=True, tonic=11, title='두르메 두르메 오르골 🌙 세파르디 자장가',
+        tags='#오르골 #자장가 #세파르디 #라디노 #아기수면 #중동음악 #중동민요 #수면음악 #힐링음악', desc='오스만 세파르디(라디노어) 전통 자장가 Durme, Durme 오르골 연주 + 단조 패드',
+        overlay='먼지 빛', colors=('#1A120A', '#4A341C'),
+        prompt='an old mediterranean stone house at night, a cradle under an arched window, moonlight over a quiet harbor, warm oil lamp glow, no people',
+        melody=("B3:1.5 C#4:0.5 D4:0.5 E4:0.5 F#4:2.5 F#4:0.5 B4 A4:1.5 G4:0.5 G4 F#4:2 E4 G4:1.5 G4:0.5 F#4:0.5 E4:0.5 D4:1.5 "
+                "C#4:0.5 E4:0.5 D4:2 C#4:0.25 B3:0.25 F#4:3 E4 G4:1.5 G4:0.5 F#4:0.5 E4:0.5 D4:1.5 C#4:0.5 E4:0.5 D4:0.5 "
+                "C#4:1.5 B3:0.5 B3:3")),
+    '오르골 중동 · 높이 뜬 달(세파르디)': dict(gen="lullaby", bpm=60, minor=True, tonic=4, title='높이 뜬 달 오르골 🌕 세파르디 옛 노래',
+        tags='#오르골 #세파르디 #라디노 #달 #중동음악 #중동민요 #수면음악 #힐링음악', desc='테살로니키 세파르디 전통 노래 Alta es la Luna 오르골 연주 + 단조 패드',
+        overlay='먼지 빛', colors=('#1A120A', '#4A341C'),
+        prompt='a high full moon over an old aegean port town, whitewashed walls and blue shadows, calm sea reflections, peaceful, no people',
+        melody=("C5:0.5 R:0.5 C5:0.5 C5:0.5 B4:0.5 D5:0.5 R A4:0.5 R:0.5 C5:0.5 B4:0.5 A4:0.5 G4:0.5 F4:0.5 R:0.5 A4:0.5 R:0.5 "
+                "A4:0.5 A4:0.5 G4:0.5 R:0.5 B4:0.5 R:0.5 R:0.5 G4:0.5 F4 E4 R E4:1.5 D4:0.5 G4 C5 A4:1.5 C5:0.5 B4:0.5 A4:0.5 "
+                "G4:0.5 F4:0.5 E4:1.5 F4:0.5 G4 C5 A4 C5 B4 R C5:0.5 R:0.5 C5:0.5 C5:0.5 B4:0.5 D5:0.5 R A4:0.5 R:0.5 C5:0.5 "
+                "B4:0.5 A4:0.5 G4:0.5 F4:0.5 R:0.5 A4:0.5 R:0.5 A4:0.5 A4:0.5 G4:0.5 R:0.5 B4:0.5 R:0.5 R:0.5 G4:0.5 F4 E4 R")),
+    '오르골 동유럽 · 툼발랄라이카(이디시)': dict(gen="lullaby", bpm=66, minor=True, tonic=0, title='툼발랄라이카 오르골 🎻 이디시 민요',
+        tags='#오르골 #툼발랄라이카 #Tumbalalaika #동유럽 #이디시 #유대음악 #수면음악 #힐링음악', desc='이디시 전통 민요 Tumbalalaika 오르골 연주 + 단조 패드',
+        overlay='눈', colors=('#0E1218', '#2A3444'),
+        prompt='a small wooden house in an eastern european shtetl in winter, warm windows, a balalaika on a bench, soft snowfall, no people',
+        melody=("G4:2 G4 G4:2 G4 G4 F4 D#4 D4:3 F4:2 F4 F4:2 F4 F4 D#4 D4 C4:3 C4 D#4 G4 C5:2 C5 D#5 D5 C5 G4:2 G4 A#4 G4 F4 "
+                "D4:2 D4 F4 D#4 D4 C4:2 C4 G4:1.5 G4:0.5 G4 G4:1.5 G4:0.5 G4 G4 F4 D#4 D4:2 D4 F4:1.5 F4:0.5 F4 F4:1.5 F4:0.5 "
+                "F4 F4 D#4 D4 C4:2 C4 C4 D#4 G4 C5:2 C5 D#5 D5 C5 G4:2 G4 A#4 G4 F4 D4:2 D4 F4 D#4 D4 C4:3")),
+    '오르골 동유럽 · 화롯가에서(오이픈 프리페치크)': dict(gen="lullaby", bpm=58, minor=True, tonic=0, title='화롯가에서 오르골 🔥 이디시 옛 노래',
+        tags='#오르골 #이디시 #옛노래 #동유럽 #이디시 #유대음악 #수면음악 #힐링음악', desc='이디시 노래 Oyfn Pripetshik(바르샤브스키, 1900년경) 오르골 연주 + 단조 패드',
+        overlay='눈', colors=('#0E1218', '#2A3444'),
+        prompt='a warm old stove glowing in a small wooden schoolroom at evening, books on a table, snow outside the window, cozy and nostalgic, no people',
+        melody=("C4:0.5 D4:0.5 D#4:0.5 D#4:0.5 D#4 D4:0.5 F4:0.5 D#4:0.5 D4:0.5 C4 D#4:0.5 A#3:0.5 D#4 F4 G4:3 C5:0.5 G4:0.5 "
+                "A#4:0.5 G#4:0.5 F4:0.5 D4:0.5 F4:0.5 G#4:0.5 G4:0.5 D#4:0.5 C4 D4:0.5 F4:0.5 D#4 F4 G4:3 C5:0.5 G4:0.5 A#4:0.5 "
+                "G#4:0.5 F4:0.5 D4:0.5 F4:0.5 G#4:0.5 G4:0.5 D#4:0.5 C4 D4:0.5 F4:0.5 D#4 D4 C4:3")),
+    '오르골 동유럽 · 아일리 률리(이디시 자장가)': dict(gen="lullaby", bpm=58, minor=True, tonic=7, title='이디시 자장가 오르골 🌙 아일리 률리',
+        tags='#오르골 #자장가 #이디시 #아기수면 #동유럽 #이디시 #유대음악 #수면음악 #힐링음악', desc='이디시 전통 자장가 Ayli Lyuli 오르골 연주 + 단조 패드',
+        overlay='눈', colors=('#0E1218', '#2A3444'),
+        prompt='a cradle by a frosted window in a quiet eastern european village at night, soft candlelight, moon over snowy roofs, no people',
+        melody=("D4 A#4 F#4 G4 D4 A#4 F#4 G4 D4 A#4 A4:0.5 A4:0.5 F#4:0.5 D4:0.5 G4:3 R A#4:0.5 C5:0.5 D5:0.5 D5:0.5 A4:0.5 "
+                "A#4:0.5 C5:0.5 C5:0.5 G4:0.5 A4:0.5 A#4:0.5 A#4:0.5 A4:0.5 F#4:0.5 D4 G4 A#4 A4 F#4:0.5 D4:0.5 D5:3 R A#4:0.5 "
+                "C5:0.5 D5:0.5 D5:0.5 A4:0.5 A#4:0.5 C5:0.5 C5:0.5 G4:0.5 A4:0.5 A#4:0.5 A#4:0.5 A4:0.5 F#4:0.5 D4 G4 A#4 A4 "
+                "F#4:0.5 D4:0.5 G4:3 R")),
+    '오르골 중동 · 샬롬 하베림': dict(gen="lullaby", bpm=60, minor=True, tonic=2, title='샬롬 하베림 오르골 🕊 평화로운 히브리 노래',
+        tags='#오르골 #샬롬 #히브리 #평화 #중동음악 #중동민요 #수면음악 #힐링음악', desc='히브리 전통 돌림노래 Shalom Chaverim 오르골 연주 + 단조 패드',
+        overlay='먼지 빛', colors=('#1A120A', '#4A341C'),
+        prompt='a quiet hillside at sunset with olive trees and a white stone path, soft golden haze, peaceful farewell mood, no people',
+        melody=("A3 D4 D4:0.5 E4:0.5 F4 D4 F4 F4:0.5 G4:0.5 A4 A4 D5:2 C5:2 A4:3 A4 D5 A4:0.5 G4:0.5 F4 G4 A4 F4:0.5 E4:0.5 D4 "
+                "A3 D4:3 E4:0.5 F4:0.5 D4:3")),
+    '오르골 중동 · 꿈(아 홀룸)': dict(gen="lullaby", bpm=60, minor=True, tonic=2, title='꿈(A Cholum) 오르골 💭 아련한 유대 전통 선율',
+        tags='#오르골 #유대음악 #꿈 #중동음악 #중동민요 #수면음악 #힐링음악', desc='유대 전통 결혼식 선율 A Cholum(코스타코프스키 곡집, 1916) 오르골 연주 + 단조 패드',
+        overlay='먼지 빛', colors=('#1A120A', '#4A341C'),
+        prompt='a dreamy candlelit room with lace curtains and a window to a starry sky, soft warm glow, gentle and nostalgic, no people',
+        melody=("D4:0.5 G4:0.5 F4 E4:0.5 G4:0.5 F4 E4:0.5 G4:0.75 F4:0.25 F4:0.75 E4:0.25 E4:0.5 D4:0.5 R:0.5 D4:0.5 F4:0.333 "
+                "A4:0.333 G4:0.333 G4:0.5 G4:0.5 G4:0.5 F4:0.5 A4:0.5 G4:0.5 F4:2 C5:1.5 C4:0.5 F4:0.75 G4:0.25 A4:0.75 G4:0.25 "
+                "G4:0.5 F4 E4:0.5 G4:0.75 F4:0.25 F4:0.75 E4:0.25 E4:0.5 D4 C4:0.5 D4:0.5 E4:0.5 F4:0.5 E4:0.5 F4:0.333 "
+                "A4:0.333 G4:0.333 F4:0.5 E4:0.5 D4:3 R:0.5 C4:0.5 F4:0.75 G4:0.25 A4:0.75 G4:0.25 G4:0.5 F4 E4:0.5 G4:0.75 "
+                "F4:0.25 F4:0.75 E4:0.25 E4:0.5 D4 C4:0.5 D4:0.5 E4:0.5 F4:0.5 E4:0.5 F4:0.333 A4:0.333 G4:0.333 F4:0.5 E4:0.5 "
+                "D4:3 R:0.5")),
+    '오르골 중동 · 알라갸즈(아르메니아)': dict(gen="lullaby", bpm=62, minor=False, tonic=9, title='알라갸즈 오르골 ⛰ 아르메니아 산의 노래',
+        tags='#오르골 #아르메니아 #코미타스 #민요 #중동음악 #중동민요 #수면음악 #힐링음악', desc='아르메니아 민요 Ալագյազ(코미타스 편곡) 오르골 연주 + 은은한 패드',
+        overlay='먼지 빛', colors=('#1A120A', '#4A341C'),
+        prompt='the snowy peaks of mount aragats above green armenian highlands at dawn, an old stone monastery, soft golden light, no people',
+        melody=("A4:1.5 E4:0.5 A4:0.5 B4:0.5 C#5:2 C#5:0.5 E5:0.5 D5:0.5 C#5:0.5 D5:0.5 E5:0.5 C#5 C#5:0.5 B4:0.5 C#5 C#5:0.5 "
+                "E5:0.5 D5:0.5 C#5:0.5 D5:0.5 E5:0.5 C#5 C#5 B4:0.5 A4:0.5 A4:0.5 C#5:0.5 B4:0.5 A4:0.5 B4:0.5 C#5:0.5 A4:0.5 "
+                "G#4:0.5 A4:3 A4:1.5 E4:0.5 A4:0.5 B4:0.5 C#5:2 D5:0.5 C#5:0.5 B4 C#5 B4:0.5 A4:0.5 A4:2 D5:0.5 F#5:0.5 E5:0.5 "
+                "D5:0.5 D5:0.5 E5:0.5 C#5 C#5 B4:0.5 A4:0.5 A4:0.5 C#5:0.5 B4:0.5 A4:0.5 B4:0.5 C#5:0.5 A4:0.5 G#4:0.5 A4:3")),
+    '오르골 중동 · 세이킬로스의 노래(가장 오래된 노래)': dict(gen="lullaby", bpm=58, minor=True, tonic=4, title='세계에서 가장 오래된 노래 오르골 🏛 세이킬로스의 비문',
+        tags='#오르골 #세이킬로스 #가장오래된노래 #고대음악 #중동음악 #중동민요 #수면음악 #힐링음악', desc="소아시아(지금의 터키)에서 발견된 2천 년 전 노래 '세이킬로스의 비문' 오르골 연주 + 단조 패드",
+        overlay='먼지 빛', colors=('#1A120A', '#4A341C'),
+        prompt='ancient marble ruins on an anatolian hillside at golden hour, a carved stone column, olive trees, soft warm haze, timeless and calm, no people',
+        melody=("A4:0.5 E5 E5:1.5 C#5:0.5 D5:0.5 E5:0.5 D5:1.5 C#5 D5:0.5 E5:0.5 D5:0.5 C#5:0.5 B4:0.5 A4 B4:0.5 G4 A4:0.5 "
+                "C#5:0.5 E5:0.5 D5:0.5 C#5:0.5 D5:0.5 C#5:0.5 A4 B4:0.5 G4 A4:0.5 C#5:0.5 B4:0.5 D5:0.5 E5:0.5 C#5:0.5 A4:0.5 "
+                "A4 A4:0.5 F#4:0.5 E4:0.5 A4:0.5 E5 E5:1.5 C#5:0.5 D5:0.5 E5:0.5 D5:1.5 C#5 D5:0.5 E5:0.5 D5:0.5 C#5:0.5 B4:0.5 "
+                "A4 B4:0.5 G4 A4:0.5 C#5:0.5 E5:0.5 D5:0.5 C#5:0.5 D5:0.5 C#5:0.5 A4 B4:0.5 G4 A4:0.5 C#5:0.5 B4:0.5 D5:0.5 "
+                "E5:0.5 C#5:0.5 A4:0.5 A4 A4:0.5 F#4:0.5 E4:0.5")),
+    '오르골 중동 · 야밀 아바야(이라크)': dict(gen="lullaby", bpm=60, minor=False, tonic=0, scale='hijaz', title='야밀 아바야 오르골 🌴 이라크 민요 힐링 음악',
+        tags='#오르골 #이라크 #아랍음악 #민요 #중동음악 #중동민요 #수면음악 #힐링음악', desc='이라크 전통 민요 Yammil Abaya 오르골 연주 + 히자즈 화음',
+        overlay='먼지 빛', colors=('#1A120A', '#4A341C'),
+        prompt='palm trees along the tigris river at dusk, an old wooden boat, warm amber sky reflecting on the water, calm and quiet, no people',
+        melody=("D5 C5:0.5 B4:0.5 B4:0.5 G#4:0.5 B4:0.5 G#4:0.5 G4:1.5 G#4:0.5 G4:0.5 F4:0.5 G4 F4 F4:0.5 E4:0.5 F4 G4 G4:3 R "
+                "A#4 A#4:0.5 A4:0.5 A4:0.5 G4:0.5 G4:0.5 F4:0.5 F4:0.5 E4 F4:0.5 E4:0.5 D4:0.5 E4 G4 F4 E4:0.5 C#4:0.5 E4:0.5 "
+                "C#4:0.5 C4:4 C5 C5:0.5 B4:0.5 C5 D5:0.5 D#5:0.5 D5:0.5 C5:3 B4:0.5 D5 C5:0.5 B4:0.5 B4:0.5 G#4:0.5 B4:0.5 "
+                "G#4:0.5 G4:4 F4 F4:0.5 E4:0.5 F4 G4 G4:3 R D5 C5:0.5 B4:0.5 B4:0.5 G#4:0.5 B4:0.5 G#4:0.5 G4:3 R F4 F4:0.5 "
+                "E4:0.5 F4 G4 G4:4 A#4 A#4:0.5 A4:0.5 A4:0.5 G4:0.5 G4:0.5 F4:0.5 E4:1.5 F4:0.5 E4:0.5 C#4:0.5 E4 G4 G4:0.5 "
+                "F4:0.5 E4:0.5 C#4:0.5 E4:0.5 C#4:0.5 C4:4")),
+    '오르골 중동 · 헤이 로 세니(쿠르드)': dict(gen="lullaby", bpm=64, minor=True, tonic=11, title='헤이 로 세니 오르골 🏔 쿠르드 민요',
+        tags='#오르골 #쿠르드 #민요 #중동음악 #중동민요 #수면음악 #힐링음악', desc='쿠르드 전통 민요 Hey lo Seni 오르골 연주 + 단조 패드',
+        overlay='먼지 빛', colors=('#1A120A', '#4A341C'),
+        prompt='rolling kurdish mountains in spring with wildflowers and a small stone village, soft morning mist, peaceful, no people',
+        melody=("A4:0.5 F#4 A4:0.25 F#4:0.25 A4:0.5 F#4 A4:0.25 F#4:0.25 A4:0.5 F#4 A4:0.25 F#4:0.25 F#4:0.5 E4:0.75 D4:0.25 "
+                "E4:0.25 F#4:0.25 F#4:0.5 E4 E4:0.25 D4:0.25 D4:0.5 C#4 D4:0.25 E4:0.25 F#4:0.25 D4:0.75 D4:0.25 C#4:0.75 "
+                "C#4:0.25 B3:1.25 C#4:0.167 D4:0.167 C#4:0.167 E4:0.25 D4:0.25 D4:0.25 C#4:0.25 C#4:0.25 B3:1.25 B3:0.5 B3 "
+                "B3:0.167 F#4:0.167 E4:0.667 E4:0.25 D4:0.75 D4:0.25 C#4:1.25 D4:0.167 D4:0.167 C#4:0.167 F#4:0.25 D4:0.75 "
+                "D4:0.25 C#4:0.75 C#4:0.25 B3:1.25 C#4:0.167 D4:0.167 C#4:0.167 E4:0.25 D4:0.75 D4:0.25 C#4:0.75 C#4:0.25 "
+                "B3:1.25 B3:0.167 B3:0.167 B3:0.167")),
+    '오르골 중동 · 황금 새장 속 나의 꾀꼬리(터키)': dict(gen="lullaby", bpm=60, minor=True, tonic=9, title='황금 새장 속 꾀꼬리 오르골 🐦 터키 민요',
+        tags='#오르골 #터키 #터키민요 #꾀꼬리 #중동음악 #중동민요 #수면음악 #힐링음악', desc='터키 전통 민요 Bülbülüm Altın Kafeste 오르골 연주 + 단조 패드',
+        overlay='먼지 빛', colors=('#1A120A', '#4A341C'),
+        prompt='a golden birdcage with a small nightingale by an ottoman window at twilight, soft lantern light, patterned tiles, calm, no people',
+        melody=("F4:0.5 F4:0.25 F4:0.25 F4:0.5 F4:0.5 E4:0.5 F4:0.5 A4:0.25 G4:0.25 F4:0.25 E4:0.25 D4:0.5 C4:0.5 C4:0.25 "
+                "E4:0.25 D4:0.5 C4:0.5 A#3:0.5 A#3:0.25 A3:0.25 A3:0.25 A#3:0.25 C4:0.25 D4:0.25 E4:0.25 F4:0.25 F4:0.5 F4:0.25 "
+                "F4:0.25 F4:0.5 F4:0.5 E4:0.5 F4:0.5 A4:0.25 G4:0.25 F4:0.25 E4:0.25 D4:0.5 C4:0.5 C4:0.25 E4:0.25 D4:0.5 "
+                "C4:0.5 A#3:0.5 A#3:0.25 A3:0.25 A3:1.5 A4 A4:0.5 A4:0.5 A4:0.75 G4:0.25 G4:0.25 G4:0.25 F4:0.25 E4:0.25 D4:0.5 "
+                "C4 D4:0.5 E4:0.5 G4:0.25 F4:0.25 F4:0.25 E4:0.25 F4:0.25 G4:0.25 F4:0.25 F4:0.25 G4:0.25 G4:0.25 A4 A4:0.5 "
+                "A4:0.5 A4:0.75 G4:0.25 G4:0.25 G4:0.25 F4:0.25 E4:0.25 D4:0.5 C4 D4:0.5 E4:0.5 G4:0.25 F4:0.25 F4:0.25 E4:0.25 "
+                "F4:0.25 G4:0.25 F4:0.25 F4:0.25 G4:0.25 G4:0.25 A4 A4:0.5 A4:0.5 A4:0.5 G4:0.5 A4:0.25 G4:0.25 F4:0.25 E4:0.25 "
+                "D4:0.5 C4:0.75 E4:0.25 D4:0.5 C4:0.5 A#3:0.5 A#3:0.25 A3:0.25 A3:0.25 A3:0.25 A#3:0.25 A#3:0.25 C4:0.25 "
+                "C4:0.25 D4 A4:0.5 A4:0.5 A4:0.5 G4:0.5 A4:0.25 G4:0.25 F4:0.25 E4:0.25 D4:0.5 C4:0.75 E4:0.25 D4:0.5 C4:0.5 "
+                "A#3:0.5 A#3:0.25 A3:0.25 A3:0.75 E4:0.25 F4:0.25 G4:0.25 F4:0.5 F4:0.25 F4:0.25 F4:0.5 F4:0.5 E4:0.5 F4:0.5 "
+                "A4:0.25 G4:0.25 F4:0.25 E4:0.25 D4:0.5 C4:0.5 C4:0.25 E4:0.25 D4:0.5 C4:0.5 A#3:0.5 A#3:0.25 A3:0.25 A3:0.25 "
+                "A#3:0.25 C4:0.25 D4:0.25 E4:0.25 F4:0.25 F4:0.5 F4:0.25 F4:0.25 F4:0.5 F4:0.5 E4:0.5 F4:0.5 A4:0.25 G4:0.25 "
+                "F4:0.25 E4:0.25 D4:0.5 C4:0.5 C4:0.25 E4:0.25 D4:0.5 C4:0.5 A#3:0.5 A#3:0.25 A3:0.25 A3:1.5")),
+    '오르골 중동 · 그대 생각에 잠 못 드는 밤(아제르바이잔)': dict(gen="lullaby", bpm=58, minor=True, tonic=9, title='그대 생각에 잠 못 드는 밤 오르골 🌙 아제르바이잔 민요',
+        tags='#오르골 #아제르바이잔 #민요 #밤 #중동음악 #중동민요 #수면음악 #힐링음악', desc='아제르바이잔 전통 민요 Fikrimden Geceler Yatabilmirem 오르골 연주 + 단조 패드',
+        overlay='먼지 빛', colors=('#1A120A', '#4A341C'),
+        prompt='a quiet caucasian village at night with a crescent moon over the mountains, a single lit window, deep blue and gold, melancholic and calm, no people',
+        melody=("E5:0.5 D5:0.5 C5:2 C5 B4 C5 D5:0.5 C5:0.5 B4:2 B4:0.75 D5:0.25 C5:0.5 B4:0.5 A4 B4 C5:1.5 B4:0.5 B4 A4:1.5 "
+                "G#4:0.5 A4:3 A4:0.5 B4:0.5 C5:0.5 D5:0.5 E5 E5:0.5 D5:0.5 C5:2 C5 B4 C5 D5:0.5 C5:0.5 B4:2 B4:0.75 D5:0.25 "
+                "C5:0.5 B4:0.5 A4 B4 C5:1.5 B4:0.5 B4 A4:1.5 G#4:0.5 A4:3 A4 B4 C#5 D5:3 D5 C5 E5 D5:3 C5 D5 R B4 C5:2 C5:0.5 "
+                "B4:0.5 A4 G#4:0.5 A4:0.5 B4:3 E4:0.5 F4:0.5 G#4:0.5 A4:0.5 B4:0.5 C5:0.5 E5:0.5 D5:0.5 C5:2 C5 B4 C5 D5:0.75 "
+                "C5:0.25 B4:2 B4:0.75 D5:0.25 C5:0.5 B4:0.5 A4 B4 C5:1.5 B4:0.5 B4 A4 G#4 A4:3")),
+}
+_w2 = list(ORGEL_WORLD2.items())
+_w3 = list(ORGEL_WORLD3.items())
+_w23 = ([kv for kv in _w2 if music_group_prefix(kv[0]) == "동유럽"] + [kv for kv in _w3 if music_group_prefix(kv[0]) == "동유럽"]
+        + [kv for kv in _w2 if music_group_prefix(kv[0]) == "중동"] + [kv for kv in _w3 if music_group_prefix(kv[0]) == "중동"]
+        + [kv for kv in _w2 + _w3 if music_group_prefix(kv[0]) not in ("동유럽", "중동")])
+MUSIC_PRESETS = dict(_mp[:_at] + list(ORGEL_SONGS.items()) + list(ORGEL_WORLD.items()) + _w23 + _mp[_at:])
 MUSIC_GROUP_KO = {"오르골 민요 · 아리랑", "오르골 민요 · 도라지 타령", "오르골 동요 · 고향의 봄"}
 MUSIC_GROUPS = ["전체", "싱잉볼", "한국", "서양 자장가·동요", "서양 민요·클래식", "일본", "중국", "러시아", "동유럽", "중동", "아프리카"]
 
@@ -5712,7 +5849,7 @@ def music_chunk(P, n, tail, rng, ci):
     elif g == "lullaby":
         beat = 60 / P["bpm"]
         loop = P["loop"]
-        PROGS["_lull"] = [[m + P["key"] for m in ch] for ch in _melody_chords(P["notes"], P.get("minor", False))]   # 멜로디와 같은 조로
+        PROGS["_lull"] = [[m + P["key"] for m in ch] for ch in _melody_chords(P["notes"], P.get("minor", False), P.get("tonic"), P.get("scale"))]   # 멜로디와 같은 조로
         bed = gen_pad(L, rng, "_lull", 8 * beat, 1300) * 0.3
         k0 = int(T0 // loop)
         cache = {}
