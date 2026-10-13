@@ -4597,12 +4597,18 @@ def stop_wav():
     _player = None
 
 
-def export_mp4(r, out, progress, cancel=None, audio=None):
+def export_mp4(r, out, progress, cancel=None, audio=None, t_range=None):
+    """t_range=(시작초, 끝초): 그 구간만 그림 (구간별로 나눠 만들 때)"""
     ff = get_ffmpeg()
     s = r.s
     fps = max(1, s["fps"])
+    i_start = 0
     dur = r.duration
     n = int(round(dur * fps))
+    if t_range:
+        i_start = int(round(t_range[0] * fps))
+        n = max(1, min(n, int(round(t_range[1] * fps))) - i_start)
+        dur = n / fps
     tmpdir = tempfile.mkdtemp(prefix="shorts_audio_")
     wav = ""
     if audio is not None:
@@ -4648,7 +4654,7 @@ def export_mp4(r, out, progress, cancel=None, audio=None):
                     raise RuntimeError("취소됨")
                 if werr:
                     break
-                fq.put(r.frame(i / fps).tobytes())
+                fq.put(r.frame((i_start + i) / fps).tobytes())
                 if i % 15 == 0:
                     progress(i, n)
         finally:
@@ -4661,6 +4667,72 @@ def export_mp4(r, out, progress, cancel=None, audio=None):
         with open(log_path, encoding="utf-8", errors="ignore") as f:
             raise RuntimeError("ffmpeg 오류:\n" + f.read()[-800:])
     progress(n, n)
+
+
+class PauseGate:
+    """cancel(threading.Event) 대신 넘기는 객체: 일시정지 파일이 있는 동안은 지워질 때까지 기다림(CPU 거의 안 씀).
+    작업 함수들이 cancel.is_set() 을 수시로 부르므로, 거기서 멈췄다가 이어서 진행됨"""
+
+    def __init__(self, pause_file, cancel=None, log=None):
+        self.pause_file, self.cancel, self.log = pause_file, cancel, log or (lambda x: None)
+
+    def is_set(self):
+        if os.path.exists(self.pause_file):
+            self.log(f"⏸ 일시정지 중 ({time.strftime('%H:%M')}) - 재개하려면 '{os.path.basename(self.pause_file)}' 파일을 지우세요 (재개.bat)")
+            while os.path.exists(self.pause_file):
+                if self.cancel is not None and self.cancel.is_set():
+                    return True
+                time.sleep(2)
+            self.log(f"▶ 재개 ({time.strftime('%H:%M')})")
+        return bool(self.cancel is not None and self.cancel.is_set())
+
+    def set(self):
+        if self.cancel is not None:
+            self.cancel.set()
+
+    def clear(self):
+        if self.cancel is not None:
+            self.cancel.clear()
+
+
+def export_mp4_resumable(r, out, progress, cancel=None, audio=None, work_dir=None, seg_sec=300, log=None):
+    """긴 영상: seg_sec 초 구간마다 따로 MP4로 만든 뒤 이어 붙이고 소리를 합침.
+    중간에 꺼져도 다시 부르면 끝난 구간은 건너뜀 (구간 파일 옆 .done 표시)"""
+    log = log or (lambda x: None)
+    work_dir = work_dir or (os.path.splitext(out)[0] + "_구간")
+    os.makedirs(work_dir, exist_ok=True)
+    fps = max(1, r.s["fps"])
+    n_all = int(round(r.duration * fps))
+    step = int(seg_sec * fps)
+    segs = [(i, min(n_all, i + step)) for i in range(0, n_all, step)]
+    for k, (i0, i1) in enumerate(segs):
+        seg = os.path.join(work_dir, f"seg_{k:03d}.mp4")
+        if os.path.exists(seg + ".done"):
+            continue
+        if cancel is not None and cancel.is_set():
+            raise RuntimeError("취소됨")
+        log(f"  🎬 구간 {k + 1}/{len(segs)} ({hms(i0 / fps)}~{hms(i1 / fps)}) 그리는 중...")
+        export_mp4(r, seg, lambda i, n, k=k, a=i0: progress(a + i, n_all), cancel, None, (i0 / fps, i1 / fps))
+        open(seg + ".done", "w").close()
+    wav = os.path.join(work_dir, "audio.wav")
+    if audio is not None and not os.path.exists(wav + ".done"):
+        write_wav(wav, audio)
+        open(wav + ".done", "w").close()
+    lst = os.path.join(work_dir, "list.txt")
+    with open(lst, "w", encoding="utf-8") as f:
+        for k in range(len(segs)):
+            f.write(f"file '{os.path.join(work_dir, f'seg_{k:03d}.mp4').replace(chr(92), '/')}'\n")
+    cmd = [get_ffmpeg(), "-y", "-v", "error", "-f", "concat", "-safe", "0", "-i", lst]
+    if audio is not None:
+        cmd += ["-i", wav, "-map", "0:v", "-map", "1:a", "-c:v", "copy", "-c:a", "aac", "-b:a", "192k", "-shortest"]
+    else:
+        cmd += ["-c", "copy"]
+    cmd += ["-t", f"{n_all / fps:.2f}", "-movflags", "+faststart", out]
+    p = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, errors="replace",
+                       creationflags=(subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0))
+    if p.returncode != 0:
+        raise RuntimeError("구간 합치기 실패: " + (p.stderr or "")[-500:])
+    progress(n_all, n_all)
 
 
 def write_package(path_base, title, story, pkg):
@@ -8121,10 +8193,28 @@ class App(tk.Tk):
         return {"title": title, "story": story, "note": note, "sources": sources, "notes": notes, "topic": topic,
                 "song": song, "melody": melody if parse_melody(melody) else "", "bpm": bpm, "artwork": artwork}
 
-    def generate_longdoc(self, model, topic, genre, minutes, log, research=False, autophoto=False, reference="", media_dir=None):
+    def generate_longdoc(self, model, topic, genre, minutes, log, research=False, autophoto=False, reference="", media_dir=None,
+                         state_path=None, gate=None):
         """장문: 한 주제를 minutes 분 나레이션 다큐로. 조사 → 구성안 → 챕터마다 따로 집필(긴 글도 AI 시간 제한에 안 걸림)
-        → 챕터별 근거 사진 → '## n. 제목' 챕터로 합침"""
-        cancel = self.cancel
+        → 챕터별 근거 사진 → '## n. 제목' 챕터로 합침
+        state_path: 단계마다 결과를 저장하는 파일 → 중간에 꺼져도 다시 실행하면 끝난 단계·챕터는 건너뜀
+        gate: 일시정지·취소를 함께 보는 객체(PauseGate). 없으면 ⏹ 중지만"""
+        cancel = gate or self.cancel
+        st8 = {}
+        if state_path and os.path.exists(state_path):
+            try:
+                st8 = json.load(open(state_path, encoding="utf-8"))
+                log(f"📂 저장된 진행 상황에서 이어서: 조사 {'완료' if 'facts' in st8 else '전'} · 구성안 {'완료' if 'outline' in st8 else '전'}"
+                    f" · 챕터 {len(st8.get('bodies') or [])}개 완료")
+            except Exception:
+                st8 = {}
+
+        def save_state():
+            if state_path:
+                os.makedirs(os.path.dirname(os.path.abspath(state_path)), exist_ok=True)
+                with open(state_path + ".tmp", "w", encoding="utf-8") as f_:
+                    json.dump(st8, f_, ensure_ascii=False)
+                os.replace(state_path + ".tmp", state_path)
         minutes = max(5.0, min(90.0, float(minutes)))
         total = int(minutes * DOC_CHARS_PER_MIN)
         open_c, close_c = max(350, int(total * 0.05)), max(300, int(total * 0.035))
@@ -8143,7 +8233,11 @@ class App(tk.Tk):
         if reference.strip():
             base += "\n\n[사용자가 붙여넣은 참고자료 - 이 내용을 가장 우선해서 사용]\n" + reference.strip()[:20000]
         sources, notes, facts = [], [], ""
-        if research:
+        if "facts" in st8:
+            topic, sources, facts = st8.get("topic") or topic, list(st8.get("sources") or []), st8["facts"]
+            if topic:
+                base = base.replace(base.split("\n")[1], f"주제: {topic}", 1)
+        elif research:
             log("🔎 웹 검색으로 자료 조사 중... (3~10분)")
             info = ask_json(model, DOC_RESEARCH_SYSTEM, base, tools=WEB_TOOLS)
             topic = info.get("topic") or topic
@@ -8151,11 +8245,20 @@ class App(tk.Tk):
             facts = json.dumps({k: info.get(k) for k in ("topic", "facts", "stories", "questions", "myths")}, ensure_ascii=False)
             log(f"  조사 완료: {topic}  (사실 {len(info.get('facts') or [])}개, 일화 {len(info.get('stories') or [])}개, 출처 {len(sources)}개)")
             base = base.replace(base.split("\n")[1], f"주제: {topic}", 1)
+            st8.update(topic=topic, sources=sources, facts=facts)
+            save_state()
         stop()
-        log(f"🗂 구성안 짜는 중... ({minutes:.0f}분 · 챕터 {n_ch}개 · 약 {total:,}자)")
-        o = ask_script_json(model, DOC_OUTLINE_SYSTEM.format(minutes=f"{minutes:.0f}", open_chars=open_c, n_ch=n_ch,
-                                                             body_chars=body_c, close_chars=close_c),
-                            base + (f"\n\n[웹 조사 자료 - 사실은 이 안에서만 쓸 것]\n{facts}" if facts else ""))
+        if "outline" in st8:
+            o = st8["outline"]
+        else:
+            o = None
+        if o is None:
+            log(f"🗂 구성안 짜는 중... ({minutes:.0f}분 · 챕터 {n_ch}개 · 약 {total:,}자)")
+            o = ask_script_json(model, DOC_OUTLINE_SYSTEM.format(minutes=f"{minutes:.0f}", open_chars=open_c, n_ch=n_ch,
+                                                                 body_chars=body_c, close_chars=close_c),
+                                base + (f"\n\n[웹 조사 자료 - 사실은 이 안에서만 쓸 것]\n{facts}" if facts else ""))
+            st8.update(outline=o, facts=st8.get("facts", facts), topic=topic, sources=sources)
+            save_state()
         chapters = [c for c in (o.get("chapters") or []) if isinstance(c, dict) and str(c.get("title", "")).strip()][:12]
         if not chapters:
             raise RuntimeError("구성안을 만들지 못했습니다. 다시 시도해 주세요.")
@@ -8168,8 +8271,13 @@ class App(tk.Tk):
             notes.append(str(o["notes"]))
         toc = "\n".join(f"{i + 1}. {c['title']} - " + " / ".join(str(p) for p in (c.get("points") or [])) for i, c in enumerate(chapters))
         log("  " + title + "\n  " + " / ".join(f"{i + 1}.{c['title']}" for i, c in enumerate(chapters)))
-        bodies, prev = [], "(첫 챕터 - 앞은 오프닝: " + doc_clean(o.get("opening", ""))[:300] + ")"
+        bodies = [tuple(b[:2]) for b in st8.get("bodies") or []]
+        prev = st8.get("prev") or ("(첫 챕터 - 앞은 오프닝: " + doc_clean(o.get("opening", ""))[:300] + ")")
+        sources += [x for x in st8.get("ch_sources") or [] if x not in sources]
+        notes += list(st8.get("ch_notes") or [])
         for i, c in enumerate(chapters):
+            if i < len(bodies):
+                continue
             stop()
             last = i == len(chapters) - 1
             log(f"✍ 챕터 {i + 1}/{len(chapters)} '{c['title']}' 쓰는 중... (목표 {want[i]:,}자)")
@@ -8207,6 +8315,8 @@ class App(tk.Tk):
                 except Exception as e:
                     log("  사진 찾기 실패(글만 사용): " + str(e).splitlines()[0][:80])
             bodies.append((c["title"], st))
+            st8.update(bodies=[list(b) for b in bodies], prev=prev, ch_sources=sources, ch_notes=notes)
+            save_state()
             log(f"  챕터 {i + 1} 완성: {len(story_text_only(st)):,}자")
         parts = [doc_clean(o.get("opening", ""))]
         parts += [f"## {i + 1}. {t}\n\n{b}" for i, (t, b) in enumerate(bodies)]

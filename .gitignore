@@ -16,3 +16,8 @@ voice_samples/
 *.log
 *.bak*
 
+
+*.flag
+장문_진행기록.txt
+장문_설정.json
+
