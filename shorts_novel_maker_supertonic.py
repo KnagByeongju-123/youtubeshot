@@ -621,7 +621,102 @@ IDEA_SYSTEM = """너는 한국 유튜브 쇼츠 채널 기획자다. (허구 썰
 사진 블로그면 '장소 + 한 줄 느낌'(예: '부산 해운대 새벽 산책', '우리 동네 30년 된 떡볶이집').
 코미디 꽁트면 '상황 + 꼬임' 한 줄(펀치라인은 숨김), 예: '택시 기사님이 내 전 애인이었다', '엄마가 ChatGPT를 배우셨다'. 실존 코미디언·방송 이름 금지.
 올드 팝송이면 '노래 제목(발표 연도) - 가수/작곡가' 형식. 소재에 '가사'가 들어가면 1929년 이전 발표곡만, '실화'면 극적인 인생을 산 가수·작곡가 위주(시대 무관).
+장문이면 30~60분 다큐로 깊게 풀 수 있는 큰 질문형 주제(35자 이내). 예: '우주는 정말 우연히 만들어졌을까?', '파인만이 말한 양자역학의 진짜 이상한 점', '인류는 왜 하필 아프리카를 떠났을까?'
 반드시 JSON만 출력: {"ideas": ["주제1", "주제2", ...]}"""
+
+
+# ---------------- 장문 (한 주제를 20~60분 나레이션 다큐로) ----------------
+DOC_CATEGORY = "장문"
+DOC_CHARS_PER_MIN = 420   # 나레이션 1분에 읽히는 글자 수(공백 포함, 문단 사이 쉼 포함 · Supertonic 보통 속도 실측 약 426자)
+CATEGORIES[DOC_CATEGORY] = (True, {
+    "우주의 비밀": ("빅뱅, 우주의 미세 조정, 블랙홀, 시간, 우주의 끝처럼 '우리는 왜 존재하는가'로 이어지는 큰 질문. 숫자를 일상 비유로.", "네온 시티"),
+    "양자물리·현실의 본질": ("관측, 중첩, 얽힘, 이중 슬릿 실험. '현실은 정말 우리가 보는 그대로일까?' 같은 질문으로 끌고 간다.", "시네마 다크"),
+    "과학자의 생각법": ("파인만·아인슈타인·뉴턴·퀴리 같은 과학자의 실제 일화와 사고방식으로 하나의 큰 질문을 풀어 간다. 인용은 널리 알려진 것만.", "감동 웜톤"),
+    "인류의 기원과 진화": ("호모 사피엔스의 탄생, 대이동, 네안데르탈인, 불·언어·농업. 발굴과 연구로 확인된 사실 위주.", "감동 웜톤"),
+    "고대 문명 미스터리": ("피라미드, 괴베클리 테페, 사라진 문명. 확인된 사실과 '아직 모르는 것'을 분명히 나누고 음모론은 '그런 주장도 있다' 정도로만.", "시네마 다크"),
+    "역사를 바꾼 결정적 순간": ("하나의 사건·결정이 세계사를 어떻게 바꿨는지 장면 중심으로. 날짜·장소·인물은 확인된 것만.", "감동 웜톤"),
+    "생명과 인체의 신비": ("세포, DNA, 뇌, 면역, 노화. '지금 당신 몸속에서는…'처럼 시청자와 연결.", "감동 웜톤"),
+    "뇌와 의식·심리": ("의식, 기억, 꿈, 착각, 유명한 심리 실험. 실험 상황→결과→우리 삶에 주는 의미.", "로맨스 핑크"),
+    "지구의 역사와 대멸종": ("지구 46억 년, 대멸종 5번, 빙하기, 대륙 이동. 시간 규모를 하루·1년 같은 비유로.", "시네마 다크"),
+    "철학의 큰 질문": ("자유의지, 시간, 행복, 죽음, 나는 누구인가. 철학자들의 생각을 쉬운 예시로 비교하고 결론은 열어 둔다.", "종이 노트"),
+    "미래 과학과 기술": ("인공지능, 우주 탐사, 핵융합, 수명 연장. 지금 실제로 어디까지 왔는지와 남은 과제를 구분.", "네온 시티"),
+    "세계사 인물 일대기": ("한 인물의 탄생부터 죽음까지, 결정적 장면들로. 널리 기록된 사실만, 루머 금지.", "감동 웜톤"),
+})
+for _t, _snd in (("우주의 비밀", "우주"), ("양자물리·현실의 본질", "우주"), ("과학자의 생각법", "잔잔한 패드"),
+                 ("인류의 기원과 진화", "바람"), ("고대 문명 미스터리", "어두운 드론"), ("역사를 바꾼 결정적 순간", "잔잔한 패드"),
+                 ("생명과 인체의 신비", "잔잔한 패드"), ("뇌와 의식·심리", "심해"), ("지구의 역사와 대멸종", "어두운 드론"),
+                 ("철학의 큰 질문", "잔잔한 패드"), ("미래 과학과 기술", "우주"), ("세계사 인물 일대기", "감성 오르골")):
+    SOUND_BY_TOPIC.setdefault(_t, _snd)
+
+DOC_STYLE = """[장문 다큐 나레이션 문체 - 반드시 지킬 것]
+- 유튜브 지식 다큐 나레이터 말투: '~입니다', '~죠', '~일까요?'를 섞은 차분하고 또렷한 존댓말. 시청자에게 말을 거는 느낌('여러분', '상상해 보세요')을 가끔.
+- 귀로 듣는 글이다. 한 문단 = 1~3문장(약 60~160자). 문단 사이 빈 줄. 어려운 용어는 처음 나올 때 쉬운 말로 풀고, 숫자는 일상 비유로 바꾼다(예: '모래알 하나').
+- 같은 말 반복 금지. 2~4문단마다 새로운 사실·장면·질문이 나와야 지루하지 않다.
+- 질문을 던지고 → 사실과 실험·일화로 풀고 → 다음 질문으로 넘기는 흐름. 각 챕터 끝은 다음 챕터가 궁금해지는 한 문장.
+- 목록·표·제목 기호(#, -, *, 번호 목록)와 이모지 금지. 괄호 설명도 최소화(읽어 주기 어색함).
+- 확인된 사실만. 논란·가설은 '~라는 주장도 있습니다', '아직 밝혀지지 않았습니다'로 분명히 구분. 인물의 말은 널리 알려진 인용만."""
+
+DOC_OUTLINE_SYSTEM = """너는 구독자 100만 유튜브 지식 다큐 채널의 메인 작가다. 한 주제를 {minutes}분짜리 나레이션 다큐로 만든다(예: '우주는 정말 우연히 만들어졌을까?' 58분).
+먼저 전체 구성안을 짠다.
+- title: 클릭하고 싶은 큰 질문형 제목 25~45자(결말 금지, 이모지 0~1개). 예: '우주는 정말 우연히 만들어졌을까? 😱 이 숫자들이 과학자들마저 침묵하게 만들었다'
+- opening: 오프닝 나레이션 4~8문단(약 {open_chars}자). 첫 문장은 가장 강한 훅(놀라운 사실·질문·장면), 이 영상에서 무엇을 알게 되는지, '끝까지 보시면…' 기대감. 인사말로 시작 금지.
+- chapters: {n_ch}개. 각 {{"title": "챕터 제목(15자 이내, 번호 없이)", "points": ["이 챕터에서 다룰 핵심 사실·장면·질문 3~6개"], "chars": 목표 글자 수}}. chars 합계는 약 {body_chars}자.
+  챕터들은 쉬운 질문 → 점점 깊은 질문 → 가장 충격적인 질문 순서로, 서로 겹치지 않게. 마지막 챕터는 전체를 정리하는 결론 챕터.
+- closing: 마무리 나레이션 3~6문단(약 {close_chars}자). 핵심을 한 문장으로 되짚고, 시청자에게 생각할 질문 하나, 댓글·구독 유도는 마지막 한 문장으로 짧게.
+
+""" + DOC_STYLE + """
+
+""" + FACT_RULES + """
+
+반드시 JSON만 출력: {{"title": "", "opening": "", "chapters": [{{"title": "", "points": [""], "chars": 1500}}], "closing": "", "sources": ["출처1"], "notes": "확인 필요한 부분"}}"""
+
+DOC_CHAPTER_SYSTEM = """너는 유튜브 지식 다큐 채널의 메인 작가다. 전체 구성안 중 '지금 쓸 챕터' 하나의 나레이션 본문만 쓴다.
+- 분량: 목표 글자 수(공백 포함)의 90~110%. 너무 짧으면 영상 길이가 모자라니 사실·일화·비유를 충분히 넣는다.
+- 챕터 제목은 쓰지 않는다(프로그램이 붙임). 본문만.
+- 앞 챕터에서 이미 한 이야기를 반복하지 않는다. 다음 챕터 내용을 미리 다 말하지 않는다.
+- 첫 문단: '앞 챕터 마지막 문장'을 되풀이하거나 같은 질문을 다시 던지지 말고, 그 질문에 답하거나 새 장면·사실로 바로 시작한다. 마지막 문단은 다음 챕터로 궁금증을 넘긴다(마지막 챕터면 결론).
+
+""" + DOC_STYLE + """
+
+""" + FACT_RULES.replace("- 마지막에 댓글을 부르는 짧은 질문 1줄 (예: \"당신이라면 어떻게 했을까?\")\n", "") + """
+
+반드시 JSON만 출력: {"story": "챕터 본문", "summary": "이 챕터 내용 2문장 요약(다음 챕터 작가에게 넘김)", "sources": ["출처"], "notes": "확인 필요한 부분(없으면 빈 문자열)"}"""
+
+DOC_RESEARCH_SYSTEM = """너는 유튜브 지식 다큐(30~60분) 대본을 위한 수석 자료조사원이다. WebSearch 로 주제를 폭넓게 검색하고, 핵심 자료는 WebFetch 로 원문을 열어 확인한다.
+주제가 비어 있으면 소재 안에서 긴 다큐로 반응이 좋을 큰 질문형 주제를 하나 골라 조사한다.
+- facts: 대본에 쓸 확인된 사실 25~40개, 한 줄씩(숫자·연도·인물·실험·장소 포함). 여러 자료가 일치하는 것만.
+- stories: 이야기로 풀기 좋은 실제 일화·실험·장면 5~10개(한두 문장씩)
+- questions: 시청자가 궁금해할 질문 8~12개(쉬운 것부터 깊은 것 순서)
+- myths: 흔한 오해나 과장된 주장과 실제 사실 2~5개
+- sources: 실제로 확인한 자료 4~8개, "자료 이름 - URL"
+반드시 JSON만 출력: {"topic": "조사한 주제", "facts": [""], "stories": [""], "questions": [""], "myths": [""], "sources": ["이름 - URL"]}"""
+
+DOC_PACKAGE_SYSTEM = """너는 구독자 100만 유튜브 지식 다큐 채널 운영자다. 30~60분짜리 롱폼 나레이션 다큐의 업로드 문구를 만든다.
+- 제목 후보 5개: 큰 질문형 + 감정 자극, 30~50자, 이모지 0~1개. 결말은 밝히지 않는다. 서로 다른 각도(질문형 / 충격 사실형 / 인물형 / 숫자형 / 반전형).
+- 설명: 첫 단락 3~5문장(영상이 던지는 질문과 무엇을 알게 되는지, 검색 키워드를 자연스럽게), 빈 줄, '이 영상은 단순히 ~이 아닙니다'류 한 단락, 빈 줄, 어떤 시청자에게 추천하는지 한 줄. 목차(타임스탬프)는 쓰지 않는다(프로그램이 붙임).
+- 해시태그 12~16개: #과학다큐 #지식 같은 큰 태그 + 주제 키워드, 띄어쓰기로 구분
+- keywords: 유튜브 태그 칸에 넣을 검색어 12~20개를 쉼표로
+- 고정댓글: 영상의 큰 질문에 대한 시청자 생각을 묻는 한 줄
+반드시 JSON만 출력: {"titles": ["..."], "description": "...", "hashtags": "#... #...", "keywords": "...", "pinned_comment": "..."}"""
+
+
+def doc_clean(text):
+    """장문 AI 결과 정리: 제목·목록 기호와 굵게 표시를 지우고, 문단(빈 줄로 구분) 단위로 맞춤. 사진 줄은 그대로"""
+    raw = str(text or "").replace("\r", "")
+    per_line = not re.search(r"\n[ \t]*\n", raw.strip())   # 빈 줄 없이 줄바꿈만 했으면 줄마다 문단
+    out = []
+    for ln in raw.split("\n"):
+        s = ln.strip()
+        if s and (parse_media(s) or PH_RE.match(s)):   # 사진 줄은 항상 따로 한 문단
+            out += ["", s, ""]
+            continue
+        if s:
+            if s.startswith("#"):          # 챕터 제목은 프로그램이 붙이므로 AI가 쓴 제목 줄은 버림
+                continue
+            s = re.sub(r"^([-*•·]|\d+[.)])\s+", "", s).replace("**", "").replace("__", "")
+        out += [s, ""] if (s and per_line) else [s]
+    paras = [" ".join(x.strip() for x in p.split("\n") if x.strip()) for p in re.split(r"\n\s*\n", "\n".join(out)) if p.strip()]
+    return "\n\n".join(paras)
 
 
 def _artist_recent(artwork):
@@ -2706,6 +2801,8 @@ class SubtitleRenderer:
                 x = ix0 + ((ix1 - ix0) - fl.getlength(ln)) / 2
                 d.text((x, ly), ln, font=fl, fill="#FFE135", stroke_width=max(3, fl.size // 12), stroke_fill="#000000")
                 ly += int(fl.size * 1.3)
+        if len(self._sub_cache) >= 48:   # 긴 영상: 오래된 자막 그림부터 버림 (영상은 앞에서부터 그리므로)
+            self._sub_cache.pop(next(iter(self._sub_cache)))
         self._sub_cache[key] = layer
         return layer
 
@@ -2782,6 +2879,8 @@ class SubtitleRenderer:
                 bl = small.resize((int(small.width * 8), int(small.height * 8)), Image.BILINEAR)
                 l, tp = (bl.width - W) // 2, (bl.height - H) // 2
                 blur = Image.fromarray((np.asarray(bl.crop((l, tp, l + W, tp + H))).astype(np.float32) * 0.42).astype(np.uint8)).convert("RGBA")
+            if len(self._img_cache) >= 10:   # 사진이 많은 긴 영상: 오래된 것부터 버림
+                self._img_cache.pop(next(iter(self._img_cache)))
             self._img_cache[idx] = (big, mask, blur)
         return self._img_cache[idx]
 
@@ -3007,7 +3106,14 @@ class SubtitleRenderer:
         return 0.0
 
 
+def screen_title(title):
+    """화면·썸네일에 그릴 제목: 이모지는 화면 글꼴에 없어 □로 나오므로 뺌 (유튜브 제목에는 그대로 둠)"""
+    t = re.sub(r"[\U0001F000-\U0001FFFF☀-➿️‍]", "", str(title or ""))
+    return re.sub(r"[ \t]+", " ", t).strip()
+
+
 def make_renderer(title, story, s, narration=None):
+    title = screen_title(title)
     if s.get("layout", "").startswith("자막형"):
         return SubtitleRenderer(title, story, s, narration)
     return Renderer(title, story, s, narration)
@@ -3549,33 +3655,74 @@ def loudness_fit(music, target=0.16):
     return out.astype(np.float32)
 
 
+LONG_MUSIC_SEC = 300   # 이보다 긴 영상은 배경음을 이 길이만큼 만든 뒤 이음매 없이 반복 (1시간 영상도 메모리 적게)
+
+
+def loop_xfade(x, n, xfade=4.0):
+    """(m, 2) 소리를 n 길이로 반복 (이음매는 xfade 초 겹쳐 부드럽게)"""
+    m = len(x)
+    X = int(min(xfade, m / SR / 4) * SR)
+    if m >= n:
+        return x[:n]
+    out = np.empty((n, 2), np.float32)
+    w = (np.sin(np.linspace(0, np.pi / 2, X, dtype=np.float32)) ** 2)[:, None]
+    joint = x[m - X:] * (1 - w) + x[:X] * w
+    body = x[X:m - X]
+    out[:m - X] = x[:m - X]
+    pos = m - X
+    while pos < n:
+        for part in (joint, body):
+            k = min(len(part), n - pos)
+            if k <= 0:
+                break
+            out[pos:pos + k] = part[:k]
+            pos += k
+    return out
+
+
+def duck_env(n, narr, duration, duck, res=100):
+    """말하는 구간(앞뒤 0.3초 포함)만 duck 배로 낮춘 음량 곡선 (0.4초에 걸쳐 부드럽게).
+    0.01초 간격으로 계산한 뒤 나눠서 늘림 → 1시간 영상도 빠르고 메모리 적게"""
+    m = int(np.ceil(n / SR * res)) + 2
+    e = np.ones(m, np.float64)
+    for st, clip in narr:
+        e[int(max(0, st - 0.3) * res):int(min(duration, st + len(clip) / SR + 0.3) * res)] = duck
+    k = max(1, int(0.4 * res))
+    c = np.concatenate([[0.0], np.cumsum(e)])
+    idx = np.arange(m)
+    lo, hi = np.clip(idx - k // 2, 0, m), np.clip(idx - k // 2 + k, 0, m)
+    es = (c[hi] - c[lo]) / np.maximum(1, hi - lo)
+    out = np.empty(n, np.float32)
+    step = SR * 60
+    for a in range(0, n, step):
+        b = min(n, a + step)
+        out[a:b] = np.interp(np.arange(a, b) * (res / SR), idx, es)
+    return out
+
+
 def build_audio(r, s, style):
     """영상 길이에 맞춘 최종 소리 (배경음 + 반전 효과음). 없으면 None"""
     n = int(r.duration * SR)
     rng = np.random.default_rng(None if s["bgm_seed"] == 0 else s["bgm_seed"])
-    music = make_music(s, style, n)
+    long_ = n > LONG_MUSIC_SEC * 1.2 * SR
+    music = make_music(s, style, min(n, LONG_MUSIC_SEC * SR) if long_ else n)
     hit_t = r.reveal_t if s["reveal_hit"] == "on" else None
     narr = getattr(r, "narr_at", []) if s.get("narration", "off") == "on" else []
     if music is None and hit_t is None and not narr:
         return None
     out = np.zeros((n, 2), np.float32)
-    t = np.arange(n) / SR
+    t = np.arange(n, dtype=np.float32) / SR
     if music is not None:
         music = loudness_fit(music) * max(0, s["bgm_volume"])
+        if long_:
+            music = loop_xfade(music.astype(np.float32), n)
         g = np.minimum(1, t / 1.5) * np.clip((r.duration - t) / 2.5, 0, 1)
         if hit_t:  # 반전 직전 음악을 줄였다가 다시 올림
             a = max(0.01, hit_t - 1.2)
             b = max(a + 0.01, hit_t - 0.1)
             g = g * np.interp(t, [0, a, b, hit_t + 1.5, hit_t + 4.5, 1e9], [1, 1, 0.25, 0.25, 1, 1])
         if narr:   # 말하는 동안 음악을 낮춤 (더킹)
-            duck = float(s.get("narr_duck", 0.35))
-            env = np.ones(n, np.float32)
-            for st, clip in narr:
-                i0, i1 = int(max(0, st - 0.3) * SR), int(min(r.duration, st + len(clip) / SR + 0.3) * SR)
-                env[i0:i1] = duck
-            k = int(0.4 * SR)
-            env = np.convolve(env, np.ones(k, np.float32) / k, mode="same")
-            g = g * env
+            g = g * duck_env(n, narr, r.duration, float(s.get("narr_duck", 0.35)))
         out += music * g[:, None].astype(np.float32)
     for st, clip in narr:
         vol = max(0, float(s.get("narr_volume", 1.0)))
@@ -4500,11 +4647,13 @@ def write_package(path_base, title, story, pkg):
     lines = [f"[제목 후보]"] + [f"{i + 1}. {t}" for i, t in enumerate(pkg.get("titles", []))]
     lines += ["", "[설명]", pkg.get("description", ""), "", "[해시태그]", pkg.get("hashtags", ""),
               "", "[고정댓글]", pkg.get("pinned_comment", "")]
+    if pkg.get("keywords"):
+        lines += ["", "[태그 (유튜브 스튜디오 '태그' 칸에 붙여넣기)]", str(pkg["keywords"])]
     if pkg.get("sources"):
         lines += ["", "[출처 (설명란에 넣으면 신뢰도 상승)]"] + [f"- {x}" for x in pkg["sources"]]
     if pkg.get("chapters"):
         lines += ["", "[챕터 타임스탬프 (설명란에 그대로 붙여넣기)]", "00:00 오프닝"]
-        lines += [f"{int(t // 60):02d}:{int(t % 60):02d} {n}" for t, n in pkg["chapters"]]
+        lines += [f"{hms(t)} {n}" for t, n in pkg["chapters"]]
     art = pkg.get("artwork")
     if isinstance(art, dict):
         lines += ["", "[그림 정보 (설명란에 넣으면 좋음)]",
@@ -6400,6 +6549,8 @@ class App(tk.Tk):
         self.artwork = c.get("artwork")
         CURRENT_MELODY["melody"], CURRENT_MELODY["bpm"] = self.melody or "", self.bpm or 90
         self.len_var.set(c.get("length", "40"))
+        self._len_doc = None
+        self.update_len_unit()   # 장문이면 길이 칸이 '분'
         self.judge_var.set(bool(c.get("judge", True)))
         self.theme_var.set(c.get("theme", "시네마 다크"))
         self.title_var.set(c.get("title", SAMPLE_TITLE))
@@ -6515,9 +6666,11 @@ class App(tk.Tk):
         ttk.Label(r, text="← 직접 입력 가능", foreground="gray").pack(side="left")
         r1 = ttk.Frame(s1)
         r1.pack(fill="x", pady=(4, 0))
-        ttk.Label(r1, text="길이(초)").pack(side="left")
+        self.len_label = ttk.Label(r1, text="길이(초)")
+        self.len_label.pack(side="left")
         self.len_var = tk.StringVar()
-        ttk.Spinbox(r1, from_=15, to=180, increment=5, textvariable=self.len_var, width=5).pack(side="left", padx=4)
+        self.len_spin = ttk.Spinbox(r1, from_=15, to=180, increment=5, textvariable=self.len_var, width=5)
+        self.len_spin.pack(side="left", padx=4)
         self.judge_var = tk.BooleanVar(value=True)
         ttk.Checkbutton(r1, text="3안 작성 후 AI 심사", variable=self.judge_var).pack(side="left", padx=4)
         self.research_var = tk.BooleanVar(value=True)
@@ -7353,7 +7506,7 @@ class App(tk.Tk):
             npy = os.path.join(cache, key + ".npy")
             if not os.path.exists(npy):
                 return None
-            a = np.load(npy)
+            a = np.load(npy, mmap_mode="r")   # 미리보기는 길이만 필요 → 메모리에 다 올리지 않음 (긴 장문도 빠르게)
             res.append((i, a, len(a) / SR))
         return res
 
@@ -7657,10 +7810,30 @@ class App(tk.Tk):
         self.vars["photo_h"].set("0.5" if self.cat_var.get() == ART_CATEGORY else "0.36")
         if self.cat_var.get() == ART_CATEGORY and self.len_var.get() in ("", "40"):
             self.len_var.set("60")   # 큐레이터 해설은 60초 정도 필요
+        if self.cat_var.get() == DOC_CATEGORY:   # 장문: 가로 롱폼 · 자막형 · 나레이션 · 반전 효과 끔
+            if not str(self.vars["format"].get()).startswith("롱폼"):
+                self.apply_format("롱폼 가로(1920×1080)")
+            for k_, v_ in (("layout", "자막형(큰 제목+사진+자막)"), ("narration", "on"), ("reveal_hit", "off"), ("reveal_fx", "off"),
+                           ("img_motion", "영상처럼(확대·이동·전환)"), ("img_fill", "전체 화면(글자가 사진 위에)"),
+                           ("fps", "24")):   # 긴 영상은 24fps로 (만드는 시간 약 20% 단축, 다큐에 충분)
+                if k_ in self.vars:
+                    self.vars[k_].set(v_)
+            self.judge_var.set(False)   # 장문은 챕터마다 따로 쓰므로 3안 심사 없음
+        self.update_len_unit()
         self.genre_box.config(values=list(topics))
         self.genre_var.set(list(topics)[0])
         self.topic_box.config(values=[])
         self.on_genre()
+
+    def update_len_unit(self):
+        """길이 칸 단위: 장문은 '분'(5~90), 나머지는 '초'(15~180)"""
+        doc = self.cat_var.get() == DOC_CATEGORY
+        was = getattr(self, "_len_doc", None)
+        self.len_label.config(text="길이(분)" if doc else "길이(초)")
+        self.len_spin.config(from_=5 if doc else 15, to=90 if doc else 180, increment=5)
+        if was is not None and was != doc:   # 초 ↔ 분이 바뀌면 알맞은 기본값으로
+            self.len_var.set("30" if doc else "40")
+        self._len_doc = doc
 
     def on_genre(self, *_):
         topics = cat_info(self.cat_var.get())[1]
@@ -7927,6 +8100,102 @@ class App(tk.Tk):
         return {"title": title, "story": story, "note": note, "sources": sources, "notes": notes, "topic": topic,
                 "song": song, "melody": melody if parse_melody(melody) else "", "bpm": bpm, "artwork": artwork}
 
+    def generate_longdoc(self, model, topic, genre, minutes, log, research=False, autophoto=False, reference="", media_dir=None):
+        """장문: 한 주제를 minutes 분 나레이션 다큐로. 조사 → 구성안 → 챕터마다 따로 집필(긴 글도 AI 시간 제한에 안 걸림)
+        → 챕터별 근거 사진 → '## n. 제목' 챕터로 합침"""
+        cancel = self.cancel
+        minutes = max(5.0, min(90.0, float(minutes)))
+        total = int(minutes * DOC_CHARS_PER_MIN)
+        open_c, close_c = max(350, int(total * 0.05)), max(300, int(total * 0.035))
+        body_c = total - open_c - close_c
+        n_ch = max(3, min(12, round(minutes / 5)))
+        media_dir = media_dir or os.path.join(DEFAULTS["out_dir"], "media")
+        topics = cat_info(DOC_CATEGORY)[1]
+        formula = topics.get(genre, ("(사용자가 직접 정한 소재)", ""))[0]
+
+        def stop():
+            if cancel.is_set():
+                raise RuntimeError("취소됨")
+
+        base = (f"콘텐츠 종류: 장문 지식 다큐 (사실 기반 - 지어내지 말 것)\n주제: {topic.strip() or '자유 (소재 안에서 긴 다큐로 반응 좋을 큰 질문)'}\n"
+                f"소재: {genre}\n소재 공식: {formula}\n영상 길이: 약 {minutes:.0f}분 (나레이션 전체 약 {total}자)")
+        if reference.strip():
+            base += "\n\n[사용자가 붙여넣은 참고자료 - 이 내용을 가장 우선해서 사용]\n" + reference.strip()[:20000]
+        sources, notes, facts = [], [], ""
+        if research:
+            log("🔎 웹 검색으로 자료 조사 중... (3~10분)")
+            info = ask_json(model, DOC_RESEARCH_SYSTEM, base, tools=WEB_TOOLS)
+            topic = info.get("topic") or topic
+            sources = [str(x) for x in info.get("sources") or []]
+            facts = json.dumps({k: info.get(k) for k in ("topic", "facts", "stories", "questions", "myths")}, ensure_ascii=False)
+            log(f"  조사 완료: {topic}  (사실 {len(info.get('facts') or [])}개, 일화 {len(info.get('stories') or [])}개, 출처 {len(sources)}개)")
+            base = base.replace(base.split("\n")[1], f"주제: {topic}", 1)
+        stop()
+        log(f"🗂 구성안 짜는 중... ({minutes:.0f}분 · 챕터 {n_ch}개 · 약 {total:,}자)")
+        o = ask_script_json(model, DOC_OUTLINE_SYSTEM.format(minutes=f"{minutes:.0f}", open_chars=open_c, n_ch=n_ch,
+                                                             body_chars=body_c, close_chars=close_c),
+                            base + (f"\n\n[웹 조사 자료 - 사실은 이 안에서만 쓸 것]\n{facts}" if facts else ""))
+        chapters = [c for c in (o.get("chapters") or []) if isinstance(c, dict) and str(c.get("title", "")).strip()][:12]
+        if not chapters:
+            raise RuntimeError("구성안을 만들지 못했습니다. 다시 시도해 주세요.")
+        want = [max(300, int(c.get("chars") or 0)) for c in chapters]
+        k = body_c / max(1, sum(want))
+        want = [int(w * k) for w in want]                  # 챕터 분량 합을 목표 길이에 맞춤
+        title = str(o.get("title", "")).strip() or topic
+        sources += [str(x) for x in o.get("sources") or [] if str(x) not in sources]
+        if o.get("notes"):
+            notes.append(str(o["notes"]))
+        toc = "\n".join(f"{i + 1}. {c['title']} - " + " / ".join(str(p) for p in (c.get("points") or [])) for i, c in enumerate(chapters))
+        log("  " + title + "\n  " + " / ".join(f"{i + 1}.{c['title']}" for i, c in enumerate(chapters)))
+        bodies, prev = [], "(첫 챕터 - 앞은 오프닝: " + doc_clean(o.get("opening", ""))[:300] + ")"
+        for i, c in enumerate(chapters):
+            stop()
+            last = i == len(chapters) - 1
+            log(f"✍ 챕터 {i + 1}/{len(chapters)} '{c['title']}' 쓰는 중... (목표 {want[i]:,}자)")
+            u = (base + f"\n\n[전체 제목] {title}\n\n[전체 구성]\n{toc}\n\n[지금 쓸 챕터] {i + 1}. {c['title']}"
+                 + (" (마지막 챕터 - 전체 결론. 단, 구독 인사는 쓰지 않는다: 클로징이 따로 있음)" if last else "")
+                 + "\n다룰 내용: " + " / ".join(str(p) for p in (c.get("points") or []))
+                 + f"\n목표 글자 수: 약 {want[i]}자 (공백 포함)\n\n[앞 챕터 요약] {prev}"
+                 + (f"\n[앞 챕터 마지막 문장 - 되풀이 금지] {split_paras(story_text_only(bodies[-1][1]))[-1]}" if bodies else "")
+                 + (f"\n\n[웹 조사 자료 - 사실은 이 안에서만 쓸 것]\n{facts}" if facts else ""))
+            d = ask_script_json(model, DOC_CHAPTER_SYSTEM, u)
+            st = doc_clean(d.get("story", ""))
+            if len(st) < want[i] * 0.6:   # 너무 짧으면 한 번 더 (영상 길이가 모자라지 않게)
+                stop()
+                log(f"  분량 부족({len(st):,}자) → 더 길게 다시 쓰는 중...")
+                d2 = ask_script_json(model, DOC_CHAPTER_SYSTEM, u + f"\n\n[주의] 직전 시도가 {len(st)}자로 너무 짧았다. 이번에는 반드시 약 {want[i]}자로, 사실·일화·비유를 더 넣어 충분히 길게 쓴다.")
+                st2 = doc_clean(d2.get("story", ""))
+                if len(st2) > len(st):
+                    st, d = st2, d2
+            if not st:
+                raise RuntimeError(f"챕터 {i + 1}을(를) 쓰지 못했습니다.")
+            prev = str(d.get("summary") or st[-300:])
+            sources += [str(x) for x in d.get("sources") or [] if str(x) not in sources]
+            if d.get("notes"):
+                notes.append(f"{i + 1}장: {d['notes']}")
+            if autophoto:   # 챕터마다 근거 사진 (1분에 한 장 정도)
+                stop()
+                n_ph = max(2, min(6, round(len(st) / DOC_CHARS_PER_MIN)))
+                log(f"  🔎 챕터 {i + 1} 사진 찾는 중... (목표 {n_ph}장)")
+                try:
+                    pd_ = ask_json(model, PHOTO_SYSTEM, f"콘텐츠 종류: {DOC_CATEGORY}\n[제목] {title} - {c['title']}\n\n[본문]\n{st}"
+                                   + photo_note(n_ph, DOC_CATEGORY), tools=WEB_TOOLS)
+                    ph = fetch_photos(pd_.get("photos"), media_dir, log, limit=n_ph)
+                    if ph:
+                        st = place_photos(st, ph)
+                except Exception as e:
+                    log("  사진 찾기 실패(글만 사용): " + str(e).splitlines()[0][:80])
+            bodies.append((c["title"], st))
+            log(f"  챕터 {i + 1} 완성: {len(story_text_only(st)):,}자")
+        parts = [doc_clean(o.get("opening", ""))]
+        parts += [f"## {i + 1}. {t}\n\n{b}" for i, (t, b) in enumerate(bodies)]
+        parts.append(doc_clean(o.get("closing", "")))
+        story = strip_placeholders("\n\n".join(p for p in parts if p.strip()))
+        n_chars = len(story_text_only(story))
+        note = f"장문 {len(bodies)}챕터 · {n_chars:,}자 · 예상 약 {n_chars / DOC_CHARS_PER_MIN:.0f}분"
+        return {"title": title, "story": story, "note": note, "sources": sources, "notes": " / ".join(notes)[:1500],
+                "topic": topic, "song": None, "melody": "", "bpm": 90, "artwork": None}
+
     def ai_write(self):
         try:
             sec = float(self.len_var.get())
@@ -7935,8 +8204,11 @@ class App(tk.Tk):
         model, cat, topic, genre, judge = self.model_var.get().strip(), self.cat_var.get(), self.topic_var.get(), self.genre_var.get(), self.judge_var.get()
         research, autophoto, ref = self.research_var.get(), self.autophoto_var.get(), getattr(self, "reference", "")
         media_dir = self.media_dir()
+        doc = cat == DOC_CATEGORY   # 장문: 길이 칸은 '분'
 
         def job():
+            if doc:
+                return self.generate_longdoc(model, topic, genre, sec, self.log_bg, research, autophoto, ref, media_dir)
             return self.generate_story(model, cat, topic, genre, sec, judge, self.log_bg, research, autophoto, ref, media_dir)
 
         def done(res):
@@ -7955,12 +8227,17 @@ class App(tk.Tk):
                 self.write_log("출처: " + " / ".join(self.sources))
             if res["notes"]:
                 self.write_log("⚠ 확인 필요: " + str(res["notes"]) + '  → "사실 검증" 버튼으로 점검 권장')
-            self.vars["target_sec"].set(str(sec))
+            self.vars["target_sec"].set("0" if doc else str(sec))   # 장문은 나레이션 길이를 따라감
             self.write_log(f"대본 완성: {res['title']}" + (f"  [{res['note']}]" if res["note"] else ""))
+            if doc:
+                self.write_log("다음 순서: 🎙 나레이션 만들기 → 🎬 MP4 만들기 → 📝 제목·업로드 문구 (챕터 목차가 설명란에 자동으로 들어가요)")
             self.refresh_preview()
             self.save_cfg()
         msg = "Claude가 대본을 쓰는 중..."
-        if research:
+        if doc:
+            msg = (f"장문 대본을 쓰는 중... (약 {sec:.0f}분 · 챕터마다 따로 작성"
+                   + (" · 웹 조사" if research else "") + (" · 챕터별 사진" if autophoto else "") + ", 10~40분 걸릴 수 있음. ⏹로 중지 가능)")
+        elif research:
             msg += " (웹 조사 포함, 3~6분 걸릴 수 있음)"
         elif judge:
             msg += " (3안 작성 + 심사, 1~2분)"
@@ -8416,8 +8693,15 @@ class App(tk.Tk):
         sources = list(getattr(self, "sources", []))
         chapters = self.renderer.chapter_times() if self.renderer else []
 
+        doc = cat == DOC_CATEGORY
+        if doc:   # 장문은 본문이 길어서 앞부분 + 챕터 제목만 보냄
+            body = story_text_only(story)
+            heads = [p for p in split_paras(body) if p.startswith("## ")]
+            user = (f"콘텐츠 종류: 장문 지식 다큐 ({len(body)}자)\n소재: {genre}\n[지금 제목] {title}\n\n[챕터]\n" + "\n".join(heads)
+                    + "\n\n[본문 앞부분]\n" + body[:4000])
+
         def job():
-            pkg = ask_script_json(model, PACKAGE_SYSTEM, user)
+            pkg = ask_script_json(model, DOC_PACKAGE_SYSTEM if doc else PACKAGE_SYSTEM, user)
             pkg["sources"] = sources
             pkg["song"] = getattr(self, "song", None)
             pkg["artwork"] = getattr(self, "artwork", None)
@@ -8477,7 +8761,7 @@ class App(tk.Tk):
             desc += "\n※ 일부 이미지는 AI로 생성되었습니다."
         extra = []
         if pkg.get("chapters"):
-            extra += ["", "00:00 오프닝"] + [f"{int(t_ // 60):02d}:{int(t_ % 60):02d} {n}" for t_, n in pkg["chapters"]]
+            extra += ["", "00:00 오프닝"] + [f"{hms(t_)} {n}" for t_, n in pkg["chapters"]]
         if pkg.get("sources"):
             extra += ["", "📚 출처"] + [f"- {x}" for x in pkg["sources"]]
         credits = [c for c in photo_credits(story) if "AI 생성 이미지" not in c]
@@ -8509,6 +8793,13 @@ class App(tk.Tk):
         r2.pack(fill="x", pady=(4, 0))
         ttk.Entry(r2, textvariable=cv).pack(side="left", fill="x", expand=True)
         ttk.Button(r2, text="복사", width=5, command=lambda: copy(cv.get(), "고정 댓글")).pack(side="left", padx=4)
+        if pkg.get("keywords"):   # 장문: 유튜브 스튜디오 '태그' 칸용 검색어
+            kv = tk.StringVar(value=str(pkg["keywords"]))
+            r3 = ttk.Frame(hf)
+            r3.pack(fill="x", pady=(4, 0))
+            ttk.Label(r3, text="태그").pack(side="left")
+            ttk.Entry(r3, textvariable=kv).pack(side="left", fill="x", expand=True, padx=4)
+            ttk.Button(r3, text="복사", width=5, command=lambda: copy(kv.get(), "태그")).pack(side="left", padx=4)
         # 체크리스트
         tips = ["업로드 화면 '변경되거나 합성된 콘텐츠' → 예 (AI 그림을 사실처럼 썼다면)" if ai_img else "",
                 "사진 출처(CC 라이선스)는 설명란에 꼭 남겨 두세요" if credits else "",
@@ -8521,6 +8812,8 @@ class App(tk.Tk):
             os.makedirs(out_dir, exist_ok=True)
             base = os.path.join(out_dir, safe_name(tget()))
             p2 = dict(pkg, description=dt.get("1.0", "end").strip(), hashtags=hv.get(), pinned_comment=cv.get())
+            if pkg.get("keywords"):
+                p2["keywords"] = kv.get()
             write_package(base, tget(), story, p2)
             self.write_log("업로드 문구 저장: " + base + "_업로드문구.txt")
             self.set_status("💾 업로드 문구 저장됨")
@@ -8597,7 +8890,7 @@ class App(tk.Tk):
             warn += ("\n🎙 나레이션: 준비됨 (읽는 속도에 맞춰 스크롤)" if r.keys else "\n🎙 나레이션: 아직 안 만듦 → '🎙 나레이션 만들기' 누르면 속도가 맞춰짐")
         ch = r.chapter_times()
         if ch:
-            warn += f"\n📑 챕터 {len(ch)}개: " + " · ".join(f"{int(t // 60)}:{int(t % 60):02d} {n[:8]}" for t, n in ch[:6]) + (" …" if len(ch) > 6 else "")
+            warn += f"\n📑 챕터 {len(ch)}개: " + " · ".join(f"{hms(t)} {n[:8]}" for t, n in ch[:6]) + (" …" if len(ch) > 6 else "")
         song = getattr(self, "song", None)
         if song and self.cat_var.get() == SONG_CATEGORY:
             warn += f"\n🎼 {song.get('title_ko') or song.get('title', '')} ({song.get('year', '?')})"
@@ -9172,7 +9465,7 @@ class App(tk.Tk):
             ch = r.chapter_times()
             if ch:
                 with open(base + "_타임스탬프.txt", "w", encoding="utf-8") as f:
-                    f.write("\n".join(f"{int(t // 60):02d}:{int(t % 60):02d} {n}" for t, n in [(0, "오프닝")] + ch))
+                    f.write("\n".join(f"{hms(t)} {n}" for t, n in [(0, "오프닝")] + ch))
             return out, mp3, in_video is not None and has_audio(out), os.path.getsize(out) / 1e6
 
         def done(res):
