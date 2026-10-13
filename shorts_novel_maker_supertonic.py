@@ -5221,6 +5221,23 @@ ORGEL_WORLD2 = {   # 동유럽·중동·아프리카 퍼블릭 도메인 곡 오
                 "D#4:0.5 R R:0.5 C4:0.5 F4:0.5 F4:0.5 F4:0.5 F4:0.5 R:2 A#4 A#4:0.5 G#4 G4:0.5 F4 D#4 R R:2")),
 }
 MUSIC_PRESETS = dict(_mp[:_at] + list(ORGEL_SONGS.items()) + list(ORGEL_WORLD.items()) + list(ORGEL_WORLD2.items()) + _mp[_at:])
+MUSIC_GROUP_KO = {"오르골 민요 · 아리랑", "오르골 민요 · 도라지 타령", "오르골 동요 · 고향의 봄"}
+MUSIC_GROUPS = ["전체", "싱잉볼", "한국", "서양 자장가·동요", "서양 민요·클래식", "일본", "중국", "러시아", "동유럽", "중동", "아프리카"]
+
+
+def music_group(name):
+    """음악 종류 → 분류(나라·지역)"""
+    P = MUSIC_PRESETS.get(name, {})
+    if P.get("gen") == "bowls":
+        return "싱잉볼"
+    if name in MUSIC_GROUP_KO:
+        return "한국"
+    for g in ("일본", "중국", "러시아", "동유럽", "중동", "아프리카"):
+        if name.startswith(f"오르골 {g} ·"):
+            return g
+    return "서양 자장가·동요" if ("자장가" in name or "동요" in name) else "서양 민요·클래식"
+
+
 MUSIC_OVERLAYS = ["없음", "먼지 빛", "반딧불", "눈", "빗줄기", "호흡 가이드"]
 MUSIC_MOTIONS = ["천천히 줌(기본)", "천천히 줌인만", "숨쉬듯 확대·축소", "좌우로 천천히", "위아래로 천천히", "없음(정지)"]
 
@@ -5714,6 +5731,58 @@ def music_chunk(P, n, tail, rng, ci):
     return ev, bed
 
 
+def load_audio_file(path):
+    """MP3·WAV·M4A 등 음악 파일 → (n, 2) float32 (44.1kHz 스테레오, ffmpeg로 풀기)"""
+    p = subprocess.run([get_ffmpeg(), "-v", "error", "-i", path, "-f", "f32le", "-ac", "2", "-ar", str(SR), "-"],
+                       stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                       creationflags=(subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0))
+    if p.returncode != 0 or not p.stdout:
+        raise RuntimeError("음악 파일을 읽지 못했습니다: " + p.stderr.decode("utf-8", "replace")[-300:])
+    a = np.frombuffer(p.stdout, np.float32).reshape(-1, 2)
+    loud = np.where(np.abs(a).max(1) > 10 ** (-50 / 20))[0]     # 앞뒤 무음(-50dB 이하) 잘라내기
+    if len(loud) == 0:
+        raise RuntimeError("음악 파일에 소리가 없습니다.")
+    return a[loud[0]:loud[-1] + 1]
+
+
+def render_audio_loop(src, minutes, wav_path, xfade=3.0, start=0.0, progress=None, cancel=None, audio=None):
+    """음악 파일을 minutes 분 길이로 되풀이해 WAV로 저장. 이음매는 xfade 초 겹쳐 부드럽게. 반환: 길이(초)
+    start: 이 초부터 저장 (이음매 미리듣기용)"""
+    import wave
+    a = load_audio_file(src) if audio is None else audio
+    M = len(a)
+    X = int(min(xfade, M / SR / 4) * SR)
+    if X > 0:
+        w_ = np.sin(np.linspace(0, np.pi / 2, X, dtype=np.float32)) ** 2
+        joint = a[M - X:] * (1 - w_)[:, None] + a[:X] * w_[:, None]   # 끝과 처음을 겹친 이음매
+    total = int(max(0.1, float(minutes)) * 60 * SR)
+    skip = int(start * SR)
+    fade_in, fade_out = int(0.5 * SR), int(min(8, total / SR / 4) * SR)
+    os.makedirs(os.path.dirname(os.path.abspath(wav_path)), exist_ok=True)
+    pos, rep = 0, 0
+    est = max(1, int(np.ceil(total / max(1, M - X))))
+    with wave.open(wav_path, "wb") as w:
+        w.setnchannels(2)
+        w.setsampwidth(2)
+        w.setframerate(SR)
+        while pos < total:
+            if cancel is not None and cancel.is_set():
+                raise RuntimeError("취소됨")
+            seg = a[:M - X] if rep == 0 else np.concatenate([joint, a[X:M - X]]) if X else a
+            seg = seg[:total - pos]
+            idx = np.arange(pos, pos + len(seg))
+            env = np.minimum(1, idx / fade_in) * np.clip((total - idx) / fade_out, 0, 1)
+            out = seg * env[:, None]
+            if pos + len(seg) > skip:
+                k = max(0, skip - pos)
+                w.writeframes((np.clip(out[k:], -1, 1) * 32767).astype("<i2").tobytes())
+            pos += len(seg)
+            rep += 1
+            if progress:
+                progress(min(rep, est), est)
+    return (total - min(skip, total)) / SR
+
+
 def render_music_track(name, minutes, seed, wav_path, progress=None, cancel=None):
     """음악 트랙을 덩어리(약 90초)씩 만들어 이어 붙여 WAV로 저장 (긴 곡도 메모리 적게). 반환: 길이(초)"""
     import wave
@@ -6069,10 +6138,10 @@ def hms(sec):
     return f"{sec // 3600}:{sec % 3600 // 60:02d}:{sec % 60:02d}" if sec >= 3600 else f"{sec // 60:02d}:{sec % 60:02d}"
 
 
-def music_upload_text(title, preset_names, chapters=None, minutes=None):
-    """음악 영상 업로드 문구 (제목 후보·설명·해시태그·고정 댓글)"""
+def music_upload_text(title, preset_names, chapters=None, minutes=None, own_audio=None):
+    """음악 영상 업로드 문구 (제목 후보·설명·해시태그·고정 댓글). own_audio: 불러온 음악 파일 이름 (프로그램 작곡이 아님)"""
     P = [MUSIC_PRESETS[n] for n in preset_names if n in MUSIC_PRESETS]
-    tags = []
+    tags = [] if P else ["#힐링음악", "#수면음악", "#공부음악", "#플레이리스트", "#playlist", "#relaxingmusic"]
     for p in P:
         for tg in p["tags"].split():
             if tg not in tags:
@@ -6091,9 +6160,14 @@ def music_upload_text(title, preset_names, chapters=None, minutes=None):
         lines += ["🎧 바이노럴 비트는 헤드폰(이어폰)으로 들어야 왼쪽·오른쪽 소리 차이가 전달됩니다. 운전 중에는 듣지 마세요.", ""]
     if chapters:
         lines += ["⏱ 목차"] + [f"{hms(t)} {n}" for t, n in chapters] + [""]
-    lines += ["※ 이 영상의 음악은 프로그램으로 직접 만든 창작 음악입니다.", "※ 의학적 치료 효과를 보장하지 않습니다.", "", " ".join(tags[:12])]
-    return {"titles": titles, "description": "\n".join(lines), "hashtags": " ".join(tags[:12]),
-            "pinned_comment": "오늘 어떤 순간에 이 음악을 틀어 두셨나요? 🎧 (공부·일·잠들기 전·명상)"}
+    lines += ([] if own_audio else ["※ 이 영상의 음악은 프로그램으로 직접 만든 창작 음악입니다."]) + ["※ 의학적 치료 효과를 보장하지 않습니다.", "", " ".join(tags[:12])]
+    pkg = {"titles": titles, "description": "\n".join(lines), "hashtags": " ".join(tags[:12]),
+           "pinned_comment": "오늘 어떤 순간에 이 음악을 틀어 두셨나요? 🎧 (공부·일·잠들기 전·명상)"}
+    if own_audio:
+        pkg["notes"] = (f"불러온 음악 파일: {own_audio}\n"
+                        "업로드 전에 이 음악을 유튜브에 올려도 되는지(저작권·사용 허락) 꼭 확인하세요. "
+                        "직접 만든 곡이 아니면 설명란에 원작자·출처를 적는 것이 좋습니다.")
+    return pkg
 
 
 # ---------------- 화면(GUI) ----------------
@@ -9189,13 +9263,28 @@ class App(tk.Tk):
         left.pack(side="left", fill="both", expand=True)
         right = ttk.Frame(win, padding=10)
         right.pack(side="left", fill="y")
-        ttk.Label(left, text="① 음악 종류").pack(anchor="w")
+        hf = ttk.Frame(left)
+        hf.pack(fill="x")
+        ttk.Label(hf, text="① 음악 종류").pack(side="left")
+        ttk.Label(hf, text="   분류").pack(side="left")
+        grp_counts = {g: sum(1 for n in MUSIC_PRESETS if g == "전체" or music_group(n) == g) for g in MUSIC_GROUPS}
+        grp_v = tk.StringVar(value=f"전체 ({grp_counts['전체']})")
+        grp_cb = ttk.Combobox(hf, textvariable=grp_v, state="readonly", width=20,
+                              values=[f"{g} ({grp_counts[g]})" for g in MUSIC_GROUPS if grp_counts[g]])
+        grp_cb.pack(side="left", padx=4)
         lf = ttk.Frame(left)
         lf.pack(fill="x")
         lst = tk.Listbox(lf, height=17, font=("맑은 고딕", 10), exportselection=False)
-        for n in MUSIC_PRESETS:
-            lst.insert("end", n)
-        lst.selection_set(0)
+
+        def fill_list(*_):
+            g = grp_v.get().rsplit(" (", 1)[0]
+            lst.delete(0, "end")
+            for n in MUSIC_PRESETS:
+                if g == "전체" or music_group(n) == g:
+                    lst.insert("end", n)
+            lst.selection_set(0)
+            lst.see(0)
+        fill_list()
         lsb = ttk.Scrollbar(lf, orient="vertical", command=lst.yview)
         lst.config(yscrollcommand=lsb.set)
         lsb.pack(side="right", fill="y")
@@ -9219,6 +9308,35 @@ class App(tk.Tk):
         ttk.Combobox(f, textvariable=mo, values=MUSIC_MOTIONS, width=14, state="readonly").grid(row=1, column=3, columnspan=2, padx=4, sticky="w")
         show_text = tk.BooleanVar(value=True)
         ttk.Checkbutton(f, text="화면에 제목 표시", variable=show_text).grid(row=4, column=1, columnspan=2, sticky="w", padx=4)
+        srcf = ttk.LabelFrame(left, text="음원 ", padding=4)
+        srcf.pack(fill="x", pady=(4, 0))
+        src_mode = tk.StringVar(value="preset")
+        src_file = {"path": ""}
+        ttk.Radiobutton(srcf, text="프로그램이 연주 (위 목록)", variable=src_mode, value="preset").pack(side="left")
+        ttk.Radiobutton(srcf, text="내 음악 파일(MP3 등)을 길이만큼 반복", variable=src_mode, value="file").pack(side="left", padx=(10, 0))
+        src_lbl = ttk.Label(srcf, text="", foreground="#555")
+
+        def pick_audio():
+            p_ = filedialog.askopenfilename(parent=win, title="반복할 음악 파일",
+                                            filetypes=[("음악 파일", "*.mp3 *.wav *.m4a *.aac *.ogg *.flac"), ("모든 파일", "*.*")])
+            if not p_:
+                return
+            src_file["path"] = p_
+            src_mode.set("file")
+            src_lbl.config(text=os.path.basename(p_))
+            if not title_v.get().strip() or title_v.get() in [x["title"] for x in MUSIC_PRESETS.values()]:
+                title_v.set(os.path.splitext(os.path.basename(p_))[0])
+        ttk.Button(srcf, text="📂 파일 선택", command=pick_audio).pack(side="left", padx=6)
+        src_lbl.pack(side="left")
+
+        def use_file():
+            """음악 파일 모드면 파일 경로, 아니면 None (파일이 없으면 안내)"""
+            if src_mode.get() != "file":
+                return None
+            if not src_file["path"] or not os.path.exists(src_file["path"]):
+                messagebox.showinfo("음악 파일", "📂 파일 선택으로 반복할 음악 파일(MP3 등)을 먼저 고르세요.", parent=win)
+                return False
+            return src_file["path"]
         ttk.Label(f, text="영상 제목").grid(row=2, column=0, sticky="e")
         title_v = tk.StringVar()
         ttk.Entry(f, textvariable=title_v, width=46).grid(row=2, column=1, columnspan=4, sticky="w", padx=4)
@@ -9376,6 +9494,12 @@ class App(tk.Tk):
             preview()
         lst.bind("<<ListboxSelect>>", on_sel)
 
+        def on_group(*_):
+            fill_list()
+            src_mode.set("preset")
+            on_sel()
+        grp_cb.bind("<<ComboboxSelected>>", on_group)
+
         def loop_for():
             P = MUSIC_PRESETS[cur()]
             return MusicLoop(s, bg["im"], ov.get(), title_v.get(), sub_v.get(), P["colors"], show_text.get(), motion=mo.get())
@@ -9393,14 +9517,23 @@ class App(tk.Tk):
         def listen():
             name, sd = cur(), int(float(seed.get() or 1))
             p_ = os.path.join(tempfile.gettempdir(), "shorts_music_preview.wav")
+            fsrc = use_file()
+            if fsrc is False:
+                return
 
             def job():
-                render_music_track(name, 0.5, sd, p_)
+                if fsrc:   # 음악 파일: 끝→처음으로 넘어가는 이음매 앞뒤 30초
+                    a = load_audio_file(fsrc)
+                    seam = max(0.0, len(a) / SR - 3.0 - 15)
+                    render_audio_loop(fsrc, (seam + 30) / 60, p_, start=seam, audio=a)
+                else:
+                    render_music_track(name, 0.5, sd, p_)
                 return p_
 
             def done(p2):
                 play_wav(p2)
-                self.set_status(f"🎧 {name} 30초 미리듣기 (■ 소리 정지로 멈춤)")
+                self.set_status((f"🎧 이음매 미리듣기: 곡 끝 15초 → 다시 처음 15초" if fsrc else f"🎧 {name} 30초 미리듣기")
+                                + " (■ 소리 정지로 멈춤)")
             self.run_bg("미리듣기 음악 만드는 중...", job, done)
 
         def make():
@@ -9410,18 +9543,27 @@ class App(tk.Tk):
             except ValueError:
                 messagebox.showinfo("길이", "길이(분)를 숫자로 넣어 주세요.", parent=win)
                 return
-            title = title_v.get().strip() or MUSIC_PRESETS[name]["title"]
+            fsrc = use_file()
+            if fsrc is False:
+                return
+            title = title_v.get().strip() or (os.path.splitext(os.path.basename(fsrc))[0] if fsrc else MUSIC_PRESETS[name]["title"])
             loop = loop_for()
             base = os.path.join(out_dir, safe_name(title) + f"_{int(mn)}분")
             os.makedirs(out_dir, exist_ok=True)
             fps_now = s["fps"]
             loop.s = dict(s, fps=min(30, int(fps_now)))   # 음악 영상은 30fps면 충분
             use_video, text_layer = bg["video"], (loop.text_layer if show_text.get() else None)   # 스레드에서는 위젯을 읽지 않음
+            if fsrc:
+                name = ""
 
             def job():
                 wav = base + ".wav"
-                self.q.put(lambda: self.set_status("🎼 음악 만드는 중... (10분 = 약 2~4분 소요)"))
-                sec = render_music_track(name, mn, sd, wav, progress=self.progress_cb("음악 "), cancel=self.cancel)
+                if fsrc:
+                    self.q.put(lambda: self.set_status(f"🔁 음악 파일을 {int(mn)}분 길이로 반복하는 중..."))
+                    sec = render_audio_loop(fsrc, mn, wav, progress=self.progress_cb("음악 "), cancel=self.cancel)
+                else:
+                    self.q.put(lambda: self.set_status("🎼 음악 만드는 중... (10분 = 약 2~4분 소요)"))
+                    sec = render_music_track(name, mn, sd, wav, progress=self.progress_cb("음악 "), cancel=self.cancel)
                 self.q.put(lambda: self.set_status("🎬 화면 그리는 중 (32초 반복 조각)..."))
                 loop_mp4 = base + "_loop.mp4"
                 if use_video:
@@ -9436,8 +9578,8 @@ class App(tk.Tk):
                     pass
                 Image.fromarray(loop.frame(3.0)).save(base + "_썸네일.png")
                 with open(base + ".json", "w", encoding="utf-8") as jf:
-                    json.dump({"title": title, "sec": sec, "preset": name, "seed": sd}, jf, ensure_ascii=False)
-                pkg = music_upload_text(title, [name], minutes=mn)
+                    json.dump({"title": title, "sec": sec, "preset": name, "seed": sd, "audio_file": fsrc or ""}, jf, ensure_ascii=False)
+                pkg = music_upload_text(title, [name] if name else [], minutes=mn, own_audio=os.path.basename(fsrc) if fsrc else None)
                 write_package(base, title, "", pkg)
                 return base, sec
 
@@ -9465,7 +9607,9 @@ class App(tk.Tk):
                 for x in picks:
                     ch.append((t_, x[1]))
                     t_ += x[2]
-                pkg = music_upload_text(title, [x[3] for x in picks], chapters=ch, minutes=t_ / 60)
+                own = [x[1] for x in picks if not x[3]]   # 불러온 음악 파일로 만든 영상이 섞여 있으면
+                pkg = music_upload_text(title, [x[3] for x in picks], chapters=ch, minutes=t_ / 60,
+                                        own_audio=("불러온 음악 파일로 만든 영상: " + ", ".join(own)) if own else None)
                 write_package(base, title, "", pkg)
                 shutil.copy(picks[0][0][:-4] + "_썸네일.png", base + "_썸네일.png") if os.path.exists(picks[0][0][:-4] + "_썸네일.png") else None
                 return base, ch
