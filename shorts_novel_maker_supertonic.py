@@ -9419,7 +9419,7 @@ class App(tk.Tk):
             use_video, text_layer = bg["video"], (loop.text_layer if show_text.get() else None)   # 스레드에서는 위젯을 읽지 않음
 
             def job():
-                wav = base + ".wav"
+                wav = base + "_tmp.wav"   # 영상에 넣을 임시 음악 파일 (MP4 완성 후 지움)
                 self.q.put(lambda: self.set_status("🎼 음악 만드는 중... (10분 = 약 2~4분 소요)"))
                 sec = render_music_track(name, mn, sd, wav, progress=self.progress_cb("음악 "), cancel=self.cancel)
                 self.q.put(lambda: self.set_status("🎬 화면 그리는 중 (32초 반복 조각)..."))
@@ -9430,10 +9430,11 @@ class App(tk.Tk):
                     export_mp4(loop, loop_mp4, self.progress_cb("화면 "), self.cancel, None)
                 self.q.put(lambda: self.set_status("🎞 음악과 화면 합치는 중..."))
                 mux_music_video(loop_mp4, wav, base + ".mp4", sec)
-                try:
-                    os.remove(loop_mp4)
-                except OSError:
-                    pass
+                for tmp_ in (loop_mp4, wav):
+                    try:
+                        os.remove(tmp_)
+                    except OSError:
+                        pass
                 Image.fromarray(loop.frame(3.0)).save(base + "_썸네일.png")
                 with open(base + ".json", "w", encoding="utf-8") as jf:
                     json.dump({"title": title, "sec": sec, "preset": name, "seed": sd}, jf, ensure_ascii=False)
@@ -9443,7 +9444,7 @@ class App(tk.Tk):
 
             def done(res):
                 b_, sec = res
-                self.write_log(f"🎵 음악 영상 완성: {b_}.mp4 ({hms(sec)}) · 음악 파일 {b_}.wav · 썸네일 · 업로드문구")
+                self.write_log(f"🎵 음악 영상 완성: {b_}.mp4 ({hms(sec)}) · 썸네일 · 업로드문구")
                 self.set_status("🎵 음악 영상 완성 → 아래 목록에서 묶어 롱폼으로 만들 수 있어요")
                 refresh_made()
             self.run_bg("음악 영상 만드는 중...", job, done)
@@ -9477,7 +9478,7 @@ class App(tk.Tk):
             self.run_bg("묶는 중...", job, done)
         ttk.Button(bf, text="🎧 30초 미리듣기", command=listen).pack(side="left")
         ttk.Button(bf, text="■ 소리 정지", command=stop_wav).pack(side="left", padx=4)
-        ttk.Button(bf, text="🎬 음악 영상 만들기 (MP4 + WAV + 썸네일 + 업로드 문구)", command=make).pack(side="left", padx=10)
+        ttk.Button(bf, text="🎬 음악 영상 만들기 (MP4 + 썸네일 + 업로드 문구)", command=make).pack(side="left", padx=10)
 
         def music_pkg():
             name, title = cur(), title_v.get().strip() or MUSIC_PRESETS[cur()]["title"]
