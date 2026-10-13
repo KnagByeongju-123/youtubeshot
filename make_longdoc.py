@@ -68,22 +68,43 @@ def main():
 
     # 1) 대본 (조사·구성안·챕터마다 저장)
     script_json = os.path.join(work, "대본.json")
+    res = None
     if os.path.exists(script_json):
-        res = json.load(open(script_json, encoding="utf-8"))
-        log("대본: 이미 완성됨 → " + res["title"])
-    else:
+        try:
+            res = json.load(open(script_json, encoding="utf-8"))
+            log("대본: 이미 완성됨 → " + res["title"])
+        except Exception:
+            log("대본 파일이 깨져 있어 진행 기록에서 다시 합칩니다")
+    if res is None:
         res = app.generate_longdoc(model, c["주제"], c["소재"], c["길이_분"], log, research=c["웹조사"], autophoto=c["챕터별_사진"],
                                    reference="", media_dir=os.path.join(out_root, "media"),
                                    state_path=os.path.join(work, "대본_진행.json"), gate=gate)
-        json.dump(res, open(script_json, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+        m.atomic_write_text(script_json, json.dumps(res, ensure_ascii=False, indent=1))
         log(f"대본 완성: {res['title']} | {res['note']}")
     title, story = res["title"], res["story"]
+    # 전원이 꺼지며 깨진 사진이 있으면 그 사진 줄만 뺌
+    from PIL import Image
+    keep, dropped = [], 0
+    for line in story.split("\n"):
+        md = m.parse_media(line)
+        if md:
+            p_ = md[0] if os.path.isabs(md[0]) else os.path.join(m.BASE, md[0])
+            try:
+                with Image.open(p_) as im:
+                    im.load()
+            except Exception:
+                dropped += 1
+                continue
+        keep.append(line)
+    if dropped:
+        story = "\n".join(keep)
+        log(f"깨진 사진 {dropped}장을 빼고 진행합니다")
     base = os.path.join(out_root, m.safe_name(title))
     app.title_var.set(title)
     app.set_story(story)
     app.set_sources(res.get("sources"), res.get("notes"))
     app.vars["target_sec"].set("0")
-    json.dump(app.project_dict(), open(base + "_프로젝트.json", "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+    m.atomic_write_text(base + "_프로젝트.json", json.dumps(app.project_dict(), ensure_ascii=False, indent=1))
     s = app.get_settings()
 
     # 2) 나레이션 (문단마다 저장 → 이어서)

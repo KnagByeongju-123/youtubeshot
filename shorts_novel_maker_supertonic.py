@@ -4304,8 +4304,16 @@ def _tts_clip(text, voice_name, rate_pct, cache_dir, pitch_hz=0, emotion="차분
     os.makedirs(cache_dir, exist_ok=True)
     npy = os.path.join(cache_dir, key + ".npy")
     if os.path.exists(npy):
-        a = np.load(npy)
-        return a, len(a) / SR
+        try:
+            a = np.load(npy)
+            if a.ndim == 1 and len(a) > 0:
+                return a, len(a) / SR
+        except Exception:
+            pass
+        try:                    # 전원이 꺼지며 깨진 파일 → 지우고 다시 만듦
+            os.remove(npy)
+        except OSError:
+            pass
     src = os.path.join(cache_dir, key + (".wav" if is_st or voice == "sapi" or voice.startswith("gemini:") else ".mp3"))
     if is_st:
         tts_supertonic(text, voice, rate_pct, src, steps, emotion)
@@ -4354,7 +4362,7 @@ def _tts_clip(text, voice_name, rate_pct, cache_dir, pitch_hz=0, emotion="차분
     if peak > 0:
         a = a * (0.7 / peak)
     a = a.astype(np.float32)
-    np.save(npy, a)
+    atomic_np_save(npy, a)
     try:
         os.remove(src)
     except OSError:
@@ -4669,6 +4677,57 @@ def export_mp4(r, out, progress, cancel=None, audio=None, t_range=None):
     progress(n, n)
 
 
+def _fsync_replace(tmp, path):
+    """tmp 를 디스크에 확실히 기록한 뒤 path 로 바꿈 (전원이 갑자기 꺼져도 반쯤 쓴 파일이 남지 않게)"""
+    try:
+        fd = os.open(tmp, os.O_RDWR | getattr(os, "O_BINARY", 0))
+        try:
+            os.fsync(fd)
+        finally:
+            os.close(fd)
+    except OSError:
+        pass
+    os.replace(tmp, path)
+
+
+def atomic_np_save(path, a):
+    tmp = path + ".tmp.npy"
+    np.save(tmp, a)
+    _fsync_replace(tmp, path)
+
+
+def atomic_write_text(path, text):
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        f.write(text)
+        f.flush()
+        os.fsync(f.fileno())
+    os.replace(tmp, path)
+
+
+def mark_done(path):
+    """구간·소리 파일이 다 써졌다는 표시 (내용을 먼저 디스크에 기록)"""
+    try:
+        fd = os.open(path, os.O_RDWR | getattr(os, "O_BINARY", 0))
+        try:
+            os.fsync(fd)
+        finally:
+            os.close(fd)
+    except OSError:
+        pass
+    atomic_write_text(path + ".done", str(os.path.getsize(path)))
+
+
+def is_done(path):
+    """.done 표시가 있고, 표시할 때의 파일 크기와 지금 크기가 같으면 완성된 파일"""
+    try:
+        with open(path + ".done", encoding="utf-8") as f:
+            want = f.read().strip()
+        return os.path.exists(path) and want.isdigit() and int(want) == os.path.getsize(path) and int(want) > 0
+    except (OSError, ValueError):
+        return False
+
+
 class PauseGate:
     """cancel(threading.Event) 대신 넘기는 객체: 일시정지 파일이 있는 동안은 지워질 때까지 기다림(CPU 거의 안 씀).
     작업 함수들이 cancel.is_set() 을 수시로 부르므로, 거기서 멈췄다가 이어서 진행됨"""
@@ -4705,19 +4764,28 @@ def export_mp4_resumable(r, out, progress, cancel=None, audio=None, work_dir=Non
     n_all = int(round(r.duration * fps))
     step = int(seg_sec * fps)
     segs = [(i, min(n_all, i + step)) for i in range(0, n_all, step)]
+    def seg_ok(path, want_sec):
+        """끝난 구간이 실제로 읽히는지(전원이 꺼지며 깨지지 않았는지) 길이로 확인"""
+        if not is_done(path):
+            return False
+        p_ = subprocess.run([get_ffmpeg(), "-i", path], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, errors="replace",
+                            creationflags=(subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0))
+        m_ = re.search(r"Duration: (\d+):(\d+):([\d.]+)", p_.stderr or "")
+        return bool(m_) and abs(int(m_.group(1)) * 3600 + int(m_.group(2)) * 60 + float(m_.group(3)) - want_sec) < 1.0
+
     for k, (i0, i1) in enumerate(segs):
         seg = os.path.join(work_dir, f"seg_{k:03d}.mp4")
-        if os.path.exists(seg + ".done"):
+        if seg_ok(seg, (i1 - i0) / fps):
             continue
         if cancel is not None and cancel.is_set():
             raise RuntimeError("취소됨")
         log(f"  🎬 구간 {k + 1}/{len(segs)} ({hms(i0 / fps)}~{hms(i1 / fps)}) 그리는 중...")
         export_mp4(r, seg, lambda i, n, k=k, a=i0: progress(a + i, n_all), cancel, None, (i0 / fps, i1 / fps))
-        open(seg + ".done", "w").close()
+        mark_done(seg)
     wav = os.path.join(work_dir, "audio.wav")
-    if audio is not None and not os.path.exists(wav + ".done"):
+    if audio is not None and not is_done(wav):
         write_wav(wav, audio)
-        open(wav + ".done", "w").close()
+        mark_done(wav)
     lst = os.path.join(work_dir, "list.txt")
     with open(lst, "w", encoding="utf-8") as f:
         for k in range(len(segs)):
@@ -8212,9 +8280,7 @@ class App(tk.Tk):
         def save_state():
             if state_path:
                 os.makedirs(os.path.dirname(os.path.abspath(state_path)), exist_ok=True)
-                with open(state_path + ".tmp", "w", encoding="utf-8") as f_:
-                    json.dump(st8, f_, ensure_ascii=False)
-                os.replace(state_path + ".tmp", state_path)
+                atomic_write_text(state_path, json.dumps(st8, ensure_ascii=False))   # 전원이 꺼져도 반쯤 쓴 파일이 안 남게
         minutes = max(5.0, min(90.0, float(minutes)))
         total = int(minutes * DOC_CHARS_PER_MIN)
         open_c, close_c = max(350, int(total * 0.05)), max(300, int(total * 0.035))
