@@ -3086,7 +3086,17 @@ class SubtitleRenderer:
             self.head_box = (m, int(H * 0.04), W - m, int(H * 0.19))
             self.img_box = (int(W * 0.18), int(H * 0.21), int(W * 0.82), int(H * 0.80))
             self.sub_box = (m, int(H * 0.82), W - m, int(H * 0.97))
+        self.slide = str(s.get("img_fill", "")).startswith("슬라이드")
+        if self.slide:   # PPT 발표: 슬라이드 전체가 잘리지 않게 크게, 자막은 그 아래
+            hide = s.get("sub_hide") == "on"
+            sw = int(W * (0.94 if hide or self.port else 0.80))
+            x0 = (W - sw) // 2
+            y0 = (H - int(sw * 9 / 16)) // 2 if hide else (int(H * 0.02) if not self.port else int(H * 0.22))
+            self.img_box = (x0, y0, x0 + sw, y0 + int(sw * 9 / 16))
+            self.sub_box = (m, self.img_box[3] + int(H * 0.012), W - m, H - int(H * 0.012))
         self._apply_layout(s, m)
+        if self.slide:
+            self.sub_fit, self.sub_scale = True, (0.62 if not self.port else 0.9)
         self.bg = Background(s, self.duration)
         self.head_layer = self._make_head()
         self._sub_cache, self._img_cache = {}, {}
@@ -3228,6 +3238,9 @@ class SubtitleRenderer:
             return self._sub_cache[key]
         s = self.s
         layer = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+        if s.get("sub_hide") == "on":          # PPT 발표: 자막 없이 슬라이드만
+            self._sub_cache[key] = layer
+            return layer
         d = ImageDraw.Draw(layer)
         x0, y0, x1, y1 = self.sub_box
         size = int(s["sub_size"] * getattr(self, "sub_scale", 1.0))
@@ -3350,8 +3363,15 @@ class SubtitleRenderer:
             x0, y0, x1, y1 = self.img_box
             bw, bh = x1 - x0, y1 - y0
             im = self.images[idx][0].convert("RGB")
-            sc = max(bw / im.width, bh / im.height) * 1.32
-            big = im.resize((max(bw, int(im.width * sc) + 1), max(bh, int(im.height * sc) + 1)), Image.LANCZOS)
+            if getattr(self, "slide", False):     # 슬라이드: 잘리지 않게 상자 안에 통째로 (남는 곳은 가장자리 색)
+                cw_, ch_ = int(bw * 1.32), int(bh * 1.32)
+                sc = min(cw_ / im.width, ch_ / im.height)
+                fit = im.resize((max(1, int(im.width * sc)), max(1, int(im.height * sc))), Image.LANCZOS)
+                big = Image.new("RGB", (cw_, ch_), im.getpixel((0, 0)))
+                big.paste(fit, ((cw_ - fit.width) // 2, (ch_ - fit.height) // 2))
+            else:
+                sc = max(bw / im.width, bh / im.height) * 1.32
+                big = im.resize((max(bw, int(im.width * sc) + 1), max(bh, int(im.height * sc) + 1)), Image.LANCZOS)
             mask = None
             if not self.full:
                 mask = Image.new("L", (bw, bh), 0)
@@ -3378,7 +3398,9 @@ class SubtitleRenderer:
         p = min(1.0, max(0.0, (t - sh["t0"]) / max(0.1, sh["t1"] - sh["t0"])))
         p = 0.5 - 0.5 * np.cos(np.pi * p)             # 부드럽게 시작·끝
         z = z0 + (z1 - z0) * p
-        if self.s.get("punch_in", "on") == "on" and str(self.s.get("img_motion", "영상")).startswith("영상"):
+        if getattr(self, "slide", False):             # 슬라이드는 움직이지 않음 (글자가 잘리면 안 됨)
+            z, ax, bx, ay, by = 1.0, 0, 0, 0, 0
+        elif self.s.get("punch_in", "on") == "on" and str(self.s.get("img_motion", "영상")).startswith("영상"):
             z *= 1 + 0.05 * (1 - smoothstep((t - sh["t0"]) / 0.3))     # 장면 시작에 살짝 펀치 줌
         base = 1.32
         cw, ch = bw * base / z, bh * base / z         # big 안에서 잘라낼 크기
@@ -6825,6 +6847,117 @@ def render_audio_loop(src, minutes, wav_path, xfade=3.0, start=0.0, progress=Non
     return (total - min(skip, total)) / SR
 
 
+# ---------------- 📊 PPT 발표 영상 (슬라이드 → AI 나레이션 → 영상) ----------------
+PPT_EXPORT_PS1 = r'''param([string]$Src, [string]$Out)
+$ErrorActionPreference = "Stop"
+$pp = New-Object -ComObject PowerPoint.Application
+try {
+  $pres = $pp.Presentations.Open($Src, -1, 0, 0)
+  $w = 1920
+  $h = [int](1920 * $pres.PageSetup.SlideHeight / $pres.PageSetup.SlideWidth)
+  $list = @()
+  for ($i = 1; $i -le $pres.Slides.Count; $i++) {
+    $s = $pres.Slides.Item($i)
+    $img = Join-Path $Out ("slide_{0:D3}.png" -f $i)
+    $s.Export($img, "PNG", $w, $h)
+    $texts = @()
+    foreach ($sh in $s.Shapes) { try { if ($sh.HasTextFrame -and $sh.TextFrame.HasText) { $texts += $sh.TextFrame.TextRange.Text } } catch {} }
+    $notes = ""
+    try { foreach ($sh in $s.NotesPage.Shapes) { try { if ($sh.PlaceholderFormat.Type -eq 2 -and $sh.TextFrame.HasText) { $notes = $sh.TextFrame.TextRange.Text } } catch {} } } catch {}
+    $list += [pscustomobject]@{ n = $i; image = $img; text = ($texts -join "`n"); notes = $notes }
+  }
+  $pres.Close()
+  ConvertTo-Json -InputObject @($list) -Depth 3 | Out-File -Encoding utf8 (Join-Path $Out "slides.json")
+} finally { $pp.Quit() }
+'''
+
+
+def ppt_export(src, out_dir, log=None):
+    """PPT/PPTX → 슬라이드 그림(1920px PNG) + 슬라이드 글 + 발표자 메모. PowerPoint(설치되어 있어야 함)를 직접 조종.
+    반환: [{"n", "image", "text", "notes"}]"""
+    log = log or (lambda x: None)
+    os.makedirs(out_dir, exist_ok=True)
+    for f_ in os.listdir(out_dir):
+        if f_.startswith("slide_") or f_ == "slides.json":
+            os.remove(os.path.join(out_dir, f_))
+    ps1 = os.path.join(out_dir, "_export.ps1")
+    with open(ps1, "w", encoding="utf-8-sig") as f:       # BOM: 윈도우 PowerShell 이 한글 경로를 바르게 읽게
+        f.write(PPT_EXPORT_PS1)
+    log("📊 PowerPoint로 슬라이드를 그림으로 바꾸는 중...")
+    p = subprocess.run(["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", ps1, "-Src", os.path.abspath(src), "-Out", os.path.abspath(out_dir)],
+                       capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=900,
+                       creationflags=(subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0))
+    js = os.path.join(out_dir, "slides.json")
+    if p.returncode != 0 or not os.path.exists(js):
+        raise RuntimeError("슬라이드를 바꾸지 못했습니다. PowerPoint가 설치되어 있는지, 파일이 열려 있지 않은지 확인하세요.\n" + (p.stderr or p.stdout)[-400:])
+    data = json.load(open(js, encoding="utf-8-sig"))
+    data = data if isinstance(data, list) else [data]
+    clean = lambda t: re.sub(r"[ \t]+", " ", str(t or "").replace("\r", "\n").replace("\x0b", "\n")).strip()
+    return [{"n": int(d["n"]), "image": d["image"], "text": clean(d.get("text")), "notes": clean(d.get("notes"))} for d in data]
+
+
+PPT_LENGTHS = {"짧게(슬라이드당 15~25초)": (90, 150), "보통(슬라이드당 30~45초)": (180, 280), "자세히(슬라이드당 60초 이상)": (350, 500)}
+PPT_TONES = ["차분한 발표", "친근한 강의", "전문가 브리핑", "열정적인 피치(투자·영업)", "뉴스·보고서 낭독", "어린이 눈높이 설명"]
+
+PPT_SYSTEM = """너는 발표 코치이자 나레이션 작가다. 슬라이드 묶음을 보고, 발표자가 청중 앞에서 말하듯 슬라이드마다 나레이션 대본을 쓴다.
+- 슬라이드 그림 파일이 주어지면 Read 도구로 하나씩 실제로 열어 보고, 글뿐 아니라 도표·그래프·그림·배치까지 해석한다(그래프면 추세와 핵심 숫자, 도식이면 흐름).
+- 발표자 메모가 있으면 그 의도와 내용을 가장 우선한다. 슬라이드 글을 그대로 읽어 주지 말고, 말로 풀어 설명한다.
+- 분량: 슬라이드마다 공백 포함 {min_c}~{max_c}자(표지·간지 슬라이드는 짧게). 문장은 짧게, 한 문단 1~2문장, 문단 사이 빈 줄.
+- 첫 슬라이드는 짧은 인사와 발표 주제·목적, 마지막 슬라이드는 핵심 요약과 마무리 인사. 슬라이드 사이가 자연스럽게 이어지게('다음으로', '이 결과를 바탕으로').
+- 말투: {tone}. 청중: {audience}.
+- 목록·제목 기호(#, -, *)와 이모지 금지. 영어 약어는 그대로 써도 된다. 숫자는 아라비아 숫자 그대로(프로그램이 읽는 법을 바꿈).
+- 성우: 아래 [성우 목록]에서 발표 주제·청중·말투에 가장 어울리는 하나를 목록의 이름 그대로 고르고, 감정 톤도 고른다.
+반드시 JSON만 출력: {{"title": "발표 영상 제목(30자 이내)", "voice": "성우 목록의 이름 그대로", "voice_reason": "고른 이유 한 줄", "emotion": "차분|밝음·유머|슬픔·감동|놀람·반전|공포·긴장|분노·갈등 중 하나", "slides": [{{"n": 1, "narration": "나레이션"}}]}}"""
+
+
+def ppt_voice_catalog():
+    """AI에게 줄 성우 목록 (무료 로컬 성우 + 엣지 한국어 성우)"""
+    names = [v["name"] for v in SUPERTONIC_VOICES] + [k for k, c in TTS_VOICES.items() if str(c).startswith("ko-KR")]
+    return names
+
+
+def ppt_narrate(model, slides, tone, audience, length, log=None, cancel=None, use_images=True):
+    """슬라이드 → 슬라이드별 나레이션 + 성우 추천. 10장씩 나눠 씀(긴 발표도 시간 제한에 안 걸림)"""
+    log = log or (lambda x: None)
+    lo, hi = PPT_LENGTHS.get(length, (180, 280))
+    sys_ = PPT_SYSTEM.format(min_c=lo, max_c=hi, tone=tone or "차분한 발표", audience=audience or "일반 청중")
+    voices = ppt_voice_catalog()
+    eng = str((SCRIPT_ENGINE.get("s") or {}).get("script_engine", "Claude"))
+    see = use_images and (eng.startswith("Claude") or eng.startswith("자동"))
+    out, meta, prev = {}, {}, ""
+    for a in range(0, len(slides), 10):
+        if cancel is not None and cancel.is_set():
+            raise RuntimeError("취소됨")
+        part = slides[a:a + 10]
+        log(f"✍ 슬라이드 {part[0]['n']}~{part[-1]['n']} / {len(slides)} 나레이션 쓰는 중..." + (" (슬라이드 그림을 직접 보고)" if see else ""))
+        body = "\n\n".join(f"[슬라이드 {s['n']}]" + (f"\n그림 파일: {s['image']}" if see else "") + f"\n슬라이드 글: {s['text'] or '(글 없음)'}"
+                           + (f"\n발표자 메모: {s['notes']}" if s.get("notes") else "") for s in part)
+        user = (f"전체 슬라이드 수: {len(slides)}\n[성우 목록]\n" + "\n".join(voices)
+                + (f"\n\n[앞부분 요약 - 이어서 쓸 것, 성우는 이미 정함: {meta.get('voice')}]\n{prev}" if a else "") + "\n\n" + body)
+        d = ask_json(model, sys_, user, tools=["Read"]) if see else ask_script_json(model, sys_.replace("Read 도구로 하나씩 실제로 열어 보고, ", ""), user)
+        if not a:
+            meta = {k: d.get(k) for k in ("title", "voice", "voice_reason", "emotion")}
+        for s in d.get("slides") or []:
+            try:
+                out[int(s.get("n"))] = doc_clean(s.get("narration", ""))
+            except (TypeError, ValueError):
+                continue
+        prev = " / ".join(f"{n}: {out[n][:80]}" for n in sorted(out)[-3:])
+    if meta.get("voice") not in voices:
+        meta["voice"] = voices[0]
+    return out, meta
+
+
+def ppt_build_story(slides, narr):
+    """슬라이드 그림 줄 + 나레이션 문단 → 자막형 렌더러용 본문"""
+    parts = []
+    for s in slides:
+        parts.append(make_marker(s["image"], f"슬라이드 {s['n']}", "", ""))
+        t = (narr.get(s["n"]) or "").strip()
+        parts.append(t if t else (s.get("text") or "다음 슬라이드입니다.")[:120])
+    return "\n\n".join(parts)
+
+
 # ---------------- 자연의 소리 믹서 (여러 소리를 골라 세기·빈도·랜덤으로 섞기) ----------------
 def _nz(n, rng, power=1.0, lo=None, hi=None):
     """색깔 잡음 → 대역 거르기 → 크기 1로"""
@@ -8088,10 +8221,11 @@ class App(tk.Tk):
         # 큰 탭: 📖 이야기 영상 / 🎵 음악 영상 / 🌿 자연의 소리
         self.main_nb = ttk.Notebook(self)
         self.main_nb.pack(fill="both", expand=True, padx=4)
-        story_tab, music_tab, nature_tab = (ttk.Frame(self.main_nb) for _ in range(3))
+        story_tab, music_tab, nature_tab, ppt_tab = (ttk.Frame(self.main_nb) for _ in range(4))
         self.main_nb.add(story_tab, text="  📖 이야기 영상 (쇼츠·장문)  ")
         self.main_nb.add(music_tab, text="  🎵 음악 영상 (명상·오르골·싱잉볼)  ")
         self.main_nb.add(nature_tab, text="  🌿 자연의 소리  ")
+        self.main_nb.add(ppt_tab, text="  📊 PPT 발표  ")
         built = set()
 
         def on_main_tab(_e=None):          # 음악·자연 탭은 처음 열 때 만듦
@@ -8099,6 +8233,9 @@ class App(tk.Tk):
             if i in built or i == 0:
                 return
             built.add(i)
+            if i == 3:
+                self.ppt_tab(ppt_tab)
+                return
             self.music_dialog(nature=(i == 2), parent=(music_tab if i == 1 else nature_tab))
         self.main_nb.bind("<<NotebookTabChanged>>", on_main_tab)
         main = ttk.Frame(story_tab, padding=(8, 0))
@@ -11098,6 +11235,252 @@ class App(tk.Tk):
         self.vars["audio_out"].set(outm)
         self.vars["reveal_hit"].set(s["reveal_hit"])
         return s
+
+    # ---- 📊 PPT 발표 탭 ----
+    def ppt_tab(self, parent):
+        """PPT 불러오기 → AI가 슬라이드를 보고 나레이션·성우를 정함 → 슬라이드 + 나레이션 + 자막 발표 영상"""
+        st = self.ppt = {"slides": [], "dir": "", "meta": {}, "narr": {}}
+        main = ttk.Frame(parent, padding=8)
+        main.pack(fill="both", expand=True)
+        right = ttk.LabelFrame(main, text="슬라이드", padding=6)
+        right.pack(side="right", fill="y", padx=(8, 0))
+        left = ttk.Frame(main)
+        left.pack(side="left", fill="both", expand=True)
+
+        # ① 파일
+        f1 = ttk.LabelFrame(left, text="① PPT 파일 (PowerPoint가 설치되어 있어야 합니다 · .pptx / .ppt)", padding=6)
+        f1.pack(fill="x")
+        path_v = tk.StringVar()
+        ttk.Entry(f1, textvariable=path_v).pack(side="left", fill="x", expand=True)
+
+        def browse():
+            p = filedialog.askopenfilename(filetypes=[("PowerPoint", "*.pptx *.ppt *.pptm"), ("모든 파일", "*.*")])
+            if p:
+                path_v.set(p)
+        ttk.Button(f1, text="찾기", command=browse).pack(side="left", padx=4)
+        ttk.Button(f1, text="📥 슬라이드 불러오기", command=lambda: load()).pack(side="left")
+
+        # ② 옵션
+        f2 = ttk.LabelFrame(left, text="② 발표 방식", padding=6)
+        f2.pack(fill="x", pady=6)
+        aud_v, tone_v = tk.StringVar(value="일반 청중"), tk.StringVar(value=PPT_TONES[0])
+        len_v, voice_v = tk.StringVar(value=list(PPT_LENGTHS)[1]), tk.StringVar(value="🤖 AI가 추천")
+        sub_v, bgm_v = tk.StringVar(value="켜기"), tk.StringVar(value="잔잔하게(작게)")
+        fmt_v = tk.StringVar(value="가로 16:9 (유튜브·발표)")
+        see_v = tk.BooleanVar(value=True)
+        rows = [("청중", ttk.Entry(f2, textvariable=aud_v, width=26)),
+                ("말투", ttk.Combobox(f2, textvariable=tone_v, values=PPT_TONES, state="readonly", width=24)),
+                ("분량", ttk.Combobox(f2, textvariable=len_v, values=list(PPT_LENGTHS), state="readonly", width=24)),
+                ("성우", ttk.Combobox(f2, textvariable=voice_v, values=["🤖 AI가 추천"] + ppt_voice_catalog(), state="readonly", width=40)),
+                ("자막", ttk.Combobox(f2, textvariable=sub_v, values=["켜기", "끄기(슬라이드 크게)"], state="readonly", width=24)),
+                ("배경음", ttk.Combobox(f2, textvariable=bgm_v, values=["잔잔하게(작게)", "없음"], state="readonly", width=24)),
+                ("화면", ttk.Combobox(f2, textvariable=fmt_v, values=["가로 16:9 (유튜브·발표)", "세로 9:16 (쇼츠)"], state="readonly", width=24))]
+        for i, (lb, w_) in enumerate(rows):
+            r_, c_ = i % 4, (i // 4) * 2
+            ttk.Label(f2, text=lb).grid(row=r_, column=c_, sticky="e", padx=(8, 4), pady=2)
+            w_.grid(row=r_, column=c_ + 1, sticky="w", pady=2)
+        ttk.Checkbutton(f2, text="AI가 슬라이드 그림(도표·그래프)까지 직접 보고 해석 (Claude)",
+                        variable=see_v).grid(row=3, column=2, columnspan=2, sticky="w", padx=8)
+
+        # ③ 대본
+        f3 = ttk.LabelFrame(left, text="③ 나레이션 대본 (직접 고쳐도 됩니다 · '### 슬라이드 번호' 줄 아래가 그 슬라이드에서 읽을 말)", padding=6)
+        f3.pack(fill="both", expand=True)
+        b3 = ttk.Frame(f3)
+        b3.pack(fill="x")
+        ttk.Button(b3, text="✍ AI 나레이션 쓰기 + 성우 고르기", command=lambda: narrate()).pack(side="left")
+        info_v = tk.StringVar(value="PPT를 불러온 뒤 AI 나레이션을 쓰세요.")
+        ttk.Label(b3, textvariable=info_v, foreground="#1a5fb4", wraplength=620).pack(side="left", padx=8)
+        txt = tk.Text(f3, wrap="word", height=14, font=("맑은 고딕", 11), undo=True)
+        sb = ttk.Scrollbar(f3, command=txt.yview)
+        txt.config(yscrollcommand=sb.set)
+        sb.pack(side="right", fill="y")
+        txt.pack(fill="both", expand=True, pady=(6, 0))
+        f4 = ttk.Frame(left)
+        f4.pack(fill="x", pady=(6, 0))
+        title_v = tk.StringVar()
+        ttk.Label(f4, text="영상 제목").pack(side="left")
+        ttk.Entry(f4, textvariable=title_v, width=40).pack(side="left", padx=4)
+        ttk.Button(f4, text="🎬 발표 영상 만들기 (MP4)", command=lambda: make()).pack(side="left", padx=6)
+
+        def open_dir():
+            d = st["dir"] or self.ppt_out()
+            os.makedirs(d, exist_ok=True)
+            if os.name == "nt":
+                os.startfile(d)
+        ttk.Button(f4, text="📂 폴더", command=open_dir).pack(side="left")
+
+        # 오른쪽: 슬라이드 목록 + 미리보기
+        lst = tk.Listbox(right, width=34, height=14, exportselection=False)
+        lst.pack(fill="y", expand=True)
+        prev_l = ttk.Label(right)
+        prev_l.pack(pady=(6, 0))
+
+        def show(_e=None):
+            sel = lst.curselection()
+            if not sel or sel[0] >= len(st["slides"]):
+                return
+            sl = st["slides"][sel[0]]
+            try:
+                im = Image.open(sl["image"])
+                im.thumbnail((300, 300))
+                prev_l._img = ImageTk.PhotoImage(im)
+                prev_l.config(image=prev_l._img)
+            except Exception:
+                prev_l.config(image="")
+            idx = txt.search(f"### 슬라이드 {sl['n']}\n", "1.0", "end")   # 대본에서 그 슬라이드로
+            if idx:
+                txt.see(idx)
+        lst.bind("<<ListboxSelect>>", show)
+
+        def script_text():
+            return "\n".join(f"### 슬라이드 {sl['n']}\n" + (st["narr"].get(sl["n"]) or "") + "\n" for sl in st["slides"])
+
+        def parse_script():
+            narr = {}
+            for m_ in re.finditer(r"^### 슬라이드 (\d+)[^\n]*\n(.*?)(?=^### 슬라이드 \d+|\Z)", txt.get("1.0", "end"), re.S | re.M):
+                narr[int(m_.group(1))] = m_.group(2).strip()
+            return narr
+
+        def save_state():
+            if st["dir"]:
+                st["narr"] = parse_script()
+                os.makedirs(st["dir"], exist_ok=True)
+                atomic_write_text(os.path.join(st["dir"], "발표_대본.json"),
+                                  json.dumps({"src": path_v.get(), "title": title_v.get(), "meta": st["meta"],
+                                              "narr": {str(k): v for k, v in st["narr"].items()}}, ensure_ascii=False, indent=1))
+
+        def fill(slides):
+            st["slides"] = slides
+            lst.delete(0, "end")
+            for sl in slides:
+                first = sl["text"].split("\n")[0] if sl["text"] else "(글 없음)"
+                lst.insert("end", f"{sl['n']:>3}. {first[:28]}" + (" 📝" if sl["notes"] else ""))
+            js = os.path.join(st["dir"], "발표_대본.json")            # 전에 쓴 대본이 있으면 이어서
+            st["narr"], st["meta"] = {}, {}
+            if os.path.exists(js):
+                try:
+                    d = json.load(open(js, encoding="utf-8"))
+                    st["narr"] = {int(k): v for k, v in (d.get("narr") or {}).items()}
+                    st["meta"] = d.get("meta") or {}
+                    title_v.set(d.get("title") or title_v.get())
+                except Exception:
+                    pass
+            txt.delete("1.0", "end")
+            txt.insert("1.0", script_text())
+            if slides:
+                lst.selection_set(0)
+                show()
+            notes = sum(1 for x in slides if x["notes"])
+            info_v.set(f"슬라이드 {len(slides)}장 불러옴" + (f" · 발표자 메모 {notes}장 (AI가 우선 반영)" if notes else "")
+                       + (" · 전에 쓴 대본을 불러왔습니다" if any(st["narr"].values()) else " → ✍ AI 나레이션 쓰기"))
+            self.write_log(f"📊 슬라이드 {len(slides)}장 불러옴: {st['dir']}")
+
+        def load():
+            p = path_v.get().strip()
+            if not p or not os.path.exists(p):
+                messagebox.showinfo("PPT 발표", "PPT 파일을 먼저 고르세요.")
+                return
+            st["dir"] = os.path.join(self.ppt_out(), safe_name(os.path.splitext(os.path.basename(p))[0]))
+            if not title_v.get().strip():
+                title_v.set(os.path.splitext(os.path.basename(p))[0])
+            self.run_bg("📥 슬라이드 불러오는 중...", lambda: ppt_export(p, os.path.join(st["dir"], "slides"), self.log_bg), fill)
+
+        def narrate():
+            if not st["slides"]:
+                messagebox.showinfo("PPT 발표", "먼저 슬라이드를 불러오세요.")
+                return
+            if any(parse_script().values()) and not messagebox.askyesno("PPT 발표", "지금 대본을 지우고 AI가 새로 쓸까요?"):
+                return
+            model, slides = self.model_var.get().strip(), list(st["slides"])
+            tone, aud, ln, see = tone_v.get(), aud_v.get(), len_v.get(), see_v.get()
+
+            def job():
+                return ppt_narrate(model, slides, tone, aud, ln, self.log_bg, self.cancel, see)
+
+            def done(res):
+                narr, meta = res
+                st["narr"], st["meta"] = narr, meta
+                txt.delete("1.0", "end")
+                txt.insert("1.0", script_text())
+                if meta.get("title"):
+                    title_v.set(meta["title"])
+                if voice_v.get().startswith("🤖"):
+                    info_v.set(f"🎙 AI 추천 성우: {meta.get('voice')} · 감정: {meta.get('emotion') or '차분'} — {meta.get('voice_reason') or ''}")
+                else:
+                    info_v.set(f"🎙 성우: {voice_v.get()} (직접 고름) · AI 추천은 {meta.get('voice')} — {meta.get('voice_reason') or ''}")
+                save_state()
+                self.write_log(f"📊 발표 나레이션 완료: {len(narr)}/{len(slides)}장 · 성우 {meta.get('voice')} ({meta.get('voice_reason') or ''})")
+            self.run_bg("✍ 슬라이드를 보고 나레이션 쓰는 중...", job, done)
+
+        def make():
+            if not st["slides"]:
+                messagebox.showinfo("PPT 발표", "먼저 슬라이드를 불러오세요.")
+                return
+            narr = parse_script()
+            empty = [sl["n"] for sl in st["slides"] if not narr.get(sl["n"])]
+            if len(empty) == len(st["slides"]):
+                messagebox.showinfo("PPT 발표", "나레이션 대본이 비어 있습니다. ✍ AI 나레이션 쓰기를 먼저 누르세요.")
+                return
+            if empty and not messagebox.askyesno("PPT 발표", f"대본이 없는 슬라이드 {len(empty)}장은 슬라이드 글을 읽습니다. 계속할까요?"):
+                return
+            save_state()
+            title = title_v.get().strip() or "발표"
+            s = self.ppt_settings(voice_v.get(), st["meta"], sub_v.get().startswith("켜기"), bgm_v.get() != "없음")
+            voice = s["narr_voice"]
+            story = ppt_build_story(st["slides"], narr)
+            fmt_name = "롱폼 가로(1920×1080)" if fmt_v.get().startswith("가로") else "쇼츠 세로(1080×1920)"
+            old_fmt = self.vars["format"].get() if "format" in self.vars else None
+            if fmt_name != old_fmt:
+                set_format(fmt_name)        # 만드는 동안만 (끝나면 원래대로)
+            base = os.path.join(st["dir"], safe_name(title))
+            model, genre = self.model_var.get().strip(), tone_v.get()
+            log = self.log_bg
+            self.write_log(f"📊 발표 영상 시작: {len(st['slides'])}장 · 성우 {voice} · 감정 {s['st_emotion']} · {fmt_v.get()}")
+
+            def restore():
+                if old_fmt and fmt_name != old_fmt:
+                    self.apply_format(old_fmt)
+
+            def job():
+                try:
+                    set_tts_cfg(s)
+                    narr_a = self.narration_for(story, s, log, self.cancel)
+                    r = make_renderer(title, story, s, narr_a)
+                    audio = build_audio(r, s, resolve_style(s, "발표"))
+                    os.makedirs(st["dir"], exist_ok=True)
+                    export_mp4_resumable(r, base + ".mp4", self.progress_cb("📊 "), self.cancel, audio,
+                                         os.path.join(st["dir"], "_work"), log=log, key=f"{title}|{voice}|{len(story)}|{W}x{H}")
+                    save_auto_thumb(r, base)
+                    if not self.cancel.is_set():
+                        self.q.put(lambda: self.status.config(text="업로드 문구·썸네일 만드는 중... (AI 1~2분)"))
+                        publish_kit(model, base, title, story, "PPT 발표", genre, s, None, [], "", log)
+                    return base + ".mp4", r.duration
+                finally:
+                    self.q.put(restore)
+
+            def done(res):
+                p, dur = res
+                self.write_log(f"✅ 발표 영상 완료: {p}  ({int(dur // 60)}분 {int(dur % 60)}초 · 썸네일·업로드 문구 포함)")
+                info_v.set(f"✅ 완료: {os.path.basename(p)} ({int(dur // 60)}분 {int(dur % 60)}초)")
+            self.run_bg("🎬 발표 영상 만드는 중...", job, done)
+
+    def ppt_settings(self, voice_choice, meta, subs=True, bgm=True):
+        """발표 영상용 설정: 자막형 + 슬라이드 통째로 + 나레이션(AI가 고른 성우·감정), 효과는 끔"""
+        s = self.get_settings()
+        voice = voice_choice if not str(voice_choice).startswith("🤖") else (meta.get("voice") or ppt_voice_catalog()[0])
+        emo = meta.get("emotion") or "차분"
+        s.update(layout="자막형(큰 제목+사진+자막)", img_fill="슬라이드(잘림 없이)", head_pos="숨김", head_show="보임",
+                 narration="on", narr_file="", narr_voice=voice, intro_sec=0, outro_sec=0, outro_text="",
+                 reveal_fx="off", reveal_hit="off", sub_split="한 줄씩(문장·쉼표로 나눠 차례로)", sub_anim="페이드",
+                 img_motion="없음", punch_in="off", img_frame="없음", img_radius=6, img_bg="on", narr_photo_pause=0.8,
+                 st_emotion=emo if emo in ("차분", "공포·긴장", "슬픔·감동", "놀람·반전", "분노·갈등", "밝음·유머") else "차분",
+                 st_emotion_map="", sub_hide="off" if subs else "on", sub_layout=SUB_LAYOUTS[0],
+                 bgm_mode="자동생성" if bgm else "없음", bgm_style="자동(소재별)", bgm_seed=0, audio_out="MP4에 포함",
+                 bgm_volume=min(float(s.get("bgm_volume", 0.5) or 0.5), 0.3))
+        return s
+
+    def ppt_out(self):
+        return os.path.join(self.vars["out_dir"].get() or os.path.join(BASE, "output"), "발표")
 
     def make_mp4(self):
         self.playing = False
