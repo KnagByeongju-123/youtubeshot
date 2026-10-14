@@ -142,6 +142,33 @@ SOUND_BY_TOPIC = {
     "기상 현상": "비 오는 밤", "지질·화산·지진": "어두운 드론", "바다": "심해", "하늘·빛": "우주", "동식물의 기이한 행동": "밝은 오르골",
 }
 
+# 자막형 화면 배치 (사진이 전체 화면일 때)
+SUB_LAYOUTS = ["기본(위 제목·아래 자막)", "시네마(위아래 검은 띠)", "다큐(왼쪽 아래 자막 상자)", "뉴스(아래 띠+색 막대)",
+               "가운데 큰 자막", "미니멀(제목 없이 얇은 자막)"]
+# 색 조합: 고르면 글자색·제목색·강조색·자막 상자 색이 한 번에 바뀜
+COLOR_PRESETS = {
+    "다큐 화이트": dict(text_color="#FFFFFF", title_color="#FFFFFF", accent_color="#4FC3F7", sub_box_color="#000000"),
+    "골드 시네마": dict(text_color="#F5F0E6", title_color="#E8C46A", accent_color="#E8C46A", sub_box_color="#000000"),
+    "네온 블루": dict(text_color="#E0F7FF", title_color="#00E5FF", accent_color="#FF4FD8", sub_box_color="#0A0A2A"),
+    "레트로 노랑": dict(text_color="#FFE135", title_color="#FFFFFF", accent_color="#FF7043", sub_box_color="#1B1B1B"),
+    "파스텔 핑크": dict(text_color="#FFFFFF", title_color="#FFC1D9", accent_color="#B39DDB", sub_box_color="#3A2340"),
+    "뉴스 레드": dict(text_color="#FFFFFF", title_color="#FFFFFF", accent_color="#E53935", sub_box_color="#101820"),
+    "숲 그린": dict(text_color="#F1F8E9", title_color="#AED581", accent_color="#66BB6A", sub_box_color="#0F2414"),
+    "공포 블러드": dict(text_color="#EDE6E6", title_color="#FF5252", accent_color="#B71C1C", sub_box_color="#120000"),
+}
+# 설정 탭 묶음 (화면 형식·표현 방식에 따라 필요한 탭만 보임). mode: all / scroll / sub
+UI_TABS = [
+    ("🎬 화면 형식", "all", ["format", "layout", "fps", "quality", "audio_out", "out_dir", "intro_sec", "outro_sec", "outro_text",
+                          "progress_bar", "reveal_fx", "hold_start", "hold_end", "safe_guide"]),
+    ("🎨 글꼴·색", "all", ["font_path", "title_font_path", "text_color", "title_color", "accent_color", "quote_color", "shadow", "stroke_width"]),
+    ("🔤 자막 디자인", "sub", ["sub_layout", "head_pos", "color_preset", "sub_box_color", "sub_box_alpha", "head_style", "head_size",
+                            "head_show", "sub_size", "sub_font_path", "sub_style", "sub_split", "sub_anim", "sub_max_chars", "sec_per_char"]),
+    ("🖼 사진·장면", "sub", ["img_fill", "img_motion", "shot_sec", "punch_in", "img_frame", "img_bg", "photo_count", "img_radius"]),
+    ("📜 스크롤 글자", "scroll", ["font_size", "title_size", "line_gap", "para_gap", "margin_x", "margin_right", "align", "photo_h",
+                              "speed", "target_sec"]),
+    ("📜 스크롤 효과", "scroll", ["fade", "focus", "focus_dim", "focus_y", "ease"]),
+]
+
 # (탭, 키, 라벨, 타입, 기본값)
 FIELDS = [
     ("글자", "font_path", "본문 글꼴", "font", find_font()),
@@ -188,6 +215,11 @@ FIELDS = [
     ("자막형", "sub_size", "자막 크기", "int", 64),
     ("자막형", "sub_font_path", "자막 글꼴(비우면 제목 글꼴)", "font", ""),
     ("자막형", "sub_style", "자막 스타일", "choice:글자 탭 글자색+검은테두리,글자 탭 글자색+검은띠,말풍선(웹툰),흰글자+검은테두리,노란글자+검은테두리,검은띠 위 흰글자", "글자 탭 글자색+검은테두리"),
+    ("자막형", "sub_layout", "자막 배치(사진 전체 화면일 때)", "choice:" + ",".join(SUB_LAYOUTS), SUB_LAYOUTS[0]),
+    ("자막형", "head_pos", "제목 위치", "choice:위 가운데,왼쪽 위 작게,숨김", "위 가운데"),
+    ("자막형", "color_preset", "색 조합(고르면 글자·제목·강조·상자 색이 바뀜)", "choice:직접 설정," + ",".join(COLOR_PRESETS), "직접 설정"),
+    ("자막형", "sub_box_color", "자막 상자·띠 색", "color", "#000000"),
+    ("자막형", "sub_box_alpha", "자막 상자·띠 진하기(0~1)", "float", 0.6),
     ("자막형", "head_show", "위 큰 제목", "choice:보임,안 보임(제목 카드만)", "보임"),
     ("자막형", "sub_split", "자막 나누기", "choice:문단 통째로,한 줄씩(문장·쉼표로 나눠 차례로)", "문단 통째로"),
     ("자막형", "sub_anim", "자막 등장 효과", "choice:팝(튀어나옴),올라옴,페이드,없음", "팝(튀어나옴)"),
@@ -2950,6 +2982,7 @@ class SubtitleRenderer:
             self.head_box = (m, int(H * 0.04), W - m, int(H * 0.19))
             self.img_box = (int(W * 0.18), int(H * 0.21), int(W * 0.82), int(H * 0.80))
             self.sub_box = (m, int(H * 0.82), W - m, int(H * 0.97))
+        self._apply_layout(s, m)
         self.bg = Background(s, self.duration)
         self.head_layer = self._make_head()
         self._sub_cache, self._img_cache = {}, {}
@@ -2964,11 +2997,81 @@ class SubtitleRenderer:
         self.outro_layer = build_card([s["outro_text"].strip()], fo, s["accent_color"], s, H * 0.72) if self.outro > 0 else None
         self.reveal_t = self.find_reveal()
 
+    # --- 배치 (자막 배치·제목 위치) ---
+    def _apply_layout(self, s, m):
+        """'자막 배치'·'제목 위치' 설정 → 자막·제목 자리, 정렬, 크기, 고정 그림(띠·어둡게)"""
+        lay = str(s.get("sub_layout", SUB_LAYOUTS[0]))
+        hp = str(s.get("head_pos", "위 가운데"))
+        self.sub_align, self.sub_valign, self.sub_scale, self.sub_boxed, self.sub_thin = "center", "bottom", 1.0, False, False
+        self.sub_fit = not lay.startswith("기본") and self.full     # 정해진 자막 영역 안에 들어가게 글자 크기 자동 조절
+        self.head_mode = "hidden" if hp.startswith("숨김") else ("small" if hp.startswith("왼쪽") else "center")
+        self.overlay = None
+        if not self.full:            # 사진 상자 모드는 기본 배치 (제목 위치만 적용)
+            return
+        box_rgb = tuple(hex_rgb(s.get("sub_box_color", "#000000")))
+        alpha = int(255 * max(0.0, min(1.0, float(s.get("sub_box_alpha", 0.6) or 0))))
+        acc = tuple(hex_rgb(s.get("accent_color", "#FF6B6B")))
+        ov = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+        d = ImageDraw.Draw(ov)
+        if lay.startswith("시네마"):
+            bh = int(H * 0.14)
+            d.rectangle([0, 0, W, bh], fill=(0, 0, 0, 255))
+            d.rectangle([0, H - bh, W, H], fill=(0, 0, 0, 255))
+            self.sub_box = (m, H - bh + int(bh * 0.10), W - m, H - int(bh * 0.08))
+            self.sub_scale = 0.6 if not self.port else 0.72
+            if self.head_mode != "hidden":
+                self.head_mode, self.head_box = "bar", (m, int(bh * 0.18), W - m, bh - int(bh * 0.14))
+        elif lay.startswith("다큐"):
+            self.sub_box = (m + 24, int(H * 0.68), int(W * 0.64) if not self.port else W - m, int(H * 0.93))
+            self.sub_align, self.sub_boxed, self.sub_scale = "left", True, 0.8
+            if self.head_mode == "center":
+                self.head_mode = "small"
+        elif lay.startswith("뉴스"):
+            y0, y1 = int(H * 0.775), int(H * 0.96)
+            d.rectangle([0, y0, W, y1], fill=box_rgb + (alpha,))
+            d.rectangle([0, y0, max(8, int(W * 0.012)), y1], fill=acc + (255,))
+            self.sub_box = (int(m * 1.4), y0 + int((y1 - y0) * 0.10), W - m, y1 - int((y1 - y0) * 0.10))
+            self.sub_align, self.sub_scale = "left", 0.78
+            if self.head_mode != "hidden":
+                self.head_mode, self.head_box = "tag", (int(m * 1.4), y0 - int(H * 0.065), W - m, y0 - 10)
+        elif lay.startswith("가운데"):
+            d.rectangle([0, 0, W, H], fill=(0, 0, 0, int(alpha * 0.55)))
+            self.sub_box = (int(W * 0.08), int(H * 0.34), int(W * 0.92), int(H * 0.70))
+            self.sub_valign, self.sub_scale = "center", 1.2
+        elif lay.startswith("미니멀"):
+            self.head_mode = "hidden"
+            self.sub_box = (m, int(H * 0.84), W - m, int(H * 0.955))
+            self.sub_scale, self.sub_thin = 0.8, True
+        if ov.getbbox():
+            self.overlay = ov
+
     # --- 제목 ---
     def _make_head(self):
         s = self.s
         layer = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-        if not self.title.strip():
+        if not self.title.strip() or getattr(self, "head_mode", "center") == "hidden":
+            return layer
+        if self.head_mode in ("small", "bar", "tag"):   # 작은 제목: 왼쪽 위 / 시네마 위 띠 안 / 뉴스 띠 위 꼬리표
+            d = ImageDraw.Draw(layer)
+            m = int(W * 0.045)
+            x0, y0, x1, y1 = self.head_box if self.head_mode != "small" else (m, int(H * 0.04), int(W * 0.7), int(H * 0.12))
+            size = int(s["head_size"] * (0.42 if self.head_mode == "small" else 0.38 if self.head_mode == "bar" else 0.36))
+            size = max(20, min(size, int((y1 - y0) * 0.75)))
+            font = load_font(s["title_font_path"] or s["font_path"], size)
+            ln = (wrap(self.title.strip(), font, x1 - x0 - 40) or [""])[0]
+            acc = tuple(hex_rgb(s["accent_color"]))
+            ty = y0 + ((y1 - y0) - size) // 2
+            if self.head_mode == "tag":                      # 강조색 꼬리표 위에 흰 글자
+                tw = font.getlength(ln)
+                d.rounded_rectangle([x0 - 14, ty - 10, x0 + tw + 14, ty + size + 12], radius=10, fill=acc + (235,))
+                d.text((x0, ty), ln, font=font, fill="#FFFFFF")
+            else:
+                if self.head_mode == "small":                # 왼쪽 강조색 막대
+                    d.rectangle([x0, ty - 2, x0 + 8, ty + size + 6], fill=acc + (255,))
+                    x0 += 22
+                d.text((x0 + 2, ty + 3), ln, font=font, fill=(0, 0, 0, 150))
+                d.text((x0, ty), ln, font=font, fill=s["title_color"], stroke_width=0 if self.head_mode == "bar" else max(2, size // 16),
+                       stroke_fill="#000000")
             return layer
         d = ImageDraw.Draw(layer)
         x0, y0, x1, y1 = self.head_box
@@ -3023,15 +3126,24 @@ class SubtitleRenderer:
         layer = Image.new("RGBA", (W, H), (0, 0, 0, 0))
         d = ImageDraw.Draw(layer)
         x0, y0, x1, y1 = self.sub_box
-        size = int(s["sub_size"])
+        size = int(s["sub_size"] * getattr(self, "sub_scale", 1.0))
         font = load_font(s.get("sub_font_path") or s["title_font_path"] or s["font_path"], size)
         lines = wrap(text, font, x1 - x0)
-        while len(lines) > 3 and size > 34:
+        fit = getattr(self, "sub_fit", False)
+        while (int(size * 1.3) * len(lines) > (y1 - y0) + 6 if fit else len(lines) > 3) and size > 30:
             size -= 4
             font = load_font(s.get("sub_font_path") or s["title_font_path"] or s["font_path"], size)
             lines = wrap(text, font, x1 - x0)
         lh = int(size * 1.3)
-        y = y1 - lh * len(lines)
+        y = (y0 + ((y1 - y0) - lh * len(lines)) // 2) if getattr(self, "sub_valign", "bottom") == "center" else y1 - lh * len(lines)
+        left = getattr(self, "sub_align", "center") == "left"
+        if getattr(self, "sub_boxed", False):   # 다큐: 반투명 상자 + 왼쪽 강조색 막대
+            tw = max(font.getlength(ln) for ln in lines)
+            pad = int(size * 0.55)
+            a_ = int(255 * max(0.0, min(1.0, float(s.get("sub_box_alpha", 0.6) or 0))))
+            d.rounded_rectangle([x0 - pad, y - pad * 0.8, x0 + tw + pad, y + lh * len(lines) - lh * 0.15 + pad * 0.6], radius=int(size * 0.35),
+                                fill=tuple(hex_rgb(s.get("sub_box_color", "#000000"))) + (a_,))
+            d.rectangle([x0 - pad, y - pad * 0.8, x0 - pad + 9, y + lh * len(lines) - lh * 0.15 + pad * 0.6], fill=tuple(hex_rgb(s["accent_color"])) + (255,))
         st = s["sub_style"]
         band = "검은띠" in st
         bubble = st.startswith("말풍선")
@@ -3050,12 +3162,13 @@ class SubtitleRenderer:
                 col = s["accent_color"]     # 따옴표 대사는 강조색
         else:
             col = "#FFE135" if st.startswith("노란") else "#FFFFFF"
-        if band:
+        if band and not getattr(self, "sub_boxed", False):
             d.rounded_rectangle([x0 - 10, y - 14, x1 + 10, y1 + 6], radius=16, fill=(0, 0, 0, 185))
-        sw = 0 if (band or bubble) else self._stroke(size)
-        shadow = s.get("shadow", "on") == "on" and not (band or bubble)
+        thin = getattr(self, "sub_thin", False) or getattr(self, "sub_boxed", False)
+        sw = 0 if (band or bubble or thin) else self._stroke(size)
+        shadow = (s.get("shadow", "on") == "on" or thin) and not (band or bubble)
         for ln in lines:
-            x = x0 + ((x1 - x0) - font.getlength(ln)) / 2
+            x = x0 if left else x0 + ((x1 - x0) - font.getlength(ln)) / 2
             if shadow:
                 d.text((x + size // 18, y + size // 14), ln, font=font, fill=(0, 0, 0, 150), stroke_width=sw, stroke_fill=(0, 0, 0, 150))
             d.text((x, y), ln, font=font, fill=col, stroke_width=sw, stroke_fill="#000000")
@@ -3305,6 +3418,8 @@ class SubtitleRenderer:
         if sg is not None:
             if sg["img"] >= 0 and self.images:
                 canvas = self._paint_images(canvas, t)
+            if getattr(self, "overlay", None) is not None:      # 시네마 띠·뉴스 띠·가운데 자막용 어둡게
+                canvas.alpha_composite(self.overlay)
             if not str(self.s.get("head_show", "보임")).startswith("안"):
                 canvas.alpha_composite(self.head_layer)
             age = t - sg["t0"]
@@ -7260,15 +7375,41 @@ class App(tk.Tk):
         st_.configure("Tab.TLabel", background=TAB_BG)
         nb = ttk.Notebook(s2)
         nb.pack(fill="x", pady=(4, 0))
+        # 탭 묶음: 화면 형식·표현 방식(스크롤형/자막형)에 따라 필요한 탭만 보이게 (UI_TABS), 나머지는 원래 탭
+        tab_of, order, self.tab_mode = {}, [], {}
+        for name, mode, keys in UI_TABS:
+            order.append(name)
+            self.tab_mode[name] = mode
+            for k in keys:
+                tab_of[k] = name
+        for sec, k, *_ in FIELDS:
+            if k not in tab_of:
+                tab_of[k] = sec
+                if sec not in order:
+                    order.append(sec)
+                    self.tab_mode[sec] = "all"
         tabs = {}
+        for name in order:
+            tabs[name] = ttk.Frame(nb, padding=6, style="Tab.TFrame")
+            nb.add(tabs[name], text=name)
+            tabs[name].n = 0
+        by_key = {k: (lb, t) for _, k, lb, t, _ in FIELDS}
+        for name, _, keys in UI_TABS:          # 묶음 순서대로 칸 배치
+            for k in keys:
+                if k in by_key:
+                    fr = tabs[name]
+                    self.make_field(fr, k, by_key[k][0], by_key[k][1], fr.n // 3, fr.n % 3)
+                    fr.n += 1
         for sec, k, lb, t, _ in FIELDS:
-            if sec not in tabs:
-                tabs[sec] = ttk.Frame(nb, padding=6, style="Tab.TFrame")
-                nb.add(tabs[sec], text=sec)
-                tabs[sec].n = 0
-            fr = tabs[sec]
-            self.make_field(fr, k, lb, t, fr.n // 3, fr.n % 3)
-            fr.n += 1
+            if tab_of[k] == sec and k not in {kk for _, _, ks in UI_TABS for kk in ks}:
+                fr = tabs[sec]
+                self.make_field(fr, k, lb, t, fr.n // 3, fr.n % 3)
+                fr.n += 1
+        self.nb, self.nb_tabs, self.nb_order = nb, tabs, order
+        for k_ in ("format", "layout"):
+            self.vars[k_].trace_add("write", lambda *_: self.after_idle(self.update_tabs))
+        self.vars["color_preset"].trace_add("write", lambda *_: self.after_idle(self.apply_color_preset))
+        self.after_idle(self.update_tabs)
 
         # ④ 만들기
         s4 = ttk.LabelFrame(left, text="③ 만들기", padding=6)
@@ -8358,6 +8499,44 @@ class App(tk.Tk):
         self.genre_var.set(list(topics)[0])
         self.topic_box.config(values=[])
         self.on_genre()
+
+    def update_tabs(self):
+        """표현 방식(스크롤형/자막형)에 맞는 탭만 보이고, 탭 이름에 화면 형식(쇼츠/롱폼)을 붙임"""
+        if not hasattr(self, "nb"):
+            return
+        sub = str(self.vars["layout"].get()).startswith("자막형")
+        fmt = "롱폼" if str(self.vars["format"].get()).startswith("롱폼") else "쇼츠"
+        cur = self.nb.select()
+        for name in self.nb_order:
+            fr, mode = self.nb_tabs[name], self.tab_mode.get(name, "all")
+            show = mode == "all" or (mode == "sub") == sub
+            label = name + (f" ({fmt})" if mode != "all" or name.startswith("🎬") else "")
+            if show:
+                self.nb.add(fr)                 # 숨겼던 탭은 원래 자리로 돌아옴
+                self.nb.tab(fr, text=label)
+            else:
+                self.nb.hide(fr)
+        try:
+            if cur and str(self.nb.tab(cur, "state")) == "hidden":
+                self.nb.select(self.nb_tabs[self.nb_order[0]])
+        except tk.TclError:
+            pass
+
+    def apply_color_preset(self):
+        """'색 조합'을 고르면 글자색·제목색·강조색·자막 상자 색을 한 번에 바꿈 (제목·자막 스타일도 색이 반영되는 것으로)"""
+        name = self.vars["color_preset"].get()
+        p = COLOR_PRESETS.get(name)
+        if not p:
+            return
+        for k, v in p.items():
+            if k in self.vars:
+                self.vars[k].set(v)
+        if not str(self.vars["head_style"].get()).startswith(("글자 탭", "웹툰")):
+            self.vars["head_style"].set("글자 탭 제목색")
+        if not str(self.vars["sub_style"].get()).startswith(("글자 탭", "말풍선")):
+            self.vars["sub_style"].set("글자 탭 글자색+검은테두리")
+        self.write_log(f"🎨 색 조합 '{name}' 적용: 글자 {p['text_color']} · 제목 {p['title_color']} · 강조 {p['accent_color']}")
+        self.refresh_preview()
 
     def update_len_unit(self):
         """길이 칸 단위: 장문은 '분'(5~90), 나머지는 '초'(15~180)"""
