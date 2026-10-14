@@ -588,6 +588,8 @@ PHOTO_RULES = """[사진 규칙]
 - 명화 이야기면 그 그림 자체(Wikimedia Commons 의 PD-Art 파일, 화가 사후 70년 경과작만)를 첫 번째로, 그 다음 이야기에 나오는 부분의 확대 이미지나 화가 초상. 한국 그림은 국립중앙박물관·간송미술관 공개 이미지도 가능.
 - 노래 이야기면 그 곡의 옛 악보 표지(sheet music cover, 1929년 이전 출판물은 퍼블릭 도메인), 작곡가·가수의 옛 사진, 당시 공연장 사진을 고른다.
 - 그 사건·현상·장소를 실제로 보여주는 사진만 고른다. 비슷한 다른 사진 금지. 직접 열어서(WebFetch) 맞는지 확인한다
+- [글과 밀접하게] 사진마다 '붙일 문단'을 먼저 정하고, 그 문단에 이름이 나오는 구체적 대상(인물·장소·유물·생물·실험 장치·사건 현장·지도·도표)을 직접 보여주는 사진을 찾는다. 막연한 풍경·건물 외관·스톡 사진·주제와 비슷하기만 한 사진은 쓰지 않는다
+- caption 에는 그 문단의 핵심 대상 이름을 그대로 넣는다(예: '리벳 실험의 시계', '마리아나 해구 챌린저 해연 위치'). after 는 그 대상이 나오는 바로 그 문단의 앞부분
 - after: 그 사진이 보여주는 문단의 앞부분(원문 그대로 10~20자). 사진은 그 문단 **바로 앞 줄**에 들어간다(사진 → 글 순서). 본문이 아직 없으면 그 사진이 보여주는 사실의 핵심 단어
 - caption: 15자 이내 한국어 설명 / credit: "작가 또는 기관 / 라이선스" / page: 출처 페이지 URL"""
 
@@ -878,6 +880,77 @@ def doc_clean(text):
     return "\n\n".join(paras)
 
 
+PHOTO_CHECK_SYSTEM = """너는 유튜브 다큐 영상의 사진 편집자다. 사진이 바로 뒤에 나오는 글(나레이션 문단)과 밀접하게 맞는지 직접 보고 검사한다.
+Read 도구로 사진 파일을 하나씩 실제로 열어 본다(열지 않고 설명만 보고 판단하지 않는다).
+- score(0~10): 그 사진이 '붙은 문단'이 말하는 대상을 얼마나 직접 보여주는지. 문단에 나오는 바로 그 인물·장소·유물·생물·현상·장치를 보여주면 8~10, 같은 주제지만 문단 내용과 직접 관련은 약하면 4~6, 엉뚱하거나 글과 상관없으면 0~3.
+  분위기 사진(창작 이야기)이면 문단 장면의 장소·시간·분위기와 맞는지로 매긴다.
+- best: 이 사진이 가장 잘 맞는 문단 번호(지금 문단이 제일 맞으면 그 번호). 다른 문단이 훨씬 잘 맞으면 그 번호.
+- best_score(0~10): best 문단과 맞는 정도 (같은 사진이 이미 다른 자리에 쓰였으면 0)
+- what: 사진에 실제로 보이는 것 한 줄(검사 근거)
+반드시 JSON만 출력: {"photos": [{"k": 1, "score": 8, "best": 3, "best_score": 9, "what": "..."}]}"""
+
+
+def check_photo_fit(model, text, log=None, min_score=5, fiction=False):
+    """사진과 글이 밀접한지 Claude가 사진을 직접 열어 보고 검사 → 안 맞는 사진은 빼고, 더 맞는 문단이 있으면 옮김.
+    text: 사진 줄([사진: ...])이 섞인 본문. 반환: (고친 본문, 뺀 수, 옮긴 수). Claude가 아니거나 실패하면 그대로"""
+    log = log or (lambda x: None)
+    paras = split_paras(text)
+    items, ph = [], []          # items: 글 문단 (번호 매김) / ph: (사진 줄 인덱스, 경로, 설명, 붙은 글 문단 번호)
+    for i, p in enumerate(paras):
+        md = parse_media(p)
+        if md:
+            ph.append([i, md[0], md[1], None])
+        elif not p.startswith("## "):
+            items.append(i)
+            for x in ph:
+                if x[3] is None:
+                    x[3] = len(items)       # 사진 → 바로 뒤 글 문단에 붙음 (번호는 1부터)
+    ph = [x for x in ph if x[3] is not None]
+    if not ph or not items:
+        return text, 0, 0
+    eng = str((SCRIPT_ENGINE.get("s") or {}).get("script_engine", "Claude"))
+    if not (eng.startswith("Claude") or eng.startswith("자동")):
+        return text, 0, 0           # 사진을 직접 보는 건 Claude 만 가능
+    plist = "\n".join(f"사진{k + 1}: {x[1] if os.path.isabs(x[1]) else os.path.join(BASE, x[1])} | 설명: {x[2]} | 붙은 문단: {x[3]}"
+                      for k, x in enumerate(ph))
+    tlist = "\n".join(f"[{n + 1}] {story_text_only(paras[i])[:220]}" for n, i in enumerate(items))
+    try:
+        d = ask_json(model, PHOTO_CHECK_SYSTEM, ("[창작 이야기 - 분위기 사진]\n" if fiction else "") +
+                     f"[글 문단]\n{tlist}\n\n[사진 - Read 로 열어 볼 것]\n{plist}", tools=["Read"])
+    except Exception as e:
+        log("  사진 검사 건너뜀: " + str(e).splitlines()[0][:80])
+        return text, 0, 0
+    res = {int(r.get("k", 0)): r for r in (d.get("photos") or []) if isinstance(r, dict) and str(r.get("k", "")).isdigit()}
+    drop, moves = set(), {}
+    for k, x in enumerate(ph):
+        r = res.get(k + 1)
+        if not r:
+            continue
+        try:
+            sc, best = float(r.get("score", 10)), int(r.get("best", x[3]) or x[3])
+            bsc = float(r.get("best_score", sc if best == x[3] else 0))
+        except (TypeError, ValueError):
+            continue
+        if 1 <= best <= len(items) and best != x[3] and bsc >= max(7, sc + 2):   # 다른 문단에 훨씬 잘 맞으면 옮김
+            moves[x[0]] = items[best - 1]
+            log(f"  ↪ 사진을 더 맞는 문단으로 옮김 ({sc:.0f}→{bsc:.0f}점): {x[2]} → 문단 {best}")
+        elif sc < min_score:
+            drop.add(x[0])
+            log(f"  ✂ 글과 안 맞는 사진 뺌 ({sc:.0f}점): {x[2]} - {str(r.get('what', ''))[:40]}")
+    if not drop and not moves:
+        return text, 0, 0
+    out = []
+    moved_lines = {}
+    for src, dst in moves.items():
+        moved_lines.setdefault(dst, []).append(paras[src])
+    for i, p in enumerate(paras):
+        if i in drop or i in moves:
+            continue
+        out += moved_lines.get(i, [])   # 옮긴 사진은 그 문단 바로 앞
+        out.append(p)
+    return "\n\n".join(out), len(drop), len(moves)
+
+
 def doc_add_photos(model, title, story, media_dir, log, cancel=None, sec=None, fiction=False):
     """이미 만든 장문 대본에 사진을 더 넣음: 오프닝·챕터마다 (나레이션 sec 초에 한 장) 목표보다 모자란 만큼만,
     사진이 없는 긴 구간에 배치. 이미 쓴 사진(출처 페이지)은 다시 고르지 않음. 반환: (새 대본, 더한 사진 수)"""
@@ -924,7 +997,8 @@ def doc_add_photos(model, title, story, media_dir, log, cancel=None, sec=None, f
             if ph:
                 text = place_photos(text, ph)
                 used.update(x.get("page") for x in ph if x.get("page"))
-                added += len(ph)
+                text, n_drop, _ = check_photo_fit(model, text, log, fiction=fiction)
+                added += len(ph) - n_drop
         except Exception as e:
             log(f"  '{name}' 사진 찾기 실패(그대로 둠): " + str(e).splitlines()[0][:80])
         out_blocks.append(text)
@@ -8777,6 +8851,8 @@ class App(tk.Tk):
                     photos = photos[:1] + crop_details(photos[0]["path"], details, media_dir, log) + photos[1:]
                 if photos:
                     story = place_photos(story, photos)
+                    if category != ART_CATEGORY:   # 명화는 그림 자체라 검사 생략
+                        story = check_photo_fit(model, story, log, fiction=not factual)[0]
             except Exception as e:
                 log("  사진 찾기 실패: " + str(e)[:80])
             story = strip_placeholders(story)
@@ -8952,6 +9028,8 @@ class App(tk.Tk):
                     ph = fetch_photos(pd_.get("photos"), media_dir, log, limit=n_ph)
                     if ph:
                         st = place_photos(st, ph)
+                        log(f"  🔍 사진이 글과 맞는지 직접 보고 검사 중...")
+                        st, n_drop, n_move = check_photo_fit(model, st, log, fiction=fiction)
                 except Exception as e:
                     log("  사진 찾기 실패(글만 사용): " + str(e).splitlines()[0][:80])
             bodies.append((c["title"], st))
@@ -8969,6 +9047,7 @@ class App(tk.Tk):
                 ph = fetch_photos(pd_.get("photos"), media_dir, log, limit=n_ph)
                 if ph:
                     opening = place_photos(opening, ph)
+                    opening = check_photo_fit(model, opening, log, fiction=fiction)[0]
             except Exception as e:
                 log("  오프닝 사진 찾기 실패(글만 사용): " + str(e).splitlines()[0][:80])
             st8["opening_ph"] = opening
