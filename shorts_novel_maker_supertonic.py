@@ -156,12 +156,41 @@ COLOR_PRESETS = {
     "숲 그린": dict(text_color="#F1F8E9", title_color="#AED581", accent_color="#66BB6A", sub_box_color="#0F2414"),
     "공포 블러드": dict(text_color="#EDE6E6", title_color="#FF5252", accent_color="#B71C1C", sub_box_color="#120000"),
 }
+# 인기 롱폼 자막 스타일: 고르면 배치·색·자막 나누기·등장 효과·사진 움직임이 한 번에 (장르별로 흔히 쓰는 형식)
+_SPLIT_LINE, _SPLIT_PARA = "한 줄씩(문장·쉼표로 나눠 차례로)", "문단 통째로"
+LONG_STYLES = {
+    "지식 다큐(아래 흰 자막)": dict(sub_layout=SUB_LAYOUTS[0], head_pos="왼쪽 위 작게", color_preset="다큐 화이트", sub_style="글자 탭 글자색+검은테두리",
+                              sub_split=_SPLIT_LINE, sub_anim="페이드", sub_size=72, head_show="보임", img_motion="영상처럼(확대·이동·전환)",
+                              punch_in="off", shot_sec=6.0, sub_box_alpha=0.6),
+    "시네마 다큐(위아래 검은 띠)": dict(sub_layout=SUB_LAYOUTS[1], head_pos="위 가운데", color_preset="골드 시네마", sub_style="글자 탭 글자색+검은테두리",
+                                sub_split=_SPLIT_LINE, sub_anim="페이드", sub_size=84, head_show="보임", img_motion="천천히 확대만",
+                                punch_in="off", shot_sec=7.0, sub_box_alpha=1.0),
+    "오디오북·낭독(가운데 큰 자막)": dict(sub_layout=SUB_LAYOUTS[4], head_pos="숨김", color_preset="골드 시네마", sub_style="글자 탭 글자색+검은테두리",
+                                  sub_split=_SPLIT_PARA, sub_anim="페이드", sub_size=76, head_show="보임", img_motion="천천히 확대만",
+                                  punch_in="off", shot_sec=8.0, sub_box_alpha=0.65),
+    "썰·사연 낭독(노란 자막)": dict(sub_layout=SUB_LAYOUTS[0], head_pos="위 가운데", color_preset="레트로 노랑", sub_style="노란글자+검은테두리",
+                              sub_split=_SPLIT_LINE, sub_anim="팝(튀어나옴)", sub_size=84, head_show="보임", img_motion="영상처럼(확대·이동·전환)",
+                              punch_in="on", shot_sec=4.5, sub_box_alpha=0.6),
+    "뉴스·이슈 해설(하단 띠)": dict(sub_layout=SUB_LAYOUTS[3], head_pos="위 가운데", color_preset="뉴스 레드", sub_style="글자 탭 글자색+검은테두리",
+                              sub_split=_SPLIT_LINE, sub_anim="팝(튀어나옴)", sub_size=80, head_show="보임", img_motion="영상처럼(확대·이동·전환)",
+                              punch_in="on", shot_sec=5.0, sub_box_alpha=0.85),
+    "미스터리·공포(어두운 미니멀)": dict(sub_layout=SUB_LAYOUTS[5], head_pos="숨김", color_preset="공포 블러드", sub_style="글자 탭 글자색+검은테두리",
+                                 sub_split=_SPLIT_LINE, sub_anim="페이드", sub_size=76, head_show="보임", img_motion="천천히 확대만",
+                                 punch_in="off", shot_sec=7.0, sub_box_alpha=0.6),
+    "다큐 상자형(왼쪽 아래 상자)": dict(sub_layout=SUB_LAYOUTS[2], head_pos="왼쪽 위 작게", color_preset="숲 그린", sub_style="글자 탭 글자색+검은테두리",
+                                sub_split=_SPLIT_LINE, sub_anim="올라옴", sub_size=80, head_show="보임", img_motion="영상처럼(확대·이동·전환)",
+                                punch_in="off", shot_sec=6.0, sub_box_alpha=0.7),
+    "깔끔 미니멀(얇은 흰 자막)": dict(sub_layout=SUB_LAYOUTS[5], head_pos="숨김", color_preset="다큐 화이트", sub_style="글자 탭 글자색+검은테두리",
+                                sub_split=_SPLIT_LINE, sub_anim="페이드", sub_size=72, head_show="보임", img_motion="천천히 확대만",
+                                punch_in="off", shot_sec=7.0, sub_box_alpha=0.6),
+}
+
 # 설정 탭 묶음 (화면 형식·표현 방식에 따라 필요한 탭만 보임). mode: all / scroll / sub
 UI_TABS = [
     ("🎬 화면 형식", "all", ["format", "layout", "fps", "quality", "audio_out", "out_dir", "intro_sec", "outro_sec", "outro_text",
                           "progress_bar", "reveal_fx", "hold_start", "hold_end", "safe_guide"]),
     ("🎨 글꼴·색", "all", ["font_path", "title_font_path", "text_color", "title_color", "accent_color", "quote_color", "shadow", "stroke_width"]),
-    ("🔤 자막 디자인", "sub", ["sub_layout", "head_pos", "color_preset", "sub_box_color", "sub_box_alpha", "head_style", "head_size",
+    ("🔤 자막 디자인", "sub", ["style_preset", "sub_layout", "head_pos", "color_preset", "sub_box_color", "sub_box_alpha", "head_style", "head_size",
                             "head_show", "sub_size", "sub_font_path", "sub_style", "sub_split", "sub_anim", "sub_max_chars", "sec_per_char"]),
     ("🖼 사진·장면", "sub", ["img_fill", "img_motion", "shot_sec", "punch_in", "img_frame", "img_bg", "photo_count", "img_radius"]),
     ("📜 스크롤 글자", "scroll", ["font_size", "title_size", "line_gap", "para_gap", "margin_x", "margin_right", "align", "photo_h",
@@ -215,6 +244,7 @@ FIELDS = [
     ("자막형", "sub_size", "자막 크기", "int", 64),
     ("자막형", "sub_font_path", "자막 글꼴(비우면 제목 글꼴)", "font", ""),
     ("자막형", "sub_style", "자막 스타일", "choice:글자 탭 글자색+검은테두리,글자 탭 글자색+검은띠,말풍선(웹툰),흰글자+검은테두리,노란글자+검은테두리,검은띠 위 흰글자", "글자 탭 글자색+검은테두리"),
+    ("자막형", "style_preset", "⭐ 인기 롱폼 스타일(고르면 아래가 한 번에)", "choice:직접 설정," + ",".join(LONG_STYLES), "직접 설정"),
     ("자막형", "sub_layout", "자막 배치(사진 전체 화면일 때)", "choice:" + ",".join(SUB_LAYOUTS), SUB_LAYOUTS[0]),
     ("자막형", "head_pos", "제목 위치", "choice:위 가운데,왼쪽 위 작게,숨김", "위 가운데"),
     ("자막형", "color_preset", "색 조합(고르면 글자·제목·강조·상자 색이 바뀜)", "choice:직접 설정," + ",".join(COLOR_PRESETS), "직접 설정"),
@@ -7486,6 +7516,7 @@ class App(tk.Tk):
         for k_ in ("format", "layout"):
             self.vars[k_].trace_add("write", lambda *_: self.after_idle(self.update_tabs))
         self.vars["color_preset"].trace_add("write", lambda *_: self.after_idle(self.apply_color_preset))
+        self.vars["style_preset"].trace_add("write", lambda *_: self.after_idle(self.apply_style_preset))
         self.after_idle(self.update_tabs)
 
         # ④ 만들기
@@ -8599,6 +8630,29 @@ class App(tk.Tk):
         except tk.TclError:
             pass
 
+    def apply_style_preset(self):
+        """'인기 롱폼 스타일'을 고르면 배치·제목 위치·색 조합·자막 나누기·등장 효과·사진 움직임을 한 번에 맞춤"""
+        name = self.vars["style_preset"].get()
+        p = LONG_STYLES.get(name)
+        if not p or getattr(self, "_applying_style", False):
+            return
+        self._applying_style = True
+        try:
+            if not str(self.vars["layout"].get()).startswith("자막형"):
+                self.vars["layout"].set("자막형(큰 제목+사진+자막)")
+            self.vars["img_fill"].set("전체 화면(글자가 사진 위에)")   # 배치는 사진 전체 화면일 때 적용
+            for k, v in p.items():
+                if k in self.vars and k != "color_preset":
+                    self.vars[k].set(str(v))
+            self.vars["color_preset"].set(p["color_preset"])          # → apply_color_preset 이 색을 바꿈
+            self.apply_color_preset()
+            if p.get("sub_style") and not p["sub_style"].startswith("글자 탭"):
+                self.vars["sub_style"].set(p["sub_style"])            # 노란 자막처럼 정해진 색 스타일은 다시 맞춤
+        finally:
+            self._applying_style = False
+        self.write_log(f"⭐ 인기 롱폼 스타일 '{name}' 적용: {p['sub_layout']} · {p['color_preset']} · 자막 {p['sub_split'][:5]} · {p['sub_anim']}")
+        self.refresh_preview()
+
     def apply_color_preset(self):
         """'색 조합'을 고르면 글자색·제목색·강조색·자막 상자 색을 한 번에 바꿈 (제목·자막 스타일도 색이 반영되는 것으로)"""
         name = self.vars["color_preset"].get()
@@ -8610,7 +8664,9 @@ class App(tk.Tk):
                 self.vars[k].set(v)
         if not str(self.vars["head_style"].get()).startswith(("글자 탭", "웹툰")):
             self.vars["head_style"].set("글자 탭 제목색")
-        if not str(self.vars["sub_style"].get()).startswith(("글자 탭", "말풍선")):
+        keep = LONG_STYLES.get(self.vars["style_preset"].get(), {}).get("sub_style")   # 인기 스타일이 정한 자막 색은 유지
+        cur_sub = str(self.vars["sub_style"].get())
+        if not cur_sub.startswith(("글자 탭", "말풍선")) and cur_sub != keep:
             self.vars["sub_style"].set("글자 탭 글자색+검은테두리")
         self.write_log(f"🎨 색 조합 '{name}' 적용: 글자 {p['text_color']} · 제목 {p['title_color']} · 강조 {p['accent_color']}")
         self.refresh_preview()
