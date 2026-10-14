@@ -2361,7 +2361,7 @@ class Background:
         z = 1 + (self.zoom - 1) * smoothstep(t / max(0.1, self.duration))
         cw, ch = W * self.zoom / z, H * self.zoom / z
         l, tp = (self.big.width - cw) / 2, (self.big.height - ch) / 2
-        return self.big.transform((w, h), Image.EXTENT, (l, tp, l + cw, tp + ch), Image.BILINEAR)
+        return extent_resize(self.big, (w, h), (l, tp, l + cw, tp + ch))
 
     def frame_small(self, t, w, h):
         """미리보기용 작은 배경 (빠름)"""
@@ -3195,8 +3195,29 @@ def screen_title(title):
     return re.sub(r"[ \t]+", " ", t).strip()
 
 
+try:
+    import cv2 as _cv2   # 있으면 사진 확대·이동을 훨씬 빠르게 (pip install opencv-python-headless)
+except Exception:
+    _cv2 = None
+
+
 def extent_resize(img, size, box):
-    """img 의 box(소수점 좌표) 부분을 size 로 늘리거나 줄임. transform(EXTENT)과 같은 결과지만 1.5배쯤 빠르고 계단 현상이 적음"""
+    """img 의 box(소수점 좌표) 부분을 size 로 늘리거나 줄임. transform(EXTENT)과 같은 결과지만 빠름.
+    OpenCV가 있으면 그걸로(약 2배 더 빠름), 없으면 PIL resize(box)"""
+    if _cv2 is not None and img.mode in ("RGB", "RGBA", "L"):
+        try:
+            arr = getattr(img, "_np_cache", None)
+            if arr is None:                     # 같은 사진은 한 번만 배열로 바꿔 둠
+                arr = np.ascontiguousarray(np.asarray(img))
+                img._np_cache = arr
+            l, t, r_, b = box
+            sx, sy = (r_ - l) / size[0], (b - t) / size[1]
+            M = np.array([[sx, 0, l + 0.5 * sx - 0.5], [0, sy, t + 0.5 * sy - 0.5]], np.float32)
+            out = _cv2.warpAffine(arr, M, (int(size[0]), int(size[1])), flags=_cv2.INTER_LINEAR | _cv2.WARP_INVERSE_MAP,
+                                  borderMode=_cv2.BORDER_REPLICATE)
+            return Image.fromarray(out)
+        except Exception:
+            pass
     l, t, r_, b = box
     l, t = max(0.0, l), max(0.0, t)
     r_, b = min(float(img.width), r_), min(float(img.height), b)
@@ -6475,7 +6496,7 @@ class MusicLoop:
         cw, ch = W * 1.12 / z, H * 1.12 / z
         cx = self.big.width / 2 + dx * (self.big.width - cw) / 2
         cy = self.big.height / 2 + dy * (self.big.height - ch) / 2
-        bg = self.big.transform((W, H), Image.EXTENT, (cx - cw / 2, cy - ch / 2, cx + cw / 2, cy + ch / 2), Image.BILINEAR)
+        bg = extent_resize(self.big, (W, H), (cx - cw / 2, cy - ch / 2, cx + cw / 2, cy + ch / 2))
         arr = (np.asarray(bg).astype(np.float32) * self.vig * 0.92).astype(np.uint8)
         im = Image.fromarray(arr).convert("RGBA")
         ov = self.overlay
