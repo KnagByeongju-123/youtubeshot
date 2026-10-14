@@ -21,7 +21,11 @@ DEFAULT = {
     "배경음_크기": 0.2,
     "웹조사": True,
     "챕터별_사진": True,
+    "사진_간격_초": 30,
+    "영상_구간_분": 2,
 }
+MORE_PHOTOS = "--more-photos" in sys.argv
+SEG_SEC = 120
 
 T0 = time.time()
 LOG_FILE = os.path.join(HERE, "장문_진행기록.txt")
@@ -41,6 +45,9 @@ def main():
     spec = importlib.util.spec_from_file_location("snm", os.path.join(HERE, "shorts_novel_maker_supertonic.py"))
     m = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(m)
+    global SEG_SEC
+    m.DOC_PHOTO_SEC = max(10, float(c.get("사진_간격_초", 30)))
+    SEG_SEC = int(max(1, float(c.get("영상_구간_분", 2))) * 60)
 
     app = m.App()
     app.withdraw()
@@ -82,6 +89,22 @@ def main():
         m.atomic_write_text(script_json, json.dumps(res, ensure_ascii=False, indent=1))
         log(f"대본 완성: {res['title']} | {res['note']}")
     title, story = res["title"], res["story"]
+    # 사진 보강 (장문_사진보강.bat): 이미 만든 대본에 사진을 더 넣고 영상만 다시 만듦
+    done_flag = os.path.join(work, "사진보강_완료.txt")
+    req_flag = os.path.join(work, "사진보강_요청.txt")      # 보강 중에 꺼져도 장문_만들기.bat 으로 이어지게
+    if MORE_PHOTOS and not os.path.exists(done_flag):
+        m.atomic_write_text(req_flag, time.strftime("%Y-%m-%d %H:%M"))
+    if os.path.exists(req_flag) and not os.path.exists(done_flag):
+        bak = os.path.join(work, "대본_사진보강전.json")
+        if not os.path.exists(bak):
+            m.atomic_write_text(bak, json.dumps(res, ensure_ascii=False, indent=1))
+        before = len(m.photo_credits(story))
+        log(f"📷 사진 보강 시작: 지금 {before}장 → 나레이션 {m.DOC_PHOTO_SEC}초에 한 장 목표")
+        story, n_add = m.doc_add_photos(model, title, story, os.path.join(out_root, "media"), log, gate)
+        res["story"] = story
+        m.atomic_write_text(script_json, json.dumps(res, ensure_ascii=False, indent=1))
+        m.atomic_write_text(done_flag, f"{before} -> {before + n_add}")
+        log(f"📷 사진 보강 완료: {n_add}장 추가 (총 {len(m.photo_credits(story))}장)")
     # 전원이 꺼지며 깨진 사진이 있으면 그 사진 줄만 뺌
     from PIL import Image
     keep, dropped = [], 0
@@ -123,7 +146,11 @@ def main():
         if p >= last[0] + 5:
             last[0] = p
             log(f"  MP4 {p}%")
-    m.export_mp4_resumable(r, base + ".mp4", prog, gate, audio, work_dir=os.path.join(work, "영상구간"), seg_sec=300, log=log)
+    import hashlib
+    key = hashlib.md5((story + "|" + json.dumps({k: s.get(k) for k in ("fps", "format", "layout", "img_fill", "img_motion", "head_style", "sub_style",
+                                                                         "font_path", "title_font_path", "bgm_volume")}, ensure_ascii=False)
+                       + "|" + title).encode("utf-8")).hexdigest()
+    m.export_mp4_resumable(r, base + ".mp4", prog, gate, audio, work_dir=os.path.join(work, "영상구간"), seg_sec=SEG_SEC, log=log, key=key)
     del audio
     r.thumbnail().save(base + "_썸네일.png")
     ch = r.chapter_times()

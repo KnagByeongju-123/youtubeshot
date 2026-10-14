@@ -669,6 +669,16 @@ for _t, _snd in (("우주의 비밀", "우주"), ("양자물리·현실의 본�
                  ("색과 빛의 과학", "감성 오르골"), ("의학의 결정적 순간", "잔잔한 패드"), ("음식과 요리의 과학", "밝은 오르골")):
     SOUND_BY_TOPIC.setdefault(_t, _snd)
 
+DOC_PHOTO_SEC = 30   # 장문 사진 간격(초): 나레이션 이 정도마다 사진 한 장
+
+
+def doc_photo_target(text, sec=None):
+    """장문 한 덩어리(챕터·오프닝)에 넣을 사진 수: 나레이션 sec 초마다 한 장 (3~10장)"""
+    chars = len(story_text_only(text or ""))
+    per = DOC_CHARS_PER_MIN * (sec or DOC_PHOTO_SEC) / 60
+    return max(3, min(10, round(chars / max(1, per))))
+
+
 DOC_STYLE = """[장문 다큐 나레이션 문체 - 반드시 지킬 것]
 - 유튜브 지식 다큐 나레이터 말투: '~입니다', '~죠', '~일까요?'를 섞은 차분하고 또렷한 존댓말. 시청자에게 말을 거는 느낌('여러분', '상상해 보세요')을 가끔.
 - 귀로 듣는 글이다. 한 문단 = 1~3문장(약 60~160자). 문단 사이 빈 줄. 어려운 용어는 처음 나올 때 쉬운 말로 풀고, 숫자는 일상 비유로 바꾼다(예: '모래알 하나').
@@ -738,6 +748,58 @@ def doc_clean(text):
         out += [s, ""] if (s and per_line) else [s]
     paras = [" ".join(x.strip() for x in p.split("\n") if x.strip()) for p in re.split(r"\n\s*\n", "\n".join(out)) if p.strip()]
     return "\n\n".join(paras)
+
+
+def doc_add_photos(model, title, story, media_dir, log, cancel=None, sec=None):
+    """이미 만든 장문 대본에 사진을 더 넣음: 오프닝·챕터마다 (나레이션 sec 초에 한 장) 목표보다 모자란 만큼만,
+    사진이 없는 긴 구간에 배치. 이미 쓴 사진(출처 페이지)은 다시 고르지 않음. 반환: (새 대본, 더한 사진 수)"""
+    paras = split_paras(story)
+    blocks, cur = [], []
+    for p in paras:
+        if p.startswith("## ") and cur:
+            blocks.append(cur)
+            cur = []
+        cur.append(p)
+    if cur:
+        blocks.append(cur)
+    used = set()
+    for p in paras:
+        md = parse_media(p)
+        if md:
+            used.update(x for x in (md[0], md[3]) if x)
+    added = 0
+    out_blocks = []
+    for bi, blk in enumerate(blocks):
+        if cancel is not None and cancel.is_set():
+            raise RuntimeError("취소됨")
+        text = "\n\n".join(blk)
+        have = sum(1 for p in blk if parse_media(p))
+        need = doc_photo_target(text, sec) - have
+        name = blk[0][3:] if blk[0].startswith("## ") else "오프닝"
+        if need <= 0:
+            out_blocks.append(text)
+            continue
+        view = []   # AI가 볼 본문: 사진 자리는 '(이미 사진: 설명)'으로
+        for p in blk:
+            md = parse_media(p)
+            view.append(f"(이미 사진: {md[1] or '사진'})" if md else p)
+        log(f"  🔎 '{name}' 사진 {need}장 더 찾는 중... (지금 {have}장)")
+        try:
+            d = ask_json(model, PHOTO_SYSTEM,
+                         f"콘텐츠 종류: {DOC_CATEGORY}\n[제목] {title} - {name}\n\n[본문]\n" + "\n\n".join(view)
+                         + photo_note(need, DOC_CATEGORY)
+                         + f"\n\n[추가 사진 요청] 이미 사진이 있는 자리 근처는 피하고, '(이미 사진…)' 표시 사이가 가장 긴 구간의 문단에 after 를 맞춘다. "
+                           f"새 사진 {need}장. 아래 이미 쓴 사진·페이지는 다시 고르지 않는다.\n" + "\n".join(sorted(used))[:3000],
+                         tools=WEB_TOOLS)
+            ph = [x for x in fetch_photos(d.get("photos"), media_dir, log, limit=need) if x.get("page") not in used]
+            if ph:
+                text = place_photos(text, ph)
+                used.update(x.get("page") for x in ph if x.get("page"))
+                added += len(ph)
+        except Exception as e:
+            log(f"  '{name}' 사진 찾기 실패(그대로 둠): " + str(e).splitlines()[0][:80])
+        out_blocks.append(text)
+    return "\n\n".join(out_blocks), added
 
 
 def _artist_recent(artwork):
@@ -2923,7 +2985,7 @@ class SubtitleRenderer:
         cx = big.width / 2 + (ax + (bx - ax) * p) * sx
         cy = big.height / 2 + (ay + (by - ay) * p) * sy
         l, tp = cx - cw / 2, cy - ch / 2
-        crop = big.transform((bw, bh), Image.EXTENT, (l, tp, l + cw, tp + ch), Image.BILINEAR)
+        crop = extent_resize(big, (bw, bh), (l, tp, l + cw, tp + ch))
         return crop, mask
 
     def shot_at(self, t):
@@ -3131,6 +3193,17 @@ def screen_title(title):
     """화면·썸네일에 그릴 제목: 이모지는 화면 글꼴에 없어 □로 나오므로 뺌 (유튜브 제목에는 그대로 둠)"""
     t = re.sub(r"[\U0001F000-\U0001FFFF☀-➿️‍]", "", str(title or ""))
     return re.sub(r"[ \t]+", " ", t).strip()
+
+
+def extent_resize(img, size, box):
+    """img 의 box(소수점 좌표) 부분을 size 로 늘리거나 줄임. transform(EXTENT)과 같은 결과지만 1.5배쯤 빠르고 계단 현상이 적음"""
+    l, t, r_, b = box
+    l, t = max(0.0, l), max(0.0, t)
+    r_, b = min(float(img.width), r_), min(float(img.height), b)
+    try:
+        return img.resize(size, Image.BILINEAR, box=(l, t, r_, b), reducing_gap=2.0)
+    except (ValueError, TypeError):
+        return img.transform(size, Image.EXTENT, box, Image.BILINEAR)
 
 
 def make_renderer(title, story, s, narration=None):
@@ -4754,12 +4827,25 @@ class PauseGate:
             self.cancel.clear()
 
 
-def export_mp4_resumable(r, out, progress, cancel=None, audio=None, work_dir=None, seg_sec=300, log=None):
+def export_mp4_resumable(r, out, progress, cancel=None, audio=None, work_dir=None, seg_sec=300, log=None, key=""):
     """긴 영상: seg_sec 초 구간마다 따로 MP4로 만든 뒤 이어 붙이고 소리를 합침.
-    중간에 꺼져도 다시 부르면 끝난 구간은 건너뜀 (구간 파일 옆 .done 표시)"""
+    중간에 꺼져도 다시 부르면 끝난 구간은 건너뜀 (구간 파일 옆 .done 표시)
+    key: 대본·설정의 지문. 지난번과 다르면(사진을 더 넣었거나 글을 고침) 예전 구간을 버리고 새로 그림"""
     log = log or (lambda x: None)
     work_dir = work_dir or (os.path.splitext(out)[0] + "_구간")
     os.makedirs(work_dir, exist_ok=True)
+    kf = os.path.join(work_dir, "key.txt")
+    old_key = open(kf, encoding="utf-8").read().strip() if os.path.exists(kf) else ""
+    if key and old_key != key:
+        for f_ in os.listdir(work_dir):
+            if f_.startswith(("seg_", "audio.wav")):
+                try:
+                    os.remove(os.path.join(work_dir, f_))
+                except OSError:
+                    pass
+        if old_key:
+            log("  대본이나 설정이 바뀌어 영상 구간을 새로 그립니다")
+        atomic_write_text(kf, key)
     fps = max(1, r.s["fps"])
     n_all = int(round(r.duration * fps))
     step = int(seg_sec * fps)
@@ -8370,7 +8456,7 @@ class App(tk.Tk):
                 notes.append(f"{i + 1}장: {d['notes']}")
             if autophoto:   # 챕터마다 근거 사진 (1분에 한 장 정도)
                 stop()
-                n_ph = max(2, min(6, round(len(st) / DOC_CHARS_PER_MIN)))
+                n_ph = doc_photo_target(st)
                 log(f"  🔎 챕터 {i + 1} 사진 찾는 중... (목표 {n_ph}장)")
                 try:
                     pd_ = ask_json(model, PHOTO_SYSTEM, f"콘텐츠 종류: {DOC_CATEGORY}\n[제목] {title} - {c['title']}\n\n[본문]\n{st}"
@@ -8384,7 +8470,22 @@ class App(tk.Tk):
             st8.update(bodies=[list(b) for b in bodies], prev=prev, ch_sources=sources, ch_notes=notes)
             save_state()
             log(f"  챕터 {i + 1} 완성: {len(story_text_only(st)):,}자")
-        parts = [doc_clean(o.get("opening", ""))]
+        opening = st8.get("opening_ph") or doc_clean(o.get("opening", ""))
+        if autophoto and "opening_ph" not in st8:   # 오프닝에도 사진 (첫 화면이 중요)
+            stop()
+            n_ph = max(2, doc_photo_target(opening))
+            log(f"  🔎 오프닝 사진 찾는 중... (목표 {n_ph}장)")
+            try:
+                pd_ = ask_json(model, PHOTO_SYSTEM, f"콘텐츠 종류: {DOC_CATEGORY}\n[제목] {title} - 오프닝\n\n[본문]\n{opening}"
+                               + photo_note(n_ph, DOC_CATEGORY), tools=WEB_TOOLS)
+                ph = fetch_photos(pd_.get("photos"), media_dir, log, limit=n_ph)
+                if ph:
+                    opening = place_photos(opening, ph)
+            except Exception as e:
+                log("  오프닝 사진 찾기 실패(글만 사용): " + str(e).splitlines()[0][:80])
+            st8["opening_ph"] = opening
+            save_state()
+        parts = [opening]
         parts += [f"## {i + 1}. {t}\n\n{b}" for i, (t, b) in enumerate(bodies)]
         parts.append(doc_clean(o.get("closing", "")))
         story = strip_placeholders("\n\n".join(p for p in parts if p.strip()))
