@@ -170,6 +170,7 @@ def main():
     except Exception as e:
         log("업로드 문구 실패(나중에 프로그램에서 다시 만들 수 있어요): " + str(e)[:100])
         pkg = {"titles": [title], "description": "", "hashtags": "", "pinned_comment": ""}
+    m.doc_date_note(pkg, fic)
     pkg.update(sources=res.get("sources") or [], chapters=ch, notes=res.get("notes", ""))
     m.write_package(base, title, story, pkg)
     log("업로드 문구 저장: " + base + "_업로드문구.txt")
