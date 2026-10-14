@@ -6825,6 +6825,511 @@ def render_audio_loop(src, minutes, wav_path, xfade=3.0, start=0.0, progress=Non
     return (total - min(skip, total)) / SR
 
 
+# ---------------- 자연의 소리 믹서 (여러 소리를 골라 세기·빈도·랜덤으로 섞기) ----------------
+def _nz(n, rng, power=1.0, lo=None, hi=None):
+    """색깔 잡음 → 대역 거르기 → 크기 1로"""
+    return _norm(band(colored_noise(n, rng, power), lo=lo, hi=hi))
+
+
+def _st2(fn):
+    """채널마다 따로 만든 소리 (좌우가 조금씩 달라 공간감)"""
+    return np.stack([fn(c) for c in range(2)], 1).astype(np.float32)
+
+
+def _impulses(n, rng, per_sec, kern_fn, lo, hi):
+    """초당 per_sec 개의 짧은 소리(kern)를 무작위로 흩뿌림"""
+    out = np.zeros(n, np.float32)
+    k = int(n / SR * max(0.0, per_sec))
+    if k:
+        kern = kern_fn()
+        imp = np.zeros(n, np.float32)
+        imp[rng.integers(0, n, k)] = rng.uniform(0.15, 1, k) * rng.choice([-1, 1], k)
+        out = band(ola_conv(imp, kern), lo=lo, hi=hi)
+    return out
+
+
+def _rain_bed(n, rng, drops, hiss, rumble, dlo, dhi, hlo=500, hhi=9000):
+    kl = int(0.006 * SR)
+
+    def ch(c):
+        h = _nz(n, rng, 1.0, hlo, hhi) * (0.8 + 0.2 * smooth_lfo(n, 5, rng))
+        d = _impulses(n, rng, drops, lambda: (rng.standard_normal(kl) * np.exp(-np.arange(kl) / (0.0012 * SR))).astype(np.float32), dlo, dhi)
+        return h * hiss + _norm(d) * 0.4 + _nz(n, rng, 2.0, None, 160) * rumble
+    return _norm(_st2(ch))
+
+
+def _place_series(n, rng, per_sec, make, spread=(0.1, 0.9)):
+    """짧은 소리(make)를 초당 per_sec 개씩 겹치지 않게 흩어 놓은 스테레오 바탕"""
+    out = np.zeros((n, 2), np.float32)
+    t = rng.exponential(1 / max(0.01, per_sec))
+    while t < n / SR:
+        place(out, make() * rng.uniform(0.3, 1.0), t, rng.uniform(*spread))
+        t += rng.exponential(1 / max(0.01, per_sec))
+    return out
+
+
+def _tone(f0, f1, dur, harm=((1, 1.0),), decay=None, attack=0.01, vib=0.0, vib_hz=6.0):
+    """f0→f1 로 미끄러지는 음 (배음·감쇠·떨림)"""
+    t = np.arange(int(dur * SR)) / SR
+    f = f0 + (f1 - f0) * (t / dur) + (vib * f0 * np.sin(2 * np.pi * vib_hz * t) if vib else 0)
+    ph = 2 * np.pi * np.cumsum(f) / SR
+    s = sum(a * np.sin(h * ph) for h, a in harm)
+    env = np.minimum(1, t / max(0.001, attack)) * (np.exp(-t / decay) if decay else np.sin(np.pi * t / dur) ** 0.6)
+    return (s * env).astype(np.float32)
+
+
+def tin_drop(rng, f0=None, ring=None):
+    """양철지붕 빗방울: 금속성 '톡' + 철판이 살짝 울리는 '퉁'"""
+    f0 = f0 or rng.uniform(1700, 4200)
+    ring = ring or rng.uniform(0.04, 0.12)
+    t = np.arange(int((ring * 5 + 0.05) * SR)) / SR
+    s = sum(a * np.sin(2 * np.pi * f0 * r * t + rng.uniform(0, 6.3)) * np.exp(-t * r ** 0.5 / ring) for r, a in ((1, 1), (1.52, .55), (2.31, .3), (3.13, .15)))
+    s = s + 0.5 * np.sin(2 * np.pi * rng.uniform(250, 480) * t) * np.exp(-t / 0.05)
+    return (s * np.minimum(1, t / 0.0005) * 0.3).astype(np.float32)
+
+
+# --- 계속 나는 소리 (bed): fn(n, rng, dens) → (n, 2) ---
+def nb_light_rain(n, rng, d):
+    return _rain_bed(n, rng, 12 * d, 0.45, 0.08, 2500, 9000, 1500, 9000)
+
+
+def nb_rain(n, rng, d):
+    return _rain_bed(n, rng, 40 * d, 0.6, 0.25, 1500, 7000)
+
+
+def nb_heavy_rain(n, rng, d):
+    return _rain_bed(n, rng, 110 * d, 0.85, 0.5, 800, 6000, 300, 9000)
+
+
+def nb_rain_window(n, rng, d):
+    def ping():
+        t = np.arange(int(0.03 * SR)) / SR
+        return (np.sin(2 * np.pi * rng.uniform(3000, 6000) * t) * np.exp(-t / 0.003) + rng.standard_normal(len(t)) * np.exp(-t / 0.001) * 0.5).astype(np.float32)
+    drops = _place_series(n, rng, 9 * d, ping)
+    return _norm(drops * 0.8 + _st2(lambda c: _nz(n, rng, 1.0, 300, 2500)) * 0.3)
+
+
+def nb_rain_tent(n, rng, d):
+    def thud():
+        t = np.arange(int(0.08 * SR)) / SR
+        return (band((rng.standard_normal(len(t)) * np.exp(-t / 0.015)).astype(np.float32), lo=150, hi=900)).astype(np.float32)
+    return _norm(_place_series(n, rng, 16 * d, thud) * 1.6 + _st2(lambda c: _nz(n, rng, 1.0, 200, 2000)) * 0.25)
+
+
+def nb_tin_roof(n, rng, d):
+    bank = [tin_drop(rng) for _ in range(12)]
+    drops = _place_series(n, rng, 2.2 * d, lambda: bank[int(rng.integers(len(bank)))])
+    return _norm(reverb(drops, rng, 1.2, 0.25) + _st2(lambda c: _nz(n, rng, 1.0, 400, 6000)) * 0.06)
+
+
+def _bubbles(n, rng, per_sec):
+    def blip():
+        dur = rng.uniform(0.012, 0.04)
+        f = rng.uniform(600, 2400)
+        return _tone(f, f * rng.uniform(1.2, 1.8), dur, decay=dur / 3, attack=0.002)
+    return _place_series(n, rng, per_sec, blip)
+
+
+def nb_stream(n, rng, d):
+    base = _st2(lambda c: _nz(n, rng, 1.0, 300, 5000) * (0.6 + 0.4 * smooth_lfo(n, 0.08, rng)))
+    return _norm(base * 0.5 + _norm(_bubbles(n, rng, 28 * d)) * 0.5)
+
+
+def nb_creek(n, rng, d):
+    base = _st2(lambda c: _nz(n, rng, 1.0, 150, 7000) * (0.7 + 0.3 * smooth_lfo(n, 0.12, rng)) + _nz(n, rng, 2.0, 40, 300) * 0.3)
+    return _norm(base * 0.7 + _norm(_bubbles(n, rng, 55 * d)) * 0.4)
+
+
+def nb_waterfall(n, rng, d):
+    return _norm(_st2(lambda c: (_nz(n, rng, 1.0, 60, 9000) * 0.7 + _nz(n, rng, 2.0, 30, 600) * 0.6) * (0.9 + 0.1 * smooth_lfo(n, 1.5, rng))))
+
+
+def nb_waves_calm(n, rng, d):
+    w = gen_waves(n, rng)
+    return _norm(np.stack([band(w[:, c], hi=3500) for c in range(2)], 1))
+
+
+def nb_waves_rough(n, rng, d):
+    return _norm(gen_waves(n, rng) + _st2(lambda c: _nz(n, rng, 0.5, 2000, 10000)) * 0.15 * d)
+
+
+def nb_underwater(n, rng, d):
+    return gen_sea(n, rng)
+
+
+def nb_breeze(n, rng, d):
+    gust = 0.4 + 0.6 * smooth_lfo(n, 5, rng) ** 2
+    return _norm(_st2(lambda c: _nz(n, rng, 1.0, 100, 900) * gust * 0.7 + _nz(n, rng, 2.0, None, 150) * 0.2))
+
+
+def nb_strong_wind(n, rng, d):
+    gust = 0.3 + 0.7 * smooth_lfo(n, 3, rng) ** 2
+    whistle = _st2(lambda c: _nz(n, rng, 0.0, 700, 1100)) * (gust ** 2)[:, None] * 0.35 * d
+    return _norm(gen_wind(n, rng) + whistle)
+
+
+def nb_blizzard(n, rng, d):
+    gust = 0.4 + 0.6 * smooth_lfo(n, 2.5, rng)
+    return _norm(gen_wind(n, rng) * 0.8 + _st2(lambda c: _nz(n, rng, 0.0, 3000, 10000) * gust) * 0.35 * d)
+
+
+def nb_leaves(n, rng, d):
+    gust = 0.3 + 0.7 * smooth_lfo(n, 3, rng) ** 2
+
+    def ch(c):
+        cr = _impulses(n, rng, 120 * d, lambda: (rng.standard_normal(int(0.004 * SR)) * np.exp(-np.arange(int(0.004 * SR)) / (0.0008 * SR))).astype(np.float32), 2500, 9000)
+        return (_nz(n, rng, 0.5, 2000, 9000) * 0.5 + _norm(cr) * 0.6) * gust
+    return _norm(_st2(ch))
+
+
+def nb_bamboo(n, rng, d):
+    def tok():
+        f = rng.uniform(350, 750)
+        return _tone(f, f * 0.97, 0.12, harm=((1, 1), (2.7, 0.4)), decay=0.03, attack=0.001)
+    knocks = _place_series(n, rng, 0.5 * d, lambda: np.concatenate([tok() * rng.uniform(0.5, 1) for _ in range(int(rng.integers(2, 5)))]))
+    return _norm(nb_breeze(n, rng, 1) * 0.6 + reverb(knocks, rng, 1.5, 0.3) * 0.8)
+
+
+def nb_night_air(n, rng, d):
+    return _norm(_st2(lambda c: _nz(n, rng, 1.0, 150, 1500) * (0.85 + 0.15 * smooth_lfo(n, 6, rng)) + _nz(n, rng, 2.0, None, 200) * 0.4))
+
+
+def _fire(n, rng, d, roar=0.6, crack=1.0):
+    bed = _st2(lambda c: _nz(n, rng, 2.0, None, 300) * (0.7 + 0.3 * smooth_lfo(n, 1.5, rng)) * roar + _nz(n, rng, 1.0, 900, 4000) * 0.08)
+    kl = int(0.012 * SR)
+    kern = lambda: (rng.standard_normal(kl) * np.exp(-np.arange(kl) / (0.002 * SR))).astype(np.float32)
+    cr = _st2(lambda c: _impulses(n, rng, 4.0 * d * crack, kern, 1200, 7000))
+    return _norm(bed + _norm(cr) * 0.6)
+
+
+def nb_campfire(n, rng, d):
+    return _fire(n, rng, d, 0.6, 1.0)
+
+
+def nb_fireplace(n, rng, d):
+    return _fire(n, rng, d, 0.85, 0.55)
+
+
+def nb_crickets(n, rng, d):
+    out = np.zeros((n, 2), np.float32)
+    for _ in range(max(1, int(round(4 * d)))):
+        f, pan, per = rng.uniform(4200, 5400), rng.uniform(0.1, 0.9), rng.uniform(0.45, 1.0)
+        pulse = _tone(f, f, 0.014, decay=None, attack=0.002)
+        chirp = np.concatenate([np.concatenate([pulse, np.zeros(int(0.014 * SR), np.float32)]) for _ in range(int(rng.integers(3, 6)))])
+        t = rng.uniform(0, per)
+        vol = rng.uniform(0.3, 1.0)
+        while t < n / SR:
+            place(out, chirp * vol * rng.uniform(0.7, 1.0), t, pan)
+            t += per * rng.uniform(0.9, 1.1)
+    return _norm(out)
+
+
+def nb_cicadas(n, rng, d):
+    t = np.arange(n) / SR
+
+    def ch(c):
+        swell = np.clip(smooth_lfo(n, 6, rng) * 1.4 - 0.2, 0.05, 1)
+        am = (0.5 + 0.5 * np.sin(2 * np.pi * rng.uniform(110, 160) * t)) ** 2
+        return _nz(n, rng, 0.0, 4000, 7500) * am * swell
+    return _norm(_st2(ch))
+
+
+def nb_frogs(n, rng, d):
+    out = np.zeros((n, 2), np.float32)
+    for _ in range(max(1, int(round(5 * d)))):
+        f, pan = rng.uniform(220, 450), rng.uniform(0.1, 0.9)
+        pulse = _tone(f, f * 0.95, 0.03, harm=((1, 1), (2, .6), (3, .3)), decay=0.012, attack=0.002)
+        gap = np.zeros(int(rng.uniform(0.012, 0.03) * SR), np.float32)
+        croak = np.concatenate([np.concatenate([pulse, gap]) for _ in range(int(rng.integers(6, 14)))])
+        t = rng.uniform(0, 3)
+        while t < n / SR:
+            place(out, croak * rng.uniform(0.3, 1.0), t, pan)
+            t += rng.uniform(1.0, 4.0)
+    return _norm(reverb(out, rng, 1.0, 0.2))
+
+
+def nb_cat_purr(n, rng, d):
+    t = np.arange(n) / SR
+    breath = np.where((t % 3.0) < 1.6, 1.0, 0.75)
+    am = (0.5 + 0.5 * np.sin(2 * np.pi * rng.uniform(24, 28) * t)) ** 2
+    m = _nz(n, rng, 1.0, 40, 300) * am * breath
+    return _norm(np.stack([m, m * 0.95], 1))
+
+
+def nb_white(n, rng, d):
+    return _st2(lambda c: _nz(n, rng, 0.0, 30, 12000))
+
+
+def nb_pink(n, rng, d):
+    return _st2(lambda c: _nz(n, rng, 1.0, 30, 12000))
+
+
+def nb_brown(n, rng, d):
+    return _st2(lambda c: _nz(n, rng, 2.0, None, 600))
+
+
+# --- 가끔 나는 소리 (event): fn(rng) → 짧은 소리 (모노, 12초 이하) ---
+def ne_thunder_far(rng):
+    d = rng.uniform(6, 10)
+    t = np.arange(int(d * SR)) / SR
+    env = np.minimum(1, t / 0.8) * np.exp(-t / (d / 3)) * (0.7 + 0.3 * np.sin(2 * np.pi * rng.uniform(0.3, 0.8) * t) ** 2)
+    return _norm(band(colored_noise(len(t), rng, 2.0), hi=180) * env) * 0.8
+
+
+def ne_thunder_near(rng):
+    d = rng.uniform(7, 10)
+    t = np.arange(int(d * SR)) / SR
+    crack = band(rng.standard_normal(len(t)).astype(np.float32), lo=400, hi=6000) * np.exp(-t / 0.12)
+    roll = band(colored_noise(len(t), rng, 2.0), hi=320) * np.minimum(1, t / 0.15) * np.exp(-t / (d / 3.5)) * (0.6 + 0.4 * smooth_lfo(len(t), 0.7, rng))
+    return _norm(_norm(crack) * 0.7 + _norm(roll))
+
+
+def ne_eave_drip(rng):
+    return _tone(rng.uniform(1100, 1500), rng.uniform(1500, 2000), 0.12, decay=0.03, attack=0.001)
+
+
+def ne_cave_drip(rng):
+    f = rng.uniform(700, 1300)
+    return _tone(f, f * rng.uniform(1.6, 2.2), 0.25, decay=0.07, attack=0.001)
+
+
+def ne_lake_lap(rng):
+    t = np.arange(int(0.5 * SR)) / SR
+    return (band(rng.standard_normal(len(t)).astype(np.float32), lo=200, hi=1500) * np.minimum(1, t / 0.02) * np.exp(-t / 0.15)).astype(np.float32)
+
+
+def ne_birds(rng):
+    c = bird_call(rng)
+    return band(c, hi=3500) if rng.random() < 0.4 else c
+
+
+def ne_cuckoo(rng):
+    f1 = rng.uniform(640, 720)
+    note = lambda f: _tone(f, f * 0.98, 0.32, harm=((1, 1), (2, .15)), attack=0.03)
+    gap = np.zeros(int(0.12 * SR), np.float32)
+    one = np.concatenate([note(f1), gap, note(f1 * 0.8), np.zeros(int(0.6 * SR), np.float32)])
+    return np.concatenate([one] * int(rng.integers(2, 5))) * 0.6
+
+
+def ne_owl(rng):
+    f = rng.uniform(320, 390)
+    hoot = lambda: _tone(f, f * 0.9, rng.uniform(0.35, 0.5), harm=((1, 1), (2, .1)), attack=0.06)
+    parts = []
+    for _ in range(int(rng.integers(2, 5))):
+        parts += [hoot(), np.zeros(int(rng.uniform(0.3, 0.6) * SR), np.float32)]
+    return np.concatenate(parts) * 0.7
+
+
+def ne_seagull(rng):
+    parts = []
+    for _ in range(int(rng.integers(2, 5))):
+        f = rng.uniform(1300, 1700)
+        parts += [_tone(f, f * 0.6, rng.uniform(0.25, 0.4), harm=tuple((h, 1 / h) for h in range(1, 7)), attack=0.01, vib=0.03, vib_hz=18),
+                  np.zeros(int(rng.uniform(0.08, 0.25) * SR), np.float32)]
+    return band(np.concatenate(parts), hi=6000) * 0.35
+
+
+def ne_woodpecker(rng):
+    k = int(rng.integers(12, 22))
+    f = rng.uniform(700, 1100)
+    tok = _tone(f, f, 0.05, harm=((1, 1), (2.4, .5)), decay=0.008, attack=0.0005)
+    step = np.zeros(int(SR / rng.uniform(14, 20)) - len(tok), np.float32)
+    return np.concatenate([np.concatenate([tok * (1 - 0.3 * i / k), step]) for i in range(k)])
+
+
+def ne_whale(rng):
+    d = rng.uniform(2.5, 4.5)
+    tt = np.arange(int(d * SR)) / SR
+    f = rng.uniform(140, 260) * (1 + 0.6 * np.sin(np.pi * tt / d)) * (1 + 0.01 * np.sin(2 * np.pi * 5 * tt))
+    ph = 2 * np.pi * np.cumsum(f) / SR
+    return ((np.sin(ph) + 0.3 * np.sin(2 * ph)) * np.sin(np.pi * tt / d) ** 2 * 0.5).astype(np.float32)
+
+
+def ne_wind_chime(rng):
+    notes = [midi_hz(m) for m in (81, 83, 86, 88, 91, 93, 95)]
+    out = np.zeros(int(4.5 * SR), np.float32)
+    t = 0.0
+    for _ in range(int(rng.integers(3, 8))):
+        b = bell(rng.choice(notes), 2.5) * rng.uniform(0.3, 0.8)
+        i = int(t * SR)
+        out[i:i + len(b)] += b[:len(out) - i]
+        t += rng.uniform(0.05, 0.35)
+    return out * 0.4
+
+
+# 이름: (분류, 종류, 함수, 기본 크기, 기본 빈도(가끔: 분당 횟수 / 계속: 밀도), 울림(초, 섞기))
+NATURE_SOUNDS = {
+    "가랑비": ("비", "bed", nb_light_rain, 0.8, 1.0, None),
+    "빗소리": ("비", "bed", nb_rain, 0.9, 1.0, None),
+    "폭우": ("비", "bed", nb_heavy_rain, 0.9, 1.0, None),
+    "창문에 부딪히는 비": ("비", "bed", nb_rain_window, 0.7, 1.0, (0.8, 0.2)),
+    "텐트 위 빗소리": ("비", "bed", nb_rain_tent, 0.8, 1.0, None),
+    "양철지붕 빗방울": ("비", "bed", nb_tin_roof, 0.7, 1.0, None),
+    "처마 낙숫물": ("비", "ev", ne_eave_drip, 0.35, 40.0, (1.0, 0.25)),
+    "먼 천둥": ("비", "ev", ne_thunder_far, 0.8, 0.6, None),
+    "가까운 천둥": ("비", "ev", ne_thunder_near, 0.9, 0.3, (2.5, 0.3)),
+    "시냇물": ("물", "bed", nb_stream, 0.7, 1.0, None),
+    "계곡물": ("물", "bed", nb_creek, 0.8, 1.0, None),
+    "폭포": ("물", "bed", nb_waterfall, 0.8, 1.0, None),
+    "잔잔한 파도": ("물", "bed", nb_waves_calm, 0.8, 1.0, None),
+    "거친 파도": ("물", "bed", nb_waves_rough, 0.9, 1.0, None),
+    "호숫가 물결": ("물", "ev", ne_lake_lap, 0.5, 40.0, (0.8, 0.2)),
+    "동굴 물방울": ("물", "ev", ne_cave_drip, 0.5, 15.0, (3.5, 0.55)),
+    "물속·심해": ("물", "bed", nb_underwater, 0.7, 1.0, None),
+    "산들바람": ("바람·공기", "bed", nb_breeze, 0.6, 1.0, None),
+    "강풍": ("바람·공기", "bed", nb_strong_wind, 0.8, 1.0, None),
+    "눈보라": ("바람·공기", "bed", nb_blizzard, 0.8, 1.0, None),
+    "나뭇잎 바스락": ("바람·공기", "bed", nb_leaves, 0.5, 1.0, None),
+    "대나무 숲": ("바람·공기", "bed", nb_bamboo, 0.6, 1.0, None),
+    "밤 공기": ("바람·공기", "bed", nb_night_air, 0.4, 1.0, None),
+    "모닥불": ("불", "bed", nb_campfire, 0.8, 1.0, None),
+    "벽난로": ("불", "bed", nb_fireplace, 0.8, 1.0, None),
+    "아침 새소리": ("새·동물", "ev", ne_birds, 0.5, 18.0, (1.8, 0.3)),
+    "뻐꾸기": ("새·동물", "ev", ne_cuckoo, 0.45, 1.5, (2.0, 0.35)),
+    "부엉이": ("새·동물", "ev", ne_owl, 0.5, 1.0, (2.5, 0.4)),
+    "갈매기": ("새·동물", "ev", ne_seagull, 0.4, 2.0, (1.5, 0.3)),
+    "딱따구리": ("새·동물", "ev", ne_woodpecker, 0.4, 1.0, (1.5, 0.3)),
+    "고래 노래": ("새·동물", "ev", ne_whale, 0.5, 2.0, (5.0, 0.7)),
+    "고양이 그르릉": ("새·동물", "bed", nb_cat_purr, 0.7, 1.0, None),
+    "귀뚜라미": ("곤충·개구리", "bed", nb_crickets, 0.35, 1.0, None),
+    "매미": ("곤충·개구리", "bed", nb_cicadas, 0.35, 1.0, None),
+    "개구리": ("곤충·개구리", "bed", nb_frogs, 0.45, 1.0, None),
+    "백색 소음": ("노이즈", "bed", nb_white, 0.4, 1.0, None),
+    "핑크 노이즈": ("노이즈", "bed", nb_pink, 0.5, 1.0, None),
+    "브라운 노이즈": ("노이즈", "bed", nb_brown, 0.7, 1.0, None),
+    "풍경(윈드차임)": ("기타", "ev", ne_wind_chime, 0.35, 2.0, (2.0, 0.3)),
+}
+NATURE_GROUPS = ["비", "물", "바람·공기", "불", "새·동물", "곤충·개구리", "노이즈", "기타"]
+# 추천 조합: 이름 → {소리: (세기, 빈도)}
+NATURE_PRESETS = {
+    "비 오는 숲": {"빗소리": (1.0, 1.0), "나뭇잎 바스락": (0.4, 1.0), "먼 천둥": (0.7, 0.4), "아침 새소리": (0.3, 4.0)},
+    "양철지붕 시골 비": {"양철지붕 빗방울": (1.0, 1.0), "처마 낙숫물": (0.8, 35.0), "가랑비": (0.4, 1.0), "개구리": (0.4, 0.6)},
+    "바닷가 밤": {"잔잔한 파도": (1.0, 1.0), "산들바람": (0.4, 1.0), "귀뚜라미": (0.3, 0.6), "갈매기": (0.3, 0.5)},
+    "여름밤 시골": {"귀뚜라미": (0.8, 1.2), "개구리": (0.7, 1.0), "부엉이": (0.5, 0.8), "밤 공기": (0.6, 1.0)},
+    "겨울 오두막 벽난로": {"벽난로": (1.0, 1.0), "눈보라": (0.4, 1.0), "풍경(윈드차임)": (0.3, 0.6)},
+    "캠핑 모닥불": {"모닥불": (1.0, 1.0), "귀뚜라미": (0.5, 0.8), "부엉이": (0.4, 0.6), "시냇물": (0.3, 1.0)},
+    "깊은 숲 계곡": {"계곡물": (0.9, 1.0), "아침 새소리": (0.6, 15.0), "뻐꾸기": (0.5, 1.2), "딱따구리": (0.4, 0.6), "나뭇잎 바스락": (0.3, 1.0)},
+    "동굴 물방울": {"동굴 물방울": (0.8, 12.0), "밤 공기": (0.5, 1.0), "물속·심해": (0.3, 1.0)},
+    "고양이와 빗소리": {"고양이 그르릉": (1.0, 1.0), "가랑비": (0.6, 1.0), "창문에 부딪히는 비": (0.4, 0.8)},
+    "수면용 노이즈": {"브라운 노이즈": (1.0, 1.0), "가랑비": (0.4, 1.0)},
+}
+
+
+def _nature_custom_audio(path, cache={}):
+    if path not in cache:
+        cache.clear()
+        cache[path] = load_audio_file(path)
+    return cache[path]
+
+
+def render_nature_track(sel, minutes, seed, wav_path, progress=None, cancel=None, custom=None):
+    """자연의 소리 믹서 → WAV. sel={소리: {"vol": 세기0~2, "freq": 빈도, "rand": 랜덤0~1}},
+    custom=[{"path", "mode": "계속"/"가끔", "vol", "freq", "rand"}]. 1분 덩어리로 만들어 이어 붙임(몇 시간도 메모리 적게). 반환: 길이(초)"""
+    import wave
+    N, tail = 60 * SR, 12 * SR
+    total = int(max(0.1, float(minutes)) * 60 * SR)
+    nch = int(np.ceil(total / N))
+    items = [(k, NATURE_SOUNDS[k], v) for k, v in sel.items() if k in NATURE_SOUNDS and float(v.get("vol", 0)) > 0]
+    custom = [c for c in (custom or []) if c.get("path") and os.path.exists(c["path"]) and float(c.get("vol", 0)) > 0]
+    if not items and not custom:
+        raise RuntimeError("소리를 하나 이상 고르세요.")
+    nxt = {}                               # 가끔 나는 소리: 다음에 날 시각(전체 기준) - 덩어리가 바뀌어도 이어짐
+    rs = np.random.default_rng(seed)
+    for k, spec, v in items:
+        if spec[1] == "ev":
+            nxt[k] = rs.uniform(0, 60 / max(0.05, float(v.get("freq", spec[4]))))
+    for j, c in enumerate(custom):
+        if c.get("mode") == "가끔":
+            nxt[f"#c{j}"] = rs.uniform(0, 60 / max(0.05, float(c.get("freq", 2))))
+    win = np.ones(N + tail, np.float32)
+    up = np.sin(np.linspace(0, np.pi / 2, tail, dtype=np.float32))     # 같은 힘으로 겹치기 (가운데가 꺼지지 않게)
+    fade_in, fade_out = int(3 * SR), int(min(8, total / SR / 4) * SR)
+    carry = np.zeros((tail, 2), np.float32)
+    os.makedirs(os.path.dirname(os.path.abspath(wav_path)), exist_ok=True)
+    written = 0
+    with wave.open(wav_path, "wb") as w:
+        w.setnchannels(2)
+        w.setsampwidth(2)
+        w.setframerate(SR)
+        for ci in range(nch):
+            if cancel is not None and cancel.is_set():
+                raise RuntimeError("취소됨")
+            T0, L = ci * N / SR, N + tail
+            rng = np.random.default_rng(seed * 7919 + ci)
+            bed = np.zeros((L, 2), np.float32)
+            ev_all = np.zeros((L, 2), np.float32)
+
+            def add_events(key, make, vol, freq, rand, verb):
+                ev = np.zeros((L, 2), np.float32)
+                mean = 60 / max(0.05, freq)
+                while nxt[key] < T0 + N / SR:
+                    clip = make()[: tail - SR]
+                    place(ev, clip * vol * (1 - rand * rng.uniform(0, 0.6)), nxt[key] - T0, 0.5 + (rng.uniform(-0.4, 0.4) if rand > 0 else 0))
+                    nxt[key] += max(0.05, mean * (1 + rand * rng.uniform(-0.85, 1.5)) if rand > 0 else mean)
+                if verb:
+                    ev = reverb(ev, rng, verb[0], verb[1])
+                return ev
+            for k, (grp, kind, fn, lvl, dfreq, verb), v in items:
+                vol = lvl * float(v.get("vol", 1))
+                freq, rand = float(v.get("freq", dfreq)), float(v.get("rand", 0.5))
+                if kind == "bed":
+                    b = fn(L, rng, max(0.1, freq))
+                    if verb:
+                        b = reverb(b, rng, verb[0], verb[1])
+                    if rand > 0:   # 랜덤: 크기가 천천히 출렁임
+                        b = b * (1 - rand * 0.5 * smooth_lfo(L, rng.uniform(8, 20), rng))[:, None]
+                    bed += b * vol
+                else:
+                    ev_all += add_events(k, lambda fn=fn: fn(rng), vol, freq, rand, verb)
+            for j, c in enumerate(custom):
+                a = _nature_custom_audio(c["path"])
+                vol, rand = float(c.get("vol", 1)) * 0.8, float(c.get("rand", 0.5))
+                if c.get("mode") == "가끔":
+                    ev_all += add_events(f"#c{j}", lambda a=a: a[: tail - SR].mean(1), vol, float(c.get("freq", 2)), rand, None)
+                else:
+                    st = int((T0 * SR) % len(a))
+                    seg = np.concatenate([a[st:], a] * (int(L / len(a)) + 2))[:L]
+                    bed += seg * vol
+            win[:] = 1
+            if ci > 0:
+                win[:tail] = up
+            win[N:] = up[::-1]
+            buf = bed * win[:, None] + ev_all
+            buf[:tail] += carry
+            carry = buf[N:].copy()
+            if ci == 0:     # 첫 1분으로 전체 크기를 정하고 끝까지 같은 크기 (조합마다 비슷한 크기로)
+                rms = float(np.sqrt((buf[:N] ** 2).mean())) + 1e-9
+                gain = min(4.0, 0.1 / rms)
+            out = buf[:N] * gain
+            idx = np.arange(ci * N, ci * N + N)
+            out *= (np.minimum(1, idx / fade_in) * np.clip((total - idx) / fade_out, 0, 1))[:, None]
+            out = np.where(np.abs(out) > 0.8, np.sign(out) * (0.8 + 0.15 * np.tanh((np.abs(out) - 0.8) / 0.15)), out)
+            k = min(N, total - written)
+            if k <= 0:
+                break
+            w.writeframes((np.clip(out[:k], -1, 1) * 32767).astype("<i2").tobytes())
+            written += k
+            if progress:
+                progress(ci + 1, nch)
+    return written / SR
+
+
+def nature_upload_text(title, sel, minutes=None, custom=None):
+    """자연의 소리 영상 업로드 문구"""
+    names = [k for k in sel if k in NATURE_SOUNDS]
+    tags = ["#자연의소리", "#ASMR", "#백색소음", "#수면", "#힐링", "#공부할때듣는"] + ["#" + re.sub(r"[^\w가-힣]", "", k) for k in names[:6]]
+    length = (f"{int(minutes // 60)}시간" if minutes and minutes >= 60 and minutes % 60 == 0 else f"{int(minutes)}분" if minutes else "")
+    titles = [f"{title}" + (f" | {length}" if length else ""), f"[{length or 'ASMR'}] {title}", f"{' + '.join(names[:3])} 🌿 {length}".strip()]
+    lines = [title, "", "🌿 들어 있는 소리: " + ", ".join(names) + (" + 직접 고른 소리" if custom else ""), "",
+             "잠들기 전, 공부·일할 때, 명상할 때 편하게 틀어 두세요.", "좋았다면 구독과 좋아요로 응원해 주세요 🙏", "",
+             "※ 이 영상의 소리는 프로그램으로 직접 합성한 소리입니다." if not custom else "※ 일부 소리는 직접 고른 음원을 사용했습니다.", "", " ".join(tags[:12])]
+    pkg = {"titles": titles, "description": "\n".join(lines), "hashtags": " ".join(tags[:12]),
+           "pinned_comment": "어떤 소리를 더 넣으면 좋을까요? 🎧 댓글로 알려 주세요"}
+    if custom:
+        pkg["notes"] = "직접 고른 소리 파일은 유튜브에 올려도 되는지(저작권) 꼭 확인하세요."
+    return pkg
+
+
 def render_music_track(name, minutes, seed, wav_path, progress=None, cancel=None):
     """음악 트랙을 덩어리(약 90초)씩 만들어 이어 붙여 WAV로 저장 (긴 곡도 메모리 적게). 반환: 길이(초)"""
     import wave
@@ -7528,6 +8033,7 @@ class App(tk.Tk):
         ttk.Button(s4, text="📺 롱폼 만들기(챕터 묶음)", command=self.longform).pack(side="left", padx=(6, 0))
         ttk.Button(s4, text="🌐 영어·일본어 버전", command=self.lang_versions_dialog).pack(side="left", padx=(6, 0))
         ttk.Button(s4, text="🎵 음악 영상(명상·집중·수면)", command=self.music_dialog).pack(side="left", padx=(6, 0))
+        ttk.Button(s4, text="🌿 자연의 소리", command=lambda: self.music_dialog(nature=True)).pack(side="left", padx=(6, 0))
         ttk.Button(s4, text="✂ 롱폼→쇼츠", command=self.shorts_cutter).pack(side="left", padx=(6, 0))
         ttk.Button(s4, text="취소", command=self.stop_now).pack(side="left", padx=6)
         ttk.Button(s4, text="저장 폴더 열기", command=self.open_folder).pack(side="left")
@@ -10656,9 +11162,184 @@ class App(tk.Tk):
         self.run_bg("번역 중...", job, done)
 
     # ---- 🎵 음악 영상 (명상·집중·수면 채널) ----
-    def music_dialog(self):
+    # ---- 🌿 자연의 소리 믹서 ----
+    def nature_state(self):
+        """믹서 상태 (저장 폴더의 자연의소리_믹서.json 에 저장되어 다음에도 그대로)"""
+        if getattr(self, "_nature", None) is None:
+            st = {"sel": {}, "custom": []}
+            try:
+                st.update(json.load(open(os.path.join(self.get_settings()["out_dir"], "자연의소리_믹서.json"), encoding="utf-8")))
+            except Exception:
+                pass
+            for k, spec in NATURE_SOUNDS.items():
+                st["sel"].setdefault(k, {"on": False, "vol": 1.0, "freq": spec[4], "rand": 0.5})
+            while len(st["custom"]) < 3:
+                st["custom"].append({"path": "", "mode": "계속", "vol": 1.0, "freq": 2.0, "rand": 0.5})
+            self._nature = st
+        return self._nature
+
+    def nature_save(self):
+        try:
+            d = self.get_settings()["out_dir"]
+            os.makedirs(d, exist_ok=True)
+            atomic_write_text(os.path.join(d, "자연의소리_믹서.json"), json.dumps(self.nature_state(), ensure_ascii=False, indent=1))
+        except Exception:
+            pass
+
+    def nature_pick(self, parent=None):
+        """만들 때 쓸 선택: {"sel": {소리: {vol, freq, rand}}, "custom": [...]} / 아무것도 없으면 안내 후 False"""
+        st = self.nature_state()
+        sel = {k: {"vol": v["vol"], "freq": v["freq"], "rand": v["rand"]} for k, v in st["sel"].items() if v.get("on") and v.get("vol", 0) > 0}
+        custom = [c for c in st["custom"] if c.get("path") and os.path.exists(c["path"]) and c.get("vol", 0) > 0]
+        if not sel and not custom:
+            messagebox.showinfo("자연의 소리", "🌿 소리 고르기에서 소리를 하나 이상 체크하세요.", parent=parent)
+            return False
+        return {"sel": sel, "custom": custom}
+
+    def nature_mixer(self, parent, on_close=None, title_var=None):
+        """체크박스로 소리를 고르고 소리마다 세기·빈도·랜덤 조절 + 추천 조합 + 내 소리 파일(커스텀)"""
+        st = self.nature_state()
+        win = tk.Toplevel(parent)
+        win.title("🌿 자연의 소리 고르기 - 체크하고 세기·빈도·랜덤 조절")
+        win.geometry("980x720")
+        win.transient(parent)          # 음악 창 앞에 뜨게
+        win.after(50, lambda: (win.lift(), win.focus_force()))
+        top = ttk.Frame(win, padding=6)
+        top.pack(fill="x")
+        ttk.Label(top, text="추천 조합").pack(side="left")
+        pv = tk.StringVar(value="")
+        pcb = ttk.Combobox(top, textvariable=pv, values=list(NATURE_PRESETS), state="readonly", width=20)
+        pcb.pack(side="left", padx=4)
+        rows = {}
+
+        def apply_preset(*_):
+            mix = NATURE_PRESETS.get(pv.get())
+            if not mix:
+                return
+            for k, r in rows.items():
+                on = k in mix
+                r["on"].set(on)
+                if on:
+                    r["vol"].set(mix[k][0])
+                    r["freq"].set(mix[k][1])
+            if title_var is not None and (not title_var.get().strip() or title_var.get().startswith("자연의 소리") or "자연의 소리 ASMR" in title_var.get()
+                                          or title_var.get() in [x["title"] for x in MUSIC_PRESETS.values()]):
+                title_var.set(f"{pv.get()} 🌿 자연의 소리 ASMR")
+        pcb.bind("<<ComboboxSelected>>", apply_preset)
+        ttk.Button(top, text="모두 끄기", command=lambda: [r["on"].set(False) for r in rows.values()]).pack(side="left", padx=8)
+        ttk.Label(top, text="세기: 0~2 · 빈도: 가끔 나는 소리는 '분당 횟수', 계속 나는 소리는 '밀도'(빗방울·귀뚜라미 수 등) · 랜덤: 간격·크기가 들쭉날쭉한 정도",
+                  foreground="#555").pack(side="left", padx=8)
+        # 스크롤 목록
+        outer = ttk.Frame(win)
+        outer.pack(fill="both", expand=True, padx=6)
+        cv = tk.Canvas(outer, highlightthickness=0)
+        sb = ttk.Scrollbar(outer, orient="vertical", command=cv.yview)
+        body = ttk.Frame(cv)
+        body.bind("<Configure>", lambda e: cv.configure(scrollregion=cv.bbox("all")))
+        cv.create_window((0, 0), window=body, anchor="nw")
+        cv.configure(yscrollcommand=sb.set)
+        cv.pack(side="left", fill="both", expand=True)
+        sb.pack(side="right", fill="y")
+        cv.bind_all("<MouseWheel>", lambda e: cv.yview_scroll(int(-e.delta / 120), "units") if str(e.widget).startswith(str(win)) else None)
+
+        def slider(parent_, var, lo, hi, width=150, fmt="{:.2f}"):
+            fr = ttk.Frame(parent_)
+            lab = ttk.Label(fr, width=6)
+            sc = ttk.Scale(fr, from_=lo, to=hi, variable=var, length=width, command=lambda _v: lab.config(text=fmt.format(var.get())))
+            sc.pack(side="left")
+            lab.pack(side="left")
+            lab.config(text=fmt.format(var.get()))
+            var.trace_add("write", lambda *_: lab.config(text=fmt.format(var.get())))   # 추천 조합으로 바뀌어도 숫자 갱신
+            return fr
+        r_ = 0
+        for g in NATURE_GROUPS:
+            ttk.Label(body, text=f"■ {g}", font=("맑은 고딕", 10, "bold")).grid(row=r_, column=0, sticky="w", pady=(8, 2))
+            r_ += 1
+            for k, (grp, kind, fn, lvl, dfreq, verb) in NATURE_SOUNDS.items():
+                if grp != g:
+                    continue
+                v = st["sel"][k]
+                rows[k] = r = {"on": tk.BooleanVar(value=bool(v.get("on"))), "vol": tk.DoubleVar(value=float(v.get("vol", 1))),
+                               "freq": tk.DoubleVar(value=float(v.get("freq", dfreq))), "rand": tk.DoubleVar(value=float(v.get("rand", 0.5)))}
+                ttk.Checkbutton(body, text=k, variable=r["on"], width=18).grid(row=r_, column=0, sticky="w", padx=(12, 0))
+                ttk.Label(body, text="세기").grid(row=r_, column=1)
+                slider(body, r["vol"], 0, 2).grid(row=r_, column=2, padx=2)
+                if kind == "ev":
+                    ttk.Label(body, text="분당 횟수").grid(row=r_, column=3)
+                    slider(body, r["freq"], 0.1, 60, fmt="{:.1f}").grid(row=r_, column=4, padx=2)
+                else:
+                    ttk.Label(body, text="밀도").grid(row=r_, column=3)
+                    slider(body, r["freq"], 0.3, 2.5).grid(row=r_, column=4, padx=2)
+                ttk.Label(body, text="랜덤").grid(row=r_, column=5)
+                slider(body, r["rand"], 0, 1, width=110).grid(row=r_, column=6, padx=2)
+                r_ += 1
+        # 커스텀: 내 소리 파일
+        ttk.Label(body, text="■ 내 소리 파일 (커스텀)", font=("맑은 고딕", 10, "bold")).grid(row=r_, column=0, sticky="w", pady=(10, 2))
+        r_ += 1
+        crow = []
+        for j, c in enumerate(st["custom"][:3]):
+            cr = {"path": tk.StringVar(value=c.get("path", "")), "mode": tk.StringVar(value=c.get("mode", "계속")),
+                  "vol": tk.DoubleVar(value=float(c.get("vol", 1))), "freq": tk.DoubleVar(value=float(c.get("freq", 2))),
+                  "rand": tk.DoubleVar(value=float(c.get("rand", 0.5)))}
+            crow.append(cr)
+            fr = ttk.Frame(body)
+            fr.grid(row=r_, column=0, columnspan=7, sticky="w", padx=(12, 0), pady=1)
+            ttk.Entry(fr, textvariable=cr["path"], width=34).pack(side="left")
+
+            def pick(cr=cr):
+                p_ = filedialog.askopenfilename(parent=win, title="섞을 소리 파일", filetypes=[("소리 파일", "*.mp3 *.wav *.m4a *.ogg *.flac"), ("모든 파일", "*.*")])
+                if p_:
+                    cr["path"].set(p_)
+            ttk.Button(fr, text="📂", width=3, command=pick).pack(side="left", padx=2)
+            ttk.Combobox(fr, textvariable=cr["mode"], values=["계속", "가끔"], state="readonly", width=5).pack(side="left", padx=4)
+            ttk.Label(fr, text="세기").pack(side="left")
+            slider(fr, cr["vol"], 0, 2, width=110).pack(side="left")
+            ttk.Label(fr, text="분당(가끔일 때)").pack(side="left")
+            slider(fr, cr["freq"], 0.1, 30, width=110, fmt="{:.1f}").pack(side="left")
+            ttk.Label(fr, text="랜덤").pack(side="left")
+            slider(fr, cr["rand"], 0, 1, width=80).pack(side="left")
+            r_ += 1
+        ttk.Label(body, text="※ 내 소리 파일은 유튜브에 올려도 되는 음원(직접 녹음·CC0 등)만 쓰세요.", foreground="#a00").grid(row=r_, column=0, columnspan=7, sticky="w", padx=12, pady=(2, 8))
+
+        def collect():
+            for k, r in rows.items():
+                st["sel"][k] = {"on": bool(r["on"].get()), "vol": round(r["vol"].get(), 2), "freq": round(r["freq"].get(), 2), "rand": round(r["rand"].get(), 2)}
+            st["custom"] = [{"path": cr["path"].get().strip(), "mode": cr["mode"].get(), "vol": round(cr["vol"].get(), 2),
+                             "freq": round(cr["freq"].get(), 2), "rand": round(cr["rand"].get(), 2)} for cr in crow]
+            self.nature_save()
+
+        def listen():
+            collect()
+            nat = self.nature_pick(win)
+            if nat is False:
+                return
+            p_ = os.path.join(tempfile.gettempdir(), "nature_preview.wav")
+
+            def job():
+                render_nature_track(nat["sel"], 0.5, int(np.random.default_rng().integers(1, 9999)), p_, custom=nat["custom"])
+                return p_
+            self.run_bg("자연의 소리 미리듣기 만드는 중...", job, lambda p2: (play_wav(p2), self.set_status("🎧 자연의 소리 30초 미리듣기 (■ 소리 정지로 멈춤)")))
+
+        def close():
+            collect()
+            try:
+                cv.unbind_all("<MouseWheel>")
+            except Exception:
+                pass
+            win.destroy()
+            if on_close:
+                on_close()
+        bf = ttk.Frame(win, padding=6)
+        bf.pack(fill="x")
+        ttk.Button(bf, text="🎧 30초 미리듣기", command=listen).pack(side="left")
+        ttk.Button(bf, text="■ 소리 정지", command=stop_wav).pack(side="left", padx=4)
+        ttk.Button(bf, text="✔ 저장하고 닫기", command=close).pack(side="right")
+        win.protocol("WM_DELETE_WINDOW", close)
+
+    def music_dialog(self, nature=False):
         win = tk.Toplevel(self)
-        win.title("🎵 음악 영상 만들기 - 명상·집중·수면·자연의 소리 (프로그램이 직접 작곡)")
+        win.title("🌿 자연의 소리 만들기 - 여러 소리를 골라 섞어 긴 영상으로" if nature else
+                  "🎵 음악 영상 만들기 - 명상·집중·수면·자연의 소리 (프로그램이 직접 작곡)")
         win.geometry("1120x760")
         s = self.get_settings()
         out_dir = os.path.join(s["out_dir"], "music")
@@ -10713,10 +11394,26 @@ class App(tk.Tk):
         ttk.Checkbutton(f, text="화면에 제목 표시", variable=show_text).grid(row=4, column=1, columnspan=2, sticky="w", padx=4)
         srcf = ttk.LabelFrame(left, text="음원 ", padding=4)
         srcf.pack(fill="x", pady=(4, 0))
-        src_mode = tk.StringVar(value="preset")
+        src_mode = tk.StringVar(value="nature" if nature else "preset")
         src_file = {"path": ""}
         ttk.Radiobutton(srcf, text="프로그램이 연주 (위 목록)", variable=src_mode, value="preset").pack(side="left")
-        ttk.Radiobutton(srcf, text="내 음악 파일(MP3 등)을 길이만큼 반복", variable=src_mode, value="file").pack(side="left", padx=(10, 0))
+        ttk.Radiobutton(srcf, text="내 음악 파일 반복", variable=src_mode, value="file").pack(side="left", padx=(8, 0))
+        ttk.Radiobutton(srcf, text="🌿 자연의 소리 믹서", variable=src_mode, value="nature").pack(side="left", padx=(8, 0))
+        nat_lbl = ttk.Label(srcf, text="", foreground="#2e7d32")
+
+        def nature_summary():
+            on = [k for k, v in self.nature_state()["sel"].items() if v.get("on")]
+            nat_lbl.config(text=(" + ".join(on[:4]) + (f" 외 {len(on) - 4}개" if len(on) > 4 else "")) if on else "(소리를 고르세요)")
+
+        def open_mixer():
+            src_mode.set("nature")
+            self.nature_mixer(win, on_close=nature_summary, title_var=title_v)
+        ttk.Button(srcf, text="🌿 소리 고르기", command=open_mixer).pack(side="left", padx=4)
+        nat_lbl.pack(side="left", padx=4)
+        win.after_idle(nature_summary)
+        if nature:
+            win.after(300, lambda: title_v.set("자연의 소리 🌿 잠잘 때 듣는 ASMR"))
+            win.after(400, open_mixer)     # 자연의 소리 만들기로 열면 믹서를 바로 띄움
         src_lbl = ttk.Label(srcf, text="", foreground="#555")
 
         def pick_audio():
@@ -10923,9 +11620,14 @@ class App(tk.Tk):
             fsrc = use_file()
             if fsrc is False:
                 return
+            nat = self.nature_pick(win) if src_mode.get() == "nature" else None
+            if nat is False:
+                return
 
             def job():
-                if fsrc:   # 음악 파일: 끝→처음으로 넘어가는 이음매 앞뒤 30초
+                if nat:
+                    render_nature_track(nat["sel"], 0.5, sd, p_, custom=nat["custom"])
+                elif fsrc:   # 음악 파일: 끝→처음으로 넘어가는 이음매 앞뒤 30초
                     a = load_audio_file(fsrc)
                     seam = max(0.0, len(a) / SR - 3.0 - 15)
                     render_audio_loop(fsrc, (seam + 30) / 60, p_, start=seam, audio=a)
@@ -10949,19 +11651,26 @@ class App(tk.Tk):
             fsrc = use_file()
             if fsrc is False:
                 return
-            title = title_v.get().strip() or (os.path.splitext(os.path.basename(fsrc))[0] if fsrc else MUSIC_PRESETS[name]["title"])
+            nat = self.nature_pick(win) if src_mode.get() == "nature" else None
+            if nat is False:
+                return
+            title = title_v.get().strip() or (os.path.splitext(os.path.basename(fsrc))[0] if fsrc else
+                                              ("자연의 소리 " + " + ".join(list(nat["sel"])[:3]) if nat else MUSIC_PRESETS[name]["title"]))
             loop = loop_for()
             base = os.path.join(out_dir, safe_name(title) + f"_{int(mn)}분")
             os.makedirs(out_dir, exist_ok=True)
             fps_now = s["fps"]
             loop.s = dict(s, fps=min(30, int(fps_now)))   # 음악 영상은 30fps면 충분
             use_video, text_layer = bg["video"], (loop.text_layer if show_text.get() else None)   # 스레드에서는 위젯을 읽지 않음
-            if fsrc:
+            if fsrc or nat:
                 name = ""
 
             def job():
                 wav = base + ".wav"
-                if fsrc:
+                if nat:
+                    self.q.put(lambda: self.set_status(f"🌿 자연의 소리 {int(mn)}분 만드는 중... (1분 덩어리씩)"))
+                    sec = render_nature_track(nat["sel"], mn, sd, wav, progress=self.progress_cb("소리 "), cancel=self.cancel, custom=nat["custom"])
+                elif fsrc:
                     self.q.put(lambda: self.set_status(f"🔁 음악 파일을 {int(mn)}분 길이로 반복하는 중..."))
                     sec = render_audio_loop(fsrc, mn, wav, progress=self.progress_cb("음악 "), cancel=self.cancel)
                 else:
@@ -10981,8 +11690,12 @@ class App(tk.Tk):
                     pass
                 Image.fromarray(loop.frame(3.0)).save(base + "_썸네일.png")
                 with open(base + ".json", "w", encoding="utf-8") as jf:
-                    json.dump({"title": title, "sec": sec, "preset": name, "seed": sd, "audio_file": fsrc or ""}, jf, ensure_ascii=False)
-                pkg = music_upload_text(title, [name] if name else [], minutes=mn, own_audio=os.path.basename(fsrc) if fsrc else None)
+                    json.dump({"title": title, "sec": sec, "preset": name, "seed": sd, "audio_file": fsrc or "",
+                               "nature": nat or None}, jf, ensure_ascii=False)
+                if nat:
+                    pkg = nature_upload_text(title, nat["sel"], minutes=mn, custom=nat["custom"])
+                else:
+                    pkg = music_upload_text(title, [name] if name else [], minutes=mn, own_audio=os.path.basename(fsrc) if fsrc else None)
                 write_package(base, title, "", pkg)
                 return base, sec
 
