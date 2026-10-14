@@ -3497,7 +3497,9 @@ class SubtitleRenderer:
             if not str(self.s.get("head_show", "보임")).startswith("안"):
                 canvas.alpha_composite(self.head_layer)
             age = t - sg["t0"]
-            if sg["kind"] == "chapter":
+            if age < 0:      # 첫 문단 시작 전(시작 정지 구간): 자막을 미리 보이지 않음 → 나레이션과 함께 한 번만 등장
+                lay = None
+            elif sg["kind"] == "chapter":
                 lay = self._sub_layer(("ch", sg["i"]), "— " + sg["text"] + " —")
             elif sg["kind"] == "lyric":
                 lay = self._sub_layer(("ly", sg["i"]), sg.get("sub", ""), lyric=sg["text"])
@@ -3516,8 +3518,9 @@ class SubtitleRenderer:
                     age = age - acc
                 else:
                     lay = self._sub_layer(("tx", sg["i"]), sg["text"])
-            lay = self._animate_sub(lay, age)
-            canvas.alpha_composite(lay)
+            if lay is not None:
+                lay = self._animate_sub(lay, age)
+                canvas.alpha_composite(lay)
         else:
             canvas.alpha_composite(self.head_layer)
         out = canvas.convert("RGB")
