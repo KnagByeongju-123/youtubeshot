@@ -7157,6 +7157,101 @@ def ne_wind_chime(rng):
     return out * 0.4
 
 
+# --- 밀림·열대 ---
+def ne_parrot(rng):
+    """열대 앵무새(마코): 거칠게 꺾이는 '깍깍'"""
+    parts = []
+    for _ in range(int(rng.integers(1, 4))):
+        dur = rng.uniform(0.18, 0.35)
+        f = rng.uniform(900, 1500)
+        t = np.arange(int(dur * SR)) / SR
+        fc = f * (1 + 0.5 * np.sin(np.pi * t / dur)) * (1 + 0.04 * np.sign(np.sin(2 * np.pi * 70 * t)))
+        ph = 2 * np.pi * np.cumsum(fc) / SR
+        harsh = sum(np.sin(h * ph) / h for h in range(1, 9)) + 0.3 * rng.standard_normal(len(t))
+        parts += [(band(harsh.astype(np.float32), lo=600, hi=6000) * np.sin(np.pi * t / dur) ** 0.4).astype(np.float32),
+                  np.zeros(int(rng.uniform(0.1, 0.3) * SR), np.float32)]
+    return _norm(np.concatenate(parts)) * 0.5
+
+
+def ne_gibbon(rng):
+    """긴팔원숭이 노래: 점점 높아지고 빨라지는 '우-우-우'"""
+    parts, gap, f0 = [], 0.55, rng.uniform(500, 650)
+    for i in range(int(rng.integers(6, 12))):
+        dur = max(0.18, 0.45 - i * 0.025)
+        a, b = f0 * (1 + 0.06 * i), f0 * (1.9 + 0.08 * i)
+        parts += [_tone(a, b, dur, harm=((1, 1), (2, .25), (3, .08)), attack=0.03), np.zeros(int(max(0.06, gap - i * 0.04) * SR), np.float32)]
+    return np.concatenate(parts) * 0.45
+
+
+def ne_howler(rng):
+    """짖는원숭이: 멀리서 낮게 울리는 굵은 포효"""
+    d = rng.uniform(2.0, 4.0)
+    t = np.arange(int(d * SR)) / SR
+    am = 0.6 + 0.4 * np.sin(2 * np.pi * rng.uniform(3, 6) * t) ** 2
+    f0 = rng.uniform(180, 260)
+    tone = sum(np.sin(2 * np.pi * f0 * h * t * (1 - 0.08 * t / d)) / h for h in range(1, 6))
+    roar = band((rng.standard_normal(len(t)) * 0.8 + tone).astype(np.float32), lo=120, hi=1400)
+    return (_norm(roar) * am * np.sin(np.pi * t / d) ** 0.5 * 0.7).astype(np.float32)
+
+
+def ne_hornbill(rng):
+    """코뿔새: 낮은 '꼭, 꼭'"""
+    f = rng.uniform(380, 520)
+    k = _tone(f, f * 0.85, 0.14, harm=((1, 1), (2, .5), (3, .3)), attack=0.008)
+    parts = []
+    for _ in range(int(rng.integers(2, 6))):
+        parts += [k * rng.uniform(0.7, 1), np.zeros(int(rng.uniform(0.25, 0.5) * SR), np.float32)]
+    return np.concatenate(parts) * 0.6
+
+
+def ne_big_cat(rng):
+    """먼 맹수 으르렁: 아주 낮게 떨리는 소리"""
+    d = rng.uniform(1.8, 3.2)
+    t = np.arange(int(d * SR)) / SR
+    am = (0.5 + 0.5 * np.sin(2 * np.pi * rng.uniform(18, 28) * t)) ** 1.5
+    g = band(colored_noise(len(t), rng, 1.5), lo=50, hi=500) * am * np.sin(np.pi * t / d) ** 0.7
+    return (_norm(g) * 0.7).astype(np.float32)
+
+
+def nb_tree_frogs(n, rng, d):
+    """청개구리 합창(열대): 높고 빠른 '삑삑' 수십 마리"""
+    out = np.zeros((n, 2), np.float32)
+    for _ in range(max(2, int(round(10 * d)))):
+        f, pan, per = rng.uniform(1800, 3800), rng.uniform(0.05, 0.95), rng.uniform(0.25, 0.9)
+        chirp = _tone(f, f * rng.uniform(1.05, 1.25), rng.uniform(0.03, 0.08), harm=((1, 1), (2, .2)), attack=0.003)
+        t, vol = rng.uniform(0, per), rng.uniform(0.2, 1.0)
+        while t < n / SR:
+            place(out, chirp * vol * rng.uniform(0.6, 1), t, pan)
+            t += per * rng.uniform(0.8, 1.25)
+    return _norm(reverb(out, rng, 0.8, 0.2))
+
+
+def nb_jungle_insects(n, rng, d):
+    """밀림 벌레 합창: 여러 높이에서 맥동하는 곤충 소리"""
+    t = np.arange(n) / SR
+    out = np.zeros((n, 2), np.float32)
+    for _ in range(max(2, int(round(5 * d)))):
+        lo = rng.uniform(2500, 8000)
+        am = (0.5 + 0.5 * np.sin(2 * np.pi * rng.uniform(15, 90) * t + rng.uniform(0, 6))) ** 2
+        sw = np.clip(smooth_lfo(n, rng.uniform(4, 10), rng) * 1.3 - 0.15, 0.1, 1)
+        x = _nz(n, rng, 0.0, lo, lo * 1.15) * am * sw * rng.uniform(0.4, 1)
+        p = rng.uniform(0.15, 0.85)
+        out[:, 0] += x * (1 - p)
+        out[:, 1] += x * p
+    return _norm(out)
+
+
+def nb_leaf_drips(n, rng, d):
+    """잎에서 떨어지는 물방울: 비 갠 뒤 '툭, 투둑'"""
+    def drip():
+        f = rng.uniform(250, 900)
+        body = _tone(f, f * 0.9, 0.06, decay=0.012, attack=0.001)
+        click = _tone(f * 3, f * 3, 0.02, decay=0.004, attack=0.0005) * 0.3
+        body[:len(click)] += click
+        return body
+    return _norm(reverb(_place_series(n, rng, 3.0 * d, drip), rng, 0.7, 0.2))
+
+
 # 이름: (분류, 종류, 함수, 기본 크기, 기본 빈도(가끔: 분당 횟수 / 계속: 밀도), 울림(초, 섞기))
 NATURE_SOUNDS = {
     "가랑비": ("비", "bed", nb_light_rain, 0.8, 1.0, None),
@@ -7191,6 +7286,14 @@ NATURE_SOUNDS = {
     "딱따구리": ("새·동물", "ev", ne_woodpecker, 0.4, 1.0, (1.5, 0.3)),
     "고래 노래": ("새·동물", "ev", ne_whale, 0.5, 2.0, (5.0, 0.7)),
     "고양이 그르릉": ("새·동물", "bed", nb_cat_purr, 0.7, 1.0, None),
+    "열대 앵무새": ("밀림·열대", "ev", ne_parrot, 0.35, 3.0, (1.5, 0.35)),
+    "긴팔원숭이 노래": ("밀림·열대", "ev", ne_gibbon, 0.45, 0.6, (3.0, 0.45)),
+    "짖는원숭이": ("밀림·열대", "ev", ne_howler, 0.5, 0.5, (3.5, 0.5)),
+    "코뿔새": ("밀림·열대", "ev", ne_hornbill, 0.4, 1.0, (2.5, 0.4)),
+    "먼 맹수 으르렁": ("밀림·열대", "ev", ne_big_cat, 0.35, 0.2, (2.5, 0.4)),
+    "청개구리 합창": ("밀림·열대", "bed", nb_tree_frogs, 0.4, 1.0, None),
+    "밀림 벌레 합창": ("밀림·열대", "bed", nb_jungle_insects, 0.3, 1.0, None),
+    "잎에서 떨어지는 물방울": ("밀림·열대", "bed", nb_leaf_drips, 0.5, 1.0, None),
     "귀뚜라미": ("곤충·개구리", "bed", nb_crickets, 0.35, 1.0, None),
     "매미": ("곤충·개구리", "bed", nb_cicadas, 0.35, 1.0, None),
     "개구리": ("곤충·개구리", "bed", nb_frogs, 0.45, 1.0, None),
@@ -7199,7 +7302,7 @@ NATURE_SOUNDS = {
     "브라운 노이즈": ("노이즈", "bed", nb_brown, 0.7, 1.0, None),
     "풍경(윈드차임)": ("기타", "ev", ne_wind_chime, 0.35, 2.0, (2.0, 0.3)),
 }
-NATURE_GROUPS = ["비", "물", "바람·공기", "불", "새·동물", "곤충·개구리", "노이즈", "기타"]
+NATURE_GROUPS = ["비", "물", "바람·공기", "불", "새·동물", "밀림·열대", "곤충·개구리", "노이즈", "기타"]
 # 추천 조합: 이름 → {소리: (세기, 빈도)}
 NATURE_PRESETS = {
     "비 오는 숲": {"빗소리": (1.0, 1.0), "나뭇잎 바스락": (0.4, 1.0), "먼 천둥": (0.7, 0.4), "아침 새소리": (0.3, 4.0)},
@@ -7212,6 +7315,10 @@ NATURE_PRESETS = {
     "동굴 물방울": {"동굴 물방울": (0.8, 12.0), "밤 공기": (0.5, 1.0), "물속·심해": (0.3, 1.0)},
     "고양이와 빗소리": {"고양이 그르릉": (1.0, 1.0), "가랑비": (0.6, 1.0), "창문에 부딪히는 비": (0.4, 0.8)},
     "수면용 노이즈": {"브라운 노이즈": (1.0, 1.0), "가랑비": (0.4, 1.0)},
+    "열대 우림(낮)": {"밀림 벌레 합창": (0.7, 1.0), "열대 앵무새": (0.6, 2.5), "긴팔원숭이 노래": (0.6, 0.5), "코뿔새": (0.5, 0.8),
+                  "잎에서 떨어지는 물방울": (0.5, 1.0), "시냇물": (0.3, 1.0)},
+    "밀림의 밤": {"청개구리 합창": (0.8, 1.2), "밀림 벌레 합창": (0.6, 0.8), "짖는원숭이": (0.5, 0.4), "먼 맹수 으르렁": (0.3, 0.15),
+              "가랑비": (0.3, 1.0)},
 }
 
 
