@@ -8085,7 +8085,23 @@ class App(tk.Tk):
         ttk.Combobox(top, textvariable=self.model_var, width=10, values=["", "sonnet", "opus", "haiku"]).pack(side="left", padx=4)
         ttk.Label(top, text="(빈칸 = Claude Code 기본 · API 키 없이 Max 구독 사용)", foreground="gray").pack(side="left")
 
-        main = ttk.Frame(self, padding=(8, 0))
+        # 큰 탭: 📖 이야기 영상 / 🎵 음악 영상 / 🌿 자연의 소리
+        self.main_nb = ttk.Notebook(self)
+        self.main_nb.pack(fill="both", expand=True, padx=4)
+        story_tab, music_tab, nature_tab = (ttk.Frame(self.main_nb) for _ in range(3))
+        self.main_nb.add(story_tab, text="  📖 이야기 영상 (쇼츠·장문)  ")
+        self.main_nb.add(music_tab, text="  🎵 음악 영상 (명상·오르골·싱잉볼)  ")
+        self.main_nb.add(nature_tab, text="  🌿 자연의 소리  ")
+        built = set()
+
+        def on_main_tab(_e=None):          # 음악·자연 탭은 처음 열 때 만듦
+            i = self.main_nb.index("current")
+            if i in built or i == 0:
+                return
+            built.add(i)
+            self.music_dialog(nature=(i == 2), parent=(music_tab if i == 1 else nature_tab))
+        self.main_nb.bind("<<NotebookTabChanged>>", on_main_tab)
+        main = ttk.Frame(story_tab, padding=(8, 0))
         main.pack(fill="both", expand=True)
         right = ttk.LabelFrame(main, text="미리보기 (1080×1920)", padding=6)
         right.pack(side="right", fill="y", padx=(8, 0))
@@ -8220,8 +8236,7 @@ class App(tk.Tk):
         ttk.Button(s4, text="연속 제작(여러 편 자동)", command=self.batch).pack(side="left")
         ttk.Button(s4, text="📺 롱폼 만들기(챕터 묶음)", command=self.longform).pack(side="left", padx=(6, 0))
         ttk.Button(s4, text="🌐 영어·일본어 버전", command=self.lang_versions_dialog).pack(side="left", padx=(6, 0))
-        ttk.Button(s4, text="🎵 음악 영상(명상·집중·수면)", command=self.music_dialog).pack(side="left", padx=(6, 0))
-        ttk.Button(s4, text="🌿 자연의 소리", command=lambda: self.music_dialog(nature=True)).pack(side="left", padx=(6, 0))
+
         ttk.Button(s4, text="✂ 롱폼→쇼츠", command=self.shorts_cutter).pack(side="left", padx=(6, 0))
         ttk.Button(s4, text="취소", command=self.stop_now).pack(side="left", padx=6)
         ttk.Button(s4, text="저장 폴더 열기", command=self.open_folder).pack(side="left")
@@ -8265,7 +8280,7 @@ class App(tk.Tk):
 
         # 하단 AI 명령어
         bot = ttk.LabelFrame(self, text="AI 명령어 (Claude로 수정)", padding=6)
-        bot.pack(side="bottom", fill="x", padx=8, pady=(4, 8), before=main)   # 창이 작아도 항상 보이게
+        bot.pack(side="bottom", fill="x", padx=8, pady=(4, 8), before=self.main_nb)   # 창이 작아도 항상 보이게 (모든 탭 공통)
         r3 = ttk.Frame(bot)
         r3.pack(fill="x")
         self.cmd_var = tk.StringVar()
@@ -11376,6 +11391,10 @@ class App(tk.Tk):
 
     def nature_pick(self, parent=None):
         """만들 때 쓸 선택: {"sel": {소리: {vol, freq, rand}}, "custom": [...]} / 아무것도 없으면 안내 후 False"""
+        try:
+            getattr(self, "_nature_collect", lambda: None)()     # 탭에 펼친 믹서의 지금 값
+        except Exception:
+            pass
         st = self.nature_state()
         sel = {k: {"vol": v["vol"], "freq": v["freq"], "rand": v["rand"], "rec": v.get("rec", True)}
                for k, v in st["sel"].items() if v.get("on") and v.get("vol", 0) > 0}
@@ -11385,14 +11404,18 @@ class App(tk.Tk):
             return False
         return {"sel": sel, "custom": custom}
 
-    def nature_mixer(self, parent, on_close=None, title_var=None):
-        """체크박스로 소리를 고르고 소리마다 세기·빈도·랜덤 조절 + 추천 조합 + 내 소리 파일(커스텀)"""
+    def nature_mixer(self, parent, on_close=None, title_var=None, embed=None):
+        """체크박스로 소리를 고르고 소리마다 세기·빈도·랜덤 조절 + 추천 조합 + 내 소리 파일(커스텀).
+        embed: 이 프레임 안에 바로 그림(자연의 소리 탭). 없으면 새 창"""
         st = self.nature_state()
-        win = tk.Toplevel(parent)
-        win.title("🌿 자연의 소리 고르기 - 체크하고 세기·빈도·랜덤 조절")
-        win.geometry("980x720")
-        win.transient(parent)          # 음악 창 앞에 뜨게
-        win.after(50, lambda: (win.lift(), win.focus_force()))
+        if embed is not None:
+            win = embed
+        else:
+            win = tk.Toplevel(parent)
+            win.title("🌿 자연의 소리 고르기 - 체크하고 세기·빈도·랜덤 조절")
+            win.geometry("980x720")
+            win.transient(parent)          # 음악 창 앞에 뜨게
+            win.after(50, lambda: (win.lift(), win.focus_force()))
         top = ttk.Frame(win, padding=6)
         top.pack(fill="x")
         ttk.Label(top, text="추천 조합").pack(side="left")
@@ -11421,7 +11444,7 @@ class App(tk.Tk):
         # 스크롤 목록
         outer = ttk.Frame(win)
         outer.pack(fill="both", expand=True, padx=6)
-        cv = tk.Canvas(outer, highlightthickness=0)
+        cv = tk.Canvas(outer, highlightthickness=0, height=300 if embed is not None else 400)
         sb = ttk.Scrollbar(outer, orient="vertical", command=cv.yview)
         body = ttk.Frame(cv)
         body.bind("<Configure>", lambda e: cv.configure(scrollregion=cv.bbox("all")))
@@ -11525,18 +11548,27 @@ class App(tk.Tk):
             win.destroy()
             if on_close:
                 on_close()
+        self._nature_collect = collect       # 만들기·미리듣기 전에 화면 값을 읽어 가도록
         bf = ttk.Frame(win, padding=6)
         bf.pack(fill="x")
         ttk.Button(bf, text="🎧 30초 미리듣기", command=listen).pack(side="left")
         ttk.Button(bf, text="■ 소리 정지", command=stop_wav).pack(side="left", padx=4)
-        ttk.Button(bf, text="✔ 저장하고 닫기", command=close).pack(side="right")
-        win.protocol("WM_DELETE_WINDOW", close)
+        if embed is not None:
+            ttk.Button(bf, text="💾 고른 소리 저장", command=lambda: (collect(), self.set_status("💾 자연의 소리 선택 저장됨"))).pack(side="right")
+        else:
+            ttk.Button(bf, text="✔ 저장하고 닫기", command=close).pack(side="right")
+            win.protocol("WM_DELETE_WINDOW", close)
 
-    def music_dialog(self, nature=False):
-        win = tk.Toplevel(self)
-        win.title("🌿 자연의 소리 만들기 - 여러 소리를 골라 섞어 긴 영상으로" if nature else
-                  "🎵 음악 영상 만들기 - 명상·집중·수면·자연의 소리 (프로그램이 직접 작곡)")
-        win.geometry("1120x760")
+    def music_dialog(self, nature=False, parent=None):
+        """🎵 음악 영상 / 🌿 자연의 소리. parent 가 있으면 그 탭 안에 그림(메인 화면 탭), 없으면 새 창"""
+        if parent is not None:
+            win = parent
+        else:
+            win = tk.Toplevel(self)
+            win.title("🌿 자연의 소리 만들기 - 여러 소리를 골라 섞어 긴 영상으로" if nature else
+                      "🎵 음악 영상 만들기 - 명상·집중·수면·자연의 소리 (프로그램이 직접 작곡)")
+            win.geometry("1120x760")
+        embed_mixer = nature and parent is not None     # 자연의 소리 탭: 음악 목록 대신 믹서를 바로 펼침
         s = self.get_settings()
         out_dir = os.path.join(s["out_dir"], "music")
         left = ttk.Frame(win, padding=10)
@@ -11573,6 +11605,12 @@ class App(tk.Tk):
         desc.pack(anchor="w", pady=(2, 6))
         f = ttk.Frame(left)
         f.pack(fill="x")
+        mixf = None
+        if embed_mixer:
+            for w_ in (hf, lf, desc):
+                w_.pack_forget()
+            mixf = ttk.LabelFrame(left, text="① 소리 고르기 (체크하고 세기·빈도·랜덤 조절)", padding=4)
+            mixf.pack(fill="both", expand=True, before=f, pady=(0, 6))
         ttk.Label(f, text="길이(분)").grid(row=0, column=0, sticky="e")
         mins = tk.StringVar(value="10")
         ttk.Combobox(f, textvariable=mins, values=["1", "3", "5", "10", "15", "20", "30", "45", "60", "90", "120", "180"], width=6).grid(row=0, column=1, padx=4)
@@ -11609,7 +11647,11 @@ class App(tk.Tk):
         win.after_idle(nature_summary)
         if nature:
             win.after(300, lambda: title_v.set("자연의 소리 🌿 잠잘 때 듣는 ASMR"))
-            win.after(400, open_mixer)     # 자연의 소리 만들기로 열면 믹서를 바로 띄움
+            if embed_mixer:                # 탭: 믹서를 이 자리에 바로 (음원 줄은 필요 없음)
+                srcf.pack_forget()
+                win.after(350, lambda: self.nature_mixer(win, title_var=title_v, embed=mixf))
+            else:
+                win.after(400, open_mixer)     # 새 창으로 열면 믹서 창을 바로 띄움
         src_lbl = ttk.Label(srcf, text="", foreground="#555")
 
         def pick_audio():
