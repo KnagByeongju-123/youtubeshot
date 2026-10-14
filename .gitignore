@@ -21,3 +21,7 @@ voice_samples/
 장문_진행기록.txt
 장문_설정.json
 
+
+nature_sounds/*
+!nature_sounds/credits.json
+

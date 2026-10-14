@@ -7254,32 +7254,23 @@ def nb_leaf_drips(n, rng, d):
 
 # 이름: (분류, 종류, 함수, 기본 크기, 기본 빈도(가끔: 분당 횟수 / 계속: 밀도), 울림(초, 섞기))
 NATURE_SOUNDS = {
-    "가랑비": ("비", "bed", nb_light_rain, 0.8, 1.0, None),
     "빗소리": ("비", "bed", nb_rain, 0.9, 1.0, None),
     "폭우": ("비", "bed", nb_heavy_rain, 0.9, 1.0, None),
-    "창문에 부딪히는 비": ("비", "bed", nb_rain_window, 0.7, 1.0, (0.8, 0.2)),
     "텐트 위 빗소리": ("비", "bed", nb_rain_tent, 0.8, 1.0, None),
     "양철지붕 빗방울": ("비", "bed", nb_tin_roof, 0.7, 1.0, None),
     "처마 낙숫물": ("비", "ev", ne_eave_drip, 0.35, 40.0, (1.0, 0.25)),
-    "먼 천둥": ("비", "ev", ne_thunder_far, 0.8, 0.6, None),
-    "가까운 천둥": ("비", "ev", ne_thunder_near, 0.9, 0.3, (2.5, 0.3)),
     "시냇물": ("물", "bed", nb_stream, 0.7, 1.0, None),
     "계곡물": ("물", "bed", nb_creek, 0.8, 1.0, None),
     "폭포": ("물", "bed", nb_waterfall, 0.8, 1.0, None),
     "잔잔한 파도": ("물", "bed", nb_waves_calm, 0.8, 1.0, None),
-    "거친 파도": ("물", "bed", nb_waves_rough, 0.9, 1.0, None),
     "호숫가 물결": ("물", "ev", ne_lake_lap, 0.5, 40.0, (0.8, 0.2)),
     "동굴 물방울": ("물", "ev", ne_cave_drip, 0.5, 15.0, (3.5, 0.55)),
-    "물속·심해": ("물", "bed", nb_underwater, 0.7, 1.0, None),
-    "산들바람": ("바람·공기", "bed", nb_breeze, 0.6, 1.0, None),
     "강풍": ("바람·공기", "bed", nb_strong_wind, 0.8, 1.0, None),
     "눈보라": ("바람·공기", "bed", nb_blizzard, 0.8, 1.0, None),
-    "나뭇잎 바스락": ("바람·공기", "bed", nb_leaves, 0.5, 1.0, None),
     "대나무 숲": ("바람·공기", "bed", nb_bamboo, 0.6, 1.0, None),
     "밤 공기": ("바람·공기", "bed", nb_night_air, 0.4, 1.0, None),
     "모닥불": ("불", "bed", nb_campfire, 0.8, 1.0, None),
     "벽난로": ("불", "bed", nb_fireplace, 0.8, 1.0, None),
-    "아침 새소리": ("새·동물", "ev", ne_birds, 0.5, 18.0, (1.8, 0.3)),
     "뻐꾸기": ("새·동물", "ev", ne_cuckoo, 0.45, 1.5, (2.0, 0.35)),
     "부엉이": ("새·동물", "ev", ne_owl, 0.5, 1.0, (2.5, 0.4)),
     "갈매기": ("새·동물", "ev", ne_seagull, 0.4, 2.0, (1.5, 0.3)),
@@ -7294,7 +7285,6 @@ NATURE_SOUNDS = {
     "청개구리 합창": ("밀림·열대", "bed", nb_tree_frogs, 0.4, 1.0, None),
     "밀림 벌레 합창": ("밀림·열대", "bed", nb_jungle_insects, 0.3, 1.0, None),
     "잎에서 떨어지는 물방울": ("밀림·열대", "bed", nb_leaf_drips, 0.5, 1.0, None),
-    "귀뚜라미": ("곤충·개구리", "bed", nb_crickets, 0.35, 1.0, None),
     "매미": ("곤충·개구리", "bed", nb_cicadas, 0.35, 1.0, None),
     "개구리": ("곤충·개구리", "bed", nb_frogs, 0.45, 1.0, None),
     "백색 소음": ("노이즈", "bed", nb_white, 0.4, 1.0, None),
@@ -7305,21 +7295,84 @@ NATURE_SOUNDS = {
 NATURE_GROUPS = ["비", "물", "바람·공기", "불", "새·동물", "밀림·열대", "곤충·개구리", "노이즈", "기타"]
 # 추천 조합: 이름 → {소리: (세기, 빈도)}
 NATURE_PRESETS = {
-    "비 오는 숲": {"빗소리": (1.0, 1.0), "나뭇잎 바스락": (0.4, 1.0), "먼 천둥": (0.7, 0.4), "아침 새소리": (0.3, 4.0)},
-    "양철지붕 시골 비": {"양철지붕 빗방울": (1.0, 1.0), "처마 낙숫물": (0.8, 35.0), "가랑비": (0.4, 1.0), "개구리": (0.4, 0.6)},
-    "바닷가 밤": {"잔잔한 파도": (1.0, 1.0), "산들바람": (0.4, 1.0), "귀뚜라미": (0.3, 0.6), "갈매기": (0.3, 0.5)},
-    "여름밤 시골": {"귀뚜라미": (0.8, 1.2), "개구리": (0.7, 1.0), "부엉이": (0.5, 0.8), "밤 공기": (0.6, 1.0)},
+    "비 오는 숲": {"빗소리": (1.0, 1.0), "계곡물": (0.3, 1.0), "뻐꾸기": (0.3, 0.5), "처마 낙숫물": (0.4, 20.0)},
+    "양철지붕 시골 비": {"양철지붕 빗방울": (1.0, 1.0), "처마 낙숫물": (0.8, 35.0), "빗소리": (0.3, 1.0), "개구리": (0.4, 0.6)},
+    "바닷가 밤": {"잔잔한 파도": (1.0, 1.0), "밤 공기": (0.4, 1.0), "갈매기": (0.3, 0.5)},
+    "여름밤 시골": {"개구리": (0.8, 1.0), "부엉이": (0.5, 0.8), "밤 공기": (0.6, 1.0), "청개구리 합창": (0.3, 0.6)},
     "겨울 오두막 벽난로": {"벽난로": (1.0, 1.0), "눈보라": (0.4, 1.0), "풍경(윈드차임)": (0.3, 0.6)},
-    "캠핑 모닥불": {"모닥불": (1.0, 1.0), "귀뚜라미": (0.5, 0.8), "부엉이": (0.4, 0.6), "시냇물": (0.3, 1.0)},
-    "깊은 숲 계곡": {"계곡물": (0.9, 1.0), "아침 새소리": (0.6, 15.0), "뻐꾸기": (0.5, 1.2), "딱따구리": (0.4, 0.6), "나뭇잎 바스락": (0.3, 1.0)},
-    "동굴 물방울": {"동굴 물방울": (0.8, 12.0), "밤 공기": (0.5, 1.0), "물속·심해": (0.3, 1.0)},
-    "고양이와 빗소리": {"고양이 그르릉": (1.0, 1.0), "가랑비": (0.6, 1.0), "창문에 부딪히는 비": (0.4, 0.8)},
-    "수면용 노이즈": {"브라운 노이즈": (1.0, 1.0), "가랑비": (0.4, 1.0)},
+    "캠핑 모닥불": {"모닥불": (1.0, 1.0), "부엉이": (0.4, 0.6), "시냇물": (0.3, 1.0), "밤 공기": (0.3, 1.0)},
+    "깊은 숲 계곡": {"계곡물": (0.9, 1.0), "뻐꾸기": (0.5, 1.2), "딱따구리": (0.4, 0.6), "대나무 숲": (0.3, 1.0)},
+    "동굴 물방울": {"동굴 물방울": (0.8, 12.0), "밤 공기": (0.5, 1.0)},
+    "고양이와 빗소리": {"고양이 그르릉": (1.0, 1.0), "빗소리": (0.5, 1.0)},
+    "수면용 노이즈": {"브라운 노이즈": (1.0, 1.0), "빗소리": (0.3, 1.0)},
     "열대 우림(낮)": {"밀림 벌레 합창": (0.7, 1.0), "열대 앵무새": (0.6, 2.5), "긴팔원숭이 노래": (0.6, 0.5), "코뿔새": (0.5, 0.8),
                   "잎에서 떨어지는 물방울": (0.5, 1.0), "시냇물": (0.3, 1.0)},
     "밀림의 밤": {"청개구리 합창": (0.8, 1.2), "밀림 벌레 합창": (0.6, 0.8), "짖는원숭이": (0.5, 0.4), "먼 맹수 으르렁": (0.3, 0.15),
-              "가랑비": (0.3, 1.0)},
+              "빗소리": (0.3, 1.0)},
 }
+
+
+NATURE_REC_DIR = os.path.join(BASE, "nature_sounds")      # 실제 녹음 (CC0·퍼블릭 도메인·CC BY) - credits.json 에 출처
+_REC_EX_SEC = {"천둥": 9.0, "풍경(윈드차임)": 5.0, "뻐꾸기": 6.0, "부엉이": 6.0, "갈매기": 4.0}
+
+
+def nature_recordings():
+    """받아 둔 실제 녹음: {믹서 소리 이름: credits 정보(+path)}. '천둥' 녹음은 먼·가까운 천둥 둘 다에 씀"""
+    try:
+        cr = json.load(open(os.path.join(NATURE_REC_DIR, "credits.json"), encoding="utf-8"))
+    except Exception:
+        return {}
+    out = {}
+    for k, v in cr.items():
+        p = os.path.join(NATURE_REC_DIR, v.get("file", ""))
+        if os.path.exists(p):
+            v = dict(v, path=p)
+            if k == "천둥":
+                out["먼 천둥"] = out["가까운 천둥"] = v
+            else:
+                out[k] = v
+    return out
+
+
+_REC_CACHE = {}
+
+
+def _rec_loop(path, max_sec=240):
+    """녹음 → 이음매 없이 반복되는 스테레오 소리(앞 max_sec 초만 써서 메모리 절약). 크기는 RMS 0.2 로"""
+    if path in _REC_CACHE:
+        return _REC_CACHE[path]
+    p = subprocess.run([get_ffmpeg(), "-v", "error", "-t", str(max_sec), "-i", path, "-f", "f32le", "-ac", "2", "-ar", str(SR), "-"],
+                       stdout=subprocess.PIPE, stderr=subprocess.PIPE, creationflags=(subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0))
+    a = np.frombuffer(p.stdout, np.float32).reshape(-1, 2).copy()
+    if len(a) < SR:
+        raise RuntimeError("녹음을 읽지 못했습니다: " + os.path.basename(path))
+    X = int(min(3.0, len(a) / SR / 4) * SR)
+    w = (np.sin(np.linspace(0, np.pi / 2, X, dtype=np.float32)) ** 2)[:, None]
+    loop = np.concatenate([a[-X:] * (1 - w) + a[:X] * w, a[X:-X]])     # 끝→처음이 자연스럽게 이어지는 반복 단위
+    loop *= 0.2 / (float(np.sqrt((loop ** 2).mean())) + 1e-9)
+    if len(_REC_CACHE) > 8:
+        _REC_CACHE.clear()
+    _REC_CACHE[path] = loop
+    return loop
+
+
+def _rec_excerpt(loop, rng, sec):
+    """녹음에서 소리가 큰 구간을 골라 sec 초 잘라냄 (가끔 나는 소리용, 앞뒤 부드럽게)"""
+    n = int(sec * SR)
+    if len(loop) <= n:
+        x = loop.mean(1)
+    else:
+        win = int(0.5 * SR)
+        e = np.sqrt((loop.mean(1)[: len(loop) // win * win].reshape(-1, win) ** 2).mean(1))
+        good = np.where(e >= np.percentile(e, 70))[0]
+        c = int(rng.choice(good)) * win if len(good) else int(rng.integers(0, len(loop) - n))
+        st = int(min(max(0, c - n // 3), len(loop) - n))
+        x = loop[st:st + n].mean(1)
+    f = int(min(0.3 * SR, len(x) // 4))
+    env = np.ones(len(x), np.float32)
+    env[:f] = np.linspace(0, 1, f)
+    env[-f:] = np.linspace(1, 0, f)
+    return (x * env * 2.0).astype(np.float32)
 
 
 def _nature_custom_audio(path, cache={}):
@@ -7342,6 +7395,7 @@ def render_nature_track(sel, minutes, seed, wav_path, progress=None, cancel=None
         raise RuntimeError("소리를 하나 이상 고르세요.")
     nxt = {}                               # 가끔 나는 소리: 다음에 날 시각(전체 기준) - 덩어리가 바뀌어도 이어짐
     rs = np.random.default_rng(seed)
+    recs = nature_recordings()
     for k, spec, v in items:
         if spec[1] == "ev":
             nxt[k] = rs.uniform(0, 60 / max(0.05, float(v.get("freq", spec[4]))))
@@ -7379,6 +7433,23 @@ def render_nature_track(sel, minutes, seed, wav_path, progress=None, cancel=None
             for k, (grp, kind, fn, lvl, dfreq, verb), v in items:
                 vol = lvl * float(v.get("vol", 1))
                 freq, rand = float(v.get("freq", dfreq)), float(v.get("rand", 0.5))
+                rec = recs.get(k) if v.get("rec", True) else None
+                if rec:                                   # 🎙 실제 녹음
+                    loop_ = _rec_loop(rec["path"])
+                    if rec.get("mode") == "bed":          # 계속: 녹음을 이음매 없이 반복 (덩어리가 바뀌어도 이어지게 전체 시각 기준)
+                        ix = (int(T0 * SR) + np.arange(L)) % len(loop_)
+                        b = loop_[ix]
+                        if rand > 0:
+                            b = b * (1 - rand * 0.4 * smooth_lfo(L, rng.uniform(8, 20), rng))[:, None]
+                        bed += b * vol * 2.5
+                    else:                                 # 가끔: 녹음에서 소리 큰 구간을 잘라 씀
+                        exs = _REC_EX_SEC.get("천둥" if "천둥" in k else k, 6.0)
+                        far = k == "먼 천둥"
+                        mk = (lambda lp=loop_, exs=exs, far=far: band(_rec_excerpt(lp, rng, exs), hi=500) if far else _rec_excerpt(lp, rng, exs))
+                        if k not in nxt:
+                            nxt[k] = T0 + rng.uniform(0, 60 / max(0.05, freq))
+                        ev_all += add_events(k, mk, vol, freq, rand, None)
+                    continue
                 if kind == "bed":
                     b = fn(L, rng, max(0.1, freq))
                     if verb:
@@ -7430,6 +7501,16 @@ def nature_upload_text(title, sel, minutes=None, custom=None):
     lines = [title, "", "🌿 들어 있는 소리: " + ", ".join(names) + (" + 직접 고른 소리" if custom else ""), "",
              "잠들기 전, 공부·일할 때, 명상할 때 편하게 틀어 두세요.", "좋았다면 구독과 좋아요로 응원해 주세요 🙏", "",
              "※ 이 영상의 소리는 프로그램으로 직접 합성한 소리입니다." if not custom else "※ 일부 소리는 직접 고른 음원을 사용했습니다.", "", " ".join(tags[:12])]
+    recs, used, credit = nature_recordings(), set(), []
+    for k, v in sel.items():
+        r = recs.get(k)
+        if r and v.get("rec", True) and r["file"] not in used:
+            used.add(r["file"])
+            att, lic = str(r.get("attribution") or "작자 미상"), str(r.get("license", ""))
+            credit.append(f"- {k}: {att}" + ("" if lic and lic in att else f" / {lic}") + (f" ({r.get('page') or r.get('source_url')})" if "BY" in lic else ""))
+    if credit:   # 실제 녹음을 썼으면: '합성' 문구 대신 출처 (CC BY 는 표기 필수)
+        lines = [ln for ln in lines if "직접 합성한 소리" not in ln]
+        lines[-1:-1] = ["🎙 실제 녹음 출처 (CC0·퍼블릭 도메인·CC BY)"] + credit + ["※ 나머지 소리는 프로그램으로 직접 합성했습니다.", ""]
     pkg = {"titles": titles, "description": "\n".join(lines), "hashtags": " ".join(tags[:12]),
            "pinned_comment": "어떤 소리를 더 넣으면 좋을까요? 🎧 댓글로 알려 주세요"}
     if custom:
@@ -11279,7 +11360,7 @@ class App(tk.Tk):
             except Exception:
                 pass
             for k, spec in NATURE_SOUNDS.items():
-                st["sel"].setdefault(k, {"on": False, "vol": 1.0, "freq": spec[4], "rand": 0.5})
+                st["sel"].setdefault(k, {"on": False, "vol": 1.0, "freq": spec[4], "rand": 0.5, "rec": True})
             while len(st["custom"]) < 3:
                 st["custom"].append({"path": "", "mode": "계속", "vol": 1.0, "freq": 2.0, "rand": 0.5})
             self._nature = st
@@ -11296,7 +11377,8 @@ class App(tk.Tk):
     def nature_pick(self, parent=None):
         """만들 때 쓸 선택: {"sel": {소리: {vol, freq, rand}}, "custom": [...]} / 아무것도 없으면 안내 후 False"""
         st = self.nature_state()
-        sel = {k: {"vol": v["vol"], "freq": v["freq"], "rand": v["rand"]} for k, v in st["sel"].items() if v.get("on") and v.get("vol", 0) > 0}
+        sel = {k: {"vol": v["vol"], "freq": v["freq"], "rand": v["rand"], "rec": v.get("rec", True)}
+               for k, v in st["sel"].items() if v.get("on") and v.get("vol", 0) > 0}
         custom = [c for c in st["custom"] if c.get("path") and os.path.exists(c["path"]) and c.get("vol", 0) > 0]
         if not sel and not custom:
             messagebox.showinfo("자연의 소리", "🌿 소리 고르기에서 소리를 하나 이상 체크하세요.", parent=parent)
@@ -11359,6 +11441,7 @@ class App(tk.Tk):
             var.trace_add("write", lambda *_: lab.config(text=fmt.format(var.get())))   # 추천 조합으로 바뀌어도 숫자 갱신
             return fr
         r_ = 0
+        recs = nature_recordings()
         for g in NATURE_GROUPS:
             ttk.Label(body, text=f"■ {g}", font=("맑은 고딕", 10, "bold")).grid(row=r_, column=0, sticky="w", pady=(8, 2))
             r_ += 1
@@ -11366,7 +11449,8 @@ class App(tk.Tk):
                 if grp != g:
                     continue
                 v = st["sel"][k]
-                rows[k] = r = {"on": tk.BooleanVar(value=bool(v.get("on"))), "vol": tk.DoubleVar(value=float(v.get("vol", 1))),
+                rows[k] = r = {"on": tk.BooleanVar(value=bool(v.get("on"))), "rec": tk.BooleanVar(value=bool(v.get("rec", True))),
+                               "vol": tk.DoubleVar(value=float(v.get("vol", 1))),
                                "freq": tk.DoubleVar(value=float(v.get("freq", dfreq))), "rand": tk.DoubleVar(value=float(v.get("rand", 0.5)))}
                 ttk.Checkbutton(body, text=k, variable=r["on"], width=18).grid(row=r_, column=0, sticky="w", padx=(12, 0))
                 ttk.Label(body, text="세기").grid(row=r_, column=1)
@@ -11379,6 +11463,10 @@ class App(tk.Tk):
                     slider(body, r["freq"], 0.3, 2.5).grid(row=r_, column=4, padx=2)
                 ttk.Label(body, text="랜덤").grid(row=r_, column=5)
                 slider(body, r["rand"], 0, 1, width=110).grid(row=r_, column=6, padx=2)
+                if k in recs:   # 실제 녹음이 있으면 녹음/합성 선택
+                    ttk.Checkbutton(body, text="🎙 녹음", variable=r["rec"]).grid(row=r_, column=7, padx=(6, 0))
+                else:
+                    ttk.Label(body, text="합성", foreground="#999").grid(row=r_, column=7, padx=(6, 0))
                 r_ += 1
         # 커스텀: 내 소리 파일
         ttk.Label(body, text="■ 내 소리 파일 (커스텀)", font=("맑은 고딕", 10, "bold")).grid(row=r_, column=0, sticky="w", pady=(10, 2))
@@ -11410,7 +11498,8 @@ class App(tk.Tk):
 
         def collect():
             for k, r in rows.items():
-                st["sel"][k] = {"on": bool(r["on"].get()), "vol": round(r["vol"].get(), 2), "freq": round(r["freq"].get(), 2), "rand": round(r["rand"].get(), 2)}
+                st["sel"][k] = {"on": bool(r["on"].get()), "vol": round(r["vol"].get(), 2), "freq": round(r["freq"].get(), 2),
+                                "rand": round(r["rand"].get(), 2), "rec": bool(r["rec"].get())}
             st["custom"] = [{"path": cr["path"].get().strip(), "mode": cr["mode"].get(), "vol": round(cr["vol"].get(), 2),
                              "freq": round(cr["freq"].get(), 2), "rand": round(cr["rand"].get(), 2)} for cr in crow]
             self.nature_save()
