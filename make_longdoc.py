@@ -100,7 +100,8 @@ def main():
             m.atomic_write_text(bak, json.dumps(res, ensure_ascii=False, indent=1))
         before = len(m.photo_credits(story))
         log(f"📷 사진 보강 시작: 지금 {before}장 → 나레이션 {m.DOC_PHOTO_SEC}초에 한 장 목표")
-        story, n_add = m.doc_add_photos(model, title, story, os.path.join(out_root, "media"), log, gate)
+        story, n_add = m.doc_add_photos(model, title, story, os.path.join(out_root, "media"), log, gate,
+                                        fiction=m.doc_is_fiction(c["소재"]))
         res["story"] = story
         m.atomic_write_text(script_json, json.dumps(res, ensure_ascii=False, indent=1))
         m.atomic_write_text(done_flag, f"{before} -> {before + n_add}")
@@ -161,10 +162,11 @@ def main():
     # 4) 업로드 문구
     body = m.story_text_only(story)
     heads = [p for p in m.split_paras(body) if p.startswith("## ")]
-    user = (f"콘텐츠 종류: 장문 지식 다큐 ({len(body)}자)\n소재: {c['소재']}\n[지금 제목] {title}\n\n[챕터]\n" + "\n".join(heads)
-            + "\n\n[본문 앞부분]\n" + body[:4000])
+    fic = m.doc_is_fiction(c["소재"])
+    user = (f"콘텐츠 종류: {'장편 창작 이야기 낭독(픽션)' if fic else '장문 지식 다큐'} ({len(body)}자)\n소재: {c['소재']}\n[지금 제목] {title}\n\n"
+            f"[{'회차' if fic else '챕터'}]\n" + "\n".join(heads) + "\n\n[본문 앞부분]\n" + body[:4000])
     try:
-        pkg = m.ask_script_json(model, m.DOC_PACKAGE_SYSTEM, user)
+        pkg = m.ask_script_json(model, m.DOC_FICTION_PACKAGE_SYSTEM if fic else m.DOC_PACKAGE_SYSTEM, user)
     except Exception as e:
         log("업로드 문구 실패(나중에 프로그램에서 다시 만들 수 있어요): " + str(e)[:100])
         pkg = {"titles": [title], "description": "", "hashtags": "", "pinned_comment": ""}

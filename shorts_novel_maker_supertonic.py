@@ -669,6 +669,74 @@ for _t, _snd in (("우주의 비밀", "우주"), ("양자물리·현실의 본�
                  ("색과 빛의 과학", "감성 오르골"), ("의학의 결정적 순간", "잔잔한 패드"), ("음식과 요리의 과학", "밝은 오르골")):
     SOUND_BY_TOPIC.setdefault(_t, _snd)
 
+# 장문 '이야기'(허구) 소재: 유튜브 장편 낭독·오디오드라마로 인기 있는 장르 (소재 이름 앞 [이야기])
+DOC_FICTION = {
+    "[이야기] 무협소설": ("강호·문파·복수·성장. 몰락한 문파의 후예, 숨겨진 무공, 사부와 제자, 정파와 마교의 대립. 문체는 무협답게 '~하였다', '~이오' 같은 고풍 말투와 초식 이름, 내공·경공 묘사. 김용 등 기존 작품의 인물·무공 이름은 쓰지 않는다.", "시네마 다크", "바람"),
+    "[이야기] 미니드라마(복수·반전)": ("재벌가·결혼·배신·출생의 비밀·통쾌한 복수. 회차마다 강한 반전과 클리프행어, 악역은 확실히 밉게, 주인공의 사이다 역전. 요즘 숏드라마처럼 빠른 전개.", "네온 시티", "긴장 펄스"),
+    "[이야기] 사연 낭독(가족·시댁·이혼)": ("시청자가 보낸 사연처럼 1인칭 고백체. 시댁 갈등, 남편의 비밀, 형제 간 유산 다툼 등 공감과 분노 → 통쾌하거나 뭉클한 결말. 실명·실제 사건처럼 보이는 구체적 개인정보 금지.", "감동 웜톤", "슬픈 패드"),
+    "[이야기] 시니어 인생 사연": ("60~80대 주인공의 회고. 자식과의 오해, 황혼의 사랑, 평생 숨긴 비밀, 노년의 용기. 느리고 따뜻한 말투, 마지막에 눈물 나는 깨달음.", "감동 웜톤", "감성 오르골"),
+    "[이야기] 회귀·빙의 판타지": ("죽음 직전 과거로 돌아가거나 소설 속 인물에 빙의. 미래 지식으로 운명을 바꾸는 쾌감, 단계별 성장, 회차마다 새 위기.", "네온 시티", "긴장 펄스"),
+    "[이야기] 로맨스 판타지": ("귀족 영애·황태자·계약 결혼·악녀 빙의. 설렘과 오해, 질투, 신분 차이, 마지막에 확실한 해피엔딩.", "로맨스 핑크", "감성 오르골"),
+    "[이야기] 현대 판타지(헌터)": ("게이트·던전·각성자·랭킹. 최약체로 무시당하던 주인공이 숨은 능력으로 각성해 올라가는 이야기, 전투 장면은 짧고 강렬하게.", "네온 시티", "긴장 펄스"),
+    "[이야기] 공포 괴담 장편": ("하나의 장소(오래된 아파트, 시골 폐교, 산장)에서 조금씩 이상한 일이 쌓이는 1인칭 실화풍 괴담. 잔인한 묘사 대신 분위기와 소리로 공포, 회차 끝마다 소름 포인트.", "공포 레드", "공포 심장박동"),
+    "[이야기] 미스터리 추리 장편": ("폐쇄된 공간의 사건, 용의자 여러 명, 단서를 공정하게 흘리고 마지막에 논리적으로 범인이 밝혀지는 정통 추리.", "시네마 다크", "긴장 펄스"),
+    "[이야기] 조선 야담·기담": ("조선 시대 저잣거리와 산골의 기이한 이야기: 여우 누이, 도깨비 거래, 원귀의 한, 꾀 많은 선비. 옛이야기 말투('~했더란다', '~하였지요')로 들려준다.", "감동 웜톤", "바람"),
+    "[이야기] 궁중 사극": ("왕실과 후궁의 암투, 억울한 누명, 숨은 왕자, 신분을 넘는 사랑. 실존 왕은 배경으로만, 주인공은 창작 인물. 사극 말투를 대사에.", "감동 웜톤", "잔잔한 패드"),
+    "[이야기] 감동 휴먼 드라마": ("평범한 사람들의 상처와 회복: 가족, 이웃, 오래된 가게, 우정. 작은 사건이 쌓여 마지막에 크게 울리는 이야기.", "감동 웜톤", "슬픈 패드"),
+    "[이야기] SF·디스토피아": ("가까운 미래 세계(인공지능, 기억 거래, 기후 붕괴 도시)에서 한 사람이 시스템의 비밀을 알아 가는 이야기. 설정은 쉽게, 반전은 크게.", "네온 시티", "우주"),
+    "[이야기] 코믹 일상 장편 썰": ("회사·학교·가족 사이의 황당한 사건이 꼬리를 무는 코믹 장편. 등장인물 캐릭터를 확실히, 회차마다 빵 터지는 장면, 마지막은 훈훈하게.", "웹툰", "밝은 오르골"),
+}
+DOC_FICTION_TOPICS = set(DOC_FICTION)
+CATEGORIES[DOC_CATEGORY][1].update({k: (v[0], v[1]) for k, v in DOC_FICTION.items()})
+for _t, _v in DOC_FICTION.items():
+    SOUND_BY_TOPIC.setdefault(_t, _v[2])
+
+DOC_FICTION_STYLE = """[장편 낭독(오디오드라마) 문체 - 반드시 지킬 것]
+- 귀로 듣는 소설이다. 성우 한 명이 읽으므로 대사 앞뒤에 누가 말하는지 분명히(예: 민서가 낮게 말했다. "…"). 대사는 큰따옴표.
+- 한 문단 = 1~3문장(약 50~160자). 문단 사이 빈 줄. 장면 묘사(소리·냄새·빛)와 대사, 속마음을 섞어 영화처럼.
+- 2~4문단마다 사건이 움직인다. 설명만 길게 늘어놓지 않는다. 회차(챕터) 끝은 반드시 다음이 궁금해지는 클리프행어(마지막 챕터는 결말).
+- 인물 이름·나이·관계·말투는 구성안 그대로 끝까지 일관되게. 새 주요 인물을 갑자기 만들지 않는다.
+- 목록·제목 기호(#, -, *, 번호)와 이모지 금지. 한자·영문을 괄호로 같이 쓰지 않는다(성우가 그대로 읽음): '귀운(歸雲)' ✗ → '귀운' ✓.
+- 완전한 창작: 실존 인물(정치인·연예인·기업인)·실제 기업·기존 소설·웹툰·드라마의 인물과 설정을 쓰지 않는다. 선정적·잔인한 묘사 금지, 공포는 분위기로."""
+
+DOC_FICTION_OUTLINE_SYSTEM = """너는 유튜브 장편 낭독(오디오드라마) 채널의 메인 작가다. 한 편의 이야기를 {minutes}분짜리 나레이션 영상으로 만든다(성우 한 명이 읽음).
+먼저 전체 구성안을 짠다.
+- title: 클릭하고 싶은 드라마 제목 20~40자. 장르가 바로 보이게(예: '[무협] 몰락한 문파의 막내, 사부가 남긴 마지막 초식'). 결말 금지, 이모지 0~1개.
+- logline: 이야기 한 줄 요약
+- setting: 시대·장소·세계관 2~4문장
+- characters: 주요 인물 3~6명. 각 {{"name": "", "age": "", "role": "주인공/조력자/악역 등", "personality": "", "speech": "말투 특징"}}
+- opening: 오프닝 나레이션 3~6문단(약 {open_chars}자). 인사 없이 사건 한가운데나 가장 강한 장면으로 시작해서 '이 이야기를 끝까지 들어야 하는 이유'를 심는다.
+- chapters: {n_ch}개 회차. 각 {{"title": "회차 제목(15자 이내, 번호 없이)", "points": ["이 회차의 사건·장면 3~6개(누가 무엇을)"], "cliffhanger": "회차 마지막 장면", "chars": 목표 글자 수}}. chars 합계는 약 {body_chars}자.
+  발단 → 갈등 고조 → 위기 → 절정 → 결말. 중반에 큰 반전 1개 이상. 마지막 회차는 결말(떡밥 회수).
+- closing: 마무리 나레이션 2~4문단(약 {close_chars}자). 여운 한 줄, 시청자에게 묻는 질문 하나, 마지막 한 문장으로 짧은 구독 유도.
+
+""" + DOC_FICTION_STYLE + """
+
+반드시 JSON만 출력: {{"title": "", "logline": "", "setting": "", "characters": [{{"name": "", "age": "", "role": "", "personality": "", "speech": ""}}], "opening": "", "chapters": [{{"title": "", "points": [""], "cliffhanger": "", "chars": 1500}}], "closing": "", "notes": ""}}"""
+
+DOC_FICTION_CHAPTER_SYSTEM = """너는 유튜브 장편 낭독(오디오드라마) 채널의 메인 작가다. 구성안 중 '지금 쓸 회차' 하나의 본문만 쓴다.
+- 분량: 목표 글자 수(공백 포함)의 90~110%. 장면과 대사를 충분히 넣어 채운다(요약하듯 쓰지 않는다).
+- 회차 제목은 쓰지 않는다(프로그램이 붙임). 본문만.
+- 앞 회차 마지막 장면에서 바로 이어 시작하되 같은 문장을 되풀이하지 않는다. 다음 회차 사건을 미리 쓰지 않는다.
+- 구성안의 points 를 모두 장면으로 보여 주고, cliffhanger 장면으로 끝낸다(마지막 회차는 결말).
+
+""" + DOC_FICTION_STYLE + """
+
+반드시 JSON만 출력: {"story": "회차 본문", "summary": "이 회차 내용 2~3문장 요약(다음 작가에게 넘김, 인물들의 현재 상황 포함)", "notes": ""}"""
+
+DOC_FICTION_PACKAGE_SYSTEM = """너는 구독자 100만 유튜브 장편 낭독(오디오드라마) 채널 운영자다. 20~60분짜리 창작 이야기 영상의 업로드 문구를 만든다.
+- 제목 후보 5개: 장르 표시([무협]·[사연]·[미니드라마] 등) + 강한 갈등·반전 암시, 25~45자, 이모지 0~1개, 결말 금지. 서로 다른 각도(대사 인용형 / 반전 암시형 / 인물형 / 감정형 / 질문형).
+- 설명: 첫 단락 3~4문장(이야기의 갈등과 주인공, 결말은 숨김), 빈 줄, '끝까지 들으면…' 기대감 한 줄, 빈 줄, 잠들기 전·운전할 때 듣기 좋다는 한 줄, 마지막 줄 "※ 이 영상은 창작된 이야기(픽션)입니다. 등장하는 인물·단체는 실제와 관련이 없습니다." 목차(타임스탬프)는 쓰지 않는다(프로그램이 붙임).
+- 해시태그 12~16개: 장르 태그(#무협소설 #오디오북 #사연 #미니드라마 #낭독 #장편소설 등) + 이야기 키워드
+- keywords: 유튜브 태그 칸용 검색어 12~20개, 쉼표로
+- 고정댓글: 주인공의 선택이나 결말에 대한 의견을 묻는 한 줄
+반드시 JSON만 출력: {"titles": ["..."], "description": "...", "hashtags": "#... #...", "keywords": "...", "pinned_comment": "..."}"""
+
+
+def doc_is_fiction(genre):
+    return str(genre or "") in DOC_FICTION_TOPICS or str(genre or "").startswith("[이야기]")
+
+
 DOC_PHOTO_SEC = 30   # 장문 사진 간격(초): 나레이션 이 정도마다 사진 한 장
 
 
@@ -684,7 +752,7 @@ DOC_STYLE = """[장문 다큐 나레이션 문체 - 반드시 지킬 것]
 - 귀로 듣는 글이다. 한 문단 = 1~3문장(약 60~160자). 문단 사이 빈 줄. 어려운 용어는 처음 나올 때 쉬운 말로 풀고, 숫자는 일상 비유로 바꾼다(예: '모래알 하나').
 - 같은 말 반복 금지. 2~4문단마다 새로운 사실·장면·질문이 나와야 지루하지 않다.
 - 질문을 던지고 → 사실과 실험·일화로 풀고 → 다음 질문으로 넘기는 흐름. 각 챕터 끝은 다음 챕터가 궁금해지는 한 문장.
-- 목록·표·제목 기호(#, -, *, 번호 목록)와 이모지 금지. 괄호 설명도 최소화(읽어 주기 어색함).
+- 목록·표·제목 기호(#, -, *, 번호 목록)와 이모지 금지. 괄호 설명도 최소화(읽어 주기 어색함). 한자·영문을 괄호로 같이 쓰지 않는다(성우가 그대로 읽음): 필요하면 '영어로는 ~라고 부르죠'처럼 말로 푼다.
 - 확인된 사실만. 논란·가설은 '~라는 주장도 있습니다', '아직 밝혀지지 않았습니다'로 분명히 구분. 인물의 말은 널리 알려진 인용만."""
 
 DOC_OUTLINE_SYSTEM = """너는 구독자 100만 유튜브 지식 다큐 채널의 메인 작가다. 한 주제를 {minutes}분짜리 나레이션 다큐로 만든다(예: '우주는 정말 우연히 만들어졌을까?' 58분).
@@ -750,7 +818,7 @@ def doc_clean(text):
     return "\n\n".join(paras)
 
 
-def doc_add_photos(model, title, story, media_dir, log, cancel=None, sec=None):
+def doc_add_photos(model, title, story, media_dir, log, cancel=None, sec=None, fiction=False):
     """이미 만든 장문 대본에 사진을 더 넣음: 오프닝·챕터마다 (나레이션 sec 초에 한 장) 목표보다 모자란 만큼만,
     사진이 없는 긴 구간에 배치. 이미 쓴 사진(출처 페이지)은 다시 고르지 않음. 반환: (새 대본, 더한 사진 수)"""
     paras = split_paras(story)
@@ -785,9 +853,10 @@ def doc_add_photos(model, title, story, media_dir, log, cancel=None, sec=None):
             view.append(f"(이미 사진: {md[1] or '사진'})" if md else p)
         log(f"  🔎 '{name}' 사진 {need}장 더 찾는 중... (지금 {have}장)")
         try:
+            pcat = "허구 단편소설" if fiction else DOC_CATEGORY
             d = ask_json(model, PHOTO_SYSTEM,
-                         f"콘텐츠 종류: {DOC_CATEGORY}\n[제목] {title} - {name}\n\n[본문]\n" + "\n\n".join(view)
-                         + photo_note(need, DOC_CATEGORY)
+                         f"콘텐츠 종류: {pcat}\n[제목] {title} - {name}\n\n[본문]\n" + "\n\n".join(view)
+                         + photo_note(need, pcat)
                          + f"\n\n[추가 사진 요청] 이미 사진이 있는 자리 근처는 피하고, '(이미 사진…)' 표시 사이가 가장 긴 구간의 문단에 after 를 맞춘다. "
                            f"새 사진 {need}장. 아래 이미 쓴 사진·페이지는 다시 고르지 않는다.\n" + "\n".join(sorted(used))[:3000],
                          tools=WEB_TOOLS)
@@ -8401,8 +8470,16 @@ class App(tk.Tk):
             if cancel.is_set():
                 raise RuntimeError("취소됨")
 
-        base = (f"콘텐츠 종류: 장문 지식 다큐 (사실 기반 - 지어내지 말 것)\n주제: {topic.strip() or '자유 (소재 안에서 긴 다큐로 반응 좋을 큰 질문)'}\n"
-                f"소재: {genre}\n소재 공식: {formula}\n영상 길이: 약 {minutes:.0f}분 (나레이션 전체 약 {total}자)")
+        fiction = doc_is_fiction(genre)   # [이야기] 소재: 창작 장편 낭독
+        outline_sys, chapter_sys = (DOC_FICTION_OUTLINE_SYSTEM, DOC_FICTION_CHAPTER_SYSTEM) if fiction else (DOC_OUTLINE_SYSTEM, DOC_CHAPTER_SYSTEM)
+        unit = "회차" if fiction else "챕터"
+        photo_cat = "허구 단편소설" if fiction else DOC_CATEGORY   # 이야기면 분위기 사진
+        if fiction:
+            base = (f"콘텐츠 종류: 장편 창작 이야기 낭독 (허구 - 실존 인물·기존 작품 금지)\n주제: {topic.strip() or '자유 (이 장르에서 요즘 반응 좋을 이야기)'}\n"
+                    f"장르: {genre}\n장르 공식: {formula}\n영상 길이: 약 {minutes:.0f}분 (나레이션 전체 약 {total}자)")
+        else:
+            base = (f"콘텐츠 종류: 장문 지식 다큐 (사실 기반 - 지어내지 말 것)\n주제: {topic.strip() or '자유 (소재 안에서 긴 다큐로 반응 좋을 큰 질문)'}\n"
+                    f"소재: {genre}\n소재 공식: {formula}\n영상 길이: 약 {minutes:.0f}분 (나레이션 전체 약 {total}자)")
         if reference.strip():
             base += "\n\n[사용자가 붙여넣은 참고자료 - 이 내용을 가장 우선해서 사용]\n" + reference.strip()[:20000]
         sources, notes, facts = [], [], ""
@@ -8410,7 +8487,7 @@ class App(tk.Tk):
             topic, sources, facts = st8.get("topic") or topic, list(st8.get("sources") or []), st8["facts"]
             if topic:
                 base = base.replace(base.split("\n")[1], f"주제: {topic}", 1)
-        elif research:
+        elif research and not fiction:
             log("🔎 웹 검색으로 자료 조사 중... (3~10분)")
             info = ask_json(model, DOC_RESEARCH_SYSTEM, base, tools=WEB_TOOLS)
             topic = info.get("topic") or topic
@@ -8426,8 +8503,8 @@ class App(tk.Tk):
         else:
             o = None
         if o is None:
-            log(f"🗂 구성안 짜는 중... ({minutes:.0f}분 · 챕터 {n_ch}개 · 약 {total:,}자)")
-            o = ask_script_json(model, DOC_OUTLINE_SYSTEM.format(minutes=f"{minutes:.0f}", open_chars=open_c, n_ch=n_ch,
+            log(f"🗂 구성안 짜는 중... ({minutes:.0f}분 · {unit} {n_ch}개 · 약 {total:,}자)" + (" · 이야기 모드: 인물·세계관부터" if fiction else ""))
+            o = ask_script_json(model, outline_sys.format(minutes=f"{minutes:.0f}", open_chars=open_c, n_ch=n_ch,
                                                                  body_chars=body_c, close_chars=close_c),
                                 base + (f"\n\n[웹 조사 자료 - 사실은 이 안에서만 쓸 것]\n{facts}" if facts else ""))
             st8.update(outline=o, facts=st8.get("facts", facts), topic=topic, sources=sources)
@@ -8440,9 +8517,14 @@ class App(tk.Tk):
         want = [int(w * k) for w in want]                  # 챕터 분량 합을 목표 길이에 맞춤
         title = str(o.get("title", "")).strip() or topic
         sources += [str(x) for x in o.get("sources") or [] if str(x) not in sources]
-        if o.get("notes"):
+        if o.get("notes") and not fiction:   # 이야기 모드의 notes 는 작가용 메모라 '확인 필요'에 넣지 않음
             notes.append(str(o["notes"]))
-        toc = "\n".join(f"{i + 1}. {c['title']} - " + " / ".join(str(p) for p in (c.get("points") or [])) for i, c in enumerate(chapters))
+        toc = "\n".join(f"{i + 1}. {c['title']} - " + " / ".join(str(p) for p in (c.get("points") or []))
+                        + (f" → 끝 장면: {c.get('cliffhanger')}" if c.get("cliffhanger") else "") for i, c in enumerate(chapters))
+        if fiction:   # 인물·세계관을 모든 회차에 넘김 (이름·말투가 끝까지 같게)
+            cast = "\n".join(f"- {x.get('name', '')} ({x.get('age', '')}, {x.get('role', '')}): {x.get('personality', '')} / 말투: {x.get('speech', '')}"
+                             for x in (o.get("characters") or []) if isinstance(x, dict))
+            toc = f"[한 줄 요약] {o.get('logline', '')}\n[세계관] {o.get('setting', '')}\n[등장인물]\n{cast}\n\n[회차 구성]\n" + toc
         log("  " + title + "\n  " + " / ".join(f"{i + 1}.{c['title']}" for i, c in enumerate(chapters)))
         bodies = [tuple(b[:2]) for b in st8.get("bodies") or []]
         prev = st8.get("prev") or ("(첫 챕터 - 앞은 오프닝: " + doc_clean(o.get("opening", ""))[:300] + ")")
@@ -8453,19 +8535,22 @@ class App(tk.Tk):
                 continue
             stop()
             last = i == len(chapters) - 1
-            log(f"✍ 챕터 {i + 1}/{len(chapters)} '{c['title']}' 쓰는 중... (목표 {want[i]:,}자)")
+            log(f"✍ {unit} {i + 1}/{len(chapters)} '{c['title']}' 쓰는 중... (목표 {want[i]:,}자)")
             u = (base + f"\n\n[전체 제목] {title}\n\n[전체 구성]\n{toc}\n\n[지금 쓸 챕터] {i + 1}. {c['title']}"
-                 + (" (마지막 챕터 - 전체 결론. 단, 구독 인사는 쓰지 않는다: 클로징이 따로 있음)" if last else "")
+                 + ((" (마지막 회차 - 결말. 구독 인사는 쓰지 않는다: 클로징이 따로 있음)" if fiction else
+                     " (마지막 챕터 - 전체 결론. 단, 구독 인사는 쓰지 않는다: 클로징이 따로 있음)") if last else "")
                  + "\n다룰 내용: " + " / ".join(str(p) for p in (c.get("points") or []))
+                 + (f"\n끝 장면(클리프행어): {c.get('cliffhanger')}" if c.get("cliffhanger") and not last else "")
                  + f"\n목표 글자 수: 약 {want[i]}자 (공백 포함)\n\n[앞 챕터 요약] {prev}"
                  + (f"\n[앞 챕터 마지막 문장 - 되풀이 금지] {split_paras(story_text_only(bodies[-1][1]))[-1]}" if bodies else "")
                  + (f"\n\n[웹 조사 자료 - 사실은 이 안에서만 쓸 것]\n{facts}" if facts else ""))
-            d = ask_script_json(model, DOC_CHAPTER_SYSTEM, u)
+            d = ask_script_json(model, chapter_sys, u)
             st = doc_clean(d.get("story", ""))
             if len(st) < want[i] * 0.6:   # 너무 짧으면 한 번 더 (영상 길이가 모자라지 않게)
                 stop()
                 log(f"  분량 부족({len(st):,}자) → 더 길게 다시 쓰는 중...")
-                d2 = ask_script_json(model, DOC_CHAPTER_SYSTEM, u + f"\n\n[주의] 직전 시도가 {len(st)}자로 너무 짧았다. 이번에는 반드시 약 {want[i]}자로, 사실·일화·비유를 더 넣어 충분히 길게 쓴다.")
+                d2 = ask_script_json(model, chapter_sys, u + f"\n\n[주의] 직전 시도가 {len(st)}자로 너무 짧았다. 이번에는 반드시 약 {want[i]}자로, "
+                                     + ("장면·대사·속마음을 더 넣어" if fiction else "사실·일화·비유를 더 넣어") + " 충분히 길게 쓴다.")
                 st2 = doc_clean(d2.get("story", ""))
                 if len(st2) > len(st):
                     st, d = st2, d2
@@ -8473,15 +8558,15 @@ class App(tk.Tk):
                 raise RuntimeError(f"챕터 {i + 1}을(를) 쓰지 못했습니다.")
             prev = str(d.get("summary") or st[-300:])
             sources += [str(x) for x in d.get("sources") or [] if str(x) not in sources]
-            if d.get("notes"):
+            if d.get("notes") and not fiction:
                 notes.append(f"{i + 1}장: {d['notes']}")
             if autophoto:   # 챕터마다 근거 사진 (1분에 한 장 정도)
                 stop()
                 n_ph = doc_photo_target(st)
-                log(f"  🔎 챕터 {i + 1} 사진 찾는 중... (목표 {n_ph}장)")
+                log(f"  🔎 {unit} {i + 1} {'분위기 ' if fiction else ''}사진 찾는 중... (목표 {n_ph}장)")
                 try:
-                    pd_ = ask_json(model, PHOTO_SYSTEM, f"콘텐츠 종류: {DOC_CATEGORY}\n[제목] {title} - {c['title']}\n\n[본문]\n{st}"
-                                   + photo_note(n_ph, DOC_CATEGORY), tools=WEB_TOOLS)
+                    pd_ = ask_json(model, PHOTO_SYSTEM, f"콘텐츠 종류: {photo_cat}\n[제목] {title} - {c['title']}\n\n[본문]\n{st}"
+                                   + photo_note(n_ph, photo_cat), tools=WEB_TOOLS)
                     ph = fetch_photos(pd_.get("photos"), media_dir, log, limit=n_ph)
                     if ph:
                         st = place_photos(st, ph)
@@ -8490,15 +8575,15 @@ class App(tk.Tk):
             bodies.append((c["title"], st))
             st8.update(bodies=[list(b) for b in bodies], prev=prev, ch_sources=sources, ch_notes=notes)
             save_state()
-            log(f"  챕터 {i + 1} 완성: {len(story_text_only(st)):,}자")
+            log(f"  {unit} {i + 1} 완성: {len(story_text_only(st)):,}자")
         opening = st8.get("opening_ph") or doc_clean(o.get("opening", ""))
         if autophoto and "opening_ph" not in st8:   # 오프닝에도 사진 (첫 화면이 중요)
             stop()
             n_ph = max(2, doc_photo_target(opening))
             log(f"  🔎 오프닝 사진 찾는 중... (목표 {n_ph}장)")
             try:
-                pd_ = ask_json(model, PHOTO_SYSTEM, f"콘텐츠 종류: {DOC_CATEGORY}\n[제목] {title} - 오프닝\n\n[본문]\n{opening}"
-                               + photo_note(n_ph, DOC_CATEGORY), tools=WEB_TOOLS)
+                pd_ = ask_json(model, PHOTO_SYSTEM, f"콘텐츠 종류: {photo_cat}\n[제목] {title} - 오프닝\n\n[본문]\n{opening}"
+                               + photo_note(n_ph, photo_cat), tools=WEB_TOOLS)
                 ph = fetch_photos(pd_.get("photos"), media_dir, log, limit=n_ph)
                 if ph:
                     opening = place_photos(opening, ph)
@@ -8511,7 +8596,9 @@ class App(tk.Tk):
         parts.append(doc_clean(o.get("closing", "")))
         story = strip_placeholders("\n\n".join(p for p in parts if p.strip()))
         n_chars = len(story_text_only(story))
-        note = f"장문 {len(bodies)}챕터 · {n_chars:,}자 · 예상 약 {n_chars / DOC_CHARS_PER_MIN:.0f}분"
+        note = f"장문{' 이야기' if fiction else ''} {len(bodies)}{unit} · {n_chars:,}자 · 예상 약 {n_chars / DOC_CHARS_PER_MIN:.0f}분"
+        if fiction:
+            notes.insert(0, "창작 이야기(픽션)")
         return {"title": title, "story": story, "note": note, "sources": sources, "notes": " / ".join(notes)[:1500],
                 "topic": topic, "song": None, "melody": "", "bpm": 90, "artwork": None}
 
@@ -8936,7 +9023,9 @@ class App(tk.Tk):
         doc = cat == DOC_CATEGORY
         user = (f"콘텐츠 종류: {cat}" + (" (실제 사건·사실만)" if factual else "") +
                 f"\n소재: {g}\n소재 공식: {topics.get(g, ('(사용자가 직접 정한 소재)', ''))[0]}\n"
-                + ("이 소재로 30~60분 나레이션 다큐로 깊게 풀 수 있는 큰 질문형 주제 8개를 만들어줘."
+                + (("이 장르로 20~60분 장편 낭독(오디오드라마)용 이야기 8개를 만들어줘. 각 주제는 '장르 표시 + 주인공의 상황과 갈등 한 줄'(35자 이내, 결말 금지, "
+                    "예: '[무협] 독을 맞고 버려진 소년, 원수의 문파에 제자로 들어가다'). 요즘 유튜브 장편 낭독·숏드라마에서 반응 좋은 설정으로."
+                    if doc_is_fiction(g) else "이 소재로 30~60분 나레이션 다큐로 깊게 풀 수 있는 큰 질문형 주제 8개를 만들어줘.")
                    if doc else "이 소재로 쇼츠 주제 8개를 만들어줘."))
         # 예전에 추천했거나 이미 만든 주제는 피하게 (같은 추천 반복 방지)
         hist_path, key = self.idea_history_path(), f"{cat}|{g}"
@@ -9050,11 +9139,12 @@ class App(tk.Tk):
         if doc:   # 장문은 본문이 길어서 앞부분 + 챕터 제목만 보냄
             body = story_text_only(story)
             heads = [p for p in split_paras(body) if p.startswith("## ")]
-            user = (f"콘텐츠 종류: 장문 지식 다큐 ({len(body)}자)\n소재: {genre}\n[지금 제목] {title}\n\n[챕터]\n" + "\n".join(heads)
-                    + "\n\n[본문 앞부분]\n" + body[:4000])
+            fic = doc_is_fiction(genre)
+            user = (f"콘텐츠 종류: {'장편 창작 이야기 낭독(픽션)' if fic else '장문 지식 다큐'} ({len(body)}자)\n소재: {genre}\n[지금 제목] {title}\n\n"
+                    f"[{'회차' if fic else '챕터'}]\n" + "\n".join(heads) + "\n\n[본문 앞부분]\n" + body[:4000])
 
         def job():
-            pkg = ask_script_json(model, DOC_PACKAGE_SYSTEM if doc else PACKAGE_SYSTEM, user)
+            pkg = ask_script_json(model, (DOC_FICTION_PACKAGE_SYSTEM if doc_is_fiction(genre) else DOC_PACKAGE_SYSTEM) if doc else PACKAGE_SYSTEM, user)
             pkg["sources"] = sources
             pkg["song"] = getattr(self, "song", None)
             pkg["artwork"] = getattr(self, "artwork", None)
