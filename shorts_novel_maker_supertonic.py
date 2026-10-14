@@ -8927,25 +8927,59 @@ class App(tk.Tk):
         self.write_log("🔎 AI가 근거 사진을 찾는 중... (1~3분)")
         self.run_bg("사진 찾는 중...", job, done)
 
+    def idea_history_path(self):
+        return os.path.join(self.get_settings()["out_dir"], "주제추천_기록.json")
+
     def ai_ideas(self):
         g, cat = self.genre_var.get(), self.cat_var.get()
         factual, topics = cat_info(cat)
+        doc = cat == DOC_CATEGORY
         user = (f"콘텐츠 종류: {cat}" + (" (실제 사건·사실만)" if factual else "") +
-                f"\n소재: {g}\n소재 공식: {topics.get(g, ('(사용자가 직접 정한 소재)', ''))[0]}\n이 소재로 쇼츠 주제 8개를 만들어줘.")
+                f"\n소재: {g}\n소재 공식: {topics.get(g, ('(사용자가 직접 정한 소재)', ''))[0]}\n"
+                + ("이 소재로 30~60분 나레이션 다큐로 깊게 풀 수 있는 큰 질문형 주제 8개를 만들어줘."
+                   if doc else "이 소재로 쇼츠 주제 8개를 만들어줘."))
+        # 예전에 추천했거나 이미 만든 주제는 피하게 (같은 추천 반복 방지)
+        hist_path, key = self.idea_history_path(), f"{cat}|{g}"
+        try:
+            hist = json.load(open(hist_path, encoding="utf-8"))
+        except Exception:
+            hist = {}
+        seen = list(hist.get(key, []))
+        if self.topic_var.get().strip():
+            seen.append(self.topic_var.get().strip())
+        if doc:   # 이미 만든 장문 (output\장문\_작업_주제)
+            d_ = os.path.join(self.get_settings()["out_dir"], "장문")
+            if os.path.isdir(d_):
+                seen += [n[len("_작업_"):] for n in os.listdir(d_) if n.startswith("_작업_")]
+        seen = list(dict.fromkeys(x for x in seen if x))[-60:]
+        if seen:
+            user += ("\n\n[이미 추천했거나 만든 주제 - 같은 것은 물론 비슷한 것(같은 대상·같은 질문)도 피하고, 새로운 대상·각도로]\n- "
+                     + "\n- ".join(seen))
         model = self.model_var.get().strip()
         web = self.research_var.get()
         if web:
-            user += "\n[웹 검색 모드] WebSearch 로 최근 화제가 된 사건·발견·현상·이야기를 찾아 그중에서 고른다. 실제로 존재하는 것만."
+            user += ("\n[웹 검색 모드] WebSearch 로 최근 화제가 된 사건·발견·현상·이야기를 찾아 그중에서 고른다. 실제로 존재하는 것만."
+                     + (" 유튜브에서 비슷한 주제의 긴 영상들이 반응(조회수)이 좋았는지, 아직 덜 다뤄진 틈새인지도 살펴서 고른다." if doc else ""))
+        user += '\n각 주제마다 왜 반응이 좋을지 한 줄 이유를 why 에 같은 순서로. 출력: {"ideas": ["..."], "why": ["..."]}'
 
         def job():
             return ask_json(model, IDEA_SYSTEM, user, tools=WEB_TOOLS if web else None)
 
         def done(d):
             ideas = [str(x) for x in d.get("ideas", []) if str(x).strip()]
+            why = [str(x) for x in d.get("why", [])] if isinstance(d.get("why"), list) else []
             if ideas:
                 self.topic_box.config(values=ideas)
                 self.topic_var.set(ideas[0])
-                self.write_log("주제 추천 (주제 칸 ▼에서 선택): " + " / ".join(ideas))
+                self.write_log("주제 추천 (주제 칸 ▼에서 선택):")
+                for i, x in enumerate(ideas):
+                    self.write_log(f"  {i + 1}. {x}" + (f"  ← {why[i]}" if i < len(why) and why[i].strip() else ""))
+                hist[key] = (list(hist.get(key, [])) + ideas)[-60:]
+                try:
+                    os.makedirs(os.path.dirname(hist_path), exist_ok=True)
+                    atomic_write_text(hist_path, json.dumps(hist, ensure_ascii=False, indent=1))
+                except Exception:
+                    pass
         self.write_log(f"[{cat} · {g}] 인기 주제를 고르는 중...")
         self.run_bg("주제 추천 중...", job, done)
 
