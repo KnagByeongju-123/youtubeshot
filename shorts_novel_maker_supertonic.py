@@ -11649,10 +11649,17 @@ class App(tk.Tk):
         mood_v = tk.StringVar()
         ttk.Entry(r0, textvariable=mood_v, width=34).pack(side="left", padx=4)
 
+        def nature_scene():
+            """자연의 소리 모드: 고른 소리로 배경 장면 설명 (예: 빗소리·모닥불 → 비 오는 밤 캠핑)"""
+            on = [k for k, v in self.nature_state()["sel"].items() if v.get("on")]
+            return ("A peaceful nature scene that matches these sounds: " + ", ".join(on) +
+                    ". Calm, cinematic, soft natural light, no people, no text.") if on else ""
+
         def copy_prompt():
             P = MUSIC_PRESETS[cur()]
+            base_p = nature_scene() if src_mode.get() == "nature" else P["prompt"]
             self.clipboard_clear()
-            self.clipboard_append(P["prompt"] + f"\n\n({ratio_ko()} 비율, 글자·워터마크 없이, 아주 잔잔하고 고요한 분위기로 그려줘)")
+            self.clipboard_append((base_p or P["prompt"]) + f"\n\n({ratio_ko()} 비율, 글자·워터마크 없이, 아주 잔잔하고 고요한 분위기로 그려줘)")
             self.set_status("📋 기본 배경 그림 프롬프트 복사됨 → ChatGPT에 붙여넣기")
 
         def ai_prompts():
@@ -11660,9 +11667,13 @@ class App(tk.Tk):
             model = self.model_var.get().strip()
             P = MUSIC_PRESETS[name]
 
+            nat_desc = nature_scene() if src_mode.get() == "nature" else ""
+
             def job():
-                return ask_script_json(model, MUSIC_PROMPT_SYSTEM, f"화면 비율: {ratio_ko()}\n음악 종류: {name} ({P['desc']})\n영상 제목: {title}"
-                                       + (f"\n사용자가 원하는 분위기·장면: {mood}" if mood else "") + f"\n참고(기본 프롬프트): {P['prompt']}")
+                kind = (f"자연의 소리 ({nat_desc})" if nat_desc else f"{name} ({P['desc']})")
+                return ask_script_json(model, MUSIC_PROMPT_SYSTEM, f"화면 비율: {ratio_ko()}\n음악 종류: {kind}\n영상 제목: {title}"
+                                       + (f"\n사용자가 원하는 분위기·장면: {mood}" if mood else "")
+                                       + ("" if nat_desc else f"\n참고(기본 프롬프트): {P['prompt']}"))
 
             def done(d):
                 w2 = tk.Toplevel(win)
