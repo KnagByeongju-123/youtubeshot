@@ -2785,7 +2785,7 @@ class SubtitleRenderer:
             d = durs.get(idx)
             if d is None:
                 d = max(1.6, len(tts_clean(text)) * spc + 0.6)
-            d = d + (1.0 if kind == "chapter" else gap)
+            d = (max(d, 1.0) + 1.0) if kind == "chapter" else d + gap   # 챕터 제목: 읽지 않고 약 2초 보여줌
             segs.append({"i": idx, "kind": kind, "text": text, "img": cur_img, "dur": d})
             idx += 1
         if self.images:   # 첫 사진이 나오기 전 문단들도 첫 사진을 보여줌 (빈 화면 방지)
@@ -3928,13 +3928,91 @@ def build_audio(r, s, style):
 # ---------------- 나레이션 (TTS) ----------------
 
 
+_KO_DIG = "영일이삼사오육칠팔구"
+_KO_NATIVE = {1: "한", 2: "두", 3: "세", 4: "네", 5: "다섯", 6: "여섯", 7: "일곱", 8: "여덟", 9: "아홉"}
+_KO_NATIVE_TENS = {1: "열", 2: "스물", 3: "서른", 4: "마흔", 5: "쉰", 6: "예순", 7: "일흔", 8: "여든", 9: "아흔"}
+# 고유어로 읽는 단위 (1~99): 세 명, 두 마리, 다섯 살, 세 시
+_KO_NATIVE_UNITS = ("마리", "사람", "시간", "살", "시", "번", "권", "잔", "그루", "송이", "척", "달", "가지", "군데", "걸음",
+                    "켤레", "곳", "쌍", "방울", "바퀴", "명", "개", "채", "벌", "줄", "알", "배")
+_KO_UNIT_WORDS = [("km²", "제곱킬로미터"), ("m²", "제곱미터"), ("km/h", "킬로미터"), ("km", "킬로미터"), ("cm", "센티미터"),
+                  ("mm", "밀리미터"), ("kg", "킬로그램"), ("mg", "밀리그램"), ("ml", "밀리리터"), ("mL", "밀리리터"), ("°C", "도"),
+                  ("℃", "도"), ("°", "도"), ("%", " 퍼센트"), ("hPa", "헥토파스칼"), ("bar", "바"), ("atm", "기압"), ("m", "미터"), ("g", "그램"), ("L", "리터")]
+
+
+def ko_sino(n):
+    """정수 → 한자어 수사 (1960 → 천구백육십, 10000 → 만, 13800000000 → 백삼십팔억)"""
+    if n == 0:
+        return "영"
+    out = []
+    for i, big in enumerate(["", "만", "억", "조", "경"]):
+        k = n % 10000
+        n //= 10000
+        if k:
+            s = ""
+            for d, small in ((k // 1000, "천"), (k // 100 % 10, "백"), (k // 10 % 10, "십"), (k % 10, "")):
+                if d:
+                    s += ("" if d == 1 and small else _KO_DIG[d]) + small
+            if big == "만" and k == 1:
+                s = ""          # '일만' 대신 '만'
+            out.append(s + big)
+        if not n:
+            break
+    return "".join(reversed(out))
+
+
+def ko_native(n):
+    """1~99 → 고유어 관형형 (3 → 세, 20 → 스무, 21 → 스물한)"""
+    if n == 20:
+        return "스무"
+    return _KO_NATIVE_TENS.get(n // 10, "") + _KO_NATIVE.get(n % 10, "")
+
+
+def ko_numbers(text):
+    """나레이션용: 아라비아 숫자·기호를 한글 읽기로 (자막은 숫자 그대로 두고 성우에게 넘기는 글만 바꿈).
+    TTS(특히 Supertonic)가 숫자를 잘못 읽거나 오류를 내는 것을 막음"""
+    t = text
+    t = re.sub(r"(?<=\d),(?=\d{3}(?!\d))", "", t)                         # 12,000 → 12000
+    t = re.sub(r"(\d)\s*[~～∼]\s*(?=\d)", r"\1에서 ", t)                  # 10~20 → 10에서 20
+    t = re.sub(r"(?<![\w.])-(?=\d)", "마이너스 ", t)
+    for a, b in _KO_UNIT_WORDS:                                         # 10km → 10킬로미터 (숫자 바로 뒤의 단위만)
+        t = re.sub(r"(\d)\s*" + re.escape(a) + r"(?![A-Za-z])", r"\1" + b, t)
+
+    def one(m_):
+        num, frac, after = m_.group(1), m_.group(2), m_.string[m_.end():m_.end() + 3]
+        try:
+            n = int(num)
+        except ValueError:
+            return m_.group(0)
+        if frac:                                                        # 3.14 → 삼 점 일사
+            return ko_sino(n) + " 점 " + "".join(_KO_DIG[int(c)] for c in frac[1:])
+        if n == 1 and after.startswith("만"):                             # 1만 → 만 (일만 X)
+            return ""
+        if after.startswith("월") and 1 <= n <= 12:                     # 6월 → 유월, 10월 → 시월
+            return {6: "유", 10: "시"}.get(n, ko_sino(n))
+        if 1 <= n <= 99 and after.startswith(_KO_NATIVE_UNITS) and not after.startswith(("시대", "시즌", "개월", "번째", "가지고", "달러", "개국", "배터", "배우", "시청")):
+            return ko_native(n)
+        if n >= 1 and after.startswith("번째"):
+            return "첫" if n == 1 else ko_native(n) if n <= 99 else ko_sino(n)
+        if len(num) > 16:                                               # 너무 긴 숫자(전화번호 등)는 한 자리씩
+            return " ".join(_KO_DIG[int(c)] for c in num)
+        if len(num) > 1 and num.startswith("0"):                       # 007 같은 번호
+            return " ".join(_KO_DIG[int(c)] for c in num)
+        return ko_sino(n)
+    t = re.sub(r"(\d+)(\.\d+)?", one, t)
+    t = t.replace("&", " 앤 ").replace("+", " 플러스 ").replace("×", " 곱하기 ").replace("=", " 는 ")
+    t = re.sub(r"[·ㆍ/]", " ", t)
+    return t
+
+
 def tts_clean(text):
-    """읽기 좋게 정리: ♪, 따옴표, 챕터 표시 제거"""
+    """읽기 좋게 정리: ♪, 따옴표, 챕터 표시 제거 + 한국어 문장의 숫자는 한글 읽기로"""
     t = text.strip()
     if t.startswith("## "):
         t = t[3:]
     t = t.lstrip("♪").strip()
     t = re.sub(r"[\"“”'‘’]", "", t)
+    if re.search(r"[가-힣]", t) and re.search(r"\d", t):
+        t = ko_numbers(t)
     t = re.sub(r"\s+", " ", t)
     return t
 
@@ -4664,6 +4742,9 @@ def build_narration(story, s, cache_dir, log=None, cancel=None, para_audio=None)
         if cancel and cancel.is_set():
             raise RuntimeError("취소됨")
         f_ = pa.get(str(i)) or pa.get(i)
+        if text.strip().startswith("## ") and not (f_ and os.path.exists(f_)):
+            res.append((i, np.zeros(1, np.float32), 0.0))   # 챕터 제목은 읽지 않음 (화면에만 잠깐 표시)
+            continue
         if f_ and os.path.exists(f_):
             a, d = load_para_audio(f_)
         else:
@@ -7822,7 +7903,7 @@ class App(tk.Tk):
         items = narration_paras(story)
         for k, (i, text) in enumerate(items):
             t = tts_clean(text)
-            if not t:
+            if not t or (text.strip().startswith("## ") and not pa.get(str(i))):   # 챕터 제목은 읽지 않음
                 res.append((i, np.zeros(1, np.float32), 0.0))
                 continue
             f_ = pa.get(str(i))
