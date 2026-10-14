@@ -2103,6 +2103,94 @@ def save_auto_thumb(r, base):
     r.thumbnail().save(base + "_썸네일.png")
 
 
+def description_text(pkg, story, portrait=False, max_sources=8):
+    """유튜브 설명란에 그대로 붙여넣는 완성본: 설명 + 챕터 + 주요 출처 + 사진 출처 + 해시태그"""
+    lines = [str(pkg.get("description", "")).strip()]
+    if "AI 생성 이미지" in (story or "") and "AI" not in lines[0]:
+        lines.append("※ 일부 이미지는 AI로 생성되었습니다.")
+    if pkg.get("chapters"):
+        lines += ["", "00:00 오프닝"] + [f"{hms(t)} {n}" for t, n in pkg["chapters"]]
+    src, seen = [], set()
+    for x in pkg.get("sources") or []:
+        k = re.sub(r"\W+", "", str(x).split(" - ")[0].lower())[:40]
+        if k and k not in seen:
+            seen.add(k)
+            src.append(str(x))
+    if src:
+        lines += ["", "📚 출처"] + [f"- {x}" for x in src[:max_sources]]
+    credits = [c for c in photo_credits(story) if "AI 생성 이미지" not in c]
+    if credits:
+        lines += ["", "🖼 사진 출처"] + credits
+    tags = str(pkg.get("hashtags", "")).strip()
+    if portrait and "#shorts" not in tags.lower():
+        tags = (tags + " #shorts").strip()
+    if tags:
+        lines += ["", tags]
+    return "\n".join(lines).strip() + "\n"
+
+
+def best_photo(story):
+    """대본 속 사진 중 가장 큰(해상도 높은) 사진 → PIL 이미지 또는 None"""
+    best, area = None, 0
+    for p, _ in story_photos(story):
+        p = p if os.path.isabs(p) else os.path.join(BASE, p)
+        try:
+            with Image.open(p) as im:
+                a = im.width * im.height
+                if a > area:
+                    best, area = p, a
+        except Exception:
+            continue
+    try:
+        return Image.open(best).convert("RGB") if best else None
+    except Exception:
+        return None
+
+
+def publish_kit(model, base, title, story, category, genre, s, chapters=None, sources=None, notes="", log=None):
+    """MP4 저장 뒤 자동으로: 업로드 문구(_업로드문구.txt) + 설명란 완성본(_설명란.txt) + 유튜브 썸네일(_썸네일_유튜브.jpg).
+    AI(대본 작성 AI)를 2번 부름. 실패해도 영상에는 영향 없음"""
+    log = log or (lambda x: None)
+    body = story_text_only(story)
+    doc = category == DOC_CATEGORY
+    fic = doc and doc_is_fiction(genre)
+    portrait = H > W
+    try:   # 1) 업로드 문구
+        if doc:
+            heads = [p for p in split_paras(body) if p.startswith("## ")]
+            user = (f"콘텐츠 종류: {'장편 창작 이야기 낭독(픽션)' if fic else '장문 지식 다큐'} ({len(body)}자)\n소재: {genre}\n[지금 제목] {title}\n\n"
+                    f"[{'회차' if fic else '챕터'}]\n" + "\n".join(heads) + "\n\n[본문 앞부분]\n" + body[:4000])
+            pkg = ask_script_json(model, DOC_FICTION_PACKAGE_SYSTEM if fic else DOC_PACKAGE_SYSTEM, user)
+            doc_date_note(pkg, fic)
+        else:
+            pkg = ask_script_json(model, PACKAGE_SYSTEM, f"콘텐츠 종류: {category}\n소재: {genre}\n[지금 제목] {title}\n\n[본문]\n{body[:6000]}")
+        pkg.update(sources=list(sources or []), chapters=list(chapters or []), notes=notes or "")
+        write_package(base, title, story, pkg)
+        atomic_write_text(base + "_설명란.txt", description_text(pkg, story, portrait))
+        log("  📝 업로드 문구·설명란 저장: " + os.path.basename(base) + "_설명란.txt (유튜브 설명란에 그대로 붙여넣기)")
+    except Exception as e:
+        log("  📝 업로드 문구 자동 생성 실패(📝 버튼으로 다시 만들 수 있어요): " + str(e).splitlines()[0][:100])
+    try:   # 2) 유튜브 썸네일 (AI 문구 + 대본 속 가장 큰 사진)
+        try:
+            download_free_font("ofl/blackhansans/BlackHanSans-Regular.ttf")
+        except Exception:
+            pass
+        plist = "\n".join(f"{i + 1}. {cap}" for i, (_, cap) in enumerate(story_photos(story))) or "(사진 없음)"
+        d = ask_script_json(model, fit_ratio(THUMB_SYSTEM), f"화면: {ratio_ko()}\n콘텐츠 종류: {category}\n[제목] {title}\n\n[본문]\n{body[:3000]}\n\n[사진 목록]\n{plist}")
+        vs = [x for x in (d.get("variants") or []) if isinstance(x, dict) and x.get("big")]
+        if vs:
+            size = (1080, 1920) if portrait else (1280, 720)
+            im = render_thumb(vs[0], s, best_photo(story), size=size).convert("RGB")
+            out = base + "_썸네일_유튜브.jpg"
+            for q in (92, 85, 75, 65):          # 유튜브 썸네일은 2MB 이하
+                im.save(out, "JPEG", quality=q, optimize=True)
+                if os.path.getsize(out) < 2_000_000:
+                    break
+            log(f"  🖼 유튜브 썸네일 저장: {os.path.basename(out)}  (문구: {vs[0].get('big', '')} {vs[0].get('big2', '')})")
+    except Exception as e:
+        log("  🖼 썸네일 자동 생성 실패(🎯 AI 썸네일 버튼으로 만들 수 있어요): " + str(e).splitlines()[0][:100])
+
+
 def story_photos(story):
     """본문의 사진 줄 → [(경로, 설명)]"""
     out = []
@@ -10006,6 +10094,8 @@ class App(tk.Tk):
             self.write_log(f"  배경음 번호가 없어 새 번호 #{seed}로 만듭니다 (소리 탭에 저장됨)")
 
         story_now, title_now = self.get_story(), self.title_var.get()
+        kit = dict(model=self.model_var.get().strip(), category=self.cat_var.get(), genre=self.genre_var.get(),
+                   sources=list(getattr(self, "sources", []) or []), notes=getattr(self, "notes", ""))
 
         def job():
             nonlocal r
@@ -10027,14 +10117,19 @@ class App(tk.Tk):
             if ch:
                 with open(base + "_타임스탬프.txt", "w", encoding="utf-8") as f:
                     f.write("\n".join(f"{hms(t)} {n}" for t, n in [(0, "오프닝")] + ch))
-            return out, mp3, in_video is not None and has_audio(out), os.path.getsize(out) / 1e6
+            size_mb = os.path.getsize(out) / 1e6
+            if not (self.cancel and self.cancel.is_set()):   # 업로드 문구·설명란·유튜브 썸네일 자동 생성
+                self.q.put(lambda: self.status.config(text="업로드 문구·썸네일 만드는 중... (AI 1~2분)"))
+                publish_kit(kit["model"], base, title_now, story_now, kit["category"], kit["genre"], s, ch,
+                            kit["sources"], kit["notes"], self.log_bg)
+            return out, mp3, in_video is not None and has_audio(out), size_mb
 
         def done(res):
             p, mp3, snd, mb = res
             what = ((f"{style} #{s['bgm_seed']}") if s["bgm_mode"] == "자동생성"
                     else ("파일 " + os.path.basename(s["bgm_path"]) if s["bgm_mode"] == "파일"
                           else ("반전 효과음만" if s["reveal_hit"] == "on" else "없음")))
-            self.write_log(f"MP4 저장 완료: {p}  ({mb:.1f}MB · 썸네일 PNG 같이 저장)")
+            self.write_log(f"MP4 저장 완료: {p}  ({mb:.1f}MB · 첫 장면 PNG + 유튜브 썸네일 JPG + 업로드 문구·설명란 TXT)")
             if "MP4에 포함" in s["audio_out"]:
                 self.write_log("  MP4 소리: " + ("✅ 포함됨 (" + what + ")" if snd else "❌ 포함 안 됨 - 소리 탭 설정을 확인하세요"))
             else:
