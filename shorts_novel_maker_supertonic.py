@@ -280,9 +280,9 @@ FIELDS = [
     ("나레이션", "st_emotion_map", "문단별 지정(예: 2=슬픔,4=놀람)", "str", ""),
     ("나레이션", "st_steps", "로컬 성우 품질(5~12)", "int", 5),
     ("나레이션", "st_edge_fallback", "로컬 성우 실패시 Edge 전환", "choice:on,off", "on"),
-    ("나레이션", "narr_tone_f", "여자 성우 톤(반음, -4~+4, 말 속도는 그대로)", "float", 2.0),
-    ("나레이션", "narr_tone_m", "남자 성우 톤(반음, -4~+4)", "float", 1.0),
-    ("나레이션", "narr_bright_f", "여자 목소리 밝게(고음 살짝 강조)", "choice:on,off", "on"),
+    ("나레이션", "narr_tone_f", "여자 성우 톤(반음, 0=원래 목소리 · 올리면 약간 울림)", "float", 0.0),
+    ("나레이션", "narr_tone_m", "남자 성우 톤(반음, 0=원래 목소리)", "float", 0.0),
+    ("나레이션", "narr_bright_f", "여자 목소리 밝게(고음 강조 · 약간 울림)", "choice:on,off", "off"),
     ("나레이션", "narr_breath_cut", "말 시작 숨소리('쓰읍') 지우기", "choice:on,off", "on"),
     ("나레이션", "narr_spoken", "숫자 발음 AI 사전(자막은 맞춤법대로, 성우는 읽는 그대로)", "choice:on,off", "on"),
     ("나레이션", "narr_style", "연기 지시(ChatGPT·Gemini 음성)", "str", "차분하고 또렷한 다큐멘터리 내레이터처럼. 반전 부분은 긴장감 있게."),
@@ -8852,10 +8852,14 @@ class App(tk.Tk):
             except Exception:
                 pass
         best.pop("_mt", None)
+        if best and not best.get("voice_fx_v2"):     # 톤·밝게는 울림이 생겨 한 번 원래 목소리로 되돌림 (숨소리 지우기는 유지)
+            st_ = best.get("settings")
+            if isinstance(st_, dict):
+                st_.update(narr_tone_f=0.0, narr_tone_m=0.0, narr_bright_f="off", narr_breath_cut="on")
         return best
 
     def project_dict(self):
-        return {"ver": 7, "model": self.model_var.get(), "category": self.cat_var.get(), "topic": self.topic_var.get(), "genre": self.genre_var.get(),
+        return {"ver": 7, "voice_fx_v2": True, "model": self.model_var.get(), "category": self.cat_var.get(), "topic": self.topic_var.get(), "genre": self.genre_var.get(),
                 "sources": getattr(self, "sources", []), "notes": getattr(self, "notes", ""),
                 "song": getattr(self, "song", None), "melody": getattr(self, "melody", ""), "bpm": getattr(self, "bpm", 90),
                 "artwork": getattr(self, "artwork", None),
@@ -12155,8 +12159,8 @@ class App(tk.Tk):
         f2.pack(fill="x", pady=6)
         aud_v, tone_v = tk.StringVar(value="일반 청중"), tk.StringVar(value=PPT_TONES[0])
         len_v, voice_v = tk.StringVar(value=list(PPT_LENGTHS)[1]), tk.StringVar(value="🤖 AI가 추천")
-        sub_v, bgm_v = tk.StringVar(value="켜기"), tk.StringVar(value="잔잔하게(작게)")
-        lang_v = tk.StringVar(value=PPT_SUB_LANGS[0])
+        sub_v, bgm_v = tk.StringVar(value="켜기"), tk.StringVar(value="없음")     # 기본: 배경음 없음
+        lang_v = tk.StringVar(value="베트남어")                                      # 기본: 베트남어 자막
         mode_v = tk.StringVar(value=PPT_MODES[0])
         vm_v, vf_v = tk.StringVar(value="🤖 AI가 추천"), tk.StringVar(value="🤖 AI가 추천")
         cat_ = ppt_voice_catalog()
@@ -12353,7 +12357,8 @@ class App(tk.Tk):
                                   json.dumps({"src": path_v.get(), "title": title_v.get(), "meta": st["meta"], "vi": st["vi"],
                                               "order": st["order"], "skip": sorted(st["skip"]), "fast": sorted(st["fast"]), "plan": st["plan"],
                                               "lang": lang_v.get(), "mode": mode_v.get(), "size": size_v.get(),
-                                              "trans": trans_v.get(), "motion": motion_v.get(), "font": font_v.get(), "vi_size": vi_v.get(), "tone": tone_v.get(), "audience": aud_v.get(),
+                                              "trans": trans_v.get(), "motion": motion_v.get(), "font": font_v.get(), "vi_size": vi_v.get(),
+                                              "bgm": bgm_v.get(), "tone": tone_v.get(), "audience": aud_v.get(),
                                               "narr": {str(k): v for k, v in st["narr"].items()}}, ensure_ascii=False, indent=1))
 
         def fill(slides):
@@ -12373,7 +12378,7 @@ class App(tk.Tk):
                     st["order"] = od + [n for n in valid if n not in od]
                     st["skip"] = {int(n) for n in d.get("skip") or [] if int(n) in valid}
                     st["fast"] = {int(n) for n in d.get("fast") or [] if int(n) in valid}
-                    for var_, key_ in ((lang_v, "lang"), (mode_v, "mode"), (tone_v, "tone"), (aud_v, "audience"), (size_v, "size"), (trans_v, "trans"), (motion_v, "motion"), (font_v, "font"), (vi_v, "vi_size")):
+                    for var_, key_ in ((lang_v, "lang"), (mode_v, "mode"), (tone_v, "tone"), (aud_v, "audience"), (size_v, "size"), (trans_v, "trans"), (motion_v, "motion"), (font_v, "font"), (vi_v, "vi_size"), (bgm_v, "bgm")):
                         if d.get(key_):
                             var_.set(d[key_])
                     title_v.set(d.get("title") or title_v.get())
