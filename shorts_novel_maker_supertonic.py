@@ -3293,6 +3293,9 @@ class SubtitleRenderer:
                 col = s["accent_color"]     # 따옴표 대사는 강조색
         else:
             col = "#FFE135" if st.startswith("노란") else "#FFFFFF"
+        pc = (s.get("para_colors") or {}).get(key[1]) if isinstance(key, tuple) and len(key) > 1 and key[0] == "tx" else None
+        if pc and not bubble:                 # 2인 진행: 말하는 사람마다 자막 색
+            col = pc
         if band and not getattr(self, "sub_boxed", False):
             d.rounded_rectangle([x0 - 10, y - 14, x1 + 10, y1 + 6], radius=16, fill=(0, 0, 0, 185))
         thin = getattr(self, "sub_thin", False) or getattr(self, "sub_boxed", False)
@@ -5205,9 +5208,10 @@ def build_narration(story, s, cache_dir, log=None, cancel=None, para_audio=None)
         if f_ and os.path.exists(f_):
             a, d = load_para_audio(f_)
         else:
-            is_st = voice_code(s["narr_voice"]).startswith("supertonic:")
+            vname = PARA_VOICE.get(text.strip(), s["narr_voice"])     # 2인 진행이면 문단마다 성우가 다름
+            is_st = voice_code(vname).startswith("supertonic:")
             mood = supertonic_mood(text, k, len(items), s) if is_st else "차분"
-            a, d = tts_clip(text, s["narr_voice"], float(s["narr_rate"]), cache_dir,
+            a, d = tts_clip(text, vname, float(s["narr_rate"]), cache_dir,
                             float(s.get("narr_pitch", 0)), mood, int(s.get("st_steps", 5)),
                             str(s.get("st_edge_fallback", "on")) == "on")
         res.append((i, a, d))
@@ -6978,13 +6982,51 @@ try {
   for ($i = 1; $i -le $pres.Slides.Count; $i++) {
     $s = $pres.Slides.Item($i)
     if ($Bold) { foreach ($sh in $s.Shapes) { Fix-Shape $sh } }      # 화면용 그림에만 적용 (원본 파일은 저장 안 함)
+    # 클릭 애니메이션: 클릭 전 단계마다 그림 (마지막 = 모든 클릭 후 = slide_NNN.png)
+    $steps = @(); $reveal = @()
+    $seq = $s.TimeLine.MainSequence
+    if ($seq.Count -gt 0) {
+      $eff = @(); $g = 0
+      for ($k = 1; $k -le $seq.Count; $k++) {
+        $e = $seq.Item($k)
+        if ($e.Timing.TriggerType -eq 1) { $g++ }
+        $et = [int]$e.EffectType
+        if (-not $e.Exit -and $et -ge 54 -and $et -le 72) { continue }       # 강조 효과는 보임/숨김과 상관없음
+        $eff += [pscustomobject]@{ sh = $e.Shape; g = $g; ex = [bool]$e.Exit }
+      }
+      if ($g -gt 0 -and $eff.Count -gt 0) {
+        $names = @($eff | ForEach-Object { $_.sh.Name })
+        $extra = @()
+        foreach ($x in $eff) {                                                # 움직이는 도형 안에 든 글상자도 같이
+          foreach ($o in $s.Shapes) {
+            if ($names -contains $o.Name) { continue }
+            if ($o.Left -ge $x.sh.Left - 2 -and $o.Top -ge $x.sh.Top - 2 -and ($o.Left + $o.Width) -le ($x.sh.Left + $x.sh.Width + 2) -and ($o.Top + $o.Height) -le ($x.sh.Top + $x.sh.Height + 2)) {
+              $extra += [pscustomobject]@{ sh = $o; g = $x.g; ex = $x.ex }; $names += $o.Name
+            }
+          }
+        }
+        $eff += $extra
+        for ($c = 1; $c -le $g; $c++) {
+          $t = @()
+          foreach ($x in $eff) { if ($x.g -eq $c) { try { if ($x.sh.HasTextFrame -and $x.sh.TextFrame.HasText) { $t += $x.sh.TextFrame.TextRange.Text } } catch {} } }
+          $reveal += (($t -join " / ") -replace "\s+", " ")
+        }
+        for ($c = 0; $c -lt $g; $c++) {
+          foreach ($x in $eff) { $x.sh.Visible = $(if ($x.ex) { -1 } else { 0 }) }
+          foreach ($x in $eff) { if ($x.g -le $c) { $x.sh.Visible = $(if ($x.ex) { 0 } else { -1 }) } }
+          $p = Join-Path $Out ("slide_{0:D3}_{1}.png" -f $i, $c)
+          $s.Export($p, "PNG", $w, $h); $steps += $p
+        }
+        foreach ($x in $eff) { $x.sh.Visible = -1 }
+      }
+    }
     $img = Join-Path $Out ("slide_{0:D3}.png" -f $i)
     $s.Export($img, "PNG", $w, $h)
     $texts = @()
     foreach ($sh in $s.Shapes) { try { if ($sh.HasTextFrame -and $sh.TextFrame.HasText) { $texts += $sh.TextFrame.TextRange.Text } } catch {} }
     $notes = ""
     try { foreach ($sh in $s.NotesPage.Shapes) { try { if ($sh.PlaceholderFormat.Type -eq 2 -and $sh.TextFrame.HasText) { $notes = $sh.TextFrame.TextRange.Text } } catch {} } } catch {}
-    $list += [pscustomobject]@{ n = $i; image = $img; text = ($texts -join "`n"); notes = $notes }
+    $list += [pscustomobject]@{ n = $i; image = $img; text = ($texts -join "`n"); notes = $notes; steps = @($steps); reveal = @($reveal) }
   }
   $pres.Saved = -1
   $pres.Close()
@@ -7015,11 +7057,17 @@ def ppt_export(src, out_dir, log=None, bold=True):
     data = json.load(open(js, encoding="utf-8-sig"))
     data = data if isinstance(data, list) else [data]
     clean = lambda t: re.sub(r"[ \t]+", " ", str(t or "").replace("\r", "\n").replace("\x0b", "\n")).strip()
-    return [{"n": int(d["n"]), "image": d["image"], "text": clean(d.get("text")), "notes": clean(d.get("notes"))} for d in data]
+    lst_ = lambda v: [x for x in (v if isinstance(v, list) else [v]) if x] if v else []
+    return [{"n": int(d["n"]), "image": d["image"], "text": clean(d.get("text")), "notes": clean(d.get("notes")),
+             "steps": lst_(d.get("steps")), "reveal": [clean(x) for x in lst_(d.get("reveal"))]} for d in data]
 
 
 PPT_LENGTHS = {"짧게(슬라이드당 15~25초)": (90, 150), "보통(슬라이드당 30~45초)": (180, 280), "자세히(슬라이드당 60초 이상)": (350, 500)}
-PPT_TONES = ["차분한 발표", "친근한 강의", "전문가 브리핑", "열정적인 피치(투자·영업)", "뉴스·보고서 낭독", "어린이 눈높이 설명"]
+PPT_TONES = ["유쾌한 진행(예능·라디오처럼)", "차분한 발표", "친근한 강의", "전문가 브리핑", "열정적인 피치(투자·영업)", "뉴스·보고서 낭독", "어린이 눈높이 설명"]
+
+PPT_CLICK_RULE = ("- 클릭 애니메이션: '애니메이션: 클릭 N번'이 적힌 슬라이드는 처음에 그 내용(정답·결과 등)이 화면에 없다. 발표자가 클릭할 자리에 "
+                  "'[다음]' 한 줄을 정확히 N번 넣는다. 정답·결과를 말하기 바로 앞에 넣고, 퀴즈면 먼저 문제를 내고 시청자가 생각할 틈을 준 다음 넣는다. "
+                  "[다음] 앞에서는 나타날 내용(정답)을 미리 말하지 않는다.\n")
 
 PPT_SYSTEM = """너는 발표 코치이자 나레이션 작가다. 슬라이드 묶음을 보고, 발표자가 청중 앞에서 말하듯 슬라이드마다 나레이션 대본을 쓴다.
 - 슬라이드 그림 파일이 주어지면 Read 도구로 하나씩 실제로 열어 보고, 글뿐 아니라 도표·그래프·그림·배치까지 해석한다(그래프면 추세와 핵심 숫자, 도식이면 흐름).
@@ -7028,8 +7076,37 @@ PPT_SYSTEM = """너는 발표 코치이자 나레이션 작가다. 슬라이드 
 - 첫 슬라이드는 짧은 인사와 발표 주제·목적, 마지막 슬라이드는 핵심 요약과 마무리 인사. 슬라이드 사이가 자연스럽게 이어지게('다음으로', '이 결과를 바탕으로').
 - 말투: {tone}. 청중: {audience}.
 - 목록·제목 기호(#, -, *)와 이모지 금지. 영어 약어는 그대로 써도 된다.
-""" + KO_NUM_RULE + """- 성우: 아래 [성우 목록]에서 발표 주제·청중·말투에 가장 어울리는 하나를 목록의 이름 그대로 고르고, 감정 톤도 고른다.
+""" + PPT_CLICK_RULE + KO_NUM_RULE + """- 성우: 아래 [성우 목록]에서 발표 주제·청중·말투에 가장 어울리는 하나를 목록의 이름 그대로 고르고, 감정 톤도 고른다.
 반드시 JSON만 출력: {{"title": "발표 영상 제목(30자 이내)", "voice": "성우 목록의 이름 그대로", "voice_reason": "고른 이유 한 줄", "emotion": "차분|밝음·유머|슬픔·감동|놀람·반전|공포·긴장|분노·갈등 중 하나", "slides": [{{"n": 1, "narration": "나레이션"}}]}}"""
+
+
+PPT_MODES = ["남녀 2인 진행 (파트 교대 + 퀴즈는 대화)", "혼자 발표 (성우 1명)"]
+PARA_VOICE = {}       # 자막 글(문단) → 그 문단을 읽을 성우 (2인 진행)
+SPK_RE = re.compile(r"^\s*\[?(남|여|M|F)\]?\s*[:：]\s*")
+DUO_COLORS = {"남": "#9AD9FF", "여": "#FFB3CF"}   # 자막 색: 남 하늘색, 여 분홍색
+
+PPT_DUO_SYSTEM = """너는 딱딱한 사내 교육을 예능·라디오처럼 재미있게 바꾸는 2인 진행 대본 작가다. 남자 진행자(남)와 여자 진행자(여)가 함께 슬라이드를 설명한다.
+- 슬라이드 그림 파일이 주어지면 Read 도구로 하나씩 실제로 열어 보고, 글뿐 아니라 도표·그림·배치까지 해석한다. 발표자 메모가 있으면 그 의도를 가장 우선한다. 슬라이드 글을 그대로 읽지 말고 말로 풀어 준다.
+- 파트 교대: 슬라이드 왼쪽 위의 작은 분류 꼬리표(예: '01 알아보기', '03 현장 사례')가 바뀔 때마다 주 진행자를 남↔여로 번갈아 맡는다. 주 진행자가 설명하고, 다른 사람은 가끔 짧게 맞장구·질문·리액션을 넣는다('오, 정말요?', '저 그거 어제 했는데요…').
+- 퀴즈·OX·'~일까요?'·사례 슬라이드는 두 사람이 주고받는 대화로: 한 사람이 문제를 내고, 시청자에게 '여러분도 3초만 생각해 보세요!'처럼 참여를 부르고, 다른 사람이 일부러 헷갈리는 답을 했다가 정답과 이유가 나온다.
+- 재미 포인트: 현장·사무실에서 있을 법한 짧은 상황극, 가벼운 농담, 공감 가는 실수담, 기억에 남는 한 줄 요약. 단 규칙·법령·숫자는 정확히. 특정 동료·성별·집단을 비하하는 농담, 억지 유행어 남발 금지.
+- 형식: 한 줄 = 한 사람의 말(1~2문장, 짧게). 줄마다 '남: ' 또는 '여: '로 시작하고, 줄 사이에 빈 줄을 넣는다.
+- 분량: 슬라이드마다 공백 포함 {min_c}~{max_c}자(대화 슬라이드는 1.3배까지). 표지는 두 사람의 밝은 인사와 오늘 주제, 마지막 슬라이드는 둘이 함께 핵심 요약과 마무리 인사.
+- 말투: {tone}. 청중: {audience}.
+- 목록·제목 기호(#, -, *)와 이모지 금지.
+""" + PPT_CLICK_RULE + KO_NUM_RULE + """- 성우: 아래 [성우 목록]에서 남자 1명, 여자 1명을 목록의 이름 그대로 고른다(가능하면 같은 종류끼리: 둘 다 Supertonic 또는 둘 다 엣지). 감정 톤도 고른다.
+반드시 JSON만 출력: {{"title": "발표 영상 제목(30자 이내)", "voice_m": "남자 성우 이름 그대로", "voice_f": "여자 성우 이름 그대로", "voice_reason": "두 성우를 고른 이유 한 줄", "emotion": "차분|밝음·유머|슬픔·감동|놀람·반전|공포·긴장|분노·갈등 중 하나", "slides": [{{"n": 1, "narration": "남: ...\\n\\n여: ..."}}]}}"""
+
+
+def ppt_voice_gender(name):
+    return "여" if "여성" in str(name) else "남"
+
+
+def ppt_duo_clean(text):
+    """2인 대본 정리: '남:'·'여:' 마다 한 문단으로 나눔"""
+    t = str(text or "").replace("\r", "")
+    t = re.sub(r"(?:(?<=^)|(?<=\n)|(?<=[.!?…~”\"')]))\s*\[?(남|여)\]?\s*[:：]\s*", lambda m: "\n\n" + m.group(1) + ": ", t)
+    return "\n\n".join(p.strip() for p in re.split(r"\n\s*\n", t) if p.strip())
 
 
 def ppt_voice_catalog():
@@ -7038,11 +7115,12 @@ def ppt_voice_catalog():
     return names
 
 
-def ppt_narrate(model, slides, tone, audience, length, log=None, cancel=None, use_images=True):
-    """슬라이드 → 슬라이드별 나레이션 + 성우 추천. 10장씩 나눠 씀(긴 발표도 시간 제한에 안 걸림)"""
+def ppt_narrate(model, slides, tone, audience, length, log=None, cancel=None, use_images=True, duo=False):
+    """슬라이드 → 슬라이드별 나레이션 + 성우 추천. 10장씩 나눠 씀(긴 발표도 시간 제한에 안 걸림).
+    duo=True: 남녀 2인 진행 (줄마다 '남:'/'여:')"""
     log = log or (lambda x: None)
     lo, hi = PPT_LENGTHS.get(length, (180, 280))
-    sys_ = PPT_SYSTEM.format(min_c=lo, max_c=hi, tone=tone or "차분한 발표", audience=audience or "일반 청중")
+    sys_ = (PPT_DUO_SYSTEM if duo else PPT_SYSTEM).format(min_c=lo, max_c=hi, tone=tone or "차분한 발표", audience=audience or "일반 청중")
     voices = ppt_voice_catalog()
     eng = str((SCRIPT_ENGINE.get("s") or {}).get("script_engine", "Claude"))
     see = use_images and (eng.startswith("Claude") or eng.startswith("자동"))
@@ -7053,18 +7131,29 @@ def ppt_narrate(model, slides, tone, audience, length, log=None, cancel=None, us
         part = slides[a:a + 10]
         log(f"✍ 슬라이드 {part[0]['n']}~{part[-1]['n']} / {len(slides)} 나레이션 쓰는 중..." + (" (슬라이드 그림을 직접 보고)" if see else ""))
         body = "\n\n".join(f"[슬라이드 {s['n']}]" + (f"\n그림 파일: {s['image']}" if see else "") + f"\n슬라이드 글: {s['text'] or '(글 없음)'}"
-                           + (f"\n발표자 메모: {s['notes']}" if s.get("notes") else "") for s in part)
+                           + (f"\n발표자 메모: {s['notes']}" if s.get("notes") else "")
+                           + (f"\n애니메이션: 클릭 {len(s['steps'])}번 — " + " / ".join(f"클릭 {k + 1}에 나타남: {t or '(그림·도형)'}" for k, t in enumerate(s.get('reveal') or [''] * len(s['steps'])))
+                              if s.get("steps") else "") for s in part)
         user = (f"전체 슬라이드 수: {len(slides)}\n[성우 목록]\n" + "\n".join(voices)
-                + (f"\n\n[앞부분 요약 - 이어서 쓸 것, 성우는 이미 정함: {meta.get('voice')}]\n{prev}" if a else "") + "\n\n" + body)
+                + (f"\n\n[앞부분 요약 - 이어서 쓸 것, 성우는 이미 정함: {meta.get('voice_m') or ''} {meta.get('voice_f') or meta.get('voice') or ''}]\n{prev}" if a else "") + "\n\n" + body)
         d = ask_json(model, sys_, user, tools=["Read"]) if see else ask_script_json(model, sys_.replace("Read 도구로 하나씩 실제로 열어 보고, ", ""), user)
         if not a:
-            meta = {k: d.get(k) for k in ("title", "voice", "voice_reason", "emotion")}
+            meta = {k: d.get(k) for k in ("title", "voice", "voice_m", "voice_f", "voice_reason", "emotion")}
         for s in d.get("slides") or []:
             try:
-                out[int(s.get("n"))] = doc_clean(s.get("narration", ""))
+                out[int(s.get("n"))] = ppt_duo_clean(s.get("narration", "")) if duo else doc_clean(s.get("narration", ""))
             except (TypeError, ValueError):
                 continue
         prev = " / ".join(f"{n}: {out[n][:80]}" for n in sorted(out)[-3:])
+    if duo:
+        men = [v for v in voices if ppt_voice_gender(v) == "남"]
+        women = [v for v in voices if ppt_voice_gender(v) == "여"]
+        if meta.get("voice_m") not in men:
+            meta["voice_m"] = men[0]
+        if meta.get("voice_f") not in women:       # 남자 성우와 같은 종류(로컬/엣지)로
+            st_ = "Supertonic" in meta["voice_m"]
+            meta["voice_f"] = next((v for v in women if ("Supertonic" in v) == st_), women[0])
+        meta["voice"] = meta["voice_m"]
     if meta.get("voice") not in voices:
         meta["voice"] = voices[0]
     return out, meta
@@ -7113,6 +7202,8 @@ def ppt_lang_story(story, lang, vi, s):
             t = ln.strip()
             if t and not parse_media(t) and t in vi:
                 SPOKEN[vi[t]] = SPOKEN.get(t, t)      # 베트남어 자막 줄 → 한국어로 읽기
+                if t in PARA_VOICE:
+                    PARA_VOICE[vi[t]] = PARA_VOICE[t]
                 out.append(vi[t])
             else:
                 out.append(ln)
@@ -7123,13 +7214,41 @@ def ppt_lang_story(story, lang, vi, s):
     return story
 
 
-def ppt_build_story(slides, narr):
-    """슬라이드 그림 줄 + 나레이션 문단 → 자막형 렌더러용 본문"""
+def ppt_build_story(slides, narr, duo=None):
+    """슬라이드 그림 줄 + 나레이션 문단 → 자막형 렌더러용 본문.
+    duo={"남": 성우, "여": 성우}: 줄 앞 '남:'/'여:'를 떼고, 그 문단을 읽을 성우를 PARA_VOICE 에 기록"""
     parts = []
+    PARA_VOICE.clear()
     for s in slides:
-        parts.append(make_marker(s["image"], f"슬라이드 {s['n']}", "", ""))
+        imgs = list(s.get("steps") or []) + [s["image"]]           # 클릭 애니메이션: 단계별 그림 (마지막 = 다 나온 상태)
+        parts.append(make_marker(imgs[0], f"슬라이드 {s['n']}", "", ""))
         t = (narr.get(s["n"]) or "").strip()
-        parts.append(t if t else (s.get("text") or "다음 슬라이드입니다.")[:120])
+        cur, lines, nxt = None, [], 1
+        for ln in re.split(r"\n+", t):
+            ln = ln.strip()
+            if re.fullmatch(r"\[\s*(다음|클릭|next)\s*\]", ln, re.I):     # 여기서 클릭 → 다음 그림
+                if nxt < len(imgs):
+                    lines.append(make_marker(imgs[nxt], f"슬라이드 {s['n']} ({nxt + 1}단계)", "", ""))
+                    nxt += 1
+                continue
+            m = SPK_RE.match(ln)
+            if m:
+                cur = "여" if m.group(1) in ("여", "F") else "남"
+                ln = ln[m.end():].strip()
+            if not ln:
+                continue
+            if duo and cur:
+                PARA_VOICE[ln] = duo[cur]
+            lines.append(ln)
+        if not lines:
+            lines = [(s.get("text") or "다음 슬라이드입니다.")[:120]]
+        while nxt < len(imgs):                  # 대본에 [다음]이 모자라면: 뒤쪽 절반에 고르게 (정답은 보통 끝 무렵)
+            txt_i = [k for k, x in enumerate(lines) if not parse_media(x)]
+            left = len(imgs) - nxt
+            pos = txt_i[min(len(txt_i) - 1, max(len(txt_i) // 2, len(txt_i) - left))] if len(txt_i) > 1 else len(lines)
+            lines.insert(pos, make_marker(imgs[nxt], f"슬라이드 {s['n']} ({nxt + 1}단계)", "", ""))
+            nxt += 1
+        parts.append("\n".join(lines))
     return "\n\n".join(parts)
 
 
@@ -9321,6 +9440,7 @@ class App(tk.Tk):
                     continue
                 except Exception:
                     return None
+            voice = voice_code(PARA_VOICE.get(text.strip(), s["narr_voice"]))
             ai = voice.startswith(("openai:", "gemini:"))
             if voice.startswith("supertonic:"):
                 mood = supertonic_mood(text, k, len(items), s)
@@ -11466,24 +11586,30 @@ class App(tk.Tk):
         len_v, voice_v = tk.StringVar(value=list(PPT_LENGTHS)[1]), tk.StringVar(value="🤖 AI가 추천")
         sub_v, bgm_v = tk.StringVar(value="켜기"), tk.StringVar(value="잔잔하게(작게)")
         lang_v = tk.StringVar(value=PPT_SUB_LANGS[0])
+        mode_v = tk.StringVar(value=PPT_MODES[0])
+        vm_v, vf_v = tk.StringVar(value="🤖 AI가 추천"), tk.StringVar(value="🤖 AI가 추천")
+        cat_ = ppt_voice_catalog()
         fmt_v = tk.StringVar(value="가로 16:9 (유튜브·발표)")
         see_v = tk.BooleanVar(value=True)
-        rows = [("청중", ttk.Entry(f2, textvariable=aud_v, width=26)),
+        rows = [("진행", ttk.Combobox(f2, textvariable=mode_v, values=PPT_MODES, state="readonly", width=34)),
+                ("남자 성우", ttk.Combobox(f2, textvariable=vm_v, values=["🤖 AI가 추천"] + [v for v in cat_ if ppt_voice_gender(v) == "남"], state="readonly", width=34)),
+                ("여자 성우", ttk.Combobox(f2, textvariable=vf_v, values=["🤖 AI가 추천"] + [v for v in cat_ if ppt_voice_gender(v) == "여"], state="readonly", width=34)),
+                ("청중", ttk.Entry(f2, textvariable=aud_v, width=26)),
                 ("말투", ttk.Combobox(f2, textvariable=tone_v, values=PPT_TONES, state="readonly", width=24)),
                 ("분량", ttk.Combobox(f2, textvariable=len_v, values=list(PPT_LENGTHS), state="readonly", width=24)),
-                ("성우", ttk.Combobox(f2, textvariable=voice_v, values=["🤖 AI가 추천"] + ppt_voice_catalog(), state="readonly", width=40)),
+                ("성우(혼자)", ttk.Combobox(f2, textvariable=voice_v, values=["🤖 AI가 추천"] + cat_, state="readonly", width=34)),
                 ("자막", ttk.Combobox(f2, textvariable=sub_v, values=["켜기", "끄기(슬라이드 크게)"], state="readonly", width=24)),
                 ("배경음", ttk.Combobox(f2, textvariable=bgm_v, values=["잔잔하게(작게)", "없음"], state="readonly", width=24)),
                 ("화면", ttk.Combobox(f2, textvariable=fmt_v, values=["가로 16:9 (유튜브·발표)", "세로 9:16 (쇼츠)"], state="readonly", width=24)),
                 ("자막 언어", ttk.Combobox(f2, textvariable=lang_v, values=PPT_SUB_LANGS, state="readonly", width=24))]
         for i, (lb, w_) in enumerate(rows):
-            r_, c_ = i % 4, (i // 4) * 2
+            r_, c_ = i % 4, (i // 4) * 2      # 4줄씩 3칸
             ttk.Label(f2, text=lb).grid(row=r_, column=c_, sticky="e", padx=(8, 4), pady=2)
             w_.grid(row=r_, column=c_ + 1, sticky="w", pady=2)
         ttk.Checkbutton(f2, text="AI가 슬라이드 그림(도표·그래프)까지 직접 보고 해석 (Claude)",
-                        variable=see_v).grid(row=0, column=4, sticky="w", padx=12)
-        ttk.Label(f2, text="성우는 항상 한국어로 읽습니다.\n베트남어: 자막만 베트남어로 번역\n숫자: 자막은 2026년, 성우는 '이천이십육 년'",
-                  foreground="#666", justify="left").grid(row=1, column=4, rowspan=3, sticky="nw", padx=12)
+                        variable=see_v).grid(row=0, column=6, sticky="w", padx=12)
+        ttk.Label(f2, text="2인 진행: 대본 줄 앞 '남:'·'여:'가 성우를 정합니다\n(자막 색: 남 하늘색 · 여 분홍색)\n성우는 항상 한국어로 읽습니다 (베트남어는 자막만)\n숫자: 자막은 2026년, 성우는 '이천이십육 년'",
+                  foreground="#666", justify="left").grid(row=1, column=6, rowspan=3, sticky="nw", padx=12)
 
         # ③ 대본
         f3 = ttk.LabelFrame(left, text="③ 나레이션 대본 (직접 고쳐도 됩니다 · '### 슬라이드 번호' 줄 아래가 그 슬라이드에서 읽을 말)", padding=6)
@@ -11540,8 +11666,11 @@ class App(tk.Tk):
 
         def parse_script():
             narr = {}
-            for m_ in re.finditer(r"^### 슬라이드 (\d+)[^\n]*\n(.*?)(?=^### 슬라이드 \d+|\Z)", txt.get("1.0", "end"), re.S | re.M):
-                narr[int(m_.group(1))] = m_.group(2).strip()
+            for m_ in re.finditer(r"^### 슬라이드 (\d+)([^\n]*)\n(.*?)(?=^### 슬라이드 \d+|\Z)", txt.get("1.0", "end"), re.S | re.M):
+                body, tag = m_.group(3).strip(), re.search(r"\[(남|여)\]", m_.group(2))
+                if tag and body and not SPK_RE.match(body):      # '### 슬라이드 3 [여]' → 그 슬라이드는 여자 성우
+                    body = tag.group(1) + ": " + body
+                narr[int(m_.group(1))] = body
             return narr
 
         def save_state():
@@ -11557,7 +11686,7 @@ class App(tk.Tk):
             lst.delete(0, "end")
             for sl in slides:
                 first = sl["text"].split("\n")[0] if sl["text"] else "(글 없음)"
-                lst.insert("end", f"{sl['n']:>3}. {first[:28]}" + (" 📝" if sl["notes"] else ""))
+                lst.insert("end", f"{sl['n']:>3}. {first[:28]}" + (" 📝" if sl["notes"] else "") + (f" 🎬{len(sl['steps'])}" if sl.get("steps") else ""))
             js = os.path.join(st["dir"], "발표_대본.json")            # 전에 쓴 대본이 있으면 이어서
             st["narr"], st["meta"], st["vi"] = {}, {}, {}
             if os.path.exists(js):
@@ -11575,7 +11704,9 @@ class App(tk.Tk):
                 lst.selection_set(0)
                 show()
             notes = sum(1 for x in slides if x["notes"])
+            anim = sum(1 for x in slides if x.get("steps"))
             info_v.set(f"슬라이드 {len(slides)}장 불러옴" + (f" · 발표자 메모 {notes}장 (AI가 우선 반영)" if notes else "")
+                       + (f" · 클릭 애니메이션 {anim}장 🎬 (대본의 [다음] 자리에서 나타남)" if anim else "")
                        + (" · 전에 쓴 대본을 불러왔습니다" if any(st["narr"].values()) else " → ✍ AI 나레이션 쓰기"))
             self.write_log(f"📊 슬라이드 {len(slides)}장 불러옴: {st['dir']}")
 
@@ -11598,9 +11729,10 @@ class App(tk.Tk):
                 return
             model, slides = self.model_var.get().strip(), list(st["slides"])
             tone, aud, ln, see = tone_v.get(), aud_v.get(), len_v.get(), see_v.get()
+            duo = mode_v.get() == PPT_MODES[0]
 
             def job():
-                return ppt_narrate(model, slides, tone, aud, ln, self.log_bg, self.cancel, see)
+                return ppt_narrate(model, slides, tone, aud, ln, self.log_bg, self.cancel, see, duo)
 
             def done(res):
                 narr, meta = res
@@ -11609,7 +11741,9 @@ class App(tk.Tk):
                 txt.insert("1.0", script_text())
                 if meta.get("title"):
                     title_v.set(meta["title"])
-                if voice_v.get().startswith("🤖"):
+                if duo:
+                    info_v.set(f"🎙 남: {meta.get('voice_m')} · 여: {meta.get('voice_f')} (AI 추천, 위에서 바꿀 수 있음) — {meta.get('voice_reason') or ''}")
+                elif voice_v.get().startswith("🤖"):
                     info_v.set(f"🎙 AI 추천 성우: {meta.get('voice')} · 감정: {meta.get('emotion') or '차분'} — {meta.get('voice_reason') or ''}")
                 else:
                     info_v.set(f"🎙 성우: {voice_v.get()} (직접 고름) · AI 추천은 {meta.get('voice')} — {meta.get('voice_reason') or ''}")
@@ -11630,10 +11764,20 @@ class App(tk.Tk):
                 return
             save_state()
             title = title_v.get().strip() or "발표"
-            s = self.ppt_settings(voice_v.get(), st["meta"], sub_v.get().startswith("켜기"), bgm_v.get() != "없음")
+            duo = None
+            if mode_v.get() == PPT_MODES[0]:
+                men = [v for v in ppt_voice_catalog() if ppt_voice_gender(v) == "남"]
+                women = [v for v in ppt_voice_catalog() if ppt_voice_gender(v) == "여"]
+                vm = vm_v.get() if not vm_v.get().startswith("🤖") else (st["meta"].get("voice_m") or men[0])
+                vf = vf_v.get() if not vf_v.get().startswith("🤖") else (st["meta"].get("voice_f") or women[0])
+                duo = {"남": vm, "여": vf}
+                if not any(SPK_RE.match(x) for v_ in narr.values() for x in v_.split("\n")):
+                    if not messagebox.askyesno("PPT 발표", "대본에 '남:'·'여:' 표시가 없습니다. 2인 진행은 ✍ AI 나레이션 쓰기를 다시 하면 대화로 써 줍니다.\n\n이대로(남자 성우 혼자) 만들까요?"):
+                        return
+            s = self.ppt_settings(duo["남"] if duo else voice_v.get(), st["meta"], sub_v.get().startswith("켜기"), bgm_v.get() != "없음")
             lang = lang_v.get() if sub_v.get().startswith("켜기") else "한국어"
-            voice = s["narr_voice"]
-            story = ppt_build_story(st["slides"], narr)
+            voice = f"남 {duo['남']} + 여 {duo['여']}" if duo else s["narr_voice"]
+            story = ppt_build_story(st["slides"], narr, duo)
             fmt_name = "롱폼 가로(1920×1080)" if fmt_v.get().startswith("가로") else "쇼츠 세로(1080×1920)"
             old_fmt = self.vars["format"].get() if "format" in self.vars else None
             if fmt_name != old_fmt:
@@ -11657,6 +11801,10 @@ class App(tk.Tk):
                         ppt_translate_vi(model, [t for _, t in narration_paras(story)], st["vi"], log, self.cancel)
                         self.q.put(save_state)
                         shown = ppt_lang_story(story, lang, st["vi"], s)
+                    if duo:                                   # 말하는 사람별 자막 색
+                        who = {v_: k_ for k_, v_ in duo.items()}
+                        s["para_colors"] = {i: DUO_COLORS[who[PARA_VOICE[t.strip()]]] for i, t in narration_paras(shown)
+                                            if PARA_VOICE.get(t.strip()) in who and duo["남"] != duo["여"]}
                     narr_a = self.narration_for(shown, s, log, self.cancel)
                     r = make_renderer(title, shown, s, narr_a)
                     audio = build_audio(r, s, resolve_style(s, "발표"))
