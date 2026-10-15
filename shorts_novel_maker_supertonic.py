@@ -3308,7 +3308,7 @@ class SubtitleRenderer:
             l1 = wrap(text, f_, x1 - x0)
             if not trans:
                 return f_, l1, None, [], int(sz * 1.3) * len(l1)
-            f2 = load_font(s.get("sub_font2") or fpath, int(sz * 0.8))
+            f2 = load_font(s.get("sub_font2") or fpath, int(sz * 0.8 * max(0.5, min(2.0, float(s.get("sub2_scale", 1.0) or 1.0)))))
             l2 = wrap(trans, f2, x1 - x0)
             return f_, l1, f2, l2, int(sz * 1.3) * len(l1) + int(f2.size * 1.3) * len(l2) + int(sz * 0.15)
         font, lines, font2, lines2, tot = lay(size)
@@ -7631,13 +7631,13 @@ def ppt_lang_story(story, lang, vi, s):
                 out.append(vi[t])
             else:
                 out.append(ln)
-        if not font_has_vi(s.get("sub_font_path") or s.get("title_font_path")):
-            s["sub_font_path"] = VI_FONT or s.get("sub_font_path", "")
-        s["sub_max_chars"] = 44
+        s["sub_font_path"] = VI_FONT or s.get("sub_font_path", "")      # 베트남어는 항상 성조 글자가 또렷한 기존 글꼴
+        k_ = max(0.5, min(2.0, float(s.get("vi_scale", 1.0) or 1.0)))
+        s["sub_size"] = int(round(float(s.get("sub_size", 64)) * k_))   # 베트남어 자막 크기
+        s["sub_max_chars"] = int(round(44 / k_))
         return "\n".join(out)
     if lang == "한국어+베트남어":
-        f2_ = s.get("sub_font_path") or s.get("title_font_path")
-        s.update(sub_trans=dict(vi), sub_font2=f2_ if font_has_vi(f2_) else VI_FONT, sub_split="문단 통째로")
+        s.update(sub_trans=dict(vi), sub_font2=VI_FONT, sub_split="문단 통째로", sub2_scale=float(s.get("vi_scale", 1.0) or 1.0))
     return story
 
 
@@ -9398,8 +9398,8 @@ class App(tk.Tk):
             if not e:
                 return
             vi = e[1] and font_has_vi(e[1])
-            desc.config(text=e[3] + ("\n🇻🇳 베트남어 성조 글자 지원 - 베트남어 자막에도 이 글꼴이 쓰입니다" if vi else
-                                      ("\n(베트남어 자막은 성조 글자가 있는 다른 글꼴로 자동 대체)" if e[1] else "")))
+            desc.config(text=e[3] + ("\n🇻🇳 베트남어 성조 글자 지원" if vi else "")
+                        + ("\n(PPT 발표의 베트남어 자막은 항상 Segoe UI Bold로 나옵니다)" if e[1] else ""))
             if e[1]:
                 draw(e[1])
             else:
@@ -12140,6 +12140,10 @@ class App(tk.Tk):
         fmt_v = tk.StringVar(value="가로 16:9 (유튜브·발표)")
         size_v = tk.StringVar(value=PPT_SIZES[0])
         trans_v, motion_v = tk.StringVar(value=PPT_TRANS[0]), tk.StringVar(value=PPT_MOTION[0])
+        vi_v = tk.StringVar(value="100")           # 베트남어 자막 크기(%)
+        vif = ttk.Frame(f2)
+        ttk.Spinbox(vif, from_=60, to=160, increment=10, width=5, textvariable=vi_v).pack(side="left")
+        ttk.Label(vif, text="%  (글꼴: Segoe UI Bold)", foreground="#666").pack(side="left")
         tonef = ttk.Frame(f2)                     # 성우 톤 (나레이션 설정과 같은 값)
         ttk.Label(tonef, text="여").pack(side="left")
         ttk.Spinbox(tonef, from_=-4, to=4, increment=0.5, width=4, textvariable=self.vars["narr_tone_f"]).pack(side="left")
@@ -12153,7 +12157,7 @@ class App(tk.Tk):
         def font_label(*_):
             p = font_v.get()
             nm = os.path.splitext(os.path.basename(p))[0] if p else "기본 (설정의 자막 글꼴)"
-            font_lbl.config(text=(nm[:20] + (" 🇻🇳" if p and font_has_vi(p) else "")))
+            font_lbl.config(text=nm[:22])
         font_v.trace_add("write", font_label)
         font_lbl.pack(side="left")
         ttk.Button(fontf, text="🔤 고르기", command=lambda: self.font_picker(font_v.get() or self.vars["sub_font_path"].get() or self.vars["title_font_path"].get(),
@@ -12174,7 +12178,8 @@ class App(tk.Tk):
                 ("전환 효과", ttk.Combobox(f2, textvariable=trans_v, values=PPT_TRANS, state="readonly", width=20)),
                 ("화면 움직임", ttk.Combobox(f2, textvariable=motion_v, values=PPT_MOTION, state="readonly", width=20)),
                 ("자막 글꼴", fontf),
-                ("성우 톤(반음)", tonef)]
+                ("성우 톤(반음)", tonef),
+                ("베트남어 자막 크기", vif)]
         for i, (lb, w_) in enumerate(rows):
             r_, c_ = i % 4, (i // 4) * 2      # 4줄씩 3칸
             ttk.Label(f2, text=lb).grid(row=r_, column=c_, sticky="e", padx=(8, 4), pady=2)
@@ -12324,7 +12329,7 @@ class App(tk.Tk):
                                   json.dumps({"src": path_v.get(), "title": title_v.get(), "meta": st["meta"], "vi": st["vi"],
                                               "order": st["order"], "skip": sorted(st["skip"]), "fast": sorted(st["fast"]), "plan": st["plan"],
                                               "lang": lang_v.get(), "mode": mode_v.get(), "size": size_v.get(),
-                                              "trans": trans_v.get(), "motion": motion_v.get(), "font": font_v.get(), "tone": tone_v.get(), "audience": aud_v.get(),
+                                              "trans": trans_v.get(), "motion": motion_v.get(), "font": font_v.get(), "vi_size": vi_v.get(), "tone": tone_v.get(), "audience": aud_v.get(),
                                               "narr": {str(k): v for k, v in st["narr"].items()}}, ensure_ascii=False, indent=1))
 
         def fill(slides):
@@ -12344,7 +12349,7 @@ class App(tk.Tk):
                     st["order"] = od + [n for n in valid if n not in od]
                     st["skip"] = {int(n) for n in d.get("skip") or [] if int(n) in valid}
                     st["fast"] = {int(n) for n in d.get("fast") or [] if int(n) in valid}
-                    for var_, key_ in ((lang_v, "lang"), (mode_v, "mode"), (tone_v, "tone"), (aud_v, "audience"), (size_v, "size"), (trans_v, "trans"), (motion_v, "motion"), (font_v, "font")):
+                    for var_, key_ in ((lang_v, "lang"), (mode_v, "mode"), (tone_v, "tone"), (aud_v, "audience"), (size_v, "size"), (trans_v, "trans"), (motion_v, "motion"), (font_v, "font"), (vi_v, "vi_size")):
                         if d.get(key_):
                             var_.set(d[key_])
                     title_v.set(d.get("title") or title_v.get())
@@ -12475,6 +12480,10 @@ class App(tk.Tk):
             s["slide_trans"], s["slide_motion"] = trans_v.get(), ("on" if motion_v.get() == PPT_MOTION[0] else "off")
             if font_v.get() and os.path.exists(font_v.get()):
                 s["sub_font_path"] = font_v.get()
+            try:
+                s["vi_scale"] = max(0.5, min(2.0, float(vi_v.get()) / 100))
+            except ValueError:
+                s["vi_scale"] = 1.0
             voice = f"남 {duo['남']} + 여 {duo['여']}" if duo else s["narr_voice"]
             story = ppt_build_story(show_, narr, duo)
             fmt_name = "롱폼 가로(1920×1080)" if fmt_v.get().startswith("가로") else "쇼츠 세로(1080×1920)"
