@@ -42,9 +42,9 @@ def ensure_packages():
 
 ensure_packages()
 import tkinter as tk
+import tkinter.font as tkfont
 from tkinter import ttk, filedialog, messagebox, colorchooser, simpledialog
 from tkinter.scrolledtext import ScrolledText
-import tkinter.font as tkfont
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont, ImageTk, ImageFilter
 
@@ -3094,9 +3094,9 @@ class SubtitleRenderer:
         self.slide = str(s.get("img_fill", "")).startswith("슬라이드")
         if self.slide:   # PPT 발표: 슬라이드 전체가 잘리지 않게 크게, 자막은 그 아래
             hide = s.get("sub_hide") == "on"
-            sw = int(W * (0.94 if hide or self.port else 0.86))   # 가로 자막 켜기: 화면 폭의 86% (예전 80%)
+            sw = int(W * (0.94 if hide or self.port else 0.80))
             x0 = (W - sw) // 2
-            y0 = (H - int(sw * 9 / 16)) // 2 if hide else (int(H * 0.01) if not self.port else int(H * 0.22))
+            y0 = (H - int(sw * 9 / 16)) // 2 if hide else (int(H * 0.02) if not self.port else int(H * 0.22))
             self.img_box = (x0, y0, x0 + sw, y0 + int(sw * 9 / 16))
             self.sub_box = (m, self.img_box[3] + int(H * 0.012), W - m, H - int(H * 0.012))
         self._apply_layout(s, m)
@@ -7044,7 +7044,6 @@ def ppt_narrate(model, slides, tone, audience, length, log=None, cancel=None, us
 
 
 PPT_SUB_LANGS = ["한국어", "베트남어", "한국어+베트남어"]
-PPT_SUB_FONT = "ofl/nanumgothic/NanumGothic-ExtraBold.ttf"   # 발표 자막: 굵고 또렷한 고딕 (무료 글꼴, 처음 한 번 받음)
 VI_FONT = next((p for p in (r"C:\Windows\Fonts\segoeuib.ttf", r"C:\Windows\Fonts\arialbd.ttf", r"C:\Windows\Fonts\tahomabd.ttf",
                             "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf") if os.path.exists(p)), "")   # 베트남어 성조 글자가 있는 글꼴
 PPT_VI_SYSTEM = """너는 한국어→베트남어 영상 자막 번역가다. 발표 나레이션 문장을 베트남 시청자가 읽기 쉬운 자연스러운 베트남어 자막으로 옮긴다.
@@ -11620,10 +11619,6 @@ class App(tk.Tk):
 
             def job():
                 try:
-                    try:
-                        s["sub_font_path"] = download_free_font(PPT_SUB_FONT)
-                    except Exception:
-                        s["sub_font_path"] = find_font(True)      # 못 받으면 맑은 고딕 굵게
                     set_tts_cfg(s)
                     shown = story
                     if lang != "한국어":
