@@ -3387,10 +3387,12 @@ class SubtitleRenderer:
             x0, y0, x1, y1 = self.img_box
             bw, bh = x1 - x0, y1 - y0
             im = self.images[idx][0].convert("RGB")
-            if getattr(self, "slide", False):     # 슬라이드: 잘리지 않게 상자 안에 통째로 (남는 곳은 가장자리 색)
-                cw_, ch_ = int(bw * 1.32), int(bh * 1.32)
+            if getattr(self, "slide", False):     # 슬라이드: 잘리지 않게 상자 안에 통째로, 한 번만 줄이고 글자 선명하게
+                cw_, ch_ = bw, bh
                 sc = min(cw_ / im.width, ch_ / im.height)
-                fit = im.resize((max(1, int(im.width * sc)), max(1, int(im.height * sc))), Image.LANCZOS)
+                fit = im.resize((max(1, round(im.width * sc)), max(1, round(im.height * sc))), Image.LANCZOS)
+                if self.s.get("slide_sharp", "on") == "on":
+                    fit = fit.filter(ImageFilter.UnsharpMask(radius=1.0, percent=70, threshold=2))
                 big = Image.new("RGB", (cw_, ch_), im.getpixel((0, 0)))
                 big.paste(fit, ((cw_ - fit.width) // 2, (ch_ - fit.height) // 2))
             else:
@@ -3418,13 +3420,13 @@ class SubtitleRenderer:
         x0, y0, x1, y1 = self.img_box
         bw, bh = x1 - x0, y1 - y0
         big, mask, _ = self._img_src(sh["img"])
+        if getattr(self, "slide", False):             # 슬라이드는 움직이지 않음 → 다시 줄이지 않고 그대로 (글자 번짐 방지)
+            return big, mask
         z0, z1, ax, bx, ay, by = sh["m"]
         p = min(1.0, max(0.0, (t - sh["t0"]) / max(0.1, sh["t1"] - sh["t0"])))
         p = 0.5 - 0.5 * np.cos(np.pi * p)             # 부드럽게 시작·끝
         z = z0 + (z1 - z0) * p
-        if getattr(self, "slide", False):             # 슬라이드는 움직이지 않음 (글자가 잘리면 안 됨)
-            z, ax, bx, ay, by = 1.0, 0, 0, 0, 0
-        elif self.s.get("punch_in", "on") == "on" and str(self.s.get("img_motion", "영상")).startswith("영상"):
+        if self.s.get("punch_in", "on") == "on" and str(self.s.get("img_motion", "영상")).startswith("영상"):
             z *= 1 + 0.05 * (1 - smoothstep((t - sh["t0"]) / 0.3))     # 장면 시작에 살짝 펀치 줌
         base = 1.32
         cw, ch = bw * base / z, bh * base / z         # big 안에서 잘라낼 크기
@@ -6943,8 +6945,30 @@ def render_audio_loop(src, minutes, wav_path, xfade=3.0, start=0.0, progress=Non
 
 
 # ---------------- 📊 PPT 발표 영상 (슬라이드 → AI 나레이션 → 영상) ----------------
-PPT_EXPORT_PS1 = r'''param([string]$Src, [string]$Out)
+PPT_EXPORT_PS1 = r'''param([string]$Src, [string]$Out, [int]$Bold = 1)
 $ErrorActionPreference = "Stop"
+$thin = "Light|Thin|Semilight|SemiLight|Hairline|ExtraLight|UltraLight|얇은"
+function Fix-Text($tr) {
+  try {
+    $n = $tr.Runs().Count
+    for ($k = 1; $k -le $n; $k++) {
+      $r = $tr.Runs($k)
+      try { $r.Font.Bold = -1 } catch {}
+      try { if ($r.Font.Name -match $thin) { $r.Font.Name = "맑은 고딕" } } catch {}
+      try { if ($r.Font.NameFarEast -match $thin) { $r.Font.NameFarEast = "맑은 고딕" } } catch {}
+    }
+  } catch {}
+}
+function Fix-Shape($sh) {
+  try { if ($sh.Type -eq 6) { foreach ($g in $sh.GroupItems) { Fix-Shape $g }; return } } catch {}
+  try { if ($sh.HasTextFrame -and $sh.TextFrame.HasText) { Fix-Text $sh.TextFrame.TextRange } } catch {}
+  try {
+    if ($sh.HasTable) {
+      $t = $sh.Table
+      for ($a = 1; $a -le $t.Rows.Count; $a++) { for ($b = 1; $b -le $t.Columns.Count; $b++) { Fix-Text $t.Cell($a, $b).Shape.TextFrame.TextRange } }
+    }
+  } catch {}
+}
 $pp = New-Object -ComObject PowerPoint.Application
 try {
   $pres = $pp.Presentations.Open($Src, -1, 0, 0)
@@ -6953,6 +6977,7 @@ try {
   $list = @()
   for ($i = 1; $i -le $pres.Slides.Count; $i++) {
     $s = $pres.Slides.Item($i)
+    if ($Bold) { foreach ($sh in $s.Shapes) { Fix-Shape $sh } }      # 화면용 그림에만 적용 (원본 파일은 저장 안 함)
     $img = Join-Path $Out ("slide_{0:D3}.png" -f $i)
     $s.Export($img, "PNG", $w, $h)
     $texts = @()
@@ -6961,13 +6986,14 @@ try {
     try { foreach ($sh in $s.NotesPage.Shapes) { try { if ($sh.PlaceholderFormat.Type -eq 2 -and $sh.TextFrame.HasText) { $notes = $sh.TextFrame.TextRange.Text } } catch {} } } catch {}
     $list += [pscustomobject]@{ n = $i; image = $img; text = ($texts -join "`n"); notes = $notes }
   }
+  $pres.Saved = -1
   $pres.Close()
   ConvertTo-Json -InputObject @($list) -Depth 3 | Out-File -Encoding utf8 (Join-Path $Out "slides.json")
 } finally { $pp.Quit() }
 '''
 
 
-def ppt_export(src, out_dir, log=None):
+def ppt_export(src, out_dir, log=None, bold=True):
     """PPT/PPTX → 슬라이드 그림(1920px PNG) + 슬라이드 글 + 발표자 메모. PowerPoint(설치되어 있어야 함)를 직접 조종.
     반환: [{"n", "image", "text", "notes"}]"""
     log = log or (lambda x: None)
@@ -6978,8 +7004,9 @@ def ppt_export(src, out_dir, log=None):
     ps1 = os.path.join(out_dir, "_export.ps1")
     with open(ps1, "w", encoding="utf-8-sig") as f:       # BOM: 윈도우 PowerShell 이 한글 경로를 바르게 읽게
         f.write(PPT_EXPORT_PS1)
-    log("📊 PowerPoint로 슬라이드를 그림으로 바꾸는 중...")
-    p = subprocess.run(["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", ps1, "-Src", os.path.abspath(src), "-Out", os.path.abspath(out_dir)],
+    log("📊 PowerPoint로 슬라이드를 그림으로 바꾸는 중..." + (" (글자 굵게)" if bold else ""))
+    p = subprocess.run(["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", ps1, "-Src", os.path.abspath(src), "-Out", os.path.abspath(out_dir),
+                        "-Bold", "1" if bold else "0"],
                        capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=900,
                        creationflags=(subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0))
     js = os.path.join(out_dir, "slides.json")
@@ -11429,6 +11456,7 @@ class App(tk.Tk):
                 path_v.set(p)
         ttk.Button(f1, text="찾기", command=browse).pack(side="left", padx=4)
         ttk.Button(f1, text="📥 슬라이드 불러오기", command=lambda: load()).pack(side="left")
+        ttk.Checkbutton(f1, text="얇은 글자 굵게 (원본은 그대로)", variable=bold_v).pack(side="left", padx=(8, 0))
 
         # ② 옵션
         f2 = ttk.LabelFrame(left, text="② 발표 방식", padding=6)
@@ -11439,6 +11467,7 @@ class App(tk.Tk):
         lang_v = tk.StringVar(value=PPT_SUB_LANGS[0])
         fmt_v = tk.StringVar(value="가로 16:9 (유튜브·발표)")
         see_v = tk.BooleanVar(value=True)
+        bold_v = tk.BooleanVar(value=True)
         rows = [("청중", ttk.Entry(f2, textvariable=aud_v, width=26)),
                 ("말투", ttk.Combobox(f2, textvariable=tone_v, values=PPT_TONES, state="readonly", width=24)),
                 ("분량", ttk.Combobox(f2, textvariable=len_v, values=list(PPT_LENGTHS), state="readonly", width=24)),
@@ -11558,7 +11587,8 @@ class App(tk.Tk):
             st["dir"] = os.path.join(self.ppt_out(), safe_name(os.path.splitext(os.path.basename(p))[0]))
             if not title_v.get().strip():
                 title_v.set(os.path.splitext(os.path.basename(p))[0])
-            self.run_bg("📥 슬라이드 불러오는 중...", lambda: ppt_export(p, os.path.join(st["dir"], "slides"), self.log_bg), fill)
+            bold = bold_v.get()
+            self.run_bg("📥 슬라이드 불러오는 중...", lambda: ppt_export(p, os.path.join(st["dir"], "slides"), self.log_bg, bold), fill)
 
         def narrate():
             if not st["slides"]:
@@ -11659,7 +11689,8 @@ class App(tk.Tk):
                  st_emotion=emo if emo in ("차분", "공포·긴장", "슬픔·감동", "놀람·반전", "분노·갈등", "밝음·유머") else "차분",
                  st_emotion_map="", sub_hide="off" if subs else "on", sub_layout=SUB_LAYOUTS[0],
                  bgm_mode="자동생성" if bgm else "없음", bgm_style="자동(소재별)", bgm_seed=0, audio_out="MP4에 포함",
-                 bgm_volume=min(float(s.get("bgm_volume", 0.5) or 0.5), 0.3))
+                 bgm_volume=min(float(s.get("bgm_volume", 0.5) or 0.5), 0.3),
+                 quality=min(int(s.get("quality", 23) or 23), 18))      # 글자가 뭉개지지 않게 높은 화질
         return s
 
     def ppt_out(self):
