@@ -11448,6 +11448,7 @@ class App(tk.Tk):
         f1 = ttk.LabelFrame(left, text="① PPT 파일 (PowerPoint가 설치되어 있어야 합니다 · .pptx / .ppt)", padding=6)
         f1.pack(fill="x")
         path_v = tk.StringVar()
+        bold_v = tk.BooleanVar(value=True)
         ttk.Entry(f1, textvariable=path_v).pack(side="left", fill="x", expand=True)
 
         def browse():
@@ -11467,7 +11468,6 @@ class App(tk.Tk):
         lang_v = tk.StringVar(value=PPT_SUB_LANGS[0])
         fmt_v = tk.StringVar(value="가로 16:9 (유튜브·발표)")
         see_v = tk.BooleanVar(value=True)
-        bold_v = tk.BooleanVar(value=True)
         rows = [("청중", ttk.Entry(f2, textvariable=aud_v, width=26)),
                 ("말투", ttk.Combobox(f2, textvariable=tone_v, values=PPT_TONES, state="readonly", width=24)),
                 ("분량", ttk.Combobox(f2, textvariable=len_v, values=list(PPT_LENGTHS), state="readonly", width=24)),
