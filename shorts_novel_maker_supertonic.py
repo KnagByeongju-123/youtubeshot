@@ -143,6 +143,62 @@ SOUND_BY_TOPIC = {
     "기상 현상": "비 오는 밤", "지질·화산·지진": "어두운 드론", "바다": "심해", "하늘·빛": "우주", "동식물의 기이한 행동": "밝은 오르골",
 }
 
+# 자막형 화면 배치 (사진이 전체 화면일 때)
+SUB_LAYOUTS = ["기본(위 제목·아래 자막)", "시네마(위아래 검은 띠)", "다큐(왼쪽 아래 자막 상자)", "뉴스(아래 띠+색 막대)",
+               "가운데 큰 자막", "미니멀(제목 없이 얇은 자막)"]
+# 색 조합: 고르면 글자색·제목색·강조색·자막 상자 색이 한 번에 바뀜
+COLOR_PRESETS = {
+    "다큐 화이트": dict(text_color="#FFFFFF", title_color="#FFFFFF", accent_color="#4FC3F7", sub_box_color="#000000"),
+    "골드 시네마": dict(text_color="#F5F0E6", title_color="#E8C46A", accent_color="#E8C46A", sub_box_color="#000000"),
+    "네온 블루": dict(text_color="#E0F7FF", title_color="#00E5FF", accent_color="#FF4FD8", sub_box_color="#0A0A2A"),
+    "레트로 노랑": dict(text_color="#FFE135", title_color="#FFFFFF", accent_color="#FF7043", sub_box_color="#1B1B1B"),
+    "파스텔 핑크": dict(text_color="#FFFFFF", title_color="#FFC1D9", accent_color="#B39DDB", sub_box_color="#3A2340"),
+    "뉴스 레드": dict(text_color="#FFFFFF", title_color="#FFFFFF", accent_color="#E53935", sub_box_color="#101820"),
+    "숲 그린": dict(text_color="#F1F8E9", title_color="#AED581", accent_color="#66BB6A", sub_box_color="#0F2414"),
+    "공포 블러드": dict(text_color="#EDE6E6", title_color="#FF5252", accent_color="#B71C1C", sub_box_color="#120000"),
+}
+# 인기 롱폼 자막 스타일: 고르면 배치·색·자막 나누기·등장 효과·사진 움직임이 한 번에 (장르별로 흔히 쓰는 형식)
+_SPLIT_LINE, _SPLIT_PARA = "한 줄씩(문장·쉼표로 나눠 차례로)", "문단 통째로"
+LONG_STYLES = {
+    "지식 다큐(아래 흰 자막)": dict(sub_layout=SUB_LAYOUTS[0], head_pos="왼쪽 위 작게", color_preset="다큐 화이트", sub_style="글자 탭 글자색+검은테두리",
+                              sub_split=_SPLIT_LINE, sub_anim="페이드", sub_size=72, head_show="보임", img_motion="영상처럼(확대·이동·전환)",
+                              punch_in="off", shot_sec=6.0, sub_box_alpha=0.6),
+    "시네마 다큐(위아래 검은 띠)": dict(sub_layout=SUB_LAYOUTS[1], head_pos="위 가운데", color_preset="골드 시네마", sub_style="글자 탭 글자색+검은테두리",
+                                sub_split=_SPLIT_LINE, sub_anim="페이드", sub_size=84, head_show="보임", img_motion="천천히 확대만",
+                                punch_in="off", shot_sec=7.0, sub_box_alpha=1.0),
+    "오디오북·낭독(가운데 큰 자막)": dict(sub_layout=SUB_LAYOUTS[4], head_pos="숨김", color_preset="골드 시네마", sub_style="글자 탭 글자색+검은테두리",
+                                  sub_split=_SPLIT_PARA, sub_anim="페이드", sub_size=76, head_show="보임", img_motion="천천히 확대만",
+                                  punch_in="off", shot_sec=8.0, sub_box_alpha=0.65),
+    "썰·사연 낭독(노란 자막)": dict(sub_layout=SUB_LAYOUTS[0], head_pos="위 가운데", color_preset="레트로 노랑", sub_style="노란글자+검은테두리",
+                              sub_split=_SPLIT_LINE, sub_anim="팝(튀어나옴)", sub_size=84, head_show="보임", img_motion="영상처럼(확대·이동·전환)",
+                              punch_in="on", shot_sec=4.5, sub_box_alpha=0.6),
+    "뉴스·이슈 해설(하단 띠)": dict(sub_layout=SUB_LAYOUTS[3], head_pos="위 가운데", color_preset="뉴스 레드", sub_style="글자 탭 글자색+검은테두리",
+                              sub_split=_SPLIT_LINE, sub_anim="팝(튀어나옴)", sub_size=80, head_show="보임", img_motion="영상처럼(확대·이동·전환)",
+                              punch_in="on", shot_sec=5.0, sub_box_alpha=0.85),
+    "미스터리·공포(어두운 미니멀)": dict(sub_layout=SUB_LAYOUTS[5], head_pos="숨김", color_preset="공포 블러드", sub_style="글자 탭 글자색+검은테두리",
+                                 sub_split=_SPLIT_LINE, sub_anim="페이드", sub_size=76, head_show="보임", img_motion="천천히 확대만",
+                                 punch_in="off", shot_sec=7.0, sub_box_alpha=0.6),
+    "다큐 상자형(왼쪽 아래 상자)": dict(sub_layout=SUB_LAYOUTS[2], head_pos="왼쪽 위 작게", color_preset="숲 그린", sub_style="글자 탭 글자색+검은테두리",
+                                sub_split=_SPLIT_LINE, sub_anim="올라옴", sub_size=80, head_show="보임", img_motion="영상처럼(확대·이동·전환)",
+                                punch_in="off", shot_sec=6.0, sub_box_alpha=0.7),
+    "깔끔 미니멀(얇은 흰 자막)": dict(sub_layout=SUB_LAYOUTS[5], head_pos="숨김", color_preset="다큐 화이트", sub_style="글자 탭 글자색+검은테두리",
+                                sub_split=_SPLIT_LINE, sub_anim="페이드", sub_size=72, head_show="보임", img_motion="천천히 확대만",
+                                punch_in="off", shot_sec=7.0, sub_box_alpha=0.6),
+}
+
+# 설정 탭 묶음 (화면 형식·표현 방식에 따라 필요한 탭만 보임). mode: all / scroll / sub
+UI_TABS = [
+    ("🎬 화면 형식", "all", ["format", "layout", "fps", "quality", "audio_out", "out_dir", "intro_sec", "outro_sec", "outro_text",
+                          "progress_bar", "reveal_fx", "hold_start", "hold_end", "safe_guide"]),
+    ("🎨 글꼴·색", "all", ["font_path", "title_font_path", "text_color", "title_color", "accent_color", "quote_color", "shadow", "stroke_width"]),
+    ("🔤 자막 디자인", "sub", ["style_preset", "sub_layout", "head_pos", "color_preset", "sub_box_color", "sub_box_alpha", "head_style", "head_size",
+                            "head_show", "sub_size", "sub_font_path", "sub_style", "sub_split", "sub_anim", "sub_max_chars", "sec_per_char"]),
+    ("🖼 사진·장면", "sub", ["img_fill", "img_motion", "shot_sec", "punch_in", "img_frame", "img_bg", "photo_count", "img_radius"]),
+    ("📜 스크롤 글자", "scroll", ["font_size", "title_size", "line_gap", "para_gap", "margin_x", "margin_right", "align", "photo_h",
+                              "speed", "target_sec"]),
+    ("📜 스크롤 효과", "scroll", ["fade", "focus", "focus_dim", "focus_y", "ease"]),
+]
+
 # (탭, 키, 라벨, 타입, 기본값)
 FIELDS = [
     ("글자", "font_path", "본문 글꼴", "font", find_font()),
@@ -189,6 +245,12 @@ FIELDS = [
     ("자막형", "sub_size", "자막 크기", "int", 64),
     ("자막형", "sub_font_path", "자막 글꼴(비우면 제목 글꼴)", "font", ""),
     ("자막형", "sub_style", "자막 스타일", "choice:글자 탭 글자색+검은테두리,글자 탭 글자색+검은띠,말풍선(웹툰),흰글자+검은테두리,노란글자+검은테두리,검은띠 위 흰글자", "글자 탭 글자색+검은테두리"),
+    ("자막형", "style_preset", "⭐ 인기 롱폼 스타일(고르면 아래가 한 번에)", "choice:직접 설정," + ",".join(LONG_STYLES), "직접 설정"),
+    ("자막형", "sub_layout", "자막 배치(사진 전체 화면일 때)", "choice:" + ",".join(SUB_LAYOUTS), SUB_LAYOUTS[0]),
+    ("자막형", "head_pos", "제목 위치", "choice:위 가운데,왼쪽 위 작게,숨김", "위 가운데"),
+    ("자막형", "color_preset", "색 조합(고르면 글자·제목·강조·상자 색이 바뀜)", "choice:직접 설정," + ",".join(COLOR_PRESETS), "직접 설정"),
+    ("자막형", "sub_box_color", "자막 상자·띠 색", "color", "#000000"),
+    ("자막형", "sub_box_alpha", "자막 상자·띠 진하기(0~1)", "float", 0.6),
     ("자막형", "head_show", "위 큰 제목", "choice:보임,안 보임(제목 카드만)", "보임"),
     ("자막형", "sub_split", "자막 나누기", "choice:문단 통째로,한 줄씩(문장·쉼표로 나눠 차례로)", "문단 통째로"),
     ("자막형", "sub_anim", "자막 등장 효과", "choice:팝(튀어나옴),올라옴,페이드,없음", "팝(튀어나옴)"),
@@ -218,6 +280,7 @@ FIELDS = [
     ("나레이션", "st_emotion_map", "문단별 지정(예: 2=슬픔,4=놀람)", "str", ""),
     ("나레이션", "st_steps", "로컬 성우 품질(5~12)", "int", 5),
     ("나레이션", "st_edge_fallback", "로컬 성우 실패시 Edge 전환", "choice:on,off", "on"),
+    ("나레이션", "narr_spoken", "숫자 발음 AI 사전(자막은 맞춤법대로, 성우는 읽는 그대로)", "choice:on,off", "on"),
     ("나레이션", "narr_style", "연기 지시(ChatGPT·Gemini 음성)", "str", "차분하고 또렷한 다큐멘터리 내레이터처럼. 반전 부분은 긴장감 있게."),
     ("나레이션", "openai_tts_model", "ChatGPT 음성 모델", "str", "gpt-4o-mini-tts"),
     ("나레이션", "gemini_tts_model", "Gemini 음성 모델", "str", "gemini-2.5-flash-preview-tts"),
@@ -361,6 +424,9 @@ CATEGORIES[PHOTO_CATEGORY] = (False, {
     "우리 동네 산책·명소": ("동네 골목·공원·시장·오래된 가게. 계절·시간대의 분위기, 숨은 이야기, 가는 법 한 줄.", "종이 노트"),
     "행사·축제·모임": ("현장 분위기→하이라이트→사람들 반응→먹거리·볼거리→팁(주차·시간대). 마지막은 다음에 올 사람에게 한마디.", "네온 시티"),
 })
+
+KO_NUM_RULE = '- 숫자·단위는 맞춤법대로 아라비아 숫자로 쓴다(예: 2026년, 42%, 1,200만 원, 4자리). 자막에 그대로 나오고, 성우가 읽는 발음은 프로그램이 따로 만든다.\n'   # 대본(자막)은 맞춤법대로, 성우 발음은 발음 사전(ensure_spoken)
+
 
 PHOTO_BLOG_SYSTEM = """너는 사진으로 유튜브 쇼츠·브이로그를 만드는 작가다. 사용자가 올린 사진들을 Read 도구로 직접 열어 본 뒤, 사진 순서대로 이야기를 쓴다.
 - 사진마다 한 문단(1~2문장). 그 사진에 실제로 보이는 것(장소·음식·사람의 행동·날씨·시간대·간판 글씨)을 구체적으로 쓴다. 안 보이는 사실은 지어내지 않는다.
@@ -557,6 +623,8 @@ PHOTO_RULES = """[사진 규칙]
 - 명화 이야기면 그 그림 자체(Wikimedia Commons 의 PD-Art 파일, 화가 사후 70년 경과작만)를 첫 번째로, 그 다음 이야기에 나오는 부분의 확대 이미지나 화가 초상. 한국 그림은 국립중앙박물관·간송미술관 공개 이미지도 가능.
 - 노래 이야기면 그 곡의 옛 악보 표지(sheet music cover, 1929년 이전 출판물은 퍼블릭 도메인), 작곡가·가수의 옛 사진, 당시 공연장 사진을 고른다.
 - 그 사건·현상·장소를 실제로 보여주는 사진만 고른다. 비슷한 다른 사진 금지. 직접 열어서(WebFetch) 맞는지 확인한다
+- [글과 밀접하게] 사진마다 '붙일 문단'을 먼저 정하고, 그 문단에 이름이 나오는 구체적 대상(인물·장소·유물·생물·실험 장치·사건 현장·지도·도표)을 직접 보여주는 사진을 찾는다. 막연한 풍경·건물 외관·스톡 사진·주제와 비슷하기만 한 사진은 쓰지 않는다
+- caption 에는 그 문단의 핵심 대상 이름을 그대로 넣는다(예: '리벳 실험의 시계', '마리아나 해구 챌린저 해연 위치'). after 는 그 대상이 나오는 바로 그 문단의 앞부분
 - after: 그 사진이 보여주는 문단의 앞부분(원문 그대로 10~20자). 사진은 그 문단 **바로 앞 줄**에 들어간다(사진 → 글 순서). 본문이 아직 없으면 그 사진이 보여주는 사실의 핵심 단어
 - caption: 15자 이내 한국어 설명 / credit: "작가 또는 기관 / 라이선스" / page: 출처 페이지 URL"""
 
@@ -622,7 +690,354 @@ IDEA_SYSTEM = """너는 한국 유튜브 쇼츠 채널 기획자다. (허구 썰
 사진 블로그면 '장소 + 한 줄 느낌'(예: '부산 해운대 새벽 산책', '우리 동네 30년 된 떡볶이집').
 코미디 꽁트면 '상황 + 꼬임' 한 줄(펀치라인은 숨김), 예: '택시 기사님이 내 전 애인이었다', '엄마가 ChatGPT를 배우셨다'. 실존 코미디언·방송 이름 금지.
 올드 팝송이면 '노래 제목(발표 연도) - 가수/작곡가' 형식. 소재에 '가사'가 들어가면 1929년 이전 발표곡만, '실화'면 극적인 인생을 산 가수·작곡가 위주(시대 무관).
+장문이면 30~60분 다큐로 깊게 풀 수 있는 큰 질문형 주제(35자 이내). 예: '우주는 정말 우연히 만들어졌을까?', '파인만이 말한 양자역학의 진짜 이상한 점', '인류는 왜 하필 아프리카를 떠났을까?'
 반드시 JSON만 출력: {"ideas": ["주제1", "주제2", ...]}"""
+
+
+# ---------------- 장문 (한 주제를 20~60분 나레이션 다큐로) ----------------
+DOC_CATEGORY = "장문"
+DOC_CHARS_PER_MIN = 420   # 나레이션 1분에 읽히는 글자 수(공백 포함, 문단 사이 쉼 포함 · Supertonic 보통 속도 실측 약 426자)
+CATEGORIES[DOC_CATEGORY] = (True, {
+    "우주의 비밀": ("빅뱅, 우주의 미세 조정, 블랙홀, 시간, 우주의 끝처럼 '우리는 왜 존재하는가'로 이어지는 큰 질문. 숫자를 일상 비유로.", "네온 시티"),
+    "양자물리·현실의 본질": ("관측, 중첩, 얽힘, 이중 슬릿 실험. '현실은 정말 우리가 보는 그대로일까?' 같은 질문으로 끌고 간다.", "시네마 다크"),
+    "과학자의 생각법": ("파인만·아인슈타인·뉴턴·퀴리 같은 과학자의 실제 일화와 사고방식으로 하나의 큰 질문을 풀어 간다. 인용은 널리 알려진 것만.", "감동 웜톤"),
+    "인류의 기원과 진화": ("호모 사피엔스의 탄생, 대이동, 네안데르탈인, 불·언어·농업. 발굴과 연구로 확인된 사실 위주.", "감동 웜톤"),
+    "고대 문명 미스터리": ("피라미드, 괴베클리 테페, 사라진 문명. 확인된 사실과 '아직 모르는 것'을 분명히 나누고 음모론은 '그런 주장도 있다' 정도로만.", "시네마 다크"),
+    "역사를 바꾼 결정적 순간": ("하나의 사건·결정이 세계사를 어떻게 바꿨는지 장면 중심으로. 날짜·장소·인물은 확인된 것만.", "감동 웜톤"),
+    "생명과 인체의 신비": ("세포, DNA, 뇌, 면역, 노화. '지금 당신 몸속에서는…'처럼 시청자와 연결.", "감동 웜톤"),
+    "뇌와 의식·심리": ("의식, 기억, 꿈, 착각, 유명한 심리 실험. 실험 상황→결과→우리 삶에 주는 의미.", "로맨스 핑크"),
+    "지구의 역사와 대멸종": ("지구 46억 년, 대멸종 5번, 빙하기, 대륙 이동. 시간 규모를 하루·1년 같은 비유로.", "시네마 다크"),
+    "철학의 큰 질문": ("자유의지, 시간, 행복, 죽음, 나는 누구인가. 철학자들의 생각을 쉬운 예시로 비교하고 결론은 열어 둔다.", "종이 노트"),
+    "미래 과학과 기술": ("인공지능, 우주 탐사, 핵융합, 수명 연장. 지금 실제로 어디까지 왔는지와 남은 과제를 구분.", "네온 시티"),
+    "세계사 인물 일대기": ("한 인물의 탄생부터 죽음까지, 결정적 장면들로. 널리 기록된 사실만, 루머 금지.", "감동 웜톤"),
+    # --- 틈새 주제 ---
+    "심해의 세계": ("수심 200m 아래부터 마리아나 해구까지 깊이를 내려가며 빛·수압·온도가 어떻게 바뀌는지, 그곳 생물의 발광·거대화·느린 생존법, 열수 분출구 생태계, 탐사의 역사(트리에스테호 1960 등). 깊이마다 장면을 바꿔 '함께 잠수하는' 구성.", "시네마 다크"),
+    "품질의 역사와 원리": ("품질관리가 어떻게 세상을 바꿨는지: 슈하트 관리도, 데밍과 전후 일본, 도요타 생산방식(지도카·저스트인타임·안돈), 식스 시그마, ISO 9001, 카이젠. '불량 하나'가 왜 수십 배 비용이 되는지 실제 사례와 쉬운 비유로. 회사명·숫자는 확인된 것만.", "종이 노트"),
+    "대형 사고에서 배운 교훈": ("타이타닉, 챌린저호, 체르노빌, 하얏트 리젠시 고가 통로 붕괴 같은 공식 조사 보고서로 원인이 밝혀진 사고. 사고 순간 → 작은 결함과 무시된 경고 → 조사 결과 → 이후 바뀐 규칙·설계. 희생자를 자극적으로 묘사하지 않는다.", "시네마 다크"),
+    "공학의 걸작": ("파나마 운하, 금문교, 국제우주정거장, 석굴암 같은 구조물이 어떻게 지어졌는지. 당시 불가능해 보였던 문제와 그걸 푼 아이디어를 중심으로.", "네온 시티"),
+    "발명과 우연한 발견": ("페니실린, 전자레인지, 포스트잇, X선처럼 실수·우연에서 시작된 발명. 발견 순간의 장면 → 왜 다른 사람은 못 봤는지 → 세상이 어떻게 바뀌었는지.", "감동 웜톤"),
+    "미생물의 세계": ("우리 몸과 지구를 움직이는 세균·바이러스·곰팡이. 장내 미생물, 발효, 전염병과 백신의 역사, 극한 환경 미생물. 크기를 일상 비유로.", "감동 웜톤"),
+    "식물의 숨은 능력": ("식물의 소통(뿌리·곰팡이 네트워크), 시간 감각, 방어 화학물질, 수천 년 사는 나무. 실험으로 확인된 것과 과장된 주장을 구분.", "감동 웜톤"),
+    "극지와 빙하": ("남극·북극의 극한 환경, 빙하 코어가 기록한 수십만 년 기후, 극지 탐험의 실화(섀클턴 등), 극지 생물.", "시네마 다크"),
+    "동굴과 지하 세계": ("석회 동굴이 만들어지는 시간, 손동굴 같은 거대 동굴, 동굴 벽화, 지하에 사는 생물, 동굴 구조 실화(태국 탐루앙 동굴 2018 등).", "시네마 다크"),
+    "화폐와 경제의 역사": ("조개껍데기에서 금화·지폐·신용카드·디지털 화폐까지. 인플레이션, 대공황, 튤립 파동 같은 실제 사건을 장면으로. 투자 조언은 하지 않는다.", "종이 노트"),
+    "수학의 미스터리": ("무한, 소수, 0의 탄생, 페르마의 마지막 정리, 아직 안 풀린 난제. 수식 없이 비유와 이야기로 설명.", "네온 시티"),
+    "시간과 달력의 역사": ("해시계·물시계·기계식 시계·원자시계, 달력이 바뀐 사연(그레고리력 1582년에 사라진 10일), 표준시와 철도.", "종이 노트"),
+    "색과 빛의 과학": ("우리가 색을 보는 원리, 동물마다 다른 색 세계, 귀했던 안료(울트라마린, 티리언 퍼플)의 역사, 하늘이 파란 이유.", "로맨스 핑크"),
+    "의학의 결정적 순간": ("마취, 소독, 수혈, 장기 이식, 항생제가 처음 성공한 날. 그 전에는 어땠는지와 의사들이 맞선 반대를 장면으로.", "감동 웜톤"),
+    "음식과 요리의 과학": ("발효, 마이야르 반응, 매운맛의 정체, 향신료가 바꾼 세계사. 부엌에서 확인할 수 있는 예시로.", "감동 웜톤"),
+    # --- 고고학 계열 ---
+    "고고학 발굴 이야기": ("투탕카멘 무덤(1922), 진시황 병마용(1974), 폼페이처럼 유명한 발굴의 순간을 장면으로: 누가 어떻게 찾았는지 → 무엇이 나왔는지 → 그것으로 새로 알게 된 사실. 발굴자의 실제 기록·일화 위주.", "감동 웜톤"),
+    "사라진 도시와 유적": ("트로이, 마추픽추, 앙코르, 차탈회위크, 모헨조다로처럼 잊혔다가 다시 발견된 도시. 번성 → 몰락 원인(가설은 가설로) → 재발견 → 지금 남은 모습.", "시네마 다크"),
+    "미라와 무덤의 비밀": ("이집트 미라, 외치(아이스맨), 습지 미라, 고대 왕릉. CT·DNA 분석으로 밝혀진 사인·식단·질병처럼 과학이 알아낸 것 중심. 시신 묘사는 절제.", "시네마 다크"),
+    "해저 고고학과 난파선": ("안티키테라 기계, 바사호, 메리 로즈호, 신안선처럼 바다에서 건져 올린 역사. 침몰 순간 → 발견과 인양 → 배 안에서 나온 것이 알려준 시대.", "시네마 다크"),
+    "한국 고고학": ("가야 고분, 신라 금관, 백제 금동대향로, 무령왕릉(1971), 반구대 암각화처럼 한국 땅의 발굴. 출토 과정의 실제 일화와 유물이 알려주는 당시 생활.", "종이 노트"),
+    "고대 문자와 암호 해독": ("로제타석과 샹폴리옹, 선형문자 B, 마야 문자, 아직 못 읽는 문자(선형문자 A, 인더스 문자). 해독의 열쇠가 된 순간을 추리극처럼.", "종이 노트"),
+    "고생물학과 공룡": ("공룡 화석 발견의 역사, 깃털 공룡, 대멸종, 화석이 만들어지는 조건. 뼈 하나로 모습을 복원하는 방법과 최근에 바뀐 공룡의 모습.", "네온 시티"),
+    "최신 고고학 발견": ("최근 1~3년 사이에 발표된 고고학·고생물학 발견(새 유적, DNA 분석, 연대 측정으로 바뀐 정설). 반드시 웹 조사로 날짜·기관을 확인하고, 학계 검증 중이면 그렇다고 밝힌다.", "시네마 다크"),
+})
+for _t, _snd in (("우주의 비밀", "우주"), ("양자물리·현실의 본질", "우주"), ("과학자의 생각법", "잔잔한 패드"),
+                 ("인류의 기원과 진화", "바람"), ("고대 문명 미스터리", "어두운 드론"), ("역사를 바꾼 결정적 순간", "잔잔한 패드"),
+                 ("생명과 인체의 신비", "잔잔한 패드"), ("뇌와 의식·심리", "심해"), ("지구의 역사와 대멸종", "어두운 드론"),
+                 ("철학의 큰 질문", "잔잔한 패드"), ("미래 과학과 기술", "우주"), ("세계사 인물 일대기", "감성 오르골"),
+                 ("심해의 세계", "심해"), ("품질의 역사와 원리", "잔잔한 패드"), ("대형 사고에서 배운 교훈", "어두운 드론"),
+                 ("공학의 걸작", "잔잔한 패드"), ("발명과 우연한 발견", "밝은 오르골"), ("미생물의 세계", "심해"),
+                 ("식물의 숨은 능력", "바람"), ("극지와 빙하", "바람"), ("동굴과 지하 세계", "어두운 드론"),
+                 ("화폐와 경제의 역사", "잔잔한 패드"), ("수학의 미스터리", "우주"), ("시간과 달력의 역사", "잔잔한 패드"),
+                 ("색과 빛의 과학", "감성 오르골"), ("의학의 결정적 순간", "잔잔한 패드"), ("음식과 요리의 과학", "밝은 오르골"),
+                 ("고고학 발굴 이야기", "바람"), ("사라진 도시와 유적", "어두운 드론"), ("미라와 무덤의 비밀", "어두운 드론"),
+                 ("해저 고고학과 난파선", "심해"), ("한국 고고학", "잔잔한 패드"), ("고대 문자와 암호 해독", "잔잔한 패드"),
+                 ("고생물학과 공룡", "바람"), ("최신 고고학 발견", "어두운 드론")):
+    SOUND_BY_TOPIC.setdefault(_t, _snd)
+
+# 장문 '이야기'(허구) 소재: 유튜브 장편 낭독·오디오드라마로 인기 있는 장르 (소재 이름 앞 [이야기])
+DOC_FICTION = {
+    "[이야기] 무협소설": ("강호·문파·복수·성장. 몰락한 문파의 후예, 숨겨진 무공, 사부와 제자, 정파와 마교의 대립. 문체는 무협답게 '~하였다', '~이오' 같은 고풍 말투와 초식 이름, 내공·경공 묘사. 김용 등 기존 작품의 인물·무공 이름은 쓰지 않는다.", "시네마 다크", "바람"),
+    "[이야기] 미니드라마(복수·반전)": ("재벌가·결혼·배신·출생의 비밀·통쾌한 복수. 회차마다 강한 반전과 클리프행어, 악역은 확실히 밉게, 주인공의 사이다 역전. 요즘 숏드라마처럼 빠른 전개.", "네온 시티", "긴장 펄스"),
+    "[이야기] 사연 낭독(가족·시댁·이혼)": ("시청자가 보낸 사연처럼 1인칭 고백체. 시댁 갈등, 남편의 비밀, 형제 간 유산 다툼 등 공감과 분노 → 통쾌하거나 뭉클한 결말. 실명·실제 사건처럼 보이는 구체적 개인정보 금지.", "감동 웜톤", "슬픈 패드"),
+    "[이야기] 시니어 인생 사연": ("60~80대 주인공의 회고. 자식과의 오해, 황혼의 사랑, 평생 숨긴 비밀, 노년의 용기. 느리고 따뜻한 말투, 마지막에 눈물 나는 깨달음.", "감동 웜톤", "감성 오르골"),
+    "[이야기] 회귀·빙의 판타지": ("죽음 직전 과거로 돌아가거나 소설 속 인물에 빙의. 미래 지식으로 운명을 바꾸는 쾌감, 단계별 성장, 회차마다 새 위기.", "네온 시티", "긴장 펄스"),
+    "[이야기] 로맨스 판타지": ("귀족 영애·황태자·계약 결혼·악녀 빙의. 설렘과 오해, 질투, 신분 차이, 마지막에 확실한 해피엔딩.", "로맨스 핑크", "감성 오르골"),
+    "[이야기] 현대 판타지(헌터)": ("게이트·던전·각성자·랭킹. 최약체로 무시당하던 주인공이 숨은 능력으로 각성해 올라가는 이야기, 전투 장면은 짧고 강렬하게.", "네온 시티", "긴장 펄스"),
+    "[이야기] 공포 괴담 장편": ("하나의 장소(오래된 아파트, 시골 폐교, 산장)에서 조금씩 이상한 일이 쌓이는 1인칭 실화풍 괴담. 잔인한 묘사 대신 분위기와 소리로 공포, 회차 끝마다 소름 포인트.", "공포 레드", "공포 심장박동"),
+    "[이야기] 미스터리 추리 장편": ("폐쇄된 공간의 사건, 용의자 여러 명, 단서를 공정하게 흘리고 마지막에 논리적으로 범인이 밝혀지는 정통 추리.", "시네마 다크", "긴장 펄스"),
+    "[이야기] 조선 야담·기담": ("조선 시대 저잣거리와 산골의 기이한 이야기: 여우 누이, 도깨비 거래, 원귀의 한, 꾀 많은 선비. 옛이야기 말투('~했더란다', '~하였지요')로 들려준다.", "감동 웜톤", "바람"),
+    "[이야기] 궁중 사극": ("왕실과 후궁의 암투, 억울한 누명, 숨은 왕자, 신분을 넘는 사랑. 실존 왕은 배경으로만, 주인공은 창작 인물. 사극 말투를 대사에.", "감동 웜톤", "잔잔한 패드"),
+    "[이야기] 감동 휴먼 드라마": ("평범한 사람들의 상처와 회복: 가족, 이웃, 오래된 가게, 우정. 작은 사건이 쌓여 마지막에 크게 울리는 이야기.", "감동 웜톤", "슬픈 패드"),
+    "[이야기] SF·디스토피아": ("가까운 미래 세계(인공지능, 기억 거래, 기후 붕괴 도시)에서 한 사람이 시스템의 비밀을 알아 가는 이야기. 설정은 쉽게, 반전은 크게.", "네온 시티", "우주"),
+    "[이야기] 코믹 일상 장편 썰": ("회사·학교·가족 사이의 황당한 사건이 꼬리를 무는 코믹 장편. 등장인물 캐릭터를 확실히, 회차마다 빵 터지는 장면, 마지막은 훈훈하게.", "웹툰", "밝은 오르골"),
+}
+DOC_FICTION_TOPICS = set(DOC_FICTION)
+CATEGORIES[DOC_CATEGORY][1].update({k: (v[0], v[1]) for k, v in DOC_FICTION.items()})
+for _t, _v in DOC_FICTION.items():
+    SOUND_BY_TOPIC.setdefault(_t, _v[2])
+
+DOC_FICTION_STYLE = """[장편 낭독(오디오드라마) 문체 - 반드시 지킬 것]
+- 귀로 듣는 소설이다. 성우 한 명이 읽으므로 대사 앞뒤에 누가 말하는지 분명히(예: 민서가 낮게 말했다. "…"). 대사는 큰따옴표.
+- 한 문단 = 1~3문장(약 50~160자). 문단 사이 빈 줄. 장면 묘사(소리·냄새·빛)와 대사, 속마음을 섞어 영화처럼.
+- 2~4문단마다 사건이 움직인다. 설명만 길게 늘어놓지 않는다. 회차(챕터) 끝은 반드시 다음이 궁금해지는 클리프행어(마지막 챕터는 결말).
+- 인물 이름·나이·관계·말투는 구성안 그대로 끝까지 일관되게. 새 주요 인물을 갑자기 만들지 않는다.
+- 목록·제목 기호(#, -, *, 번호)와 이모지 금지. 한자·영문을 괄호로 같이 쓰지 않는다(성우가 그대로 읽음): '귀운(歸雲)' ✗ → '귀운' ✓.
+- 완전한 창작: 실존 인물(정치인·연예인·기업인)·실제 기업·기존 소설·웹툰·드라마의 인물과 설정을 쓰지 않는다. 선정적·잔인한 묘사 금지, 공포는 분위기로."""
+
+DOC_FICTION_OUTLINE_SYSTEM = """너는 유튜브 장편 낭독(오디오드라마) 채널의 메인 작가다. 한 편의 이야기를 {minutes}분짜리 나레이션 영상으로 만든다(성우 한 명이 읽음).
+먼저 전체 구성안을 짠다.
+- title: 클릭하고 싶은 드라마 제목 20~40자. 장르가 바로 보이게(예: '[무협] 몰락한 문파의 막내, 사부가 남긴 마지막 초식'). 결말 금지, 이모지 0~1개.
+- logline: 이야기 한 줄 요약
+- setting: 시대·장소·세계관 2~4문장
+- characters: 주요 인물 3~6명. 각 {{"name": "", "age": "", "role": "주인공/조력자/악역 등", "personality": "", "speech": "말투 특징"}}
+- opening: 오프닝 나레이션 3~6문단(약 {open_chars}자). 인사 없이 사건 한가운데나 가장 강한 장면으로 시작해서 '이 이야기를 끝까지 들어야 하는 이유'를 심는다.
+- chapters: {n_ch}개 회차. 각 {{"title": "회차 제목(15자 이내, 번호 없이)", "points": ["이 회차의 사건·장면 3~6개(누가 무엇을)"], "cliffhanger": "회차 마지막 장면", "chars": 목표 글자 수}}. chars 합계는 약 {body_chars}자.
+  발단 → 갈등 고조 → 위기 → 절정 → 결말. 중반에 큰 반전 1개 이상. 마지막 회차는 결말(떡밥 회수).
+- closing: 마무리 나레이션 2~4문단(약 {close_chars}자). 여운 한 줄, 시청자에게 묻는 질문 하나, 마지막 한 문장으로 짧은 구독 유도.
+
+""" + DOC_FICTION_STYLE + """
+
+반드시 JSON만 출력: {{"title": "", "logline": "", "setting": "", "characters": [{{"name": "", "age": "", "role": "", "personality": "", "speech": ""}}], "opening": "", "chapters": [{{"title": "", "points": [""], "cliffhanger": "", "chars": 1500}}], "closing": "", "notes": ""}}"""
+
+DOC_FICTION_CHAPTER_SYSTEM = """너는 유튜브 장편 낭독(오디오드라마) 채널의 메인 작가다. 구성안 중 '지금 쓸 회차' 하나의 본문만 쓴다.
+""" + KO_NUM_RULE + """- 분량: 목표 글자 수(공백 포함)의 90~110%. 장면과 대사를 충분히 넣어 채운다(요약하듯 쓰지 않는다).
+- 회차 제목은 쓰지 않는다(프로그램이 붙임). 본문만.
+- 앞 회차 마지막 장면에서 바로 이어 시작하되 같은 문장을 되풀이하지 않는다. 다음 회차 사건을 미리 쓰지 않는다.
+- 구성안의 points 를 모두 장면으로 보여 주고, cliffhanger 장면으로 끝낸다(마지막 회차는 결말).
+
+""" + DOC_FICTION_STYLE + """
+
+반드시 JSON만 출력: {"story": "회차 본문", "summary": "이 회차 내용 2~3문장 요약(다음 작가에게 넘김, 인물들의 현재 상황 포함)", "notes": ""}"""
+
+DOC_FICTION_PACKAGE_SYSTEM = """너는 구독자 100만 유튜브 장편 낭독(오디오드라마) 채널 운영자다. 20~60분짜리 창작 이야기 영상의 업로드 문구를 만든다.
+- 제목 후보 5개: 장르 표시([무협]·[사연]·[미니드라마] 등) + 강한 갈등·반전 암시, 25~45자, 이모지 0~1개, 결말 금지. 서로 다른 각도(대사 인용형 / 반전 암시형 / 인물형 / 감정형 / 질문형).
+- 설명: 첫 단락 3~4문장(이야기의 갈등과 주인공, 결말은 숨김), 빈 줄, '끝까지 들으면…' 기대감 한 줄, 빈 줄, 잠들기 전·운전할 때 듣기 좋다는 한 줄, 마지막 줄 "※ 이 영상은 창작된 이야기(픽션)입니다. 등장하는 인물·단체는 실제와 관련이 없습니다." 목차(타임스탬프)는 쓰지 않는다(프로그램이 붙임).
+- 해시태그 12~16개: 장르 태그(#무협소설 #오디오북 #사연 #미니드라마 #낭독 #장편소설 등) + 이야기 키워드
+- keywords: 유튜브 태그 칸용 검색어 12~20개, 쉼표로
+- 고정댓글: 주인공의 선택이나 결말에 대한 의견을 묻는 한 줄
+반드시 JSON만 출력: {"titles": ["..."], "description": "...", "hashtags": "#... #...", "keywords": "...", "pinned_comment": "..."}"""
+
+
+def doc_date_note(pkg, fiction=False):
+    """장문 다큐 업로드 문구 끝에 '이 영상은 ○년 ○월 기준 정보입니다' (이야기면 안 붙임)"""
+    if fiction or not isinstance(pkg, dict):
+        return pkg
+    note = f"※ 이 영상은 {time.strftime('%Y년 %m월').replace(' 0', ' ')} 기준 정보입니다. 이후 새로운 연구로 내용이 바뀔 수 있습니다."
+    d = str(pkg.get("description", "")).rstrip()
+    if "기준 정보" not in d:
+        pkg["description"] = (d + "\n\n" + note).strip()
+    return pkg
+
+
+def doc_is_fiction(genre):
+    return str(genre or "") in DOC_FICTION_TOPICS or str(genre or "").startswith("[이야기]")
+
+
+DOC_PHOTO_SEC = 30   # 장문 사진 간격(초): 나레이션 이 정도마다 사진 한 장
+
+
+def doc_photo_target(text, sec=None):
+    """장문 한 덩어리(챕터·오프닝)에 넣을 사진 수: 나레이션 sec 초마다 한 장 (3~10장)"""
+    chars = len(story_text_only(text or ""))
+    per = DOC_CHARS_PER_MIN * (sec or DOC_PHOTO_SEC) / 60
+    return max(3, min(10, round(chars / max(1, per))))
+
+
+DOC_STYLE = """[장문 다큐 나레이션 문체 - 반드시 지킬 것]
+- 유튜브 지식 다큐 나레이터 말투: '~입니다', '~죠', '~일까요?'를 섞은 차분하고 또렷한 존댓말. 시청자에게 말을 거는 느낌('여러분', '상상해 보세요')을 가끔.
+- 귀로 듣는 글이다. 한 문단 = 1~3문장(약 60~160자). 문단 사이 빈 줄. 어려운 용어는 처음 나올 때 쉬운 말로 풀고, 숫자는 일상 비유로 바꾼다(예: '모래알 하나').
+- 같은 말 반복 금지. 2~4문단마다 새로운 사실·장면·질문이 나와야 지루하지 않다.
+- 질문을 던지고 → 사실과 실험·일화로 풀고 → 다음 질문으로 넘기는 흐름. 각 챕터 끝은 다음 챕터가 궁금해지는 한 문장.
+- 목록·표·제목 기호(#, -, *, 번호 목록)와 이모지 금지. 괄호 설명도 최소화(읽어 주기 어색함). 한자·영문을 괄호로 같이 쓰지 않는다(성우가 그대로 읽음): 필요하면 '영어로는 ~라고 부르죠'처럼 말로 푼다.
+- 확인된 사실만. 논란·가설은 '~라는 주장도 있습니다', '아직 밝혀지지 않았습니다'로 분명히 구분. 인물의 말은 널리 알려진 인용만.
+- 최신 연구·발견은 시점과 출처를 말로 밝힌다(예: '2025년 학술지 네이처에 실린 연구에 따르면'). 아직 검증 중이면 '아직 다른 연구로 확인되지는 않았습니다'처럼 분명히. 날짜를 모르면 '최근'이라고만 하고 지어내지 않는다."""
+
+DOC_OUTLINE_SYSTEM = """너는 구독자 100만 유튜브 지식 다큐 채널의 메인 작가다. 한 주제를 {minutes}분짜리 나레이션 다큐로 만든다(예: '우주는 정말 우연히 만들어졌을까?' 58분).
+먼저 전체 구성안을 짠다.
+- title: 클릭하고 싶은 큰 질문형 제목 25~45자(결말 금지, 이모지 0~1개). 예: '우주는 정말 우연히 만들어졌을까? 😱 이 숫자들이 과학자들마저 침묵하게 만들었다'
+- opening: 오프닝 나레이션 4~8문단(약 {open_chars}자). 첫 문장은 가장 강한 훅(놀라운 사실·질문·장면), 이 영상에서 무엇을 알게 되는지, '끝까지 보시면…' 기대감. 인사말로 시작 금지.
+- chapters: {n_ch}개. 각 {{"title": "챕터 제목(15자 이내, 번호 없이)", "points": ["이 챕터에서 다룰 핵심 사실·장면·질문 3~6개"], "chars": 목표 글자 수}}. chars 합계는 약 {body_chars}자.
+  챕터들은 쉬운 질문 → 점점 깊은 질문 → 가장 충격적인 질문 순서로, 서로 겹치지 않게. 마지막 챕터는 전체를 정리하는 결론 챕터.
+  [최우선: 최신 정보] 조사 자료의 recent(최근 소식)를 이 영상의 중심으로 삼는다. 오프닝의 첫 훅은 가장 최근의 놀라운 발견으로, 챕터의 절반 이상은 최신 연구·발견을 중심으로 구성하고, 옛 이야기는 '예전에는 이렇게 알았지만'처럼 최신 내용을 돋보이게 하는 배경으로 쓴다. 마지막 챕터에는 '지금 이 순간 과학이 어디까지 왔고 무엇이 아직 미확정인지'를 넣는다.
+  title 에도 최신성이 드러나면 좋다(예: '2026년 새로 밝혀진', '최근 발견된').
+- closing: 마무리 나레이션 3~6문단(약 {close_chars}자). 핵심을 한 문장으로 되짚고, 시청자에게 생각할 질문 하나, 댓글·구독 유도는 마지막 한 문장으로 짧게.
+
+""" + DOC_STYLE + """
+
+""" + FACT_RULES + """
+
+반드시 JSON만 출력: {{"title": "", "opening": "", "chapters": [{{"title": "", "points": [""], "chars": 1500}}], "closing": "", "sources": ["출처1"], "notes": "확인 필요한 부분"}}"""
+
+DOC_CHAPTER_SYSTEM = """너는 유튜브 지식 다큐 채널의 메인 작가다. 전체 구성안 중 '지금 쓸 챕터' 하나의 나레이션 본문만 쓴다.
+""" + KO_NUM_RULE + """- 분량: 목표 글자 수(공백 포함)의 90~110%. 너무 짧으면 영상 길이가 모자라니 사실·일화·비유를 충분히 넣는다.
+- 챕터 제목은 쓰지 않는다(프로그램이 붙임). 본문만.
+- 앞 챕터에서 이미 한 이야기를 반복하지 않는다. 다음 챕터 내용을 미리 다 말하지 않는다.
+- 첫 문단: '앞 챕터 마지막 문장'을 되풀이하거나 같은 질문을 다시 던지지 말고, 그 질문에 답하거나 새 장면·사실로 바로 시작한다. 마지막 문단은 다음 챕터로 궁금증을 넘긴다(마지막 챕터면 결론).
+
+""" + DOC_STYLE + """
+
+""" + FACT_RULES.replace("- 마지막에 댓글을 부르는 짧은 질문 1줄 (예: \"당신이라면 어떻게 했을까?\")\n", "") + """
+
+반드시 JSON만 출력: {"story": "챕터 본문", "summary": "이 챕터 내용 2문장 요약(다음 챕터 작가에게 넘김)", "sources": ["출처"], "notes": "확인 필요한 부분(없으면 빈 문자열)"}"""
+
+DOC_RESEARCH_SYSTEM = """너는 유튜브 지식 다큐(30~60분) 대본을 위한 수석 자료조사원이다. WebSearch 로 주제를 폭넓게 검색하고, 핵심 자료는 WebFetch 로 원문을 열어 확인한다.
+[최우선 원칙: 최신 정보] 사용자가 알려준 '오늘 날짜' 기준으로 가장 최근의 연구·발견·뉴스를 먼저 찾는다(검색어에 올해·작년 연도와 'new study', '최신 연구', 'discovery' 등을 넣어 여러 번 검색). 옛날 사실은 최신 소식을 이해하기 위한 배경으로만 모은다. 옛 정설과 최신 연구가 다르면 최신 연구를 기준으로 삼고 '무엇이 바뀌었는지'를 facts 에 적는다.
+주제가 비어 있으면 소재 안에서 최근 1~2년 사이 새 발견·뉴스와 이어지는, 긴 다큐로 반응이 좋을 큰 질문형 주제를 골라 조사한다. 주제가 정해져 있어도 그 주제의 최신 동향을 반드시 찾는다.
+- facts: 대본에 쓸 확인된 사실 25~40개, 한 줄씩(숫자·연도·인물·실험·장소 포함). 여러 자료가 일치하는 것만.
+- stories: 이야기로 풀기 좋은 실제 일화·실험·장면 5~10개(한두 문장씩)
+- questions: 시청자가 궁금해할 질문 8~12개(쉬운 것부터 깊은 것 순서)
+- myths: 흔한 오해나 과장된 주장과 실제 사실 2~5개
+- recent: 사용자가 알려준 '오늘 날짜' 기준 최근 1~3년 안에 나온 새 연구·발견·뉴스 5~10개(최근 것부터). 반드시 검색해서 찾고, 한 줄마다 "발표 연도(가능하면 월) · 기관/학술지/매체 · 내용 · 확정 여부(학계 검증 중이면 '검증 중')". 옛 정설이 최근 연구로 바뀐 경우를 특히 찾는다. 없으면 빈 배열.
+- sources: 실제로 확인한 자료 5~10개, "자료 이름 - URL" (recent 의 출처 포함)
+반드시 JSON만 출력: {"topic": "조사한 주제", "facts": [""], "stories": [""], "questions": [""], "myths": [""], "recent": [""], "sources": ["이름 - URL"]}"""
+
+DOC_PACKAGE_SYSTEM = """너는 구독자 100만 유튜브 지식 다큐 채널 운영자다. 30~60분짜리 롱폼 나레이션 다큐의 업로드 문구를 만든다.
+- 제목 후보 5개: 큰 질문형 + 감정 자극, 30~50자, 이모지 0~1개. 결말은 밝히지 않는다. 서로 다른 각도(질문형 / 충격 사실형 / 인물형 / 숫자형 / 반전형). 본문에 최근 발견·연구가 나오면 2개 이상에 연도나 '최근', '새로 밝혀진'을 넣는다.
+- 설명: 첫 단락 3~5문장(영상이 던지는 질문과 무엇을 알게 되는지, 검색 키워드를 자연스럽게), 빈 줄, '이 영상은 단순히 ~이 아닙니다'류 한 단락, 빈 줄, 어떤 시청자에게 추천하는지 한 줄. 목차(타임스탬프)는 쓰지 않는다(프로그램이 붙임).
+- 해시태그 12~16개: #과학다큐 #지식 같은 큰 태그 + 주제 키워드, 띄어쓰기로 구분
+- keywords: 유튜브 태그 칸에 넣을 검색어 12~20개를 쉼표로
+- 고정댓글: 영상의 큰 질문에 대한 시청자 생각을 묻는 한 줄
+반드시 JSON만 출력: {"titles": ["..."], "description": "...", "hashtags": "#... #...", "keywords": "...", "pinned_comment": "..."}"""
+
+
+def doc_clean(text):
+    """장문 AI 결과 정리: 제목·목록 기호와 굵게 표시를 지우고, 문단(빈 줄로 구분) 단위로 맞춤. 사진 줄은 그대로"""
+    raw = str(text or "").replace("\r", "")
+    per_line = not re.search(r"\n[ \t]*\n", raw.strip())   # 빈 줄 없이 줄바꿈만 했으면 줄마다 문단
+    out = []
+    for ln in raw.split("\n"):
+        s = ln.strip()
+        if s and (parse_media(s) or PH_RE.match(s)):   # 사진 줄은 항상 따로 한 문단
+            out += ["", s, ""]
+            continue
+        if s:
+            if s.startswith("#"):          # 챕터 제목은 프로그램이 붙이므로 AI가 쓴 제목 줄은 버림
+                continue
+            s = re.sub(r"^([-*•·]|\d+[.)])\s+", "", s).replace("**", "").replace("__", "")
+        out += [s, ""] if (s and per_line) else [s]
+    paras = [" ".join(x.strip() for x in p.split("\n") if x.strip()) for p in re.split(r"\n\s*\n", "\n".join(out)) if p.strip()]
+    return "\n\n".join(paras)
+
+
+PHOTO_CHECK_SYSTEM = """너는 유튜브 다큐 영상의 사진 편집자다. 사진이 바로 뒤에 나오는 글(나레이션 문단)과 밀접하게 맞는지 직접 보고 검사한다.
+Read 도구로 사진 파일을 하나씩 실제로 열어 본다(열지 않고 설명만 보고 판단하지 않는다).
+- score(0~10): 그 사진이 '붙은 문단'이 말하는 대상을 얼마나 직접 보여주는지. 문단에 나오는 바로 그 인물·장소·유물·생물·현상·장치를 보여주면 8~10, 같은 주제지만 문단 내용과 직접 관련은 약하면 4~6, 엉뚱하거나 글과 상관없으면 0~3.
+  분위기 사진(창작 이야기)이면 문단 장면의 장소·시간·분위기와 맞는지로 매긴다.
+- best: 이 사진이 가장 잘 맞는 문단 번호(지금 문단이 제일 맞으면 그 번호). 다른 문단이 훨씬 잘 맞으면 그 번호.
+- best_score(0~10): best 문단과 맞는 정도 (같은 사진이 이미 다른 자리에 쓰였으면 0)
+- what: 사진에 실제로 보이는 것 한 줄(검사 근거)
+반드시 JSON만 출력: {"photos": [{"k": 1, "score": 8, "best": 3, "best_score": 9, "what": "..."}]}"""
+
+
+def check_photo_fit(model, text, log=None, min_score=5, fiction=False):
+    """사진과 글이 밀접한지 Claude가 사진을 직접 열어 보고 검사 → 안 맞는 사진은 빼고, 더 맞는 문단이 있으면 옮김.
+    text: 사진 줄([사진: ...])이 섞인 본문. 반환: (고친 본문, 뺀 수, 옮긴 수). Claude가 아니거나 실패하면 그대로"""
+    log = log or (lambda x: None)
+    paras = split_paras(text)
+    items, ph = [], []          # items: 글 문단 (번호 매김) / ph: (사진 줄 인덱스, 경로, 설명, 붙은 글 문단 번호)
+    for i, p in enumerate(paras):
+        md = parse_media(p)
+        if md:
+            ph.append([i, md[0], md[1], None])
+        elif not p.startswith("## "):
+            items.append(i)
+            for x in ph:
+                if x[3] is None:
+                    x[3] = len(items)       # 사진 → 바로 뒤 글 문단에 붙음 (번호는 1부터)
+    ph = [x for x in ph if x[3] is not None]
+    if not ph or not items:
+        return text, 0, 0
+    eng = str((SCRIPT_ENGINE.get("s") or {}).get("script_engine", "Claude"))
+    if not (eng.startswith("Claude") or eng.startswith("자동")):
+        return text, 0, 0           # 사진을 직접 보는 건 Claude 만 가능
+    plist = "\n".join(f"사진{k + 1}: {x[1] if os.path.isabs(x[1]) else os.path.join(BASE, x[1])} | 설명: {x[2]} | 붙은 문단: {x[3]}"
+                      for k, x in enumerate(ph))
+    tlist = "\n".join(f"[{n + 1}] {story_text_only(paras[i])[:220]}" for n, i in enumerate(items))
+    try:
+        d = ask_json(model, PHOTO_CHECK_SYSTEM, ("[창작 이야기 - 분위기 사진]\n" if fiction else "") +
+                     f"[글 문단]\n{tlist}\n\n[사진 - Read 로 열어 볼 것]\n{plist}", tools=["Read"])
+    except Exception as e:
+        log("  사진 검사 건너뜀: " + str(e).splitlines()[0][:80])
+        return text, 0, 0
+    res = {int(r.get("k", 0)): r for r in (d.get("photos") or []) if isinstance(r, dict) and str(r.get("k", "")).isdigit()}
+    drop, moves = set(), {}
+    for k, x in enumerate(ph):
+        r = res.get(k + 1)
+        if not r:
+            continue
+        try:
+            sc, best = float(r.get("score", 10)), int(r.get("best", x[3]) or x[3])
+            bsc = float(r.get("best_score", sc if best == x[3] else 0))
+        except (TypeError, ValueError):
+            continue
+        if 1 <= best <= len(items) and best != x[3] and bsc >= max(7, sc + 2):   # 다른 문단에 훨씬 잘 맞으면 옮김
+            moves[x[0]] = items[best - 1]
+            log(f"  ↪ 사진을 더 맞는 문단으로 옮김 ({sc:.0f}→{bsc:.0f}점): {x[2]} → 문단 {best}")
+        elif sc < min_score:
+            drop.add(x[0])
+            log(f"  ✂ 글과 안 맞는 사진 뺌 ({sc:.0f}점): {x[2]} - {str(r.get('what', ''))[:40]}")
+    if not drop and not moves:
+        return text, 0, 0
+    out = []
+    moved_lines = {}
+    for src, dst in moves.items():
+        moved_lines.setdefault(dst, []).append(paras[src])
+    for i, p in enumerate(paras):
+        if i in drop or i in moves:
+            continue
+        out += moved_lines.get(i, [])   # 옮긴 사진은 그 문단 바로 앞
+        out.append(p)
+    return "\n\n".join(out), len(drop), len(moves)
+
+
+def doc_add_photos(model, title, story, media_dir, log, cancel=None, sec=None, fiction=False):
+    """이미 만든 장문 대본에 사진을 더 넣음: 오프닝·챕터마다 (나레이션 sec 초에 한 장) 목표보다 모자란 만큼만,
+    사진이 없는 긴 구간에 배치. 이미 쓴 사진(출처 페이지)은 다시 고르지 않음. 반환: (새 대본, 더한 사진 수)"""
+    paras = split_paras(story)
+    blocks, cur = [], []
+    for p in paras:
+        if p.startswith("## ") and cur:
+            blocks.append(cur)
+            cur = []
+        cur.append(p)
+    if cur:
+        blocks.append(cur)
+    used = set()
+    for p in paras:
+        md = parse_media(p)
+        if md:
+            used.update(x for x in (md[0], md[3]) if x)
+    added = 0
+    out_blocks = []
+    for bi, blk in enumerate(blocks):
+        if cancel is not None and cancel.is_set():
+            raise RuntimeError("취소됨")
+        text = "\n\n".join(blk)
+        have = sum(1 for p in blk if parse_media(p))
+        need = doc_photo_target(text, sec) - have
+        name = blk[0][3:] if blk[0].startswith("## ") else "오프닝"
+        if need <= 0:
+            out_blocks.append(text)
+            continue
+        view = []   # AI가 볼 본문: 사진 자리는 '(이미 사진: 설명)'으로
+        for p in blk:
+            md = parse_media(p)
+            view.append(f"(이미 사진: {md[1] or '사진'})" if md else p)
+        log(f"  🔎 '{name}' 사진 {need}장 더 찾는 중... (지금 {have}장)")
+        try:
+            pcat = "허구 단편소설" if fiction else DOC_CATEGORY
+            d = ask_json(model, PHOTO_SYSTEM,
+                         f"콘텐츠 종류: {pcat}\n[제목] {title} - {name}\n\n[본문]\n" + "\n\n".join(view)
+                         + photo_note(need, pcat)
+                         + f"\n\n[추가 사진 요청] 이미 사진이 있는 자리 근처는 피하고, '(이미 사진…)' 표시 사이가 가장 긴 구간의 문단에 after 를 맞춘다. "
+                           f"새 사진 {need}장. 아래 이미 쓴 사진·페이지는 다시 고르지 않는다.\n" + "\n".join(sorted(used))[:3000],
+                         tools=WEB_TOOLS)
+            ph = [x for x in fetch_photos(d.get("photos"), media_dir, log, limit=need) if x.get("page") not in used]
+            if ph:
+                text = place_photos(text, ph)
+                used.update(x.get("page") for x in ph if x.get("page"))
+                text, n_drop, _ = check_photo_fit(model, text, log, fiction=fiction)
+                added += len(ph) - n_drop
+        except Exception as e:
+            log(f"  '{name}' 사진 찾기 실패(그대로 둠): " + str(e).splitlines()[0][:80])
+        out_blocks.append(text)
+    return "\n\n".join(out_blocks), added
 
 
 def _artist_recent(artwork):
@@ -1829,6 +2244,94 @@ def save_auto_thumb(r, base):
     r.thumbnail().save(base + "_썸네일.png")
 
 
+def description_text(pkg, story, portrait=False, max_sources=8):
+    """유튜브 설명란에 그대로 붙여넣는 완성본: 설명 + 챕터 + 주요 출처 + 사진 출처 + 해시태그"""
+    lines = [str(pkg.get("description", "")).strip()]
+    if "AI 생성 이미지" in (story or "") and "AI" not in lines[0]:
+        lines.append("※ 일부 이미지는 AI로 생성되었습니다.")
+    if pkg.get("chapters"):
+        lines += ["", "00:00 오프닝"] + [f"{hms(t)} {n}" for t, n in pkg["chapters"]]
+    src, seen = [], set()
+    for x in pkg.get("sources") or []:
+        k = re.sub(r"\W+", "", str(x).split(" - ")[0].lower())[:40]
+        if k and k not in seen:
+            seen.add(k)
+            src.append(str(x))
+    if src:
+        lines += ["", "📚 출처"] + [f"- {x}" for x in src[:max_sources]]
+    credits = [c for c in photo_credits(story) if "AI 생성 이미지" not in c]
+    if credits:
+        lines += ["", "🖼 사진 출처"] + credits
+    tags = str(pkg.get("hashtags", "")).strip()
+    if portrait and "#shorts" not in tags.lower():
+        tags = (tags + " #shorts").strip()
+    if tags:
+        lines += ["", tags]
+    return "\n".join(lines).strip() + "\n"
+
+
+def best_photo(story):
+    """대본 속 사진 중 가장 큰(해상도 높은) 사진 → PIL 이미지 또는 None"""
+    best, area = None, 0
+    for p, _ in story_photos(story):
+        p = p if os.path.isabs(p) else os.path.join(BASE, p)
+        try:
+            with Image.open(p) as im:
+                a = im.width * im.height
+                if a > area:
+                    best, area = p, a
+        except Exception:
+            continue
+    try:
+        return Image.open(best).convert("RGB") if best else None
+    except Exception:
+        return None
+
+
+def publish_kit(model, base, title, story, category, genre, s, chapters=None, sources=None, notes="", log=None):
+    """MP4 저장 뒤 자동으로: 업로드 문구(_업로드문구.txt) + 설명란 완성본(_설명란.txt) + 유튜브 썸네일(_썸네일_유튜브.jpg).
+    AI(대본 작성 AI)를 2번 부름. 실패해도 영상에는 영향 없음"""
+    log = log or (lambda x: None)
+    body = story_text_only(story)
+    doc = category == DOC_CATEGORY
+    fic = doc and doc_is_fiction(genre)
+    portrait = H > W
+    try:   # 1) 업로드 문구
+        if doc:
+            heads = [p for p in split_paras(body) if p.startswith("## ")]
+            user = (f"콘텐츠 종류: {'장편 창작 이야기 낭독(픽션)' if fic else '장문 지식 다큐'} ({len(body)}자)\n소재: {genre}\n[지금 제목] {title}\n\n"
+                    f"[{'회차' if fic else '챕터'}]\n" + "\n".join(heads) + "\n\n[본문 앞부분]\n" + body[:4000])
+            pkg = ask_script_json(model, DOC_FICTION_PACKAGE_SYSTEM if fic else DOC_PACKAGE_SYSTEM, user)
+            doc_date_note(pkg, fic)
+        else:
+            pkg = ask_script_json(model, PACKAGE_SYSTEM, f"콘텐츠 종류: {category}\n소재: {genre}\n[지금 제목] {title}\n\n[본문]\n{body[:6000]}")
+        pkg.update(sources=list(sources or []), chapters=list(chapters or []), notes=notes or "")
+        write_package(base, title, story, pkg)
+        atomic_write_text(base + "_설명란.txt", description_text(pkg, story, portrait))
+        log("  📝 업로드 문구·설명란 저장: " + os.path.basename(base) + "_설명란.txt (유튜브 설명란에 그대로 붙여넣기)")
+    except Exception as e:
+        log("  📝 업로드 문구 자동 생성 실패(📝 버튼으로 다시 만들 수 있어요): " + str(e).splitlines()[0][:100])
+    try:   # 2) 유튜브 썸네일 (AI 문구 + 대본 속 가장 큰 사진)
+        try:
+            download_free_font("ofl/blackhansans/BlackHanSans-Regular.ttf")
+        except Exception:
+            pass
+        plist = "\n".join(f"{i + 1}. {cap}" for i, (_, cap) in enumerate(story_photos(story))) or "(사진 없음)"
+        d = ask_script_json(model, fit_ratio(THUMB_SYSTEM), f"화면: {ratio_ko()}\n콘텐츠 종류: {category}\n[제목] {title}\n\n[본문]\n{body[:3000]}\n\n[사진 목록]\n{plist}")
+        vs = [x for x in (d.get("variants") or []) if isinstance(x, dict) and x.get("big")]
+        if vs:
+            size = (1080, 1920) if portrait else (1280, 720)
+            im = render_thumb(vs[0], s, best_photo(story), size=size).convert("RGB")
+            out = base + "_썸네일_유튜브.jpg"
+            for q in (92, 85, 75, 65):          # 유튜브 썸네일은 2MB 이하
+                im.save(out, "JPEG", quality=q, optimize=True)
+                if os.path.getsize(out) < 2_000_000:
+                    break
+            log(f"  🖼 유튜브 썸네일 저장: {os.path.basename(out)}  (문구: {vs[0].get('big', '')} {vs[0].get('big2', '')})")
+    except Exception as e:
+        log("  🖼 썸네일 자동 생성 실패(🎯 AI 썸네일 버튼으로 만들 수 있어요): " + str(e).splitlines()[0][:100])
+
+
 def story_photos(story):
     """본문의 사진 줄 → [(경로, 설명)]"""
     out = []
@@ -2184,7 +2687,7 @@ class Background:
         z = 1 + (self.zoom - 1) * smoothstep(t / max(0.1, self.duration))
         cw, ch = W * self.zoom / z, H * self.zoom / z
         l, tp = (self.big.width - cw) / 2, (self.big.height - ch) / 2
-        return self.big.transform((w, h), Image.EXTENT, (l, tp, l + cw, tp + ch), Image.BILINEAR)
+        return extent_resize(self.big, (w, h), (l, tp, l + cw, tp + ch))
 
     def frame_small(self, t, w, h):
         """미리보기용 작은 배경 (빠름)"""
@@ -2539,7 +3042,7 @@ class SubtitleRenderer:
             d = durs.get(idx)
             if d is None:
                 d = max(1.6, len(tts_clean(text)) * spc + 0.6)
-            d = d + (1.0 if kind == "chapter" else gap)
+            d = (max(d, 1.0) + 1.0) if kind == "chapter" else d + gap   # 챕터 제목: 읽지 않고 약 2초 보여줌
             segs.append({"i": idx, "kind": kind, "text": text, "img": cur_img, "dur": d})
             idx += 1
         if self.images:   # 첫 사진이 나오기 전 문단들도 첫 사진을 보여줌 (빈 화면 방지)
@@ -2588,6 +3091,17 @@ class SubtitleRenderer:
             self.head_box = (m, int(H * 0.04), W - m, int(H * 0.19))
             self.img_box = (int(W * 0.18), int(H * 0.21), int(W * 0.82), int(H * 0.80))
             self.sub_box = (m, int(H * 0.82), W - m, int(H * 0.97))
+        self.slide = str(s.get("img_fill", "")).startswith("슬라이드")
+        if self.slide:   # PPT 발표: 슬라이드 전체가 잘리지 않게 크게, 자막은 그 아래
+            hide = s.get("sub_hide") == "on"
+            sw = int(W * (0.94 if hide or self.port else 0.86))   # 가로 자막 켜기: 화면 폭의 86% (예전 80%)
+            x0 = (W - sw) // 2
+            y0 = (H - int(sw * 9 / 16)) // 2 if hide else (int(H * 0.01) if not self.port else int(H * 0.22))
+            self.img_box = (x0, y0, x0 + sw, y0 + int(sw * 9 / 16))
+            self.sub_box = (m, self.img_box[3] + int(H * 0.012), W - m, H - int(H * 0.012))
+        self._apply_layout(s, m)
+        if self.slide:
+            self.sub_fit, self.sub_scale = True, (0.62 if not self.port else 0.9)
         self.bg = Background(s, self.duration)
         self.head_layer = self._make_head()
         self._sub_cache, self._img_cache = {}, {}
@@ -2602,11 +3116,81 @@ class SubtitleRenderer:
         self.outro_layer = build_card([s["outro_text"].strip()], fo, s["accent_color"], s, H * 0.72) if self.outro > 0 else None
         self.reveal_t = self.find_reveal()
 
+    # --- 배치 (자막 배치·제목 위치) ---
+    def _apply_layout(self, s, m):
+        """'자막 배치'·'제목 위치' 설정 → 자막·제목 자리, 정렬, 크기, 고정 그림(띠·어둡게)"""
+        lay = str(s.get("sub_layout", SUB_LAYOUTS[0]))
+        hp = str(s.get("head_pos", "위 가운데"))
+        self.sub_align, self.sub_valign, self.sub_scale, self.sub_boxed, self.sub_thin = "center", "bottom", 1.0, False, False
+        self.sub_fit = not lay.startswith("기본") and self.full     # 정해진 자막 영역 안에 들어가게 글자 크기 자동 조절
+        self.head_mode = "hidden" if hp.startswith("숨김") else ("small" if hp.startswith("왼쪽") else "center")
+        self.overlay = None
+        if not self.full:            # 사진 상자 모드는 기본 배치 (제목 위치만 적용)
+            return
+        box_rgb = tuple(hex_rgb(s.get("sub_box_color", "#000000")))
+        alpha = int(255 * max(0.0, min(1.0, float(s.get("sub_box_alpha", 0.6) or 0))))
+        acc = tuple(hex_rgb(s.get("accent_color", "#FF6B6B")))
+        ov = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+        d = ImageDraw.Draw(ov)
+        if lay.startswith("시네마"):
+            bh = int(H * 0.14)
+            d.rectangle([0, 0, W, bh], fill=(0, 0, 0, 255))
+            d.rectangle([0, H - bh, W, H], fill=(0, 0, 0, 255))
+            self.sub_box = (m, H - bh + int(bh * 0.10), W - m, H - int(bh * 0.08))
+            self.sub_scale = 0.6 if not self.port else 0.72
+            if self.head_mode != "hidden":
+                self.head_mode, self.head_box = "bar", (m, int(bh * 0.18), W - m, bh - int(bh * 0.14))
+        elif lay.startswith("다큐"):
+            self.sub_box = (m + 24, int(H * 0.68), int(W * 0.64) if not self.port else W - m, int(H * 0.93))
+            self.sub_align, self.sub_boxed, self.sub_scale = "left", True, 0.8
+            if self.head_mode == "center":
+                self.head_mode = "small"
+        elif lay.startswith("뉴스"):
+            y0, y1 = int(H * 0.775), int(H * 0.96)
+            d.rectangle([0, y0, W, y1], fill=box_rgb + (alpha,))
+            d.rectangle([0, y0, max(8, int(W * 0.012)), y1], fill=acc + (255,))
+            self.sub_box = (int(m * 1.4), y0 + int((y1 - y0) * 0.10), W - m, y1 - int((y1 - y0) * 0.10))
+            self.sub_align, self.sub_scale = "left", 0.78
+            if self.head_mode != "hidden":
+                self.head_mode, self.head_box = "tag", (int(m * 1.4), y0 - int(H * 0.065), W - m, y0 - 10)
+        elif lay.startswith("가운데"):
+            d.rectangle([0, 0, W, H], fill=(0, 0, 0, int(alpha * 0.55)))
+            self.sub_box = (int(W * 0.08), int(H * 0.34), int(W * 0.92), int(H * 0.70))
+            self.sub_valign, self.sub_scale = "center", 1.2
+        elif lay.startswith("미니멀"):
+            self.head_mode = "hidden"
+            self.sub_box = (m, int(H * 0.84), W - m, int(H * 0.955))
+            self.sub_scale, self.sub_thin = 0.8, True
+        if ov.getbbox():
+            self.overlay = ov
+
     # --- 제목 ---
     def _make_head(self):
         s = self.s
         layer = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-        if not self.title.strip():
+        if not self.title.strip() or getattr(self, "head_mode", "center") == "hidden":
+            return layer
+        if self.head_mode in ("small", "bar", "tag"):   # 작은 제목: 왼쪽 위 / 시네마 위 띠 안 / 뉴스 띠 위 꼬리표
+            d = ImageDraw.Draw(layer)
+            m = int(W * 0.045)
+            x0, y0, x1, y1 = self.head_box if self.head_mode != "small" else (m, int(H * 0.04), int(W * 0.7), int(H * 0.12))
+            size = int(s["head_size"] * (0.42 if self.head_mode == "small" else 0.38 if self.head_mode == "bar" else 0.36))
+            size = max(20, min(size, int((y1 - y0) * 0.75)))
+            font = load_font(s["title_font_path"] or s["font_path"], size)
+            ln = (wrap(self.title.strip(), font, x1 - x0 - 40) or [""])[0]
+            acc = tuple(hex_rgb(s["accent_color"]))
+            ty = y0 + ((y1 - y0) - size) // 2
+            if self.head_mode == "tag":                      # 강조색 꼬리표 위에 흰 글자
+                tw = font.getlength(ln)
+                d.rounded_rectangle([x0 - 14, ty - 10, x0 + tw + 14, ty + size + 12], radius=10, fill=acc + (235,))
+                d.text((x0, ty), ln, font=font, fill="#FFFFFF")
+            else:
+                if self.head_mode == "small":                # 왼쪽 강조색 막대
+                    d.rectangle([x0, ty - 2, x0 + 8, ty + size + 6], fill=acc + (255,))
+                    x0 += 22
+                d.text((x0 + 2, ty + 3), ln, font=font, fill=(0, 0, 0, 150))
+                d.text((x0, ty), ln, font=font, fill=s["title_color"], stroke_width=0 if self.head_mode == "bar" else max(2, size // 16),
+                       stroke_fill="#000000")
             return layer
         d = ImageDraw.Draw(layer)
         x0, y0, x1, y1 = self.head_box
@@ -2659,17 +3243,38 @@ class SubtitleRenderer:
             return self._sub_cache[key]
         s = self.s
         layer = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+        if s.get("sub_hide") == "on":          # PPT 발표: 자막 없이 슬라이드만
+            self._sub_cache[key] = layer
+            return layer
         d = ImageDraw.Draw(layer)
         x0, y0, x1, y1 = self.sub_box
-        size = int(s["sub_size"])
-        font = load_font(s.get("sub_font_path") or s["title_font_path"] or s["font_path"], size)
-        lines = wrap(text, font, x1 - x0)
-        while len(lines) > 3 and size > 34:
+        size = int(s["sub_size"] * getattr(self, "sub_scale", 1.0))
+        fpath = s.get("sub_font_path") or s["title_font_path"] or s["font_path"]
+        trans = None if lyric else (s.get("sub_trans") or {}).get(text.strip())     # 두 언어 자막: 아래 줄에 번역
+
+        def lay(sz):
+            f_ = load_font(fpath, sz)
+            l1 = wrap(text, f_, x1 - x0)
+            if not trans:
+                return f_, l1, None, [], int(sz * 1.3) * len(l1)
+            f2 = load_font(s.get("sub_font2") or fpath, int(sz * 0.8))
+            l2 = wrap(trans, f2, x1 - x0)
+            return f_, l1, f2, l2, int(sz * 1.3) * len(l1) + int(f2.size * 1.3) * len(l2) + int(sz * 0.15)
+        font, lines, font2, lines2, tot = lay(size)
+        fit = getattr(self, "sub_fit", False)
+        while (tot > (y1 - y0) + 6 if fit else len(lines) + len(lines2) > (5 if trans else 3)) and size > 30:
             size -= 4
-            font = load_font(s.get("sub_font_path") or s["title_font_path"] or s["font_path"], size)
-            lines = wrap(text, font, x1 - x0)
+            font, lines, font2, lines2, tot = lay(size)
         lh = int(size * 1.3)
-        y = y1 - lh * len(lines)
+        y = (y0 + ((y1 - y0) - tot) // 2) if getattr(self, "sub_valign", "bottom") == "center" else y1 - tot
+        left = getattr(self, "sub_align", "center") == "left"
+        if getattr(self, "sub_boxed", False):   # 다큐: 반투명 상자 + 왼쪽 강조색 막대
+            tw = max(font.getlength(ln) for ln in lines)
+            pad = int(size * 0.55)
+            a_ = int(255 * max(0.0, min(1.0, float(s.get("sub_box_alpha", 0.6) or 0))))
+            d.rounded_rectangle([x0 - pad, y - pad * 0.8, x0 + tw + pad, y + lh * len(lines) - lh * 0.15 + pad * 0.6], radius=int(size * 0.35),
+                                fill=tuple(hex_rgb(s.get("sub_box_color", "#000000"))) + (a_,))
+            d.rectangle([x0 - pad, y - pad * 0.8, x0 - pad + 9, y + lh * len(lines) - lh * 0.15 + pad * 0.6], fill=tuple(hex_rgb(s["accent_color"])) + (255,))
         st = s["sub_style"]
         band = "검은띠" in st
         bubble = st.startswith("말풍선")
@@ -2688,16 +3293,27 @@ class SubtitleRenderer:
                 col = s["accent_color"]     # 따옴표 대사는 강조색
         else:
             col = "#FFE135" if st.startswith("노란") else "#FFFFFF"
-        if band:
+        if band and not getattr(self, "sub_boxed", False):
             d.rounded_rectangle([x0 - 10, y - 14, x1 + 10, y1 + 6], radius=16, fill=(0, 0, 0, 185))
-        sw = 0 if (band or bubble) else self._stroke(size)
-        shadow = s.get("shadow", "on") == "on" and not (band or bubble)
+        thin = getattr(self, "sub_thin", False) or getattr(self, "sub_boxed", False)
+        sw = 0 if (band or bubble or thin) else self._stroke(size)
+        shadow = (s.get("shadow", "on") == "on" or thin) and not (band or bubble)
         for ln in lines:
-            x = x0 + ((x1 - x0) - font.getlength(ln)) / 2
+            x = x0 if left else x0 + ((x1 - x0) - font.getlength(ln)) / 2
             if shadow:
                 d.text((x + size // 18, y + size // 14), ln, font=font, fill=(0, 0, 0, 150), stroke_width=sw, stroke_fill=(0, 0, 0, 150))
             d.text((x, y), ln, font=font, fill=col, stroke_width=sw, stroke_fill="#000000")
             y += lh
+        if lines2:                                   # 번역 줄 (작게, 다른 색)
+            y += int(size * 0.15)
+            col2 = "#1a5fb4" if bubble else ("#FFFFFF" if str(col).upper() == "#FFE135" else "#FFE135")
+            sw2 = 0 if (band or bubble or thin) else self._stroke(font2.size)
+            for ln in lines2:
+                x = x0 if left else x0 + ((x1 - x0) - font2.getlength(ln)) / 2
+                if shadow:
+                    d.text((x + font2.size // 18, y + font2.size // 14), ln, font=font2, fill=(0, 0, 0, 150), stroke_width=sw2, stroke_fill=(0, 0, 0, 150))
+                d.text((x, y), ln, font=font2, fill=col2, stroke_width=sw2, stroke_fill="#000000")
+                y += int(font2.size * 1.3)
         if lyric:   # 가사 원문은 사진 위에 노란 글자로
             fl = load_font(s.get("sub_font_path") or s["title_font_path"] or s["font_path"], int(size * 0.95))
             ix0, iy0, ix1, iy1 = self.img_box
@@ -2707,6 +3323,8 @@ class SubtitleRenderer:
                 x = ix0 + ((ix1 - ix0) - fl.getlength(ln)) / 2
                 d.text((x, ly), ln, font=fl, fill="#FFE135", stroke_width=max(3, fl.size // 12), stroke_fill="#000000")
                 ly += int(fl.size * 1.3)
+        if len(self._sub_cache) >= 48:   # 긴 영상: 오래된 자막 그림부터 버림 (영상은 앞에서부터 그리므로)
+            self._sub_cache.pop(next(iter(self._sub_cache)))
         self._sub_cache[key] = layer
         return layer
 
@@ -2769,8 +3387,15 @@ class SubtitleRenderer:
             x0, y0, x1, y1 = self.img_box
             bw, bh = x1 - x0, y1 - y0
             im = self.images[idx][0].convert("RGB")
-            sc = max(bw / im.width, bh / im.height) * 1.32
-            big = im.resize((max(bw, int(im.width * sc) + 1), max(bh, int(im.height * sc) + 1)), Image.LANCZOS)
+            if getattr(self, "slide", False):     # 슬라이드: 잘리지 않게 상자 안에 통째로 (남는 곳은 가장자리 색)
+                cw_, ch_ = int(bw * 1.32), int(bh * 1.32)
+                sc = min(cw_ / im.width, ch_ / im.height)
+                fit = im.resize((max(1, int(im.width * sc)), max(1, int(im.height * sc))), Image.LANCZOS)
+                big = Image.new("RGB", (cw_, ch_), im.getpixel((0, 0)))
+                big.paste(fit, ((cw_ - fit.width) // 2, (ch_ - fit.height) // 2))
+            else:
+                sc = max(bw / im.width, bh / im.height) * 1.32
+                big = im.resize((max(bw, int(im.width * sc) + 1), max(bh, int(im.height * sc) + 1)), Image.LANCZOS)
             mask = None
             if not self.full:
                 mask = Image.new("L", (bw, bh), 0)
@@ -2783,6 +3408,8 @@ class SubtitleRenderer:
                 bl = small.resize((int(small.width * 8), int(small.height * 8)), Image.BILINEAR)
                 l, tp = (bl.width - W) // 2, (bl.height - H) // 2
                 blur = Image.fromarray((np.asarray(bl.crop((l, tp, l + W, tp + H))).astype(np.float32) * 0.42).astype(np.uint8)).convert("RGBA")
+            if len(self._img_cache) >= 10:   # 사진이 많은 긴 영상: 오래된 것부터 버림
+                self._img_cache.pop(next(iter(self._img_cache)))
             self._img_cache[idx] = (big, mask, blur)
         return self._img_cache[idx]
 
@@ -2795,7 +3422,9 @@ class SubtitleRenderer:
         p = min(1.0, max(0.0, (t - sh["t0"]) / max(0.1, sh["t1"] - sh["t0"])))
         p = 0.5 - 0.5 * np.cos(np.pi * p)             # 부드럽게 시작·끝
         z = z0 + (z1 - z0) * p
-        if self.s.get("punch_in", "on") == "on" and str(self.s.get("img_motion", "영상")).startswith("영상"):
+        if getattr(self, "slide", False):             # 슬라이드는 움직이지 않음 (글자가 잘리면 안 됨)
+            z, ax, bx, ay, by = 1.0, 0, 0, 0, 0
+        elif self.s.get("punch_in", "on") == "on" and str(self.s.get("img_motion", "영상")).startswith("영상"):
             z *= 1 + 0.05 * (1 - smoothstep((t - sh["t0"]) / 0.3))     # 장면 시작에 살짝 펀치 줌
         base = 1.32
         cw, ch = bw * base / z, bh * base / z         # big 안에서 잘라낼 크기
@@ -2804,7 +3433,7 @@ class SubtitleRenderer:
         cx = big.width / 2 + (ax + (bx - ax) * p) * sx
         cy = big.height / 2 + (ay + (by - ay) * p) * sy
         l, tp = cx - cw / 2, cy - ch / 2
-        crop = big.transform((bw, bh), Image.EXTENT, (l, tp, l + cw, tp + ch), Image.BILINEAR)
+        crop = extent_resize(big, (bw, bh), (l, tp, l + cw, tp + ch))
         return crop, mask
 
     def shot_at(self, t):
@@ -2939,10 +3568,14 @@ class SubtitleRenderer:
         if sg is not None:
             if sg["img"] >= 0 and self.images:
                 canvas = self._paint_images(canvas, t)
+            if getattr(self, "overlay", None) is not None:      # 시네마 띠·뉴스 띠·가운데 자막용 어둡게
+                canvas.alpha_composite(self.overlay)
             if not str(self.s.get("head_show", "보임")).startswith("안"):
                 canvas.alpha_composite(self.head_layer)
             age = t - sg["t0"]
-            if sg["kind"] == "chapter":
+            if age < 0:      # 첫 문단 시작 전(시작 정지 구간): 자막을 미리 보이지 않음 → 나레이션과 함께 한 번만 등장
+                lay = None
+            elif sg["kind"] == "chapter":
                 lay = self._sub_layer(("ch", sg["i"]), "— " + sg["text"] + " —")
             elif sg["kind"] == "lyric":
                 lay = self._sub_layer(("ly", sg["i"]), sg.get("sub", ""), lyric=sg["text"])
@@ -2961,8 +3594,9 @@ class SubtitleRenderer:
                     age = age - acc
                 else:
                     lay = self._sub_layer(("tx", sg["i"]), sg["text"])
-            lay = self._animate_sub(lay, age)
-            canvas.alpha_composite(lay)
+            if lay is not None:
+                lay = self._animate_sub(lay, age)
+                canvas.alpha_composite(lay)
         else:
             canvas.alpha_composite(self.head_layer)
         out = canvas.convert("RGB")
@@ -3008,7 +3642,46 @@ class SubtitleRenderer:
         return 0.0
 
 
+def screen_title(title):
+    """화면·썸네일에 그릴 제목: 이모지는 화면 글꼴에 없어 □로 나오므로 뺌 (유튜브 제목에는 그대로 둠)"""
+    t = re.sub(r"[\U0001F000-\U0001FFFF☀-➿️‍]", "", str(title or ""))
+    return re.sub(r"[ \t]+", " ", t).strip()
+
+
+try:
+    import cv2 as _cv2   # 있으면 사진 확대·이동을 훨씬 빠르게 (pip install opencv-python-headless)
+except Exception:
+    _cv2 = None
+
+
+def extent_resize(img, size, box):
+    """img 의 box(소수점 좌표) 부분을 size 로 늘리거나 줄임. transform(EXTENT)과 같은 결과지만 빠름.
+    OpenCV가 있으면 그걸로(약 2배 더 빠름), 없으면 PIL resize(box)"""
+    if _cv2 is not None and img.mode in ("RGB", "RGBA", "L"):
+        try:
+            arr = getattr(img, "_np_cache", None)
+            if arr is None:                     # 같은 사진은 한 번만 배열로 바꿔 둠
+                arr = np.ascontiguousarray(np.asarray(img))
+                img._np_cache = arr
+            l, t, r_, b = box
+            sx, sy = (r_ - l) / size[0], (b - t) / size[1]
+            M = np.array([[sx, 0, l + 0.5 * sx - 0.5], [0, sy, t + 0.5 * sy - 0.5]], np.float32)
+            out = _cv2.warpAffine(arr, M, (int(size[0]), int(size[1])), flags=_cv2.INTER_LINEAR | _cv2.WARP_INVERSE_MAP,
+                                  borderMode=_cv2.BORDER_REPLICATE)
+            return Image.fromarray(out)
+        except Exception:
+            pass
+    l, t, r_, b = box
+    l, t = max(0.0, l), max(0.0, t)
+    r_, b = min(float(img.width), r_), min(float(img.height), b)
+    try:
+        return img.resize(size, Image.BILINEAR, box=(l, t, r_, b), reducing_gap=2.0)
+    except (ValueError, TypeError):
+        return img.transform(size, Image.EXTENT, box, Image.BILINEAR)
+
+
 def make_renderer(title, story, s, narration=None):
+    title = screen_title(title)
     if s.get("layout", "").startswith("자막형"):
         return SubtitleRenderer(title, story, s, narration)
     return Renderer(title, story, s, narration)
@@ -3368,21 +4041,29 @@ def parse_melody(text):
     return notes if sum(1 for n in notes if n[0] is not None) >= 8 else None
 
 
-def _melody_chords(notes, minor=False):
-    """멜로디 음들로 조성을 추정해 단순한 반주 화음(I-IV-V-I-vi-IV-V-I, 단조는 i-iv-v-i-VI-iv-V-i) 만들기"""
+def _melody_chords(notes, minor=False, tonic=None, scale=None):
+    """멜로디 음들로 조성을 추정해 단순한 반주 화음(I-IV-V-I-vi-IV-V-I, 단조는 i-iv-v-i-VI-iv-V-i) 만들기.
+    tonic: 악보에 적힌 으뜸음(0=C … 11=B, 있으면 추정 대신 사용), scale="hijaz": 중동 히자즈(I-bII-I-iv) 화음"""
     pcs = [n[0] % 12 for n in notes if n[0] is not None]
     hist = np.bincount(pcs, minlength=12).astype(float)
     major = np.array([1, 0, 1, 0, 1, 1, 0, 1, 0, 1, 0, 1], float)
     key = int(max(range(12), key=lambda k: (np.roll(major, k) * hist).sum()))
+    if scale == "hijaz" and tonic is not None:   # 예: 미 히자즈 = 미-파-솔#-라-시-도-레
+        r = 48 + int(tonic) % 12
+        I = [r, r + 7, r + 12, r + 16, r + 19]
+        bII = [r + 1, r + 8, r + 13, r + 17, r + 20]
+        iv = [r + 5, r + 12, r + 17, r + 20, r + 24]
+        bvii = [r - 2, r + 5, r + 10, r + 13, r + 17]
+        return [I, bII, I, iv, bvii, bII, iv, I]
     if minor:   # 나란한조(장조의 6음)를 으뜸음으로
-        r = 48 + (key + 9) % 12
+        r = 48 + ((key + 9) % 12 if tonic is None else int(tonic) % 12)
         i = [r, r + 7, r + 12, r + 15, r + 19]
         iv = [r + 5, r + 12, r + 17, r + 20, r + 24]
         v = [r + 7, r + 14, r + 19, r + 22, r + 26]
         V = [r + 7, r + 14, r + 19, r + 23, r + 26]
         VI = [r + 8, r + 15, r + 20, r + 24, r + 27]
         return [i, iv, v, i, VI, iv, V, i]
-    root = 48 + key
+    root = 48 + (key if tonic is None else int(tonic) % 12)
     I = [root, root + 7, root + 12, root + 16, root + 19]
     IV = [root + 5, root + 12, root + 17, root + 21, root + 24]
     V = [root + 7, root + 14, root + 19, root + 23, root + 26]
@@ -3542,33 +4223,74 @@ def loudness_fit(music, target=0.16):
     return out.astype(np.float32)
 
 
+LONG_MUSIC_SEC = 300   # 이보다 긴 영상은 배경음을 이 길이만큼 만든 뒤 이음매 없이 반복 (1시간 영상도 메모리 적게)
+
+
+def loop_xfade(x, n, xfade=4.0):
+    """(m, 2) 소리를 n 길이로 반복 (이음매는 xfade 초 겹쳐 부드럽게)"""
+    m = len(x)
+    X = int(min(xfade, m / SR / 4) * SR)
+    if m >= n:
+        return x[:n]
+    out = np.empty((n, 2), np.float32)
+    w = (np.sin(np.linspace(0, np.pi / 2, X, dtype=np.float32)) ** 2)[:, None]
+    joint = x[m - X:] * (1 - w) + x[:X] * w
+    body = x[X:m - X]
+    out[:m - X] = x[:m - X]
+    pos = m - X
+    while pos < n:
+        for part in (joint, body):
+            k = min(len(part), n - pos)
+            if k <= 0:
+                break
+            out[pos:pos + k] = part[:k]
+            pos += k
+    return out
+
+
+def duck_env(n, narr, duration, duck, res=100):
+    """말하는 구간(앞뒤 0.3초 포함)만 duck 배로 낮춘 음량 곡선 (0.4초에 걸쳐 부드럽게).
+    0.01초 간격으로 계산한 뒤 나눠서 늘림 → 1시간 영상도 빠르고 메모리 적게"""
+    m = int(np.ceil(n / SR * res)) + 2
+    e = np.ones(m, np.float64)
+    for st, clip in narr:
+        e[int(max(0, st - 0.3) * res):int(min(duration, st + len(clip) / SR + 0.3) * res)] = duck
+    k = max(1, int(0.4 * res))
+    c = np.concatenate([[0.0], np.cumsum(e)])
+    idx = np.arange(m)
+    lo, hi = np.clip(idx - k // 2, 0, m), np.clip(idx - k // 2 + k, 0, m)
+    es = (c[hi] - c[lo]) / np.maximum(1, hi - lo)
+    out = np.empty(n, np.float32)
+    step = SR * 60
+    for a in range(0, n, step):
+        b = min(n, a + step)
+        out[a:b] = np.interp(np.arange(a, b) * (res / SR), idx, es)
+    return out
+
+
 def build_audio(r, s, style):
     """영상 길이에 맞춘 최종 소리 (배경음 + 반전 효과음). 없으면 None"""
     n = int(r.duration * SR)
     rng = np.random.default_rng(None if s["bgm_seed"] == 0 else s["bgm_seed"])
-    music = make_music(s, style, n)
+    long_ = n > LONG_MUSIC_SEC * 1.2 * SR
+    music = make_music(s, style, min(n, LONG_MUSIC_SEC * SR) if long_ else n)
     hit_t = r.reveal_t if s["reveal_hit"] == "on" else None
     narr = getattr(r, "narr_at", []) if s.get("narration", "off") == "on" else []
     if music is None and hit_t is None and not narr:
         return None
     out = np.zeros((n, 2), np.float32)
-    t = np.arange(n) / SR
+    t = np.arange(n, dtype=np.float32) / SR
     if music is not None:
         music = loudness_fit(music) * max(0, s["bgm_volume"])
+        if long_:
+            music = loop_xfade(music.astype(np.float32), n)
         g = np.minimum(1, t / 1.5) * np.clip((r.duration - t) / 2.5, 0, 1)
         if hit_t:  # 반전 직전 음악을 줄였다가 다시 올림
             a = max(0.01, hit_t - 1.2)
             b = max(a + 0.01, hit_t - 0.1)
             g = g * np.interp(t, [0, a, b, hit_t + 1.5, hit_t + 4.5, 1e9], [1, 1, 0.25, 0.25, 1, 1])
         if narr:   # 말하는 동안 음악을 낮춤 (더킹)
-            duck = float(s.get("narr_duck", 0.35))
-            env = np.ones(n, np.float32)
-            for st, clip in narr:
-                i0, i1 = int(max(0, st - 0.3) * SR), int(min(r.duration, st + len(clip) / SR + 0.3) * SR)
-                env[i0:i1] = duck
-            k = int(0.4 * SR)
-            env = np.convolve(env, np.ones(k, np.float32) / k, mode="same")
-            g = g * env
+            g = g * duck_env(n, narr, r.duration, float(s.get("narr_duck", 0.35)))
         out += music * g[:, None].astype(np.float32)
     for st, clip in narr:
         vol = max(0, float(s.get("narr_volume", 1.0)))
@@ -3590,13 +4312,161 @@ def build_audio(r, s, style):
 # ---------------- 나레이션 (TTS) ----------------
 
 
+_KO_DIG = "영일이삼사오육칠팔구"
+_KO_NATIVE = {1: "한", 2: "두", 3: "세", 4: "네", 5: "다섯", 6: "여섯", 7: "일곱", 8: "여덟", 9: "아홉"}
+_KO_NATIVE_TENS = {1: "열", 2: "스물", 3: "서른", 4: "마흔", 5: "쉰", 6: "예순", 7: "일흔", 8: "여든", 9: "아흔"}
+# 고유어로 읽는 단위 (1~99): 세 명, 두 마리, 다섯 살, 세 시
+_KO_NATIVE_UNITS = ("마리", "사람", "시간", "살", "시", "번", "권", "잔", "그루", "송이", "척", "달", "가지", "군데", "걸음",
+                    "켤레", "곳", "쌍", "방울", "바퀴", "명", "개", "채", "벌", "줄", "알", "배",
+                    "자리", "장", "통", "차례", "겹", "갈래", "마디", "모금", "포기", "자루", "그릇", "봉지", "덩이", "곡")
+_KO_UNIT_WORDS = [("km²", "제곱킬로미터"), ("m²", "제곱미터"), ("km/h", "킬로미터"), ("km", "킬로미터"), ("cm", "센티미터"),
+                  ("mm", "밀리미터"), ("kg", "킬로그램"), ("mg", "밀리그램"), ("ml", "밀리리터"), ("mL", "밀리리터"), ("°C", "도"),
+                  ("℃", "도"), ("°", "도"), ("%", " 퍼센트"), ("hPa", "헥토파스칼"), ("bar", "바"), ("atm", "기압"), ("m", "미터"), ("g", "그램"), ("L", "리터")]
+
+
+def ko_sino(n):
+    """정수 → 한자어 수사 (1960 → 천구백육십, 10000 → 만, 13800000000 → 백삼십팔억)"""
+    if n == 0:
+        return "영"
+    out = []
+    for i, big in enumerate(["", "만", "억", "조", "경"]):
+        k = n % 10000
+        n //= 10000
+        if k:
+            s = ""
+            for d, small in ((k // 1000, "천"), (k // 100 % 10, "백"), (k // 10 % 10, "십"), (k % 10, "")):
+                if d:
+                    s += ("" if d == 1 and small else _KO_DIG[d]) + small
+            if big == "만" and k == 1:
+                s = ""          # '일만' 대신 '만'
+            out.append(s + big)
+        if not n:
+            break
+    return "".join(reversed(out))
+
+
+def ko_native(n):
+    """1~99 → 고유어 관형형 (3 → 세, 20 → 스무, 21 → 스물한)"""
+    if n == 20:
+        return "스무"
+    return _KO_NATIVE_TENS.get(n // 10, "") + _KO_NATIVE.get(n % 10, "")
+
+
+def ko_numbers(text):
+    """나레이션용: 아라비아 숫자·기호를 한글 읽기로 (자막은 숫자 그대로 두고 성우에게 넘기는 글만 바꿈).
+    TTS(특히 Supertonic)가 숫자를 잘못 읽거나 오류를 내는 것을 막음"""
+    t = text
+    t = re.sub(r"(?<=\d),(?=\d{3}(?!\d))", "", t)                         # 12,000 → 12000
+    t = re.sub(r"(\d)\s*[~～∼]\s*(?=\d)", r"\1에서 ", t)                  # 10~20 → 10에서 20
+    t = re.sub(r"(?<![\w.])-(?=\d)", "마이너스 ", t)
+    for a, b in _KO_UNIT_WORDS:                                         # 10km → 10킬로미터 (숫자 바로 뒤의 단위만)
+        t = re.sub(r"(\d)\s*" + re.escape(a) + r"(?![A-Za-z])", r"\1" + b, t)
+
+    def one(m_):
+        num, frac, after = m_.group(1), m_.group(2), m_.string[m_.end():m_.end() + 3]
+        try:
+            n = int(num)
+        except ValueError:
+            return m_.group(0)
+        if frac:                                                        # 3.14 → 삼 점 일사
+            return ko_sino(n) + " 점 " + "".join(_KO_DIG[int(c)] for c in frac[1:])
+        if n == 1 and after.startswith("만"):                             # 1만 → 만 (일만 X)
+            return ""
+        if after.startswith("월") and 1 <= n <= 12:                     # 6월 → 유월, 10월 → 시월
+            return {6: "유", 10: "시"}.get(n, ko_sino(n))
+        before = m_.string[max(0, m_.start() - 1):m_.start()]
+        if 1 <= n <= 99 and before != "제" and after.startswith(_KO_NATIVE_UNITS) and not after.startswith(
+                ("시대", "시즌", "개월", "번째", "가지고", "달러", "개국", "배터", "배우", "시청", "장관", "장면", "장소", "장군", "통계", "곡선")):
+            return ko_native(n)
+        if n >= 1 and after.startswith("번째"):
+            return "첫" if n == 1 else ko_native(n) if n <= 99 else ko_sino(n)
+        if len(num) > 16:                                               # 너무 긴 숫자(전화번호 등)는 한 자리씩
+            return " ".join(_KO_DIG[int(c)] for c in num)
+        if len(num) > 1 and num.startswith("0"):                       # 007 같은 번호
+            return " ".join(_KO_DIG[int(c)] for c in num)
+        return ko_sino(n)
+    t = re.sub(r"(\d+)(\.\d+)?", one, t)
+    t = t.replace("&", " 앤 ").replace("+", " 플러스 ").replace("×", " 곱하기 ").replace("=", " 는 ")
+    t = re.sub(r"[·ㆍ/]", " ", t)
+    return t
+
+
+# ---- 발음 사전: 자막은 맞춤법대로(2026년, 42%), 성우는 읽는 그대로(이천이십육 년, 사십이 퍼센트) ----
+SPOKEN = {}                 # 자막 글(문단) → 성우가 읽을 글
+SPOKEN_CFG = {"model": ""}  # 발음 사전 만들 AI 모델 (App 이 작업 전에 넣음)
+SPOKEN_FILE = "발음사전.json"
+SPOKEN_SYSTEM = """너는 한국어 성우 대본 감수자다. 각 문장을 성우가 소리 내어 읽는 그대로 바꾼다.
+- 숫자·단위·기호(%, ~, km, kg, ℃ 등)만 한글 발음으로 바꾸고, 나머지 글자·띄어쓰기·문장부호는 절대 바꾸지 않는다.
+- 세는 말(개, 명, 마리, 자리, 장, 살, 시, 시간, 가지, 번, 곳, 잔, 권, 대(자동차 수) 등)은 고유어: 한, 두, 세, 네, 다섯, 스무, 서른.
+- 그 밖(년, 월, 일, 분, 초, 원, 퍼센트, 미터, 층, 호, 회, 세기, 차(회차), 대(나이대), 번(번호)·제N장 등)은 한자어: 일, 이, 삼, 사.
+- 6월=유월, 10월=시월. 연도: 이천이십육 년. 큰 수는 만 단위로: 1,200만 원 → 천이백만 원, 13,800 → 만 삼천팔백. 소수: 3.5 → 삼 점 오.
+- 범위 10~20 → 십에서 이십. 전화번호·제품 번호는 한 자리씩. 영어 약어(AI, CEO)는 그대로 둔다.
+- 결과에 아라비아 숫자를 남기지 않는다.
+반드시 JSON만 출력: {"items": [{"i": 번호, "say": "성우가 읽을 문장"}]}"""
+
+
+def spoken_load(cache_dir):
+    try:
+        SPOKEN.update(json.load(open(os.path.join(cache_dir, SPOKEN_FILE), encoding="utf-8")))
+    except (OSError, ValueError):
+        pass
+
+
+def spoken_save(cache_dir, new):
+    p = os.path.join(cache_dir, SPOKEN_FILE)
+    d = {}
+    try:
+        d = json.load(open(p, encoding="utf-8"))
+    except (OSError, ValueError):
+        pass
+    d.update(new)
+    os.makedirs(cache_dir, exist_ok=True)
+    atomic_write_text(p, json.dumps(d, ensure_ascii=False, indent=0))
+
+
+def ensure_spoken(model, story, cache_dir, log=None, cancel=None):
+    """숫자가 있는 문단만 골라 AI가 '읽는 법'을 만들어 발음 사전에 넣음 (자막 글은 그대로). 실패하면 프로그램 규칙으로 읽음"""
+    log = log or (lambda x: None)
+    spoken_load(cache_dir)
+    todo = list(dict.fromkeys(t for _, t in narration_paras(story)
+                              if re.search(r"\d", t) and re.search(r"[가-힣]", t) and not t.startswith("## ") and t not in SPOKEN))
+    if not todo:
+        return 0
+    log(f"🔤 숫자가 있는 문장 {len(todo)}개의 읽는 법 만드는 중 (자막은 맞춤법대로 둠)...")
+    new = {}
+    for a in range(0, len(todo), 40):
+        if cancel is not None and cancel.is_set():
+            raise RuntimeError("취소됨")
+        part = todo[a:a + 40]
+        try:
+            d = ask_script_json(model, SPOKEN_SYSTEM, "\n".join(f"[{i}] {t}" for i, t in enumerate(part)))
+        except Exception as e:
+            log("  발음 사전 실패(프로그램 규칙으로 읽음): " + str(e)[:80])
+            continue
+        for it in d.get("items") or []:
+            try:
+                i, say = int(it.get("i")), str(it.get("say") or "").strip()
+            except (TypeError, ValueError):
+                continue
+            if 0 <= i < len(part) and say and not re.search(r"\d", say) and 0.5 < len(say) / max(1, len(part[i])) < 4:
+                new[part[i]] = say
+    if new:
+        SPOKEN.update(new)
+        spoken_save(cache_dir, new)
+    log(f"  🔤 발음 사전 {len(new)}/{len(todo)}개 완료")
+    return len(new)
+
+
 def tts_clean(text):
-    """읽기 좋게 정리: ♪, 따옴표, 챕터 표시 제거"""
+    """읽기 좋게 정리: ♪, 따옴표, 챕터 표시 제거 + 한국어 문장의 숫자는 한글 읽기로"""
     t = text.strip()
+    t = SPOKEN.get(t, t)                 # 발음 사전(자막 글 → 읽는 글)
     if t.startswith("## "):
         t = t[3:]
     t = t.lstrip("♪").strip()
     t = re.sub(r"[\"“”'‘’]", "", t)
+    if re.search(r"[가-힣]", t) and re.search(r"\d", t):
+        t = ko_numbers(t)
     t = re.sub(r"\s+", " ", t)
     return t
 
@@ -4129,8 +4999,16 @@ def _tts_clip(text, voice_name, rate_pct, cache_dir, pitch_hz=0, emotion="차분
     os.makedirs(cache_dir, exist_ok=True)
     npy = os.path.join(cache_dir, key + ".npy")
     if os.path.exists(npy):
-        a = np.load(npy)
-        return a, len(a) / SR
+        try:
+            a = np.load(npy)
+            if a.ndim == 1 and len(a) > 0:
+                return a, len(a) / SR
+        except Exception:
+            pass
+        try:                    # 전원이 꺼지며 깨진 파일 → 지우고 다시 만듦
+            os.remove(npy)
+        except OSError:
+            pass
     src = os.path.join(cache_dir, key + (".wav" if is_st or voice == "sapi" or voice.startswith("gemini:") else ".mp3"))
     if is_st:
         tts_supertonic(text, voice, rate_pct, src, steps, emotion)
@@ -4179,7 +5057,7 @@ def _tts_clip(text, voice_name, rate_pct, cache_dir, pitch_hz=0, emotion="차분
     if peak > 0:
         a = a * (0.7 / peak)
     a = a.astype(np.float32)
-    np.save(npy, a)
+    atomic_np_save(npy, a)
     try:
         os.remove(src)
     except OSError:
@@ -4314,10 +5192,14 @@ def build_narration(story, s, cache_dir, log=None, cancel=None, para_audio=None)
     items = narration_paras(story)
     res = []
     pa = para_audio or {}
+    spoken_load(cache_dir)
     for k, (i, text) in enumerate(items):
         if cancel and cancel.is_set():
             raise RuntimeError("취소됨")
         f_ = pa.get(str(i)) or pa.get(i)
+        if text.strip().startswith("## ") and not (f_ and os.path.exists(f_)):
+            res.append((i, np.zeros(1, np.float32), 0.0))   # 챕터 제목은 읽지 않음 (화면에만 잠깐 표시)
+            continue
         if f_ and os.path.exists(f_):
             a, d = load_para_audio(f_)
         else:
@@ -4422,12 +5304,18 @@ def stop_wav():
     _player = None
 
 
-def export_mp4(r, out, progress, cancel=None, audio=None):
+def export_mp4(r, out, progress, cancel=None, audio=None, t_range=None):
+    """t_range=(시작초, 끝초): 그 구간만 그림 (구간별로 나눠 만들 때)"""
     ff = get_ffmpeg()
     s = r.s
     fps = max(1, s["fps"])
+    i_start = 0
     dur = r.duration
     n = int(round(dur * fps))
+    if t_range:
+        i_start = int(round(t_range[0] * fps))
+        n = max(1, min(n, int(round(t_range[1] * fps))) - i_start)
+        dur = n / fps
     tmpdir = tempfile.mkdtemp(prefix="shorts_audio_")
     wav = ""
     if audio is not None:
@@ -4473,7 +5361,7 @@ def export_mp4(r, out, progress, cancel=None, audio=None):
                     raise RuntimeError("취소됨")
                 if werr:
                     break
-                fq.put(r.frame(i / fps).tobytes())
+                fq.put(r.frame((i_start + i) / fps).tobytes())
                 if i % 15 == 0:
                     progress(i, n)
         finally:
@@ -4488,16 +5376,157 @@ def export_mp4(r, out, progress, cancel=None, audio=None):
     progress(n, n)
 
 
+def _fsync_replace(tmp, path):
+    """tmp 를 디스크에 확실히 기록한 뒤 path 로 바꿈 (전원이 갑자기 꺼져도 반쯤 쓴 파일이 남지 않게)"""
+    try:
+        fd = os.open(tmp, os.O_RDWR | getattr(os, "O_BINARY", 0))
+        try:
+            os.fsync(fd)
+        finally:
+            os.close(fd)
+    except OSError:
+        pass
+    os.replace(tmp, path)
+
+
+def atomic_np_save(path, a):
+    tmp = path + ".tmp.npy"
+    np.save(tmp, a)
+    _fsync_replace(tmp, path)
+
+
+def atomic_write_text(path, text):
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        f.write(text)
+        f.flush()
+        os.fsync(f.fileno())
+    os.replace(tmp, path)
+
+
+def mark_done(path):
+    """구간·소리 파일이 다 써졌다는 표시 (내용을 먼저 디스크에 기록)"""
+    try:
+        fd = os.open(path, os.O_RDWR | getattr(os, "O_BINARY", 0))
+        try:
+            os.fsync(fd)
+        finally:
+            os.close(fd)
+    except OSError:
+        pass
+    atomic_write_text(path + ".done", str(os.path.getsize(path)))
+
+
+def is_done(path):
+    """.done 표시가 있고, 표시할 때의 파일 크기와 지금 크기가 같으면 완성된 파일"""
+    try:
+        with open(path + ".done", encoding="utf-8") as f:
+            want = f.read().strip()
+        return os.path.exists(path) and want.isdigit() and int(want) == os.path.getsize(path) and int(want) > 0
+    except (OSError, ValueError):
+        return False
+
+
+class PauseGate:
+    """cancel(threading.Event) 대신 넘기는 객체: 일시정지 파일이 있는 동안은 지워질 때까지 기다림(CPU 거의 안 씀).
+    작업 함수들이 cancel.is_set() 을 수시로 부르므로, 거기서 멈췄다가 이어서 진행됨"""
+
+    def __init__(self, pause_file, cancel=None, log=None):
+        self.pause_file, self.cancel, self.log = pause_file, cancel, log or (lambda x: None)
+
+    def is_set(self):
+        if os.path.exists(self.pause_file):
+            self.log(f"⏸ 일시정지 중 ({time.strftime('%H:%M')}) - 재개하려면 '{os.path.basename(self.pause_file)}' 파일을 지우세요 (재개.bat)")
+            while os.path.exists(self.pause_file):
+                if self.cancel is not None and self.cancel.is_set():
+                    return True
+                time.sleep(2)
+            self.log(f"▶ 재개 ({time.strftime('%H:%M')})")
+        return bool(self.cancel is not None and self.cancel.is_set())
+
+    def set(self):
+        if self.cancel is not None:
+            self.cancel.set()
+
+    def clear(self):
+        if self.cancel is not None:
+            self.cancel.clear()
+
+
+def export_mp4_resumable(r, out, progress, cancel=None, audio=None, work_dir=None, seg_sec=300, log=None, key=""):
+    """긴 영상: seg_sec 초 구간마다 따로 MP4로 만든 뒤 이어 붙이고 소리를 합침.
+    중간에 꺼져도 다시 부르면 끝난 구간은 건너뜀 (구간 파일 옆 .done 표시)
+    key: 대본·설정의 지문. 지난번과 다르면(사진을 더 넣었거나 글을 고침) 예전 구간을 버리고 새로 그림"""
+    log = log or (lambda x: None)
+    work_dir = work_dir or (os.path.splitext(out)[0] + "_구간")
+    os.makedirs(work_dir, exist_ok=True)
+    kf = os.path.join(work_dir, "key.txt")
+    old_key = open(kf, encoding="utf-8").read().strip() if os.path.exists(kf) else ""
+    if key and old_key != key:
+        for f_ in os.listdir(work_dir):
+            if f_.startswith(("seg_", "audio.wav")):
+                try:
+                    os.remove(os.path.join(work_dir, f_))
+                except OSError:
+                    pass
+        if old_key:
+            log("  대본이나 설정이 바뀌어 영상 구간을 새로 그립니다")
+        atomic_write_text(kf, key)
+    fps = max(1, r.s["fps"])
+    n_all = int(round(r.duration * fps))
+    step = int(seg_sec * fps)
+    segs = [(i, min(n_all, i + step)) for i in range(0, n_all, step)]
+    def seg_ok(path, want_sec):
+        """끝난 구간이 실제로 읽히는지(전원이 꺼지며 깨지지 않았는지) 길이로 확인"""
+        if not is_done(path):
+            return False
+        p_ = subprocess.run([get_ffmpeg(), "-i", path], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, errors="replace",
+                            creationflags=(subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0))
+        m_ = re.search(r"Duration: (\d+):(\d+):([\d.]+)", p_.stderr or "")
+        return bool(m_) and abs(int(m_.group(1)) * 3600 + int(m_.group(2)) * 60 + float(m_.group(3)) - want_sec) < 1.0
+
+    for k, (i0, i1) in enumerate(segs):
+        seg = os.path.join(work_dir, f"seg_{k:03d}.mp4")
+        if seg_ok(seg, (i1 - i0) / fps):
+            continue
+        if cancel is not None and cancel.is_set():
+            raise RuntimeError("취소됨")
+        log(f"  🎬 구간 {k + 1}/{len(segs)} ({hms(i0 / fps)}~{hms(i1 / fps)}) 그리는 중...")
+        export_mp4(r, seg, lambda i, n, k=k, a=i0: progress(a + i, n_all), cancel, None, (i0 / fps, i1 / fps))
+        mark_done(seg)
+    wav = os.path.join(work_dir, "audio.wav")
+    if audio is not None and not is_done(wav):
+        write_wav(wav, audio)
+        mark_done(wav)
+    lst = os.path.join(work_dir, "list.txt")
+    with open(lst, "w", encoding="utf-8") as f:
+        for k in range(len(segs)):
+            f.write(f"file '{os.path.join(work_dir, f'seg_{k:03d}.mp4').replace(chr(92), '/')}'\n")
+    cmd = [get_ffmpeg(), "-y", "-v", "error", "-f", "concat", "-safe", "0", "-i", lst]
+    if audio is not None:
+        cmd += ["-i", wav, "-map", "0:v", "-map", "1:a", "-c:v", "copy", "-c:a", "aac", "-b:a", "192k", "-shortest"]
+    else:
+        cmd += ["-c", "copy"]
+    cmd += ["-t", f"{n_all / fps:.2f}", "-movflags", "+faststart", out]
+    p = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, errors="replace",
+                       creationflags=(subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0))
+    if p.returncode != 0:
+        raise RuntimeError("구간 합치기 실패: " + (p.stderr or "")[-500:])
+    progress(n_all, n_all)
+
+
 def write_package(path_base, title, story, pkg):
     """업로드 문구 txt 저장"""
     lines = [f"[제목 후보]"] + [f"{i + 1}. {t}" for i, t in enumerate(pkg.get("titles", []))]
     lines += ["", "[설명]", pkg.get("description", ""), "", "[해시태그]", pkg.get("hashtags", ""),
               "", "[고정댓글]", pkg.get("pinned_comment", "")]
+    if pkg.get("keywords"):
+        lines += ["", "[태그 (유튜브 스튜디오 '태그' 칸에 붙여넣기)]", str(pkg["keywords"])]
     if pkg.get("sources"):
         lines += ["", "[출처 (설명란에 넣으면 신뢰도 상승)]"] + [f"- {x}" for x in pkg["sources"]]
     if pkg.get("chapters"):
         lines += ["", "[챕터 타임스탬프 (설명란에 그대로 붙여넣기)]", "00:00 오프닝"]
-        lines += [f"{int(t // 60):02d}:{int(t % 60):02d} {n}" for t, n in pkg["chapters"]]
+        lines += [f"{hms(t)} {n}" for t, n in pkg["chapters"]]
     art = pkg.get("artwork")
     if isinstance(art, dict):
         lines += ["", "[그림 정보 (설명란에 넣으면 좋음)]",
@@ -4708,7 +5737,7 @@ ORGEL_SONGS = {   # 퍼블릭 도메인 곡 오르골 연주 (멜로디: 웹의 
                 "D4:0.5 E4:0.5 F4:1.5 E4:0.5 E4:0.5 D4:0.5 C4:0.5 D4:0.5 C4:0.5 A3:0.5 F3:1.5 C4:0.5 D4:0.5 E4:0.5 F4:1.5 "
                 "E4:0.5 E4:0.5 D4:0.5 C4:0.5 A3:0.5 G3:2 R:0.5 C4:0.5 C4:0.5 C4:0.5 A4:1.5 G4:0.5 G4:0.5 F4:0.5 D4:0.5 F4:0.5 "
                 "C4:0.5 A3:0.5 F3:1.5 E3:0.5 F3:0.5 G3:0.5 A3:0.5 D4:0.5 C4:0.5 A3:0.5 G3:0.5 F3:0.5 D3:0.5 E3:0.5 F3:2 R:0.5")),
-    '오르골 · 그린슬리브스': dict(gen="lullaby", bpm=72, minor=True, title='그린슬리브스 오르골 🌿 잔잔한 영국 민요',
+    '오르골 · 그린슬리브스': dict(gen="lullaby", bpm=72, minor=True, tonic=4, title='그린슬리브스 오르골 🌿 잔잔한 영국 민요',
         tags='#그린슬리브스 #Greensleeves #오르골 #영국민요 #힐링음악 #수면음악', desc='영국 민요 그린슬리브스(16세기) 오르골 연주 + 단조 패드',
         overlay='먼지 빛', colors=('#0C140E', '#24382A'),
         prompt='an old english castle garden at twilight, ivy covered stone walls, soft lantern glow, misty green tones, medieval and calm, no people',
@@ -4716,7 +5745,7 @@ ORGEL_SONGS = {   # 퍼블릭 도메인 곡 오르골 연주 (멜로디: 웹의 
                 "B4:1.5 C5:0.5 B4 A4:2 F#4 D4:1.5 E4:0.5 F#4 G4:1.5 F#4:0.5 E4 D#4:1.5 C#4:0.5 D#4 E4:4 R R D5:3 D5:1.5 C#5:0.5 "
                 "B4 A4:2 F#4 D4:1.5 E4:0.5 F#4 G4:2 E4 E4:1.5 D#4:0.5 E4 F#4:2 D#4 B3:3 D5:3 D5:1.5 C#5:0.5 B4 A4:2 F#4 D4:1.5 "
                 "E4:0.5 F#4 G4:2 E4 D#4:1.5 C#4:0.5 D#4 E4:4 R")),
-    '오르골 · 스카버러 페어': dict(gen="lullaby", bpm=72, minor=True, title='스카버러 페어 오르골 🌾 아련한 영국 민요',
+    '오르골 · 스카버러 페어': dict(gen="lullaby", bpm=72, minor=True, tonic=2, title='스카버러 페어 오르골 🌾 아련한 영국 민요',
         tags='#스카버러페어 #ScarboroughFair #오르골 #영국민요 #힐링음악 #수면음악', desc='영국 민요 스카버러 페어 오르골 연주 + 단조 패드',
         overlay='먼지 빛', colors=('#14120E', '#38322A'),
         prompt='a misty seaside village fair at dawn, herbs of parsley sage rosemary and thyme on a rustic table, soft grey and gold light, nostalgic, no people',
@@ -4861,7 +5890,7 @@ ORGEL_SONGS = {   # 퍼블릭 도메인 곡 오르골 연주 (멜로디: 웹의 
 _mp = list(MUSIC_PRESETS.items())
 _at = [n for n, _ in _mp].index("오르골 · 캐논") + 1   # 기존 오르골 곡들 바로 뒤에
 ORGEL_WORLD = {   # 일본·중국·러시아 퍼블릭 도메인 곡 오르골 연주 (멜로디: 웹의 악보에서 옮김)
-    '오르골 일본 · 사쿠라 사쿠라(さくらさくら)': dict(gen="lullaby", bpm=66, minor=True, title='사쿠라 사쿠라 오르골 🌸 일본 벚꽃 민요 힐링 음악',
+    '오르골 일본 · 사쿠라 사쿠라(さくらさくら)': dict(gen="lullaby", bpm=66, minor=True, tonic=4, title='사쿠라 사쿠라 오르골 🌸 일본 벚꽃 민요 힐링 음악',
         tags='#오르골 #사쿠라 #벚꽃 #일본노래 #일본동요 #수면음악 #힐링음악', desc='일본 전통 민요 さくらさくら 오르골 연주 + 은은한 패드',
         overlay='먼지 빛', colors=('#160E14', '#3E2836'),
         prompt='cherry blossom petals drifting over a quiet japanese temple garden at dusk, soft pink and lavender light, stone lantern, calm pond, no people',
@@ -4879,7 +5908,7 @@ ORGEL_WORLD = {   # 일본·중국·러시아 퍼블릭 도메인 곡 오르골 
         prompt='a peaceful japanese countryside village with rice fields and green mountains, a small river, soft morning light, nostalgic, no people',
         melody=("G4 G4 G4 A4:1.5 B4:0.5 A4 B4 B4 C5 D5:2 R C5 D5 E5 B4:1.5 C5:0.5 B4 A4 A4 F#4 G4:2 R A4:0.5 G4:0.5 A4 D4 "
                 "G4:0.5 A4:0.5 B4 B4 C5:0.5 B4:0.5 C5:1.5 E5:0.5 D5:0.5 C5:0.5 B4 R D5 D5 D5 G4:1.5 A4:0.5 B4 C5 C5 A4 G4:2 R")),
-    '오르골 일본 · 에도 자장가(江戸子守唄)': dict(gen="lullaby", bpm=60, minor=True, title='에도 자장가 오르골 🎐 일본 전통 자장가',
+    '오르골 일본 · 에도 자장가(江戸子守唄)': dict(gen="lullaby", bpm=60, minor=True, tonic=11, title='에도 자장가 오르골 🎐 일본 전통 자장가',
         tags='#오르골 #자장가 #일본자장가 #아기수면 #일본노래 #일본동요 #수면음악 #힐링음악', desc='일본 전통 자장가 江戸子守唄 오르골 연주 + 단조 패드',
         overlay='먼지 빛', colors=('#160E14', '#3E2836'),
         prompt='a quiet traditional japanese room at night, paper lantern glow, tatami floor, a small futon, soft moonlight through shoji screens, no people',
@@ -4947,7 +5976,7 @@ ORGEL_WORLD = {   # 일본·중국·러시아 퍼블릭 도메인 곡 오르골 
                 "B3 D4 B3 A3:0.5 G3:0.5 A3:2 E4 E4:0.5 D4:0.5 B3:0.5 D4:0.5 E4:0.5 G4:0.5 E4:0.5 D4:0.5 B3 A3:2 E4:1.5 D4:0.5 "
                 "E4 G4 A4 G4:0.5 E4:0.5 D4:2 E4:1.5 D4:0.5 B3 G4 E4 D4:0.5 B3:0.5 A3:2 G3:1.5 A3:0.5 B3 D4 B3 A3:0.5 G3:0.5 "
                 "A3:2 E4 E4:0.5 D4:0.5 B3:0.5 D4:0.5 E4:0.5 G4:0.5 E4:0.5 D4:0.5 B3 A3:2")),
-    '오르골 중국 · 수하포(绣荷包)': dict(gen="lullaby", bpm=64, minor=True, title='수하포 오르골 🧵 수놓는 주머니 중국 민요',
+    '오르골 중국 · 수하포(绣荷包)': dict(gen="lullaby", bpm=64, minor=True, tonic=2, title='수하포 오르골 🧵 수놓는 주머니 중국 민요',
         tags='#오르골 #绣荷包 #중국민요 #중국노래 #수면음악 #힐링음악', desc='중국 민요 绣荷包 오르골 연주 + 단조 패드',
         overlay='먼지 빛', colors=('#180E0C', '#46261E'),
         prompt='an embroidered silk pouch and threads on a wooden table by a window, moonlight and soft lantern glow, delicate and calm, no people',
@@ -5018,7 +6047,7 @@ ORGEL_WORLD = {   # 일본·중국·러시아 퍼블릭 도메인 곡 오르골 
         prompt='a single white birch tree standing in a wide golden field under a soft summer evening sky, calm and open, no people',
         melody=("E4:0.5 E4:0.5 E4:0.5 E4:0.5 D4 C4:0.5 C4:0.5 B3 A3 E4:0.5 E4:0.5 G4:0.5 E4:0.5 D4:0.5 D4:0.5 C4:0.5 C4:0.5 B3 "
                 "A3 B3:1.5 C4:0.5 D4 C4:0.5 C4:0.5 B3 A3 B3:1.5 C4:0.5 D4:0.5 E4:0.5 C4:0.5 C4:0.5 B3 A3")),
-    '오르골 러시아 · 볼가강 뱃노래': dict(gen="lullaby", bpm=56, minor=True, title='볼가강 뱃노래 오르골 🌊 느리고 깊은 러시아 민요',
+    '오르골 러시아 · 볼가강 뱃노래': dict(gen="lullaby", bpm=56, minor=True, tonic=4, title='볼가강 뱃노래 오르골 🌊 느리고 깊은 러시아 민요',
         tags='#오르골 #볼가강뱃노래 #러시아민요 #러시아민요 #러시아노래 #수면음악 #힐링음악', desc='러시아 민요 Эй, ухнем 느린 오르골 연주 + 단조 패드',
         overlay='눈', colors=('#0C1018', '#26344A'),
         prompt='a misty river bank at dusk with an old barge and long ropes, deep blue and grey tones, quiet and heavy atmosphere, no people',
@@ -5044,7 +6073,7 @@ ORGEL_WORLD2 = {   # 동유럽·중동·아프리카 퍼블릭 도메인 곡 오
         melody=("A4 A4 A4 A#4 A#4:1.5 A4:0.5 G4 G4 G4 A#4 A4 R F4 F4 F4 G4 G4:1.5 F4:0.5 E4 D4 E4 G4 F4 R C5 C5 C5 D5 D5:1.5 "
                 "C5:0.5 A#4 A#4 D5 D5 C5 R A4 A4 A4 A#4 A#4:1.5 A4:0.5 G4 C5:1.5 A#4:0.5 A#4 A4 R C5 C5 C5 D5 D5:1.5 C5:0.5 A#4 "
                 "A#4 D5 D5 C5 R A4 A4 A4 A#4 A#4:1.5 A4:0.5 G4 C5:1.5 A#4:0.5 A#4 A4 R")),
-    '오르골 동유럽 · 봄바람이 물을 넘치게 하네(헝가리)': dict(gen="lullaby", bpm=62, minor=True, title='헝가리 민요 오르골 🌬 봄바람이 물을 넘치게 하네',
+    '오르골 동유럽 · 봄바람이 물을 넘치게 하네(헝가리)': dict(gen="lullaby", bpm=62, minor=True, tonic=2, title='헝가리 민요 오르골 🌬 봄바람이 물을 넘치게 하네',
         tags='#오르골 #헝가리 #헝가리민요 #동유럽 #동유럽민요 #수면음악 #힐링음악', desc='헝가리 민요 Tavaszi szél vizet áraszt 오르골 연주 + 단조 패드',
         overlay='눈', colors=('#0E1218', '#2A3444'),
         prompt='a spring breeze over a flooded hungarian meadow at dawn, blossoming trees, soft mist, calm water reflections, no people',
@@ -5058,13 +6087,13 @@ ORGEL_WORLD2 = {   # 동유럽·중동·아프리카 퍼블릭 도메인 곡 오
                 "G#4:1.5 A4:2 D#5:2 C#5:0.5 B4:0.5 A4:0.5 B4:0.5 A4:0.5 G#4:1.5 D#4:2 D#4 R D#5 D#5 E5 C#5 B4:0.5 A4:0.5 B4:0.5 "
                 "C#5:0.5 E5 D#5 G#4:0.5 G#4:1.5 A4:0.5 A4:1.5 B4:0.5 A4:0.5 G#4:0.5 F#4:0.5 E4 D#4 D#4 G#4 F#4:0.5 G#4:1.5 A4:2 "
                 "D#5:2 C#5:0.5 B4:0.5 A4:0.5 B4:0.5 A4:0.5 G#4:1.5 D#4:2 D#4 R")),
-    '오르골 동유럽 · 잠이 창가를 지나가네(우크라이나 자장가)': dict(gen="lullaby", bpm=58, minor=True, title='우크라이나 자장가 오르골 🌙 잠이 창가를 지나가네',
+    '오르골 동유럽 · 잠이 창가를 지나가네(우크라이나 자장가)': dict(gen="lullaby", bpm=58, minor=True, tonic=4, title='우크라이나 자장가 오르골 🌙 잠이 창가를 지나가네',
         tags='#오르골 #자장가 #우크라이나 #아기수면 #동유럽 #동유럽민요 #수면음악 #힐링음악', desc='우크라이나 전통 자장가 Ой ходить сон коло вікон 오르골 연주 + 단조 패드',
         overlay='눈', colors=('#0E1218', '#2A3444'),
         prompt='a cozy ukrainian cottage at night with embroidered curtains, a cradle by the window, sunflower fields under the moon outside, soft and dreamy, no people',
         melody=("B4 B4 G4 B4:3 A4 A4 E4 G4:3 B4 B4 G4 B4:3 A4 B4:0.5 A4:0.5 G4:0.5 F#4:0.5 E4:3 G4 G4 A4 A4 G4:0.5 F#4:0.5 E4 "
                 "E4:2 D4:4 G4 G4 A4 A4 G4:0.5 F#4:0.5 E4 E4:4 R:2")),
-    '오르골 동유럽 · 샤드릭(캐럴 오브 더 벨)': dict(gen="lullaby", bpm=66, minor=True, title='캐럴 오브 더 벨 오르골 🔔 샤드릭 잔잔한 버전',
+    '오르골 동유럽 · 샤드릭(캐럴 오브 더 벨)': dict(gen="lullaby", bpm=66, minor=True, tonic=7, title='캐럴 오브 더 벨 오르골 🔔 샤드릭 잔잔한 버전',
         tags='#오르골 #캐럴오브더벨 #샤드릭 #CarolOfTheBells #동유럽 #동유럽민요 #수면음악 #힐링음악', desc='레온토비치 Щедрик(1916, 캐럴 오브 더 벨) 오르골 연주 + 단조 패드',
         overlay='눈', colors=('#0E1218', '#2A3444'),
         prompt='silver bells hanging in a snowy winter night, soft bokeh lights, frosted window, deep blue and gold tones, calm, no people',
@@ -5158,7 +6187,7 @@ ORGEL_WORLD2 = {   # 동유럽·중동·아프리카 퍼블릭 도메인 곡 오
                 "F4:0.5 G4:0.5 A4:0.5 A3:0.5 D4:0.5 F4:0.5 A4:2 F4:1.5 E4:0.5 E4 D4 R:0.5 D4:0.5 F4:0.5 A4:0.5 D5:2 A#4:1.5 "
                 "A4:0.5 A4 G4 R:0.5 G4:0.5 A4:0.5 A#4:0.5 A4:1.5 E4:0.5 A4:1.5 G4:0.5 G4 F4 R:0.5 E4:0.5 F4:0.5 G4:0.5 A4 A4 A4 "
                 "A4 A4:0.75 G4:0.25 F4:0.5 E4:0.5 D4:1.5")),
-    '오르골 중동 · 할라 할라 닌노이(자장가)': dict(gen="lullaby", bpm=58, minor=True, title='중동 자장가 오르골 🌙 할라 할라 닌노이',
+    '오르골 중동 · 할라 할라 닌노이(자장가)': dict(gen="lullaby", bpm=58, minor=True, tonic=2, title='중동 자장가 오르골 🌙 할라 할라 닌노이',
         tags='#오르골 #자장가 #아르메니아 #아기수면 #중동음악 #중동민요 #수면음악 #힐링음악', desc='아르메니아 지역 전통 자장가 Hala, hala ninnoy 오르골 연주 + 단조 패드',
         overlay='먼지 빛', colors=('#1A120A', '#4A341C'),
         prompt='a stone cottage in the caucasus mountains at night, a wooden cradle with a woven blanket, warm oil lamp glow, stars over the peaks, no people',
@@ -5167,7 +6196,7 @@ ORGEL_WORLD2 = {   # 동유럽·중동·아프리카 퍼블릭 도메인 곡 오
                 "F4:0.75 G4:0.25 E4:0.75 D4:0.25 D4:1.5 R:0.5 C5 C5:0.5 B4:0.5 C5:0.75 A4:0.25 A4 A4 A4:0.75 G4:0.25 A4:2 "
                 "F4:0.5 F4:0.5 F4:0.5 G4:0.5 A4 A4:0.75 F4:0.25 G4 G4:0.75 E4:0.25 F4:1.5 G4:0.5 A4 A4:0.5 F4:0.5 G4 G4 F4 E4 "
                 "G4:2 D4:0.5 D4:0.5 D4:0.5 C4:0.5 E4 F4:0.75 E4:0.25 F4:0.5 G4:0.5 E4:0.75 D4:0.25 D4:2")),
-    '오르골 중동 · 사르 겔린(금발의 신부)': dict(gen="lullaby", bpm=60, minor=True, title='사르 겔린 오르골 🍂 애잔한 코카서스 민요',
+    '오르골 중동 · 사르 겔린(금발의 신부)': dict(gen="lullaby", bpm=60, minor=True, tonic=4, title='사르 겔린 오르골 🍂 애잔한 코카서스 민요',
         tags='#오르골 #사르겔린 #SariGelin #민요 #중동음악 #중동민요 #수면음악 #힐링음악', desc='터키·아르메니아·아제르바이잔 전통 민요 Sarı Gelin 오르골 연주 + 단조 패드',
         overlay='먼지 빛', colors=('#1A120A', '#4A341C'),
         prompt='a misty mountain valley in the caucasus at dusk, an old stone bridge over a stream, autumn trees, melancholic and calm, no people',
@@ -5221,7 +6250,153 @@ ORGEL_WORLD2 = {   # 동유럽·중동·아프리카 퍼블릭 도메인 곡 오
                 "F4:0.5 F4:0.5 F4:0.5 R:2 C4 C4:0.5 C4 G4:0.5 F4 D#4 A#4:0.5 A#4 G4:0.5 A#4:0.5 C4:0.5 D#4:0.5 D#4:0.5 D#4:0.5 "
                 "D#4:0.5 R R:0.5 C4:0.5 F4:0.5 F4:0.5 F4:0.5 F4:0.5 R:2 A#4 A#4:0.5 G#4 G4:0.5 F4 D#4 R R:2")),
 }
-MUSIC_PRESETS = dict(_mp[:_at] + list(ORGEL_SONGS.items()) + list(ORGEL_WORLD.items()) + list(ORGEL_WORLD2.items()) + _mp[_at:])
+def music_group_prefix(name):
+    """'오르골 동유럽 · ...' → '동유럽'"""
+    m_ = re.match(r"오르골 (\S+) ·", name)
+    return m_.group(1) if m_ else ""
+
+
+ORGEL_WORLD3 = {   # 중동 추가곡 + 이디시 노래 (퍼블릭 도메인, 멜로디: 웹의 악보에서 옮김)
+    '오르골 중동 · 두르메 두르메(세파르디 자장가)': dict(gen="lullaby", bpm=56, minor=True, tonic=11, title='두르메 두르메 오르골 🌙 세파르디 자장가',
+        tags='#오르골 #자장가 #세파르디 #라디노 #아기수면 #중동음악 #중동민요 #수면음악 #힐링음악', desc='오스만 세파르디(라디노어) 전통 자장가 Durme, Durme 오르골 연주 + 단조 패드',
+        overlay='먼지 빛', colors=('#1A120A', '#4A341C'),
+        prompt='an old mediterranean stone house at night, a cradle under an arched window, moonlight over a quiet harbor, warm oil lamp glow, no people',
+        melody=("B3:1.5 C#4:0.5 D4:0.5 E4:0.5 F#4:2.5 F#4:0.5 B4 A4:1.5 G4:0.5 G4 F#4:2 E4 G4:1.5 G4:0.5 F#4:0.5 E4:0.5 D4:1.5 "
+                "C#4:0.5 E4:0.5 D4:2 C#4:0.25 B3:0.25 F#4:3 E4 G4:1.5 G4:0.5 F#4:0.5 E4:0.5 D4:1.5 C#4:0.5 E4:0.5 D4:0.5 "
+                "C#4:1.5 B3:0.5 B3:3")),
+    '오르골 중동 · 높이 뜬 달(세파르디)': dict(gen="lullaby", bpm=60, minor=True, tonic=4, title='높이 뜬 달 오르골 🌕 세파르디 옛 노래',
+        tags='#오르골 #세파르디 #라디노 #달 #중동음악 #중동민요 #수면음악 #힐링음악', desc='테살로니키 세파르디 전통 노래 Alta es la Luna 오르골 연주 + 단조 패드',
+        overlay='먼지 빛', colors=('#1A120A', '#4A341C'),
+        prompt='a high full moon over an old aegean port town, whitewashed walls and blue shadows, calm sea reflections, peaceful, no people',
+        melody=("C5:0.5 R:0.5 C5:0.5 C5:0.5 B4:0.5 D5:0.5 R A4:0.5 R:0.5 C5:0.5 B4:0.5 A4:0.5 G4:0.5 F4:0.5 R:0.5 A4:0.5 R:0.5 "
+                "A4:0.5 A4:0.5 G4:0.5 R:0.5 B4:0.5 R:0.5 R:0.5 G4:0.5 F4 E4 R E4:1.5 D4:0.5 G4 C5 A4:1.5 C5:0.5 B4:0.5 A4:0.5 "
+                "G4:0.5 F4:0.5 E4:1.5 F4:0.5 G4 C5 A4 C5 B4 R C5:0.5 R:0.5 C5:0.5 C5:0.5 B4:0.5 D5:0.5 R A4:0.5 R:0.5 C5:0.5 "
+                "B4:0.5 A4:0.5 G4:0.5 F4:0.5 R:0.5 A4:0.5 R:0.5 A4:0.5 A4:0.5 G4:0.5 R:0.5 B4:0.5 R:0.5 R:0.5 G4:0.5 F4 E4 R")),
+    '오르골 동유럽 · 툼발랄라이카(이디시)': dict(gen="lullaby", bpm=66, minor=True, tonic=0, title='툼발랄라이카 오르골 🎻 이디시 민요',
+        tags='#오르골 #툼발랄라이카 #Tumbalalaika #동유럽 #이디시 #유대음악 #수면음악 #힐링음악', desc='이디시 전통 민요 Tumbalalaika 오르골 연주 + 단조 패드',
+        overlay='눈', colors=('#0E1218', '#2A3444'),
+        prompt='a small wooden house in an eastern european shtetl in winter, warm windows, a balalaika on a bench, soft snowfall, no people',
+        melody=("G4:2 G4 G4:2 G4 G4 F4 D#4 D4:3 F4:2 F4 F4:2 F4 F4 D#4 D4 C4:3 C4 D#4 G4 C5:2 C5 D#5 D5 C5 G4:2 G4 A#4 G4 F4 "
+                "D4:2 D4 F4 D#4 D4 C4:2 C4 G4:1.5 G4:0.5 G4 G4:1.5 G4:0.5 G4 G4 F4 D#4 D4:2 D4 F4:1.5 F4:0.5 F4 F4:1.5 F4:0.5 "
+                "F4 F4 D#4 D4 C4:2 C4 C4 D#4 G4 C5:2 C5 D#5 D5 C5 G4:2 G4 A#4 G4 F4 D4:2 D4 F4 D#4 D4 C4:3")),
+    '오르골 동유럽 · 화롯가에서(오이픈 프리페치크)': dict(gen="lullaby", bpm=58, minor=True, tonic=0, title='화롯가에서 오르골 🔥 이디시 옛 노래',
+        tags='#오르골 #이디시 #옛노래 #동유럽 #이디시 #유대음악 #수면음악 #힐링음악', desc='이디시 노래 Oyfn Pripetshik(바르샤브스키, 1900년경) 오르골 연주 + 단조 패드',
+        overlay='눈', colors=('#0E1218', '#2A3444'),
+        prompt='a warm old stove glowing in a small wooden schoolroom at evening, books on a table, snow outside the window, cozy and nostalgic, no people',
+        melody=("C4:0.5 D4:0.5 D#4:0.5 D#4:0.5 D#4 D4:0.5 F4:0.5 D#4:0.5 D4:0.5 C4 D#4:0.5 A#3:0.5 D#4 F4 G4:3 C5:0.5 G4:0.5 "
+                "A#4:0.5 G#4:0.5 F4:0.5 D4:0.5 F4:0.5 G#4:0.5 G4:0.5 D#4:0.5 C4 D4:0.5 F4:0.5 D#4 F4 G4:3 C5:0.5 G4:0.5 A#4:0.5 "
+                "G#4:0.5 F4:0.5 D4:0.5 F4:0.5 G#4:0.5 G4:0.5 D#4:0.5 C4 D4:0.5 F4:0.5 D#4 D4 C4:3")),
+    '오르골 동유럽 · 아일리 률리(이디시 자장가)': dict(gen="lullaby", bpm=58, minor=True, tonic=7, title='이디시 자장가 오르골 🌙 아일리 률리',
+        tags='#오르골 #자장가 #이디시 #아기수면 #동유럽 #이디시 #유대음악 #수면음악 #힐링음악', desc='이디시 전통 자장가 Ayli Lyuli 오르골 연주 + 단조 패드',
+        overlay='눈', colors=('#0E1218', '#2A3444'),
+        prompt='a cradle by a frosted window in a quiet eastern european village at night, soft candlelight, moon over snowy roofs, no people',
+        melody=("D4 A#4 F#4 G4 D4 A#4 F#4 G4 D4 A#4 A4:0.5 A4:0.5 F#4:0.5 D4:0.5 G4:3 R A#4:0.5 C5:0.5 D5:0.5 D5:0.5 A4:0.5 "
+                "A#4:0.5 C5:0.5 C5:0.5 G4:0.5 A4:0.5 A#4:0.5 A#4:0.5 A4:0.5 F#4:0.5 D4 G4 A#4 A4 F#4:0.5 D4:0.5 D5:3 R A#4:0.5 "
+                "C5:0.5 D5:0.5 D5:0.5 A4:0.5 A#4:0.5 C5:0.5 C5:0.5 G4:0.5 A4:0.5 A#4:0.5 A#4:0.5 A4:0.5 F#4:0.5 D4 G4 A#4 A4 "
+                "F#4:0.5 D4:0.5 G4:3 R")),
+    '오르골 중동 · 샬롬 하베림': dict(gen="lullaby", bpm=60, minor=True, tonic=2, title='샬롬 하베림 오르골 🕊 평화로운 히브리 노래',
+        tags='#오르골 #샬롬 #히브리 #평화 #중동음악 #중동민요 #수면음악 #힐링음악', desc='히브리 전통 돌림노래 Shalom Chaverim 오르골 연주 + 단조 패드',
+        overlay='먼지 빛', colors=('#1A120A', '#4A341C'),
+        prompt='a quiet hillside at sunset with olive trees and a white stone path, soft golden haze, peaceful farewell mood, no people',
+        melody=("A3 D4 D4:0.5 E4:0.5 F4 D4 F4 F4:0.5 G4:0.5 A4 A4 D5:2 C5:2 A4:3 A4 D5 A4:0.5 G4:0.5 F4 G4 A4 F4:0.5 E4:0.5 D4 "
+                "A3 D4:3 E4:0.5 F4:0.5 D4:3")),
+    '오르골 중동 · 꿈(아 홀룸)': dict(gen="lullaby", bpm=60, minor=True, tonic=2, title='꿈(A Cholum) 오르골 💭 아련한 유대 전통 선율',
+        tags='#오르골 #유대음악 #꿈 #중동음악 #중동민요 #수면음악 #힐링음악', desc='유대 전통 결혼식 선율 A Cholum(코스타코프스키 곡집, 1916) 오르골 연주 + 단조 패드',
+        overlay='먼지 빛', colors=('#1A120A', '#4A341C'),
+        prompt='a dreamy candlelit room with lace curtains and a window to a starry sky, soft warm glow, gentle and nostalgic, no people',
+        melody=("D4:0.5 G4:0.5 F4 E4:0.5 G4:0.5 F4 E4:0.5 G4:0.75 F4:0.25 F4:0.75 E4:0.25 E4:0.5 D4:0.5 R:0.5 D4:0.5 F4:0.333 "
+                "A4:0.333 G4:0.333 G4:0.5 G4:0.5 G4:0.5 F4:0.5 A4:0.5 G4:0.5 F4:2 C5:1.5 C4:0.5 F4:0.75 G4:0.25 A4:0.75 G4:0.25 "
+                "G4:0.5 F4 E4:0.5 G4:0.75 F4:0.25 F4:0.75 E4:0.25 E4:0.5 D4 C4:0.5 D4:0.5 E4:0.5 F4:0.5 E4:0.5 F4:0.333 "
+                "A4:0.333 G4:0.333 F4:0.5 E4:0.5 D4:3 R:0.5 C4:0.5 F4:0.75 G4:0.25 A4:0.75 G4:0.25 G4:0.5 F4 E4:0.5 G4:0.75 "
+                "F4:0.25 F4:0.75 E4:0.25 E4:0.5 D4 C4:0.5 D4:0.5 E4:0.5 F4:0.5 E4:0.5 F4:0.333 A4:0.333 G4:0.333 F4:0.5 E4:0.5 "
+                "D4:3 R:0.5")),
+    '오르골 중동 · 알라갸즈(아르메니아)': dict(gen="lullaby", bpm=62, minor=False, tonic=9, title='알라갸즈 오르골 ⛰ 아르메니아 산의 노래',
+        tags='#오르골 #아르메니아 #코미타스 #민요 #중동음악 #중동민요 #수면음악 #힐링음악', desc='아르메니아 민요 Ալագյազ(코미타스 편곡) 오르골 연주 + 은은한 패드',
+        overlay='먼지 빛', colors=('#1A120A', '#4A341C'),
+        prompt='the snowy peaks of mount aragats above green armenian highlands at dawn, an old stone monastery, soft golden light, no people',
+        melody=("A4:1.5 E4:0.5 A4:0.5 B4:0.5 C#5:2 C#5:0.5 E5:0.5 D5:0.5 C#5:0.5 D5:0.5 E5:0.5 C#5 C#5:0.5 B4:0.5 C#5 C#5:0.5 "
+                "E5:0.5 D5:0.5 C#5:0.5 D5:0.5 E5:0.5 C#5 C#5 B4:0.5 A4:0.5 A4:0.5 C#5:0.5 B4:0.5 A4:0.5 B4:0.5 C#5:0.5 A4:0.5 "
+                "G#4:0.5 A4:3 A4:1.5 E4:0.5 A4:0.5 B4:0.5 C#5:2 D5:0.5 C#5:0.5 B4 C#5 B4:0.5 A4:0.5 A4:2 D5:0.5 F#5:0.5 E5:0.5 "
+                "D5:0.5 D5:0.5 E5:0.5 C#5 C#5 B4:0.5 A4:0.5 A4:0.5 C#5:0.5 B4:0.5 A4:0.5 B4:0.5 C#5:0.5 A4:0.5 G#4:0.5 A4:3")),
+    '오르골 중동 · 세이킬로스의 노래(가장 오래된 노래)': dict(gen="lullaby", bpm=58, minor=True, tonic=4, title='세계에서 가장 오래된 노래 오르골 🏛 세이킬로스의 비문',
+        tags='#오르골 #세이킬로스 #가장오래된노래 #고대음악 #중동음악 #중동민요 #수면음악 #힐링음악', desc="소아시아(지금의 터키)에서 발견된 2천 년 전 노래 '세이킬로스의 비문' 오르골 연주 + 단조 패드",
+        overlay='먼지 빛', colors=('#1A120A', '#4A341C'),
+        prompt='ancient marble ruins on an anatolian hillside at golden hour, a carved stone column, olive trees, soft warm haze, timeless and calm, no people',
+        melody=("A4:0.5 E5 E5:1.5 C#5:0.5 D5:0.5 E5:0.5 D5:1.5 C#5 D5:0.5 E5:0.5 D5:0.5 C#5:0.5 B4:0.5 A4 B4:0.5 G4 A4:0.5 "
+                "C#5:0.5 E5:0.5 D5:0.5 C#5:0.5 D5:0.5 C#5:0.5 A4 B4:0.5 G4 A4:0.5 C#5:0.5 B4:0.5 D5:0.5 E5:0.5 C#5:0.5 A4:0.5 "
+                "A4 A4:0.5 F#4:0.5 E4:0.5 A4:0.5 E5 E5:1.5 C#5:0.5 D5:0.5 E5:0.5 D5:1.5 C#5 D5:0.5 E5:0.5 D5:0.5 C#5:0.5 B4:0.5 "
+                "A4 B4:0.5 G4 A4:0.5 C#5:0.5 E5:0.5 D5:0.5 C#5:0.5 D5:0.5 C#5:0.5 A4 B4:0.5 G4 A4:0.5 C#5:0.5 B4:0.5 D5:0.5 "
+                "E5:0.5 C#5:0.5 A4:0.5 A4 A4:0.5 F#4:0.5 E4:0.5")),
+    '오르골 중동 · 야밀 아바야(이라크)': dict(gen="lullaby", bpm=60, minor=False, tonic=0, scale='hijaz', title='야밀 아바야 오르골 🌴 이라크 민요 힐링 음악',
+        tags='#오르골 #이라크 #아랍음악 #민요 #중동음악 #중동민요 #수면음악 #힐링음악', desc='이라크 전통 민요 Yammil Abaya 오르골 연주 + 히자즈 화음',
+        overlay='먼지 빛', colors=('#1A120A', '#4A341C'),
+        prompt='palm trees along the tigris river at dusk, an old wooden boat, warm amber sky reflecting on the water, calm and quiet, no people',
+        melody=("D5 C5:0.5 B4:0.5 B4:0.5 G#4:0.5 B4:0.5 G#4:0.5 G4:1.5 G#4:0.5 G4:0.5 F4:0.5 G4 F4 F4:0.5 E4:0.5 F4 G4 G4:3 R "
+                "A#4 A#4:0.5 A4:0.5 A4:0.5 G4:0.5 G4:0.5 F4:0.5 F4:0.5 E4 F4:0.5 E4:0.5 D4:0.5 E4 G4 F4 E4:0.5 C#4:0.5 E4:0.5 "
+                "C#4:0.5 C4:4 C5 C5:0.5 B4:0.5 C5 D5:0.5 D#5:0.5 D5:0.5 C5:3 B4:0.5 D5 C5:0.5 B4:0.5 B4:0.5 G#4:0.5 B4:0.5 "
+                "G#4:0.5 G4:4 F4 F4:0.5 E4:0.5 F4 G4 G4:3 R D5 C5:0.5 B4:0.5 B4:0.5 G#4:0.5 B4:0.5 G#4:0.5 G4:3 R F4 F4:0.5 "
+                "E4:0.5 F4 G4 G4:4 A#4 A#4:0.5 A4:0.5 A4:0.5 G4:0.5 G4:0.5 F4:0.5 E4:1.5 F4:0.5 E4:0.5 C#4:0.5 E4 G4 G4:0.5 "
+                "F4:0.5 E4:0.5 C#4:0.5 E4:0.5 C#4:0.5 C4:4")),
+    '오르골 중동 · 헤이 로 세니(쿠르드)': dict(gen="lullaby", bpm=64, minor=True, tonic=11, title='헤이 로 세니 오르골 🏔 쿠르드 민요',
+        tags='#오르골 #쿠르드 #민요 #중동음악 #중동민요 #수면음악 #힐링음악', desc='쿠르드 전통 민요 Hey lo Seni 오르골 연주 + 단조 패드',
+        overlay='먼지 빛', colors=('#1A120A', '#4A341C'),
+        prompt='rolling kurdish mountains in spring with wildflowers and a small stone village, soft morning mist, peaceful, no people',
+        melody=("A4:0.5 F#4 A4:0.25 F#4:0.25 A4:0.5 F#4 A4:0.25 F#4:0.25 A4:0.5 F#4 A4:0.25 F#4:0.25 F#4:0.5 E4:0.75 D4:0.25 "
+                "E4:0.25 F#4:0.25 F#4:0.5 E4 E4:0.25 D4:0.25 D4:0.5 C#4 D4:0.25 E4:0.25 F#4:0.25 D4:0.75 D4:0.25 C#4:0.75 "
+                "C#4:0.25 B3:1.25 C#4:0.167 D4:0.167 C#4:0.167 E4:0.25 D4:0.25 D4:0.25 C#4:0.25 C#4:0.25 B3:1.25 B3:0.5 B3 "
+                "B3:0.167 F#4:0.167 E4:0.667 E4:0.25 D4:0.75 D4:0.25 C#4:1.25 D4:0.167 D4:0.167 C#4:0.167 F#4:0.25 D4:0.75 "
+                "D4:0.25 C#4:0.75 C#4:0.25 B3:1.25 C#4:0.167 D4:0.167 C#4:0.167 E4:0.25 D4:0.75 D4:0.25 C#4:0.75 C#4:0.25 "
+                "B3:1.25 B3:0.167 B3:0.167 B3:0.167")),
+    '오르골 중동 · 황금 새장 속 나의 꾀꼬리(터키)': dict(gen="lullaby", bpm=60, minor=True, tonic=9, title='황금 새장 속 꾀꼬리 오르골 🐦 터키 민요',
+        tags='#오르골 #터키 #터키민요 #꾀꼬리 #중동음악 #중동민요 #수면음악 #힐링음악', desc='터키 전통 민요 Bülbülüm Altın Kafeste 오르골 연주 + 단조 패드',
+        overlay='먼지 빛', colors=('#1A120A', '#4A341C'),
+        prompt='a golden birdcage with a small nightingale by an ottoman window at twilight, soft lantern light, patterned tiles, calm, no people',
+        melody=("F4:0.5 F4:0.25 F4:0.25 F4:0.5 F4:0.5 E4:0.5 F4:0.5 A4:0.25 G4:0.25 F4:0.25 E4:0.25 D4:0.5 C4:0.5 C4:0.25 "
+                "E4:0.25 D4:0.5 C4:0.5 A#3:0.5 A#3:0.25 A3:0.25 A3:0.25 A#3:0.25 C4:0.25 D4:0.25 E4:0.25 F4:0.25 F4:0.5 F4:0.25 "
+                "F4:0.25 F4:0.5 F4:0.5 E4:0.5 F4:0.5 A4:0.25 G4:0.25 F4:0.25 E4:0.25 D4:0.5 C4:0.5 C4:0.25 E4:0.25 D4:0.5 "
+                "C4:0.5 A#3:0.5 A#3:0.25 A3:0.25 A3:1.5 A4 A4:0.5 A4:0.5 A4:0.75 G4:0.25 G4:0.25 G4:0.25 F4:0.25 E4:0.25 D4:0.5 "
+                "C4 D4:0.5 E4:0.5 G4:0.25 F4:0.25 F4:0.25 E4:0.25 F4:0.25 G4:0.25 F4:0.25 F4:0.25 G4:0.25 G4:0.25 A4 A4:0.5 "
+                "A4:0.5 A4:0.75 G4:0.25 G4:0.25 G4:0.25 F4:0.25 E4:0.25 D4:0.5 C4 D4:0.5 E4:0.5 G4:0.25 F4:0.25 F4:0.25 E4:0.25 "
+                "F4:0.25 G4:0.25 F4:0.25 F4:0.25 G4:0.25 G4:0.25 A4 A4:0.5 A4:0.5 A4:0.5 G4:0.5 A4:0.25 G4:0.25 F4:0.25 E4:0.25 "
+                "D4:0.5 C4:0.75 E4:0.25 D4:0.5 C4:0.5 A#3:0.5 A#3:0.25 A3:0.25 A3:0.25 A3:0.25 A#3:0.25 A#3:0.25 C4:0.25 "
+                "C4:0.25 D4 A4:0.5 A4:0.5 A4:0.5 G4:0.5 A4:0.25 G4:0.25 F4:0.25 E4:0.25 D4:0.5 C4:0.75 E4:0.25 D4:0.5 C4:0.5 "
+                "A#3:0.5 A#3:0.25 A3:0.25 A3:0.75 E4:0.25 F4:0.25 G4:0.25 F4:0.5 F4:0.25 F4:0.25 F4:0.5 F4:0.5 E4:0.5 F4:0.5 "
+                "A4:0.25 G4:0.25 F4:0.25 E4:0.25 D4:0.5 C4:0.5 C4:0.25 E4:0.25 D4:0.5 C4:0.5 A#3:0.5 A#3:0.25 A3:0.25 A3:0.25 "
+                "A#3:0.25 C4:0.25 D4:0.25 E4:0.25 F4:0.25 F4:0.5 F4:0.25 F4:0.25 F4:0.5 F4:0.5 E4:0.5 F4:0.5 A4:0.25 G4:0.25 "
+                "F4:0.25 E4:0.25 D4:0.5 C4:0.5 C4:0.25 E4:0.25 D4:0.5 C4:0.5 A#3:0.5 A#3:0.25 A3:0.25 A3:1.5")),
+    '오르골 중동 · 그대 생각에 잠 못 드는 밤(아제르바이잔)': dict(gen="lullaby", bpm=58, minor=True, tonic=9, title='그대 생각에 잠 못 드는 밤 오르골 🌙 아제르바이잔 민요',
+        tags='#오르골 #아제르바이잔 #민요 #밤 #중동음악 #중동민요 #수면음악 #힐링음악', desc='아제르바이잔 전통 민요 Fikrimden Geceler Yatabilmirem 오르골 연주 + 단조 패드',
+        overlay='먼지 빛', colors=('#1A120A', '#4A341C'),
+        prompt='a quiet caucasian village at night with a crescent moon over the mountains, a single lit window, deep blue and gold, melancholic and calm, no people',
+        melody=("E5:0.5 D5:0.5 C5:2 C5 B4 C5 D5:0.5 C5:0.5 B4:2 B4:0.75 D5:0.25 C5:0.5 B4:0.5 A4 B4 C5:1.5 B4:0.5 B4 A4:1.5 "
+                "G#4:0.5 A4:3 A4:0.5 B4:0.5 C5:0.5 D5:0.5 E5 E5:0.5 D5:0.5 C5:2 C5 B4 C5 D5:0.5 C5:0.5 B4:2 B4:0.75 D5:0.25 "
+                "C5:0.5 B4:0.5 A4 B4 C5:1.5 B4:0.5 B4 A4:1.5 G#4:0.5 A4:3 A4 B4 C#5 D5:3 D5 C5 E5 D5:3 C5 D5 R B4 C5:2 C5:0.5 "
+                "B4:0.5 A4 G#4:0.5 A4:0.5 B4:3 E4:0.5 F4:0.5 G#4:0.5 A4:0.5 B4:0.5 C5:0.5 E5:0.5 D5:0.5 C5:2 C5 B4 C5 D5:0.75 "
+                "C5:0.25 B4:2 B4:0.75 D5:0.25 C5:0.5 B4:0.5 A4 B4 C5:1.5 B4:0.5 B4 A4 G#4 A4:3")),
+}
+_w2 = list(ORGEL_WORLD2.items())
+_w3 = list(ORGEL_WORLD3.items())
+_w23 = ([kv for kv in _w2 if music_group_prefix(kv[0]) == "동유럽"] + [kv for kv in _w3 if music_group_prefix(kv[0]) == "동유럽"]
+        + [kv for kv in _w2 if music_group_prefix(kv[0]) == "중동"] + [kv for kv in _w3 if music_group_prefix(kv[0]) == "중동"]
+        + [kv for kv in _w2 + _w3 if music_group_prefix(kv[0]) not in ("동유럽", "중동")])
+MUSIC_PRESETS = dict(_mp[:_at] + list(ORGEL_SONGS.items()) + list(ORGEL_WORLD.items()) + _w23 + _mp[_at:])
+MUSIC_GROUP_KO = {"오르골 민요 · 아리랑", "오르골 민요 · 도라지 타령", "오르골 동요 · 고향의 봄"}
+MUSIC_GROUPS = ["전체", "싱잉볼", "한국", "서양 자장가·동요", "서양 민요·클래식", "일본", "중국", "러시아", "동유럽", "중동", "아프리카"]
+
+
+def music_group(name):
+    """음악 종류 → 분류(나라·지역)"""
+    P = MUSIC_PRESETS.get(name, {})
+    if P.get("gen") == "bowls":
+        return "싱잉볼"
+    if name in MUSIC_GROUP_KO:
+        return "한국"
+    for g in ("일본", "중국", "러시아", "동유럽", "중동", "아프리카"):
+        if name.startswith(f"오르골 {g} ·"):
+            return g
+    return "서양 자장가·동요" if ("자장가" in name or "동요" in name) else "서양 민요·클래식"
+
+
 MUSIC_OVERLAYS = ["없음", "먼지 빛", "반딧불", "눈", "빗줄기", "호흡 가이드"]
 MUSIC_MOTIONS = ["천천히 줌(기본)", "천천히 줌인만", "숨쉬듯 확대·축소", "좌우로 천천히", "위아래로 천천히", "없음(정지)"]
 
@@ -5696,7 +6871,7 @@ def music_chunk(P, n, tail, rng, ci):
     elif g == "lullaby":
         beat = 60 / P["bpm"]
         loop = P["loop"]
-        PROGS["_lull"] = [[m + P["key"] for m in ch] for ch in _melody_chords(P["notes"], P.get("minor", False))]   # 멜로디와 같은 조로
+        PROGS["_lull"] = [[m + P["key"] for m in ch] for ch in _melody_chords(P["notes"], P.get("minor", False), P.get("tonic"), P.get("scale"))]   # 멜로디와 같은 조로
         bed = gen_pad(L, rng, "_lull", 8 * beat, 1300) * 0.3
         k0 = int(T0 // loop)
         cache = {}
@@ -5713,6 +6888,916 @@ def music_chunk(P, n, tail, rng, ci):
     elif g == "space":
         bed = gen_space(L, rng)
     return ev, bed
+
+
+def load_audio_file(path):
+    """MP3·WAV·M4A 등 음악 파일 → (n, 2) float32 (44.1kHz 스테레오, ffmpeg로 풀기)"""
+    p = subprocess.run([get_ffmpeg(), "-v", "error", "-i", path, "-f", "f32le", "-ac", "2", "-ar", str(SR), "-"],
+                       stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                       creationflags=(subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0))
+    if p.returncode != 0 or not p.stdout:
+        raise RuntimeError("음악 파일을 읽지 못했습니다: " + p.stderr.decode("utf-8", "replace")[-300:])
+    a = np.frombuffer(p.stdout, np.float32).reshape(-1, 2)
+    loud = np.where(np.abs(a).max(1) > 10 ** (-50 / 20))[0]     # 앞뒤 무음(-50dB 이하) 잘라내기
+    if len(loud) == 0:
+        raise RuntimeError("음악 파일에 소리가 없습니다.")
+    return a[loud[0]:loud[-1] + 1]
+
+
+def render_audio_loop(src, minutes, wav_path, xfade=3.0, start=0.0, progress=None, cancel=None, audio=None):
+    """음악 파일을 minutes 분 길이로 되풀이해 WAV로 저장. 이음매는 xfade 초 겹쳐 부드럽게. 반환: 길이(초)
+    start: 이 초부터 저장 (이음매 미리듣기용)"""
+    import wave
+    a = load_audio_file(src) if audio is None else audio
+    M = len(a)
+    X = int(min(xfade, M / SR / 4) * SR)
+    if X > 0:
+        w_ = np.sin(np.linspace(0, np.pi / 2, X, dtype=np.float32)) ** 2
+        joint = a[M - X:] * (1 - w_)[:, None] + a[:X] * w_[:, None]   # 끝과 처음을 겹친 이음매
+    total = int(max(0.1, float(minutes)) * 60 * SR)
+    skip = int(start * SR)
+    fade_in, fade_out = int(0.5 * SR), int(min(8, total / SR / 4) * SR)
+    os.makedirs(os.path.dirname(os.path.abspath(wav_path)), exist_ok=True)
+    pos, rep = 0, 0
+    est = max(1, int(np.ceil(total / max(1, M - X))))
+    with wave.open(wav_path, "wb") as w:
+        w.setnchannels(2)
+        w.setsampwidth(2)
+        w.setframerate(SR)
+        while pos < total:
+            if cancel is not None and cancel.is_set():
+                raise RuntimeError("취소됨")
+            seg = a[:M - X] if rep == 0 else np.concatenate([joint, a[X:M - X]]) if X else a
+            seg = seg[:total - pos]
+            idx = np.arange(pos, pos + len(seg))
+            env = np.minimum(1, idx / fade_in) * np.clip((total - idx) / fade_out, 0, 1)
+            out = seg * env[:, None]
+            if pos + len(seg) > skip:
+                k = max(0, skip - pos)
+                w.writeframes((np.clip(out[k:], -1, 1) * 32767).astype("<i2").tobytes())
+            pos += len(seg)
+            rep += 1
+            if progress:
+                progress(min(rep, est), est)
+    return (total - min(skip, total)) / SR
+
+
+# ---------------- 📊 PPT 발표 영상 (슬라이드 → AI 나레이션 → 영상) ----------------
+PPT_EXPORT_PS1 = r'''param([string]$Src, [string]$Out)
+$ErrorActionPreference = "Stop"
+$pp = New-Object -ComObject PowerPoint.Application
+try {
+  $pres = $pp.Presentations.Open($Src, -1, 0, 0)
+  $w = 1920
+  $h = [int](1920 * $pres.PageSetup.SlideHeight / $pres.PageSetup.SlideWidth)
+  $list = @()
+  for ($i = 1; $i -le $pres.Slides.Count; $i++) {
+    $s = $pres.Slides.Item($i)
+    $img = Join-Path $Out ("slide_{0:D3}.png" -f $i)
+    $s.Export($img, "PNG", $w, $h)
+    $texts = @()
+    foreach ($sh in $s.Shapes) { try { if ($sh.HasTextFrame -and $sh.TextFrame.HasText) { $texts += $sh.TextFrame.TextRange.Text } } catch {} }
+    $notes = ""
+    try { foreach ($sh in $s.NotesPage.Shapes) { try { if ($sh.PlaceholderFormat.Type -eq 2 -and $sh.TextFrame.HasText) { $notes = $sh.TextFrame.TextRange.Text } } catch {} } } catch {}
+    $list += [pscustomobject]@{ n = $i; image = $img; text = ($texts -join "`n"); notes = $notes }
+  }
+  $pres.Close()
+  ConvertTo-Json -InputObject @($list) -Depth 3 | Out-File -Encoding utf8 (Join-Path $Out "slides.json")
+} finally { $pp.Quit() }
+'''
+
+
+def ppt_export(src, out_dir, log=None):
+    """PPT/PPTX → 슬라이드 그림(1920px PNG) + 슬라이드 글 + 발표자 메모. PowerPoint(설치되어 있어야 함)를 직접 조종.
+    반환: [{"n", "image", "text", "notes"}]"""
+    log = log or (lambda x: None)
+    os.makedirs(out_dir, exist_ok=True)
+    for f_ in os.listdir(out_dir):
+        if f_.startswith("slide_") or f_ == "slides.json":
+            os.remove(os.path.join(out_dir, f_))
+    ps1 = os.path.join(out_dir, "_export.ps1")
+    with open(ps1, "w", encoding="utf-8-sig") as f:       # BOM: 윈도우 PowerShell 이 한글 경로를 바르게 읽게
+        f.write(PPT_EXPORT_PS1)
+    log("📊 PowerPoint로 슬라이드를 그림으로 바꾸는 중...")
+    p = subprocess.run(["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", ps1, "-Src", os.path.abspath(src), "-Out", os.path.abspath(out_dir)],
+                       capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=900,
+                       creationflags=(subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0))
+    js = os.path.join(out_dir, "slides.json")
+    if p.returncode != 0 or not os.path.exists(js):
+        raise RuntimeError("슬라이드를 바꾸지 못했습니다. PowerPoint가 설치되어 있는지, 파일이 열려 있지 않은지 확인하세요.\n" + (p.stderr or p.stdout)[-400:])
+    data = json.load(open(js, encoding="utf-8-sig"))
+    data = data if isinstance(data, list) else [data]
+    clean = lambda t: re.sub(r"[ \t]+", " ", str(t or "").replace("\r", "\n").replace("\x0b", "\n")).strip()
+    return [{"n": int(d["n"]), "image": d["image"], "text": clean(d.get("text")), "notes": clean(d.get("notes"))} for d in data]
+
+
+PPT_LENGTHS = {"짧게(슬라이드당 15~25초)": (90, 150), "보통(슬라이드당 30~45초)": (180, 280), "자세히(슬라이드당 60초 이상)": (350, 500)}
+PPT_TONES = ["차분한 발표", "친근한 강의", "전문가 브리핑", "열정적인 피치(투자·영업)", "뉴스·보고서 낭독", "어린이 눈높이 설명"]
+
+PPT_SYSTEM = """너는 발표 코치이자 나레이션 작가다. 슬라이드 묶음을 보고, 발표자가 청중 앞에서 말하듯 슬라이드마다 나레이션 대본을 쓴다.
+- 슬라이드 그림 파일이 주어지면 Read 도구로 하나씩 실제로 열어 보고, 글뿐 아니라 도표·그래프·그림·배치까지 해석한다(그래프면 추세와 핵심 숫자, 도식이면 흐름).
+- 발표자 메모가 있으면 그 의도와 내용을 가장 우선한다. 슬라이드 글을 그대로 읽어 주지 말고, 말로 풀어 설명한다.
+- 분량: 슬라이드마다 공백 포함 {min_c}~{max_c}자(표지·간지 슬라이드는 짧게). 문장은 짧게, 한 문단 1~2문장, 문단 사이 빈 줄.
+- 첫 슬라이드는 짧은 인사와 발표 주제·목적, 마지막 슬라이드는 핵심 요약과 마무리 인사. 슬라이드 사이가 자연스럽게 이어지게('다음으로', '이 결과를 바탕으로').
+- 말투: {tone}. 청중: {audience}.
+- 목록·제목 기호(#, -, *)와 이모지 금지. 영어 약어는 그대로 써도 된다.
+""" + KO_NUM_RULE + """- 성우: 아래 [성우 목록]에서 발표 주제·청중·말투에 가장 어울리는 하나를 목록의 이름 그대로 고르고, 감정 톤도 고른다.
+반드시 JSON만 출력: {{"title": "발표 영상 제목(30자 이내)", "voice": "성우 목록의 이름 그대로", "voice_reason": "고른 이유 한 줄", "emotion": "차분|밝음·유머|슬픔·감동|놀람·반전|공포·긴장|분노·갈등 중 하나", "slides": [{{"n": 1, "narration": "나레이션"}}]}}"""
+
+
+def ppt_voice_catalog():
+    """AI에게 줄 성우 목록 (무료 로컬 성우 + 엣지 한국어 성우)"""
+    names = [v["name"] for v in SUPERTONIC_VOICES] + [k for k, c in TTS_VOICES.items() if str(c).startswith("ko-KR")]
+    return names
+
+
+def ppt_narrate(model, slides, tone, audience, length, log=None, cancel=None, use_images=True):
+    """슬라이드 → 슬라이드별 나레이션 + 성우 추천. 10장씩 나눠 씀(긴 발표도 시간 제한에 안 걸림)"""
+    log = log or (lambda x: None)
+    lo, hi = PPT_LENGTHS.get(length, (180, 280))
+    sys_ = PPT_SYSTEM.format(min_c=lo, max_c=hi, tone=tone or "차분한 발표", audience=audience or "일반 청중")
+    voices = ppt_voice_catalog()
+    eng = str((SCRIPT_ENGINE.get("s") or {}).get("script_engine", "Claude"))
+    see = use_images and (eng.startswith("Claude") or eng.startswith("자동"))
+    out, meta, prev = {}, {}, ""
+    for a in range(0, len(slides), 10):
+        if cancel is not None and cancel.is_set():
+            raise RuntimeError("취소됨")
+        part = slides[a:a + 10]
+        log(f"✍ 슬라이드 {part[0]['n']}~{part[-1]['n']} / {len(slides)} 나레이션 쓰는 중..." + (" (슬라이드 그림을 직접 보고)" if see else ""))
+        body = "\n\n".join(f"[슬라이드 {s['n']}]" + (f"\n그림 파일: {s['image']}" if see else "") + f"\n슬라이드 글: {s['text'] or '(글 없음)'}"
+                           + (f"\n발표자 메모: {s['notes']}" if s.get("notes") else "") for s in part)
+        user = (f"전체 슬라이드 수: {len(slides)}\n[성우 목록]\n" + "\n".join(voices)
+                + (f"\n\n[앞부분 요약 - 이어서 쓸 것, 성우는 이미 정함: {meta.get('voice')}]\n{prev}" if a else "") + "\n\n" + body)
+        d = ask_json(model, sys_, user, tools=["Read"]) if see else ask_script_json(model, sys_.replace("Read 도구로 하나씩 실제로 열어 보고, ", ""), user)
+        if not a:
+            meta = {k: d.get(k) for k in ("title", "voice", "voice_reason", "emotion")}
+        for s in d.get("slides") or []:
+            try:
+                out[int(s.get("n"))] = doc_clean(s.get("narration", ""))
+            except (TypeError, ValueError):
+                continue
+        prev = " / ".join(f"{n}: {out[n][:80]}" for n in sorted(out)[-3:])
+    if meta.get("voice") not in voices:
+        meta["voice"] = voices[0]
+    return out, meta
+
+
+PPT_SUB_LANGS = ["한국어", "베트남어", "한국어+베트남어"]
+PPT_SUB_FONT = "ofl/nanumgothic/NanumGothic-ExtraBold.ttf"   # 발표 자막: 굵고 또렷한 고딕 (무료 글꼴, 처음 한 번 받음)
+VI_FONT = next((p for p in (r"C:\Windows\Fonts\segoeuib.ttf", r"C:\Windows\Fonts\arialbd.ttf", r"C:\Windows\Fonts\tahomabd.ttf",
+                            "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf") if os.path.exists(p)), "")   # 베트남어 성조 글자가 있는 글꼴
+PPT_VI_SYSTEM = """너는 한국어→베트남어 영상 자막 번역가다. 발표 나레이션 문장을 베트남 시청자가 읽기 쉬운 자연스러운 베트남어 자막으로 옮긴다.
+- 뜻을 정확히, 문장은 짧고 쉽게. 존댓말 발표 말투(chúng tôi, quý vị 등)는 문맥에 맞게.
+- 숫자는 아라비아 숫자 그대로(2026, 42%, 12 triệu won 처럼 단위는 베트남식). 고유명사는 통용 표기, 없으면 원어 로마자.
+- 성조 기호를 정확히 쓴다. 줄 수를 늘리거나 합치지 않는다(한 항목 = 한 줄).
+반드시 JSON만 출력: {"items": [{"i": 번호, "vi": "베트남어 자막"}]}"""
+
+
+def ppt_translate_vi(model, lines, cache, log=None, cancel=None):
+    """한국어 자막 줄 → 베트남어 (cache={한국어: 베트남어} 에 없는 줄만 번역)"""
+    log = log or (lambda x: None)
+    todo = list(dict.fromkeys(t for t in lines if t.strip() and t not in cache))
+    if not todo:
+        return 0
+    log(f"🇻🇳 베트남어 자막 번역 중 ({len(todo)}줄)...")
+    done = 0
+    for a in range(0, len(todo), 30):
+        if cancel is not None and cancel.is_set():
+            raise RuntimeError("취소됨")
+        part = todo[a:a + 30]
+        d = ask_script_json(model, PPT_VI_SYSTEM, "\n".join(f"[{i}] {t}" for i, t in enumerate(part)))
+        for it in d.get("items") or []:
+            try:
+                i, vi = int(it.get("i")), str(it.get("vi") or "").strip()
+            except (TypeError, ValueError):
+                continue
+            if 0 <= i < len(part) and vi:
+                cache[part[i]] = vi
+                done += 1
+    log(f"  🇻🇳 번역 {done}/{len(todo)}줄 완료")
+    return done
+
+
+def ppt_lang_story(story, lang, vi, s):
+    """자막 언어 적용: 베트남어 → 화면 글은 베트남어, 성우는 한국어(발음 사전으로 연결) / 두 언어 → 한국어 아래 베트남어 줄"""
+    if lang == "베트남어":
+        out = []
+        for ln in story.split("\n"):
+            t = ln.strip()
+            if t and not parse_media(t) and t in vi:
+                SPOKEN[vi[t]] = SPOKEN.get(t, t)      # 베트남어 자막 줄 → 한국어로 읽기
+                out.append(vi[t])
+            else:
+                out.append(ln)
+        s.update(sub_font_path=VI_FONT or s.get("sub_font_path", ""), sub_max_chars=44)
+        return "\n".join(out)
+    if lang == "한국어+베트남어":
+        s.update(sub_trans=dict(vi), sub_font2=VI_FONT, sub_split="문단 통째로")
+    return story
+
+
+def ppt_build_story(slides, narr):
+    """슬라이드 그림 줄 + 나레이션 문단 → 자막형 렌더러용 본문"""
+    parts = []
+    for s in slides:
+        parts.append(make_marker(s["image"], f"슬라이드 {s['n']}", "", ""))
+        t = (narr.get(s["n"]) or "").strip()
+        parts.append(t if t else (s.get("text") or "다음 슬라이드입니다.")[:120])
+    return "\n\n".join(parts)
+
+
+# ---------------- 자연의 소리 믹서 (여러 소리를 골라 세기·빈도·랜덤으로 섞기) ----------------
+def _nz(n, rng, power=1.0, lo=None, hi=None):
+    """색깔 잡음 → 대역 거르기 → 크기 1로"""
+    return _norm(band(colored_noise(n, rng, power), lo=lo, hi=hi))
+
+
+def _st2(fn):
+    """채널마다 따로 만든 소리 (좌우가 조금씩 달라 공간감)"""
+    return np.stack([fn(c) for c in range(2)], 1).astype(np.float32)
+
+
+def _impulses(n, rng, per_sec, kern_fn, lo, hi):
+    """초당 per_sec 개의 짧은 소리(kern)를 무작위로 흩뿌림"""
+    out = np.zeros(n, np.float32)
+    k = int(n / SR * max(0.0, per_sec))
+    if k:
+        kern = kern_fn()
+        imp = np.zeros(n, np.float32)
+        imp[rng.integers(0, n, k)] = rng.uniform(0.15, 1, k) * rng.choice([-1, 1], k)
+        out = band(ola_conv(imp, kern), lo=lo, hi=hi)
+    return out
+
+
+def _rain_bed(n, rng, drops, hiss, rumble, dlo, dhi, hlo=500, hhi=9000):
+    kl = int(0.006 * SR)
+
+    def ch(c):
+        h = _nz(n, rng, 1.0, hlo, hhi) * (0.8 + 0.2 * smooth_lfo(n, 5, rng))
+        d = _impulses(n, rng, drops, lambda: (rng.standard_normal(kl) * np.exp(-np.arange(kl) / (0.0012 * SR))).astype(np.float32), dlo, dhi)
+        return h * hiss + _norm(d) * 0.4 + _nz(n, rng, 2.0, None, 160) * rumble
+    return _norm(_st2(ch))
+
+
+def _place_series(n, rng, per_sec, make, spread=(0.1, 0.9)):
+    """짧은 소리(make)를 초당 per_sec 개씩 겹치지 않게 흩어 놓은 스테레오 바탕"""
+    out = np.zeros((n, 2), np.float32)
+    t = rng.exponential(1 / max(0.01, per_sec))
+    while t < n / SR:
+        place(out, make() * rng.uniform(0.3, 1.0), t, rng.uniform(*spread))
+        t += rng.exponential(1 / max(0.01, per_sec))
+    return out
+
+
+def _tone(f0, f1, dur, harm=((1, 1.0),), decay=None, attack=0.01, vib=0.0, vib_hz=6.0):
+    """f0→f1 로 미끄러지는 음 (배음·감쇠·떨림)"""
+    t = np.arange(int(dur * SR)) / SR
+    f = f0 + (f1 - f0) * (t / dur) + (vib * f0 * np.sin(2 * np.pi * vib_hz * t) if vib else 0)
+    ph = 2 * np.pi * np.cumsum(f) / SR
+    s = sum(a * np.sin(h * ph) for h, a in harm)
+    env = np.minimum(1, t / max(0.001, attack)) * (np.exp(-t / decay) if decay else np.sin(np.pi * t / dur) ** 0.6)
+    return (s * env).astype(np.float32)
+
+
+def tin_drop(rng, f0=None, ring=None):
+    """양철지붕 빗방울: 금속성 '톡' + 철판이 살짝 울리는 '퉁'"""
+    f0 = f0 or rng.uniform(1700, 4200)
+    ring = ring or rng.uniform(0.04, 0.12)
+    t = np.arange(int((ring * 5 + 0.05) * SR)) / SR
+    s = sum(a * np.sin(2 * np.pi * f0 * r * t + rng.uniform(0, 6.3)) * np.exp(-t * r ** 0.5 / ring) for r, a in ((1, 1), (1.52, .55), (2.31, .3), (3.13, .15)))
+    s = s + 0.5 * np.sin(2 * np.pi * rng.uniform(250, 480) * t) * np.exp(-t / 0.05)
+    return (s * np.minimum(1, t / 0.0005) * 0.3).astype(np.float32)
+
+
+# --- 계속 나는 소리 (bed): fn(n, rng, dens) → (n, 2) ---
+def nb_light_rain(n, rng, d):
+    return _rain_bed(n, rng, 12 * d, 0.45, 0.08, 2500, 9000, 1500, 9000)
+
+
+def nb_rain(n, rng, d):
+    return _rain_bed(n, rng, 40 * d, 0.6, 0.25, 1500, 7000)
+
+
+def nb_heavy_rain(n, rng, d):
+    return _rain_bed(n, rng, 110 * d, 0.85, 0.5, 800, 6000, 300, 9000)
+
+
+def nb_rain_window(n, rng, d):
+    def ping():
+        t = np.arange(int(0.03 * SR)) / SR
+        return (np.sin(2 * np.pi * rng.uniform(3000, 6000) * t) * np.exp(-t / 0.003) + rng.standard_normal(len(t)) * np.exp(-t / 0.001) * 0.5).astype(np.float32)
+    drops = _place_series(n, rng, 9 * d, ping)
+    return _norm(drops * 0.8 + _st2(lambda c: _nz(n, rng, 1.0, 300, 2500)) * 0.3)
+
+
+def nb_rain_tent(n, rng, d):
+    def thud():
+        t = np.arange(int(0.08 * SR)) / SR
+        return (band((rng.standard_normal(len(t)) * np.exp(-t / 0.015)).astype(np.float32), lo=150, hi=900)).astype(np.float32)
+    return _norm(_place_series(n, rng, 16 * d, thud) * 1.6 + _st2(lambda c: _nz(n, rng, 1.0, 200, 2000)) * 0.25)
+
+
+def nb_tin_roof(n, rng, d):
+    bank = [tin_drop(rng) for _ in range(12)]
+    drops = _place_series(n, rng, 2.2 * d, lambda: bank[int(rng.integers(len(bank)))])
+    return _norm(reverb(drops, rng, 1.2, 0.25) + _st2(lambda c: _nz(n, rng, 1.0, 400, 6000)) * 0.06)
+
+
+def _bubbles(n, rng, per_sec):
+    def blip():
+        dur = rng.uniform(0.012, 0.04)
+        f = rng.uniform(600, 2400)
+        return _tone(f, f * rng.uniform(1.2, 1.8), dur, decay=dur / 3, attack=0.002)
+    return _place_series(n, rng, per_sec, blip)
+
+
+def nb_stream(n, rng, d):
+    base = _st2(lambda c: _nz(n, rng, 1.0, 300, 5000) * (0.6 + 0.4 * smooth_lfo(n, 0.08, rng)))
+    return _norm(base * 0.5 + _norm(_bubbles(n, rng, 28 * d)) * 0.5)
+
+
+def nb_creek(n, rng, d):
+    base = _st2(lambda c: _nz(n, rng, 1.0, 150, 7000) * (0.7 + 0.3 * smooth_lfo(n, 0.12, rng)) + _nz(n, rng, 2.0, 40, 300) * 0.3)
+    return _norm(base * 0.7 + _norm(_bubbles(n, rng, 55 * d)) * 0.4)
+
+
+def nb_waterfall(n, rng, d):
+    return _norm(_st2(lambda c: (_nz(n, rng, 1.0, 60, 9000) * 0.7 + _nz(n, rng, 2.0, 30, 600) * 0.6) * (0.9 + 0.1 * smooth_lfo(n, 1.5, rng))))
+
+
+def nb_waves_calm(n, rng, d):
+    w = gen_waves(n, rng)
+    return _norm(np.stack([band(w[:, c], hi=3500) for c in range(2)], 1))
+
+
+def nb_waves_rough(n, rng, d):
+    return _norm(gen_waves(n, rng) + _st2(lambda c: _nz(n, rng, 0.5, 2000, 10000)) * 0.15 * d)
+
+
+def nb_underwater(n, rng, d):
+    return gen_sea(n, rng)
+
+
+def nb_breeze(n, rng, d):
+    gust = 0.4 + 0.6 * smooth_lfo(n, 5, rng) ** 2
+    return _norm(_st2(lambda c: _nz(n, rng, 1.0, 100, 900) * gust * 0.7 + _nz(n, rng, 2.0, None, 150) * 0.2))
+
+
+def nb_strong_wind(n, rng, d):
+    gust = 0.3 + 0.7 * smooth_lfo(n, 3, rng) ** 2
+    whistle = _st2(lambda c: _nz(n, rng, 0.0, 700, 1100)) * (gust ** 2)[:, None] * 0.35 * d
+    return _norm(gen_wind(n, rng) + whistle)
+
+
+def nb_blizzard(n, rng, d):
+    gust = 0.4 + 0.6 * smooth_lfo(n, 2.5, rng)
+    return _norm(gen_wind(n, rng) * 0.8 + _st2(lambda c: _nz(n, rng, 0.0, 3000, 10000) * gust) * 0.35 * d)
+
+
+def nb_leaves(n, rng, d):
+    gust = 0.3 + 0.7 * smooth_lfo(n, 3, rng) ** 2
+
+    def ch(c):
+        cr = _impulses(n, rng, 120 * d, lambda: (rng.standard_normal(int(0.004 * SR)) * np.exp(-np.arange(int(0.004 * SR)) / (0.0008 * SR))).astype(np.float32), 2500, 9000)
+        return (_nz(n, rng, 0.5, 2000, 9000) * 0.5 + _norm(cr) * 0.6) * gust
+    return _norm(_st2(ch))
+
+
+def nb_bamboo(n, rng, d):
+    def tok():
+        f = rng.uniform(350, 750)
+        return _tone(f, f * 0.97, 0.12, harm=((1, 1), (2.7, 0.4)), decay=0.03, attack=0.001)
+    knocks = _place_series(n, rng, 0.5 * d, lambda: np.concatenate([tok() * rng.uniform(0.5, 1) for _ in range(int(rng.integers(2, 5)))]))
+    return _norm(nb_breeze(n, rng, 1) * 0.6 + reverb(knocks, rng, 1.5, 0.3) * 0.8)
+
+
+def nb_night_air(n, rng, d):
+    return _norm(_st2(lambda c: _nz(n, rng, 1.0, 150, 1500) * (0.85 + 0.15 * smooth_lfo(n, 6, rng)) + _nz(n, rng, 2.0, None, 200) * 0.4))
+
+
+def _fire(n, rng, d, roar=0.6, crack=1.0):
+    bed = _st2(lambda c: _nz(n, rng, 2.0, None, 300) * (0.7 + 0.3 * smooth_lfo(n, 1.5, rng)) * roar + _nz(n, rng, 1.0, 900, 4000) * 0.08)
+    kl = int(0.012 * SR)
+    kern = lambda: (rng.standard_normal(kl) * np.exp(-np.arange(kl) / (0.002 * SR))).astype(np.float32)
+    cr = _st2(lambda c: _impulses(n, rng, 4.0 * d * crack, kern, 1200, 7000))
+    return _norm(bed + _norm(cr) * 0.6)
+
+
+def nb_campfire(n, rng, d):
+    return _fire(n, rng, d, 0.6, 1.0)
+
+
+def nb_fireplace(n, rng, d):
+    return _fire(n, rng, d, 0.85, 0.55)
+
+
+def nb_crickets(n, rng, d):
+    out = np.zeros((n, 2), np.float32)
+    for _ in range(max(1, int(round(4 * d)))):
+        f, pan, per = rng.uniform(4200, 5400), rng.uniform(0.1, 0.9), rng.uniform(0.45, 1.0)
+        pulse = _tone(f, f, 0.014, decay=None, attack=0.002)
+        chirp = np.concatenate([np.concatenate([pulse, np.zeros(int(0.014 * SR), np.float32)]) for _ in range(int(rng.integers(3, 6)))])
+        t = rng.uniform(0, per)
+        vol = rng.uniform(0.3, 1.0)
+        while t < n / SR:
+            place(out, chirp * vol * rng.uniform(0.7, 1.0), t, pan)
+            t += per * rng.uniform(0.9, 1.1)
+    return _norm(out)
+
+
+def nb_cicadas(n, rng, d):
+    t = np.arange(n) / SR
+
+    def ch(c):
+        swell = np.clip(smooth_lfo(n, 6, rng) * 1.4 - 0.2, 0.05, 1)
+        am = (0.5 + 0.5 * np.sin(2 * np.pi * rng.uniform(110, 160) * t)) ** 2
+        return _nz(n, rng, 0.0, 4000, 7500) * am * swell
+    return _norm(_st2(ch))
+
+
+def nb_frogs(n, rng, d):
+    out = np.zeros((n, 2), np.float32)
+    for _ in range(max(1, int(round(5 * d)))):
+        f, pan = rng.uniform(220, 450), rng.uniform(0.1, 0.9)
+        pulse = _tone(f, f * 0.95, 0.03, harm=((1, 1), (2, .6), (3, .3)), decay=0.012, attack=0.002)
+        gap = np.zeros(int(rng.uniform(0.012, 0.03) * SR), np.float32)
+        croak = np.concatenate([np.concatenate([pulse, gap]) for _ in range(int(rng.integers(6, 14)))])
+        t = rng.uniform(0, 3)
+        while t < n / SR:
+            place(out, croak * rng.uniform(0.3, 1.0), t, pan)
+            t += rng.uniform(1.0, 4.0)
+    return _norm(reverb(out, rng, 1.0, 0.2))
+
+
+def nb_cat_purr(n, rng, d):
+    t = np.arange(n) / SR
+    breath = np.where((t % 3.0) < 1.6, 1.0, 0.75)
+    am = (0.5 + 0.5 * np.sin(2 * np.pi * rng.uniform(24, 28) * t)) ** 2
+    m = _nz(n, rng, 1.0, 40, 300) * am * breath
+    return _norm(np.stack([m, m * 0.95], 1))
+
+
+def nb_white(n, rng, d):
+    return _st2(lambda c: _nz(n, rng, 0.0, 30, 12000))
+
+
+def nb_pink(n, rng, d):
+    return _st2(lambda c: _nz(n, rng, 1.0, 30, 12000))
+
+
+def nb_brown(n, rng, d):
+    return _st2(lambda c: _nz(n, rng, 2.0, None, 600))
+
+
+# --- 가끔 나는 소리 (event): fn(rng) → 짧은 소리 (모노, 12초 이하) ---
+def ne_thunder_far(rng):
+    d = rng.uniform(6, 10)
+    t = np.arange(int(d * SR)) / SR
+    env = np.minimum(1, t / 0.8) * np.exp(-t / (d / 3)) * (0.7 + 0.3 * np.sin(2 * np.pi * rng.uniform(0.3, 0.8) * t) ** 2)
+    return _norm(band(colored_noise(len(t), rng, 2.0), hi=180) * env) * 0.8
+
+
+def ne_thunder_near(rng):
+    d = rng.uniform(7, 10)
+    t = np.arange(int(d * SR)) / SR
+    crack = band(rng.standard_normal(len(t)).astype(np.float32), lo=400, hi=6000) * np.exp(-t / 0.12)
+    roll = band(colored_noise(len(t), rng, 2.0), hi=320) * np.minimum(1, t / 0.15) * np.exp(-t / (d / 3.5)) * (0.6 + 0.4 * smooth_lfo(len(t), 0.7, rng))
+    return _norm(_norm(crack) * 0.7 + _norm(roll))
+
+
+def ne_eave_drip(rng):
+    return _tone(rng.uniform(1100, 1500), rng.uniform(1500, 2000), 0.12, decay=0.03, attack=0.001)
+
+
+def ne_cave_drip(rng):
+    f = rng.uniform(700, 1300)
+    return _tone(f, f * rng.uniform(1.6, 2.2), 0.25, decay=0.07, attack=0.001)
+
+
+def ne_lake_lap(rng):
+    t = np.arange(int(0.5 * SR)) / SR
+    return (band(rng.standard_normal(len(t)).astype(np.float32), lo=200, hi=1500) * np.minimum(1, t / 0.02) * np.exp(-t / 0.15)).astype(np.float32)
+
+
+def ne_birds(rng):
+    c = bird_call(rng)
+    return band(c, hi=3500) if rng.random() < 0.4 else c
+
+
+def ne_cuckoo(rng):
+    f1 = rng.uniform(640, 720)
+    note = lambda f: _tone(f, f * 0.98, 0.32, harm=((1, 1), (2, .15)), attack=0.03)
+    gap = np.zeros(int(0.12 * SR), np.float32)
+    one = np.concatenate([note(f1), gap, note(f1 * 0.8), np.zeros(int(0.6 * SR), np.float32)])
+    return np.concatenate([one] * int(rng.integers(2, 5))) * 0.6
+
+
+def ne_owl(rng):
+    f = rng.uniform(320, 390)
+    hoot = lambda: _tone(f, f * 0.9, rng.uniform(0.35, 0.5), harm=((1, 1), (2, .1)), attack=0.06)
+    parts = []
+    for _ in range(int(rng.integers(2, 5))):
+        parts += [hoot(), np.zeros(int(rng.uniform(0.3, 0.6) * SR), np.float32)]
+    return np.concatenate(parts) * 0.7
+
+
+def ne_seagull(rng):
+    parts = []
+    for _ in range(int(rng.integers(2, 5))):
+        f = rng.uniform(1300, 1700)
+        parts += [_tone(f, f * 0.6, rng.uniform(0.25, 0.4), harm=tuple((h, 1 / h) for h in range(1, 7)), attack=0.01, vib=0.03, vib_hz=18),
+                  np.zeros(int(rng.uniform(0.08, 0.25) * SR), np.float32)]
+    return band(np.concatenate(parts), hi=6000) * 0.35
+
+
+def ne_woodpecker(rng):
+    k = int(rng.integers(12, 22))
+    f = rng.uniform(700, 1100)
+    tok = _tone(f, f, 0.05, harm=((1, 1), (2.4, .5)), decay=0.008, attack=0.0005)
+    step = np.zeros(int(SR / rng.uniform(14, 20)) - len(tok), np.float32)
+    return np.concatenate([np.concatenate([tok * (1 - 0.3 * i / k), step]) for i in range(k)])
+
+
+def ne_whale(rng):
+    d = rng.uniform(2.5, 4.5)
+    tt = np.arange(int(d * SR)) / SR
+    f = rng.uniform(140, 260) * (1 + 0.6 * np.sin(np.pi * tt / d)) * (1 + 0.01 * np.sin(2 * np.pi * 5 * tt))
+    ph = 2 * np.pi * np.cumsum(f) / SR
+    return ((np.sin(ph) + 0.3 * np.sin(2 * ph)) * np.sin(np.pi * tt / d) ** 2 * 0.5).astype(np.float32)
+
+
+def ne_wind_chime(rng):
+    notes = [midi_hz(m) for m in (81, 83, 86, 88, 91, 93, 95)]
+    out = np.zeros(int(4.5 * SR), np.float32)
+    t = 0.0
+    for _ in range(int(rng.integers(3, 8))):
+        b = bell(rng.choice(notes), 2.5) * rng.uniform(0.3, 0.8)
+        i = int(t * SR)
+        out[i:i + len(b)] += b[:len(out) - i]
+        t += rng.uniform(0.05, 0.35)
+    return out * 0.4
+
+
+# --- 밀림·열대 ---
+def ne_parrot(rng):
+    """열대 앵무새(마코): 거칠게 꺾이는 '깍깍'"""
+    parts = []
+    for _ in range(int(rng.integers(1, 4))):
+        dur = rng.uniform(0.18, 0.35)
+        f = rng.uniform(900, 1500)
+        t = np.arange(int(dur * SR)) / SR
+        fc = f * (1 + 0.5 * np.sin(np.pi * t / dur)) * (1 + 0.04 * np.sign(np.sin(2 * np.pi * 70 * t)))
+        ph = 2 * np.pi * np.cumsum(fc) / SR
+        harsh = sum(np.sin(h * ph) / h for h in range(1, 9)) + 0.3 * rng.standard_normal(len(t))
+        parts += [(band(harsh.astype(np.float32), lo=600, hi=6000) * np.sin(np.pi * t / dur) ** 0.4).astype(np.float32),
+                  np.zeros(int(rng.uniform(0.1, 0.3) * SR), np.float32)]
+    return _norm(np.concatenate(parts)) * 0.5
+
+
+def ne_gibbon(rng):
+    """긴팔원숭이 노래: 점점 높아지고 빨라지는 '우-우-우'"""
+    parts, gap, f0 = [], 0.55, rng.uniform(500, 650)
+    for i in range(int(rng.integers(6, 12))):
+        dur = max(0.18, 0.45 - i * 0.025)
+        a, b = f0 * (1 + 0.06 * i), f0 * (1.9 + 0.08 * i)
+        parts += [_tone(a, b, dur, harm=((1, 1), (2, .25), (3, .08)), attack=0.03), np.zeros(int(max(0.06, gap - i * 0.04) * SR), np.float32)]
+    return np.concatenate(parts) * 0.45
+
+
+def ne_howler(rng):
+    """짖는원숭이: 멀리서 낮게 울리는 굵은 포효"""
+    d = rng.uniform(2.0, 4.0)
+    t = np.arange(int(d * SR)) / SR
+    am = 0.6 + 0.4 * np.sin(2 * np.pi * rng.uniform(3, 6) * t) ** 2
+    f0 = rng.uniform(180, 260)
+    tone = sum(np.sin(2 * np.pi * f0 * h * t * (1 - 0.08 * t / d)) / h for h in range(1, 6))
+    roar = band((rng.standard_normal(len(t)) * 0.8 + tone).astype(np.float32), lo=120, hi=1400)
+    return (_norm(roar) * am * np.sin(np.pi * t / d) ** 0.5 * 0.7).astype(np.float32)
+
+
+def ne_hornbill(rng):
+    """코뿔새: 낮은 '꼭, 꼭'"""
+    f = rng.uniform(380, 520)
+    k = _tone(f, f * 0.85, 0.14, harm=((1, 1), (2, .5), (3, .3)), attack=0.008)
+    parts = []
+    for _ in range(int(rng.integers(2, 6))):
+        parts += [k * rng.uniform(0.7, 1), np.zeros(int(rng.uniform(0.25, 0.5) * SR), np.float32)]
+    return np.concatenate(parts) * 0.6
+
+
+def ne_big_cat(rng):
+    """먼 맹수 으르렁: 아주 낮게 떨리는 소리"""
+    d = rng.uniform(1.8, 3.2)
+    t = np.arange(int(d * SR)) / SR
+    am = (0.5 + 0.5 * np.sin(2 * np.pi * rng.uniform(18, 28) * t)) ** 1.5
+    g = band(colored_noise(len(t), rng, 1.5), lo=50, hi=500) * am * np.sin(np.pi * t / d) ** 0.7
+    return (_norm(g) * 0.7).astype(np.float32)
+
+
+def nb_tree_frogs(n, rng, d):
+    """청개구리 합창(열대): 높고 빠른 '삑삑' 수십 마리"""
+    out = np.zeros((n, 2), np.float32)
+    for _ in range(max(2, int(round(10 * d)))):
+        f, pan, per = rng.uniform(1800, 3800), rng.uniform(0.05, 0.95), rng.uniform(0.25, 0.9)
+        chirp = _tone(f, f * rng.uniform(1.05, 1.25), rng.uniform(0.03, 0.08), harm=((1, 1), (2, .2)), attack=0.003)
+        t, vol = rng.uniform(0, per), rng.uniform(0.2, 1.0)
+        while t < n / SR:
+            place(out, chirp * vol * rng.uniform(0.6, 1), t, pan)
+            t += per * rng.uniform(0.8, 1.25)
+    return _norm(reverb(out, rng, 0.8, 0.2))
+
+
+def nb_jungle_insects(n, rng, d):
+    """밀림 벌레 합창: 여러 높이에서 맥동하는 곤충 소리"""
+    t = np.arange(n) / SR
+    out = np.zeros((n, 2), np.float32)
+    for _ in range(max(2, int(round(5 * d)))):
+        lo = rng.uniform(2500, 8000)
+        am = (0.5 + 0.5 * np.sin(2 * np.pi * rng.uniform(15, 90) * t + rng.uniform(0, 6))) ** 2
+        sw = np.clip(smooth_lfo(n, rng.uniform(4, 10), rng) * 1.3 - 0.15, 0.1, 1)
+        x = _nz(n, rng, 0.0, lo, lo * 1.15) * am * sw * rng.uniform(0.4, 1)
+        p = rng.uniform(0.15, 0.85)
+        out[:, 0] += x * (1 - p)
+        out[:, 1] += x * p
+    return _norm(out)
+
+
+def nb_leaf_drips(n, rng, d):
+    """잎에서 떨어지는 물방울: 비 갠 뒤 '툭, 투둑'"""
+    def drip():
+        f = rng.uniform(250, 900)
+        body = _tone(f, f * 0.9, 0.06, decay=0.012, attack=0.001)
+        click = _tone(f * 3, f * 3, 0.02, decay=0.004, attack=0.0005) * 0.3
+        body[:len(click)] += click
+        return body
+    return _norm(reverb(_place_series(n, rng, 3.0 * d, drip), rng, 0.7, 0.2))
+
+
+# 이름: (분류, 종류, 함수, 기본 크기, 기본 빈도(가끔: 분당 횟수 / 계속: 밀도), 울림(초, 섞기))
+NATURE_SOUNDS = {
+    "빗소리": ("비", "bed", nb_rain, 0.9, 1.0, None),
+    "폭우": ("비", "bed", nb_heavy_rain, 0.9, 1.0, None),
+    "텐트 위 빗소리": ("비", "bed", nb_rain_tent, 0.8, 1.0, None),
+    "양철지붕 빗방울": ("비", "bed", nb_tin_roof, 0.7, 1.0, None),
+    "처마 낙숫물": ("비", "ev", ne_eave_drip, 0.35, 40.0, (1.0, 0.25)),
+    "시냇물": ("물", "bed", nb_stream, 0.7, 1.0, None),
+    "계곡물": ("물", "bed", nb_creek, 0.8, 1.0, None),
+    "폭포": ("물", "bed", nb_waterfall, 0.8, 1.0, None),
+    "잔잔한 파도": ("물", "bed", nb_waves_calm, 0.8, 1.0, None),
+    "호숫가 물결": ("물", "ev", ne_lake_lap, 0.5, 40.0, (0.8, 0.2)),
+    "동굴 물방울": ("물", "ev", ne_cave_drip, 0.5, 15.0, (3.5, 0.55)),
+    "강풍": ("바람·공기", "bed", nb_strong_wind, 0.8, 1.0, None),
+    "눈보라": ("바람·공기", "bed", nb_blizzard, 0.8, 1.0, None),
+    "대나무 숲": ("바람·공기", "bed", nb_bamboo, 0.6, 1.0, None),
+    "밤 공기": ("바람·공기", "bed", nb_night_air, 0.4, 1.0, None),
+    "모닥불": ("불", "bed", nb_campfire, 0.8, 1.0, None),
+    "벽난로": ("불", "bed", nb_fireplace, 0.8, 1.0, None),
+    "뻐꾸기": ("새·동물", "ev", ne_cuckoo, 0.45, 1.5, (2.0, 0.35)),
+    "부엉이": ("새·동물", "ev", ne_owl, 0.5, 1.0, (2.5, 0.4)),
+    "갈매기": ("새·동물", "ev", ne_seagull, 0.4, 2.0, (1.5, 0.3)),
+    "딱따구리": ("새·동물", "ev", ne_woodpecker, 0.4, 1.0, (1.5, 0.3)),
+    "고래 노래": ("새·동물", "ev", ne_whale, 0.5, 2.0, (5.0, 0.7)),
+    "고양이 그르릉": ("새·동물", "bed", nb_cat_purr, 0.7, 1.0, None),
+    "열대 앵무새": ("밀림·열대", "ev", ne_parrot, 0.35, 3.0, (1.5, 0.35)),
+    "긴팔원숭이 노래": ("밀림·열대", "ev", ne_gibbon, 0.45, 0.6, (3.0, 0.45)),
+    "짖는원숭이": ("밀림·열대", "ev", ne_howler, 0.5, 0.5, (3.5, 0.5)),
+    "코뿔새": ("밀림·열대", "ev", ne_hornbill, 0.4, 1.0, (2.5, 0.4)),
+    "먼 맹수 으르렁": ("밀림·열대", "ev", ne_big_cat, 0.35, 0.2, (2.5, 0.4)),
+    "청개구리 합창": ("밀림·열대", "bed", nb_tree_frogs, 0.4, 1.0, None),
+    "밀림 벌레 합창": ("밀림·열대", "bed", nb_jungle_insects, 0.3, 1.0, None),
+    "잎에서 떨어지는 물방울": ("밀림·열대", "bed", nb_leaf_drips, 0.5, 1.0, None),
+    "매미": ("곤충·개구리", "bed", nb_cicadas, 0.35, 1.0, None),
+    "개구리": ("곤충·개구리", "bed", nb_frogs, 0.45, 1.0, None),
+    "백색 소음": ("노이즈", "bed", nb_white, 0.4, 1.0, None),
+    "핑크 노이즈": ("노이즈", "bed", nb_pink, 0.5, 1.0, None),
+    "브라운 노이즈": ("노이즈", "bed", nb_brown, 0.7, 1.0, None),
+    "풍경(윈드차임)": ("기타", "ev", ne_wind_chime, 0.35, 2.0, (2.0, 0.3)),
+}
+NATURE_GROUPS = ["비", "물", "바람·공기", "불", "새·동물", "밀림·열대", "곤충·개구리", "노이즈", "기타"]
+# 추천 조합: 이름 → {소리: (세기, 빈도)}
+NATURE_PRESETS = {
+    "비 오는 숲": {"빗소리": (1.0, 1.0), "계곡물": (0.3, 1.0), "뻐꾸기": (0.3, 0.5), "처마 낙숫물": (0.4, 20.0)},
+    "양철지붕 시골 비": {"양철지붕 빗방울": (1.0, 1.0), "처마 낙숫물": (0.8, 35.0), "빗소리": (0.3, 1.0), "개구리": (0.4, 0.6)},
+    "바닷가 밤": {"잔잔한 파도": (1.0, 1.0), "밤 공기": (0.4, 1.0), "갈매기": (0.3, 0.5)},
+    "여름밤 시골": {"개구리": (0.8, 1.0), "부엉이": (0.5, 0.8), "밤 공기": (0.6, 1.0), "청개구리 합창": (0.3, 0.6)},
+    "겨울 오두막 벽난로": {"벽난로": (1.0, 1.0), "눈보라": (0.4, 1.0), "풍경(윈드차임)": (0.3, 0.6)},
+    "캠핑 모닥불": {"모닥불": (1.0, 1.0), "부엉이": (0.4, 0.6), "시냇물": (0.3, 1.0), "밤 공기": (0.3, 1.0)},
+    "깊은 숲 계곡": {"계곡물": (0.9, 1.0), "뻐꾸기": (0.5, 1.2), "딱따구리": (0.4, 0.6), "대나무 숲": (0.3, 1.0)},
+    "동굴 물방울": {"동굴 물방울": (0.8, 12.0), "밤 공기": (0.5, 1.0)},
+    "고양이와 빗소리": {"고양이 그르릉": (1.0, 1.0), "빗소리": (0.5, 1.0)},
+    "수면용 노이즈": {"브라운 노이즈": (1.0, 1.0), "빗소리": (0.3, 1.0)},
+    "열대 우림(낮)": {"밀림 벌레 합창": (0.7, 1.0), "열대 앵무새": (0.6, 2.5), "긴팔원숭이 노래": (0.6, 0.5), "코뿔새": (0.5, 0.8),
+                  "잎에서 떨어지는 물방울": (0.5, 1.0), "시냇물": (0.3, 1.0)},
+    "밀림의 밤": {"청개구리 합창": (0.8, 1.2), "밀림 벌레 합창": (0.6, 0.8), "짖는원숭이": (0.5, 0.4), "먼 맹수 으르렁": (0.3, 0.15),
+              "빗소리": (0.3, 1.0)},
+}
+
+
+NATURE_REC_DIR = os.path.join(BASE, "nature_sounds")      # 실제 녹음 (CC0·퍼블릭 도메인·CC BY) - credits.json 에 출처
+_REC_EX_SEC = {"천둥": 9.0, "풍경(윈드차임)": 5.0, "뻐꾸기": 6.0, "부엉이": 6.0, "갈매기": 4.0}
+
+
+def nature_recordings():
+    """받아 둔 실제 녹음: {믹서 소리 이름: credits 정보(+path)}. '천둥' 녹음은 먼·가까운 천둥 둘 다에 씀"""
+    try:
+        cr = json.load(open(os.path.join(NATURE_REC_DIR, "credits.json"), encoding="utf-8"))
+    except Exception:
+        return {}
+    out = {}
+    for k, v in cr.items():
+        p = os.path.join(NATURE_REC_DIR, v.get("file", ""))
+        if os.path.exists(p):
+            v = dict(v, path=p)
+            if k == "천둥":
+                out["먼 천둥"] = out["가까운 천둥"] = v
+            else:
+                out[k] = v
+    return out
+
+
+_REC_CACHE = {}
+
+
+def _rec_loop(path, max_sec=240):
+    """녹음 → 이음매 없이 반복되는 스테레오 소리(앞 max_sec 초만 써서 메모리 절약). 크기는 RMS 0.2 로"""
+    if path in _REC_CACHE:
+        return _REC_CACHE[path]
+    p = subprocess.run([get_ffmpeg(), "-v", "error", "-t", str(max_sec), "-i", path, "-f", "f32le", "-ac", "2", "-ar", str(SR), "-"],
+                       stdout=subprocess.PIPE, stderr=subprocess.PIPE, creationflags=(subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0))
+    a = np.frombuffer(p.stdout, np.float32).reshape(-1, 2).copy()
+    if len(a) < SR:
+        raise RuntimeError("녹음을 읽지 못했습니다: " + os.path.basename(path))
+    X = int(min(3.0, len(a) / SR / 4) * SR)
+    w = (np.sin(np.linspace(0, np.pi / 2, X, dtype=np.float32)) ** 2)[:, None]
+    loop = np.concatenate([a[-X:] * (1 - w) + a[:X] * w, a[X:-X]])     # 끝→처음이 자연스럽게 이어지는 반복 단위
+    loop *= 0.2 / (float(np.sqrt((loop ** 2).mean())) + 1e-9)
+    if len(_REC_CACHE) > 8:
+        _REC_CACHE.clear()
+    _REC_CACHE[path] = loop
+    return loop
+
+
+def _rec_excerpt(loop, rng, sec):
+    """녹음에서 소리가 큰 구간을 골라 sec 초 잘라냄 (가끔 나는 소리용, 앞뒤 부드럽게)"""
+    n = int(sec * SR)
+    if len(loop) <= n:
+        x = loop.mean(1)
+    else:
+        win = int(0.5 * SR)
+        e = np.sqrt((loop.mean(1)[: len(loop) // win * win].reshape(-1, win) ** 2).mean(1))
+        good = np.where(e >= np.percentile(e, 70))[0]
+        c = int(rng.choice(good)) * win if len(good) else int(rng.integers(0, len(loop) - n))
+        st = int(min(max(0, c - n // 3), len(loop) - n))
+        x = loop[st:st + n].mean(1)
+    f = int(min(0.3 * SR, len(x) // 4))
+    env = np.ones(len(x), np.float32)
+    env[:f] = np.linspace(0, 1, f)
+    env[-f:] = np.linspace(1, 0, f)
+    return (x * env * 2.0).astype(np.float32)
+
+
+def _nature_custom_audio(path, cache={}):
+    if path not in cache:
+        cache.clear()
+        cache[path] = load_audio_file(path)
+    return cache[path]
+
+
+def render_nature_track(sel, minutes, seed, wav_path, progress=None, cancel=None, custom=None):
+    """자연의 소리 믹서 → WAV. sel={소리: {"vol": 세기0~2, "freq": 빈도, "rand": 랜덤0~1}},
+    custom=[{"path", "mode": "계속"/"가끔", "vol", "freq", "rand"}]. 1분 덩어리로 만들어 이어 붙임(몇 시간도 메모리 적게). 반환: 길이(초)"""
+    import wave
+    N, tail = 60 * SR, 12 * SR
+    total = int(max(0.1, float(minutes)) * 60 * SR)
+    nch = int(np.ceil(total / N))
+    items = [(k, NATURE_SOUNDS[k], v) for k, v in sel.items() if k in NATURE_SOUNDS and float(v.get("vol", 0)) > 0]
+    custom = [c for c in (custom or []) if c.get("path") and os.path.exists(c["path"]) and float(c.get("vol", 0)) > 0]
+    if not items and not custom:
+        raise RuntimeError("소리를 하나 이상 고르세요.")
+    nxt = {}                               # 가끔 나는 소리: 다음에 날 시각(전체 기준) - 덩어리가 바뀌어도 이어짐
+    rs = np.random.default_rng(seed)
+    recs = nature_recordings()
+    for k, spec, v in items:
+        if spec[1] == "ev":
+            nxt[k] = rs.uniform(0, 60 / max(0.05, float(v.get("freq", spec[4]))))
+    for j, c in enumerate(custom):
+        if c.get("mode") == "가끔":
+            nxt[f"#c{j}"] = rs.uniform(0, 60 / max(0.05, float(c.get("freq", 2))))
+    win = np.ones(N + tail, np.float32)
+    up = np.sin(np.linspace(0, np.pi / 2, tail, dtype=np.float32))     # 같은 힘으로 겹치기 (가운데가 꺼지지 않게)
+    fade_in, fade_out = int(3 * SR), int(min(8, total / SR / 4) * SR)
+    carry = np.zeros((tail, 2), np.float32)
+    os.makedirs(os.path.dirname(os.path.abspath(wav_path)), exist_ok=True)
+    written = 0
+    with wave.open(wav_path, "wb") as w:
+        w.setnchannels(2)
+        w.setsampwidth(2)
+        w.setframerate(SR)
+        for ci in range(nch):
+            if cancel is not None and cancel.is_set():
+                raise RuntimeError("취소됨")
+            T0, L = ci * N / SR, N + tail
+            rng = np.random.default_rng(seed * 7919 + ci)
+            bed = np.zeros((L, 2), np.float32)
+            ev_all = np.zeros((L, 2), np.float32)
+
+            def add_events(key, make, vol, freq, rand, verb):
+                ev = np.zeros((L, 2), np.float32)
+                mean = 60 / max(0.05, freq)
+                while nxt[key] < T0 + N / SR:
+                    clip = make()[: tail - SR]
+                    place(ev, clip * vol * (1 - rand * rng.uniform(0, 0.6)), nxt[key] - T0, 0.5 + (rng.uniform(-0.4, 0.4) if rand > 0 else 0))
+                    nxt[key] += max(0.05, mean * (1 + rand * rng.uniform(-0.85, 1.5)) if rand > 0 else mean)
+                if verb:
+                    ev = reverb(ev, rng, verb[0], verb[1])
+                return ev
+            for k, (grp, kind, fn, lvl, dfreq, verb), v in items:
+                vol = lvl * float(v.get("vol", 1))
+                freq, rand = float(v.get("freq", dfreq)), float(v.get("rand", 0.5))
+                rec = recs.get(k) if v.get("rec", True) else None
+                if rec:                                   # 🎙 실제 녹음
+                    loop_ = _rec_loop(rec["path"])
+                    if rec.get("mode") == "bed":          # 계속: 녹음을 이음매 없이 반복 (덩어리가 바뀌어도 이어지게 전체 시각 기준)
+                        ix = (int(T0 * SR) + np.arange(L)) % len(loop_)
+                        b = loop_[ix]
+                        if rand > 0:
+                            b = b * (1 - rand * 0.4 * smooth_lfo(L, rng.uniform(8, 20), rng))[:, None]
+                        bed += b * vol * 2.5
+                    else:                                 # 가끔: 녹음에서 소리 큰 구간을 잘라 씀
+                        exs = _REC_EX_SEC.get("천둥" if "천둥" in k else k, 6.0)
+                        far = k == "먼 천둥"
+                        mk = (lambda lp=loop_, exs=exs, far=far: band(_rec_excerpt(lp, rng, exs), hi=500) if far else _rec_excerpt(lp, rng, exs))
+                        if k not in nxt:
+                            nxt[k] = T0 + rng.uniform(0, 60 / max(0.05, freq))
+                        ev_all += add_events(k, mk, vol, freq, rand, None)
+                    continue
+                if kind == "bed":
+                    b = fn(L, rng, max(0.1, freq))
+                    if verb:
+                        b = reverb(b, rng, verb[0], verb[1])
+                    if rand > 0:   # 랜덤: 크기가 천천히 출렁임
+                        b = b * (1 - rand * 0.5 * smooth_lfo(L, rng.uniform(8, 20), rng))[:, None]
+                    bed += b * vol
+                else:
+                    ev_all += add_events(k, lambda fn=fn: fn(rng), vol, freq, rand, verb)
+            for j, c in enumerate(custom):
+                a = _nature_custom_audio(c["path"])
+                vol, rand = float(c.get("vol", 1)) * 0.8, float(c.get("rand", 0.5))
+                if c.get("mode") == "가끔":
+                    ev_all += add_events(f"#c{j}", lambda a=a: a[: tail - SR].mean(1), vol, float(c.get("freq", 2)), rand, None)
+                else:
+                    st = int((T0 * SR) % len(a))
+                    seg = np.concatenate([a[st:], a] * (int(L / len(a)) + 2))[:L]
+                    bed += seg * vol
+            win[:] = 1
+            if ci > 0:
+                win[:tail] = up
+            win[N:] = up[::-1]
+            buf = bed * win[:, None] + ev_all
+            buf[:tail] += carry
+            carry = buf[N:].copy()
+            if ci == 0:     # 첫 1분으로 전체 크기를 정하고 끝까지 같은 크기 (조합마다 비슷한 크기로)
+                rms = float(np.sqrt((buf[:N] ** 2).mean())) + 1e-9
+                gain = min(4.0, 0.1 / rms)
+            out = buf[:N] * gain
+            idx = np.arange(ci * N, ci * N + N)
+            out *= (np.minimum(1, idx / fade_in) * np.clip((total - idx) / fade_out, 0, 1))[:, None]
+            out = np.where(np.abs(out) > 0.8, np.sign(out) * (0.8 + 0.15 * np.tanh((np.abs(out) - 0.8) / 0.15)), out)
+            k = min(N, total - written)
+            if k <= 0:
+                break
+            w.writeframes((np.clip(out[:k], -1, 1) * 32767).astype("<i2").tobytes())
+            written += k
+            if progress:
+                progress(ci + 1, nch)
+    return written / SR
+
+
+def nature_upload_text(title, sel, minutes=None, custom=None):
+    """자연의 소리 영상 업로드 문구"""
+    names = [k for k in sel if k in NATURE_SOUNDS]
+    tags = ["#자연의소리", "#ASMR", "#백색소음", "#수면", "#힐링", "#공부할때듣는"] + ["#" + re.sub(r"[^\w가-힣]", "", k) for k in names[:6]]
+    length = (f"{int(minutes // 60)}시간" if minutes and minutes >= 60 and minutes % 60 == 0 else f"{int(minutes)}분" if minutes else "")
+    titles = [f"{title}" + (f" | {length}" if length else ""), f"[{length or 'ASMR'}] {title}", f"{' + '.join(names[:3])} 🌿 {length}".strip()]
+    lines = [title, "", "🌿 들어 있는 소리: " + ", ".join(names) + (" + 직접 고른 소리" if custom else ""), "",
+             "잠들기 전, 공부·일할 때, 명상할 때 편하게 틀어 두세요.", "좋았다면 구독과 좋아요로 응원해 주세요 🙏", "",
+             "※ 이 영상의 소리는 프로그램으로 직접 합성한 소리입니다." if not custom else "※ 일부 소리는 직접 고른 음원을 사용했습니다.", "", " ".join(tags[:12])]
+    recs, used, credit = nature_recordings(), set(), []
+    for k, v in sel.items():
+        r = recs.get(k)
+        if r and v.get("rec", True) and r["file"] not in used:
+            used.add(r["file"])
+            att, lic = str(r.get("attribution") or "작자 미상"), str(r.get("license", ""))
+            credit.append(f"- {k}: {att}" + ("" if lic and lic in att else f" / {lic}") + (f" ({r.get('page') or r.get('source_url')})" if "BY" in lic else ""))
+    if credit:   # 실제 녹음을 썼으면: '합성' 문구 대신 출처 (CC BY 는 표기 필수)
+        lines = [ln for ln in lines if "직접 합성한 소리" not in ln]
+        lines[-1:-1] = ["🎙 실제 녹음 출처 (CC0·퍼블릭 도메인·CC BY)"] + credit + ["※ 나머지 소리는 프로그램으로 직접 합성했습니다.", ""]
+    pkg = {"titles": titles, "description": "\n".join(lines), "hashtags": " ".join(tags[:12]),
+           "pinned_comment": "어떤 소리를 더 넣으면 좋을까요? 🎧 댓글로 알려 주세요"}
+    if custom:
+        pkg["notes"] = "직접 고른 소리 파일은 유튜브에 올려도 되는지(저작권) 꼭 확인하세요."
+    return pkg
 
 
 def render_music_track(name, minutes, seed, wav_path, progress=None, cancel=None):
@@ -5874,7 +7959,7 @@ class MusicLoop:
         cw, ch = W * 1.12 / z, H * 1.12 / z
         cx = self.big.width / 2 + dx * (self.big.width - cw) / 2
         cy = self.big.height / 2 + dy * (self.big.height - ch) / 2
-        bg = self.big.transform((W, H), Image.EXTENT, (cx - cw / 2, cy - ch / 2, cx + cw / 2, cy + ch / 2), Image.BILINEAR)
+        bg = extent_resize(self.big, (W, H), (cx - cw / 2, cy - ch / 2, cx + cw / 2, cy + ch / 2))
         arr = (np.asarray(bg).astype(np.float32) * self.vig * 0.92).astype(np.uint8)
         im = Image.fromarray(arr).convert("RGBA")
         ov = self.overlay
@@ -6070,10 +8155,10 @@ def hms(sec):
     return f"{sec // 3600}:{sec % 3600 // 60:02d}:{sec % 60:02d}" if sec >= 3600 else f"{sec // 60:02d}:{sec % 60:02d}"
 
 
-def music_upload_text(title, preset_names, chapters=None, minutes=None):
-    """음악 영상 업로드 문구 (제목 후보·설명·해시태그·고정 댓글)"""
+def music_upload_text(title, preset_names, chapters=None, minutes=None, own_audio=None):
+    """음악 영상 업로드 문구 (제목 후보·설명·해시태그·고정 댓글). own_audio: 불러온 음악 파일 이름 (프로그램 작곡이 아님)"""
     P = [MUSIC_PRESETS[n] for n in preset_names if n in MUSIC_PRESETS]
-    tags = []
+    tags = [] if P else ["#힐링음악", "#수면음악", "#공부음악", "#플레이리스트", "#playlist", "#relaxingmusic"]
     for p in P:
         for tg in p["tags"].split():
             if tg not in tags:
@@ -6092,9 +8177,14 @@ def music_upload_text(title, preset_names, chapters=None, minutes=None):
         lines += ["🎧 바이노럴 비트는 헤드폰(이어폰)으로 들어야 왼쪽·오른쪽 소리 차이가 전달됩니다. 운전 중에는 듣지 마세요.", ""]
     if chapters:
         lines += ["⏱ 목차"] + [f"{hms(t)} {n}" for t, n in chapters] + [""]
-    lines += ["※ 이 영상의 음악은 프로그램으로 직접 만든 창작 음악입니다.", "※ 의학적 치료 효과를 보장하지 않습니다.", "", " ".join(tags[:12])]
-    return {"titles": titles, "description": "\n".join(lines), "hashtags": " ".join(tags[:12]),
-            "pinned_comment": "오늘 어떤 순간에 이 음악을 틀어 두셨나요? 🎧 (공부·일·잠들기 전·명상)"}
+    lines += ([] if own_audio else ["※ 이 영상의 음악은 프로그램으로 직접 만든 창작 음악입니다."]) + ["※ 의학적 치료 효과를 보장하지 않습니다.", "", " ".join(tags[:12])]
+    pkg = {"titles": titles, "description": "\n".join(lines), "hashtags": " ".join(tags[:12]),
+           "pinned_comment": "오늘 어떤 순간에 이 음악을 틀어 두셨나요? 🎧 (공부·일·잠들기 전·명상)"}
+    if own_audio:
+        pkg["notes"] = (f"불러온 음악 파일: {own_audio}\n"
+                        "업로드 전에 이 음악을 유튜브에 올려도 되는지(저작권·사용 허락) 꼭 확인하세요. "
+                        "직접 만든 곡이 아니면 설명란에 원작자·출처를 적는 것이 좋습니다.")
+    return pkg
 
 
 # ---------------- 화면(GUI) ----------------
@@ -6200,6 +8290,8 @@ class App(tk.Tk):
         self.artwork = c.get("artwork")
         CURRENT_MELODY["melody"], CURRENT_MELODY["bpm"] = self.melody or "", self.bpm or 90
         self.len_var.set(c.get("length", "40"))
+        self._len_doc = None
+        self.update_len_unit()   # 장문이면 길이 칸이 '분'
         self.judge_var.set(bool(c.get("judge", True)))
         self.theme_var.set(c.get("theme", "시네마 다크"))
         self.title_var.set(c.get("title", SAMPLE_TITLE))
@@ -6285,7 +8377,27 @@ class App(tk.Tk):
         ttk.Combobox(top, textvariable=self.model_var, width=10, values=["", "sonnet", "opus", "haiku"]).pack(side="left", padx=4)
         ttk.Label(top, text="(빈칸 = Claude Code 기본 · API 키 없이 Max 구독 사용)", foreground="gray").pack(side="left")
 
-        main = ttk.Frame(self, padding=(8, 0))
+        # 큰 탭: 📖 이야기 영상 / 🎵 음악 영상 / 🌿 자연의 소리
+        self.main_nb = ttk.Notebook(self)
+        self.main_nb.pack(fill="both", expand=True, padx=4)
+        story_tab, music_tab, nature_tab, ppt_tab = (ttk.Frame(self.main_nb) for _ in range(4))
+        self.main_nb.add(story_tab, text="  📖 이야기 영상 (쇼츠·장문)  ")
+        self.main_nb.add(music_tab, text="  🎵 음악 영상 (명상·오르골·싱잉볼)  ")
+        self.main_nb.add(nature_tab, text="  🌿 자연의 소리  ")
+        self.main_nb.add(ppt_tab, text="  📊 PPT 발표  ")
+        built = set()
+
+        def on_main_tab(_e=None):          # 음악·자연 탭은 처음 열 때 만듦
+            i = self.main_nb.index("current")
+            if i in built or i == 0:
+                return
+            built.add(i)
+            if i == 3:
+                self.ppt_tab(ppt_tab)
+                return
+            self.music_dialog(nature=(i == 2), parent=(music_tab if i == 1 else nature_tab))
+        self.main_nb.bind("<<NotebookTabChanged>>", on_main_tab)
+        main = ttk.Frame(story_tab, padding=(8, 0))
         main.pack(fill="both", expand=True)
         right = ttk.LabelFrame(main, text="미리보기 (1080×1920)", padding=6)
         right.pack(side="right", fill="y", padx=(8, 0))
@@ -6315,9 +8427,11 @@ class App(tk.Tk):
         ttk.Label(r, text="← 직접 입력 가능", foreground="gray").pack(side="left")
         r1 = ttk.Frame(s1)
         r1.pack(fill="x", pady=(4, 0))
-        ttk.Label(r1, text="길이(초)").pack(side="left")
+        self.len_label = ttk.Label(r1, text="길이(초)")
+        self.len_label.pack(side="left")
         self.len_var = tk.StringVar()
-        ttk.Spinbox(r1, from_=15, to=180, increment=5, textvariable=self.len_var, width=5).pack(side="left", padx=4)
+        self.len_spin = ttk.Spinbox(r1, from_=15, to=180, increment=5, textvariable=self.len_var, width=5)
+        self.len_spin.pack(side="left", padx=4)
         self.judge_var = tk.BooleanVar(value=True)
         ttk.Checkbutton(r1, text="3안 작성 후 AI 심사", variable=self.judge_var).pack(side="left", padx=4)
         self.research_var = tk.BooleanVar(value=True)
@@ -6373,15 +8487,42 @@ class App(tk.Tk):
         st_.configure("Tab.TLabel", background=TAB_BG)
         nb = ttk.Notebook(s2)
         nb.pack(fill="x", pady=(4, 0))
+        # 탭 묶음: 화면 형식·표현 방식(스크롤형/자막형)에 따라 필요한 탭만 보이게 (UI_TABS), 나머지는 원래 탭
+        tab_of, order, self.tab_mode = {}, [], {}
+        for name, mode, keys in UI_TABS:
+            order.append(name)
+            self.tab_mode[name] = mode
+            for k in keys:
+                tab_of[k] = name
+        for sec, k, *_ in FIELDS:
+            if k not in tab_of:
+                tab_of[k] = sec
+                if sec not in order:
+                    order.append(sec)
+                    self.tab_mode[sec] = "all"
         tabs = {}
+        for name in order:
+            tabs[name] = ttk.Frame(nb, padding=6, style="Tab.TFrame")
+            nb.add(tabs[name], text=name)
+            tabs[name].n = 0
+        by_key = {k: (lb, t) for _, k, lb, t, _ in FIELDS}
+        for name, _, keys in UI_TABS:          # 묶음 순서대로 칸 배치
+            for k in keys:
+                if k in by_key:
+                    fr = tabs[name]
+                    self.make_field(fr, k, by_key[k][0], by_key[k][1], fr.n // 3, fr.n % 3)
+                    fr.n += 1
         for sec, k, lb, t, _ in FIELDS:
-            if sec not in tabs:
-                tabs[sec] = ttk.Frame(nb, padding=6, style="Tab.TFrame")
-                nb.add(tabs[sec], text=sec)
-                tabs[sec].n = 0
-            fr = tabs[sec]
-            self.make_field(fr, k, lb, t, fr.n // 3, fr.n % 3)
-            fr.n += 1
+            if tab_of[k] == sec and k not in {kk for _, _, ks in UI_TABS for kk in ks}:
+                fr = tabs[sec]
+                self.make_field(fr, k, lb, t, fr.n // 3, fr.n % 3)
+                fr.n += 1
+        self.nb, self.nb_tabs, self.nb_order = nb, tabs, order
+        for k_ in ("format", "layout"):
+            self.vars[k_].trace_add("write", lambda *_: self.after_idle(self.update_tabs))
+        self.vars["color_preset"].trace_add("write", lambda *_: self.after_idle(self.apply_color_preset))
+        self.vars["style_preset"].trace_add("write", lambda *_: self.after_idle(self.apply_style_preset))
+        self.after_idle(self.update_tabs)
 
         # ④ 만들기
         s4 = ttk.LabelFrame(left, text="③ 만들기", padding=6)
@@ -6391,7 +8532,7 @@ class App(tk.Tk):
         ttk.Button(s4, text="연속 제작(여러 편 자동)", command=self.batch).pack(side="left")
         ttk.Button(s4, text="📺 롱폼 만들기(챕터 묶음)", command=self.longform).pack(side="left", padx=(6, 0))
         ttk.Button(s4, text="🌐 영어·일본어 버전", command=self.lang_versions_dialog).pack(side="left", padx=(6, 0))
-        ttk.Button(s4, text="🎵 음악 영상(명상·집중·수면)", command=self.music_dialog).pack(side="left", padx=(6, 0))
+
         ttk.Button(s4, text="✂ 롱폼→쇼츠", command=self.shorts_cutter).pack(side="left", padx=(6, 0))
         ttk.Button(s4, text="취소", command=self.stop_now).pack(side="left", padx=6)
         ttk.Button(s4, text="저장 폴더 열기", command=self.open_folder).pack(side="left")
@@ -6435,7 +8576,7 @@ class App(tk.Tk):
 
         # 하단 AI 명령어
         bot = ttk.LabelFrame(self, text="AI 명령어 (Claude로 수정)", padding=6)
-        bot.pack(side="bottom", fill="x", padx=8, pady=(4, 8), before=main)   # 창이 작아도 항상 보이게
+        bot.pack(side="bottom", fill="x", padx=8, pady=(4, 8), before=self.main_nb)   # 창이 작아도 항상 보이게 (모든 탭 공통)
         r3 = ttk.Frame(bot)
         r3.pack(fill="x")
         self.cmd_var = tk.StringVar()
@@ -7099,7 +9240,17 @@ class App(tk.Tk):
             if log:
                 log("🎙 외부 나레이션 파일을 문단별로 나누는 중: " + os.path.basename(nf))
             return self._merge_para_audio(split_external_narration(story, nf))
-        return build_narration(story, s, os.path.join(s["out_dir"], "tts_cache"), log, cancel, dict(getattr(self, "para_audio", {}) or {}))
+        cache = os.path.join(s["out_dir"], "tts_cache")
+        if str(s.get("narr_spoken", "on")) == "on":     # 숫자 읽는 법(발음 사전) - 자막은 그대로
+            try:
+                model = SPOKEN_CFG.get("model") or (self.model_var.get().strip() if threading.current_thread() is threading.main_thread() else "")
+                ensure_spoken(model, story, cache, log, cancel)
+            except RuntimeError:
+                raise
+            except Exception as e:
+                if log:
+                    log("  발음 사전 건너뜀: " + str(e)[:80])
+        return build_narration(story, s, cache, log, cancel, dict(getattr(self, "para_audio", {}) or {}))
 
     def _merge_para_audio(self, res):
         """통째 파일을 나눈 결과 위에, 문단별 음성 파일이 있는 줄은 그 파일로 바꿈"""
@@ -7130,9 +9281,10 @@ class App(tk.Tk):
         res = []
         pa = getattr(self, "para_audio", {}) or {}
         items = narration_paras(story)
+        spoken_load(cache)
         for k, (i, text) in enumerate(items):
             t = tts_clean(text)
-            if not t:
+            if not t or (text.strip().startswith("## ") and not pa.get(str(i))):   # 챕터 제목은 읽지 않음
                 res.append((i, np.zeros(1, np.float32), 0.0))
                 continue
             f_ = pa.get(str(i))
@@ -7153,7 +9305,7 @@ class App(tk.Tk):
             npy = os.path.join(cache, key + ".npy")
             if not os.path.exists(npy):
                 return None
-            a = np.load(npy)
+            a = np.load(npy, mmap_mode="r")   # 미리보기는 길이만 필요 → 메모리에 다 올리지 않음 (긴 장문도 빠르게)
             res.append((i, a, len(a) / SR))
         return res
 
@@ -7457,10 +9609,93 @@ class App(tk.Tk):
         self.vars["photo_h"].set("0.5" if self.cat_var.get() == ART_CATEGORY else "0.36")
         if self.cat_var.get() == ART_CATEGORY and self.len_var.get() in ("", "40"):
             self.len_var.set("60")   # 큐레이터 해설은 60초 정도 필요
+        if self.cat_var.get() == DOC_CATEGORY:   # 장문: 가로 롱폼 · 자막형 · 나레이션 · 반전 효과 끔
+            if not str(self.vars["format"].get()).startswith("롱폼"):
+                self.apply_format("롱폼 가로(1920×1080)")
+            for k_, v_ in (("layout", "자막형(큰 제목+사진+자막)"), ("narration", "on"), ("reveal_hit", "off"), ("reveal_fx", "off"),
+                           ("img_motion", "영상처럼(확대·이동·전환)"), ("img_fill", "전체 화면(글자가 사진 위에)"),
+                           ("fps", "24")):   # 긴 영상은 24fps로 (만드는 시간 약 20% 단축, 다큐에 충분)
+                if k_ in self.vars:
+                    self.vars[k_].set(v_)
+            self.judge_var.set(False)   # 장문은 챕터마다 따로 쓰므로 3안 심사 없음
+        self.update_len_unit()
         self.genre_box.config(values=list(topics))
         self.genre_var.set(list(topics)[0])
         self.topic_box.config(values=[])
         self.on_genre()
+
+    def update_tabs(self):
+        """표현 방식(스크롤형/자막형)에 맞는 탭만 보이고, 탭 이름에 화면 형식(쇼츠/롱폼)을 붙임"""
+        if not hasattr(self, "nb"):
+            return
+        sub = str(self.vars["layout"].get()).startswith("자막형")
+        fmt = "롱폼" if str(self.vars["format"].get()).startswith("롱폼") else "쇼츠"
+        cur = self.nb.select()
+        for name in self.nb_order:
+            fr, mode = self.nb_tabs[name], self.tab_mode.get(name, "all")
+            show = mode == "all" or (mode == "sub") == sub
+            label = name + (f" ({fmt})" if mode != "all" or name.startswith("🎬") else "")
+            if show:
+                self.nb.add(fr)                 # 숨겼던 탭은 원래 자리로 돌아옴
+                self.nb.tab(fr, text=label)
+            else:
+                self.nb.hide(fr)
+        try:
+            if cur and str(self.nb.tab(cur, "state")) == "hidden":
+                self.nb.select(self.nb_tabs[self.nb_order[0]])
+        except tk.TclError:
+            pass
+
+    def apply_style_preset(self):
+        """'인기 롱폼 스타일'을 고르면 배치·제목 위치·색 조합·자막 나누기·등장 효과·사진 움직임을 한 번에 맞춤"""
+        name = self.vars["style_preset"].get()
+        p = LONG_STYLES.get(name)
+        if not p or getattr(self, "_applying_style", False):
+            return
+        self._applying_style = True
+        try:
+            if not str(self.vars["layout"].get()).startswith("자막형"):
+                self.vars["layout"].set("자막형(큰 제목+사진+자막)")
+            self.vars["img_fill"].set("전체 화면(글자가 사진 위에)")   # 배치는 사진 전체 화면일 때 적용
+            for k, v in p.items():
+                if k in self.vars and k != "color_preset":
+                    self.vars[k].set(str(v))
+            self.vars["color_preset"].set(p["color_preset"])          # → apply_color_preset 이 색을 바꿈
+            self.apply_color_preset()
+            if p.get("sub_style") and not p["sub_style"].startswith("글자 탭"):
+                self.vars["sub_style"].set(p["sub_style"])            # 노란 자막처럼 정해진 색 스타일은 다시 맞춤
+        finally:
+            self._applying_style = False
+        self.write_log(f"⭐ 인기 롱폼 스타일 '{name}' 적용: {p['sub_layout']} · {p['color_preset']} · 자막 {p['sub_split'][:5]} · {p['sub_anim']}")
+        self.refresh_preview()
+
+    def apply_color_preset(self):
+        """'색 조합'을 고르면 글자색·제목색·강조색·자막 상자 색을 한 번에 바꿈 (제목·자막 스타일도 색이 반영되는 것으로)"""
+        name = self.vars["color_preset"].get()
+        p = COLOR_PRESETS.get(name)
+        if not p:
+            return
+        for k, v in p.items():
+            if k in self.vars:
+                self.vars[k].set(v)
+        if not str(self.vars["head_style"].get()).startswith(("글자 탭", "웹툰")):
+            self.vars["head_style"].set("글자 탭 제목색")
+        keep = LONG_STYLES.get(self.vars["style_preset"].get(), {}).get("sub_style")   # 인기 스타일이 정한 자막 색은 유지
+        cur_sub = str(self.vars["sub_style"].get())
+        if not cur_sub.startswith(("글자 탭", "말풍선")) and cur_sub != keep:
+            self.vars["sub_style"].set("글자 탭 글자색+검은테두리")
+        self.write_log(f"🎨 색 조합 '{name}' 적용: 글자 {p['text_color']} · 제목 {p['title_color']} · 강조 {p['accent_color']}")
+        self.refresh_preview()
+
+    def update_len_unit(self):
+        """길이 칸 단위: 장문은 '분'(5~90), 나머지는 '초'(15~180)"""
+        doc = self.cat_var.get() == DOC_CATEGORY
+        was = getattr(self, "_len_doc", None)
+        self.len_label.config(text="길이(분)" if doc else "길이(초)")
+        self.len_spin.config(from_=5 if doc else 15, to=90 if doc else 180, increment=5)
+        if was is not None and was != doc:   # 초 ↔ 분이 바뀌면 알맞은 기본값으로
+            self.len_var.set("30" if doc else "40")
+        self._len_doc = doc
 
     def on_genre(self, *_):
         topics = cat_info(self.cat_var.get())[1]
@@ -7516,6 +9751,7 @@ class App(tk.Tk):
         self.status.config(text=label)
         self.set_status(label)
         SCRIPT_ENGINE["s"] = self.get_settings()
+        SPOKEN_CFG["model"] = self.model_var.get().strip()
         HIT_CTX["category"] = self.cat_var.get()
         PHOTO_PLAN.update(sub=str(SCRIPT_ENGINE["s"].get("layout", "")).startswith("자막형"),
                           n=int(float(SCRIPT_ENGINE["s"].get("photo_count", 0) or 0)))
@@ -7691,6 +9927,8 @@ class App(tk.Tk):
                     photos = photos[:1] + crop_details(photos[0]["path"], details, media_dir, log) + photos[1:]
                 if photos:
                     story = place_photos(story, photos)
+                    if category != ART_CATEGORY:   # 명화는 그림 자체라 검사 생략
+                        story = check_photo_fit(model, story, log, fiction=not factual)[0]
             except Exception as e:
                 log("  사진 찾기 실패: " + str(e)[:80])
             story = strip_placeholders(story)
@@ -7727,6 +9965,180 @@ class App(tk.Tk):
         return {"title": title, "story": story, "note": note, "sources": sources, "notes": notes, "topic": topic,
                 "song": song, "melody": melody if parse_melody(melody) else "", "bpm": bpm, "artwork": artwork}
 
+    def generate_longdoc(self, model, topic, genre, minutes, log, research=False, autophoto=False, reference="", media_dir=None,
+                         state_path=None, gate=None):
+        """장문: 한 주제를 minutes 분 나레이션 다큐로. 조사 → 구성안 → 챕터마다 따로 집필(긴 글도 AI 시간 제한에 안 걸림)
+        → 챕터별 근거 사진 → '## n. 제목' 챕터로 합침
+        state_path: 단계마다 결과를 저장하는 파일 → 중간에 꺼져도 다시 실행하면 끝난 단계·챕터는 건너뜀
+        gate: 일시정지·취소를 함께 보는 객체(PauseGate). 없으면 ⏹ 중지만"""
+        cancel = gate or self.cancel
+        st8 = {}
+        if state_path and os.path.exists(state_path):
+            try:
+                st8 = json.load(open(state_path, encoding="utf-8"))
+                log(f"📂 저장된 진행 상황에서 이어서: 조사 {'완료' if 'facts' in st8 else '전'} · 구성안 {'완료' if 'outline' in st8 else '전'}"
+                    f" · 챕터 {len(st8.get('bodies') or [])}개 완료")
+            except Exception:
+                st8 = {}
+
+        def save_state():
+            if state_path:
+                os.makedirs(os.path.dirname(os.path.abspath(state_path)), exist_ok=True)
+                atomic_write_text(state_path, json.dumps(st8, ensure_ascii=False))   # 전원이 꺼져도 반쯤 쓴 파일이 안 남게
+        minutes = max(5.0, min(90.0, float(minutes)))
+        total = int(minutes * DOC_CHARS_PER_MIN)
+        open_c, close_c = max(350, int(total * 0.05)), max(300, int(total * 0.035))
+        body_c = total - open_c - close_c
+        n_ch = max(3, min(12, round(minutes / 5)))
+        media_dir = media_dir or os.path.join(DEFAULTS["out_dir"], "media")
+        topics = cat_info(DOC_CATEGORY)[1]
+        formula = topics.get(genre, ("(사용자가 직접 정한 소재)", ""))[0]
+
+        def stop():
+            if cancel.is_set():
+                raise RuntimeError("취소됨")
+
+        fiction = doc_is_fiction(genre)   # [이야기] 소재: 창작 장편 낭독
+        outline_sys, chapter_sys = (DOC_FICTION_OUTLINE_SYSTEM, DOC_FICTION_CHAPTER_SYSTEM) if fiction else (DOC_OUTLINE_SYSTEM, DOC_CHAPTER_SYSTEM)
+        unit = "회차" if fiction else "챕터"
+        photo_cat = "허구 단편소설" if fiction else DOC_CATEGORY   # 이야기면 분위기 사진
+        if fiction:
+            base = (f"콘텐츠 종류: 장편 창작 이야기 낭독 (허구 - 실존 인물·기존 작품 금지)\n주제: {topic.strip() or '자유 (이 장르에서 요즘 반응 좋을 이야기)'}\n"
+                    f"장르: {genre}\n장르 공식: {formula}\n영상 길이: 약 {minutes:.0f}분 (나레이션 전체 약 {total}자)")
+        else:
+            base = (f"콘텐츠 종류: 장문 지식 다큐 (사실 기반 - 지어내지 말 것)\n주제: {topic.strip() or '자유 (소재 안에서 긴 다큐로 반응 좋을 큰 질문)'}\n"
+                    f"소재: {genre}\n소재 공식: {formula}\n영상 길이: 약 {minutes:.0f}분 (나레이션 전체 약 {total}자)\n"
+                    f"오늘 날짜: {time.strftime('%Y년 %m월 %d일')} (최신 정보는 이 날짜 기준)")
+        if reference.strip():
+            base += "\n\n[사용자가 붙여넣은 참고자료 - 이 내용을 가장 우선해서 사용]\n" + reference.strip()[:20000]
+        sources, notes, facts = [], [], ""
+        if "facts" in st8:
+            topic, sources, facts = st8.get("topic") or topic, list(st8.get("sources") or []), st8["facts"]
+            if topic:
+                base = base.replace(base.split("\n")[1], f"주제: {topic}", 1)
+        elif not fiction:   # 다큐는 최신 정보를 위해 항상 웹 조사 (체크박스가 꺼져 있어도)
+            if not research:
+                log("ℹ 최신 정보 반영을 위해 다큐는 웹 조사를 항상 합니다")
+            log("🔎 웹 검색으로 최신 정보부터 조사 중... (3~10분)")
+            info = ask_json(model, DOC_RESEARCH_SYSTEM, base, tools=WEB_TOOLS)
+            topic = info.get("topic") or topic
+            sources = [str(x) for x in info.get("sources") or []]
+            facts = json.dumps({k: info.get(k) for k in ("topic", "facts", "stories", "questions", "myths", "recent")}, ensure_ascii=False)
+            log(f"  조사 완료: {topic}  (사실 {len(info.get('facts') or [])}개, 일화 {len(info.get('stories') or [])}개, "
+                f"최신 소식 {len(info.get('recent') or [])}개, 출처 {len(sources)}개)")
+            for x in (info.get("recent") or [])[:8]:
+                log("   🆕 " + str(x)[:110])
+            base = base.replace(base.split("\n")[1], f"주제: {topic}", 1)
+            st8.update(topic=topic, sources=sources, facts=facts)
+            save_state()
+        stop()
+        if "outline" in st8:
+            o = st8["outline"]
+        else:
+            o = None
+        if o is None:
+            log(f"🗂 구성안 짜는 중... ({minutes:.0f}분 · {unit} {n_ch}개 · 약 {total:,}자)" + (" · 이야기 모드: 인물·세계관부터" if fiction else ""))
+            o = ask_script_json(model, outline_sys.format(minutes=f"{minutes:.0f}", open_chars=open_c, n_ch=n_ch,
+                                                                 body_chars=body_c, close_chars=close_c),
+                                base + (f"\n\n[웹 조사 자료 - 사실은 이 안에서만 쓸 것]\n{facts}" if facts else ""))
+            st8.update(outline=o, facts=st8.get("facts", facts), topic=topic, sources=sources)
+            save_state()
+        chapters = [c for c in (o.get("chapters") or []) if isinstance(c, dict) and str(c.get("title", "")).strip()][:12]
+        if not chapters:
+            raise RuntimeError("구성안을 만들지 못했습니다. 다시 시도해 주세요.")
+        want = [max(300, int(c.get("chars") or 0)) for c in chapters]
+        k = body_c / max(1, sum(want))
+        want = [int(w * k) for w in want]                  # 챕터 분량 합을 목표 길이에 맞춤
+        title = str(o.get("title", "")).strip() or topic
+        sources += [str(x) for x in o.get("sources") or [] if str(x) not in sources]
+        if o.get("notes") and not fiction:   # 이야기 모드의 notes 는 작가용 메모라 '확인 필요'에 넣지 않음
+            notes.append(str(o["notes"]))
+        toc = "\n".join(f"{i + 1}. {c['title']} - " + " / ".join(str(p) for p in (c.get("points") or []))
+                        + (f" → 끝 장면: {c.get('cliffhanger')}" if c.get("cliffhanger") else "") for i, c in enumerate(chapters))
+        if fiction:   # 인물·세계관을 모든 회차에 넘김 (이름·말투가 끝까지 같게)
+            cast = "\n".join(f"- {x.get('name', '')} ({x.get('age', '')}, {x.get('role', '')}): {x.get('personality', '')} / 말투: {x.get('speech', '')}"
+                             for x in (o.get("characters") or []) if isinstance(x, dict))
+            toc = f"[한 줄 요약] {o.get('logline', '')}\n[세계관] {o.get('setting', '')}\n[등장인물]\n{cast}\n\n[회차 구성]\n" + toc
+        log("  " + title + "\n  " + " / ".join(f"{i + 1}.{c['title']}" for i, c in enumerate(chapters)))
+        bodies = [tuple(b[:2]) for b in st8.get("bodies") or []]
+        prev = st8.get("prev") or ("(첫 챕터 - 앞은 오프닝: " + doc_clean(o.get("opening", ""))[:300] + ")")
+        sources += [x for x in st8.get("ch_sources") or [] if x not in sources]
+        notes += list(st8.get("ch_notes") or [])
+        for i, c in enumerate(chapters):
+            if i < len(bodies):
+                continue
+            stop()
+            last = i == len(chapters) - 1
+            log(f"✍ {unit} {i + 1}/{len(chapters)} '{c['title']}' 쓰는 중... (목표 {want[i]:,}자)")
+            u = (base + f"\n\n[전체 제목] {title}\n\n[전체 구성]\n{toc}\n\n[지금 쓸 챕터] {i + 1}. {c['title']}"
+                 + ((" (마지막 회차 - 결말. 구독 인사는 쓰지 않는다: 클로징이 따로 있음)" if fiction else
+                     " (마지막 챕터 - 전체 결론. 단, 구독 인사는 쓰지 않는다: 클로징이 따로 있음)") if last else "")
+                 + "\n다룰 내용: " + " / ".join(str(p) for p in (c.get("points") or []))
+                 + (f"\n끝 장면(클리프행어): {c.get('cliffhanger')}" if c.get("cliffhanger") and not last else "")
+                 + f"\n목표 글자 수: 약 {want[i]}자 (공백 포함)\n\n[앞 챕터 요약] {prev}"
+                 + (f"\n[앞 챕터 마지막 문장 - 되풀이 금지] {split_paras(story_text_only(bodies[-1][1]))[-1]}" if bodies else "")
+                 + (f"\n\n[웹 조사 자료 - 사실은 이 안에서만 쓸 것]\n{facts}" if facts else ""))
+            d = ask_script_json(model, chapter_sys, u)
+            st = doc_clean(d.get("story", ""))
+            if len(st) < want[i] * 0.6:   # 너무 짧으면 한 번 더 (영상 길이가 모자라지 않게)
+                stop()
+                log(f"  분량 부족({len(st):,}자) → 더 길게 다시 쓰는 중...")
+                d2 = ask_script_json(model, chapter_sys, u + f"\n\n[주의] 직전 시도가 {len(st)}자로 너무 짧았다. 이번에는 반드시 약 {want[i]}자로, "
+                                     + ("장면·대사·속마음을 더 넣어" if fiction else "사실·일화·비유를 더 넣어") + " 충분히 길게 쓴다.")
+                st2 = doc_clean(d2.get("story", ""))
+                if len(st2) > len(st):
+                    st, d = st2, d2
+            if not st:
+                raise RuntimeError(f"챕터 {i + 1}을(를) 쓰지 못했습니다.")
+            prev = str(d.get("summary") or st[-300:])
+            sources += [str(x) for x in d.get("sources") or [] if str(x) not in sources]
+            if d.get("notes") and not fiction:
+                notes.append(f"{i + 1}장: {d['notes']}")
+            if autophoto:   # 챕터마다 근거 사진 (1분에 한 장 정도)
+                stop()
+                n_ph = doc_photo_target(st)
+                log(f"  🔎 {unit} {i + 1} {'분위기 ' if fiction else ''}사진 찾는 중... (목표 {n_ph}장)")
+                try:
+                    pd_ = ask_json(model, PHOTO_SYSTEM, f"콘텐츠 종류: {photo_cat}\n[제목] {title} - {c['title']}\n\n[본문]\n{st}"
+                                   + photo_note(n_ph, photo_cat), tools=WEB_TOOLS)
+                    ph = fetch_photos(pd_.get("photos"), media_dir, log, limit=n_ph)
+                    if ph:
+                        st = place_photos(st, ph)
+                        log(f"  🔍 사진이 글과 맞는지 직접 보고 검사 중...")
+                        st, n_drop, n_move = check_photo_fit(model, st, log, fiction=fiction)
+                except Exception as e:
+                    log("  사진 찾기 실패(글만 사용): " + str(e).splitlines()[0][:80])
+            bodies.append((c["title"], st))
+            st8.update(bodies=[list(b) for b in bodies], prev=prev, ch_sources=sources, ch_notes=notes)
+            save_state()
+            log(f"  {unit} {i + 1} 완성: {len(story_text_only(st)):,}자")
+        opening = st8.get("opening_ph") or doc_clean(o.get("opening", ""))
+        if autophoto and "opening_ph" not in st8:   # 오프닝에도 사진 (첫 화면이 중요)
+            stop()
+            n_ph = max(2, doc_photo_target(opening))
+            log(f"  🔎 오프닝 사진 찾는 중... (목표 {n_ph}장)")
+            try:
+                pd_ = ask_json(model, PHOTO_SYSTEM, f"콘텐츠 종류: {photo_cat}\n[제목] {title} - 오프닝\n\n[본문]\n{opening}"
+                               + photo_note(n_ph, photo_cat), tools=WEB_TOOLS)
+                ph = fetch_photos(pd_.get("photos"), media_dir, log, limit=n_ph)
+                if ph:
+                    opening = place_photos(opening, ph)
+                    opening = check_photo_fit(model, opening, log, fiction=fiction)[0]
+            except Exception as e:
+                log("  오프닝 사진 찾기 실패(글만 사용): " + str(e).splitlines()[0][:80])
+            st8["opening_ph"] = opening
+            save_state()
+        parts = [opening]
+        parts += [f"## {i + 1}. {t}\n\n{b}" for i, (t, b) in enumerate(bodies)]
+        parts.append(doc_clean(o.get("closing", "")))
+        story = strip_placeholders("\n\n".join(p for p in parts if p.strip()))
+        n_chars = len(story_text_only(story))
+        note = f"장문{' 이야기' if fiction else ''} {len(bodies)}{unit} · {n_chars:,}자 · 예상 약 {n_chars / DOC_CHARS_PER_MIN:.0f}분"
+        if fiction:
+            notes.insert(0, "창작 이야기(픽션)")
+        return {"title": title, "story": story, "note": note, "sources": sources, "notes": " / ".join(notes)[:1500],
+                "topic": topic, "song": None, "melody": "", "bpm": 90, "artwork": None}
+
     def ai_write(self):
         try:
             sec = float(self.len_var.get())
@@ -7735,8 +10147,11 @@ class App(tk.Tk):
         model, cat, topic, genre, judge = self.model_var.get().strip(), self.cat_var.get(), self.topic_var.get(), self.genre_var.get(), self.judge_var.get()
         research, autophoto, ref = self.research_var.get(), self.autophoto_var.get(), getattr(self, "reference", "")
         media_dir = self.media_dir()
+        doc = cat == DOC_CATEGORY   # 장문: 길이 칸은 '분'
 
         def job():
+            if doc:
+                return self.generate_longdoc(model, topic, genre, sec, self.log_bg, research, autophoto, ref, media_dir)
             return self.generate_story(model, cat, topic, genre, sec, judge, self.log_bg, research, autophoto, ref, media_dir)
 
         def done(res):
@@ -7755,12 +10170,17 @@ class App(tk.Tk):
                 self.write_log("출처: " + " / ".join(self.sources))
             if res["notes"]:
                 self.write_log("⚠ 확인 필요: " + str(res["notes"]) + '  → "사실 검증" 버튼으로 점검 권장')
-            self.vars["target_sec"].set(str(sec))
+            self.vars["target_sec"].set("0" if doc else str(sec))   # 장문은 나레이션 길이를 따라감
             self.write_log(f"대본 완성: {res['title']}" + (f"  [{res['note']}]" if res["note"] else ""))
+            if doc:
+                self.write_log("다음 순서: 🎙 나레이션 만들기 → 🎬 MP4 만들기 → 📝 제목·업로드 문구 (챕터 목차가 설명란에 자동으로 들어가요)")
             self.refresh_preview()
             self.save_cfg()
         msg = "Claude가 대본을 쓰는 중..."
-        if research:
+        if doc:
+            msg = (f"장문 대본을 쓰는 중... (약 {sec:.0f}분 · 챕터마다 따로 작성"
+                   + (" · 웹 조사" if research else "") + (" · 챕터별 사진" if autophoto else "") + ", 10~40분 걸릴 수 있음. ⏹로 중지 가능)")
+        elif research:
             msg += " (웹 조사 포함, 3~6분 걸릴 수 있음)"
         elif judge:
             msg += " (3안 작성 + 심사, 1~2분)"
@@ -8131,25 +10551,62 @@ class App(tk.Tk):
         self.write_log("🔎 AI가 근거 사진을 찾는 중... (1~3분)")
         self.run_bg("사진 찾는 중...", job, done)
 
+    def idea_history_path(self):
+        return os.path.join(self.get_settings()["out_dir"], "주제추천_기록.json")
+
     def ai_ideas(self):
         g, cat = self.genre_var.get(), self.cat_var.get()
         factual, topics = cat_info(cat)
+        doc = cat == DOC_CATEGORY
         user = (f"콘텐츠 종류: {cat}" + (" (실제 사건·사실만)" if factual else "") +
-                f"\n소재: {g}\n소재 공식: {topics.get(g, ('(사용자가 직접 정한 소재)', ''))[0]}\n이 소재로 쇼츠 주제 8개를 만들어줘.")
+                f"\n소재: {g}\n소재 공식: {topics.get(g, ('(사용자가 직접 정한 소재)', ''))[0]}\n"
+                + (("이 장르로 20~60분 장편 낭독(오디오드라마)용 이야기 8개를 만들어줘. 각 주제는 '장르 표시 + 주인공의 상황과 갈등 한 줄'(35자 이내, 결말 금지, "
+                    "예: '[무협] 독을 맞고 버려진 소년, 원수의 문파에 제자로 들어가다'). 요즘 유튜브 장편 낭독·숏드라마에서 반응 좋은 설정으로."
+                    if doc_is_fiction(g) else "이 소재로 30~60분 나레이션 다큐로 깊게 풀 수 있는 큰 질문형 주제 8개를 만들어줘. "
+                    f"최신 정보 최우선: 오늘({time.strftime('%Y년 %m월')}) 기준 최근 1~2년의 새 발견·연구·뉴스와 이어진 주제를 먼저(8개 중 5개 이상), 나머지는 꾸준히 인기 있는 큰 질문으로.")
+                   if doc else "이 소재로 쇼츠 주제 8개를 만들어줘."))
+        # 예전에 추천했거나 이미 만든 주제는 피하게 (같은 추천 반복 방지)
+        hist_path, key = self.idea_history_path(), f"{cat}|{g}"
+        try:
+            hist = json.load(open(hist_path, encoding="utf-8"))
+        except Exception:
+            hist = {}
+        seen = list(hist.get(key, []))
+        if self.topic_var.get().strip():
+            seen.append(self.topic_var.get().strip())
+        if doc:   # 이미 만든 장문 (output\장문\_작업_주제)
+            d_ = os.path.join(self.get_settings()["out_dir"], "장문")
+            if os.path.isdir(d_):
+                seen += [n[len("_작업_"):] for n in os.listdir(d_) if n.startswith("_작업_")]
+        seen = list(dict.fromkeys(x for x in seen if x))[-60:]
+        if seen:
+            user += ("\n\n[이미 추천했거나 만든 주제 - 같은 것은 물론 비슷한 것(같은 대상·같은 질문)도 피하고, 새로운 대상·각도로]\n- "
+                     + "\n- ".join(seen))
         model = self.model_var.get().strip()
-        web = self.research_var.get()
+        web = self.research_var.get() or (doc and not doc_is_fiction(g))   # 다큐 장문은 최신 정보를 위해 항상 웹 검색
         if web:
-            user += "\n[웹 검색 모드] WebSearch 로 최근 화제가 된 사건·발견·현상·이야기를 찾아 그중에서 고른다. 실제로 존재하는 것만."
+            user += ("\n[웹 검색 모드] WebSearch 로 최근 화제가 된 사건·발견·현상·이야기를 찾아 그중에서 고른다. 실제로 존재하는 것만."
+                     + (" 유튜브에서 비슷한 주제의 긴 영상들이 반응(조회수)이 좋았는지, 아직 덜 다뤄진 틈새인지도 살펴서 고른다." if doc else ""))
+        user += '\n각 주제마다 왜 반응이 좋을지 한 줄 이유를 why 에 같은 순서로. 출력: {"ideas": ["..."], "why": ["..."]}'
 
         def job():
             return ask_json(model, IDEA_SYSTEM, user, tools=WEB_TOOLS if web else None)
 
         def done(d):
             ideas = [str(x) for x in d.get("ideas", []) if str(x).strip()]
+            why = [str(x) for x in d.get("why", [])] if isinstance(d.get("why"), list) else []
             if ideas:
                 self.topic_box.config(values=ideas)
                 self.topic_var.set(ideas[0])
-                self.write_log("주제 추천 (주제 칸 ▼에서 선택): " + " / ".join(ideas))
+                self.write_log("주제 추천 (주제 칸 ▼에서 선택):")
+                for i, x in enumerate(ideas):
+                    self.write_log(f"  {i + 1}. {x}" + (f"  ← {why[i]}" if i < len(why) and why[i].strip() else ""))
+                hist[key] = (list(hist.get(key, [])) + ideas)[-60:]
+                try:
+                    os.makedirs(os.path.dirname(hist_path), exist_ok=True)
+                    atomic_write_text(hist_path, json.dumps(hist, ensure_ascii=False, indent=1))
+                except Exception:
+                    pass
         self.write_log(f"[{cat} · {g}] 인기 주제를 고르는 중...")
         self.run_bg("주제 추천 중...", job, done)
 
@@ -8216,8 +10673,18 @@ class App(tk.Tk):
         sources = list(getattr(self, "sources", []))
         chapters = self.renderer.chapter_times() if self.renderer else []
 
+        doc = cat == DOC_CATEGORY
+        if doc:   # 장문은 본문이 길어서 앞부분 + 챕터 제목만 보냄
+            body = story_text_only(story)
+            heads = [p for p in split_paras(body) if p.startswith("## ")]
+            fic = doc_is_fiction(genre)
+            user = (f"콘텐츠 종류: {'장편 창작 이야기 낭독(픽션)' if fic else '장문 지식 다큐'} ({len(body)}자)\n소재: {genre}\n[지금 제목] {title}\n\n"
+                    f"[{'회차' if fic else '챕터'}]\n" + "\n".join(heads) + "\n\n[본문 앞부분]\n" + body[:4000])
+
         def job():
-            pkg = ask_script_json(model, PACKAGE_SYSTEM, user)
+            pkg = ask_script_json(model, (DOC_FICTION_PACKAGE_SYSTEM if doc_is_fiction(genre) else DOC_PACKAGE_SYSTEM) if doc else PACKAGE_SYSTEM, user)
+            if doc:
+                doc_date_note(pkg, doc_is_fiction(genre))
             pkg["sources"] = sources
             pkg["song"] = getattr(self, "song", None)
             pkg["artwork"] = getattr(self, "artwork", None)
@@ -8277,7 +10744,7 @@ class App(tk.Tk):
             desc += "\n※ 일부 이미지는 AI로 생성되었습니다."
         extra = []
         if pkg.get("chapters"):
-            extra += ["", "00:00 오프닝"] + [f"{int(t_ // 60):02d}:{int(t_ % 60):02d} {n}" for t_, n in pkg["chapters"]]
+            extra += ["", "00:00 오프닝"] + [f"{hms(t_)} {n}" for t_, n in pkg["chapters"]]
         if pkg.get("sources"):
             extra += ["", "📚 출처"] + [f"- {x}" for x in pkg["sources"]]
         credits = [c for c in photo_credits(story) if "AI 생성 이미지" not in c]
@@ -8309,6 +10776,13 @@ class App(tk.Tk):
         r2.pack(fill="x", pady=(4, 0))
         ttk.Entry(r2, textvariable=cv).pack(side="left", fill="x", expand=True)
         ttk.Button(r2, text="복사", width=5, command=lambda: copy(cv.get(), "고정 댓글")).pack(side="left", padx=4)
+        if pkg.get("keywords"):   # 장문: 유튜브 스튜디오 '태그' 칸용 검색어
+            kv = tk.StringVar(value=str(pkg["keywords"]))
+            r3 = ttk.Frame(hf)
+            r3.pack(fill="x", pady=(4, 0))
+            ttk.Label(r3, text="태그").pack(side="left")
+            ttk.Entry(r3, textvariable=kv).pack(side="left", fill="x", expand=True, padx=4)
+            ttk.Button(r3, text="복사", width=5, command=lambda: copy(kv.get(), "태그")).pack(side="left", padx=4)
         # 체크리스트
         tips = ["업로드 화면 '변경되거나 합성된 콘텐츠' → 예 (AI 그림을 사실처럼 썼다면)" if ai_img else "",
                 "사진 출처(CC 라이선스)는 설명란에 꼭 남겨 두세요" if credits else "",
@@ -8321,6 +10795,8 @@ class App(tk.Tk):
             os.makedirs(out_dir, exist_ok=True)
             base = os.path.join(out_dir, safe_name(tget()))
             p2 = dict(pkg, description=dt.get("1.0", "end").strip(), hashtags=hv.get(), pinned_comment=cv.get())
+            if pkg.get("keywords"):
+                p2["keywords"] = kv.get()
             write_package(base, tget(), story, p2)
             self.write_log("업로드 문구 저장: " + base + "_업로드문구.txt")
             self.set_status("💾 업로드 문구 저장됨")
@@ -8397,7 +10873,7 @@ class App(tk.Tk):
             warn += ("\n🎙 나레이션: 준비됨 (읽는 속도에 맞춰 스크롤)" if r.keys else "\n🎙 나레이션: 아직 안 만듦 → '🎙 나레이션 만들기' 누르면 속도가 맞춰짐")
         ch = r.chapter_times()
         if ch:
-            warn += f"\n📑 챕터 {len(ch)}개: " + " · ".join(f"{int(t // 60)}:{int(t % 60):02d} {n[:8]}" for t, n in ch[:6]) + (" …" if len(ch) > 6 else "")
+            warn += f"\n📑 챕터 {len(ch)}개: " + " · ".join(f"{hms(t)} {n[:8]}" for t, n in ch[:6]) + (" …" if len(ch) > 6 else "")
         song = getattr(self, "song", None)
         if song and self.cat_var.get() == SONG_CATEGORY:
             warn += f"\n🎼 {song.get('title_ko') or song.get('title', '')} ({song.get('year', '?')})"
@@ -8931,6 +11407,269 @@ class App(tk.Tk):
         self.vars["reveal_hit"].set(s["reveal_hit"])
         return s
 
+    # ---- 📊 PPT 발표 탭 ----
+    def ppt_tab(self, parent):
+        """PPT 불러오기 → AI가 슬라이드를 보고 나레이션·성우를 정함 → 슬라이드 + 나레이션 + 자막 발표 영상"""
+        st = self.ppt = {"slides": [], "dir": "", "meta": {}, "narr": {}, "vi": {}}
+        main = ttk.Frame(parent, padding=8)
+        main.pack(fill="both", expand=True)
+        right = ttk.LabelFrame(main, text="슬라이드", padding=6)
+        right.pack(side="right", fill="y", padx=(8, 0))
+        left = ttk.Frame(main)
+        left.pack(side="left", fill="both", expand=True)
+
+        # ① 파일
+        f1 = ttk.LabelFrame(left, text="① PPT 파일 (PowerPoint가 설치되어 있어야 합니다 · .pptx / .ppt)", padding=6)
+        f1.pack(fill="x")
+        path_v = tk.StringVar()
+        ttk.Entry(f1, textvariable=path_v).pack(side="left", fill="x", expand=True)
+
+        def browse():
+            p = filedialog.askopenfilename(filetypes=[("PowerPoint", "*.pptx *.ppt *.pptm"), ("모든 파일", "*.*")])
+            if p:
+                path_v.set(p)
+        ttk.Button(f1, text="찾기", command=browse).pack(side="left", padx=4)
+        ttk.Button(f1, text="📥 슬라이드 불러오기", command=lambda: load()).pack(side="left")
+
+        # ② 옵션
+        f2 = ttk.LabelFrame(left, text="② 발표 방식", padding=6)
+        f2.pack(fill="x", pady=6)
+        aud_v, tone_v = tk.StringVar(value="일반 청중"), tk.StringVar(value=PPT_TONES[0])
+        len_v, voice_v = tk.StringVar(value=list(PPT_LENGTHS)[1]), tk.StringVar(value="🤖 AI가 추천")
+        sub_v, bgm_v = tk.StringVar(value="켜기"), tk.StringVar(value="잔잔하게(작게)")
+        lang_v = tk.StringVar(value=PPT_SUB_LANGS[0])
+        fmt_v = tk.StringVar(value="가로 16:9 (유튜브·발표)")
+        see_v = tk.BooleanVar(value=True)
+        rows = [("청중", ttk.Entry(f2, textvariable=aud_v, width=26)),
+                ("말투", ttk.Combobox(f2, textvariable=tone_v, values=PPT_TONES, state="readonly", width=24)),
+                ("분량", ttk.Combobox(f2, textvariable=len_v, values=list(PPT_LENGTHS), state="readonly", width=24)),
+                ("성우", ttk.Combobox(f2, textvariable=voice_v, values=["🤖 AI가 추천"] + ppt_voice_catalog(), state="readonly", width=40)),
+                ("자막", ttk.Combobox(f2, textvariable=sub_v, values=["켜기", "끄기(슬라이드 크게)"], state="readonly", width=24)),
+                ("배경음", ttk.Combobox(f2, textvariable=bgm_v, values=["잔잔하게(작게)", "없음"], state="readonly", width=24)),
+                ("화면", ttk.Combobox(f2, textvariable=fmt_v, values=["가로 16:9 (유튜브·발표)", "세로 9:16 (쇼츠)"], state="readonly", width=24)),
+                ("자막 언어", ttk.Combobox(f2, textvariable=lang_v, values=PPT_SUB_LANGS, state="readonly", width=24))]
+        for i, (lb, w_) in enumerate(rows):
+            r_, c_ = i % 4, (i // 4) * 2
+            ttk.Label(f2, text=lb).grid(row=r_, column=c_, sticky="e", padx=(8, 4), pady=2)
+            w_.grid(row=r_, column=c_ + 1, sticky="w", pady=2)
+        ttk.Checkbutton(f2, text="AI가 슬라이드 그림(도표·그래프)까지 직접 보고 해석 (Claude)",
+                        variable=see_v).grid(row=0, column=4, sticky="w", padx=12)
+        ttk.Label(f2, text="성우는 항상 한국어로 읽습니다.\n베트남어: 자막만 베트남어로 번역\n숫자: 자막은 2026년, 성우는 '이천이십육 년'",
+                  foreground="#666", justify="left").grid(row=1, column=4, rowspan=3, sticky="nw", padx=12)
+
+        # ③ 대본
+        f3 = ttk.LabelFrame(left, text="③ 나레이션 대본 (직접 고쳐도 됩니다 · '### 슬라이드 번호' 줄 아래가 그 슬라이드에서 읽을 말)", padding=6)
+        f3.pack(fill="both", expand=True)
+        b3 = ttk.Frame(f3)
+        b3.pack(fill="x")
+        ttk.Button(b3, text="✍ AI 나레이션 쓰기 + 성우 고르기", command=lambda: narrate()).pack(side="left")
+        info_v = tk.StringVar(value="PPT를 불러온 뒤 AI 나레이션을 쓰세요.")
+        ttk.Label(b3, textvariable=info_v, foreground="#1a5fb4", wraplength=620).pack(side="left", padx=8)
+        txt = tk.Text(f3, wrap="word", height=14, font=("맑은 고딕", 11), undo=True)
+        sb = ttk.Scrollbar(f3, command=txt.yview)
+        txt.config(yscrollcommand=sb.set)
+        sb.pack(side="right", fill="y")
+        txt.pack(fill="both", expand=True, pady=(6, 0))
+        f4 = ttk.Frame(left)
+        f4.pack(fill="x", pady=(6, 0))
+        title_v = tk.StringVar()
+        ttk.Label(f4, text="영상 제목").pack(side="left")
+        ttk.Entry(f4, textvariable=title_v, width=40).pack(side="left", padx=4)
+        ttk.Button(f4, text="🎬 발표 영상 만들기 (MP4)", command=lambda: make()).pack(side="left", padx=6)
+
+        def open_dir():
+            d = st["dir"] or self.ppt_out()
+            os.makedirs(d, exist_ok=True)
+            if os.name == "nt":
+                os.startfile(d)
+        ttk.Button(f4, text="📂 폴더", command=open_dir).pack(side="left")
+
+        # 오른쪽: 슬라이드 목록 + 미리보기
+        lst = tk.Listbox(right, width=34, height=14, exportselection=False)
+        lst.pack(fill="y", expand=True)
+        prev_l = ttk.Label(right)
+        prev_l.pack(pady=(6, 0))
+
+        def show(_e=None):
+            sel = lst.curselection()
+            if not sel or sel[0] >= len(st["slides"]):
+                return
+            sl = st["slides"][sel[0]]
+            try:
+                im = Image.open(sl["image"])
+                im.thumbnail((300, 300))
+                prev_l._img = ImageTk.PhotoImage(im)
+                prev_l.config(image=prev_l._img)
+            except Exception:
+                prev_l.config(image="")
+            idx = txt.search(f"### 슬라이드 {sl['n']}\n", "1.0", "end")   # 대본에서 그 슬라이드로
+            if idx:
+                txt.see(idx)
+        lst.bind("<<ListboxSelect>>", show)
+
+        def script_text():
+            return "\n".join(f"### 슬라이드 {sl['n']}\n" + (st["narr"].get(sl["n"]) or "") + "\n" for sl in st["slides"])
+
+        def parse_script():
+            narr = {}
+            for m_ in re.finditer(r"^### 슬라이드 (\d+)[^\n]*\n(.*?)(?=^### 슬라이드 \d+|\Z)", txt.get("1.0", "end"), re.S | re.M):
+                narr[int(m_.group(1))] = m_.group(2).strip()
+            return narr
+
+        def save_state():
+            if st["dir"]:
+                st["narr"] = parse_script()
+                os.makedirs(st["dir"], exist_ok=True)
+                atomic_write_text(os.path.join(st["dir"], "발표_대본.json"),
+                                  json.dumps({"src": path_v.get(), "title": title_v.get(), "meta": st["meta"], "vi": st["vi"],
+                                              "narr": {str(k): v for k, v in st["narr"].items()}}, ensure_ascii=False, indent=1))
+
+        def fill(slides):
+            st["slides"] = slides
+            lst.delete(0, "end")
+            for sl in slides:
+                first = sl["text"].split("\n")[0] if sl["text"] else "(글 없음)"
+                lst.insert("end", f"{sl['n']:>3}. {first[:28]}" + (" 📝" if sl["notes"] else ""))
+            js = os.path.join(st["dir"], "발표_대본.json")            # 전에 쓴 대본이 있으면 이어서
+            st["narr"], st["meta"], st["vi"] = {}, {}, {}
+            if os.path.exists(js):
+                try:
+                    d = json.load(open(js, encoding="utf-8"))
+                    st["narr"] = {int(k): v for k, v in (d.get("narr") or {}).items()}
+                    st["meta"] = d.get("meta") or {}
+                    st["vi"] = d.get("vi") or {}
+                    title_v.set(d.get("title") or title_v.get())
+                except Exception:
+                    pass
+            txt.delete("1.0", "end")
+            txt.insert("1.0", script_text())
+            if slides:
+                lst.selection_set(0)
+                show()
+            notes = sum(1 for x in slides if x["notes"])
+            info_v.set(f"슬라이드 {len(slides)}장 불러옴" + (f" · 발표자 메모 {notes}장 (AI가 우선 반영)" if notes else "")
+                       + (" · 전에 쓴 대본을 불러왔습니다" if any(st["narr"].values()) else " → ✍ AI 나레이션 쓰기"))
+            self.write_log(f"📊 슬라이드 {len(slides)}장 불러옴: {st['dir']}")
+
+        def load():
+            p = path_v.get().strip()
+            if not p or not os.path.exists(p):
+                messagebox.showinfo("PPT 발표", "PPT 파일을 먼저 고르세요.")
+                return
+            st["dir"] = os.path.join(self.ppt_out(), safe_name(os.path.splitext(os.path.basename(p))[0]))
+            if not title_v.get().strip():
+                title_v.set(os.path.splitext(os.path.basename(p))[0])
+            self.run_bg("📥 슬라이드 불러오는 중...", lambda: ppt_export(p, os.path.join(st["dir"], "slides"), self.log_bg), fill)
+
+        def narrate():
+            if not st["slides"]:
+                messagebox.showinfo("PPT 발표", "먼저 슬라이드를 불러오세요.")
+                return
+            if any(parse_script().values()) and not messagebox.askyesno("PPT 발표", "지금 대본을 지우고 AI가 새로 쓸까요?"):
+                return
+            model, slides = self.model_var.get().strip(), list(st["slides"])
+            tone, aud, ln, see = tone_v.get(), aud_v.get(), len_v.get(), see_v.get()
+
+            def job():
+                return ppt_narrate(model, slides, tone, aud, ln, self.log_bg, self.cancel, see)
+
+            def done(res):
+                narr, meta = res
+                st["narr"], st["meta"] = narr, meta
+                txt.delete("1.0", "end")
+                txt.insert("1.0", script_text())
+                if meta.get("title"):
+                    title_v.set(meta["title"])
+                if voice_v.get().startswith("🤖"):
+                    info_v.set(f"🎙 AI 추천 성우: {meta.get('voice')} · 감정: {meta.get('emotion') or '차분'} — {meta.get('voice_reason') or ''}")
+                else:
+                    info_v.set(f"🎙 성우: {voice_v.get()} (직접 고름) · AI 추천은 {meta.get('voice')} — {meta.get('voice_reason') or ''}")
+                save_state()
+                self.write_log(f"📊 발표 나레이션 완료: {len(narr)}/{len(slides)}장 · 성우 {meta.get('voice')} ({meta.get('voice_reason') or ''})")
+            self.run_bg("✍ 슬라이드를 보고 나레이션 쓰는 중...", job, done)
+
+        def make():
+            if not st["slides"]:
+                messagebox.showinfo("PPT 발표", "먼저 슬라이드를 불러오세요.")
+                return
+            narr = parse_script()
+            empty = [sl["n"] for sl in st["slides"] if not narr.get(sl["n"])]
+            if len(empty) == len(st["slides"]):
+                messagebox.showinfo("PPT 발표", "나레이션 대본이 비어 있습니다. ✍ AI 나레이션 쓰기를 먼저 누르세요.")
+                return
+            if empty and not messagebox.askyesno("PPT 발표", f"대본이 없는 슬라이드 {len(empty)}장은 슬라이드 글을 읽습니다. 계속할까요?"):
+                return
+            save_state()
+            title = title_v.get().strip() or "발표"
+            s = self.ppt_settings(voice_v.get(), st["meta"], sub_v.get().startswith("켜기"), bgm_v.get() != "없음")
+            lang = lang_v.get() if sub_v.get().startswith("켜기") else "한국어"
+            voice = s["narr_voice"]
+            story = ppt_build_story(st["slides"], narr)
+            fmt_name = "롱폼 가로(1920×1080)" if fmt_v.get().startswith("가로") else "쇼츠 세로(1080×1920)"
+            old_fmt = self.vars["format"].get() if "format" in self.vars else None
+            if fmt_name != old_fmt:
+                set_format(fmt_name)        # 만드는 동안만 (끝나면 원래대로)
+            base = os.path.join(st["dir"], safe_name(title))
+            model, genre = self.model_var.get().strip(), tone_v.get()
+            log = self.log_bg
+            self.write_log(f"📊 발표 영상 시작: {len(st['slides'])}장 · 성우 {voice} · 감정 {s['st_emotion']} · {fmt_v.get()} · 자막 {lang}")
+
+            def restore():
+                if old_fmt and fmt_name != old_fmt:
+                    self.apply_format(old_fmt)
+
+            def job():
+                try:
+                    try:
+                        s["sub_font_path"] = download_free_font(PPT_SUB_FONT)
+                    except Exception:
+                        s["sub_font_path"] = find_font(True)      # 못 받으면 맑은 고딕 굵게
+                    set_tts_cfg(s)
+                    shown = story
+                    if lang != "한국어":
+                        cache = os.path.join(s["out_dir"], "tts_cache")
+                        ensure_spoken(model, story, cache, log, self.cancel)      # 한국어 발음 먼저
+                        ppt_translate_vi(model, [t for _, t in narration_paras(story)], st["vi"], log, self.cancel)
+                        self.q.put(save_state)
+                        shown = ppt_lang_story(story, lang, st["vi"], s)
+                    narr_a = self.narration_for(shown, s, log, self.cancel)
+                    r = make_renderer(title, shown, s, narr_a)
+                    audio = build_audio(r, s, resolve_style(s, "발표"))
+                    os.makedirs(st["dir"], exist_ok=True)
+                    export_mp4_resumable(r, base + ".mp4", self.progress_cb("📊 "), self.cancel, audio,
+                                         os.path.join(st["dir"], "_work"), log=log, key=f"{title}|{voice}|{len(story)}|{W}x{H}")
+                    save_auto_thumb(r, base)
+                    if not self.cancel.is_set():
+                        self.q.put(lambda: self.status.config(text="업로드 문구·썸네일 만드는 중... (AI 1~2분)"))
+                        publish_kit(model, base, title, story, "PPT 발표", genre, s, None, [], "", log)
+                    return base + ".mp4", r.duration
+                finally:
+                    self.q.put(restore)
+
+            def done(res):
+                p, dur = res
+                self.write_log(f"✅ 발표 영상 완료: {p}  ({int(dur // 60)}분 {int(dur % 60)}초 · 썸네일·업로드 문구 포함)")
+                info_v.set(f"✅ 완료: {os.path.basename(p)} ({int(dur // 60)}분 {int(dur % 60)}초)")
+            self.run_bg("🎬 발표 영상 만드는 중...", job, done)
+
+    def ppt_settings(self, voice_choice, meta, subs=True, bgm=True):
+        """발표 영상용 설정: 자막형 + 슬라이드 통째로 + 나레이션(AI가 고른 성우·감정), 효과는 끔"""
+        s = self.get_settings()
+        voice = voice_choice if not str(voice_choice).startswith("🤖") else (meta.get("voice") or ppt_voice_catalog()[0])
+        emo = meta.get("emotion") or "차분"
+        s.update(layout="자막형(큰 제목+사진+자막)", img_fill="슬라이드(잘림 없이)", head_pos="숨김", head_show="보임",
+                 narration="on", narr_file="", narr_voice=voice, intro_sec=0, outro_sec=0, outro_text="",
+                 reveal_fx="off", reveal_hit="off", sub_split="한 줄씩(문장·쉼표로 나눠 차례로)", sub_anim="페이드",
+                 img_motion="없음", punch_in="off", img_frame="없음", img_radius=6, img_bg="on", narr_photo_pause=0.8,
+                 st_emotion=emo if emo in ("차분", "공포·긴장", "슬픔·감동", "놀람·반전", "분노·갈등", "밝음·유머") else "차분",
+                 st_emotion_map="", sub_hide="off" if subs else "on", sub_layout=SUB_LAYOUTS[0],
+                 bgm_mode="자동생성" if bgm else "없음", bgm_style="자동(소재별)", bgm_seed=0, audio_out="MP4에 포함",
+                 bgm_volume=min(float(s.get("bgm_volume", 0.5) or 0.5), 0.3))
+        return s
+
+    def ppt_out(self):
+        return os.path.join(self.vars["out_dir"].get() or os.path.join(BASE, "output"), "발표")
+
     def make_mp4(self):
         self.playing = False
         self.refresh_preview()
@@ -8952,6 +11691,8 @@ class App(tk.Tk):
             self.write_log(f"  배경음 번호가 없어 새 번호 #{seed}로 만듭니다 (소리 탭에 저장됨)")
 
         story_now, title_now = self.get_story(), self.title_var.get()
+        kit = dict(model=self.model_var.get().strip(), category=self.cat_var.get(), genre=self.genre_var.get(),
+                   sources=list(getattr(self, "sources", []) or []), notes=getattr(self, "notes", ""))
 
         def job():
             nonlocal r
@@ -8972,15 +11713,20 @@ class App(tk.Tk):
             ch = r.chapter_times()
             if ch:
                 with open(base + "_타임스탬프.txt", "w", encoding="utf-8") as f:
-                    f.write("\n".join(f"{int(t // 60):02d}:{int(t % 60):02d} {n}" for t, n in [(0, "오프닝")] + ch))
-            return out, mp3, in_video is not None and has_audio(out), os.path.getsize(out) / 1e6
+                    f.write("\n".join(f"{hms(t)} {n}" for t, n in [(0, "오프닝")] + ch))
+            size_mb = os.path.getsize(out) / 1e6
+            if not (self.cancel and self.cancel.is_set()):   # 업로드 문구·설명란·유튜브 썸네일 자동 생성
+                self.q.put(lambda: self.status.config(text="업로드 문구·썸네일 만드는 중... (AI 1~2분)"))
+                publish_kit(kit["model"], base, title_now, story_now, kit["category"], kit["genre"], s, ch,
+                            kit["sources"], kit["notes"], self.log_bg)
+            return out, mp3, in_video is not None and has_audio(out), size_mb
 
         def done(res):
             p, mp3, snd, mb = res
             what = ((f"{style} #{s['bgm_seed']}") if s["bgm_mode"] == "자동생성"
                     else ("파일 " + os.path.basename(s["bgm_path"]) if s["bgm_mode"] == "파일"
                           else ("반전 효과음만" if s["reveal_hit"] == "on" else "없음")))
-            self.write_log(f"MP4 저장 완료: {p}  ({mb:.1f}MB · 썸네일 PNG 같이 저장)")
+            self.write_log(f"MP4 저장 완료: {p}  ({mb:.1f}MB · 첫 장면 PNG + 유튜브 썸네일 JPG + 업로드 문구·설명란 TXT)")
             if "MP4에 포함" in s["audio_out"]:
                 self.write_log("  MP4 소리: " + ("✅ 포함됨 (" + what + ")" if snd else "❌ 포함 안 됨 - 소리 탭 설정을 확인하세요"))
             else:
@@ -9190,23 +11936,238 @@ class App(tk.Tk):
         self.run_bg("번역 중...", job, done)
 
     # ---- 🎵 음악 영상 (명상·집중·수면 채널) ----
-    def music_dialog(self):
-        win = tk.Toplevel(self)
-        win.title("🎵 음악 영상 만들기 - 명상·집중·수면·자연의 소리 (프로그램이 직접 작곡)")
-        win.geometry("1120x760")
+    # ---- 🌿 자연의 소리 믹서 ----
+    def nature_state(self):
+        """믹서 상태 (저장 폴더의 자연의소리_믹서.json 에 저장되어 다음에도 그대로)"""
+        if getattr(self, "_nature", None) is None:
+            st = {"sel": {}, "custom": []}
+            try:
+                st.update(json.load(open(os.path.join(self.get_settings()["out_dir"], "자연의소리_믹서.json"), encoding="utf-8")))
+            except Exception:
+                pass
+            for k, spec in NATURE_SOUNDS.items():
+                st["sel"].setdefault(k, {"on": False, "vol": 1.0, "freq": spec[4], "rand": 0.5, "rec": True})
+            while len(st["custom"]) < 3:
+                st["custom"].append({"path": "", "mode": "계속", "vol": 1.0, "freq": 2.0, "rand": 0.5})
+            self._nature = st
+        return self._nature
+
+    def nature_save(self):
+        try:
+            d = self.get_settings()["out_dir"]
+            os.makedirs(d, exist_ok=True)
+            atomic_write_text(os.path.join(d, "자연의소리_믹서.json"), json.dumps(self.nature_state(), ensure_ascii=False, indent=1))
+        except Exception:
+            pass
+
+    def nature_pick(self, parent=None):
+        """만들 때 쓸 선택: {"sel": {소리: {vol, freq, rand}}, "custom": [...]} / 아무것도 없으면 안내 후 False"""
+        try:
+            getattr(self, "_nature_collect", lambda: None)()     # 탭에 펼친 믹서의 지금 값
+        except Exception:
+            pass
+        st = self.nature_state()
+        sel = {k: {"vol": v["vol"], "freq": v["freq"], "rand": v["rand"], "rec": v.get("rec", True)}
+               for k, v in st["sel"].items() if v.get("on") and v.get("vol", 0) > 0}
+        custom = [c for c in st["custom"] if c.get("path") and os.path.exists(c["path"]) and c.get("vol", 0) > 0]
+        if not sel and not custom:
+            messagebox.showinfo("자연의 소리", "🌿 소리 고르기에서 소리를 하나 이상 체크하세요.", parent=parent)
+            return False
+        return {"sel": sel, "custom": custom}
+
+    def nature_mixer(self, parent, on_close=None, title_var=None, embed=None):
+        """체크박스로 소리를 고르고 소리마다 세기·빈도·랜덤 조절 + 추천 조합 + 내 소리 파일(커스텀).
+        embed: 이 프레임 안에 바로 그림(자연의 소리 탭). 없으면 새 창"""
+        st = self.nature_state()
+        if embed is not None:
+            win = embed
+        else:
+            win = tk.Toplevel(parent)
+            win.title("🌿 자연의 소리 고르기 - 체크하고 세기·빈도·랜덤 조절")
+            win.geometry("980x720")
+            win.transient(parent)          # 음악 창 앞에 뜨게
+            win.after(50, lambda: (win.lift(), win.focus_force()))
+        top = ttk.Frame(win, padding=6)
+        top.pack(fill="x")
+        ttk.Label(top, text="추천 조합").pack(side="left")
+        pv = tk.StringVar(value="")
+        pcb = ttk.Combobox(top, textvariable=pv, values=list(NATURE_PRESETS), state="readonly", width=20)
+        pcb.pack(side="left", padx=4)
+        rows = {}
+
+        def apply_preset(*_):
+            mix = NATURE_PRESETS.get(pv.get())
+            if not mix:
+                return
+            for k, r in rows.items():
+                on = k in mix
+                r["on"].set(on)
+                if on:
+                    r["vol"].set(mix[k][0])
+                    r["freq"].set(mix[k][1])
+            if title_var is not None and (not title_var.get().strip() or title_var.get().startswith("자연의 소리") or "자연의 소리 ASMR" in title_var.get()
+                                          or title_var.get() in [x["title"] for x in MUSIC_PRESETS.values()]):
+                title_var.set(f"{pv.get()} 🌿 자연의 소리 ASMR")
+        pcb.bind("<<ComboboxSelected>>", apply_preset)
+        ttk.Button(top, text="모두 끄기", command=lambda: [r["on"].set(False) for r in rows.values()]).pack(side="left", padx=8)
+        ttk.Label(top, text="세기: 0~2 · 빈도: 가끔 나는 소리는 '분당 횟수', 계속 나는 소리는 '밀도'(빗방울·귀뚜라미 수 등) · 랜덤: 간격·크기가 들쭉날쭉한 정도",
+                  foreground="#555").pack(side="left", padx=8)
+        # 스크롤 목록
+        outer = ttk.Frame(win)
+        outer.pack(fill="both", expand=True, padx=6)
+        cv = tk.Canvas(outer, highlightthickness=0, height=300 if embed is not None else 400)
+        sb = ttk.Scrollbar(outer, orient="vertical", command=cv.yview)
+        body = ttk.Frame(cv)
+        body.bind("<Configure>", lambda e: cv.configure(scrollregion=cv.bbox("all")))
+        cv.create_window((0, 0), window=body, anchor="nw")
+        cv.configure(yscrollcommand=sb.set)
+        cv.pack(side="left", fill="both", expand=True)
+        sb.pack(side="right", fill="y")
+        cv.bind_all("<MouseWheel>", lambda e: cv.yview_scroll(int(-e.delta / 120), "units") if str(e.widget).startswith(str(win)) else None)
+
+        def slider(parent_, var, lo, hi, width=150, fmt="{:.2f}"):
+            fr = ttk.Frame(parent_)
+            lab = ttk.Label(fr, width=6)
+            sc = ttk.Scale(fr, from_=lo, to=hi, variable=var, length=width, command=lambda _v: lab.config(text=fmt.format(var.get())))
+            sc.pack(side="left")
+            lab.pack(side="left")
+            lab.config(text=fmt.format(var.get()))
+            var.trace_add("write", lambda *_: lab.config(text=fmt.format(var.get())))   # 추천 조합으로 바뀌어도 숫자 갱신
+            return fr
+        r_ = 0
+        recs = nature_recordings()
+        for g in NATURE_GROUPS:
+            ttk.Label(body, text=f"■ {g}", font=("맑은 고딕", 10, "bold")).grid(row=r_, column=0, sticky="w", pady=(8, 2))
+            r_ += 1
+            for k, (grp, kind, fn, lvl, dfreq, verb) in NATURE_SOUNDS.items():
+                if grp != g:
+                    continue
+                v = st["sel"][k]
+                rows[k] = r = {"on": tk.BooleanVar(value=bool(v.get("on"))), "rec": tk.BooleanVar(value=bool(v.get("rec", True))),
+                               "vol": tk.DoubleVar(value=float(v.get("vol", 1))),
+                               "freq": tk.DoubleVar(value=float(v.get("freq", dfreq))), "rand": tk.DoubleVar(value=float(v.get("rand", 0.5)))}
+                ttk.Checkbutton(body, text=k, variable=r["on"], width=18).grid(row=r_, column=0, sticky="w", padx=(12, 0))
+                ttk.Label(body, text="세기").grid(row=r_, column=1)
+                slider(body, r["vol"], 0, 2).grid(row=r_, column=2, padx=2)
+                if kind == "ev":
+                    ttk.Label(body, text="분당 횟수").grid(row=r_, column=3)
+                    slider(body, r["freq"], 0.1, 60, fmt="{:.1f}").grid(row=r_, column=4, padx=2)
+                else:
+                    ttk.Label(body, text="밀도").grid(row=r_, column=3)
+                    slider(body, r["freq"], 0.3, 2.5).grid(row=r_, column=4, padx=2)
+                ttk.Label(body, text="랜덤").grid(row=r_, column=5)
+                slider(body, r["rand"], 0, 1, width=110).grid(row=r_, column=6, padx=2)
+                if k in recs:   # 실제 녹음이 있으면 녹음/합성 선택
+                    ttk.Checkbutton(body, text="🎙 녹음", variable=r["rec"]).grid(row=r_, column=7, padx=(6, 0))
+                else:
+                    ttk.Label(body, text="합성", foreground="#999").grid(row=r_, column=7, padx=(6, 0))
+                r_ += 1
+        # 커스텀: 내 소리 파일
+        ttk.Label(body, text="■ 내 소리 파일 (커스텀)", font=("맑은 고딕", 10, "bold")).grid(row=r_, column=0, sticky="w", pady=(10, 2))
+        r_ += 1
+        crow = []
+        for j, c in enumerate(st["custom"][:3]):
+            cr = {"path": tk.StringVar(value=c.get("path", "")), "mode": tk.StringVar(value=c.get("mode", "계속")),
+                  "vol": tk.DoubleVar(value=float(c.get("vol", 1))), "freq": tk.DoubleVar(value=float(c.get("freq", 2))),
+                  "rand": tk.DoubleVar(value=float(c.get("rand", 0.5)))}
+            crow.append(cr)
+            fr = ttk.Frame(body)
+            fr.grid(row=r_, column=0, columnspan=7, sticky="w", padx=(12, 0), pady=1)
+            ttk.Entry(fr, textvariable=cr["path"], width=34).pack(side="left")
+
+            def pick(cr=cr):
+                p_ = filedialog.askopenfilename(parent=win, title="섞을 소리 파일", filetypes=[("소리 파일", "*.mp3 *.wav *.m4a *.ogg *.flac"), ("모든 파일", "*.*")])
+                if p_:
+                    cr["path"].set(p_)
+            ttk.Button(fr, text="📂", width=3, command=pick).pack(side="left", padx=2)
+            ttk.Combobox(fr, textvariable=cr["mode"], values=["계속", "가끔"], state="readonly", width=5).pack(side="left", padx=4)
+            ttk.Label(fr, text="세기").pack(side="left")
+            slider(fr, cr["vol"], 0, 2, width=110).pack(side="left")
+            ttk.Label(fr, text="분당(가끔일 때)").pack(side="left")
+            slider(fr, cr["freq"], 0.1, 30, width=110, fmt="{:.1f}").pack(side="left")
+            ttk.Label(fr, text="랜덤").pack(side="left")
+            slider(fr, cr["rand"], 0, 1, width=80).pack(side="left")
+            r_ += 1
+        ttk.Label(body, text="※ 내 소리 파일은 유튜브에 올려도 되는 음원(직접 녹음·CC0 등)만 쓰세요.", foreground="#a00").grid(row=r_, column=0, columnspan=7, sticky="w", padx=12, pady=(2, 8))
+
+        def collect():
+            for k, r in rows.items():
+                st["sel"][k] = {"on": bool(r["on"].get()), "vol": round(r["vol"].get(), 2), "freq": round(r["freq"].get(), 2),
+                                "rand": round(r["rand"].get(), 2), "rec": bool(r["rec"].get())}
+            st["custom"] = [{"path": cr["path"].get().strip(), "mode": cr["mode"].get(), "vol": round(cr["vol"].get(), 2),
+                             "freq": round(cr["freq"].get(), 2), "rand": round(cr["rand"].get(), 2)} for cr in crow]
+            self.nature_save()
+
+        def listen():
+            collect()
+            nat = self.nature_pick(win)
+            if nat is False:
+                return
+            p_ = os.path.join(tempfile.gettempdir(), "nature_preview.wav")
+
+            def job():
+                render_nature_track(nat["sel"], 0.5, int(np.random.default_rng().integers(1, 9999)), p_, custom=nat["custom"])
+                return p_
+            self.run_bg("자연의 소리 미리듣기 만드는 중...", job, lambda p2: (play_wav(p2), self.set_status("🎧 자연의 소리 30초 미리듣기 (■ 소리 정지로 멈춤)")))
+
+        def close():
+            collect()
+            try:
+                cv.unbind_all("<MouseWheel>")
+            except Exception:
+                pass
+            win.destroy()
+            if on_close:
+                on_close()
+        self._nature_collect = collect       # 만들기·미리듣기 전에 화면 값을 읽어 가도록
+        bf = ttk.Frame(win, padding=6)
+        bf.pack(fill="x")
+        ttk.Button(bf, text="🎧 30초 미리듣기", command=listen).pack(side="left")
+        ttk.Button(bf, text="■ 소리 정지", command=stop_wav).pack(side="left", padx=4)
+        if embed is not None:
+            ttk.Button(bf, text="💾 고른 소리 저장", command=lambda: (collect(), self.set_status("💾 자연의 소리 선택 저장됨"))).pack(side="right")
+        else:
+            ttk.Button(bf, text="✔ 저장하고 닫기", command=close).pack(side="right")
+            win.protocol("WM_DELETE_WINDOW", close)
+
+    def music_dialog(self, nature=False, parent=None):
+        """🎵 음악 영상 / 🌿 자연의 소리. parent 가 있으면 그 탭 안에 그림(메인 화면 탭), 없으면 새 창"""
+        if parent is not None:
+            win = parent
+        else:
+            win = tk.Toplevel(self)
+            win.title("🌿 자연의 소리 만들기 - 여러 소리를 골라 섞어 긴 영상으로" if nature else
+                      "🎵 음악 영상 만들기 - 명상·집중·수면·자연의 소리 (프로그램이 직접 작곡)")
+            win.geometry("1120x760")
+        embed_mixer = nature and parent is not None     # 자연의 소리 탭: 음악 목록 대신 믹서를 바로 펼침
         s = self.get_settings()
         out_dir = os.path.join(s["out_dir"], "music")
         left = ttk.Frame(win, padding=10)
         left.pack(side="left", fill="both", expand=True)
         right = ttk.Frame(win, padding=10)
         right.pack(side="left", fill="y")
-        ttk.Label(left, text="① 음악 종류").pack(anchor="w")
+        hf = ttk.Frame(left)
+        hf.pack(fill="x")
+        ttk.Label(hf, text="① 음악 종류").pack(side="left")
+        ttk.Label(hf, text="   분류").pack(side="left")
+        grp_counts = {g: sum(1 for n in MUSIC_PRESETS if g == "전체" or music_group(n) == g) for g in MUSIC_GROUPS}
+        grp_v = tk.StringVar(value=f"전체 ({grp_counts['전체']})")
+        grp_cb = ttk.Combobox(hf, textvariable=grp_v, state="readonly", width=20,
+                              values=[f"{g} ({grp_counts[g]})" for g in MUSIC_GROUPS if grp_counts[g]])
+        grp_cb.pack(side="left", padx=4)
         lf = ttk.Frame(left)
         lf.pack(fill="x")
         lst = tk.Listbox(lf, height=17, font=("맑은 고딕", 10), exportselection=False)
-        for n in MUSIC_PRESETS:
-            lst.insert("end", n)
-        lst.selection_set(0)
+
+        def fill_list(*_):
+            g = grp_v.get().rsplit(" (", 1)[0]
+            lst.delete(0, "end")
+            for n in MUSIC_PRESETS:
+                if g == "전체" or music_group(n) == g:
+                    lst.insert("end", n)
+            lst.selection_set(0)
+            lst.see(0)
+        fill_list()
         lsb = ttk.Scrollbar(lf, orient="vertical", command=lst.yview)
         lst.config(yscrollcommand=lsb.set)
         lsb.pack(side="right", fill="y")
@@ -9215,6 +12176,12 @@ class App(tk.Tk):
         desc.pack(anchor="w", pady=(2, 6))
         f = ttk.Frame(left)
         f.pack(fill="x")
+        mixf = None
+        if embed_mixer:
+            for w_ in (hf, lf, desc):
+                w_.pack_forget()
+            mixf = ttk.LabelFrame(left, text="① 소리 고르기 (체크하고 세기·빈도·랜덤 조절)", padding=4)
+            mixf.pack(fill="both", expand=True, before=f, pady=(0, 6))
         ttk.Label(f, text="길이(분)").grid(row=0, column=0, sticky="e")
         mins = tk.StringVar(value="10")
         ttk.Combobox(f, textvariable=mins, values=["1", "3", "5", "10", "15", "20", "30", "45", "60", "90", "120", "180"], width=6).grid(row=0, column=1, padx=4)
@@ -9230,6 +12197,55 @@ class App(tk.Tk):
         ttk.Combobox(f, textvariable=mo, values=MUSIC_MOTIONS, width=14, state="readonly").grid(row=1, column=3, columnspan=2, padx=4, sticky="w")
         show_text = tk.BooleanVar(value=True)
         ttk.Checkbutton(f, text="화면에 제목 표시", variable=show_text).grid(row=4, column=1, columnspan=2, sticky="w", padx=4)
+        srcf = ttk.LabelFrame(left, text="음원 ", padding=4)
+        srcf.pack(fill="x", pady=(4, 0))
+        src_mode = tk.StringVar(value="nature" if nature else "preset")
+        src_file = {"path": ""}
+        ttk.Radiobutton(srcf, text="프로그램이 연주 (위 목록)", variable=src_mode, value="preset").pack(side="left")
+        ttk.Radiobutton(srcf, text="내 음악 파일 반복", variable=src_mode, value="file").pack(side="left", padx=(8, 0))
+        ttk.Radiobutton(srcf, text="🌿 자연의 소리 믹서", variable=src_mode, value="nature").pack(side="left", padx=(8, 0))
+        nat_lbl = ttk.Label(srcf, text="", foreground="#2e7d32")
+
+        def nature_summary():
+            on = [k for k, v in self.nature_state()["sel"].items() if v.get("on")]
+            nat_lbl.config(text=(" + ".join(on[:4]) + (f" 외 {len(on) - 4}개" if len(on) > 4 else "")) if on else "(소리를 고르세요)")
+
+        def open_mixer():
+            src_mode.set("nature")
+            self.nature_mixer(win, on_close=nature_summary, title_var=title_v)
+        ttk.Button(srcf, text="🌿 소리 고르기", command=open_mixer).pack(side="left", padx=4)
+        nat_lbl.pack(side="left", padx=4)
+        win.after_idle(nature_summary)
+        if nature:
+            win.after(300, lambda: title_v.set("자연의 소리 🌿 잠잘 때 듣는 ASMR"))
+            if embed_mixer:                # 탭: 믹서를 이 자리에 바로 (음원 줄은 필요 없음)
+                srcf.pack_forget()
+                win.after(350, lambda: self.nature_mixer(win, title_var=title_v, embed=mixf))
+            else:
+                win.after(400, open_mixer)     # 새 창으로 열면 믹서 창을 바로 띄움
+        src_lbl = ttk.Label(srcf, text="", foreground="#555")
+
+        def pick_audio():
+            p_ = filedialog.askopenfilename(parent=win, title="반복할 음악 파일",
+                                            filetypes=[("음악 파일", "*.mp3 *.wav *.m4a *.aac *.ogg *.flac"), ("모든 파일", "*.*")])
+            if not p_:
+                return
+            src_file["path"] = p_
+            src_mode.set("file")
+            src_lbl.config(text=os.path.basename(p_))
+            if not title_v.get().strip() or title_v.get() in [x["title"] for x in MUSIC_PRESETS.values()]:
+                title_v.set(os.path.splitext(os.path.basename(p_))[0])
+        ttk.Button(srcf, text="📂 파일 선택", command=pick_audio).pack(side="left", padx=6)
+        src_lbl.pack(side="left")
+
+        def use_file():
+            """음악 파일 모드면 파일 경로, 아니면 None (파일이 없으면 안내)"""
+            if src_mode.get() != "file":
+                return None
+            if not src_file["path"] or not os.path.exists(src_file["path"]):
+                messagebox.showinfo("음악 파일", "📂 파일 선택으로 반복할 음악 파일(MP3 등)을 먼저 고르세요.", parent=win)
+                return False
+            return src_file["path"]
         ttk.Label(f, text="영상 제목").grid(row=2, column=0, sticky="e")
         title_v = tk.StringVar()
         ttk.Entry(f, textvariable=title_v, width=46).grid(row=2, column=1, columnspan=4, sticky="w", padx=4)
@@ -9246,10 +12262,17 @@ class App(tk.Tk):
         mood_v = tk.StringVar()
         ttk.Entry(r0, textvariable=mood_v, width=34).pack(side="left", padx=4)
 
+        def nature_scene():
+            """자연의 소리 모드: 고른 소리로 배경 장면 설명 (예: 빗소리·모닥불 → 비 오는 밤 캠핑)"""
+            on = [k for k, v in self.nature_state()["sel"].items() if v.get("on")]
+            return ("A peaceful nature scene that matches these sounds: " + ", ".join(on) +
+                    ". Calm, cinematic, soft natural light, no people, no text.") if on else ""
+
         def copy_prompt():
             P = MUSIC_PRESETS[cur()]
+            base_p = nature_scene() if src_mode.get() == "nature" else P["prompt"]
             self.clipboard_clear()
-            self.clipboard_append(P["prompt"] + f"\n\n({ratio_ko()} 비율, 글자·워터마크 없이, 아주 잔잔하고 고요한 분위기로 그려줘)")
+            self.clipboard_append((base_p or P["prompt"]) + f"\n\n({ratio_ko()} 비율, 글자·워터마크 없이, 아주 잔잔하고 고요한 분위기로 그려줘)")
             self.set_status("📋 기본 배경 그림 프롬프트 복사됨 → ChatGPT에 붙여넣기")
 
         def ai_prompts():
@@ -9257,9 +12280,13 @@ class App(tk.Tk):
             model = self.model_var.get().strip()
             P = MUSIC_PRESETS[name]
 
+            nat_desc = nature_scene() if src_mode.get() == "nature" else ""
+
             def job():
-                return ask_script_json(model, MUSIC_PROMPT_SYSTEM, f"화면 비율: {ratio_ko()}\n음악 종류: {name} ({P['desc']})\n영상 제목: {title}"
-                                       + (f"\n사용자가 원하는 분위기·장면: {mood}" if mood else "") + f"\n참고(기본 프롬프트): {P['prompt']}")
+                kind = (f"자연의 소리 ({nat_desc})" if nat_desc else f"{name} ({P['desc']})")
+                return ask_script_json(model, MUSIC_PROMPT_SYSTEM, f"화면 비율: {ratio_ko()}\n음악 종류: {kind}\n영상 제목: {title}"
+                                       + (f"\n사용자가 원하는 분위기·장면: {mood}" if mood else "")
+                                       + ("" if nat_desc else f"\n참고(기본 프롬프트): {P['prompt']}"))
 
             def done(d):
                 w2 = tk.Toplevel(win)
@@ -9387,6 +12414,12 @@ class App(tk.Tk):
             preview()
         lst.bind("<<ListboxSelect>>", on_sel)
 
+        def on_group(*_):
+            fill_list()
+            src_mode.set("preset")
+            on_sel()
+        grp_cb.bind("<<ComboboxSelected>>", on_group)
+
         def loop_for():
             P = MUSIC_PRESETS[cur()]
             return MusicLoop(s, bg["im"], ov.get(), title_v.get(), sub_v.get(), P["colors"], show_text.get(), motion=mo.get())
@@ -9404,14 +12437,28 @@ class App(tk.Tk):
         def listen():
             name, sd = cur(), int(float(seed.get() or 1))
             p_ = os.path.join(tempfile.gettempdir(), "shorts_music_preview.wav")
+            fsrc = use_file()
+            if fsrc is False:
+                return
+            nat = self.nature_pick(win) if src_mode.get() == "nature" else None
+            if nat is False:
+                return
 
             def job():
-                render_music_track(name, 0.5, sd, p_)
+                if nat:
+                    render_nature_track(nat["sel"], 0.5, sd, p_, custom=nat["custom"])
+                elif fsrc:   # 음악 파일: 끝→처음으로 넘어가는 이음매 앞뒤 30초
+                    a = load_audio_file(fsrc)
+                    seam = max(0.0, len(a) / SR - 3.0 - 15)
+                    render_audio_loop(fsrc, (seam + 30) / 60, p_, start=seam, audio=a)
+                else:
+                    render_music_track(name, 0.5, sd, p_)
                 return p_
 
             def done(p2):
                 play_wav(p2)
-                self.set_status(f"🎧 {name} 30초 미리듣기 (■ 소리 정지로 멈춤)")
+                self.set_status((f"🎧 이음매 미리듣기: 곡 끝 15초 → 다시 처음 15초" if fsrc else f"🎧 {name} 30초 미리듣기")
+                                + " (■ 소리 정지로 멈춤)")
             self.run_bg("미리듣기 음악 만드는 중...", job, done)
 
         def make():
@@ -9421,18 +12468,34 @@ class App(tk.Tk):
             except ValueError:
                 messagebox.showinfo("길이", "길이(분)를 숫자로 넣어 주세요.", parent=win)
                 return
-            title = title_v.get().strip() or MUSIC_PRESETS[name]["title"]
+            fsrc = use_file()
+            if fsrc is False:
+                return
+            nat = self.nature_pick(win) if src_mode.get() == "nature" else None
+            if nat is False:
+                return
+            title = title_v.get().strip() or (os.path.splitext(os.path.basename(fsrc))[0] if fsrc else
+                                              ("자연의 소리 " + " + ".join(list(nat["sel"])[:3]) if nat else MUSIC_PRESETS[name]["title"]))
             loop = loop_for()
             base = os.path.join(out_dir, safe_name(title) + f"_{int(mn)}분")
             os.makedirs(out_dir, exist_ok=True)
             fps_now = s["fps"]
             loop.s = dict(s, fps=min(30, int(fps_now)))   # 음악 영상은 30fps면 충분
             use_video, text_layer = bg["video"], (loop.text_layer if show_text.get() else None)   # 스레드에서는 위젯을 읽지 않음
+            if fsrc or nat:
+                name = ""
 
             def job():
                 wav = base + "_tmp.wav"   # 영상에 넣을 임시 음악 파일 (MP4 완성 후 지움)
-                self.q.put(lambda: self.set_status("🎼 음악 만드는 중... (10분 = 약 2~4분 소요)"))
-                sec = render_music_track(name, mn, sd, wav, progress=self.progress_cb("음악 "), cancel=self.cancel)
+                if nat:
+                    self.q.put(lambda: self.set_status(f"🌿 자연의 소리 {int(mn)}분 만드는 중... (1분 덩어리씩)"))
+                    sec = render_nature_track(nat["sel"], mn, sd, wav, progress=self.progress_cb("소리 "), cancel=self.cancel, custom=nat["custom"])
+                elif fsrc:
+                    self.q.put(lambda: self.set_status(f"🔁 음악 파일을 {int(mn)}분 길이로 반복하는 중..."))
+                    sec = render_audio_loop(fsrc, mn, wav, progress=self.progress_cb("음악 "), cancel=self.cancel)
+                else:
+                    self.q.put(lambda: self.set_status("🎼 음악 만드는 중... (10분 = 약 2~4분 소요)"))
+                    sec = render_music_track(name, mn, sd, wav, progress=self.progress_cb("음악 "), cancel=self.cancel)
                 self.q.put(lambda: self.set_status("🎬 화면 그리는 중 (32초 반복 조각)..."))
                 loop_mp4 = base + "_loop.mp4"
                 if use_video:
@@ -9448,8 +12511,12 @@ class App(tk.Tk):
                         pass
                 Image.fromarray(loop.frame(3.0)).save(base + "_썸네일.png")
                 with open(base + ".json", "w", encoding="utf-8") as jf:
-                    json.dump({"title": title, "sec": sec, "preset": name, "seed": sd}, jf, ensure_ascii=False)
-                pkg = music_upload_text(title, [name], minutes=mn)
+                    json.dump({"title": title, "sec": sec, "preset": name, "seed": sd, "audio_file": fsrc or "",
+                               "nature": nat or None}, jf, ensure_ascii=False)
+                if nat:
+                    pkg = nature_upload_text(title, nat["sel"], minutes=mn, custom=nat["custom"])
+                else:
+                    pkg = music_upload_text(title, [name] if name else [], minutes=mn, own_audio=os.path.basename(fsrc) if fsrc else None)
                 write_package(base, title, "", pkg)
                 return base, sec
 
@@ -9477,7 +12544,9 @@ class App(tk.Tk):
                 for x in picks:
                     ch.append((t_, x[1]))
                     t_ += x[2]
-                pkg = music_upload_text(title, [x[3] for x in picks], chapters=ch, minutes=t_ / 60)
+                own = [x[1] for x in picks if not x[3]]   # 불러온 음악 파일로 만든 영상이 섞여 있으면
+                pkg = music_upload_text(title, [x[3] for x in picks], chapters=ch, minutes=t_ / 60,
+                                        own_audio=("불러온 음악 파일로 만든 영상: " + ", ".join(own)) if own else None)
                 write_package(base, title, "", pkg)
                 shutil.copy(picks[0][0][:-4] + "_썸네일.png", base + "_썸네일.png") if os.path.exists(picks[0][0][:-4] + "_썸네일.png") else None
                 return base, ch

@@ -1,0 +1,172 @@
+{
+ "빗소리": {
+  "file": "빗소리.mp3",
+  "mode": "bed",
+  "license": "CC0",
+  "license_url": "https://freesound.org/s/430765/",
+  "attribution": "joedeshon (freesound.org/s/430765), CC0",
+  "source_url": "https://archive.org/download/soundica-fs-430765-long-easy-rain-08-wav/430765.mp3",
+  "page": "https://archive.org/details/soundica-fs-430765-long-easy-rain-08-wav",
+  "notes": "24 min of steady rain. Internet Archive 1:1 mirror of a Freesound file (I checked the license on the Freesound page). Freesound HQ-preview MP3 (~185 kbps), not the lossless original. Original 44.1 kHz."
+ },
+ "폭우": {
+  "file": "폭우.wav",
+  "mode": "bed",
+  "license": "CC0",
+  "license_url": "https://freesound.org/s/200270/",
+  "attribution": "\"Rain heavy 1 (rural)\" by jmbphilmes (freesound.org/s/200270), CC0",
+  "source_url": "https://raw.githubusercontent.com/jenius-apps/ambie/main/src/AmbientSounds.Uwp/Assets/Sounds/rain.wav",
+  "page": "https://github.com/jenius-apps/ambie",
+  "notes": "Ambie bundles a trimmed WAV loop, probably about 30-35 s (estimated from size, not measured). The full 400 s, 48 kHz original is on Freesound (login needed). Credit in https://github.com/jenius-apps/ambie/blob/main/src/AmbientSounds.Uwp/Assets/Data.json"
+ },
+ "텐트 위 빗소리": {
+  "file": "텐트 위 빗소리.ogg",
+  "mode": "bed",
+  "license": "CC BY 4.0",
+  "license_url": "https://freesound.org/s/523397/",
+  "attribution": "\"rain on a tent\" by Garuda1982 (freesound.org/s/523397), CC BY 4.0; edited by Mateus Felipe (Noisekun)",
+  "source_url": "https://raw.githubusercontent.com/mateusfg7/Noisekun/main/.github/assets/sounds/rain-on-tent.ogg",
+  "page": "https://github.com/mateusfg7/Noisekun",
+  "notes": "Edited loop. The original is 110 s at 96 kHz. Credit table: https://github.com/mateusfg7/Noisekun#%EF%B8%8F-credits"
+ },
+ "시냇물": {
+  "file": "시냇물.mp3",
+  "mode": "bed",
+  "license": "CC0",
+  "license_url": "https://freesound.org/s/610726/",
+  "attribution": "EverydayEldritch (freesound.org/s/610726), CC0",
+  "source_url": "https://archive.org/download/soundica-fs-610726-running-stream-with-rocks-splashing-rubbing-grav/610726.mp3",
+  "page": "https://archive.org/details/soundica-fs-610726-running-stream-with-rocks-splashing-rubbing-grav",
+  "notes": "Internet Archive 1:1 mirror of a Freesound file (I checked the license on the Freesound page). Freesound HQ-preview MP3 (~185 kbps), not the lossless original."
+ },
+ "계곡물": {
+  "file": "계곡물.mp3",
+  "mode": "bed",
+  "license": "CC0",
+  "license_url": "https://freesound.org/s/557170/",
+  "attribution": "klau78 (freesound.org/s/557170), CC0",
+  "source_url": "https://archive.org/download/soundica-fs-557170-river-water-stream-with-high-flow/557170.mp3",
+  "page": "https://archive.org/details/soundica-fs-557170-river-water-stream-with-high-flow",
+  "notes": "Internet Archive 1:1 mirror of a Freesound file (I checked the license on the Freesound page). Freesound HQ-preview MP3 (~185 kbps), not the lossless original. Original 48 kHz."
+ },
+ "폭포": {
+  "file": "폭포.ogg",
+  "mode": "bed",
+  "license": "CC BY 4.0",
+  "license_url": "https://freesound.org/s/489073/",
+  "attribution": "\"Waterfall\" by straget (freesound.org/s/489073), CC BY 4.0; edited by Mateus Felipe (Noisekun)",
+  "source_url": "https://raw.githubusercontent.com/mateusfg7/Noisekun/main/.github/assets/sounds/waterfall.ogg",
+  "page": "https://github.com/mateusfg7/Noisekun",
+  "notes": "Original 122 s at 44.1 kHz."
+ },
+ "잔잔한 파도": {
+  "file": "잔잔한 파도.mp3",
+  "mode": "bed",
+  "license": "CC0",
+  "license_url": "https://freesound.org/s/457149/",
+  "attribution": "Benbojangles (freesound.org/s/457149), CC0",
+  "source_url": "https://archive.org/download/soundica-fs-457149-binaural-beach-waves-4-wav/457149.mp3",
+  "page": "https://archive.org/details/soundica-fs-457149-binaural-beach-waves-4-wav",
+  "notes": "Binaural. Internet Archive 1:1 mirror of a Freesound file (I checked the license on the Freesound page). Freesound HQ-preview MP3 (~185 kbps), not the lossless original. Original 96 kHz."
+ },
+ "호숫가 물결": {
+  "file": "호숫가 물결.ogg",
+  "mode": "bed",
+  "license": "CC BY 3.0",
+  "license_url": "https://commons.wikimedia.org/wiki/File:Water_on_Rocks.ogg",
+  "attribution": "\"Water on Rocks\" by Dsw4, CC BY 3.0, via Wikimedia Commons",
+  "source_url": "https://upload.wikimedia.org/wikipedia/commons/8/8a/Water_on_Rocks.ogg",
+  "page": "https://commons.wikimedia.org/wiki/File:Water_on_Rocks.ogg",
+  "notes": "Same recordist, Lake Ontario."
+ },
+ "강풍": {
+  "file": "강풍.mp3",
+  "mode": "bed",
+  "license": "CC BY 4.0",
+  "license_url": "https://freesound.org/s/370312/",
+  "attribution": "\"20161208Windstorm_01.WAV\" by daveincamas (freesound.org/s/370312), CC BY 4.0",
+  "source_url": "https://archive.org/download/soundica-fs-370312-20161208windstorm-01-wav/370312.mp3",
+  "page": "https://archive.org/details/soundica-fs-370312-20161208windstorm-01-wav",
+  "notes": "Internet Archive 1:1 mirror of a Freesound file (I checked the license on the Freesound page). Freesound HQ-preview MP3 (~185 kbps), not the lossless original."
+ },
+ "풍경(윈드차임)": {
+  "file": "풍경(윈드차임).ogg",
+  "mode": "ev",
+  "license": "CC0",
+  "license_url": "https://commons.wikimedia.org/wiki/File:Windglockenspiel.Koshi.ogg",
+  "attribution": "Membeth., CC0",
+  "source_url": "https://upload.wikimedia.org/wikipedia/commons/a/a6/Windglockenspiel.Koshi.ogg",
+  "page": "https://commons.wikimedia.org/wiki/File:Windglockenspiel.Koshi.ogg",
+  "notes": "Tuned chime (a1-d2-f2-g2-a2-d3-f3-a3). Short, so loop it or scatter it. (size from the Commons API imageinfo metadata; HEAD was rate-limited)"
+ },
+ "모닥불": {
+  "file": "모닥불.flac",
+  "mode": "bed",
+  "license": "CC0",
+  "license_url": "https://freesound.org/s/729396/",
+  "attribution": "HECKFRICKER (freesound.org/s/729396), CC0",
+  "source_url": "https://archive.org/download/soundica-fs-729396-campfire-02/729396__heckfricker__campfire-02.flac",
+  "page": "https://archive.org/details/soundica-fs-729396-campfire-02",
+  "notes": "Lossless, 44.1 kHz. The same item also has a 7.6 MB MP3."
+ },
+ "벽난로": {
+  "file": "벽난로.wav",
+  "mode": "bed",
+  "license": "CC0",
+  "license_url": "https://freesound.org/s/499032/",
+  "attribution": "\"13_Fire in fireplace.wav\" by 16FThumaF (freesound.org/s/499032), CC0",
+  "source_url": "https://raw.githubusercontent.com/jenius-apps/ambie/main/src/AmbientSounds.Uwp/Assets/Sounds/fireplace.wav",
+  "page": "https://github.com/jenius-apps/ambie",
+  "notes": "Original 103 s at 48 kHz. Ambie ships a trimmed loop."
+ },
+ "뻐꾸기": {
+  "file": "뻐꾸기.ogg",
+  "mode": "ev",
+  "license": "CC BY 3.0",
+  "license_url": "https://commons.wikimedia.org/wiki/File:Cuculus_canorus_v01.ogg",
+  "attribution": "\"Cuculus canorus v01\" by Σ64, CC BY 3.0, via Wikimedia Commons",
+  "source_url": "https://upload.wikimedia.org/wikipedia/commons/4/44/Cuculus_canorus_v01.ogg",
+  "page": "https://commons.wikimedia.org/wiki/File:Cuculus_canorus_v01.ogg",
+  "notes": "SHORT (39 s, under the 1-min target). Use as a scattered one-shot over a birdsong bed. (size from the Commons API imageinfo metadata; HEAD was rate-limited)"
+ },
+ "부엉이": {
+  "file": "부엉이.ogg",
+  "mode": "ev",
+  "license": "CC BY 4.0",
+  "license_url": "https://commons.wikimedia.org/wiki/File:Tawny_owl_calling_at_night_in_Tuntorp,_Brastad,_Sweden.ogg",
+  "attribution": "\"Tawny owl calling at night in Tuntorp, Brastad, Sweden\" by W.carter, CC BY 4.0, via Wikimedia Commons",
+  "source_url": "https://upload.wikimedia.org/wikipedia/commons/e/ef/Tawny_owl_calling_at_night_in_Tuntorp%2C_Brastad%2C_Sweden.ogg",
+  "page": "https://commons.wikimedia.org/wiki/File:Tawny_owl_calling_at_night_in_Tuntorp,_Brastad,_Sweden.ogg",
+  "notes": "Strix aluco with night ambience. High bitrate. (size from the Commons API imageinfo metadata; HEAD was rate-limited)"
+ },
+ "갈매기": {
+  "file": "갈매기.ogg",
+  "mode": "ev",
+  "license": "Public domain",
+  "license_url": "https://commons.wikimedia.org/wiki/File:Gulls_above_the_street_at_dawn.ogg",
+  "attribution": "earthcalling (pdsounds.org), public domain",
+  "source_url": "https://upload.wikimedia.org/wikipedia/commons/4/4e/Gulls_above_the_street_at_dawn.ogg",
+  "page": "https://commons.wikimedia.org/wiki/File:Gulls_above_the_street_at_dawn.ogg",
+  "notes": "WEAK candidate: gulls over a street, not a beach. The source was a 128 kbps MP3. (size from the Commons API imageinfo metadata; HEAD was rate-limited)"
+ },
+ "매미": {
+  "file": "매미.flac",
+  "mode": "bed",
+  "license": "CC0",
+  "license_url": "https://commons.wikimedia.org/wiki/File:HyalessaFuscata_KR.flac",
+  "attribution": "金旻秀 (kim.min.su), CC0",
+  "source_url": "https://upload.wikimedia.org/wikipedia/commons/e/ef/HyalessaFuscata_KR.flac",
+  "page": "https://commons.wikimedia.org/wiki/File:HyalessaFuscata_KR.flac",
+  "notes": "Hyalessa fuscata recorded in Korea. Lossless. (size from the Commons API imageinfo metadata; HEAD was rate-limited)"
+ },
+ "개구리": {
+  "file": "개구리.mp3",
+  "mode": "bed",
+  "license": "Public domain (US National Park Service)",
+  "license_url": "https://www.nps.gov/yell/learn/photosmultimedia/soundlibrary.htm",
+  "attribution": "National Park Service",
+  "source_url": "https://www.nps.gov/nps-audiovideo/legacy/mp3/imr/avElement/yell-ChorusFrogs.mp3",
+  "page": "https://www.nps.gov/yell/learn/photosmultimedia/sounds-chorusfrogs.htm",
+  "notes": ""
+ }
+}
