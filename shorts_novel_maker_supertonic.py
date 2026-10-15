@@ -4474,6 +4474,8 @@ def ko_numbers(text):
         if 1 <= n <= 99 and before != "제" and after.startswith(_KO_NATIVE_UNITS) and not after.startswith(
                 ("시대", "시즌", "개월", "번째", "가지고", "달러", "개국", "배터", "배우", "시청", "장관", "장면", "장소", "장군", "통계", "곡선")):
             return ko_native(n)
+        if n == 4 and after.startswith("번") and not after.startswith(("번째", "번이나", "번만", "번씩", "번도", "번을", "번 더")):
+            return "네"          # '사 번'은 '사번(사원번호)'처럼 들림 → 네 번
         if n >= 1 and after.startswith("번째"):
             return "첫" if n == 1 else ko_native(n) if n <= 99 else ko_sino(n)
         if len(num) > 16:                                               # 너무 긴 숫자(전화번호 등)는 한 자리씩
@@ -4495,6 +4497,9 @@ SPOKEN_SYSTEM = """너는 한국어 성우 대본 감수자다. 각 문장을 �
 - 숫자·단위·기호(%, ~, km, kg, ℃ 등)만 한글 발음으로 바꾸고, 나머지 글자·띄어쓰기·문장부호는 절대 바꾸지 않는다.
 - 세는 말(개, 명, 마리, 자리, 장, 살, 시, 시간, 가지, 번, 곳, 잔, 권, 대(자동차 수) 등)은 고유어: 한, 두, 세, 네, 다섯, 스무, 서른.
 - 그 밖(년, 월, 일, 분, 초, 원, 퍼센트, 미터, 층, 호, 회, 세기, 차(회차), 대(나이대), 번(번호)·제N장 등)은 한자어: 일, 이, 삼, 사.
+- 고유어는 1~99에만 쓴다. 100 이상은 세는 말 앞이라도 한자어: 226개 → 이백이십육 개, 150명 → 백오십 명.
+- 듣는 사람이 헷갈리지 않게: 숫자 4를 '사'로 읽어 다른 낱말처럼 들리면 바꿔 읽는다. 특히 목록·문제·보기 번호 '4번'은 '사번(사원번호)'과 똑같이 들리므로 '네 번째'로 읽는다(4번 O → 네 번째, 오 / 1번 7일 → 첫 번째, 칠 일 처럼 같은 문장의 다른 번호도 맞춘다). 횟수 '4번'(네 번 했다)은 '네 번'.
+- 낱말 '사번'(사원번호의 줄임말)은 숫자 4번과 헷갈리지 않게 '사원번호'로 풀어 읽는다.
 - 6월=유월, 10월=시월. 연도: 이천이십육 년. 큰 수는 만 단위로: 1,200만 원 → 천이백만 원, 13,800 → 만 삼천팔백. 소수: 3.5 → 삼 점 오.
 - 범위 10~20 → 십에서 이십. 전화번호·제품 번호는 한 자리씩. 영어 약어(AI, CEO)는 그대로 둔다.
 - 결과에 아라비아 숫자를 남기지 않는다.
@@ -4525,7 +4530,7 @@ def ensure_spoken(model, story, cache_dir, log=None, cancel=None):
     log = log or (lambda x: None)
     spoken_load(cache_dir)
     todo = list(dict.fromkeys(t for _, t in narration_paras(story)
-                              if re.search(r"\d", t) and re.search(r"[가-힣]", t) and not t.startswith("## ") and t not in SPOKEN))
+                              if re.search(r"\d|사번", t) and re.search(r"[가-힣]", t) and not t.startswith("## ") and t not in SPOKEN))
     if not todo:
         return 0
     log(f"🔤 숫자가 있는 문장 {len(todo)}개의 읽는 법 만드는 중 (자막은 맞춤법대로 둠)...")
@@ -4544,7 +4549,8 @@ def ensure_spoken(model, story, cache_dir, log=None, cancel=None):
                 i, say = int(it.get("i")), str(it.get("say") or "").strip()
             except (TypeError, ValueError):
                 continue
-            if 0 <= i < len(part) and say and not re.search(r"\d", say) and 0.5 < len(say) / max(1, len(part[i])) < 4:
+            ok_ = 0 <= i < len(part) and say and not re.search(r"\d", say) and 0.5 < len(say) / max(1, len(part[i])) < 4
+            if ok_ and not re.search(r"(?<![가-힣])사\s?번(?!째)", say):     # '사 번'(=사번처럼 들림)이 남으면 버리고 규칙으로 읽음
                 new[part[i]] = say
     if new:
         SPOKEN.update(new)
@@ -4561,8 +4567,11 @@ def tts_clean(text):
         t = t[3:]
     t = t.lstrip("♪").strip()
     t = re.sub(r"[\"“”'‘’]", "", t)
-    if re.search(r"[가-힣]", t) and re.search(r"\d", t):
-        t = ko_numbers(t)
+    if re.search(r"[가-힣]", t):
+        t = re.sub(r"(?<![0-9가-힣])사번(은|이|을|과)?(?=[\s,.!?·:]|[도만의에처보까부]|$)",              # 낱말 '사번' ↔ 숫자 '4번' 구분
+                   lambda m_: "사원번호" + {"은": "는", "이": "가", "을": "를", "과": "와"}.get(m_.group(1) or "", ""), t)
+        if re.search(r"\d", t):
+            t = ko_numbers(t)
     t = re.sub(r"\s+", " ", t)
     return t
 
