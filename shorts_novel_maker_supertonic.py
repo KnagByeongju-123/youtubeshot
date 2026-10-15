@@ -280,6 +280,10 @@ FIELDS = [
     ("나레이션", "st_emotion_map", "문단별 지정(예: 2=슬픔,4=놀람)", "str", ""),
     ("나레이션", "st_steps", "로컬 성우 품질(5~12)", "int", 5),
     ("나레이션", "st_edge_fallback", "로컬 성우 실패시 Edge 전환", "choice:on,off", "on"),
+    ("나레이션", "narr_tone_f", "여자 성우 톤(반음, -4~+4, 말 속도는 그대로)", "float", 2.0),
+    ("나레이션", "narr_tone_m", "남자 성우 톤(반음, -4~+4)", "float", 1.0),
+    ("나레이션", "narr_bright_f", "여자 목소리 밝게(고음 살짝 강조)", "choice:on,off", "on"),
+    ("나레이션", "narr_breath_cut", "말 시작 숨소리('쓰읍') 지우기", "choice:on,off", "on"),
     ("나레이션", "narr_spoken", "숫자 발음 AI 사전(자막은 맞춤법대로, 성우는 읽는 그대로)", "choice:on,off", "on"),
     ("나레이션", "narr_style", "연기 지시(ChatGPT·Gemini 음성)", "str", "차분하고 또렷한 다큐멘터리 내레이터처럼. 반전 부분은 긴장감 있게."),
     ("나레이션", "openai_tts_model", "ChatGPT 음성 모델", "str", "gpt-4o-mini-tts"),
@@ -5116,7 +5120,8 @@ def tts_supertonic(text, voice, rate_pct, out_wav, steps=5, mood="차분"):
             raise
 
 
-TTS_CFG = {"style": "", "openai_key": "", "gemini_key": "", "openai_tts_model": "", "gemini_tts_model": ""}
+TTS_CFG = {"style": "", "openai_key": "", "gemini_key": "", "openai_tts_model": "", "gemini_tts_model": "",
+           "tone_f": 0, "tone_m": 0, "bright_f": "off", "breath_cut": "off"}
 
 
 def set_tts_cfg(s):
@@ -5125,7 +5130,9 @@ def set_tts_cfg(s):
                    openai_key=(s.get("openai_key") or os.environ.get("OPENAI_API_KEY", "")).strip(),
                    gemini_key=(s.get("gemini_key") or os.environ.get("GEMINI_API_KEY", "")).strip(),
                    openai_tts_model=str(s.get("openai_tts_model", "")).strip(),
-                   gemini_tts_model=str(s.get("gemini_tts_model", "")).strip())
+                   gemini_tts_model=str(s.get("gemini_tts_model", "")).strip(),
+                   tone_f=s.get("narr_tone_f", 0), tone_m=s.get("narr_tone_m", 0),
+                   bright_f=str(s.get("narr_bright_f", "off")), breath_cut=str(s.get("narr_breath_cut", "off")))
 
 
 AI_VOICE_MALE = {v.lower() for v, d in OPENAI_VOICES + GEMINI_VOICES if d.startswith("남성")}
@@ -5147,7 +5154,121 @@ EDGE_FAIL_TO_SAPI = False   # 엣지 실패 시 몰래 윈도우 음성으로 �
 LAST_TTS = {"voice": ""}   # 마지막으로 실제 읽은 성우 (대체됐는지 확인용)
 
 
+# ---- 성우 소리 다듬기: 말 시작 숨소리 지우기 · 톤(반음) · 여자 목소리 밝게 ----
+_FEMALE_HINTS = ("SunHi", "JiMin", "SeoHyeon", "SoonBok", "YuJin", "Aria", "Jenny", "Nanami", "Ana", "Emma", "Sonia")
+
+
+def is_female_voice(name, code=""):
+    t = f"{name} {code}"
+    if "여성" in t or re.search(r"supertonic:F\d", t) or any(x in t for x in _FEMALE_HINTS):
+        return True
+    v = str(code or voice_code(name)).split(":")[-1].lower()
+    return v in {x.lower() for x, d in OPENAI_VOICES + GEMINI_VOICES if d.startswith("여성")}
+
+
+def voice_post_params(voice_name, code=""):
+    fem = is_female_voice(voice_name, code)
+    try:
+        tone = float(TTS_CFG.get("tone_f" if fem else "tone_m", 0) or 0)
+    except (TypeError, ValueError):
+        tone = 0.0
+    tone = max(-6.0, min(6.0, tone))
+    bright = bool(fem and TTS_CFG.get("bright_f", "off") == "on")
+    trim = TTS_CFG.get("breath_cut", "off") == "on"
+    return tone, bright, trim
+
+
+def trim_breath(a):
+    """말 시작 숨소리('쓰읍') 지우기: 앞쪽의 작은 소리 뒤에 짧은 쉼이 있고 그다음 말이 시작되면 그 앞을 잘라냄"""
+    fr = int(0.01 * SR)
+    n = len(a) // fr
+    if n < 25:
+        return a
+    rms = np.sqrt((np.asarray(a[:n * fr], np.float32).reshape(n, fr) ** 2).mean(1))
+    pk = float(rms.max()) or 1.0
+    above = rms > pk * 0.05
+    lim = min(n, 80)                       # 앞 0.8초 안에서만
+    k = 0
+    while k < lim and not above[k]:
+        k += 1
+    s0 = k
+    while k < lim and above[k]:
+        k += 1
+    blob = rms[s0:k]
+    g0 = k
+    while k < lim and not above[k]:
+        k += 1
+    if len(blob) and len(blob) <= 45 and k - g0 >= 4 and k < lim and float(blob.max()) < pk * 0.45:
+        cut = max(0, (k - 2) * fr)
+        b = np.array(a[cut:], np.float32)
+    else:
+        b = np.array(a, np.float32)
+    f_ = min(len(b), int(0.012 * SR))      # 아주 짧게 부드럽게 시작 (딸깍 소리 방지)
+    b[:f_] *= np.linspace(0, 1, f_, dtype=np.float32)
+    return b
+
+
+def ffmpeg_voice_fx(a, semis=0.0, bright=False):
+    """톤(반음, 말 속도는 그대로) + 밝게(고음 살짝 올리고 둔한 저음 살짝 줄임)"""
+    fl = []
+    if semis:
+        k = 2 ** (semis / 12.0)
+        fl.append(f"asetrate={int(round(SR * k))},aresample={SR},atempo={1 / k:.6f}")
+    if bright:
+        fl.append("treble=g=3.5:f=3200,equalizer=f=220:t=q:w=1.2:g=-1.5")
+    if not fl:
+        return a
+    p = subprocess.run([get_ffmpeg(), "-v", "error", "-f", "f32le", "-ar", str(SR), "-ac", "1", "-i", "-", "-af", ",".join(fl),
+                        "-f", "f32le", "-ar", str(SR), "-ac", "1", "-"], input=np.asarray(a, np.float32).tobytes(),
+                       stdout=subprocess.PIPE, stderr=subprocess.PIPE, creationflags=(subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0))
+    if p.returncode != 0 or not p.stdout:
+        return a
+    out = np.frombuffer(p.stdout, np.float32).copy()
+    pk = float(np.abs(out).max()) if len(out) else 0
+    return out * (0.98 / pk) if pk > 0.98 else out
+
+
+def voice_post(a, voice_name, cache_dir, code="", only_cached=False):
+    """성우 소리 다듬기 (결과는 캐시). only_cached=True: 만들어 둔 것만 (미리보기용, 없으면 None)"""
+    tone, bright, trim = voice_post_params(voice_name, code)
+    if not (tone or bright or trim) or len(a) < 10:
+        return a
+    import hashlib
+    h = hashlib.md5(np.ascontiguousarray(np.asarray(a, np.float32)[::37]).tobytes()
+                    + f"{len(a)}|{tone}|{bright}|{trim}|v1".encode()).hexdigest()[:20]
+    p = os.path.join(cache_dir, f"post_{h}.npy")
+    if os.path.exists(p):
+        try:
+            b = np.load(p)
+            if b.ndim == 1 and len(b):
+                return b
+        except Exception:
+            pass
+    if only_cached:
+        return None
+    b = np.asarray(a, np.float32)
+    if trim:
+        b = trim_breath(b)
+    if tone or bright:
+        b = ffmpeg_voice_fx(b, tone, bright)
+    try:
+        os.makedirs(cache_dir, exist_ok=True)
+        atomic_np_save(p, b.astype(np.float32))
+    except Exception:
+        pass
+    return b
+
+
 def tts_clip(text, voice_name, rate_pct, cache_dir, pitch_hz=0, emotion="차분", steps=5, fallback=True):
+    """문장 하나 → (소리, 길이초) + 성우 소리 다듬기(숨소리·톤·밝기)"""
+    a, d = _tts_clip_sel(text, voice_name, rate_pct, cache_dir, pitch_hz, emotion, steps, fallback)
+    if len(a) > 10:
+        a = voice_post(a, voice_name, cache_dir, LAST_TTS.get("voice", ""))
+        d = len(a) / SR
+    return a, d
+
+
+def _tts_clip_sel(text, voice_name, rate_pct, cache_dir, pitch_hz=0, emotion="차분", steps=5, fallback=True):
     """문장 하나 → (소리 배열 mono float32, 길이초). 같은 문장은 캐시에서 재사용
     ChatGPT·Gemini 음성 한도를 다 쓰면 무료 성우로 자동으로 바꿔 계속 만듦"""
     voice = voice_code(voice_name)
@@ -9874,6 +9995,11 @@ class App(tk.Tk):
             if not os.path.exists(npy):
                 return None
             a = np.load(npy, mmap_mode="r")   # 미리보기는 길이만 필요 → 메모리에 다 올리지 않음 (긴 장문도 빠르게)
+            vn_ = PARA_VOICE.get(text.strip(), s["narr_voice"])
+            if any(voice_post_params(vn_, voice)):    # 톤·숨소리 다듬은 소리 (만들어 둔 것만)
+                a = voice_post(np.asarray(a), vn_, cache, voice, only_cached=True)
+                if a is None:
+                    return None
             res.append((i, a, len(a) / SR))
         return res
 
@@ -12014,6 +12140,12 @@ class App(tk.Tk):
         fmt_v = tk.StringVar(value="가로 16:9 (유튜브·발표)")
         size_v = tk.StringVar(value=PPT_SIZES[0])
         trans_v, motion_v = tk.StringVar(value=PPT_TRANS[0]), tk.StringVar(value=PPT_MOTION[0])
+        tonef = ttk.Frame(f2)                     # 성우 톤 (나레이션 설정과 같은 값)
+        ttk.Label(tonef, text="여").pack(side="left")
+        ttk.Spinbox(tonef, from_=-4, to=4, increment=0.5, width=4, textvariable=self.vars["narr_tone_f"]).pack(side="left")
+        ttk.Label(tonef, text=" 남").pack(side="left")
+        ttk.Spinbox(tonef, from_=-4, to=4, increment=0.5, width=4, textvariable=self.vars["narr_tone_m"]).pack(side="left")
+        ttk.Button(tonef, text="🎧 들어보기", command=lambda: listen_voices()).pack(side="left", padx=4)
         font_v = tk.StringVar(value="")          # 발표 자막 글꼴 (비우면 설정의 자막 글꼴)
         fontf = ttk.Frame(f2)
         font_lbl = ttk.Label(fontf, text="기본 (설정의 자막 글꼴)", width=22, foreground="#1a5fb4")
@@ -12041,7 +12173,8 @@ class App(tk.Tk):
                 ("슬라이드", ttk.Combobox(f2, textvariable=size_v, values=PPT_SIZES, state="readonly", width=24)),
                 ("전환 효과", ttk.Combobox(f2, textvariable=trans_v, values=PPT_TRANS, state="readonly", width=20)),
                 ("화면 움직임", ttk.Combobox(f2, textvariable=motion_v, values=PPT_MOTION, state="readonly", width=20)),
-                ("자막 글꼴", fontf)]
+                ("자막 글꼴", fontf),
+                ("성우 톤(반음)", tonef)]
         for i, (lb, w_) in enumerate(rows):
             r_, c_ = i % 4, (i // 4) * 2      # 4줄씩 3칸
             ttk.Label(f2, text=lb).grid(row=r_, column=c_, sticky="e", padx=(8, 4), pady=2)
@@ -12239,6 +12372,27 @@ class App(tk.Tk):
                 title_v.set(os.path.splitext(os.path.basename(p))[0])
             bold = bold_v.get()
             self.run_bg("📥 슬라이드 불러오는 중...", lambda: ppt_export(p, os.path.join(st["dir"], "slides"), self.log_bg, bold), fill)
+
+        def listen_voices():
+            """남녀 성우 톤 미리 듣기 (지금 설정: 톤·밝게·숨소리 지우기)"""
+            men = [v for v in ppt_voice_catalog() if ppt_voice_gender(v) == "남"]
+            women = [v for v in ppt_voice_catalog() if ppt_voice_gender(v) == "여"]
+            vm = vm_v.get() if not vm_v.get().startswith("🤖") else (st["meta"].get("voice_m") or men[0])
+            vf = vf_v.get() if not vf_v.get().startswith("🤖") else (st["meta"].get("voice_f") or women[0])
+            s = self.ppt_settings(vm, st["meta"], True, False)
+            emo = s.get("st_emotion", "차분")
+            cache = os.path.join(s["out_dir"], "tts_cache")
+            out = os.path.join(cache, "_톤_미리듣기.wav")
+
+            def job():
+                set_tts_cfg(s)
+                a1, _ = tts_clip("안녕하세요! 오늘 교육을 함께할 진행자, 이하나예요. 숫자는 거짓말 안 해요!", vf, float(s["narr_rate"]), cache, 0, emo, int(s.get("st_steps", 5)))
+                a2, _ = tts_clip("반갑습니다, 강반장입니다. 이게 된다고? 같이 한번 볼까요?", vm, float(s["narr_rate"]), cache, 0, emo, int(s.get("st_steps", 5)))
+                x = np.concatenate([a1, np.zeros(int(0.5 * SR), np.float32), a2])
+                write_wav(out, np.stack([x, x], 1))
+                return out
+            self.run_bg("🎧 성우 톤 미리 듣는 중...", job, lambda p: (play_wav(p), self.set_status(
+                f"🎧 여 {vf.split(' (')[0]} 톤 {self.vars['narr_tone_f'].get()} · 남 {vm.split(' (')[0]} 톤 {self.vars['narr_tone_m'].get()}")))
 
         def plan():
             if not st["slides"]:
