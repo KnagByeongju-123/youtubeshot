@@ -3108,7 +3108,13 @@ class SubtitleRenderer:
             self.img_box = (int(W * 0.18), int(H * 0.21), int(W * 0.82), int(H * 0.80))
             self.sub_box = (m, int(H * 0.82), W - m, int(H * 0.97))
         self.slide = str(s.get("img_fill", "")).startswith("슬라이드")
-        if self.slide:   # PPT 발표: 슬라이드 전체가 잘리지 않게 크게, 자막은 그 아래
+        self.slide_full = self.slide and not self.port and s.get("slide_full", "on") == "on"
+        self.sub_pill = False
+        if self.slide_full:   # PPT 발표: 슬라이드가 화면 가득, 자막은 화면 안 아래쪽 (반투명 상자 위)
+            self.img_box = (0, 0, W, H)
+            self.sub_box = (m, int(H * 0.80), W - m, int(H * 0.955))
+            self.sub_pill = s.get("sub_hide") != "on"
+        elif self.slide:   # PPT 발표: 슬라이드 전체가 잘리지 않게 크게, 자막은 그 아래
             hide = s.get("sub_hide") == "on"
             sw = int(W * (0.94 if hide or self.port else 0.80))
             x0 = (W - sw) // 2
@@ -3291,6 +3297,12 @@ class SubtitleRenderer:
             d.rounded_rectangle([x0 - pad, y - pad * 0.8, x0 + tw + pad, y + lh * len(lines) - lh * 0.15 + pad * 0.6], radius=int(size * 0.35),
                                 fill=tuple(hex_rgb(s.get("sub_box_color", "#000000"))) + (a_,))
             d.rectangle([x0 - pad, y - pad * 0.8, x0 - pad + 9, y + lh * len(lines) - lh * 0.15 + pad * 0.6], fill=tuple(hex_rgb(s["accent_color"])) + (255,))
+        if getattr(self, "sub_pill", False) and lines:   # 화면 가득 슬라이드: 자막 뒤 반투명 상자 (글자가 슬라이드 위에서도 잘 보이게)
+            ws_ = [font.getlength(ln) for ln in lines] + ([font2.getlength(ln) for ln in lines2] if lines2 else [])
+            pad, cx_ = int(size * 0.55), (x0 + x1) / 2
+            bx0_ = x0 - pad if left else cx_ - max(ws_) / 2 - pad
+            bx1_ = x0 + max(ws_) + pad if left else cx_ + max(ws_) / 2 + pad
+            d.rounded_rectangle([bx0_, y - pad * 0.55, bx1_, y + tot + pad * 0.3], radius=int(size * 0.45), fill=(0, 0, 0, 205))
         st = s["sub_style"]
         band = "검은띠" in st
         bubble = st.startswith("말풍선")
@@ -3418,11 +3430,11 @@ class SubtitleRenderer:
                 sc = max(bw / im.width, bh / im.height) * 1.32
                 big = im.resize((max(bw, int(im.width * sc) + 1), max(bh, int(im.height * sc) + 1)), Image.LANCZOS)
             mask = None
-            if not self.full:
+            if not self.full and not getattr(self, "slide_full", False):
                 mask = Image.new("L", (bw, bh), 0)
                 ImageDraw.Draw(mask).rounded_rectangle([0, 0, bw - 1, bh - 1], radius=int(self.s["img_radius"]), fill=255)
             blur = None
-            if self.s.get("img_bg", "on") == "on" and not self.full:
+            if self.s.get("img_bg", "on") == "on" and not self.full and not getattr(self, "slide_full", False):
                 k = max(W / im.width, H / im.height)
                 small = im.resize((max(1, int(im.width * k / 8)) + 1, max(1, int(im.height * k / 8)) + 1), Image.BILINEAR)
                 small = small.filter(ImageFilter.GaussianBlur(4))
@@ -7348,6 +7360,7 @@ def ppt_narrate(model, slides, tone, audience, length, log=None, cancel=None, us
 
 
 PPT_SUB_LANGS = ["한국어", "베트남어", "한국어+베트남어"]
+PPT_SIZES = ["화면 가득 (자막은 화면 안 아래)", "작게 (자막은 슬라이드 아래)"]
 VI_FONT = next((p for p in (r"C:\Windows\Fonts\segoeuib.ttf", r"C:\Windows\Fonts\arialbd.ttf", r"C:\Windows\Fonts\tahomabd.ttf",
                             "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf") if os.path.exists(p)), "")   # 베트남어 성조 글자가 있는 글꼴
 PPT_VI_SYSTEM = """너는 한국어→베트남어 영상 자막 번역가다. 발표 나레이션 문장을 베트남 시청자가 읽기 쉬운 자연스러운 베트남어 자막으로 옮긴다.
@@ -11799,6 +11812,7 @@ class App(tk.Tk):
         vm_v, vf_v = tk.StringVar(value="🤖 AI가 추천"), tk.StringVar(value="🤖 AI가 추천")
         cat_ = ppt_voice_catalog()
         fmt_v = tk.StringVar(value="가로 16:9 (유튜브·발표)")
+        size_v = tk.StringVar(value=PPT_SIZES[0])
         see_v = tk.BooleanVar(value=True)
         rows = [("진행", ttk.Combobox(f2, textvariable=mode_v, values=PPT_MODES, state="readonly", width=34)),
                 ("남자 성우", ttk.Combobox(f2, textvariable=vm_v, values=["🤖 AI가 추천"] + [v for v in cat_ if ppt_voice_gender(v) == "남"], state="readonly", width=34)),
@@ -11810,7 +11824,8 @@ class App(tk.Tk):
                 ("자막", ttk.Combobox(f2, textvariable=sub_v, values=["켜기", "끄기(슬라이드 크게)"], state="readonly", width=24)),
                 ("배경음", ttk.Combobox(f2, textvariable=bgm_v, values=["잔잔하게(작게)", "없음"], state="readonly", width=24)),
                 ("화면", ttk.Combobox(f2, textvariable=fmt_v, values=["가로 16:9 (유튜브·발표)", "세로 9:16 (쇼츠)"], state="readonly", width=24)),
-                ("자막 언어", ttk.Combobox(f2, textvariable=lang_v, values=PPT_SUB_LANGS, state="readonly", width=24))]
+                ("자막 언어", ttk.Combobox(f2, textvariable=lang_v, values=PPT_SUB_LANGS, state="readonly", width=24)),
+                ("슬라이드", ttk.Combobox(f2, textvariable=size_v, values=PPT_SIZES, state="readonly", width=24))]
         for i, (lb, w_) in enumerate(rows):
             r_, c_ = i % 4, (i // 4) * 2      # 4줄씩 3칸
             ttk.Label(f2, text=lb).grid(row=r_, column=c_, sticky="e", padx=(8, 4), pady=2)
@@ -11959,7 +11974,7 @@ class App(tk.Tk):
                 atomic_write_text(os.path.join(st["dir"], "발표_대본.json"),
                                   json.dumps({"src": path_v.get(), "title": title_v.get(), "meta": st["meta"], "vi": st["vi"],
                                               "order": st["order"], "skip": sorted(st["skip"]), "fast": sorted(st["fast"]), "plan": st["plan"],
-                                              "lang": lang_v.get(), "mode": mode_v.get(), "tone": tone_v.get(), "audience": aud_v.get(),
+                                              "lang": lang_v.get(), "mode": mode_v.get(), "size": size_v.get(), "tone": tone_v.get(), "audience": aud_v.get(),
                                               "narr": {str(k): v for k, v in st["narr"].items()}}, ensure_ascii=False, indent=1))
 
         def fill(slides):
@@ -11979,7 +11994,7 @@ class App(tk.Tk):
                     st["order"] = od + [n for n in valid if n not in od]
                     st["skip"] = {int(n) for n in d.get("skip") or [] if int(n) in valid}
                     st["fast"] = {int(n) for n in d.get("fast") or [] if int(n) in valid}
-                    for var_, key_ in ((lang_v, "lang"), (mode_v, "mode"), (tone_v, "tone"), (aud_v, "audience")):
+                    for var_, key_ in ((lang_v, "lang"), (mode_v, "mode"), (tone_v, "tone"), (aud_v, "audience"), (size_v, "size")):
                         if d.get(key_):
                             var_.set(d[key_])
                     title_v.set(d.get("title") or title_v.get())
@@ -12085,6 +12100,7 @@ class App(tk.Tk):
                         return
             s = self.ppt_settings(duo["남"] if duo else voice_v.get(), st["meta"], sub_v.get().startswith("켜기"), bgm_v.get() != "없음")
             lang = lang_v.get() if sub_v.get().startswith("켜기") else "한국어"
+            s["slide_full"] = "on" if size_v.get() == PPT_SIZES[0] else "off"
             voice = f"남 {duo['남']} + 여 {duo['여']}" if duo else s["narr_voice"]
             story = ppt_build_story(show_, narr, duo)
             fmt_name = "롱폼 가로(1920×1080)" if fmt_v.get().startswith("가로") else "쇼츠 세로(1080×1920)"
