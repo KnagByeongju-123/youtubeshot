@@ -3085,6 +3085,14 @@ class SubtitleRenderer:
         self.shots = self._make_shots()
         for k_, sh_ in enumerate(self.shots):       # 앞 장면 (같은 그림 확대 이동용)
             sh_["prev"] = self.shots[k_ - 1]["img"] if k_ else None
+        k_ = 0
+        while k_ < len(self.shots):                 # 같은 슬라이드 장면 묶음의 시작·끝
+            j_ = k_
+            while j_ + 1 < len(self.shots) and self._slide_no(self.shots[j_ + 1]["img"]) == self._slide_no(self.shots[k_]["img"]):
+                j_ += 1
+            for sh_ in self.shots[k_:j_ + 1]:
+                sh_["g0"], sh_["g1"] = self.shots[k_]["t0"], self.shots[j_]["t1"]
+            k_ = j_ + 1
         self.narr_at = []
         for sg in self.segs:
             if sg["i"] in clips:
@@ -3451,19 +3459,31 @@ class SubtitleRenderer:
         x0, y0, x1, y1 = self.img_box
         bw, bh = x1 - x0, y1 - y0
         big, mask, _ = self._img_src(sh["img"])
-        if getattr(self, "slide", False):             # 슬라이드: 움직이지 않음 (확대 표시가 있으면 그 부분으로 카메라 이동)
+        if getattr(self, "slide", False):             # 슬라이드: [확대] → 카메라 이동, '천천히 다가가기' → 아주 느린 확대(3.5%)
+            im = self.images[sh["img"]][0]
             r1 = self._zoom_rect(sh["img"])
             p = sh.get("prev")
-            same = p is not None and self.images[p][0] is self.images[sh["img"]][0]
+            same = p is not None and self.images[p][0] is im
             moving = same and t - sh["t0"] < 0.9 and self._zoom_rect(p) != r1
-            if r1 is None and not moving:
+            kb = self.s.get("slide_motion", "on") == "on" and abs(im.width / im.height - bw / bh) < 0.03 * bw / bh
+            if r1 is None and not moving and not kb:
                 return big, mask
-            im = self.images[sh["img"]][0]
-            if moving:
+            if moving or kb:
                 full = self._zoom_rect(sh["img"], whole=True)
-                r0, r2 = self._zoom_rect(p) or full, r1 or full
-                a = float(smoothstep((t - sh["t0"]) / 0.9))
-                return extent_resize(im, (bw, bh), tuple(r0[k] + (r2[k] - r0[k]) * a for k in range(4))), mask
+                if moving:
+                    r0, r2 = self._zoom_rect(p) or full, r1 or full
+                    a = float(smoothstep((t - sh["t0"]) / 0.9))
+                    rr = tuple(r0[k] + (r2[k] - r0[k]) * a for k in range(4))
+                else:
+                    rr = r1 or full
+                if kb:                                # 같은 슬라이드가 보이는 동안 이어서 천천히 다가감 (단계·확대가 바뀌어도 끊기지 않게)
+                    g0, g1 = sh.get("g0", sh["t0"]), sh.get("g1", sh["t1"])
+                    q = min(1.0, max(0.0, (t - g0) / max(0.5, g1 - g0)))
+                    z = 1 + 0.035 * (0.5 - 0.5 * np.cos(np.pi * q))
+                    cx, cy = (rr[0] + rr[2]) / 2, (rr[1] + rr[3]) / 2
+                    w2, h2 = (rr[2] - rr[0]) / z / 2, (rr[3] - rr[1]) / z / 2
+                    rr = (cx - w2, cy - h2, cx + w2, cy + h2)
+                return extent_resize(im, (bw, bh), rr), mask
             key = ("zoom", sh["img"])
             if key not in self._img_cache:
                 z = extent_resize(im, (bw, bh), r1)
@@ -3488,6 +3508,48 @@ class SubtitleRenderer:
         l, tp = cx - cw / 2, cy - ch / 2
         crop = extent_resize(big, (bw, bh), (l, tp, l + cw, tp + ch))
         return crop, mask
+
+    def _slide_no(self, idx):
+        m = re.match(r"\s*슬라이드 (\d+)", str(self.images[idx][1] or "")) if 0 <= idx < len(self.images) else None
+        return int(m.group(1)) if m else ("img", idx)
+
+    def _trans_kind(self, idx):
+        kind = str(self.s.get("slide_trans", "밀어내기"))
+        if kind.startswith("섞어"):
+            n = self._slide_no(idx)
+            return ["밀어내기", "덮기", "닦아내기", "확대"][(n if isinstance(n, int) else idx) % 4]
+        return kind.split(" ")[0]
+
+    @staticmethod
+    def _transition(a, b, e, kind):
+        """a(앞 슬라이드) → b(다음 슬라이드), e: 0→1"""
+        w, h = b.size
+        if kind.startswith("밀어"):                 # 밀어내기: 앞 장이 왼쪽으로 밀려나고 새 장이 오른쪽에서
+            out = Image.new("RGB", (w, h))
+            dx = int(round(w * e))
+            out.paste(a, (-dx, 0))
+            out.paste(b, (w - dx, 0))
+            return out
+        if kind.startswith("덮"):                   # 덮기: 새 장이 오른쪽에서 들어와 덮음 (그림자)
+            out = a.copy()
+            x = int(round(w * (1 - e)))
+            sh_ = Image.new("L", (w, h), 0)
+            ImageDraw.Draw(sh_).rectangle([max(0, x - 40), 0, x, h], fill=90)
+            out.paste((0, 0, 0), (0, 0), sh_.filter(ImageFilter.GaussianBlur(18)))
+            out.paste(b, (x, 0))
+            return out
+        if kind.startswith("닦"):                   # 닦아내기: 왼쪽부터 부드럽게 드러남
+            fe = w * 0.18
+            xs = np.arange(w, dtype=np.float32)
+            row = np.clip((e * (w + fe) - xs) / fe, 0, 1)
+            mk = Image.fromarray((np.repeat(row[None, :], h, 0) * 255).astype(np.uint8), "L")
+            return Image.composite(b, a, mk)
+        if kind.startswith("확대"):                 # 확대: 앞 장은 다가오며 사라지고, 새 장은 살짝 멀리서 다가옴
+            def zm(img, z):
+                cw, ch = w / z, h / z
+                return extent_resize(img, (w, h), ((w - cw) / 2, (h - ch) / 2, (w + cw) / 2, (h + ch) / 2))
+            return Image.blend(zm(a, 1 + 0.25 * e), zm(b, 1.12 - 0.12 * e) if e < 1 else b, e)
+        return Image.blend(a, b, e)                 # 페이드
 
     def _zoom_rect(self, idx, whole=False):
         """확대 장면이면 원본 그림에서 잘라 올 영역(사진 상자 비율에 맞춤), 아니면 None. whole=True: 그림 전체"""
@@ -3537,6 +3599,15 @@ class SubtitleRenderer:
         prev = self.shots[k - 1] if k > 0 and t - sh["t0"] < fade else None
         if prev is not None and getattr(self, "slide", False) and self.images[prev["img"]][0] is self.images[sh["img"]][0]:
             prev = None                       # 같은 슬라이드 확대 이동: 겹치지 않고 카메라만 움직임
+        trans = None
+        if getattr(self, "slide", False) and k > 0:     # 다른 슬라이드로 넘어갈 때: PPT 같은 전환 효과
+            p_ = self.shots[k - 1]
+            if self._slide_no(p_["img"]) != self._slide_no(sh["img"]):
+                kind = self._trans_kind(sh["img"])
+                T = 0.6
+                if kind != "없음" and t - sh["t0"] < T:
+                    trans = (p_, float(smoothstep((t - sh["t0"]) / T)), kind)
+                prev = None
         a = smoothstep((t - sh["t0"]) / fade) if prev is not None else 1.0
         if self.s.get("img_bg", "on") == "on" and not self.full:
             cur_b = self._img_src(sh["img"])[2]
@@ -3545,7 +3616,10 @@ class SubtitleRenderer:
                     cur_b = Image.blend(self._img_src(prev["img"])[2], cur_b, float(a))
                 canvas = cur_b.copy()
         crop, mask = self._shot_crop(sh, t)
-        if prev is not None:
+        if trans is not None:
+            pc, _ = self._shot_crop(trans[0], t)
+            crop = self._transition(pc.convert("RGB"), crop.convert("RGB"), trans[1], trans[2])
+        elif prev is not None:
             pc, _ = self._shot_crop(prev, t)
             crop = Image.blend(pc, crop, float(a))
         canvas.paste(crop, (self.img_box[0], self.img_box[1]), mask)
@@ -7370,6 +7444,8 @@ def ppt_narrate(model, slides, tone, audience, length, log=None, cancel=None, us
 
 PPT_SUB_LANGS = ["한국어", "베트남어", "한국어+베트남어"]
 PPT_SIZES = ["화면 가득 (자막은 화면 안 아래)", "작게 (자막은 슬라이드 아래)"]
+PPT_TRANS = ["밀어내기", "덮기", "닦아내기", "확대", "페이드", "섞어서 (장마다 다르게)", "없음"]
+PPT_MOTION = ["천천히 다가가기", "멈춤"]
 VI_FONT = next((p for p in (r"C:\Windows\Fonts\segoeuib.ttf", r"C:\Windows\Fonts\arialbd.ttf", r"C:\Windows\Fonts\tahomabd.ttf",
                             "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf") if os.path.exists(p)), "")   # 베트남어 성조 글자가 있는 글꼴
 PPT_VI_SYSTEM = """너는 한국어→베트남어 영상 자막 번역가다. 발표 나레이션 문장을 베트남 시청자가 읽기 쉬운 자연스러운 베트남어 자막으로 옮긴다.
@@ -11822,6 +11898,7 @@ class App(tk.Tk):
         cat_ = ppt_voice_catalog()
         fmt_v = tk.StringVar(value="가로 16:9 (유튜브·발표)")
         size_v = tk.StringVar(value=PPT_SIZES[0])
+        trans_v, motion_v = tk.StringVar(value=PPT_TRANS[0]), tk.StringVar(value=PPT_MOTION[0])
         see_v = tk.BooleanVar(value=True)
         rows = [("진행", ttk.Combobox(f2, textvariable=mode_v, values=PPT_MODES, state="readonly", width=34)),
                 ("남자 성우", ttk.Combobox(f2, textvariable=vm_v, values=["🤖 AI가 추천"] + [v for v in cat_ if ppt_voice_gender(v) == "남"], state="readonly", width=34)),
@@ -11834,15 +11911,17 @@ class App(tk.Tk):
                 ("배경음", ttk.Combobox(f2, textvariable=bgm_v, values=["잔잔하게(작게)", "없음"], state="readonly", width=24)),
                 ("화면", ttk.Combobox(f2, textvariable=fmt_v, values=["가로 16:9 (유튜브·발표)", "세로 9:16 (쇼츠)"], state="readonly", width=24)),
                 ("자막 언어", ttk.Combobox(f2, textvariable=lang_v, values=PPT_SUB_LANGS, state="readonly", width=24)),
-                ("슬라이드", ttk.Combobox(f2, textvariable=size_v, values=PPT_SIZES, state="readonly", width=24))]
+                ("슬라이드", ttk.Combobox(f2, textvariable=size_v, values=PPT_SIZES, state="readonly", width=24)),
+                ("전환 효과", ttk.Combobox(f2, textvariable=trans_v, values=PPT_TRANS, state="readonly", width=20)),
+                ("화면 움직임", ttk.Combobox(f2, textvariable=motion_v, values=PPT_MOTION, state="readonly", width=20))]
         for i, (lb, w_) in enumerate(rows):
             r_, c_ = i % 4, (i // 4) * 2      # 4줄씩 3칸
             ttk.Label(f2, text=lb).grid(row=r_, column=c_, sticky="e", padx=(8, 4), pady=2)
             w_.grid(row=r_, column=c_ + 1, sticky="w", pady=2)
         ttk.Checkbutton(f2, text="AI가 슬라이드 그림(도표·그래프)까지 직접 보고 해석 (Claude)",
-                        variable=see_v).grid(row=0, column=6, sticky="w", padx=12)
+                        variable=see_v).grid(row=0, column=8, sticky="w", padx=12)
         ttk.Label(f2, text="2인 진행: 대본 줄 앞 '남:'·'여:'가 성우를 정합니다\n(자막 색: 남 하늘색 · 여 분홍색)\n성우는 항상 한국어로 읽습니다 (베트남어는 자막만)\n숫자: 자막은 2026년, 성우는 '이천이십육 년'",
-                  foreground="#666", justify="left").grid(row=1, column=6, rowspan=3, sticky="nw", padx=12)
+                  foreground="#666", justify="left").grid(row=1, column=8, rowspan=3, sticky="nw", padx=12)
 
         # ③ 대본
         f3 = ttk.LabelFrame(left, text="③ 나레이션 대본 (직접 고쳐도 됩니다 · '### 슬라이드 번호' 줄 아래가 그 슬라이드에서 읽을 말)", padding=6)
@@ -11983,7 +12062,8 @@ class App(tk.Tk):
                 atomic_write_text(os.path.join(st["dir"], "발표_대본.json"),
                                   json.dumps({"src": path_v.get(), "title": title_v.get(), "meta": st["meta"], "vi": st["vi"],
                                               "order": st["order"], "skip": sorted(st["skip"]), "fast": sorted(st["fast"]), "plan": st["plan"],
-                                              "lang": lang_v.get(), "mode": mode_v.get(), "size": size_v.get(), "tone": tone_v.get(), "audience": aud_v.get(),
+                                              "lang": lang_v.get(), "mode": mode_v.get(), "size": size_v.get(),
+                                              "trans": trans_v.get(), "motion": motion_v.get(), "tone": tone_v.get(), "audience": aud_v.get(),
                                               "narr": {str(k): v for k, v in st["narr"].items()}}, ensure_ascii=False, indent=1))
 
         def fill(slides):
@@ -12003,7 +12083,7 @@ class App(tk.Tk):
                     st["order"] = od + [n for n in valid if n not in od]
                     st["skip"] = {int(n) for n in d.get("skip") or [] if int(n) in valid}
                     st["fast"] = {int(n) for n in d.get("fast") or [] if int(n) in valid}
-                    for var_, key_ in ((lang_v, "lang"), (mode_v, "mode"), (tone_v, "tone"), (aud_v, "audience"), (size_v, "size")):
+                    for var_, key_ in ((lang_v, "lang"), (mode_v, "mode"), (tone_v, "tone"), (aud_v, "audience"), (size_v, "size"), (trans_v, "trans"), (motion_v, "motion")):
                         if d.get(key_):
                             var_.set(d[key_])
                     title_v.set(d.get("title") or title_v.get())
@@ -12110,6 +12190,7 @@ class App(tk.Tk):
             s = self.ppt_settings(duo["남"] if duo else voice_v.get(), st["meta"], sub_v.get().startswith("켜기"), bgm_v.get() != "없음")
             lang = lang_v.get() if sub_v.get().startswith("켜기") else "한국어"
             s["slide_full"] = "on" if size_v.get() == PPT_SIZES[0] else "off"
+            s["slide_trans"], s["slide_motion"] = trans_v.get(), ("on" if motion_v.get() == PPT_MOTION[0] else "off")
             voice = f"남 {duo['남']} + 여 {duo['여']}" if duo else s["narr_voice"]
             story = ppt_build_story(show_, narr, duo)
             fmt_name = "롱폼 가로(1920×1080)" if fmt_v.get().startswith("가로") else "쇼츠 세로(1080×1920)"
