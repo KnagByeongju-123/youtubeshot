@@ -5195,30 +5195,37 @@ def voice_post_params(voice_name, code=""):
 
 
 def trim_breath(a):
-    """말 시작 숨소리('쓰읍') 지우기: 앞쪽의 작은 소리 뒤에 짧은 쉼이 있고 그다음 말이 시작되면 그 앞을 잘라냄"""
+    """말 시작 숨소리('흐', '쓰읍') 지우기: 앞쪽의 짧은 소리 뒤에 쉼이 있고 그다음 말이 시작될 때,
+    그 소리가 작거나(숨) 목청이 울리지 않는 바람소리(잡음도 높음)면 잘라냄. '네.'처럼 목청이 울리는 짧은 말은 그대로"""
     fr = int(0.01 * SR)
-    n = len(a) // fr
-    if n < 25:
-        return a
-    rms = np.sqrt((np.asarray(a[:n * fr], np.float32).reshape(n, fr) ** 2).mean(1))
-    pk = float(rms.max()) or 1.0
-    above = rms > pk * 0.05
-    lim = min(n, 80)                       # 앞 0.8초 안에서만
-    k = 0
-    while k < lim and not above[k]:
-        k += 1
-    s0 = k
-    while k < lim and above[k]:
-        k += 1
-    blob = rms[s0:k]
-    g0 = k
-    while k < lim and not above[k]:
-        k += 1
-    if len(blob) and len(blob) <= 45 and k - g0 >= 4 and k < lim and float(blob.max()) < pk * 0.45:
-        cut = max(0, (k - 2) * fr)
-        b = np.array(a[cut:], np.float32)
-    else:
-        b = np.array(a, np.float32)
+    b = np.array(a, np.float32)
+    for _ in range(2):                     # 숨이 두 번 들어간 경우까지
+        n = len(b) // fr
+        if n < 25:
+            break
+        x = b[:n * fr].reshape(n, fr)
+        rms = np.sqrt((x ** 2).mean(1))
+        zcr = (np.abs(np.diff(np.sign(x), axis=1)) > 0).mean(1)
+        pk = float(rms.max()) or 1.0
+        above = rms > pk * 0.05
+        lim = min(n, 100)                  # 앞 1초 안에서만
+        k = 0
+        while k < lim and not above[k]:
+            k += 1
+        s0 = k
+        while k < lim and above[k]:
+            k += 1
+        blob, bz = rms[s0:k], zcr[s0:k]
+        g0 = k
+        while k < lim and not above[k]:
+            k += 1
+        if not (len(blob) and len(blob) <= 35 and k - g0 >= 5 and k < lim):
+            break
+        breathy = float(np.median(bz)) >= 0.08 and float((bz < 0.05).mean()) < 0.3     # 목청이 안 울리는 바람소리
+        if float(blob.max()) < pk * 0.45 or breathy:
+            b = b[max(0, (k - 2) * fr):].copy()
+        else:
+            break
     f_ = min(len(b), int(0.012 * SR))      # 아주 짧게 부드럽게 시작 (딸깍 소리 방지)
     b[:f_] *= np.linspace(0, 1, f_, dtype=np.float32)
     return b
@@ -5251,7 +5258,7 @@ def voice_post(a, voice_name, cache_dir, code="", only_cached=False):
         return a
     import hashlib
     h = hashlib.md5(np.ascontiguousarray(np.asarray(a, np.float32)[::37]).tobytes()
-                    + f"{len(a)}|{tone}|{bright}|{trim}|v1".encode()).hexdigest()[:20]
+                    + f"{len(a)}|{tone}|{bright}|{trim}|v2".encode()).hexdigest()[:20]
     p = os.path.join(cache_dir, f"post_{h}.npy")
     if os.path.exists(p):
         try:
