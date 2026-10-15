@@ -2159,6 +2159,23 @@ def download_free_font(repo_path):
     return dst
 
 
+_VI_OK = {}
+
+
+def font_has_vi(path):
+    """베트남어 성조 글자(ệ ữ ấ ờ)가 있는 글꼴인지"""
+    if not path:
+        return False
+    if path not in _VI_OK:
+        try:
+            ft = ImageFont.truetype(path, 30)
+            miss = bytes(ft.getmask("󰀀"))
+            _VI_OK[path] = all(bytes(ft.getmask(c)) != miss for c in "ệữấờ")
+        except Exception:
+            _VI_OK[path] = False
+    return _VI_OK[path]
+
+
 def has_hangul(font):
     """글꼴에 한글이 있는지 (없는 글자는 빈칸/네모로 그려짐 → 비교)"""
     try:
@@ -7493,10 +7510,13 @@ def ppt_lang_story(story, lang, vi, s):
                 out.append(vi[t])
             else:
                 out.append(ln)
-        s.update(sub_font_path=VI_FONT or s.get("sub_font_path", ""), sub_max_chars=44)
+        if not font_has_vi(s.get("sub_font_path") or s.get("title_font_path")):
+            s["sub_font_path"] = VI_FONT or s.get("sub_font_path", "")
+        s["sub_max_chars"] = 44
         return "\n".join(out)
     if lang == "한국어+베트남어":
-        s.update(sub_trans=dict(vi), sub_font2=VI_FONT, sub_split="문단 통째로")
+        f2_ = s.get("sub_font_path") or s.get("title_font_path")
+        s.update(sub_trans=dict(vi), sub_font2=f2_ if font_has_vi(f2_) else VI_FONT, sub_split="문단 통째로")
     return story
 
 
@@ -9098,94 +9118,183 @@ class App(tk.Tk):
         else:
             ttk.Entry(cell, textvariable=v, width=8).pack(side="left")
 
-    def font_picker(self, key="title_font_path"):
-        """🔤 글꼴 고르기: 무료 글꼴(받기) + 내 PC 한글 글꼴, 미리보기 후 제목/본문/자막에 적용"""
+    def font_picker(self, key="title_font_path", on_pick=None, title=None):
+        """🔤 글꼴 고르기: 목록의 줄마다 그 글꼴 모양으로 미리보기(갤러리). 무료 글꼴(받기) + 내 PC 한글 글꼴.
+        on_pick(path, name): 설정 대신 그 함수로 넘김 (PPT 발표 자막 글꼴 등). 🇻🇳 = 베트남어 성조 글자 지원"""
         dlg = tk.Toplevel(self)
-        dlg.title("글꼴 고르기")
+        dlg.title(title or "글꼴 고르기 - 모양을 보고 고르세요")
         dlg.transient(self)
-        dlg.geometry("900x600")
+        dlg.geometry("1100x680")
         f = ttk.Frame(dlg, padding=10)
         f.pack(fill="both", expand=True)
         top = ttk.Frame(f)
         top.pack(fill="x")
-        ttk.Label(top, text="어디에 쓸까요:").pack(side="left")
         where = tk.StringVar(value=key)
-        for k_, lab_ in (("title_font_path", "제목"), ("font_path", "본문(스크롤형)"), ("sub_font_path", "자막(자막형)")):
-            ttk.Radiobutton(top, text=lab_, value=k_, variable=where).pack(side="left", padx=4)
+        if on_pick is None:
+            ttk.Label(top, text="어디에 쓸까요:").pack(side="left")
+            for k_, lab_ in (("title_font_path", "제목"), ("font_path", "본문(스크롤형)"), ("sub_font_path", "자막(자막형)")):
+                ttk.Radiobutton(top, text=lab_, value=k_, variable=where).pack(side="left", padx=4)
+        ttk.Label(top, text="   미리보기 글:").pack(side="left")
+        sample = tk.StringVar(value=self.title_var.get().strip()[:18] or "그날 밤, 아무도 몰랐다")
+        ttk.Entry(top, textvariable=sample, width=26).pack(side="left", padx=4)
+        flt = tk.StringVar(value="전체")
+        ttk.Combobox(top, textvariable=flt, values=["전체", "★ 무료 글꼴만", "🇻🇳 베트남어 되는 것만"], state="readonly", width=20).pack(side="left", padx=6)
         status = ttk.Label(top, text="내 PC 글꼴 찾는 중...", foreground="gray")
         status.pack(side="right")
         mid = ttk.Frame(f)
         mid.pack(fill="both", expand=True, pady=6)
-        lst = tk.Listbox(mid, font=("맑은 고딕", 11), activestyle="none", exportselection=False, width=42)
-        sb = ttk.Scrollbar(mid, orient="vertical", command=lst.yview)
-        lst.config(yscrollcommand=sb.set)
-        lst.pack(side="left", fill="y")
+        ROW, GW = 64, 560
+        gal = tk.Canvas(mid, width=GW, bg="white", highlightthickness=1, highlightbackground="#ccc")
+        sb = ttk.Scrollbar(mid, orient="vertical")
+        gal.pack(side="left", fill="y")
         sb.pack(side="left", fill="y")
         right = ttk.Frame(mid, padding=(10, 0))
         right.pack(side="left", fill="both", expand=True)
-        sample = tk.StringVar(value=self.title_var.get().strip() or "그날 밤, 아무도 몰랐다")
-        ttk.Entry(right, textvariable=sample, width=40).pack(fill="x")
         pv = tk.Label(right, bg="#111")
-        pv.pack(fill="both", expand=True, pady=6)
-        desc = ttk.Label(right, text="", foreground="#555", wraplength=460)
-        desc.pack(anchor="w")
+        pv.pack(fill="both", expand=True)
+        desc = ttk.Label(right, text="", foreground="#555", wraplength=440)
+        desc.pack(anchor="w", pady=(6, 0))
         entries = []    # (표시, 경로 또는 None, repo_path 또는 None, 설명)
         for n, d_, rp in FREE_FONTS:
             have = os.path.exists(free_font_path(rp))
             entries.append((f"★ {n}" + ("" if have else "  (무료·받기)"), free_font_path(rp) if have else None, rp, d_ + " · 무료(OFL, 상업 이용 가능)"))
+        view = []                      # 지금 보이는 entries 번호 (필터 적용)
+        cur = {"i": None}
+        thumbs = {}
+        ui_font = load_font(find_font(), 13)
+
+        def visible_entries():
+            fv = flt.get()
+            out = []
+            for i, e in enumerate(entries):
+                if fv.startswith("★") and not e[0].startswith("★"):
+                    continue
+                if fv.startswith("🇻🇳") and not (e[1] and font_has_vi(e[1])):
+                    continue
+                out.append(i)
+            return out
+
+        def thumb(i):
+            key_ = (i, sample.get())
+            if key_ in thumbs:
+                return thumbs[key_]
+            e = entries[i]
+            im = Image.new("RGB", (GW - 8, ROW - 6), "white")
+            d = ImageDraw.Draw(im)
+            name = e[0].replace("  (무료·받기)", "")
+            if e[1]:
+                vi = font_has_vi(e[1])
+                d.text((10, 4), name + ("    [베트남어 OK]" if vi else ""), font=ui_font, fill="#1a7f37" if vi else "#888")
+                try:
+                    ft = load_font(e[1], 30)
+                    d.text((10, 20), (sample.get() or "가나다 ABC 123")[:20] + "  123", font=ft, fill="#111")
+                except Exception:
+                    d.text((10, 26), "(미리보기 실패)", font=ui_font, fill="#c00")
+            else:
+                d.text((10, 4), name, font=ui_font, fill="#888")
+                d.text((10, 28), "무료 글꼴 - 누르면 받아서 미리 보여줍니다", font=ui_font, fill="#1a5fb4")
+            thumbs[key_] = ImageTk.PhotoImage(im)
+            return thumbs[key_]
+
+        def draw_visible(*_):
+            if not view:
+                return
+            a, b = gal.yview()
+            tot = len(view) * ROW
+            r0, r1 = int(a * tot // ROW), int(b * tot // ROW) + 1
+            for r in range(max(0, r0), min(len(view), r1 + 1)):
+                if not gal.find_withtag(f"img{r}"):
+                    gal.create_image(4, r * ROW + 3, anchor="nw", image=thumb(view[r]), tags=(f"img{r}", "img"))
+
+        def rebuild(*_):
+            view[:] = visible_entries()
+            gal.delete("all")
+            gal.config(scrollregion=(0, 0, GW, max(1, len(view) * ROW)))
+            for r, i in enumerate(view):
+                if i == cur["i"]:
+                    gal.create_rectangle(1, r * ROW, GW, (r + 1) * ROW - 1, fill="#dbeafe", outline="#3b82f6", width=2)
+                else:
+                    gal.create_line(0, (r + 1) * ROW - 1, GW, (r + 1) * ROW - 1, fill="#eee")
+            draw_visible()
+
+        def yscroll(*args):
+            gal.yview(*args)
+            draw_visible()
+        sb.config(command=yscroll)
+        gal.config(yscrollcommand=lambda a, b: (sb.set(a, b), dlg.after_idle(draw_visible)))
+        gal.bind("<MouseWheel>", lambda ev: (gal.yview_scroll(int(-ev.delta / 120) * 2, "units"), draw_visible()))
+        gal.bind("<Configure>", draw_visible)
+        flt.trace_add("write", rebuild)
+
+        def sample_changed(*_):
+            thumbs.clear()
+            rebuild()
+            show()
+        sample.trace_add("write", lambda *_: dlg.after(300, sample_changed))
 
         def fill(pc):
             free_files = {free_font_path(rp) for _, _, rp in FREE_FONTS}
             for n, p in pc:
                 if p not in free_files:
-                    entries.append((f"   {n}", p, None, "내 PC 글꼴: " + p))
-            lst.delete(0, "end")
-            for e in entries:
-                lst.insert("end", e[0])
-            status.config(text=f"무료 {len(FREE_FONTS)}개 + 내 PC {len(entries) - len(FREE_FONTS)}개")
-            cur = self.vars[where.get()].get()
+                    entries.append((f"{n}", p, None, "내 PC 글꼴: " + p))
+            status.config(text=f"무료 {len(FREE_FONTS)}개 + 내 PC {len(entries) - len(FREE_FONTS)}개 · 줄을 누르면 크게 · 두 번 누르면 적용")
+            now = self.vars[where.get()].get() if on_pick is None else key
             for i, e in enumerate(entries):
-                if e[1] and os.path.normcase(e[1]) == os.path.normcase(cur):
-                    lst.selection_set(i)
-                    lst.see(i)
-                    show()
+                if e[1] and now and os.path.normcase(e[1]) == os.path.normcase(str(now)):
+                    cur["i"] = i
                     break
+            rebuild()
+            if cur["i"] is not None and cur["i"] in view:
+                gal.yview_moveto(max(0, view.index(cur["i"]) - 2) * ROW / max(1, len(view) * ROW))
+                draw_visible()
+                show()
 
         def worker():
             pc = list_pc_fonts()
             self.q.put(lambda: dlg.winfo_exists() and fill(pc))
         threading.Thread(target=worker, daemon=True).start()
-        for e in entries:
-            lst.insert("end", e[0])
+        rebuild()
 
         def draw(path):
-            im = Image.new("RGB", (480, 300), (17, 17, 17))
+            im = Image.new("RGB", (500, 380), (17, 17, 17))
             d = ImageDraw.Draw(im)
-            y = 30
-            for txt, sz, col in ((sample.get(), 46, "#FFD54F"), ("자막은 이렇게 보여요.", 34, "#FFFFFF"), ("ABC abc 123 !?", 30, "#9ad")):
+            y = 26
+            for txt, sz, col in ((sample.get(), 46, "#FFD54F"), ("자막은 이렇게 보여요.", 34, "#FFFFFF"),
+                                 ("Phụ đề tiếng Việt ở đây", 30, "#9AD9FF"), ("ABC abc 123 !?", 30, "#9ad")):
                 ft = load_font(path, sz)
-                for ln in wrap(txt, ft, 440)[:2]:
+                for ln in wrap(txt, ft, 460)[:2]:
                     d.text((20, y), ln, font=ft, fill=col, stroke_width=2, stroke_fill="#000")
                     y += int(sz * 1.3)
-                y += 10
+                y += 8
             pv._img = ImageTk.PhotoImage(im)
-            pv.config(image=pv._img)
+            pv.config(image=pv._img, text="")
 
         def sel():
-            i = lst.curselection()
-            return entries[i[0]] if i else None
+            return entries[cur["i"]] if cur["i"] is not None else None
 
         def show(*_):
             e = sel()
             if not e:
                 return
-            desc.config(text=e[3])
+            vi = e[1] and font_has_vi(e[1])
+            desc.config(text=e[3] + ("\n🇻🇳 베트남어 성조 글자 지원 - 베트남어 자막에도 이 글꼴이 쓰입니다" if vi else
+                                      ("\n(베트남어 자막은 성조 글자가 있는 다른 글꼴로 자동 대체)" if e[1] else "")))
             if e[1]:
                 draw(e[1])
             else:
-                pv.config(image="", text="'적용' 또는 '받기'를 누르면 내려받아 미리 보여줍니다", fg="#ccc")
-        lst.bind("<<ListboxSelect>>", show)
-        sample.trace_add("write", lambda *_: show())
+                ensure(e, draw)
+
+        def click(ev):
+            r = int(gal.canvasy(ev.y) // ROW)
+            if 0 <= r < len(view):
+                cur["i"] = view[r]
+                y0 = gal.yview()[0]
+                rebuild()
+                gal.yview_moveto(y0)
+                draw_visible()
+                show()
+        gal.bind("<Button-1>", click)
+        gal.bind("<Double-Button-1>", lambda ev: (click(ev), apply()))
 
         def ensure(e, then):
             if e[1]:
@@ -9205,9 +9314,12 @@ class App(tk.Tk):
         def refresh_entry(e, p_):
             k = entries.index(e)
             entries[k] = (e[0].replace("  (무료·받기)", ""), p_, e[2], e[3])
-            lst.delete(k)
-            lst.insert(k, entries[k][0])
-            lst.selection_set(k)
+            for kk in [x for x in thumbs if x[0] == k]:
+                thumbs.pop(kk)
+            y0 = gal.yview()[0]
+            rebuild()
+            gal.yview_moveto(y0)
+            draw_visible()
 
         def apply():
             e = sel()
@@ -9216,19 +9328,22 @@ class App(tk.Tk):
                 return
 
             def done(p_):
-                self.vars[where.get()].set(p_)
+                nm = e[0].strip("★ ").replace("  (무료·받기)", "")
                 draw(p_)
+                if on_pick is not None:
+                    on_pick(p_, nm)
+                    dlg.destroy()
+                    return
+                self.vars[where.get()].set(p_)
                 names = {"title_font_path": "제목", "font_path": "본문", "sub_font_path": "자막"}
-                self.write_log(f"🔤 {names[where.get()]} 글꼴: {e[0].strip('★ ').replace('  (무료·받기)', '')}")
+                self.write_log(f"🔤 {names[where.get()]} 글꼴: {nm}")
                 self.save_cfg()
                 self.refresh_preview()
             ensure(e, done)
         bf = ttk.Frame(f)
         bf.pack(fill="x")
-        ttk.Button(bf, text="받기/미리보기", command=lambda: (sel() and ensure(sel(), draw))).pack(side="left")
         ttk.Button(bf, text="닫기", command=dlg.destroy).pack(side="right")
-        ttk.Button(bf, text="✔ 적용", command=apply).pack(side="right", padx=6)
-        lst.bind("<Double-Button-1>", lambda _: apply())
+        ttk.Button(bf, text="✔ 이 글꼴로", command=apply).pack(side="right", padx=6)
 
     def browse(self, key, t):
         types = {"font": [("글꼴", "*.ttf *.otf *.ttc")],
@@ -11899,6 +12014,18 @@ class App(tk.Tk):
         fmt_v = tk.StringVar(value="가로 16:9 (유튜브·발표)")
         size_v = tk.StringVar(value=PPT_SIZES[0])
         trans_v, motion_v = tk.StringVar(value=PPT_TRANS[0]), tk.StringVar(value=PPT_MOTION[0])
+        font_v = tk.StringVar(value="")          # 발표 자막 글꼴 (비우면 설정의 자막 글꼴)
+        fontf = ttk.Frame(f2)
+        font_lbl = ttk.Label(fontf, text="기본 (설정의 자막 글꼴)", width=22, foreground="#1a5fb4")
+
+        def font_label(*_):
+            p = font_v.get()
+            nm = os.path.splitext(os.path.basename(p))[0] if p else "기본 (설정의 자막 글꼴)"
+            font_lbl.config(text=(nm[:20] + (" 🇻🇳" if p and font_has_vi(p) else "")))
+        font_v.trace_add("write", font_label)
+        font_lbl.pack(side="left")
+        ttk.Button(fontf, text="🔤 고르기", command=lambda: self.font_picker(font_v.get() or self.vars["sub_font_path"].get() or self.vars["title_font_path"].get(),
+                                                                          on_pick=lambda p, n: font_v.set(p), title="발표 자막 글꼴 고르기 - 모양을 보고 고르세요")).pack(side="left", padx=2)
         see_v = tk.BooleanVar(value=True)
         rows = [("진행", ttk.Combobox(f2, textvariable=mode_v, values=PPT_MODES, state="readonly", width=34)),
                 ("남자 성우", ttk.Combobox(f2, textvariable=vm_v, values=["🤖 AI가 추천"] + [v for v in cat_ if ppt_voice_gender(v) == "남"], state="readonly", width=34)),
@@ -11913,15 +12040,16 @@ class App(tk.Tk):
                 ("자막 언어", ttk.Combobox(f2, textvariable=lang_v, values=PPT_SUB_LANGS, state="readonly", width=24)),
                 ("슬라이드", ttk.Combobox(f2, textvariable=size_v, values=PPT_SIZES, state="readonly", width=24)),
                 ("전환 효과", ttk.Combobox(f2, textvariable=trans_v, values=PPT_TRANS, state="readonly", width=20)),
-                ("화면 움직임", ttk.Combobox(f2, textvariable=motion_v, values=PPT_MOTION, state="readonly", width=20))]
+                ("화면 움직임", ttk.Combobox(f2, textvariable=motion_v, values=PPT_MOTION, state="readonly", width=20)),
+                ("자막 글꼴", fontf)]
         for i, (lb, w_) in enumerate(rows):
             r_, c_ = i % 4, (i // 4) * 2      # 4줄씩 3칸
             ttk.Label(f2, text=lb).grid(row=r_, column=c_, sticky="e", padx=(8, 4), pady=2)
             w_.grid(row=r_, column=c_ + 1, sticky="w", pady=2)
         ttk.Checkbutton(f2, text="AI가 슬라이드 그림(도표·그래프)까지 직접 보고 해석 (Claude)",
-                        variable=see_v).grid(row=0, column=8, sticky="w", padx=12)
-        ttk.Label(f2, text="2인 진행: 대본 줄 앞 '남:'·'여:'가 성우를 정합니다\n(자막 색: 남 하늘색 · 여 분홍색)\n성우는 항상 한국어로 읽습니다 (베트남어는 자막만)\n숫자: 자막은 2026년, 성우는 '이천이십육 년'",
-                  foreground="#666", justify="left").grid(row=1, column=8, rowspan=3, sticky="nw", padx=12)
+                        variable=see_v).grid(row=4, column=0, columnspan=4, sticky="w", padx=8, pady=(4, 0))
+        ttk.Label(f2, text="2인 진행: 대본 줄 앞 '남:'·'여:'가 성우 (자막 색 남 하늘색·여 분홍색) · 성우는 항상 한국어 (베트남어는 자막만) · 숫자: 자막 2026년 / 성우 '이천이십육 년'",
+                  foreground="#666", wraplength=1000).grid(row=5, column=0, columnspan=8, sticky="w", padx=8)
 
         # ③ 대본
         f3 = ttk.LabelFrame(left, text="③ 나레이션 대본 (직접 고쳐도 됩니다 · '### 슬라이드 번호' 줄 아래가 그 슬라이드에서 읽을 말)", padding=6)
@@ -12063,7 +12191,7 @@ class App(tk.Tk):
                                   json.dumps({"src": path_v.get(), "title": title_v.get(), "meta": st["meta"], "vi": st["vi"],
                                               "order": st["order"], "skip": sorted(st["skip"]), "fast": sorted(st["fast"]), "plan": st["plan"],
                                               "lang": lang_v.get(), "mode": mode_v.get(), "size": size_v.get(),
-                                              "trans": trans_v.get(), "motion": motion_v.get(), "tone": tone_v.get(), "audience": aud_v.get(),
+                                              "trans": trans_v.get(), "motion": motion_v.get(), "font": font_v.get(), "tone": tone_v.get(), "audience": aud_v.get(),
                                               "narr": {str(k): v for k, v in st["narr"].items()}}, ensure_ascii=False, indent=1))
 
         def fill(slides):
@@ -12083,7 +12211,7 @@ class App(tk.Tk):
                     st["order"] = od + [n for n in valid if n not in od]
                     st["skip"] = {int(n) for n in d.get("skip") or [] if int(n) in valid}
                     st["fast"] = {int(n) for n in d.get("fast") or [] if int(n) in valid}
-                    for var_, key_ in ((lang_v, "lang"), (mode_v, "mode"), (tone_v, "tone"), (aud_v, "audience"), (size_v, "size"), (trans_v, "trans"), (motion_v, "motion")):
+                    for var_, key_ in ((lang_v, "lang"), (mode_v, "mode"), (tone_v, "tone"), (aud_v, "audience"), (size_v, "size"), (trans_v, "trans"), (motion_v, "motion"), (font_v, "font")):
                         if d.get(key_):
                             var_.set(d[key_])
                     title_v.set(d.get("title") or title_v.get())
@@ -12191,6 +12319,8 @@ class App(tk.Tk):
             lang = lang_v.get() if sub_v.get().startswith("켜기") else "한국어"
             s["slide_full"] = "on" if size_v.get() == PPT_SIZES[0] else "off"
             s["slide_trans"], s["slide_motion"] = trans_v.get(), ("on" if motion_v.get() == PPT_MOTION[0] else "off")
+            if font_v.get() and os.path.exists(font_v.get()):
+                s["sub_font_path"] = font_v.get()
             voice = f"남 {duo['남']} + 여 {duo['여']}" if duo else s["narr_voice"]
             story = ppt_build_story(show_, narr, duo)
             fmt_name = "롱폼 가로(1920×1080)" if fmt_v.get().startswith("가로") else "쇼츠 세로(1080×1920)"
