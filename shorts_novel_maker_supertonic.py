@@ -279,6 +279,7 @@ FIELDS = [
     ("나레이션", "st_emotion_map", "문단별 지정(예: 2=슬픔,4=놀람)", "str", ""),
     ("나레이션", "st_steps", "로컬 성우 품질(5~12)", "int", 5),
     ("나레이션", "st_edge_fallback", "로컬 성우 실패시 Edge 전환", "choice:on,off", "on"),
+    ("나레이션", "narr_spoken", "숫자 발음 AI 사전(자막은 맞춤법대로, 성우는 읽는 그대로)", "choice:on,off", "on"),
     ("나레이션", "narr_style", "연기 지시(ChatGPT·Gemini 음성)", "str", "차분하고 또렷한 다큐멘터리 내레이터처럼. 반전 부분은 긴장감 있게."),
     ("나레이션", "openai_tts_model", "ChatGPT 음성 모델", "str", "gpt-4o-mini-tts"),
     ("나레이션", "gemini_tts_model", "Gemini 음성 모델", "str", "gemini-2.5-flash-preview-tts"),
@@ -423,7 +424,7 @@ CATEGORIES[PHOTO_CATEGORY] = (False, {
     "행사·축제·모임": ("현장 분위기→하이라이트→사람들 반응→먹거리·볼거리→팁(주차·시간대). 마지막은 다음에 올 사람에게 한마디.", "네온 시티"),
 })
 
-KO_NUM_RULE = '- 숫자는 아라비아 숫자로 쓰지 말고 성우가 읽는 그대로 한글로 쓴다(세는 말은 고유어, 그 밖은 한자어): 4자리→네 자리, 3명→세 명, 2가지→두 가지, 1시간 30분→한 시간 삼십 분, 2026년→이천이십육 년, 42%→사십이 퍼센트, 1,200만원→천이백만 원, 3.5배→삼 점 오 배, 6월→유월, 10월→시월, 20살→스무 살, 첫 번째·두 번째.\n'   # 나레이션 대본: 숫자를 한글 읽기로 (TTS가 4자리를 '사자리'로 읽는 문제)
+KO_NUM_RULE = '- 숫자·단위는 맞춤법대로 아라비아 숫자로 쓴다(예: 2026년, 42%, 1,200만 원, 4자리). 자막에 그대로 나오고, 성우가 읽는 발음은 프로그램이 따로 만든다.\n'   # 대본(자막)은 맞춤법대로, 성우 발음은 발음 사전(ensure_spoken)
 
 
 PHOTO_BLOG_SYSTEM = """너는 사진으로 유튜브 쇼츠·브이로그를 만드는 작가다. 사용자가 올린 사진들을 Read 도구로 직접 열어 본 뒤, 사진 순서대로 이야기를 쓴다.
@@ -3247,15 +3248,24 @@ class SubtitleRenderer:
         d = ImageDraw.Draw(layer)
         x0, y0, x1, y1 = self.sub_box
         size = int(s["sub_size"] * getattr(self, "sub_scale", 1.0))
-        font = load_font(s.get("sub_font_path") or s["title_font_path"] or s["font_path"], size)
-        lines = wrap(text, font, x1 - x0)
+        fpath = s.get("sub_font_path") or s["title_font_path"] or s["font_path"]
+        trans = None if lyric else (s.get("sub_trans") or {}).get(text.strip())     # 두 언어 자막: 아래 줄에 번역
+
+        def lay(sz):
+            f_ = load_font(fpath, sz)
+            l1 = wrap(text, f_, x1 - x0)
+            if not trans:
+                return f_, l1, None, [], int(sz * 1.3) * len(l1)
+            f2 = load_font(s.get("sub_font2") or fpath, int(sz * 0.8))
+            l2 = wrap(trans, f2, x1 - x0)
+            return f_, l1, f2, l2, int(sz * 1.3) * len(l1) + int(f2.size * 1.3) * len(l2) + int(sz * 0.15)
+        font, lines, font2, lines2, tot = lay(size)
         fit = getattr(self, "sub_fit", False)
-        while (int(size * 1.3) * len(lines) > (y1 - y0) + 6 if fit else len(lines) > 3) and size > 30:
+        while (tot > (y1 - y0) + 6 if fit else len(lines) + len(lines2) > (5 if trans else 3)) and size > 30:
             size -= 4
-            font = load_font(s.get("sub_font_path") or s["title_font_path"] or s["font_path"], size)
-            lines = wrap(text, font, x1 - x0)
+            font, lines, font2, lines2, tot = lay(size)
         lh = int(size * 1.3)
-        y = (y0 + ((y1 - y0) - lh * len(lines)) // 2) if getattr(self, "sub_valign", "bottom") == "center" else y1 - lh * len(lines)
+        y = (y0 + ((y1 - y0) - tot) // 2) if getattr(self, "sub_valign", "bottom") == "center" else y1 - tot
         left = getattr(self, "sub_align", "center") == "left"
         if getattr(self, "sub_boxed", False):   # 다큐: 반투명 상자 + 왼쪽 강조색 막대
             tw = max(font.getlength(ln) for ln in lines)
@@ -3293,6 +3303,16 @@ class SubtitleRenderer:
                 d.text((x + size // 18, y + size // 14), ln, font=font, fill=(0, 0, 0, 150), stroke_width=sw, stroke_fill=(0, 0, 0, 150))
             d.text((x, y), ln, font=font, fill=col, stroke_width=sw, stroke_fill="#000000")
             y += lh
+        if lines2:                                   # 번역 줄 (작게, 다른 색)
+            y += int(size * 0.15)
+            col2 = "#1a5fb4" if bubble else ("#FFFFFF" if str(col).upper() == "#FFE135" else "#FFE135")
+            sw2 = 0 if (band or bubble or thin) else self._stroke(font2.size)
+            for ln in lines2:
+                x = x0 if left else x0 + ((x1 - x0) - font2.getlength(ln)) / 2
+                if shadow:
+                    d.text((x + font2.size // 18, y + font2.size // 14), ln, font=font2, fill=(0, 0, 0, 150), stroke_width=sw2, stroke_fill=(0, 0, 0, 150))
+                d.text((x, y), ln, font=font2, fill=col2, stroke_width=sw2, stroke_fill="#000000")
+                y += int(font2.size * 1.3)
         if lyric:   # 가사 원문은 사진 위에 노란 글자로
             fl = load_font(s.get("sub_font_path") or s["title_font_path"] or s["font_path"], int(size * 0.95))
             ix0, iy0, ix1, iy1 = self.img_box
@@ -4370,9 +4390,76 @@ def ko_numbers(text):
     return t
 
 
+# ---- 발음 사전: 자막은 맞춤법대로(2026년, 42%), 성우는 읽는 그대로(이천이십육 년, 사십이 퍼센트) ----
+SPOKEN = {}                 # 자막 글(문단) → 성우가 읽을 글
+SPOKEN_CFG = {"model": ""}  # 발음 사전 만들 AI 모델 (App 이 작업 전에 넣음)
+SPOKEN_FILE = "발음사전.json"
+SPOKEN_SYSTEM = """너는 한국어 성우 대본 감수자다. 각 문장을 성우가 소리 내어 읽는 그대로 바꾼다.
+- 숫자·단위·기호(%, ~, km, kg, ℃ 등)만 한글 발음으로 바꾸고, 나머지 글자·띄어쓰기·문장부호는 절대 바꾸지 않는다.
+- 세는 말(개, 명, 마리, 자리, 장, 살, 시, 시간, 가지, 번, 곳, 잔, 권, 대(자동차 수) 등)은 고유어: 한, 두, 세, 네, 다섯, 스무, 서른.
+- 그 밖(년, 월, 일, 분, 초, 원, 퍼센트, 미터, 층, 호, 회, 세기, 차(회차), 대(나이대), 번(번호)·제N장 등)은 한자어: 일, 이, 삼, 사.
+- 6월=유월, 10월=시월. 연도: 이천이십육 년. 큰 수는 만 단위로: 1,200만 원 → 천이백만 원, 13,800 → 만 삼천팔백. 소수: 3.5 → 삼 점 오.
+- 범위 10~20 → 십에서 이십. 전화번호·제품 번호는 한 자리씩. 영어 약어(AI, CEO)는 그대로 둔다.
+- 결과에 아라비아 숫자를 남기지 않는다.
+반드시 JSON만 출력: {"items": [{"i": 번호, "say": "성우가 읽을 문장"}]}"""
+
+
+def spoken_load(cache_dir):
+    try:
+        SPOKEN.update(json.load(open(os.path.join(cache_dir, SPOKEN_FILE), encoding="utf-8")))
+    except (OSError, ValueError):
+        pass
+
+
+def spoken_save(cache_dir, new):
+    p = os.path.join(cache_dir, SPOKEN_FILE)
+    d = {}
+    try:
+        d = json.load(open(p, encoding="utf-8"))
+    except (OSError, ValueError):
+        pass
+    d.update(new)
+    os.makedirs(cache_dir, exist_ok=True)
+    atomic_write_text(p, json.dumps(d, ensure_ascii=False, indent=0))
+
+
+def ensure_spoken(model, story, cache_dir, log=None, cancel=None):
+    """숫자가 있는 문단만 골라 AI가 '읽는 법'을 만들어 발음 사전에 넣음 (자막 글은 그대로). 실패하면 프로그램 규칙으로 읽음"""
+    log = log or (lambda x: None)
+    spoken_load(cache_dir)
+    todo = list(dict.fromkeys(t for _, t in narration_paras(story)
+                              if re.search(r"\d", t) and re.search(r"[가-힣]", t) and not t.startswith("## ") and t not in SPOKEN))
+    if not todo:
+        return 0
+    log(f"🔤 숫자가 있는 문장 {len(todo)}개의 읽는 법 만드는 중 (자막은 맞춤법대로 둠)...")
+    new = {}
+    for a in range(0, len(todo), 40):
+        if cancel is not None and cancel.is_set():
+            raise RuntimeError("취소됨")
+        part = todo[a:a + 40]
+        try:
+            d = ask_script_json(model, SPOKEN_SYSTEM, "\n".join(f"[{i}] {t}" for i, t in enumerate(part)))
+        except Exception as e:
+            log("  발음 사전 실패(프로그램 규칙으로 읽음): " + str(e)[:80])
+            continue
+        for it in d.get("items") or []:
+            try:
+                i, say = int(it.get("i")), str(it.get("say") or "").strip()
+            except (TypeError, ValueError):
+                continue
+            if 0 <= i < len(part) and say and not re.search(r"\d", say) and 0.5 < len(say) / max(1, len(part[i])) < 4:
+                new[part[i]] = say
+    if new:
+        SPOKEN.update(new)
+        spoken_save(cache_dir, new)
+    log(f"  🔤 발음 사전 {len(new)}/{len(todo)}개 완료")
+    return len(new)
+
+
 def tts_clean(text):
     """읽기 좋게 정리: ♪, 따옴표, 챕터 표시 제거 + 한국어 문장의 숫자는 한글 읽기로"""
     t = text.strip()
+    t = SPOKEN.get(t, t)                 # 발음 사전(자막 글 → 읽는 글)
     if t.startswith("## "):
         t = t[3:]
     t = t.lstrip("♪").strip()
@@ -5104,6 +5191,7 @@ def build_narration(story, s, cache_dir, log=None, cancel=None, para_audio=None)
     items = narration_paras(story)
     res = []
     pa = para_audio or {}
+    spoken_load(cache_dir)
     for k, (i, text) in enumerate(items):
         if cancel and cancel.is_set():
             raise RuntimeError("취소됨")
@@ -6952,6 +7040,59 @@ def ppt_narrate(model, slides, tone, audience, length, log=None, cancel=None, us
     if meta.get("voice") not in voices:
         meta["voice"] = voices[0]
     return out, meta
+
+
+PPT_SUB_LANGS = ["한국어", "베트남어", "한국어+베트남어"]
+VI_FONT = next((p for p in (r"C:\Windows\Fonts\segoeuib.ttf", r"C:\Windows\Fonts\arialbd.ttf", r"C:\Windows\Fonts\tahomabd.ttf",
+                            "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf") if os.path.exists(p)), "")   # 베트남어 성조 글자가 있는 글꼴
+PPT_VI_SYSTEM = """너는 한국어→베트남어 영상 자막 번역가다. 발표 나레이션 문장을 베트남 시청자가 읽기 쉬운 자연스러운 베트남어 자막으로 옮긴다.
+- 뜻을 정확히, 문장은 짧고 쉽게. 존댓말 발표 말투(chúng tôi, quý vị 등)는 문맥에 맞게.
+- 숫자는 아라비아 숫자 그대로(2026, 42%, 12 triệu won 처럼 단위는 베트남식). 고유명사는 통용 표기, 없으면 원어 로마자.
+- 성조 기호를 정확히 쓴다. 줄 수를 늘리거나 합치지 않는다(한 항목 = 한 줄).
+반드시 JSON만 출력: {"items": [{"i": 번호, "vi": "베트남어 자막"}]}"""
+
+
+def ppt_translate_vi(model, lines, cache, log=None, cancel=None):
+    """한국어 자막 줄 → 베트남어 (cache={한국어: 베트남어} 에 없는 줄만 번역)"""
+    log = log or (lambda x: None)
+    todo = list(dict.fromkeys(t for t in lines if t.strip() and t not in cache))
+    if not todo:
+        return 0
+    log(f"🇻🇳 베트남어 자막 번역 중 ({len(todo)}줄)...")
+    done = 0
+    for a in range(0, len(todo), 30):
+        if cancel is not None and cancel.is_set():
+            raise RuntimeError("취소됨")
+        part = todo[a:a + 30]
+        d = ask_script_json(model, PPT_VI_SYSTEM, "\n".join(f"[{i}] {t}" for i, t in enumerate(part)))
+        for it in d.get("items") or []:
+            try:
+                i, vi = int(it.get("i")), str(it.get("vi") or "").strip()
+            except (TypeError, ValueError):
+                continue
+            if 0 <= i < len(part) and vi:
+                cache[part[i]] = vi
+                done += 1
+    log(f"  🇻🇳 번역 {done}/{len(todo)}줄 완료")
+    return done
+
+
+def ppt_lang_story(story, lang, vi, s):
+    """자막 언어 적용: 베트남어 → 화면 글은 베트남어, 성우는 한국어(발음 사전으로 연결) / 두 언어 → 한국어 아래 베트남어 줄"""
+    if lang == "베트남어":
+        out = []
+        for ln in story.split("\n"):
+            t = ln.strip()
+            if t and not parse_media(t) and t in vi:
+                SPOKEN[vi[t]] = SPOKEN.get(t, t)      # 베트남어 자막 줄 → 한국어로 읽기
+                out.append(vi[t])
+            else:
+                out.append(ln)
+        s.update(sub_font_path=VI_FONT or s.get("sub_font_path", ""), sub_max_chars=44)
+        return "\n".join(out)
+    if lang == "한국어+베트남어":
+        s.update(sub_trans=dict(vi), sub_font2=VI_FONT, sub_split="문단 통째로")
+    return story
 
 
 def ppt_build_story(slides, narr):
@@ -9087,7 +9228,17 @@ class App(tk.Tk):
             if log:
                 log("🎙 외부 나레이션 파일을 문단별로 나누는 중: " + os.path.basename(nf))
             return self._merge_para_audio(split_external_narration(story, nf))
-        return build_narration(story, s, os.path.join(s["out_dir"], "tts_cache"), log, cancel, dict(getattr(self, "para_audio", {}) or {}))
+        cache = os.path.join(s["out_dir"], "tts_cache")
+        if str(s.get("narr_spoken", "on")) == "on":     # 숫자 읽는 법(발음 사전) - 자막은 그대로
+            try:
+                model = SPOKEN_CFG.get("model") or (self.model_var.get().strip() if threading.current_thread() is threading.main_thread() else "")
+                ensure_spoken(model, story, cache, log, cancel)
+            except RuntimeError:
+                raise
+            except Exception as e:
+                if log:
+                    log("  발음 사전 건너뜀: " + str(e)[:80])
+        return build_narration(story, s, cache, log, cancel, dict(getattr(self, "para_audio", {}) or {}))
 
     def _merge_para_audio(self, res):
         """통째 파일을 나눈 결과 위에, 문단별 음성 파일이 있는 줄은 그 파일로 바꿈"""
@@ -9118,6 +9269,7 @@ class App(tk.Tk):
         res = []
         pa = getattr(self, "para_audio", {}) or {}
         items = narration_paras(story)
+        spoken_load(cache)
         for k, (i, text) in enumerate(items):
             t = tts_clean(text)
             if not t or (text.strip().startswith("## ") and not pa.get(str(i))):   # 챕터 제목은 읽지 않음
@@ -9587,6 +9739,7 @@ class App(tk.Tk):
         self.status.config(text=label)
         self.set_status(label)
         SCRIPT_ENGINE["s"] = self.get_settings()
+        SPOKEN_CFG["model"] = self.model_var.get().strip()
         HIT_CTX["category"] = self.cat_var.get()
         PHOTO_PLAN.update(sub=str(SCRIPT_ENGINE["s"].get("layout", "")).startswith("자막형"),
                           n=int(float(SCRIPT_ENGINE["s"].get("photo_count", 0) or 0)))
@@ -11245,7 +11398,7 @@ class App(tk.Tk):
     # ---- 📊 PPT 발표 탭 ----
     def ppt_tab(self, parent):
         """PPT 불러오기 → AI가 슬라이드를 보고 나레이션·성우를 정함 → 슬라이드 + 나레이션 + 자막 발표 영상"""
-        st = self.ppt = {"slides": [], "dir": "", "meta": {}, "narr": {}}
+        st = self.ppt = {"slides": [], "dir": "", "meta": {}, "narr": {}, "vi": {}}
         main = ttk.Frame(parent, padding=8)
         main.pack(fill="both", expand=True)
         right = ttk.LabelFrame(main, text="슬라이드", padding=6)
@@ -11272,6 +11425,7 @@ class App(tk.Tk):
         aud_v, tone_v = tk.StringVar(value="일반 청중"), tk.StringVar(value=PPT_TONES[0])
         len_v, voice_v = tk.StringVar(value=list(PPT_LENGTHS)[1]), tk.StringVar(value="🤖 AI가 추천")
         sub_v, bgm_v = tk.StringVar(value="켜기"), tk.StringVar(value="잔잔하게(작게)")
+        lang_v = tk.StringVar(value=PPT_SUB_LANGS[0])
         fmt_v = tk.StringVar(value="가로 16:9 (유튜브·발표)")
         see_v = tk.BooleanVar(value=True)
         rows = [("청중", ttk.Entry(f2, textvariable=aud_v, width=26)),
@@ -11280,13 +11434,16 @@ class App(tk.Tk):
                 ("성우", ttk.Combobox(f2, textvariable=voice_v, values=["🤖 AI가 추천"] + ppt_voice_catalog(), state="readonly", width=40)),
                 ("자막", ttk.Combobox(f2, textvariable=sub_v, values=["켜기", "끄기(슬라이드 크게)"], state="readonly", width=24)),
                 ("배경음", ttk.Combobox(f2, textvariable=bgm_v, values=["잔잔하게(작게)", "없음"], state="readonly", width=24)),
-                ("화면", ttk.Combobox(f2, textvariable=fmt_v, values=["가로 16:9 (유튜브·발표)", "세로 9:16 (쇼츠)"], state="readonly", width=24))]
+                ("화면", ttk.Combobox(f2, textvariable=fmt_v, values=["가로 16:9 (유튜브·발표)", "세로 9:16 (쇼츠)"], state="readonly", width=24)),
+                ("자막 언어", ttk.Combobox(f2, textvariable=lang_v, values=PPT_SUB_LANGS, state="readonly", width=24))]
         for i, (lb, w_) in enumerate(rows):
             r_, c_ = i % 4, (i // 4) * 2
             ttk.Label(f2, text=lb).grid(row=r_, column=c_, sticky="e", padx=(8, 4), pady=2)
             w_.grid(row=r_, column=c_ + 1, sticky="w", pady=2)
         ttk.Checkbutton(f2, text="AI가 슬라이드 그림(도표·그래프)까지 직접 보고 해석 (Claude)",
-                        variable=see_v).grid(row=3, column=2, columnspan=2, sticky="w", padx=8)
+                        variable=see_v).grid(row=0, column=4, sticky="w", padx=12)
+        ttk.Label(f2, text="성우는 항상 한국어로 읽습니다.\n베트남어: 자막만 베트남어로 번역\n숫자: 자막은 2026년, 성우는 '이천이십육 년'",
+                  foreground="#666", justify="left").grid(row=1, column=4, rowspan=3, sticky="nw", padx=12)
 
         # ③ 대본
         f3 = ttk.LabelFrame(left, text="③ 나레이션 대본 (직접 고쳐도 됩니다 · '### 슬라이드 번호' 줄 아래가 그 슬라이드에서 읽을 말)", padding=6)
@@ -11352,7 +11509,7 @@ class App(tk.Tk):
                 st["narr"] = parse_script()
                 os.makedirs(st["dir"], exist_ok=True)
                 atomic_write_text(os.path.join(st["dir"], "발표_대본.json"),
-                                  json.dumps({"src": path_v.get(), "title": title_v.get(), "meta": st["meta"],
+                                  json.dumps({"src": path_v.get(), "title": title_v.get(), "meta": st["meta"], "vi": st["vi"],
                                               "narr": {str(k): v for k, v in st["narr"].items()}}, ensure_ascii=False, indent=1))
 
         def fill(slides):
@@ -11362,12 +11519,13 @@ class App(tk.Tk):
                 first = sl["text"].split("\n")[0] if sl["text"] else "(글 없음)"
                 lst.insert("end", f"{sl['n']:>3}. {first[:28]}" + (" 📝" if sl["notes"] else ""))
             js = os.path.join(st["dir"], "발표_대본.json")            # 전에 쓴 대본이 있으면 이어서
-            st["narr"], st["meta"] = {}, {}
+            st["narr"], st["meta"], st["vi"] = {}, {}, {}
             if os.path.exists(js):
                 try:
                     d = json.load(open(js, encoding="utf-8"))
                     st["narr"] = {int(k): v for k, v in (d.get("narr") or {}).items()}
                     st["meta"] = d.get("meta") or {}
+                    st["vi"] = d.get("vi") or {}
                     title_v.set(d.get("title") or title_v.get())
                 except Exception:
                     pass
@@ -11432,6 +11590,7 @@ class App(tk.Tk):
             save_state()
             title = title_v.get().strip() or "발표"
             s = self.ppt_settings(voice_v.get(), st["meta"], sub_v.get().startswith("켜기"), bgm_v.get() != "없음")
+            lang = lang_v.get() if sub_v.get().startswith("켜기") else "한국어"
             voice = s["narr_voice"]
             story = ppt_build_story(st["slides"], narr)
             fmt_name = "롱폼 가로(1920×1080)" if fmt_v.get().startswith("가로") else "쇼츠 세로(1080×1920)"
@@ -11441,7 +11600,7 @@ class App(tk.Tk):
             base = os.path.join(st["dir"], safe_name(title))
             model, genre = self.model_var.get().strip(), tone_v.get()
             log = self.log_bg
-            self.write_log(f"📊 발표 영상 시작: {len(st['slides'])}장 · 성우 {voice} · 감정 {s['st_emotion']} · {fmt_v.get()}")
+            self.write_log(f"📊 발표 영상 시작: {len(st['slides'])}장 · 성우 {voice} · 감정 {s['st_emotion']} · {fmt_v.get()} · 자막 {lang}")
 
             def restore():
                 if old_fmt and fmt_name != old_fmt:
@@ -11450,8 +11609,15 @@ class App(tk.Tk):
             def job():
                 try:
                     set_tts_cfg(s)
-                    narr_a = self.narration_for(story, s, log, self.cancel)
-                    r = make_renderer(title, story, s, narr_a)
+                    shown = story
+                    if lang != "한국어":
+                        cache = os.path.join(s["out_dir"], "tts_cache")
+                        ensure_spoken(model, story, cache, log, self.cancel)      # 한국어 발음 먼저
+                        ppt_translate_vi(model, [t for _, t in narration_paras(story)], st["vi"], log, self.cancel)
+                        self.q.put(save_state)
+                        shown = ppt_lang_story(story, lang, st["vi"], s)
+                    narr_a = self.narration_for(shown, s, log, self.cancel)
+                    r = make_renderer(title, shown, s, narr_a)
                     audio = build_audio(r, s, resolve_style(s, "발표"))
                     os.makedirs(st["dir"], exist_ok=True)
                     export_mp4_resumable(r, base + ".mp4", self.progress_cb("📊 "), self.cancel, audio,

@@ -25,3 +25,4 @@ voice_samples/
 nature_sounds/*
 !nature_sounds/credits.json
 
+발음사전.json
