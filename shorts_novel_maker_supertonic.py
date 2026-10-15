@@ -44,6 +44,7 @@ ensure_packages()
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox, colorchooser, simpledialog
 from tkinter.scrolledtext import ScrolledText
+import tkinter.font as tkfont
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont, ImageTk, ImageFilter
 
@@ -6104,6 +6105,16 @@ class App(tk.Tk):
         sh_ = self.winfo_screenheight()
         self.geometry(f"1460x{min(980, max(760, sh_ - 90))}")   # 화면이 작으면 창도 거기에 맞춤
         self.minsize(1200, 760)
+        if os.name == "nt":
+            try:
+                self.state("zoomed")   # 처음부터 화면 가득 크게
+            except tk.TclError:
+                pass
+        for nm_ in ("TkDefaultFont", "TkTextFont", "TkMenuFont", "TkHeadingFont", "TkCaptionFont", "TkTooltipFont"):
+            try:   # 기본 굴림 9pt 대신 굵은 맑은 고딕 10pt
+                tkfont.nametofont(nm_).configure(family="맑은 고딕", size=10, weight="bold")
+            except tk.TclError:
+                pass
         self.q = queue.Queue()
         self.renderer = None
         self.busy = False
