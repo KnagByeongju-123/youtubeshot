@@ -5199,7 +5199,7 @@ def trim_breath(a):
     그 소리가 작거나(숨) 목청이 울리지 않는 바람소리(잡음도 높음)면 잘라냄. '네.'처럼 목청이 울리는 짧은 말은 그대로"""
     fr = int(0.01 * SR)
     b = np.array(a, np.float32)
-    for _ in range(2):                     # 숨이 두 번 들어간 경우까지
+    for rep in range(2):                   # 숨이 두 번 들어간 경우까지 (두 번째는 아주 작은 숨일 때만)
         n = len(b) // fr
         if n < 25:
             break
@@ -5222,7 +5222,7 @@ def trim_breath(a):
         if not (len(blob) and len(blob) <= 35 and k - g0 >= 5 and k < lim):
             break
         breathy = float(np.median(bz)) >= 0.08 and float((bz < 0.05).mean()) < 0.3     # 목청이 안 울리는 바람소리
-        if float(blob.max()) < pk * 0.45 or breathy:
+        if (float(blob.max()) < pk * 0.45 or breathy) and (rep == 0 or (float(blob.max()) < pk * 0.3 and breathy)):
             b = b[max(0, (k - 2) * fr):].copy()
         else:
             break
@@ -5258,7 +5258,7 @@ def voice_post(a, voice_name, cache_dir, code="", only_cached=False):
         return a
     import hashlib
     h = hashlib.md5(np.ascontiguousarray(np.asarray(a, np.float32)[::37]).tobytes()
-                    + f"{len(a)}|{tone}|{bright}|{trim}|v2".encode()).hexdigest()[:20]
+                    + f"{len(a)}|{tone}|{bright}|{trim}|v3".encode()).hexdigest()[:20]
     p = os.path.join(cache_dir, f"post_{h}.npy")
     if os.path.exists(p):
         try:
