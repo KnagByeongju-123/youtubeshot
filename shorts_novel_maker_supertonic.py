@@ -4620,25 +4620,34 @@ def spoken_save(cache_dir, new):
     atomic_write_text(p, json.dumps(d, ensure_ascii=False, indent=0))
 
 
+def spoken_needs_ai(t):
+    """프로그램 규칙으로 읽기 어려운 숫자만 AI에게: 번호/횟수 '4번', 낱말 '사번', 영문+숫자 코드(P-45·D-30·Q1·IATF 16949), 시각(10:30)"""
+    return bool(re.search(r"\d\s*번(?!째)|사번|[A-Za-z]\s*-?\s*\d|\d\s*-?\s*[A-Za-z]|\d\s*:\s*\d", t))
+
+
 def ensure_spoken(model, story, cache_dir, log=None, cancel=None):
-    """숫자가 있는 문단만 골라 AI가 '읽는 법'을 만들어 발음 사전에 넣음 (자막 글은 그대로). 실패하면 프로그램 규칙으로 읽음"""
+    """숫자 읽는 법 사전. 쉬운 숫자(2026년, 42%, 1,200만 원 …)는 프로그램 규칙으로 바로 읽고,
+    헷갈리는 것만 AI에게 (여러 묶음을 동시에). 자막 글은 그대로. 실패하면 프로그램 규칙으로 읽음"""
     log = log or (lambda x: None)
     spoken_load(cache_dir)
     todo = list(dict.fromkeys(t for _, t in narration_paras(story)
-                              if re.search(r"\d|사번", t) and re.search(r"[가-힣]", t) and not t.startswith("## ") and t not in SPOKEN))
+                              if re.search(r"\d|사번", t) and re.search(r"[가-힣]", t) and not t.startswith("## ")
+                              and t not in SPOKEN and spoken_needs_ai(t)))
     if not todo:
         return 0
-    log(f"🔤 숫자가 있는 문장 {len(todo)}개의 읽는 법 만드는 중 (자막은 맞춤법대로 둠)...")
+    log(f"🔤 헷갈리는 숫자가 있는 문장 {len(todo)}개만 읽는 법 만드는 중 (나머지 숫자는 바로 읽음)...")
     new = {}
-    for a in range(0, len(todo), 40):
+    parts = [todo[a:a + 15] for a in range(0, len(todo), 15)]
+
+    def one(part):
         if cancel is not None and cancel.is_set():
-            raise RuntimeError("취소됨")
-        part = todo[a:a + 40]
+            return {}
+        got = {}
         try:
             d = ask_script_json(model, SPOKEN_SYSTEM, "\n".join(f"[{i}] {t}" for i, t in enumerate(part)))
         except Exception as e:
-            log("  발음 사전 실패(프로그램 규칙으로 읽음): " + str(e)[:80])
-            continue
+            log("  발음 사전 일부 실패(프로그램 규칙으로 읽음): " + str(e)[:80])
+            return got
         for it in d.get("items") or []:
             try:
                 i, say = int(it.get("i")), str(it.get("say") or "").strip()
@@ -4646,7 +4655,14 @@ def ensure_spoken(model, story, cache_dir, log=None, cancel=None):
                 continue
             ok_ = 0 <= i < len(part) and say and not re.search(r"\d", say) and 0.5 < len(say) / max(1, len(part[i])) < 4
             if ok_ and not re.search(r"(?<![가-힣])사\s?번(?!째)", say):     # '사 번'(=사번처럼 들림)이 남으면 버리고 규칙으로 읽음
-                new[part[i]] = say
+                got[part[i]] = say
+        return got
+    from concurrent.futures import ThreadPoolExecutor
+    with ThreadPoolExecutor(max_workers=min(4, len(parts))) as ex:     # 여러 묶음을 동시에
+        for got in ex.map(one, parts):
+            new.update(got)
+    if cancel is not None and cancel.is_set():
+        raise RuntimeError("취소됨")
     if new:
         SPOKEN.update(new)
         spoken_save(cache_dir, new)
