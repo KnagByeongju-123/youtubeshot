@@ -3020,6 +3020,7 @@ class SubtitleRenderer:
         self.hs, self.he = s["hold_start"], s["hold_end"]
         # 문단 → 구간
         self.images, segs, idx, cur_img = [], [], 0, -1
+        imcache, pend = {}, []
         paras_for_narr = narration_paras(story)
         for para in story.replace("\r", "").split("\n"):
             para = para.strip()
@@ -3027,10 +3028,21 @@ class SubtitleRenderer:
                 continue
             med = parse_media(para)
             if med:
-                im = load_media_image(med[0])
+                if med[0] not in imcache:          # 같은 그림(확대 장면 등)은 한 번만 읽음
+                    imcache[med[0]] = load_media_image(med[0])
+                im = imcache[med[0]]
                 if im is not None:
                     self.images.append((im, med[1]))
                     cur_img = len(self.images) - 1
+                continue
+            hm = HOLD_RE.match(para)
+            if hm:                                 # [쉼:2.5] 말 없이 화면만 (몽타주)
+                segs.append({"i": None, "kind": "hold", "text": "", "img": cur_img, "dur": max(0.5, float(hm.group(1))), "sfx": pend})
+                pend = []
+                continue
+            fm = SFX_RE.match(para)
+            if fm:                                 # [효과:알림] 다음 문단 시작에 효과음
+                pend.append(fm.group(1).strip())
                 continue
             if PH_RE.match(para):
                 continue
@@ -3043,7 +3055,8 @@ class SubtitleRenderer:
             if d is None:
                 d = max(1.6, len(tts_clean(text)) * spc + 0.6)
             d = (max(d, 1.0) + 1.0) if kind == "chapter" else d + gap   # 챕터 제목: 읽지 않고 약 2초 보여줌
-            segs.append({"i": idx, "kind": kind, "text": text, "img": cur_img, "dur": d})
+            segs.append({"i": idx, "kind": kind, "text": text, "img": cur_img, "dur": d, "sfx": pend})
+            pend = []
             idx += 1
         if self.images:   # 첫 사진이 나오기 전 문단들도 첫 사진을 보여줌 (빈 화면 방지)
             for sg in segs:
@@ -3068,7 +3081,10 @@ class SubtitleRenderer:
         self.duration = self.intro + self.hs + self.scroll_t + self.he
         self.dist, self.speed = 0, 0.0
         self.paras = [(0, (sg["text"] if sg["kind"] != "chapter" else "## " + sg["text"])) for sg in self.segs]
+        self.sfx_at = [(sg["t0"], k) for sg in self.segs for k in sg.get("sfx") or []]
         self.shots = self._make_shots()
+        for k_, sh_ in enumerate(self.shots):       # 앞 장면 (같은 그림 확대 이동용)
+            sh_["prev"] = self.shots[k_ - 1]["img"] if k_ else None
         self.narr_at = []
         for sg in self.segs:
             if sg["i"] in clips:
@@ -3423,8 +3439,28 @@ class SubtitleRenderer:
         x0, y0, x1, y1 = self.img_box
         bw, bh = x1 - x0, y1 - y0
         big, mask, _ = self._img_src(sh["img"])
-        if getattr(self, "slide", False):             # 슬라이드는 움직이지 않음 → 다시 줄이지 않고 그대로 (글자 번짐 방지)
-            return big, mask
+        if getattr(self, "slide", False):             # 슬라이드: 움직이지 않음 (확대 표시가 있으면 그 부분으로 카메라 이동)
+            r1 = self._zoom_rect(sh["img"])
+            p = sh.get("prev")
+            same = p is not None and self.images[p][0] is self.images[sh["img"]][0]
+            moving = same and t - sh["t0"] < 0.9 and self._zoom_rect(p) != r1
+            if r1 is None and not moving:
+                return big, mask
+            im = self.images[sh["img"]][0]
+            if moving:
+                full = self._zoom_rect(sh["img"], whole=True)
+                r0, r2 = self._zoom_rect(p) or full, r1 or full
+                a = float(smoothstep((t - sh["t0"]) / 0.9))
+                return extent_resize(im, (bw, bh), tuple(r0[k] + (r2[k] - r0[k]) * a for k in range(4))), mask
+            key = ("zoom", sh["img"])
+            if key not in self._img_cache:
+                z = extent_resize(im, (bw, bh), r1)
+                if self.s.get("slide_sharp", "on") == "on":
+                    z = z.filter(ImageFilter.UnsharpMask(radius=1.0, percent=70, threshold=2))
+                if len(self._img_cache) >= 10:
+                    self._img_cache.pop(next(iter(self._img_cache)))
+                self._img_cache[key] = z
+            return self._img_cache[key], mask
         z0, z1, ax, bx, ay, by = sh["m"]
         p = min(1.0, max(0.0, (t - sh["t0"]) / max(0.1, sh["t1"] - sh["t0"])))
         p = 0.5 - 0.5 * np.cos(np.pi * p)             # 부드럽게 시작·끝
@@ -3441,6 +3477,38 @@ class SubtitleRenderer:
         crop = extent_resize(big, (bw, bh), (l, tp, l + cw, tp + ch))
         return crop, mask
 
+    def _zoom_rect(self, idx, whole=False):
+        """확대 장면이면 원본 그림에서 잘라 올 영역(사진 상자 비율에 맞춤), 아니면 None. whole=True: 그림 전체"""
+        if idx is None or idx < 0:
+            return None
+        im, cap = self.images[idx]
+        m = re.search(r"zoom=([\d.]+),([\d.]+),([\d.]+),([\d.]+)", str(cap or ""))
+        if not m and not whole:
+            return None
+        IW, IH = float(im.width), float(im.height)
+        if m:
+            x0, y0, x1, y1 = (float(v) for v in m.groups())
+            x0, x1 = sorted((x0, x1))
+            y0, y1 = sorted((y0, y1))
+            x0, x1, y0, y1 = x0 * IW, x1 * IW, y0 * IH, y1 * IH
+            w, h = max(x1 - x0, IW * 0.22) * 1.08, max(y1 - y0, IH * 0.22) * 1.08    # 조금 여유
+        else:
+            x0, y0, x1, y1, w, h = 0, 0, IW, IH, IW, IH
+        bx0, by0, bx1, by1 = self.img_box
+        asp = (bx1 - bx0) / max(1, by1 - by0)
+        if w / h > asp:
+            h = w / asp
+        else:
+            w = h * asp
+        if w > IW:
+            w, h = IW, IW / asp
+        if h > IH:
+            h, w = IH, IH * asp
+        cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
+        l = min(max(0.0, cx - w / 2), IW - w)
+        tp = min(max(0.0, cy - h / 2), IH - h)
+        return (l, tp, l + w, tp + h)
+
     def shot_at(self, t):
         for k, sh in enumerate(self.shots):
             if t < sh["t1"]:
@@ -3455,6 +3523,8 @@ class SubtitleRenderer:
         sh = self.shots[k]
         fade = 0.35
         prev = self.shots[k - 1] if k > 0 and t - sh["t0"] < fade else None
+        if prev is not None and getattr(self, "slide", False) and self.images[prev["img"]][0] is self.images[sh["img"]][0]:
+            prev = None                       # 같은 슬라이드 확대 이동: 겹치지 않고 카메라만 움직임
         a = smoothstep((t - sh["t0"]) / fade) if prev is not None else 1.0
         if self.s.get("img_bg", "on") == "on" and not self.full:
             cur_b = self._img_src(sh["img"])[2]
@@ -3584,6 +3654,8 @@ class SubtitleRenderer:
                 lay = self._sub_layer(("ch", sg["i"]), "— " + sg["text"] + " —")
             elif sg["kind"] == "lyric":
                 lay = self._sub_layer(("ly", sg["i"]), sg.get("sub", ""), lyric=sg["text"])
+            elif sg["kind"] == "hold":
+                lay = None
             else:
                 chunks = self._chunks(sg)
                 if len(chunks) > 1:   # 한 줄씩: 글자 수 비율로 시간을 나눠 차례로 보여줌
@@ -4281,7 +4353,8 @@ def build_audio(r, s, style):
     music = make_music(s, style, min(n, LONG_MUSIC_SEC * SR) if long_ else n)
     hit_t = r.reveal_t if s["reveal_hit"] == "on" else None
     narr = getattr(r, "narr_at", []) if s.get("narration", "off") == "on" else []
-    if music is None and hit_t is None and not narr:
+    sfx = getattr(r, "sfx_at", []) or []
+    if music is None and hit_t is None and not narr and not sfx:
         return None
     out = np.zeros((n, 2), np.float32)
     t = np.arange(n, dtype=np.float32) / SR
@@ -4303,6 +4376,12 @@ def build_audio(r, s, style):
         seg = clip[: max(0, n - i0)]
         if len(seg):
             out[i0:i0 + len(seg)] += seg[:, None] * vol if seg.ndim == 1 else seg * vol
+    for st, kind in sfx:                       # 발표 연출 효과음 ([효과:알림] 등)
+        snd = sfx_sound(kind) * (0.55 * max(0.0, float(s.get("hit_volume", 0.6) or 0.6)) / 0.6)
+        i0 = int(st * SR)
+        seg = snd[: max(0, n - i0)]
+        if len(seg):
+            out[i0:i0 + len(seg)] += seg
     if hit_t:
         kind = str(s.get("hit_sound", "자동"))
         if kind.startswith("자동"):
@@ -5085,7 +5164,7 @@ def narration_paras(story):
     out, idx = [], 0
     for para in (story or "").replace("\r", "").split("\n"):
         para = para.strip()
-        if not para or parse_media(para) or PH_RE.match(para):
+        if not para or parse_media(para) or PH_RE.match(para) or HOLD_RE.match(para) or SFX_RE.match(para):
             continue
         para = PH_INLINE_RE.sub("", para).strip()
         if not para:
@@ -7026,7 +7105,11 @@ try {
     foreach ($sh in $s.Shapes) { try { if ($sh.HasTextFrame -and $sh.TextFrame.HasText) { $texts += $sh.TextFrame.TextRange.Text } } catch {} }
     $notes = ""
     try { foreach ($sh in $s.NotesPage.Shapes) { try { if ($sh.PlaceholderFormat.Type -eq 2 -and $sh.TextFrame.HasText) { $notes = $sh.TextFrame.TextRange.Text } } catch {} } } catch {}
-    $list += [pscustomobject]@{ n = $i; image = $img; text = ($texts -join "`n"); notes = $notes; steps = @($steps); reveal = @($reveal) }
+    $hi = ""
+    $hasPic = $false
+    foreach ($sh in $s.Shapes) { try { if ($sh.Type -eq 13 -or $sh.Type -eq 11) { $hasPic = $true } } catch {} }
+    if ($hasPic) { $hi = Join-Path $Out ("slide_{0:D3}_hi.png" -f $i); $s.Export($hi, "PNG", 2560, [int](2560 * $h / $w)) }   # 확대용
+    $list += [pscustomobject]@{ n = $i; image = $img; text = ($texts -join "`n"); notes = $notes; steps = @($steps); reveal = @($reveal); hires = $hi }
   }
   $pres.Saved = -1
   $pres.Close()
@@ -7059,11 +7142,112 @@ def ppt_export(src, out_dir, log=None, bold=True):
     clean = lambda t: re.sub(r"[ \t]+", " ", str(t or "").replace("\r", "\n").replace("\x0b", "\n")).strip()
     lst_ = lambda v: [x for x in (v if isinstance(v, list) else [v]) if x] if v else []
     return [{"n": int(d["n"]), "image": d["image"], "text": clean(d.get("text")), "notes": clean(d.get("notes")),
-             "steps": lst_(d.get("steps")), "reveal": [clean(x) for x in lst_(d.get("reveal"))]} for d in data]
+             "steps": lst_(d.get("steps")), "reveal": [clean(x) for x in lst_(d.get("reveal"))], "hires": d.get("hires") or ""} for d in data]
 
 
 PPT_LENGTHS = {"짧게(슬라이드당 15~25초)": (90, 150), "보통(슬라이드당 30~45초)": (180, 280), "자세히(슬라이드당 60초 이상)": (350, 500)}
 PPT_TONES = ["유쾌한 진행(예능·라디오처럼)", "차분한 발표", "친근한 강의", "전문가 브리핑", "열정적인 피치(투자·영업)", "뉴스·보고서 낭독", "어린이 눈높이 설명"]
+
+# ---- 발표 영상 연출 표시: [다음] [확대:x0,y0,x1,y1] [전체] [효과:알림] [쉼:2.5] ----
+PPT_TAG_RE = re.compile(r"^\[\s*(다음|클릭|next|전체|확대\s*[:：][^\]]*|효과\s*[:：][^\]]*|쉼\s*[:：][^\]]*)\s*\]$", re.I)
+HOLD_RE = re.compile(r"^\[\s*쉼\s*[:：]\s*([\d.]+)\s*초?\s*\]$")
+SFX_RE = re.compile(r"^\[\s*효과\s*[:：]\s*([^\]]+?)\s*\]$")
+ZOOM_RE = re.compile(r"^\[\s*확대\s*[:：]\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*\]$")
+SFX_KINDS = ["알림", "정답", "땡", "휙", "박수", "두둥"]
+
+
+def ppt_tag_split(t):
+    """AI 대본 정리 전: 연출 표시를 항상 한 줄로 떼어 놓음"""
+    return re.sub(r"\s*(\[\s*(?:다음|클릭|전체|확대\s*[:：][^\]]*|효과\s*[:：][^\]]*|쉼\s*[:：][^\]]*)\s*\])\s*", r"\n\n\1\n\n", str(t or ""))
+
+
+def sfx_sound(kind):
+    """발표 영상 효과음 (프로그램이 직접 만듦): 알림(띵동) · 정답(딩동댕) · 땡(오답) · 휙 · 박수 · 두둥"""
+    k = str(kind)
+    tt = lambda d: np.arange(int(d * SR), dtype=np.float32) / SR
+
+    def tone(fq, d, decay=6.0, harm=(1.0, 0.35, 0.12)):
+        x = tt(d)
+        y = sum(a * np.sin(2 * np.pi * fq * (i + 1) * x) for i, a in enumerate(harm)) * np.exp(-decay * x)
+        r_ = max(1, int(0.004 * SR))
+        y[:r_] *= np.linspace(0, 1, r_)
+        return y
+    if "알림" in k or "띵동" in k or "호출" in k:
+        y = np.concatenate([tone(1319, 0.2, 7), tone(1047, 0.55, 5)])
+    elif "정답" in k or "딩동댕" in k:
+        y = np.concatenate([tone(1047, 0.15, 8), tone(1319, 0.15, 8), tone(1568, 0.7, 4)])
+    elif "땡" in k or "오답" in k or "틀" in k:
+        x = tt(0.6)
+        y = (np.sign(np.sin(2 * np.pi * 150 * x)) * 0.45 + np.sin(2 * np.pi * 300 * x) * 0.35) * np.exp(-2.2 * x)
+    elif "휙" in k or "whoosh" in k.lower():
+        x = tt(0.42)
+        nz = np.random.default_rng(7).standard_normal(len(x))
+        lo = np.convolve(nz, np.ones(24) / 24, mode="same")
+        hi_ = nz - np.convolve(nz, np.ones(6) / 6, mode="same")
+        p = x / x[-1]
+        y = (lo * (1 - p) * 3 + hi_ * p * 0.6) * np.sin(np.pi * p) ** 2
+    elif "박수" in k:
+        rng = np.random.default_rng(11)
+        d = 2.4
+        y = np.zeros(int(d * SR), np.float32)
+        L = int(0.03 * SR)
+        for _ in range(int(d * 55)):
+            i = int(rng.uniform(0, d - 0.05) * SR)
+            y[i:i + L] += (rng.standard_normal(L) * np.exp(-np.linspace(0, 9, L)) * rng.uniform(0.3, 1)).astype(np.float32)
+        y = np.convolve(y, [1, -0.7], mode="same") * np.minimum(1, np.linspace(3, 0, len(y)))
+    elif "두둥" in k or "쿵" in k:
+        a = reveal_fx(int(1.8 * SR), 0.05, np.random.default_rng(3), "쿵")
+        return (a / (np.abs(a).max() + 1e-9) * 0.7).astype(np.float32)
+    else:
+        y = tone(1047, 0.4)
+    y = y / (np.abs(y).max() + 1e-9) * 0.6
+    return np.stack([y, y], 1).astype(np.float32)
+
+
+PPT_FX_RULE = ("- 연출 표시(각각 한 줄로, 필요한 곳에만):\n"
+               "  · 화면 확대: 화면 캡처처럼 글자가 작은 슬라이드('화면 캡처 있음')에서, 설명하는 부분 바로 앞에 '[확대:x0,y0,x1,y1]'을 넣는다. "
+               "좌표는 슬라이드 그림 기준 0~1 비율(왼쪽 위 0,0 · 오른쪽 아래 1,1), 너비·높이 0.25 이상, 슬라이드 그림을 직접 보고 정확히. "
+               "다른 부분을 설명하면 새 [확대:...], 전체를 다시 보여줄 땐 '[전체]'. 슬라이드당 최대 3번.\n"
+               "  · 효과음: '[효과:알림]'(휴대폰 알림·호출 장면), '[효과:정답]'(정답·좋은 결과), '[효과:땡]'(틀린 답·나쁜 예), "
+               "'[효과:두둥]'(놀라운 숫자 공개), '[효과:박수]'(마무리·큰 성과). 슬라이드당 많아야 1~2개, 남발 금지.\n"
+               "  · ⚡ 몽타주 슬라이드: 대사 없이 3초씩 빠르게 넘어간다. 몽타주 묶음의 첫 슬라이드에만 짧은 한 줄(예: '그 밖에도 이런 것까지!'), "
+               "나머지 몽타주 슬라이드는 narration 을 빈 문자열로.\n")
+
+PPT_PLAN_SYSTEM = """너는 사내 교육 영상 구성 작가다. 슬라이드 목록(글)을 보고, 딱딱한 자료를 직원들이 끝까지 보는 재미있는 교육 영상으로 구성한다.
+- 목표 길이: 약 {minutes}분. 청중: {audience}. 진행: {host}.
+- 기능을 나열하지 말고 이야기로 엮는다. 예: 오프닝 상황극(불편했던 장면) → 왜 만들었나 → '하루 따라가기'(출근→작업→이상 발생→마감→월말) → 미리 막는다(퀴즈) → 숫자로 보는 효과(퀴즈) → 속사포 몽타주 → 레벨업·마무리.
+- order: 보여 줄 슬라이드 번호를 영상 순서대로(모두 쓸 필요 없음). order 에 없는 슬라이드는 빠진다(중복·반복 표지·너무 빽빽한 개요 등).
+- fast: order 안에서 몽타주로 3초씩 빠르게 넘길 슬라이드(비슷한 기능 화면이 이어지는 곳, 연속으로 묶기).
+- concept: 진행자 캐릭터(2인 진행이면 남·여 각각 이름·성격·말버릇)와 전체 콘셉트 3~5줄. chapters: 구간 제목, 들어갈 슬라이드, 구간마다 재미 장치(상황극·퀴즈·효과음 등) 한 줄.
+- 숫자 옆에 '확인 필요' 같은 메모가 있으면 notes 에 경고로 적는다.
+반드시 JSON만 출력: {{"order": [번호], "fast": [번호], "concept": "...", "chapters": [{{"title": "...", "slides": [번호], "fun": "..."}}], "notes": "..."}}"""
+
+
+def ppt_plan(model, slides, audience, minutes, duo, log=None):
+    """AI 구성 추천: 영상 순서·뺄 슬라이드·몽타주·캐릭터 콘셉트"""
+    log = log or (lambda x: None)
+    log(f"🧭 {len(slides)}장으로 {minutes}분 교육 영상 구성 짜는 중...")
+    body = "\n".join(f"[{s['n']}] " + re.sub(r"\s+", " ", s["text"])[:300] + (" (화면 캡처 있음)" if s.get("hires") else "")
+                     + (f" (클릭 애니메이션 {len(s['steps'])}번)" if s.get("steps") else "") for s in slides)
+    d = ask_script_json(model, PPT_PLAN_SYSTEM.format(minutes=minutes, audience=audience or "사내 전 직원", host="남녀 2인" if duo else "1인"),
+                        f"슬라이드 {len(slides)}장\n\n{body}")
+    valid = [s["n"] for s in slides]
+    order = []
+    for n in d.get("order") or []:
+        try:
+            n = int(n)
+        except (TypeError, ValueError):
+            continue
+        if n in valid and n not in order:
+            order.append(n)
+    if not order:
+        order = list(valid)
+    fast = sorted({int(n) for n in d.get("fast") or [] if str(n).isdigit()} & set(order))
+    ch = "\n".join(f"- {c.get('title', '')}: {', '.join(map(str, c.get('slides') or []))} — {c.get('fun', '')}" for c in d.get("chapters") or [])
+    note = (str(d.get("concept") or "").strip() + ("\n[구간]\n" + ch if ch else "")).strip()
+    return {"order": order, "skip": sorted(set(valid) - set(order)), "fast": fast, "note": note, "notes": str(d.get("notes") or "")}
+
+
 
 PPT_CLICK_RULE = ("- 클릭 애니메이션: '애니메이션: 클릭 N번'이 적힌 슬라이드는 처음에 그 내용(정답·결과 등)이 화면에 없다. 발표자가 클릭할 자리에 "
                   "'[다음]' 한 줄을 정확히 N번 넣는다. 정답·결과를 말하기 바로 앞에 넣고, 퀴즈면 먼저 문제를 내고 시청자가 생각할 틈을 준 다음 넣는다. "
@@ -7076,7 +7260,7 @@ PPT_SYSTEM = """너는 발표 코치이자 나레이션 작가다. 슬라이드 
 - 첫 슬라이드는 짧은 인사와 발표 주제·목적, 마지막 슬라이드는 핵심 요약과 마무리 인사. 슬라이드 사이가 자연스럽게 이어지게('다음으로', '이 결과를 바탕으로').
 - 말투: {tone}. 청중: {audience}.
 - 목록·제목 기호(#, -, *)와 이모지 금지. 영어 약어는 그대로 써도 된다.
-""" + PPT_CLICK_RULE + KO_NUM_RULE + """- 성우: 아래 [성우 목록]에서 발표 주제·청중·말투에 가장 어울리는 하나를 목록의 이름 그대로 고르고, 감정 톤도 고른다.
+""" + PPT_CLICK_RULE + PPT_FX_RULE + KO_NUM_RULE + """- 성우: 아래 [성우 목록]에서 발표 주제·청중·말투에 가장 어울리는 하나를 목록의 이름 그대로 고르고, 감정 톤도 고른다.
 반드시 JSON만 출력: {{"title": "발표 영상 제목(30자 이내)", "voice": "성우 목록의 이름 그대로", "voice_reason": "고른 이유 한 줄", "emotion": "차분|밝음·유머|슬픔·감동|놀람·반전|공포·긴장|분노·갈등 중 하나", "slides": [{{"n": 1, "narration": "나레이션"}}]}}"""
 
 
@@ -7094,7 +7278,7 @@ PPT_DUO_SYSTEM = """너는 딱딱한 사내 교육을 예능·라디오처럼 �
 - 분량: 슬라이드마다 공백 포함 {min_c}~{max_c}자(대화 슬라이드는 1.3배까지). 표지는 두 사람의 밝은 인사와 오늘 주제, 마지막 슬라이드는 둘이 함께 핵심 요약과 마무리 인사.
 - 말투: {tone}. 청중: {audience}.
 - 목록·제목 기호(#, -, *)와 이모지 금지.
-""" + PPT_CLICK_RULE + KO_NUM_RULE + """- 성우: 아래 [성우 목록]에서 남자 1명, 여자 1명을 목록의 이름 그대로 고른다(가능하면 같은 종류끼리: 둘 다 Supertonic 또는 둘 다 엣지). 감정 톤도 고른다.
+""" + PPT_CLICK_RULE + PPT_FX_RULE + KO_NUM_RULE + """- 성우: 아래 [성우 목록]에서 남자 1명, 여자 1명을 목록의 이름 그대로 고른다(가능하면 같은 종류끼리: 둘 다 Supertonic 또는 둘 다 엣지). 감정 톤도 고른다.
 반드시 JSON만 출력: {{"title": "발표 영상 제목(30자 이내)", "voice_m": "남자 성우 이름 그대로", "voice_f": "여자 성우 이름 그대로", "voice_reason": "두 성우를 고른 이유 한 줄", "emotion": "차분|밝음·유머|슬픔·감동|놀람·반전|공포·긴장|분노·갈등 중 하나", "slides": [{{"n": 1, "narration": "남: ...\\n\\n여: ..."}}]}}"""
 
 
@@ -7115,7 +7299,7 @@ def ppt_voice_catalog():
     return names
 
 
-def ppt_narrate(model, slides, tone, audience, length, log=None, cancel=None, use_images=True, duo=False):
+def ppt_narrate(model, slides, tone, audience, length, log=None, cancel=None, use_images=True, duo=False, plan_note=""):
     """슬라이드 → 슬라이드별 나레이션 + 성우 추천. 10장씩 나눠 씀(긴 발표도 시간 제한에 안 걸림).
     duo=True: 남녀 2인 진행 (줄마다 '남:'/'여:')"""
     log = log or (lambda x: None)
@@ -7133,15 +7317,19 @@ def ppt_narrate(model, slides, tone, audience, length, log=None, cancel=None, us
         body = "\n\n".join(f"[슬라이드 {s['n']}]" + (f"\n그림 파일: {s['image']}" if see else "") + f"\n슬라이드 글: {s['text'] or '(글 없음)'}"
                            + (f"\n발표자 메모: {s['notes']}" if s.get("notes") else "")
                            + (f"\n애니메이션: 클릭 {len(s['steps'])}번 — " + " / ".join(f"클릭 {k + 1}에 나타남: {t or '(그림·도형)'}" for k, t in enumerate(s.get('reveal') or [''] * len(s['steps'])))
-                              if s.get("steps") else "") for s in part)
-        user = (f"전체 슬라이드 수: {len(slides)}\n[성우 목록]\n" + "\n".join(voices)
+                              if s.get("steps") else "")
+                           + ("\n⚡ 몽타주 슬라이드(대사 없이 빠르게 넘어감)" if s.get("fast") else "")
+                           + ("\n화면 캡처 있음(확대 가능)" if s.get("hires") and not s.get("steps") else "") for s in part)
+        user = ((f"[구성 메모 - 이 콘셉트·캐릭터·구간대로]\n{plan_note}\n\n" if plan_note else "")
+                + f"전체 슬라이드 수: {len(slides)} (영상 순서대로 나열됨)\n[성우 목록]\n" + "\n".join(voices)
                 + (f"\n\n[앞부분 요약 - 이어서 쓸 것, 성우는 이미 정함: {meta.get('voice_m') or ''} {meta.get('voice_f') or meta.get('voice') or ''}]\n{prev}" if a else "") + "\n\n" + body)
         d = ask_json(model, sys_, user, tools=["Read"]) if see else ask_script_json(model, sys_.replace("Read 도구로 하나씩 실제로 열어 보고, ", ""), user)
         if not a:
             meta = {k: d.get(k) for k in ("title", "voice", "voice_m", "voice_f", "voice_reason", "emotion")}
         for s in d.get("slides") or []:
             try:
-                out[int(s.get("n"))] = ppt_duo_clean(s.get("narration", "")) if duo else doc_clean(s.get("narration", ""))
+                raw_ = ppt_tag_split(s.get("narration", ""))
+                out[int(s.get("n"))] = ppt_duo_clean(raw_) if duo else doc_clean(raw_)
             except (TypeError, ValueError):
                 continue
         prev = " / ".join(f"{n}: {out[n][:80]}" for n in sorted(out)[-3:])
@@ -7216,41 +7404,62 @@ def ppt_lang_story(story, lang, vi, s):
 
 def ppt_build_story(slides, narr, duo=None):
     """슬라이드 그림 줄 + 나레이션 문단 → 자막형 렌더러용 본문.
-    duo={"남": 성우, "여": 성우}: 줄 앞 '남:'/'여:'를 떼고, 그 문단을 읽을 성우를 PARA_VOICE 에 기록"""
+    duo={"남": 성우, "여": 성우}: 줄 앞 '남:'/'여:'를 떼고, 그 문단을 읽을 성우를 PARA_VOICE 에 기록.
+    연출: [다음]=클릭 단계 그림, [확대:..]/[전체]=화면 확대(같은 그림의 확대 줄), [효과:..]·[쉼:..]은 그대로 남겨 렌더러가 처리.
+    slides 의 'fast'(⚡ 몽타주): 대사가 없으면 2.5초 보여 주고 '휙' 소리와 함께 넘어감"""
     parts = []
     PARA_VOICE.clear()
     for s in slides:
-        imgs = list(s.get("steps") or []) + [s["image"]]           # 클릭 애니메이션: 단계별 그림 (마지막 = 다 나온 상태)
-        parts.append(make_marker(imgs[0], f"슬라이드 {s['n']}", "", ""))
-        t = (narr.get(s["n"]) or "").strip()
-        cur, lines, nxt = None, [], 1
+        t = ppt_tag_split(narr.get(s["n"]) or "").strip()
+        hires = s.get("hires") or ""
+        zoomy = bool(re.search(r"\[\s*확대\s*[:：]", t)) and not s.get("steps") and hires and os.path.exists(hires)
+        imgs = list(s.get("steps") or []) + [hires if zoomy else s["image"]]   # 클릭 단계별 그림 (마지막 = 다 나온 상태)
+        st_ = {"k": 0, "zoom": ""}
+
+        def mk(k, s=s, st_=st_, imgs=imgs):
+            return make_marker(imgs[k], f"슬라이드 {s['n']}" + (f" ({k + 1}단계)" if k else "")
+                               + (f" zoom={st_['zoom']}" if st_["zoom"] else ""), "", "")
+        lines = ["[효과:휙]"] if s.get("fast") else []
+        lines.append(mk(0))
+        cur, nxt, spoken = None, 1, 0
         for ln in re.split(r"\n+", t):
             ln = ln.strip()
+            if not ln:
+                continue
             if re.fullmatch(r"\[\s*(다음|클릭|next)\s*\]", ln, re.I):     # 여기서 클릭 → 다음 그림
                 if nxt < len(imgs):
-                    lines.append(make_marker(imgs[nxt], f"슬라이드 {s['n']} ({nxt + 1}단계)", "", ""))
+                    st_["k"] = nxt
+                    lines.append(mk(nxt))
                     nxt += 1
+                continue
+            zm = ZOOM_RE.match(ln)
+            if zm or re.fullmatch(r"\[\s*전체\s*\]", ln):               # 화면 확대 / 전체
+                st_["zoom"] = ",".join(f"{min(1.0, max(0.0, float(v))):.3f}" for v in zm.groups()) if zm else ""
+                lines.append(mk(st_["k"]))
+                continue
+            if SFX_RE.match(ln) or HOLD_RE.match(ln):
+                lines.append(ln)
                 continue
             m = SPK_RE.match(ln)
             if m:
                 cur = "여" if m.group(1) in ("여", "F") else "남"
                 ln = ln[m.end():].strip()
-            if not ln:
+            if not ln or PPT_TAG_RE.match(ln):
                 continue
             if duo and cur:
                 PARA_VOICE[ln] = duo[cur]
             lines.append(ln)
-        if not lines:
-            lines = [(s.get("text") or "다음 슬라이드입니다.")[:120]]
+            spoken += 1
+        if not spoken:
+            lines.append("[쉼:2.5]" if s.get("fast") else (s.get("text") or "다음 슬라이드입니다.")[:120])
         while nxt < len(imgs):                  # 대본에 [다음]이 모자라면: 뒤쪽 절반에 고르게 (정답은 보통 끝 무렵)
-            txt_i = [k for k, x in enumerate(lines) if not parse_media(x)]
+            txt_i = [k for k, x in enumerate(lines) if not parse_media(x) and not PPT_TAG_RE.match(x)]
             left = len(imgs) - nxt
             pos = txt_i[min(len(txt_i) - 1, max(len(txt_i) // 2, len(txt_i) - left))] if len(txt_i) > 1 else len(lines)
             lines.insert(pos, make_marker(imgs[nxt], f"슬라이드 {s['n']} ({nxt + 1}단계)", "", ""))
             nxt += 1
         parts.append("\n".join(lines))
     return "\n\n".join(parts)
-
 
 # ---------------- 자연의 소리 믹서 (여러 소리를 골라 세기·빈도·랜덤으로 섞기) ----------------
 def _nz(n, rng, power=1.0, lo=None, hi=None):
@@ -11556,7 +11765,7 @@ class App(tk.Tk):
     # ---- 📊 PPT 발표 탭 ----
     def ppt_tab(self, parent):
         """PPT 불러오기 → AI가 슬라이드를 보고 나레이션·성우를 정함 → 슬라이드 + 나레이션 + 자막 발표 영상"""
-        st = self.ppt = {"slides": [], "dir": "", "meta": {}, "narr": {}, "vi": {}}
+        st = self.ppt = {"slides": [], "dir": "", "meta": {}, "narr": {}, "vi": {}, "order": [], "skip": set(), "fast": set(), "plan": ""}
         main = ttk.Frame(parent, padding=8)
         main.pack(fill="both", expand=True)
         right = ttk.LabelFrame(main, text="슬라이드", padding=6)
@@ -11639,16 +11848,86 @@ class App(tk.Tk):
         ttk.Button(f4, text="📂 폴더", command=open_dir).pack(side="left")
 
         # 오른쪽: 슬라이드 목록 + 미리보기
-        lst = tk.Listbox(right, width=34, height=14, exportselection=False)
-        lst.pack(fill="y", expand=True)
+        lf_ = ttk.Frame(right)
+        lf_.pack(fill="both", expand=True)
+        lst = tk.Listbox(lf_, width=36, height=14, exportselection=False)
+        lsb = ttk.Scrollbar(lf_, command=lst.yview)
+        lst.config(yscrollcommand=lsb.set)
+        lsb.pack(side="right", fill="y")
+        lst.pack(side="left", fill="both", expand=True)
+        ob = ttk.Frame(right)
+        ob.pack(fill="x", pady=(4, 0))
+        ttk.Button(ob, text="▲", width=3, command=lambda: move(-1)).pack(side="left")
+        ttk.Button(ob, text="▼", width=3, command=lambda: move(1)).pack(side="left", padx=2)
+        ttk.Button(ob, text="빼기/넣기", command=lambda: toggle("skip")).pack(side="left")
+        ttk.Button(ob, text="⚡ 몽타주", command=lambda: toggle("fast")).pack(side="left", padx=2)
+        ob2 = ttk.Frame(right)
+        ob2.pack(fill="x", pady=(4, 0))
+        min_v = tk.StringVar(value="10")
+        ttk.Button(ob2, text="🧭 AI 구성 추천", command=lambda: plan()).pack(side="left")
+        ttk.Label(ob2, text=" 목표").pack(side="left")
+        ttk.Entry(ob2, textvariable=min_v, width=4).pack(side="left")
+        ttk.Label(ob2, text="분").pack(side="left")
+        ttk.Label(right, text="▲▼ 영상 순서 · 빼기(✖) · ⚡ 3초씩 빠르게\n(PPT 파일은 그대로, 영상 순서만 바뀜)", foreground="#666", justify="left").pack(anchor="w")
         prev_l = ttk.Label(right)
         prev_l.pack(pady=(6, 0))
+        by_n = lambda n: next((x for x in st["slides"] if x["n"] == n), None)
+
+        def ordered():
+            """영상에 나올 슬라이드 (순서대로, 뺀 것 제외, ⚡ 표시 포함)"""
+            return [dict(by_n(n), fast=n in st["fast"]) for n in st["order"] if n not in st["skip"] and by_n(n)]
+
+        def refresh_list(sel_n=None):
+            lst.delete(0, "end")
+            for k, n in enumerate(st["order"]):
+                sl = by_n(n)
+                if not sl:
+                    continue
+                first = sl["text"].split("\n")[0] if sl["text"] else "(글 없음)"
+                mark = "✖ " if n in st["skip"] else ("⚡ " if n in st["fast"] else "")
+                lst.insert("end", f"{mark}{n:>3}. {first[:26]}" + (" 📝" if sl["notes"] else "") + (f" 🎬{len(sl['steps'])}" if sl.get("steps") else ""))
+                if n in st["skip"]:
+                    lst.itemconfig("end", foreground="#aaa")
+                elif n in st["fast"]:
+                    lst.itemconfig("end", foreground="#b35900")
+            if sel_n in st["order"]:
+                i = st["order"].index(sel_n)
+                lst.selection_set(i)
+                lst.see(i)
+
+        def resync(sel_n=None):
+            st["narr"].update(parse_script())
+            txt.delete("1.0", "end")
+            txt.insert("1.0", script_text())
+            refresh_list(sel_n)
+            save_state()
+
+        def cur_n():
+            sel = lst.curselection()
+            return st["order"][sel[0]] if sel and sel[0] < len(st["order"]) else None
+
+        def move(dk):
+            n = cur_n()
+            if n is None:
+                return
+            i = st["order"].index(n)
+            j = i + dk
+            if 0 <= j < len(st["order"]):
+                st["order"][i], st["order"][j] = st["order"][j], st["order"][i]
+                resync(n)
+
+        def toggle(which):
+            n = cur_n()
+            if n is None:
+                return
+            st[which] ^= {n}
+            resync(n)
 
         def show(_e=None):
-            sel = lst.curselection()
-            if not sel or sel[0] >= len(st["slides"]):
+            n = cur_n()
+            if n is None:
                 return
-            sl = st["slides"][sel[0]]
+            sl = by_n(n)
             try:
                 im = Image.open(sl["image"])
                 im.thumbnail((300, 300))
@@ -11662,7 +11941,7 @@ class App(tk.Tk):
         lst.bind("<<ListboxSelect>>", show)
 
         def script_text():
-            return "\n".join(f"### 슬라이드 {sl['n']}\n" + (st["narr"].get(sl["n"]) or "") + "\n" for sl in st["slides"])
+            return "\n".join(f"### 슬라이드 {sl['n']}" + (" ⚡" if sl.get("fast") else "") + "\n" + (st["narr"].get(sl["n"]) or "") + "\n" for sl in ordered())
 
         def parse_script():
             narr = {}
@@ -11675,33 +11954,41 @@ class App(tk.Tk):
 
         def save_state():
             if st["dir"]:
-                st["narr"] = parse_script()
+                st["narr"].update(parse_script())
                 os.makedirs(st["dir"], exist_ok=True)
                 atomic_write_text(os.path.join(st["dir"], "발표_대본.json"),
                                   json.dumps({"src": path_v.get(), "title": title_v.get(), "meta": st["meta"], "vi": st["vi"],
+                                              "order": st["order"], "skip": sorted(st["skip"]), "fast": sorted(st["fast"]), "plan": st["plan"],
+                                              "lang": lang_v.get(), "mode": mode_v.get(), "tone": tone_v.get(), "audience": aud_v.get(),
                                               "narr": {str(k): v for k, v in st["narr"].items()}}, ensure_ascii=False, indent=1))
 
         def fill(slides):
             st["slides"] = slides
-            lst.delete(0, "end")
-            for sl in slides:
-                first = sl["text"].split("\n")[0] if sl["text"] else "(글 없음)"
-                lst.insert("end", f"{sl['n']:>3}. {first[:28]}" + (" 📝" if sl["notes"] else "") + (f" 🎬{len(sl['steps'])}" if sl.get("steps") else ""))
-            js = os.path.join(st["dir"], "발표_대본.json")            # 전에 쓴 대본이 있으면 이어서
-            st["narr"], st["meta"], st["vi"] = {}, {}, {}
+            js = os.path.join(st["dir"], "발표_대본.json")            # 전에 쓴 대본·구성이 있으면 이어서
+            st["narr"], st["meta"], st["vi"], st["plan"] = {}, {}, {}, ""
+            st["order"], st["skip"], st["fast"] = [x["n"] for x in slides], set(), set()
             if os.path.exists(js):
                 try:
                     d = json.load(open(js, encoding="utf-8"))
                     st["narr"] = {int(k): v for k, v in (d.get("narr") or {}).items()}
                     st["meta"] = d.get("meta") or {}
                     st["vi"] = d.get("vi") or {}
+                    st["plan"] = d.get("plan") or ""
+                    valid = [x["n"] for x in slides]
+                    od = [int(n) for n in d.get("order") or [] if int(n) in valid]
+                    st["order"] = od + [n for n in valid if n not in od]
+                    st["skip"] = {int(n) for n in d.get("skip") or [] if int(n) in valid}
+                    st["fast"] = {int(n) for n in d.get("fast") or [] if int(n) in valid}
+                    for var_, key_ in ((lang_v, "lang"), (mode_v, "mode"), (tone_v, "tone"), (aud_v, "audience")):
+                        if d.get(key_):
+                            var_.set(d[key_])
                     title_v.set(d.get("title") or title_v.get())
                 except Exception:
                     pass
             txt.delete("1.0", "end")
             txt.insert("1.0", script_text())
+            refresh_list(st["order"][0] if st["order"] else None)
             if slides:
-                lst.selection_set(0)
                 show()
             notes = sum(1 for x in slides if x["notes"])
             anim = sum(1 for x in slides if x.get("steps"))
@@ -11721,22 +12008,43 @@ class App(tk.Tk):
             bold = bold_v.get()
             self.run_bg("📥 슬라이드 불러오는 중...", lambda: ppt_export(p, os.path.join(st["dir"], "slides"), self.log_bg, bold), fill)
 
+        def plan():
+            if not st["slides"]:
+                messagebox.showinfo("PPT 발표", "먼저 슬라이드를 불러오세요.")
+                return
+            try:
+                mins = max(2, min(60, int(float(min_v.get()))))
+            except ValueError:
+                mins = 10
+            model, slides, aud, duo = self.model_var.get().strip(), list(st["slides"]), aud_v.get(), mode_v.get() == PPT_MODES[0]
+
+            def done(p):
+                st["order"] = p["order"] + p["skip"]          # 뺀 슬라이드는 뒤로 (✖, 다시 넣을 수 있음)
+                st["skip"], st["fast"], st["plan"] = set(p["skip"]), set(p["fast"]), p["note"]
+                resync(st["order"][0])
+                info_v.set(f"🧭 구성 추천: {len(p['order'])}장 사용 · {len(p['skip'])}장 뺌 · ⚡ 몽타주 {len(p['fast'])}장 → 이제 ✍ AI 나레이션 쓰기")
+                self.write_log("🧭 AI 구성 추천\n" + p["note"] + (f"\n⚠ {p['notes']}" if p["notes"] else ""))
+                if p["notes"]:
+                    messagebox.showwarning("PPT 발표 - 확인할 내용", p["notes"])
+            self.run_bg("🧭 영상 구성 짜는 중...", lambda: ppt_plan(model, slides, aud, mins, duo, self.log_bg), done)
+
         def narrate():
             if not st["slides"]:
                 messagebox.showinfo("PPT 발표", "먼저 슬라이드를 불러오세요.")
                 return
             if any(parse_script().values()) and not messagebox.askyesno("PPT 발표", "지금 대본을 지우고 AI가 새로 쓸까요?"):
                 return
-            model, slides = self.model_var.get().strip(), list(st["slides"])
+            model, slides, pnote = self.model_var.get().strip(), ordered(), st["plan"]
             tone, aud, ln, see = tone_v.get(), aud_v.get(), len_v.get(), see_v.get()
             duo = mode_v.get() == PPT_MODES[0]
 
             def job():
-                return ppt_narrate(model, slides, tone, aud, ln, self.log_bg, self.cancel, see, duo)
+                return ppt_narrate(model, slides, tone, aud, ln, self.log_bg, self.cancel, see, duo, pnote)
 
             def done(res):
                 narr, meta = res
-                st["narr"], st["meta"] = narr, meta
+                st["narr"].update(narr)
+                st["meta"] = meta
                 txt.delete("1.0", "end")
                 txt.insert("1.0", script_text())
                 if meta.get("title"):
@@ -11756,8 +12064,9 @@ class App(tk.Tk):
                 messagebox.showinfo("PPT 발표", "먼저 슬라이드를 불러오세요.")
                 return
             narr = parse_script()
-            empty = [sl["n"] for sl in st["slides"] if not narr.get(sl["n"])]
-            if len(empty) == len(st["slides"]):
+            show_ = ordered()
+            empty = [sl["n"] for sl in show_ if not narr.get(sl["n"]) and not sl.get("fast")]
+            if len(empty) == len([x for x in show_ if not x.get("fast")]):
                 messagebox.showinfo("PPT 발표", "나레이션 대본이 비어 있습니다. ✍ AI 나레이션 쓰기를 먼저 누르세요.")
                 return
             if empty and not messagebox.askyesno("PPT 발표", f"대본이 없는 슬라이드 {len(empty)}장은 슬라이드 글을 읽습니다. 계속할까요?"):
@@ -11777,7 +12086,7 @@ class App(tk.Tk):
             s = self.ppt_settings(duo["남"] if duo else voice_v.get(), st["meta"], sub_v.get().startswith("켜기"), bgm_v.get() != "없음")
             lang = lang_v.get() if sub_v.get().startswith("켜기") else "한국어"
             voice = f"남 {duo['남']} + 여 {duo['여']}" if duo else s["narr_voice"]
-            story = ppt_build_story(st["slides"], narr, duo)
+            story = ppt_build_story(show_, narr, duo)
             fmt_name = "롱폼 가로(1920×1080)" if fmt_v.get().startswith("가로") else "쇼츠 세로(1080×1920)"
             old_fmt = self.vars["format"].get() if "format" in self.vars else None
             if fmt_name != old_fmt:
@@ -11785,7 +12094,7 @@ class App(tk.Tk):
             base = os.path.join(st["dir"], safe_name(title))
             model, genre = self.model_var.get().strip(), tone_v.get()
             log = self.log_bg
-            self.write_log(f"📊 발표 영상 시작: {len(st['slides'])}장 · 성우 {voice} · 감정 {s['st_emotion']} · {fmt_v.get()} · 자막 {lang}")
+            self.write_log(f"📊 발표 영상 시작: {len(show_)}장 · 성우 {voice} · 감정 {s['st_emotion']} · {fmt_v.get()} · 자막 {lang}")
 
             def restore():
                 if old_fmt and fmt_name != old_fmt:
