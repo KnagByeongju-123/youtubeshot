@@ -7634,7 +7634,7 @@ def ppt_lang_story(story, lang, vi, s):
         s["sub_font_path"] = VI_FONT or s.get("sub_font_path", "")      # 베트남어는 항상 성조 글자가 또렷한 기존 글꼴
         k_ = max(0.5, min(2.0, float(s.get("vi_scale", 1.0) or 1.0)))
         s["sub_size"] = int(round(float(s.get("sub_size", 64)) * k_))   # 베트남어 자막 크기
-        s["sub_max_chars"] = int(round(44 / k_))
+        s["sub_max_chars"] = int(round(44 * 88 / max(40, s["sub_size"])))   # 글자가 클수록 한 줄 글자 수 줄임
         return "\n".join(out)
     if lang == "한국어+베트남어":
         s.update(sub_trans=dict(vi), sub_font2=VI_FONT, sub_split="문단 통째로", sub2_scale=float(s.get("vi_scale", 1.0) or 1.0))
@@ -9308,7 +9308,7 @@ class App(tk.Tk):
                 d.text((10, 4), name + ("    [베트남어 OK]" if vi else ""), font=ui_font, fill="#1a7f37" if vi else "#888")
                 try:
                     ft = load_font(e[1], 30)
-                    d.text((10, 20), (sample.get() or "가나다 ABC 123")[:20] + "  123", font=ft, fill="#111")
+                    d.text((10, 20), (sample.get() or "자막 미리보기")[:12] + "  2026년 42%! (D-30)", font=ft, fill="#111")
                 except Exception:
                     d.text((10, 26), "(미리보기 실패)", font=ui_font, fill="#c00")
             else:
@@ -9380,8 +9380,8 @@ class App(tk.Tk):
             im = Image.new("RGB", (500, 380), (17, 17, 17))
             d = ImageDraw.Draw(im)
             y = 26
-            for txt, sz, col in ((sample.get(), 46, "#FFD54F"), ("자막은 이렇게 보여요.", 34, "#FFFFFF"),
-                                 ("Phụ đề tiếng Việt ở đây", 30, "#9AD9FF"), ("ABC abc 123 !?", 30, "#9ad")):
+            for txt, sz, col in ((sample.get(), 46, "#FFD54F"), ("자막은 이렇게 보여요. 2026년 10월 15일", 34, "#FFFFFF"),
+                                 ("1,200만 원 · 90%↓ → 1분!?", 32, "#9AD9FF"), ("「점검표」 ①②③ ※ ★ (D-30)", 30, "#FFB3CF")):
                 ft = load_font(path, sz)
                 for ln in wrap(txt, ft, 460)[:2]:
                     d.text((20, y), ln, font=ft, fill=col, stroke_width=2, stroke_fill="#000")
@@ -12140,10 +12140,12 @@ class App(tk.Tk):
         fmt_v = tk.StringVar(value="가로 16:9 (유튜브·발표)")
         size_v = tk.StringVar(value=PPT_SIZES[0])
         trans_v, motion_v = tk.StringVar(value=PPT_TRANS[0]), tk.StringVar(value=PPT_MOTION[0])
-        vi_v = tk.StringVar(value="100")           # 베트남어 자막 크기(%)
-        vif = ttk.Frame(f2)
+        vi_v = tk.StringVar(value="100")           # 자막 크기(%) - 한국어·베트남어 모두
+        vif = ttk.Frame(f2)                        # 자막 켜기/끄기 + 크기를 한 칸에
+        ttk.Combobox(vif, textvariable=sub_v, values=["켜기", "끄기(슬라이드 크게)"], state="readonly", width=10).pack(side="left")
+        ttk.Label(vif, text=" 크기").pack(side="left")
         ttk.Spinbox(vif, from_=60, to=160, increment=10, width=5, textvariable=vi_v).pack(side="left")
-        ttk.Label(vif, text="%  (글꼴: Segoe UI Bold)", foreground="#666").pack(side="left")
+        ttk.Label(vif, text="%").pack(side="left")
         tonef = ttk.Frame(f2)                     # 성우 톤 (나레이션 설정과 같은 값)
         ttk.Label(tonef, text="여").pack(side="left")
         ttk.Spinbox(tonef, from_=-4, to=4, increment=0.5, width=4, textvariable=self.vars["narr_tone_f"]).pack(side="left")
@@ -12170,7 +12172,7 @@ class App(tk.Tk):
                 ("말투", ttk.Combobox(f2, textvariable=tone_v, values=PPT_TONES, state="readonly", width=24)),
                 ("분량", ttk.Combobox(f2, textvariable=len_v, values=list(PPT_LENGTHS), state="readonly", width=24)),
                 ("성우(혼자)", ttk.Combobox(f2, textvariable=voice_v, values=["🤖 AI가 추천"] + cat_, state="readonly", width=34)),
-                ("자막", ttk.Combobox(f2, textvariable=sub_v, values=["켜기", "끄기(슬라이드 크게)"], state="readonly", width=24)),
+                ("자막", vif),
                 ("배경음", ttk.Combobox(f2, textvariable=bgm_v, values=["잔잔하게(작게)", "없음"], state="readonly", width=24)),
                 ("화면", ttk.Combobox(f2, textvariable=fmt_v, values=["가로 16:9 (유튜브·발표)", "세로 9:16 (쇼츠)"], state="readonly", width=24)),
                 ("자막 언어", ttk.Combobox(f2, textvariable=lang_v, values=PPT_SUB_LANGS, state="readonly", width=24)),
@@ -12178,8 +12180,7 @@ class App(tk.Tk):
                 ("전환 효과", ttk.Combobox(f2, textvariable=trans_v, values=PPT_TRANS, state="readonly", width=20)),
                 ("화면 움직임", ttk.Combobox(f2, textvariable=motion_v, values=PPT_MOTION, state="readonly", width=20)),
                 ("자막 글꼴", fontf),
-                ("성우 톤(반음)", tonef),
-                ("베트남어 자막 크기", vif)]
+                ("성우 톤(반음)", tonef)]
         for i, (lb, w_) in enumerate(rows):
             r_, c_ = i % 4, (i // 4) * 2      # 4줄씩 3칸
             ttk.Label(f2, text=lb).grid(row=r_, column=c_, sticky="e", padx=(8, 4), pady=2)
@@ -12480,10 +12481,11 @@ class App(tk.Tk):
             s["slide_trans"], s["slide_motion"] = trans_v.get(), ("on" if motion_v.get() == PPT_MOTION[0] else "off")
             if font_v.get() and os.path.exists(font_v.get()):
                 s["sub_font_path"] = font_v.get()
-            try:
-                s["vi_scale"] = max(0.5, min(2.0, float(vi_v.get()) / 100))
+            try:                                   # 자막 크기(%): 화면에 나오는 자막 전체 (한국어·베트남어)
+                s["sub_size"] = int(round(float(s.get("sub_size", 64)) * max(0.5, min(2.0, float(vi_v.get()) / 100))))
             except ValueError:
-                s["vi_scale"] = 1.0
+                pass
+            s["vi_scale"] = 1.0
             voice = f"남 {duo['남']} + 여 {duo['여']}" if duo else s["narr_voice"]
             story = ppt_build_story(show_, narr, duo)
             fmt_name = "롱폼 가로(1920×1080)" if fmt_v.get().startswith("가로") else "쇼츠 세로(1080×1920)"
