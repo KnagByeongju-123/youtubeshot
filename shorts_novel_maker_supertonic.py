@@ -7520,16 +7520,58 @@ PPT_SYSTEM = """너는 발표 코치이자 나레이션 작가다. 슬라이드 
 반드시 JSON만 출력: {{"title": "발표 영상 제목(30자 이내)", "voice": "성우 목록의 이름 그대로", "voice_reason": "고른 이유 한 줄", "emotion": "차분|밝음·유머|슬픔·감동|놀람·반전|공포·긴장|분노·갈등 중 하나", "slides": [{{"n": 1, "narration": "나레이션"}}]}}"""
 
 
-PPT_MODES = ["남녀 2인 진행 (파트 교대 + 퀴즈는 대화)", "혼자 발표 (성우 1명)"]
+PPT_MODES = ["남녀 2인 진행 (파트 교대 + 퀴즈는 대화)", "남녀 한 페이지씩 (슬라이드마다 번갈아)", "남녀 기자 리포트",
+             "남녀 뉴스 진행 (앵커)", "혼자 발표 (성우 1명)"]
+PPT_SOLO = PPT_MODES[-1]
+PPT_DUO_STYLES = {   # 진행 방식 → (역할, 진행 규칙)  (규칙 글에 중괄호 쓰지 않기)
+    PPT_MODES[0]: ("너는 딱딱한 사내 교육을 예능·라디오처럼 재미있게 바꾸는 2인 진행 대본 작가다. 남자 진행자(남)와 여자 진행자(여)가 함께 슬라이드를 설명한다.",
+                   "- 파트 교대: 슬라이드 왼쪽 위의 작은 분류 꼬리표(예: '01 알아보기', '03 현장 사례')가 바뀔 때마다 주 진행자를 남↔여로 번갈아 맡는다. 주 진행자가 설명하고, 다른 사람은 가끔 짧게 맞장구·질문·리액션을 넣는다('오, 정말요?', '저 그거 어제 했는데요…').\n"
+                   "- 퀴즈·OX·'~일까요?'·사례 슬라이드는 두 사람이 주고받는 대화로: 한 사람이 문제를 내고, 시청자에게 '여러분도 3초만 생각해 보세요!'처럼 참여를 부르고, 다른 사람이 일부러 헷갈리는 답을 했다가 정답과 이유가 나온다.\n"
+                   "- 재미 포인트: 현장·사무실에서 있을 법한 짧은 상황극, 가벼운 농담, 공감 가는 실수담, 기억에 남는 한 줄 요약. 단 규칙·법령·숫자는 정확히. 특정 동료·성별·집단을 비하하는 농담, 억지 유행어 남발 금지."),
+    PPT_MODES[1]: ("너는 사내 교육 영상의 2인 발표 대본 작가다. 남자 발표자(남)와 여자 발표자(여)가 슬라이드를 한 장씩 번갈아 설명한다.",
+                   "- 한 페이지씩: 영상 순서의 첫 슬라이드는 남, 다음은 여, 그다음은 남…처럼 슬라이드마다 한 사람이 그 페이지 전체를 혼자 설명한다(그 슬라이드의 모든 줄이 같은 사람). 대사가 없는 몽타주 슬라이드는 순서에서 건너뛴다.\n"
+                   "- 다음 사람에게 넘길 때는 가끔만 자연스럽게('이어서 설명해 드릴게요'), 매번 하지 않는다.\n"
+                   "- 퀴즈 슬라이드는 혼자서 문제를 내고 '여러분도 3초만 생각해 보세요!' 다음 정답과 이유를 말한다."),
+    PPT_MODES[2]: ("너는 방송사 보도국 기자처럼 사내 소식을 전하는 리포트 대본 작가다. 남자 기자(남)와 여자 기자(여)가 현장 리포트 형식으로 슬라이드 내용을 전한다.",
+                   "- 기자 리포트 말투: 사실 중심의 짧고 단정한 문장('~했습니다', '~로 확인됐습니다', '~할 계획입니다'). 감탄·농담 금지.\n"
+                   "- 파트(슬라이드 왼쪽 위 꼬리표)가 바뀔 때마다 리포트하는 기자를 남↔여로 번갈아 맡는다. 파트 첫 줄은 리포트 도입('현장에서는 ~', '취재 결과 ~'), 파트 마지막 줄은 '○○○ 기자였습니다.' 클로징(남·여 기자 이름을 하나씩 정해 진행 내내 같은 이름, 회사 이름은 슬라이드에서 찾아 '○○ 사내 뉴스 ○○○ 기자'처럼).\n"
+                   "- 인터뷰처럼 들리는 한 줄은 '현장 관계자는 ~라고 말했습니다'처럼 간접 인용으로.\n"
+                   "- 퀴즈 슬라이드는 '시청자 여러분도 생각해 보시죠' 다음 정답을 짧게 전한다.\n"
+                   "- 첫 슬라이드: 기자 한 명이 오늘 리포트 주제를 소개. 마지막 슬라이드: 두 기자가 한 줄씩 핵심을 정리."),
+    PPT_MODES[3]: ("너는 TV 뉴스 앵커 대본 작가다. 남자 앵커(남)와 여자 앵커(여)가 사내 뉴스를 진행하며 슬라이드 내용을 소식으로 전한다.",
+                   "- 뉴스 진행 말투: 정확하고 또렷한 존댓말('~입니다', '~했습니다'). 과장·농담 금지, 문장은 짧게.\n"
+                   "- 첫 슬라이드: 남 '안녕하십니까, ○○ 사내 뉴스입니다.'(회사 이름은 슬라이드에서), 여 '오늘은 ~ 소식을 전해 드립니다.'처럼 두 앵커가 인사와 헤드라인을 전한다. 마지막 슬라이드: 핵심 정리 후 '지금까지 ○○ 사내 뉴스였습니다. 감사합니다.'\n"
+                   "- 슬라이드(소식)마다 주로 전하는 앵커를 남↔여로 번갈아 맡고, 다른 앵커가 한 줄로 이어받거나 다음 소식으로 넘긴다('이어서 다음 소식입니다.').\n"
+                   "- 퀴즈 슬라이드는 '시청자 퀴즈' 코너처럼: 한 앵커가 문제를 내고 다른 앵커가 정답을 전한다."),
+}
+
+
+def ppt_per_page(out, slides):
+    """'한 페이지씩': 대사가 있는 슬라이드마다 남·여를 확실히 번갈아 (그 슬라이드의 모든 줄을 한 사람으로)"""
+    k = 0
+    for s in slides:
+        t = out.get(s["n"]) or ""
+        lines = [ln for ln in re.split(r"\n\s*\n", t) if ln.strip()]
+        if not any(not PPT_TAG_RE.match(ln.strip()) for ln in lines):
+            continue
+        spk = "남" if k % 2 == 0 else "여"
+        k += 1
+        new = []
+        for ln in lines:
+            ln = ln.strip()
+            if PPT_TAG_RE.match(ln):
+                new.append(ln)
+            else:
+                new.append(spk + ": " + SPK_RE.sub("", ln, count=1).strip())
+        out[s["n"]] = "\n\n".join(new)
+    return out
 PARA_VOICE = {}       # 자막 글(문단) → 그 문단을 읽을 성우 (2인 진행)
 SPK_RE = re.compile(r"^\s*\[?(남|여|M|F)\]?\s*[:：]\s*")
 DUO_COLORS = {"남": "#9AD9FF", "여": "#FFB3CF"}   # 자막 색: 남 하늘색, 여 분홍색
 
-PPT_DUO_SYSTEM = """너는 딱딱한 사내 교육을 예능·라디오처럼 재미있게 바꾸는 2인 진행 대본 작가다. 남자 진행자(남)와 여자 진행자(여)가 함께 슬라이드를 설명한다.
+PPT_DUO_SYSTEM = """{role}
 - 슬라이드 그림 파일이 주어지면 Read 도구로 하나씩 실제로 열어 보고, 글뿐 아니라 도표·그림·배치까지 해석한다. 발표자 메모가 있으면 그 의도를 가장 우선한다. 슬라이드 글을 그대로 읽지 말고 말로 풀어 준다.
-- 파트 교대: 슬라이드 왼쪽 위의 작은 분류 꼬리표(예: '01 알아보기', '03 현장 사례')가 바뀔 때마다 주 진행자를 남↔여로 번갈아 맡는다. 주 진행자가 설명하고, 다른 사람은 가끔 짧게 맞장구·질문·리액션을 넣는다('오, 정말요?', '저 그거 어제 했는데요…').
-- 퀴즈·OX·'~일까요?'·사례 슬라이드는 두 사람이 주고받는 대화로: 한 사람이 문제를 내고, 시청자에게 '여러분도 3초만 생각해 보세요!'처럼 참여를 부르고, 다른 사람이 일부러 헷갈리는 답을 했다가 정답과 이유가 나온다.
-- 재미 포인트: 현장·사무실에서 있을 법한 짧은 상황극, 가벼운 농담, 공감 가는 실수담, 기억에 남는 한 줄 요약. 단 규칙·법령·숫자는 정확히. 특정 동료·성별·집단을 비하하는 농담, 억지 유행어 남발 금지.
+{style_rules}
 - 형식: 한 줄 = 한 사람의 말(1~2문장, 짧게). 줄마다 '남: ' 또는 '여: '로 시작하고, 줄 사이에 빈 줄을 넣는다.
 - 분량: 슬라이드마다 공백 포함 {min_c}~{max_c}자(대화 슬라이드는 1.3배까지). 표지는 두 사람의 밝은 인사와 오늘 주제, 마지막 슬라이드는 둘이 함께 핵심 요약과 마무리 인사.
 - 말투: {tone}. 청중: {audience}.
@@ -7555,12 +7597,14 @@ def ppt_voice_catalog():
     return names
 
 
-def ppt_narrate(model, slides, tone, audience, length, log=None, cancel=None, use_images=True, duo=False, plan_note=""):
+def ppt_narrate(model, slides, tone, audience, length, log=None, cancel=None, use_images=True, duo=False, plan_note="", style=""):
     """슬라이드 → 슬라이드별 나레이션 + 성우 추천. 10장씩 나눠 씀(긴 발표도 시간 제한에 안 걸림).
     duo=True: 남녀 2인 진행 (줄마다 '남:'/'여:')"""
     log = log or (lambda x: None)
     lo, hi = PPT_LENGTHS.get(length, (180, 280))
-    sys_ = (PPT_DUO_SYSTEM if duo else PPT_SYSTEM).format(min_c=lo, max_c=hi, tone=tone or "차분한 발표", audience=audience or "일반 청중")
+    role_, rules_ = PPT_DUO_STYLES.get(style) or PPT_DUO_STYLES[PPT_MODES[0]]
+    sys_ = (PPT_DUO_SYSTEM.format(role=role_, style_rules=rules_, min_c=lo, max_c=hi, tone=tone or "차분한 발표", audience=audience or "일반 청중") if duo
+            else PPT_SYSTEM.format(min_c=lo, max_c=hi, tone=tone or "차분한 발표", audience=audience or "일반 청중"))
     voices = ppt_voice_catalog()
     eng = str((SCRIPT_ENGINE.get("s") or {}).get("script_engine", "Claude"))
     see = use_images and (eng.startswith("Claude") or eng.startswith("자동"))
@@ -7589,6 +7633,8 @@ def ppt_narrate(model, slides, tone, audience, length, log=None, cancel=None, us
             except (TypeError, ValueError):
                 continue
         prev = " / ".join(f"{n}: {out[n][:80]}" for n in sorted(out)[-3:])
+    if duo and style == PPT_MODES[1]:          # 한 페이지씩: 남·여 순서를 확실히
+        ppt_per_page(out, slides)
     if duo:
         men = [v for v in voices if ppt_voice_gender(v) == "남"]
         women = [v for v in voices if ppt_voice_gender(v) == "여"]
@@ -12162,6 +12208,14 @@ class App(tk.Tk):
         sub_v, bgm_v = tk.StringVar(value="켜기"), tk.StringVar(value="없음")     # 기본: 배경음 없음
         lang_v = tk.StringVar(value="베트남어")                                      # 기본: 베트남어 자막
         mode_v = tk.StringVar(value=PPT_MODES[0])
+
+        def mode_changed(*_):                  # 기자·뉴스 → 뉴스 말투, 2인 진행 → 유쾌한 말투
+            m_ = mode_v.get()
+            if m_ in (PPT_MODES[2], PPT_MODES[3]):
+                tone_v.set("뉴스·보고서 낭독")
+            elif m_ == PPT_MODES[0] and tone_v.get() == "뉴스·보고서 낭독":
+                tone_v.set(PPT_TONES[0])
+        mode_v.trace_add("write", mode_changed)
         vm_v, vf_v = tk.StringVar(value="🤖 AI가 추천"), tk.StringVar(value="🤖 AI가 추천")
         cat_ = ppt_voice_catalog()
         fmt_v = tk.StringVar(value="가로 16:9 (유튜브·발표)")
@@ -12436,7 +12490,7 @@ class App(tk.Tk):
                 mins = max(2, min(60, int(float(min_v.get()))))
             except ValueError:
                 mins = 10
-            model, slides, aud, duo = self.model_var.get().strip(), list(st["slides"]), aud_v.get(), mode_v.get() == PPT_MODES[0]
+            model, slides, aud, duo = self.model_var.get().strip(), list(st["slides"]), aud_v.get(), mode_v.get() != PPT_SOLO
 
             def done(p):
                 st["order"] = p["order"] + p["skip"]          # 뺀 슬라이드는 뒤로 (✖, 다시 넣을 수 있음)
@@ -12456,10 +12510,10 @@ class App(tk.Tk):
                 return
             model, slides, pnote = self.model_var.get().strip(), ordered(), st["plan"]
             tone, aud, ln, see = tone_v.get(), aud_v.get(), len_v.get(), see_v.get()
-            duo = mode_v.get() == PPT_MODES[0]
+            duo, style = mode_v.get() != PPT_SOLO, mode_v.get()
 
             def job():
-                return ppt_narrate(model, slides, tone, aud, ln, self.log_bg, self.cancel, see, duo, pnote)
+                return ppt_narrate(model, slides, tone, aud, ln, self.log_bg, self.cancel, see, duo, pnote, style)
 
             def done(res):
                 narr, meta = res
@@ -12494,7 +12548,7 @@ class App(tk.Tk):
             save_state()
             title = title_v.get().strip() or "발표"
             duo = None
-            if mode_v.get() == PPT_MODES[0]:
+            if mode_v.get() != PPT_SOLO:
                 men = [v for v in ppt_voice_catalog() if ppt_voice_gender(v) == "남"]
                 women = [v for v in ppt_voice_catalog() if ppt_voice_gender(v) == "여"]
                 vm = vm_v.get() if not vm_v.get().startswith("🤖") else (st["meta"].get("voice_m") or men[0])
