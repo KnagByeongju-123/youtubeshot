@@ -22,8 +22,4 @@ voice_samples/
 장문_설정.json
 
 
-nature_sounds/*
-!nature_sounds/credits.json
-
-발음사전.json
-_덮어쓰기전_백업*/
+models/

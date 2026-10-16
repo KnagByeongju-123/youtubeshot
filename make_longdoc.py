@@ -133,6 +133,8 @@ def main():
 
     # 2) 나레이션 (문단마다 저장 → 이어서)
     log("🎙 나레이션 만드는 중... (이미 만든 문단은 건너뜀)")
+    if hasattr(m, "ensure_depth_maps") and str(s.get("img_depth", "off")) == "on":
+        m.ensure_depth_maps(m.story_photo_paths(story), log)
     narr = app.narration_for(story, s, lambda x: None, gate)
     log(f"나레이션 완성: {len(narr)}문단 · {sum(d for _, _, d in narr) / 60:.1f}분")
 

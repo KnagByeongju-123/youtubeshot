@@ -98,3 +98,8 @@ AI 모델: https://huggingface.co/supertone-oss-archive/supertonic-3
 포함된 Python 파일 문법 검사 및 ZIP 내부파일 검사를 수행했습니다.
 실제 사용 중인 Windows PC에서는 한글 수정본이 정상 작동한다고 사용자께서 확인했습니다.
 다른 PC의 Windows/Python/네트워크 환경에서의 설치까지 보장할 수는 없습니다.
+
+[사진 입체 움직임(2.5D) 모델]
+- 장문·쇼츠 사진이 앞뒤로 입체감 있게 움직이는 기능은 깊이 추정 AI 모델이 필요합니다.
+- 입체움직임_모델받기.bat 을 한 번 실행하면 models\depth_anything_v2_small_fp16.onnx (49.6MB, Apache-2.0) 를 받습니다.
+- 모델이 없으면 기능이 자동으로 꺼지고 기존 평면 움직임만 씁니다. (설정 → 사진·장면 → 사진 입체 움직임)

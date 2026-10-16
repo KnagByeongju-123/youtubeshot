@@ -6,7 +6,7 @@ AI: PC에 설치된 Claude Code(claude -p)를 Max 구독으로 사용 (API 키 �
 기능: AI 대본(3안 심사·웹 조사), 근거 사진(복붙·AI 검색), 자체 합성 배경음, 연속 제작
 실행: python shorts_novel_maker.py
 """
-import os, re, io, sys, json, time, queue, shutil, difflib, tempfile, threading, subprocess, math
+import os, re, io, sys, json, time, queue, shutil, difflib, tempfile, threading, subprocess, math, hashlib
 import importlib
 import importlib.util
 import atexit
@@ -193,7 +193,7 @@ UI_TABS = [
     ("🎨 글꼴·색", "all", ["font_path", "title_font_path", "text_color", "title_color", "accent_color", "quote_color", "shadow", "stroke_width"]),
     ("🔤 자막 디자인", "sub", ["style_preset", "sub_layout", "head_pos", "color_preset", "sub_box_color", "sub_box_alpha", "head_style", "head_size",
                             "head_show", "sub_size", "sub_font_path", "sub_style", "sub_split", "sub_anim", "sub_max_chars", "sec_per_char"]),
-    ("🖼 사진·장면", "sub", ["img_fill", "img_motion", "shot_sec", "punch_in", "img_frame", "img_bg", "photo_count", "img_radius"]),
+    ("🖼 사진·장면", "sub", ["img_fill", "img_motion", "img_depth", "shot_sec", "punch_in", "img_frame", "img_bg", "photo_count", "img_radius"]),
     ("📜 스크롤 글자", "scroll", ["font_size", "title_size", "line_gap", "para_gap", "margin_x", "margin_right", "align", "photo_h",
                               "speed", "target_sec"]),
     ("📜 스크롤 효과", "scroll", ["fade", "focus", "focus_dim", "focus_y", "ease"]),
@@ -258,6 +258,7 @@ FIELDS = [
     ("자막형", "img_frame", "사진 테두리(상자 모드)", "choice:없음,만화 테두리(검정),흰 테두리", "없음"),
     ("자막형", "sub_max_chars", "자막 한 번에 글자 수", "int", 28),
     ("자막형", "img_motion", "사진 움직임", "choice:영상처럼(확대·이동·전환),천천히 확대만,없음", "영상처럼(확대·이동·전환)"),
+    ("자막형", "img_depth", "사진 입체 움직임(2.5D · 깊이 AI, 앞뒤가 다르게 움직임)", "choice:on,off", "on"),
     ("자막형", "shot_sec", "한 장면 최대 길이(초)", "float", 4.5),
     ("자막형", "img_fill", "사진 배치", "choice:전체 화면(글자가 사진 위에),가운데 상자", "전체 화면(글자가 사진 위에)"),
     ("자막형", "img_bg", "상자 모드: 뒤 배경을 사진 흐림으로", "choice:on,off", "on"),
@@ -3058,6 +3059,7 @@ class SubtitleRenderer:
                 im = imcache[med[0]]
                 if im is not None:
                     self.images.append((im, med[1]))
+                    self.img_paths = getattr(self, "img_paths", []) + [resolve_media(med[0]) or med[0]]
                     cur_img = len(self.images) - 1
                 continue
             hm = HOLD_RE.match(para)
@@ -3141,6 +3143,8 @@ class SubtitleRenderer:
             self.img_box = (int(W * 0.18), int(H * 0.21), int(W * 0.82), int(H * 0.80))
             self.sub_box = (m, int(H * 0.82), W - m, int(H * 0.97))
         self.slide = str(s.get("img_fill", "")).startswith("슬라이드")
+        self.depth_on = (not self.slide) and str(s.get("img_depth", "off")) == "on" and _cv2 is not None and depth_ready()
+        self._depth_big = {}
         self.slide_full = self.slide and not self.port and s.get("slide_full", "on") == "on"
         self.sub_pill = False
         if self.slide_full:   # PPT 발표: 슬라이드가 화면 가득, 자막은 화면 안 아래쪽 (반투명 상자 위)
@@ -3532,7 +3536,28 @@ class SubtitleRenderer:
         cy = big.height / 2 + (ay + (by - ay) * p) * sy
         l, tp = cx - cw / 2, cy - ch / 2
         crop = extent_resize(big, (bw, bh), (l, tp, l + cw, tp + ch))
+        if getattr(self, "depth_on", False):
+            dbig = self._depth_for(sh["img"], big.size)
+            if dbig is not None:
+                dcrop = np.asarray(extent_resize(dbig, (bw, bh), (l, tp, l + cw, tp + ch)))        # uint8 0~255
+                ph = 2 * np.pi * t / 9.0                              # 9초 주기로 천천히 좌우·상하로 흔들리듯
+                crop = parallax_warp(crop, dcrop, bw * 0.022 * np.sin(ph), bh * 0.010 * np.sin(ph * 0.5 + 1.0))
         return crop, mask
+
+    def _depth_for(self, idx, size):
+        """idx 사진의 깊이 지도를 큰 사진 크기의 L 이미지로 (캐시)"""
+        if idx in self._depth_big:
+            return self._depth_big[idx]
+        paths = getattr(self, "img_paths", [])
+        d = load_depth(paths[idx]) if idx < len(paths) else None
+        im = None
+        if d is not None:
+            im = Image.fromarray((d * 255).astype(np.uint8), "L").resize(size, Image.BILINEAR)
+            im = im.filter(ImageFilter.GaussianBlur(max(1, size[0] // 400)))   # 경계가 딱 끊기지 않게
+        if len(self._depth_big) >= 6:
+            self._depth_big.pop(next(iter(self._depth_big)))
+        self._depth_big[idx] = im
+        return im
 
     def _slide_no(self, idx):
         m = re.match(r"\s*슬라이드 (\d+)", str(self.images[idx][1] or "")) if 0 <= idx < len(self.images) else None
@@ -3890,6 +3915,115 @@ SCENE_REWRITE_SYSTEM = """너는 유튜브 나레이션 대본 편집자다. 전
 - 분량은 원래와 비슷하게(지시가 있으면 그대로). 귀로 듣는 글이므로 문장은 짧게, 문단은 1~3문장.
 - 사진 줄([사진: ...])과 '## ' 제목 줄, 목록 기호, 이모지는 쓰지 않는다. 숫자는 맞춤법대로 아라비아 숫자.
 반드시 JSON만 출력: {"paragraphs": ["문단1", "문단2"]}"""
+
+# ---------------- 사진 입체 움직임 (2.5D 패럴랙스): 깊이 AI 로 앞뒤를 나눠 다르게 움직임 ----------------
+DEPTH_MODEL = os.path.join(BASE, "models", "depth_anything_v2_small_fp16.onnx")
+DEPTH_DIR = os.path.join(BASE, "output", "depth_cache")
+_DEPTH_CACHE = {}
+_DEPTH_WARNED = set()
+_GRID_CACHE = {}
+
+
+def depth_key(path):
+    st = os.stat(path)
+    return hashlib.md5(f"{os.path.abspath(path)}|{st.st_size}|{int(st.st_mtime)}".encode("utf-8")).hexdigest()[:20]
+
+
+def depth_ready():
+    return os.path.exists(DEPTH_MODEL) and os.path.exists(os.path.join(BASE, "depth_worker.py"))
+
+
+def ensure_depth_maps(paths, log=None, cancel=None):
+    """사진들의 깊이 지도를 미리 계산해 둠 (한 번 계산하면 재사용). 모델이 없으면 조용히 건너뜀"""
+    log = log or (lambda x: None)
+    paths = [p for p in dict.fromkeys(paths) if p and os.path.exists(p)]
+    if not paths:
+        return 0
+    if not depth_ready():
+        if "model" not in _DEPTH_WARNED:
+            _DEPTH_WARNED.add("model")
+            log("  ℹ 사진 입체 움직임: 깊이 모델(models\\depth_anything_v2_small_fp16.onnx)이 없어 평면 움직임만 씁니다")
+        return 0
+    os.makedirs(DEPTH_DIR, exist_ok=True)
+    todo = [p for p in paths if not os.path.exists(os.path.join(DEPTH_DIR, depth_key(p) + ".npy"))]
+    if not todo:
+        return 0
+    log(f"  🧊 사진 {len(todo)}장의 깊이(앞뒤) 계산 중... (입체 움직임용, 한 번만)")
+    done = 0
+    for a in range(0, len(todo), 40):
+        if cancel is not None and cancel.is_set():
+            raise RuntimeError("취소됨")
+        cmd = [_supertonic_python(), "-X", "utf8", "-u", os.path.join(BASE, "depth_worker.py"), DEPTH_MODEL, DEPTH_DIR] + todo[a:a + 40]
+        try:
+            p = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=1800,
+                               creationflags=(subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0))
+            done += sum(1 for ln in (p.stdout or "").splitlines() if ln.startswith("OK "))
+            bad = [ln for ln in (p.stdout or "").splitlines() if ln.startswith("ERR ")]
+            if bad:
+                log("  깊이 계산 실패 " + str(len(bad)) + "장: " + bad[0][:100])
+            if p.returncode != 0 and not done:
+                log("  깊이 계산 프로그램 오류: " + (p.stderr or "")[-200:])
+        except Exception as e:
+            log("  깊이 계산 건너뜀: " + str(e)[:100])
+    return done
+
+
+def load_depth(path):
+    """깊이 지도 (float32, 0=멀다~1=가깝다) 또는 None"""
+    if not path or not os.path.exists(path):
+        return None
+    try:
+        npy = os.path.join(DEPTH_DIR, depth_key(path) + ".npy")
+    except OSError:
+        return None
+    if npy in _DEPTH_CACHE:
+        return _DEPTH_CACHE[npy]
+    if not os.path.exists(npy):
+        return None
+    try:
+        d = np.load(npy).astype(np.float32)
+    except Exception:
+        return None
+    rows = d.mean(axis=1)                       # 지도·도표처럼 평평한 그림(깊이가 위→아래 기울기뿐)은 입체 움직임 안 함
+    corr = abs(float(np.corrcoef(rows, np.arange(len(rows)))[0, 1])) if len(rows) > 2 and rows.std() > 1e-6 else 0.0
+    if corr > 0.92 or float(d.std()) < 0.06:
+        d = None
+    if len(_DEPTH_CACHE) >= 24:
+        _DEPTH_CACHE.pop(next(iter(_DEPTH_CACHE)))
+    _DEPTH_CACHE[npy] = d
+    return d
+
+
+def story_photo_paths(story):
+    out = []
+    for ln in (story or "").split("\n"):
+        med = parse_media(ln.strip())
+        if med:
+            p = resolve_media(med[0])
+            if p:
+                out.append(p)
+    return out
+
+
+def parallax_warp(crop, dcrop, amp_x, amp_y):
+    """깊이에 따라 픽셀을 옆으로 밀어 입체감 (가까운 것은 많이, 먼 것은 조금). crop: PIL RGB, dcrop: 같은 크기 float32 0~1"""
+    if _cv2 is None:
+        return crop
+    arr = np.asarray(crop)
+    h, w = arr.shape[:2]
+    g = _GRID_CACHE.get((h, w))
+    if g is None:                                   # 좌표 격자는 크기마다 한 번만
+        ys, xs = np.mgrid[0:h, 0:w].astype(np.float32)
+        g = _GRID_CACHE[(h, w)] = (xs, ys)
+        if len(_GRID_CACHE) > 4:
+            _GRID_CACHE.pop(next(iter(_GRID_CACHE)))
+    xs, ys = g
+    d = dcrop if dcrop.dtype == np.float32 else dcrop.astype(np.float32)
+    sx, sy = float(amp_x) / 255.0, float(amp_y) / 255.0            # dcrop 은 0~255 (가까울수록 큼)
+    map_x = _cv2.addWeighted(xs, 1.0, d, -sx, 127.5 * sx)          # xs - (d-127.5)*amp/255  (SIMD 한 번에)
+    map_y = _cv2.addWeighted(ys, 1.0, d, -sy, 127.5 * sy)
+    out = _cv2.remap(arr, map_x, map_y, interpolation=_cv2.INTER_LINEAR, borderMode=_cv2.BORDER_REFLECT)
+    return Image.fromarray(out)
 
 
 def screen_title(title):
@@ -13639,6 +13773,8 @@ class App(tk.Tk):
                     log(f"  ⏭ 장면 {k + 1}/{N} 이미 완료 - 건너뜀: {first}")
                 else:
                     log(f"🎬 장면 {k + 1}/{N} 만드는 중: {first}")
+                    if str(sk.get("img_depth", "off")) == "on":
+                        ensure_depth_maps(story_photo_paths(text_k), log, self.cancel)
                     narr_a = self.narration_for(text_k, sk, log, self.cancel)
                     r = make_renderer(title, text_k, sk, narr_a)
                     if k == 0:
@@ -13706,6 +13842,8 @@ class App(tk.Tk):
 
         def job():
             nonlocal r
+            if str(s.get("layout", "")).startswith("자막형") and str(s.get("img_depth", "off")) == "on":
+                ensure_depth_maps(story_photo_paths(story_now), self.log_bg, self.cancel)
             if (str(s.get("layout", "")).startswith("자막형") and str(s.get("scene_parts", "on")) == "on" and s.get("narration") == "on"
                     and not str(s.get("narr_file", "")).strip() and not (getattr(self, "para_audio", {}) or {})):
                 return self._make_mp4_scenes(story_now, title_now, s, style, base, out, kit, prog)
