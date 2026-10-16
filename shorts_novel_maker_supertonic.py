@@ -837,7 +837,7 @@ def doc_is_fiction(genre):
     return str(genre or "") in DOC_FICTION_TOPICS or str(genre or "").startswith("[이야기]")
 
 
-DOC_PHOTO_SEC = 30   # 장문 사진 간격(초): 나레이션 이 정도마다 사진 한 장
+DOC_PHOTO_SEC = 15   # 장문 사진 간격(초): 나레이션 이 정도마다 사진 한 장 (지식 다큐 채널 수준)
 
 
 def doc_photo_target(text, sec=None):
@@ -9308,6 +9308,8 @@ class App(tk.Tk):
             st_ = best.get("settings")
             if isinstance(st_, dict):
                 st_.update(narr_tone_f=0.0, narr_tone_m=0.0, narr_bright_f="off", narr_breath_cut="on")
+        if best and not best.get("doc_len_v2") and best.get("category") == DOC_CATEGORY and str(best.get("length", "")).strip() == "30":
+            best["length"] = "10"                       # 장문 기본 길이 30분 → 10분 (부담 적게)
         if best and not best.get("progress_bar_v2"):  # 위쪽 진행바는 한 번 끔 (필요하면 효과 탭에서 다시 켬)
             st_ = best.get("settings")
             if isinstance(st_, dict):
@@ -9315,7 +9317,7 @@ class App(tk.Tk):
         return best
 
     def project_dict(self):
-        return {"ver": 7, "voice_fx_v2": True, "progress_bar_v2": True, "model": self.model_var.get(), "category": self.cat_var.get(), "topic": self.topic_var.get(), "genre": self.genre_var.get(),
+        return {"ver": 7, "voice_fx_v2": True, "progress_bar_v2": True, "doc_len_v2": True, "model": self.model_var.get(), "category": self.cat_var.get(), "topic": self.topic_var.get(), "genre": self.genre_var.get(),
                 "sources": getattr(self, "sources", []), "notes": getattr(self, "notes", ""),
                 "song": getattr(self, "song", None), "melody": getattr(self, "melody", ""), "bpm": getattr(self, "bpm", 90),
                 "artwork": getattr(self, "artwork", None),
@@ -11252,7 +11254,7 @@ class App(tk.Tk):
         self.len_label.config(text="길이(분)" if doc else "길이(초)")
         self.len_spin.config(from_=5 if doc else 15, to=90 if doc else 180, increment=5)
         if was is not None and was != doc:   # 초 ↔ 분이 바뀌면 알맞은 기본값으로
-            self.len_var.set("30" if doc else "40")
+            self.len_var.set("10" if doc else "40")
         self._len_doc = doc
 
     def on_genre(self, *_):

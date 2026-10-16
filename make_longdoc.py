@@ -16,12 +16,12 @@ PAUSE = os.path.join(HERE, "장문_일시정지중.flag")
 DEFAULT = {
     "주제": "수심 1만 미터, 마리아나 해구 바닥에는 무엇이 살고 있을까?",
     "소재": "심해의 세계",
-    "길이_분": 30,
+    "길이_분": 10,
     "배경음": "심해",
     "배경음_크기": 0.2,
     "웹조사": True,
     "챕터별_사진": True,
-    "사진_간격_초": 30,
+    "사진_간격_초": 15,
     "영상_구간_분": 2,
 }
 MORE_PHOTOS = "--more-photos" in sys.argv
@@ -46,7 +46,7 @@ def main():
     m = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(m)
     global SEG_SEC
-    m.DOC_PHOTO_SEC = max(10, float(c.get("사진_간격_초", 30)))
+    m.DOC_PHOTO_SEC = max(10, float(c.get("사진_간격_초", 15)))
     SEG_SEC = int(max(1, float(c.get("영상_구간_분", 2))) * 60)
 
     app = m.App()
