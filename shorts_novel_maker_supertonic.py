@@ -9961,8 +9961,22 @@ class App(tk.Tk):
         st_ = ttk.Style(self)
         st_.configure("Tab.TFrame", background=TAB_BG)          # 설정 탭 영역은 연노랑으로 구분
         st_.configure("Tab.TLabel", background=TAB_BG)
-        nb = ttk.Notebook(s2)
-        nb.pack(fill="x", pady=(4, 0))
+        # 설정 항목이 많아져 본창에는 항목 묶음 버튼만 두고, 누르면 별도 설정 창(팝업)이 그 묶음 탭으로 열림 (글자 잘림 방지)
+        self.set_win = tk.Toplevel(self)
+        self.set_win.withdraw()
+        self.set_win.title("② 디자인 · 영상 설정  -  바꾸면 바로 적용됩니다 (창을 닫아도 값은 유지)")
+        self.set_win.protocol("WM_DELETE_WINDOW", self.set_win.withdraw)
+        self.set_win.minsize(900, 300)
+        sw_top = ttk.Frame(self.set_win, padding=(8, 6))
+        sw_top.pack(fill="x")
+        ttk.Label(sw_top, text="항목을 바꾸면 미리보기·만들기에 바로 반영됩니다. 다 고쳤으면 창을 닫으세요.", foreground="gray").pack(side="left")
+        ttk.Button(sw_top, text="닫기", command=self.set_win.withdraw).pack(side="right")
+        nb = ttk.Notebook(self.set_win)
+        nb.pack(fill="both", expand=True, padx=8, pady=(0, 8))
+        self.tab_row = ttk.Frame(s2)
+        self.tab_row.pack(fill="x", pady=(4, 0))
+        ttk.Label(self.tab_row, text="⚙ 설정 열기:").pack(side="left")
+        self.tab_btns = {}
         # 탭 묶음: 화면 형식·표현 방식(스크롤형/자막형)에 따라 필요한 탭만 보이게 (UI_TABS), 나머지는 원래 탭
         tab_of, order, self.tab_mode = {}, [], {}
         for name, mode, keys in UI_TABS:
@@ -9981,17 +9995,19 @@ class App(tk.Tk):
             tabs[name] = ttk.Frame(nb, padding=6, style="Tab.TFrame")
             nb.add(tabs[name], text=name)
             tabs[name].n = 0
+            self.tab_btns[name] = ttk.Button(self.tab_row, text=name, command=lambda n_=name: self.open_settings(n_))
+            self.tab_btns[name].pack(side="left", padx=(4, 0))
         by_key = {k: (lb, t) for _, k, lb, t, _ in FIELDS}
         for name, _, keys in UI_TABS:          # 묶음 순서대로 칸 배치
             for k in keys:
                 if k in by_key:
                     fr = tabs[name]
-                    self.make_field(fr, k, by_key[k][0], by_key[k][1], fr.n // 3, fr.n % 3)
+                    self.make_field(fr, k, by_key[k][0], by_key[k][1], fr.n // 2, fr.n % 2)
                     fr.n += 1
         for sec, k, lb, t, _ in FIELDS:
             if tab_of[k] == sec and k not in {kk for _, _, ks in UI_TABS for kk in ks}:
                 fr = tabs[sec]
-                self.make_field(fr, k, lb, t, fr.n // 3, fr.n % 3)
+                self.make_field(fr, k, lb, t, fr.n // 2, fr.n % 2)
                 fr.n += 1
         self.nb, self.nb_tabs, self.nb_order = nb, tabs, order
         for k_ in ("format", "layout"):
@@ -11574,6 +11590,26 @@ class App(tk.Tk):
         self.topic_box.config(values=[])
         self.on_genre()
 
+    def open_settings(self, name=None):
+        """설정 창(팝업)을 열고 해당 묶음 탭으로"""
+        w = self.set_win
+        if name and name in self.nb_tabs:
+            try:
+                self.nb.select(self.nb_tabs[name])
+            except tk.TclError:
+                pass
+        if w.state() == "withdrawn":
+            w.update_idletasks()
+            rw, rh = max(1180, w.winfo_reqwidth()), w.winfo_reqheight() + 10
+            x = self.winfo_rootx() + max(0, (self.winfo_width() - rw) // 2)
+            y = self.winfo_rooty() + 80
+            sw_, sh_ = self.winfo_screenwidth(), self.winfo_screenheight()
+            x, y = min(max(0, x), max(0, sw_ - rw)), min(max(0, y), max(0, sh_ - rh - 60))
+            w.geometry(f"{rw}x{rh}+{x}+{y}")
+        w.deiconify()
+        w.lift()
+        w.focus_set()
+
     def update_tabs(self):
         """표현 방식(스크롤형/자막형)에 맞는 탭만 보이고, 탭 이름에 화면 형식(쇼츠/롱폼)을 붙임"""
         if not hasattr(self, "nb"):
@@ -11585,11 +11621,17 @@ class App(tk.Tk):
             fr, mode = self.nb_tabs[name], self.tab_mode.get(name, "all")
             show = mode == "all" or (mode == "sub") == sub
             label = name + (f" ({fmt})" if mode != "all" or name.startswith("🎬") else "")
+            btn = getattr(self, "tab_btns", {}).get(name)
             if show:
                 self.nb.add(fr)                 # 숨겼던 탭은 원래 자리로 돌아옴
                 self.nb.tab(fr, text=label)
+                if btn:
+                    btn.config(text=label)
+                    btn.pack(side="left", padx=(4, 0))
             else:
                 self.nb.hide(fr)
+                if btn:
+                    btn.pack_forget()
         try:
             if cur and str(self.nb.tab(cur, "state")) == "hidden":
                 self.nb.select(self.nb_tabs[self.nb_order[0]])
