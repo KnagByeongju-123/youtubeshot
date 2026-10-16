@@ -5914,6 +5914,23 @@ def export_mp4_resumable(r, out, progress, cancel=None, audio=None, work_dir=Non
     progress(n_all, n_all)
 
 
+def concat_mp4_files(files, out):
+    """같은 설정으로 만든 MP4 조각들을 다시 압축하지 않고 하나로 이어 붙임"""
+    lst = out + ".list.txt"
+    with open(lst, "w", encoding="utf-8") as f:
+        for p in files:
+            f.write(f"file '{os.path.abspath(p).replace(chr(92), '/')}'\n")
+    cmd = [get_ffmpeg(), "-y", "-v", "error", "-f", "concat", "-safe", "0", "-i", lst, "-c", "copy", "-movflags", "+faststart", out]
+    p = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, errors="replace",
+                       creationflags=(subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0))
+    try:
+        os.remove(lst)
+    except OSError:
+        pass
+    if p.returncode != 0:
+        raise RuntimeError("조각 합치기 실패: " + (p.stderr or "")[-500:])
+
+
 def write_package(path_base, title, story, pkg):
     """업로드 문구 txt 저장"""
     lines = [f"[제목 후보]"] + [f"{i + 1}. {t}" for i, t in enumerate(pkg.get("titles", []))]
@@ -12357,6 +12374,9 @@ class App(tk.Tk):
         ttk.Label(f4, text="영상 제목").pack(side="left")
         ttk.Entry(f4, textvariable=title_v, width=40).pack(side="left", padx=4)
         ttk.Button(f4, text="🎬 발표 영상 만들기 (MP4)", command=lambda: make()).pack(side="left", padx=6)
+        chunk_v = tk.StringVar(value="1")
+        ttk.Spinbox(f4, from_=1, to=50, width=3, textvariable=chunk_v).pack(side="left")
+        ttk.Label(f4, text="장씩 따로 만든 뒤 합침 (오류가 나도 끝난 장은 남고, 다시 누르면 이어서)", foreground="#666").pack(side="left", padx=(2, 6))
 
         def open_dir():
             d = st["dir"] or self.ppt_out()
@@ -12479,7 +12499,7 @@ class App(tk.Tk):
                                               "order": st["order"], "skip": sorted(st["skip"]), "fast": sorted(st["fast"]), "plan": st["plan"],
                                               "lang": lang_v.get(), "mode": mode_v.get(), "size": size_v.get(),
                                               "trans": trans_v.get(), "motion": motion_v.get(), "font": font_v.get(), "vi_size": vi_v.get(),
-                                              "bgm": bgm_v.get(), "tone": tone_v.get(), "audience": aud_v.get(),
+                                              "bgm": bgm_v.get(), "chunk": chunk_v.get(), "tone": tone_v.get(), "audience": aud_v.get(),
                                               "narr": {str(k): v for k, v in st["narr"].items()}}, ensure_ascii=False, indent=1))
 
         def fill(slides):
@@ -12499,7 +12519,7 @@ class App(tk.Tk):
                     st["order"] = od + [n for n in valid if n not in od]
                     st["skip"] = {int(n) for n in d.get("skip") or [] if int(n) in valid}
                     st["fast"] = {int(n) for n in d.get("fast") or [] if int(n) in valid}
-                    for var_, key_ in ((lang_v, "lang"), (mode_v, "mode"), (tone_v, "tone"), (aud_v, "audience"), (size_v, "size"), (trans_v, "trans"), (motion_v, "motion"), (font_v, "font"), (vi_v, "vi_size"), (bgm_v, "bgm")):
+                    for var_, key_ in ((lang_v, "lang"), (mode_v, "mode"), (tone_v, "tone"), (aud_v, "audience"), (size_v, "size"), (trans_v, "trans"), (motion_v, "motion"), (font_v, "font"), (vi_v, "vi_size"), (bgm_v, "bgm"), (chunk_v, "chunk")):
                         if d.get(key_):
                             var_.set(d[key_])
                     title_v.set(d.get("title") or title_v.get())
@@ -12650,31 +12670,81 @@ class App(tk.Tk):
                 if old_fmt and fmt_name != old_fmt:
                     self.apply_format(old_fmt)
 
+            try:
+                chunk = max(1, min(50, int(float(chunk_v.get()))))
+            except ValueError:
+                chunk = 1
+            groups = [show_[i:i + chunk] for i in range(0, len(show_), chunk)]
+            parts_dir = os.path.join(st["dir"], "_work", "parts")
+
             def job():
+                import hashlib
                 try:
                     set_tts_cfg(s)
-                    shown = story
-                    if lang != "한국어":
-                        cache = os.path.join(s["out_dir"], "tts_cache")
-                        ensure_spoken(model, story, cache, log, self.cancel)      # 한국어 발음 먼저
-                        ppt_translate_vi(model, [t for _, t in narration_paras(story)], st["vi"], log, self.cancel)
-                        self.q.put(save_state)
-                        shown = ppt_lang_story(story, lang, st["vi"], s)
-                    if duo:                                   # 말하는 사람별 자막 색
-                        who = {v_: k_ for k_, v_ in duo.items()}
-                        s["para_colors"] = {i: DUO_COLORS[who[PARA_VOICE[t.strip()]]] for i, t in narration_paras(shown)
-                                            if PARA_VOICE.get(t.strip()) in who and duo["남"] != duo["여"]}
-                    narr_a = self.narration_for(shown, s, log, self.cancel)
-                    r = make_renderer(title, shown, s, narr_a)
-                    audio = build_audio(r, s, resolve_style(s, "발표"))
+                    os.makedirs(parts_dir, exist_ok=True)
+                    cache = os.path.join(s["out_dir"], "tts_cache")
+                    who = {v_: k_ for k_, v_ in duo.items()} if duo else {}
+                    part_files, full_story, total = [], [], 0.0
+                    for k, grp in enumerate(groups):
+                        if self.cancel.is_set():
+                            raise RuntimeError("취소됨")
+                        rng_txt = f"슬라이드 {grp[0]['n']}~{grp[-1]['n']}" if len(grp) > 1 else f"슬라이드 {grp[0]['n']}"
+                        try:
+                            sk = dict(s)
+                            story_k = ppt_build_story(grp, narr, duo)
+                            full_story.append(story_k)
+                            shown = story_k
+                            if lang != "한국어":
+                                ensure_spoken(model, story_k, cache, log, self.cancel)      # 한국어 발음 먼저
+                                ppt_translate_vi(model, [t for _, t in narration_paras(story_k)], st["vi"], log, self.cancel)
+                                self.q.put(save_state)
+                                shown = ppt_lang_story(story_k, lang, st["vi"], sk)
+                            if duo:                                   # 말하는 사람별 자막 색
+                                sk["para_colors"] = {i: DUO_COLORS[who[PARA_VOICE[t.strip()]]] for i, t in narration_paras(shown)
+                                                     if PARA_VOICE.get(t.strip()) in who and duo["남"] != duo["여"]}
+                            fp = {k_: sk.get(k_) for k_ in ("sub_size", "sub_font_path", "slide_full", "slide_trans", "slide_motion", "sub_hide",
+                                                           "narr_rate", "narr_tone_f", "narr_tone_m", "narr_bright_f", "narr_breath_cut", "narr_replace", "fps", "quality")}
+                            key = hashlib.md5((shown + "|" + voice + f"|{W}x{H}|" + json.dumps(fp, ensure_ascii=False, sort_keys=True)).encode("utf-8")).hexdigest()
+                            part = os.path.join(parts_dir, f"part_{k + 1:02d}.mp4")
+                            info = {}
+                            try:
+                                info = json.load(open(part + ".key", encoding="utf-8"))
+                            except Exception:
+                                pass
+                            if os.path.exists(part) and is_done(part) and info.get("key") == key:
+                                log(f"  ⏭ 조각 {k + 1}/{len(groups)} ({rng_txt}) 이미 완료 - 건너뜀")
+                                part_files.append(part)
+                                total += float(info.get("dur") or 0)
+                                continue
+                            log(f"🎬 조각 {k + 1}/{len(groups)} ({rng_txt}) 만드는 중...")
+                            narr_a = self.narration_for(shown, sk, log, self.cancel)
+                            r = make_renderer(title, shown, sk, narr_a)
+                            if k == 0:
+                                save_auto_thumb(r, base)
+                            audio = build_audio(r, sk, resolve_style(sk, "발표"))
+                            if audio is None:                         # 소리 없는 조각도 소리 줄을 넣어야 합칠 수 있음
+                                audio = np.zeros((int(r.duration * SR), 2), np.float32)
+                            export_mp4_resumable(r, part, self.progress_cb(f"📊 조각 {k + 1}/{len(groups)} "), self.cancel, audio,
+                                                 os.path.join(parts_dir, f"work_{k + 1:02d}"), log=log, key=key)
+                            atomic_write_text(part + ".key", json.dumps({"key": key, "dur": r.duration, "slides": [g["n"] for g in grp]}))
+                            mark_done(part)
+                            part_files.append(part)
+                            total += r.duration
+                            del r, narr_a, audio
+                        except Exception as e:
+                            if str(e) == "취소됨":
+                                raise
+                            raise RuntimeError(f"조각 {k + 1}/{len(groups)} ({rng_txt})에서 오류: {e}\n\n"
+                                               f"끝난 조각 {k}개는 남아 있습니다. 다시 '🎬 발표 영상 만들기'를 누르면 이 조각부터 이어서 만듭니다.") from e
+                    log(f"🔗 조각 {len(part_files)}개 합치는 중...")
+                    self.q.put(lambda: self.status.config(text="조각 합치는 중..."))
                     os.makedirs(st["dir"], exist_ok=True)
-                    export_mp4_resumable(r, base + ".mp4", self.progress_cb("📊 "), self.cancel, audio,
-                                         os.path.join(st["dir"], "_work"), log=log, key=f"{title}|{voice}|{len(story)}|{W}x{H}")
-                    save_auto_thumb(r, base)
+                    concat_mp4_files(part_files, base + ".mp4")
+                    story_all = "\n\n".join(full_story)
                     if not self.cancel.is_set():
                         self.q.put(lambda: self.status.config(text="업로드 문구·썸네일 만드는 중... (AI 1~2분)"))
-                        publish_kit(model, base, title, story, "PPT 발표", genre, s, None, [], "", log)
-                    return base + ".mp4", r.duration
+                        publish_kit(model, base, title, story_all, "PPT 발표", genre, s, None, [], "", log)
+                    return base + ".mp4", total
                 finally:
                     self.q.put(restore)
 
