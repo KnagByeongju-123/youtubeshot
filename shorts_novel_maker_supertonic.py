@@ -7359,7 +7359,7 @@ def render_audio_loop(src, minutes, wav_path, xfade=3.0, start=0.0, progress=Non
 
 
 # ---------------- 📊 PPT 발표 영상 (슬라이드 → AI 나레이션 → 영상) ----------------
-PPT_EXPORT_PS1 = r'''param([string]$Src, [string]$Out, [int]$Bold = 1)
+PPT_EXPORT_PS1 = r'''param([string]$Src, [string]$Out, [int]$Bold = 1, [int]$Only = 0)
 $ErrorActionPreference = "Stop"
 $thin = "Light|Thin|Semilight|SemiLight|Hairline|ExtraLight|UltraLight|얇은"
 function Fix-Text($tr) {
@@ -7389,7 +7389,9 @@ try {
   $w = 1920
   $h = [int](1920 * $pres.PageSetup.SlideHeight / $pres.PageSetup.SlideWidth)
   $list = @()
-  for ($i = 1; $i -le $pres.Slides.Count; $i++) {
+  $from = 1; $to = $pres.Slides.Count
+  if ($Only -ge 1 -and $Only -le $pres.Slides.Count) { $from = $Only; $to = $Only }     # 한 장만 다시
+  for ($i = $from; $i -le $to; $i++) {
     $s = $pres.Slides.Item($i)
     if ($Bold) { foreach ($sh in $s.Shapes) { Fix-Shape $sh } }      # 화면용 그림에만 적용 (원본 파일은 저장 안 함)
     # 클릭 애니메이션: 클릭 전 단계마다 그림 (마지막 = 모든 클릭 후 = slide_NNN.png)
@@ -7444,28 +7446,32 @@ try {
   }
   $pres.Saved = -1
   $pres.Close()
-  ConvertTo-Json -InputObject @($list) -Depth 3 | Out-File -Encoding utf8 (Join-Path $Out "slides.json")
+  $jsName = $(if ($Only -ge 1) { "slide_{0:D3}.json" -f $Only } else { "slides.json" })
+  ConvertTo-Json -InputObject @($list) -Depth 3 | Out-File -Encoding utf8 (Join-Path $Out $jsName)
 } finally { $pp.Quit() }
 '''
 
 
-def ppt_export(src, out_dir, log=None, bold=True):
+def ppt_export(src, out_dir, log=None, bold=True, only=0):
     """PPT/PPTX → 슬라이드 그림(1920px PNG) + 슬라이드 글 + 발표자 메모. PowerPoint(설치되어 있어야 함)를 직접 조종.
-    반환: [{"n", "image", "text", "notes"}]"""
+    반환: [{"n", "image", "text", "notes"}].  only=N: N번 슬라이드 한 장만 다시 (다른 장 파일은 그대로)"""
     log = log or (lambda x: None)
     os.makedirs(out_dir, exist_ok=True)
     for f_ in os.listdir(out_dir):
-        if f_.startswith("slide_") or f_ == "slides.json":
+        if only:
+            if f_.startswith(f"slide_{only:03d}"):
+                os.remove(os.path.join(out_dir, f_))
+        elif f_.startswith("slide_") or f_ == "slides.json":
             os.remove(os.path.join(out_dir, f_))
     ps1 = os.path.join(out_dir, "_export.ps1")
     with open(ps1, "w", encoding="utf-8-sig") as f:       # BOM: 윈도우 PowerShell 이 한글 경로를 바르게 읽게
         f.write(PPT_EXPORT_PS1)
-    log("📊 PowerPoint로 슬라이드를 그림으로 바꾸는 중..." + (" (글자 굵게)" if bold else ""))
+    log((f"📊 PowerPoint로 {only}번 슬라이드만 다시 그림으로 바꾸는 중..." if only else "📊 PowerPoint로 슬라이드를 그림으로 바꾸는 중...") + (" (글자 굵게)" if bold else ""))
     p = subprocess.run(["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", ps1, "-Src", os.path.abspath(src), "-Out", os.path.abspath(out_dir),
-                        "-Bold", "1" if bold else "0"],
+                        "-Bold", "1" if bold else "0", "-Only", str(int(only or 0))],
                        capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=900,
                        creationflags=(subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0))
-    js = os.path.join(out_dir, "slides.json")
+    js = os.path.join(out_dir, f"slide_{only:03d}.json" if only else "slides.json")
     if p.returncode != 0 or not os.path.exists(js):
         raise RuntimeError("슬라이드를 바꾸지 못했습니다. PowerPoint가 설치되어 있는지, 파일이 열려 있지 않은지 확인하세요.\n" + (p.stderr or p.stdout)[-400:])
     data = json.load(open(js, encoding="utf-8-sig"))
@@ -12399,6 +12405,7 @@ class App(tk.Tk):
         ttk.Button(ob, text="▼", width=3, command=lambda: move(1)).pack(side="left", padx=2)
         ttk.Button(ob, text="빼기/넣기", command=lambda: toggle("skip")).pack(side="left")
         ttk.Button(ob, text="⚡ 몽타주", command=lambda: toggle("fast")).pack(side="left", padx=2)
+        ttk.Button(ob, text="🔄 이 장만 다시", command=lambda: reload_one()).pack(side="left", padx=2)
         ob2 = ttk.Frame(right)
         ob2.pack(fill="x", pady=(4, 0))
         min_v = tk.StringVar(value="10")
@@ -12536,6 +12543,32 @@ class App(tk.Tk):
                        + (f" · 클릭 애니메이션 {anim}장 🎬 (대본의 [다음] 자리에서 나타남)" if anim else "")
                        + (" · 전에 쓴 대본을 불러왔습니다" if any(st["narr"].values()) else " → ✍ AI 나레이션 쓰기"))
             self.write_log(f"📊 슬라이드 {len(slides)}장 불러옴: {st['dir']}")
+
+        def reload_one():
+            """PPT에서 고친 슬라이드 한 장만 다시 그림으로 (대본·순서·번역은 그대로, 영상은 그 장만 다시 만들어짐)"""
+            n = cur_n()
+            p = path_v.get().strip()
+            if n is None or not st["slides"]:
+                messagebox.showinfo("PPT 발표", "오른쪽 목록에서 다시 불러올 슬라이드를 고르세요.")
+                return
+            if not p or not os.path.exists(p):
+                messagebox.showinfo("PPT 발표", "PPT 파일을 먼저 고르세요.")
+                return
+            bold = bold_v.get()
+
+            def done(res):
+                if not res:
+                    messagebox.showerror("PPT 발표", f"{n}번 슬라이드를 다시 불러오지 못했습니다.")
+                    return
+                new = res[0]
+                for i, sl in enumerate(st["slides"]):
+                    if sl["n"] == n:
+                        st["slides"][i] = new
+                refresh_list(n)
+                show()
+                info_v.set(f"🔄 {n}번 슬라이드를 다시 불러왔습니다 (대본 그대로) → 🎬 발표 영상 만들기를 누르면 이 장만 다시 만듭니다")
+                self.write_log(f"🔄 {n}번 슬라이드 다시 불러옴" + (f" · 클릭 애니메이션 {len(new['steps'])}번" if new.get("steps") else ""))
+            self.run_bg(f"🔄 {n}번 슬라이드 다시 불러오는 중...", lambda: ppt_export(p, os.path.join(st["dir"], "slides"), self.log_bg, bold, n), done)
 
         def load():
             p = path_v.get().strip()
@@ -12702,7 +12735,9 @@ class App(tk.Tk):
                             if duo:                                   # 말하는 사람별 자막 색
                                 sk["para_colors"] = {i: DUO_COLORS[who[PARA_VOICE[t.strip()]]] for i, t in narration_paras(shown)
                                                      if PARA_VOICE.get(t.strip()) in who and duo["남"] != duo["여"]}
-                            fp = {k_: sk.get(k_) for k_ in ("sub_size", "sub_font_path", "slide_full", "slide_trans", "slide_motion", "sub_hide",
+                            fp = {"imgs": [(os.path.basename(p_), int(os.path.getmtime(p_)), os.path.getsize(p_)) for g_ in grp
+                                           for p_ in [g_["image"]] + list(g_.get("steps") or []) + ([g_["hires"]] if g_.get("hires") else []) if os.path.exists(p_)]}
+                            fp |= {k_: sk.get(k_) for k_ in ("sub_size", "sub_font_path", "slide_full", "slide_trans", "slide_motion", "sub_hide",
                                                            "narr_rate", "narr_tone_f", "narr_tone_m", "narr_bright_f", "narr_breath_cut", "narr_replace", "fps", "quality")}
                             key = hashlib.md5((shown + "|" + voice + f"|{W}x{H}|" + json.dumps(fp, ensure_ascii=False, sort_keys=True)).encode("utf-8")).hexdigest()
                             part = os.path.join(parts_dir, f"part_{k + 1:02d}.mp4")
