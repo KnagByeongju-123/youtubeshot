@@ -9495,7 +9495,14 @@ class MusicLoop:
 
 
 def video_loop(src, out_mp4, text_layer, fps, quality, sec=32.0):
-    """짧은 반복 영상 → 화면 크기에 맞게 잘라 sec 초 반복 조각으로 (제목 글자 PNG를 위에 올림)"""
+    """짧은 반복 영상 → 화면 크기에 맞게 잘라 sec 초 반복 조각으로 (제목 글자 PNG를 위에 올림).
+    조각 길이는 원본 길이의 정수배로 맞춤 → 조각이 다시 반복될 때도 원본의 이음새에서만 넘어가 끊김이 없음"""
+    try:
+        d = float(media_duration(src) or 0)
+    except Exception:
+        d = 0.0
+    if 0.3 < d < 600:
+        sec = d * max(1, math.ceil(sec / d))      # 예: 7초 영상 → 35초 조각 (5번 반복)
     png = out_mp4 + ".text.png"
     cmd = [get_ffmpeg(), "-y", "-v", "error", "-stream_loop", "-1", "-i", src]
     vf = f"scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H},fps={fps},format=yuv420p"
