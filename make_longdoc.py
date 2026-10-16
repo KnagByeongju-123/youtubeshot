@@ -29,6 +29,7 @@ DEFAULT = {
     "영상_구간_분": 2,
     "연속_편수": 5,
     "연속_소재": [],
+    "제목_표시": "왼쪽 위 작게",      # 위 가운데 / 왼쪽 위 작게 / 숨김  (10분 다큐는 큰 제목이 화면을 가려 작게)
 }
 # 연속 제작 때 '연속_소재'가 비어 있으면 이 소재들을 돌아가며 씀 (10분 롱폼으로 반응 좋은 묶음)
 BATCH_GENRES = ["세계의 축제", "신기한 풍속과 전통", "역사를 바꾼 결정적 순간", "세계의 외딴 마을과 작은 나라", "고고학 발굴 이야기",
@@ -292,6 +293,8 @@ def run_doc(m, app, c, gate):
         app.genre_var.set(c["소재"])
         app.on_genre()
     app.topic_var.set(c["주제"])
+    if str(c.get("제목_표시", "")).strip() in ("위 가운데", "왼쪽 위 작게", "숨김"):
+        app.vars["head_pos"].set(str(c["제목_표시"]).strip())
     app.vars["bgm_mode"].set("자동생성")
     app.vars["bgm_volume"].set(str(c["배경음_크기"]))
     s = app.get_settings()
@@ -382,7 +385,7 @@ def run_doc(m, app, c, gate):
             last[0] = p
             log(f"  MP4 {p}%")
     import hashlib
-    key = hashlib.md5((story + "|" + json.dumps({k: s.get(k) for k in ("fps", "format", "layout", "img_fill", "img_motion", "head_style", "sub_style",
+    key = hashlib.md5((story + "|" + json.dumps({k: s.get(k) for k in ("fps", "format", "layout", "img_fill", "img_motion", "img_depth", "head_style", "head_pos", "head_size", "head_show", "sub_style", "sub_size", "sub_layout",
                                                                          "font_path", "title_font_path", "bgm_volume")}, ensure_ascii=False)
                        + "|" + title).encode("utf-8")).hexdigest()
     m.export_mp4_resumable(r, base + ".mp4", prog, gate, audio, work_dir=os.path.join(work, "영상구간"), seg_sec=SEG_SEC, log=log, key=key)
