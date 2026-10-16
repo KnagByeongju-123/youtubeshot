@@ -4672,16 +4672,34 @@ def ensure_spoken(model, story, cache_dir, log=None, cancel=None):
     return len(new)
 
 
+VI_RE = re.compile(r"[ăâđêôơưạảấầẩẫậắằẳẵặẹẻẽếềểễệỉịọỏốồổỗộớờởỡợụủứừửữựỳỵỷỹĂÂĐÊÔƠƯẠẢẤẦẨẪẬẮẰẲẴẶẸẺẼẾỀỂỄỆỈỊỌỎỐỒỔỖỘỚỜỞỠỢỤỦỨỪỬỮỰỲỴỶỸ]")
+VI_KO = {}      # 베트남어 자막 줄 → 원래 한국어 줄 (성우는 항상 한국어로)
+
+
+def no_vietnamese(t, orig=""):
+    """베트남어는 자막에만: 읽을 글에 베트남어가 남으면 원래 한국어로 바꾸거나, 베트남어 낱말은 빼고 읽음"""
+    if not VI_RE.search(t) and not re.search(r"\b(Xin chào|Xin chao|Cảm ơn|Cam on)\b", t, re.I):
+        return t
+    ko = VI_KO.get(orig.strip()) or VI_KO.get(t.strip())
+    if ko:
+        r_ = spoken_src(ko)
+        return SPOKEN.get(r_, r_)
+    t = re.sub(r"\b(Xin chào|Xin chao|Cảm ơn|Cam on)\b[!,.~]*", " ", t, flags=re.I)
+    return " ".join(w for w in t.split() if not VI_RE.search(w))
+
+
 def tts_clean(text):
     """읽기 좋게 정리: ♪, 따옴표, 챕터 표시 제거 + 한국어 문장의 숫자는 한글 읽기로"""
     t = text.strip()
     r_ = spoken_src(t)                   # 읽기 바꾸기 (LOT → 로트 …)
+    t0_ = t
     if r_ in SPOKEN:                     # 발음 사전(자막 글 → 읽는 글)
         t = SPOKEN[r_]
     elif t in SPOKEN:
         t = spoken_src(SPOKEN[t])
     else:
         t = r_
+    t = no_vietnamese(t, t0_)            # 베트남어는 자막만 - 성우는 절대 베트남어로 읽지 않음
     if t.startswith("## "):
         t = t[3:]
     t = t.lstrip("♪").strip()
@@ -7516,6 +7534,7 @@ PPT_PLAN_SYSTEM = """너는 사내 교육 영상 구성 작가다. 슬라이드 
 - fast: order 안에서 몽타주로 3초씩 빠르게 넘길 슬라이드(비슷한 기능 화면이 이어지는 곳, 연속으로 묶기).
 - concept: 진행자 캐릭터(2인 진행이면 남·여 각각 이름·성격·말버릇)와 전체 콘셉트 3~5줄. chapters: 구간 제목, 들어갈 슬라이드, 구간마다 재미 장치(상황극·퀴즈·효과음 등) 한 줄.
 - 숫자 옆에 '확인 필요' 같은 메모가 있으면 notes 에 경고로 적는다.
+- 진행 대사는 한국어로만 (베트남어 인사 등 외국어 대사 넣지 않기 - 베트남어는 자막으로만 나간다).
 반드시 JSON만 출력: {{"order": [번호], "fast": [번호], "concept": "...", "chapters": [{{"title": "...", "slides": [번호], "fun": "..."}}], "notes": "..."}}"""
 
 
@@ -7547,7 +7566,8 @@ def ppt_plan(model, slides, audience, minutes, duo, log=None):
 
 PPT_CLICK_RULE = ("- 클릭 애니메이션: '애니메이션: 클릭 N번'이 적힌 슬라이드는 처음에 그 내용(정답·결과 등)이 화면에 없다. 발표자가 클릭할 자리에 "
                   "'[다음]' 한 줄을 정확히 N번 넣는다. 정답·결과를 말하기 바로 앞에 넣고, 퀴즈면 먼저 문제를 내고 시청자가 생각할 틈을 준 다음 넣는다. "
-                  "[다음] 앞에서는 나타날 내용(정답)을 미리 말하지 않는다.\n")
+                  "[다음] 앞에서는 나타날 내용(정답)을 미리 말하지 않는다.\n"
+                  "- 대본은 한국어로만 쓴다. 'Xin chào' 같은 베트남어·외국어 인사나 문장은 쓰지 않는다(베트남어는 프로그램이 자막으로만 넣는다).\n")
 
 PPT_SYSTEM = """너는 발표 코치이자 나레이션 작가다. 슬라이드 묶음을 보고, 발표자가 청중 앞에서 말하듯 슬라이드마다 나레이션 대본을 쓴다.
 - 슬라이드 그림 파일이 주어지면 Read 도구로 하나씩 실제로 열어 보고, 글뿐 아니라 도표·그래프·그림·배치까지 해석한다(그래프면 추세와 핵심 숫자, 도식이면 흐름).
@@ -7736,6 +7756,7 @@ def ppt_lang_story(story, lang, vi, s):
             if t and not parse_media(t) and t in vi:
                 r_ = spoken_src(t)
                 SPOKEN[vi[t]] = SPOKEN.get(r_, r_)    # 베트남어 자막 줄 → 한국어로 읽기 (읽기 바꾸기 적용)
+                VI_KO[vi[t].strip()] = t
                 if t in PARA_VOICE:
                     PARA_VOICE[vi[t]] = PARA_VOICE[t]
                 out.append(vi[t])
