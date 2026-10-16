@@ -7383,9 +7383,18 @@ function Fix-Shape($sh) {
     }
   } catch {}
 }
-$pp = New-Object -ComObject PowerPoint.Application
+$pp = $null; $started = $false
+for ($try = 0; $try -lt 8 -and -not $pp; $try++) {       # 켜져 있는 PowerPoint 에 붙음 (바쁘면 잠시 기다렸다 다시)
+  try { $cand = [Runtime.InteropServices.Marshal]::GetActiveObject("PowerPoint.Application"); $null = $cand.Presentations.Count; $pp = $cand }
+  catch { if ($_.Exception.HResult -eq -2147221021) { break }; Start-Sleep -Milliseconds 800 }
+}
+if (-not $pp) { $pp = New-Object -ComObject PowerPoint.Application; $started = $true }
+$pres = $null
 try {
-  $pres = $pp.Presentations.Open($Src, -1, 0, 0)
+  for ($try = 0; $try -lt 8 -and -not $pres; $try++) {
+    try { $pres = $pp.Presentations.Open($Src, -1, 0, 0) }   # $Src 는 프로그램이 만든 복사본 (사용자가 열어 둔 원본은 건드리지 않음)
+    catch { if ($try -ge 7) { throw }; Start-Sleep -Milliseconds 800 }
+  }
   $w = 1920
   $h = [int](1920 * $pres.PageSetup.SlideHeight / $pres.PageSetup.SlideWidth)
   $list = @()
@@ -7444,11 +7453,12 @@ try {
     if ($hasPic) { $hi = Join-Path $Out ("slide_{0:D3}_hi.png" -f $i); $s.Export($hi, "PNG", 2560, [int](2560 * $h / $w)) }   # 확대용
     $list += [pscustomobject]@{ n = $i; image = $img; text = ($texts -join "`n"); notes = $notes; steps = @($steps); reveal = @($reveal); hires = $hi }
   }
-  $pres.Saved = -1
-  $pres.Close()
   $jsName = $(if ($Only -ge 1) { "slide_{0:D3}.json" -f $Only } else { "slides.json" })
   ConvertTo-Json -InputObject @($list) -Depth 3 | Out-File -Encoding utf8 (Join-Path $Out $jsName)
-} finally { $pp.Quit() }
+} finally {
+  if ($pres) { try { $pres.Saved = -1; $pres.Close() } catch {} }
+  if ($started) { try { $pp.Quit() } catch {} }        # 사용자가 쓰고 있던 PowerPoint 는 그대로 둠
+}
 '''
 
 
@@ -7467,19 +7477,55 @@ def ppt_export(src, out_dir, log=None, bold=True, only=0):
     with open(ps1, "w", encoding="utf-8-sig") as f:       # BOM: 윈도우 PowerShell 이 한글 경로를 바르게 읽게
         f.write(PPT_EXPORT_PS1)
     log((f"📊 PowerPoint로 {only}번 슬라이드만 다시 그림으로 바꾸는 중..." if only else "📊 PowerPoint로 슬라이드를 그림으로 바꾸는 중...") + (" (글자 굵게)" if bold else ""))
-    p = subprocess.run(["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", ps1, "-Src", os.path.abspath(src), "-Out", os.path.abspath(out_dir),
-                        "-Bold", "1" if bold else "0", "-Only", str(int(only or 0))],
-                       capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=900,
-                       creationflags=(subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0))
+    copy = os.path.join(out_dir, "_src" + os.path.splitext(src)[1])     # 복사본으로 작업: PowerPoint 에 열려 있는 원본과 부딪히지 않게
+    shutil.copy2(src, copy)
+    try:
+        p = subprocess.run(["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", ps1, "-Src", os.path.abspath(copy), "-Out", os.path.abspath(out_dir),
+                            "-Bold", "1" if bold else "0", "-Only", str(int(only or 0))],
+                           capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=900,
+                           creationflags=(subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0))
+    finally:
+        try:
+            os.remove(copy)
+        except OSError:
+            pass
     js = os.path.join(out_dir, f"slide_{only:03d}.json" if only else "slides.json")
     if p.returncode != 0 or not os.path.exists(js):
-        raise RuntimeError("슬라이드를 바꾸지 못했습니다. PowerPoint가 설치되어 있는지, 파일이 열려 있지 않은지 확인하세요.\n" + (p.stderr or p.stdout)[-400:])
+        raise RuntimeError("슬라이드를 바꾸지 못했습니다. PowerPoint가 설치되어 있는지 확인하세요.\n" + (p.stderr or p.stdout)[-400:])
+    if not only:
+        try:
+            atomic_write_text(os.path.join(out_dir, "_export_meta.json"),
+                              json.dumps({"src": os.path.abspath(src), "mtime": os.path.getmtime(src), "size": os.path.getsize(src), "bold": bool(bold)}))
+        except Exception:
+            pass
+    return ppt_parse_slides(js)
+
+
+def ppt_parse_slides(js):
     data = json.load(open(js, encoding="utf-8-sig"))
     data = data if isinstance(data, list) else [data]
     clean = lambda t: re.sub(r"[ \t]+", " ", str(t or "").replace("\r", "\n").replace("\x0b", "\n")).strip()
     lst_ = lambda v: [x for x in (v if isinstance(v, list) else [v]) if x] if v else []
     return [{"n": int(d["n"]), "image": d["image"], "text": clean(d.get("text")), "notes": clean(d.get("notes")),
              "steps": lst_(d.get("steps")), "reveal": [clean(x) for x in lst_(d.get("reveal"))], "hires": d.get("hires") or ""} for d in data]
+
+
+def ppt_export_cached(src, out_dir, log=None, bold=True):
+    """전에 바꿔 둔 그림이 있고 PPT 파일이 그 뒤로 안 바뀌었으면 PowerPoint 를 거치지 않고 바로 씀 (몇 초)"""
+    log = log or (lambda x: None)
+    meta_p, js = os.path.join(out_dir, "_export_meta.json"), os.path.join(out_dir, "slides.json")
+    try:
+        meta = json.load(open(meta_p, encoding="utf-8"))
+        same = (os.path.normcase(meta.get("src", "")) == os.path.normcase(os.path.abspath(src)) and abs(float(meta.get("mtime", 0)) - os.path.getmtime(src)) < 1
+                and int(meta.get("size", -1)) == os.path.getsize(src) and bool(meta.get("bold", True)) == bool(bold) and os.path.exists(js))
+        if same:
+            sl = ppt_parse_slides(js)
+            if sl and all(os.path.exists(x["image"]) for x in sl):
+                log(f"📊 PPT 파일이 그대로라 전에 바꿔 둔 슬라이드 그림 {len(sl)}장을 바로 씁니다 (PowerPoint 생략)")
+                return sl
+    except Exception:
+        pass
+    return ppt_export(src, out_dir, log, bold)
 
 
 PPT_LENGTHS = {"짧게(슬라이드당 15~25초)": (90, 150), "보통(슬라이드당 30~45초)": (180, 280), "자세히(슬라이드당 60초 이상)": (350, 500)}
@@ -12274,6 +12320,12 @@ class App(tk.Tk):
         f1 = ttk.LabelFrame(left, text="① PPT 파일 (PowerPoint가 설치되어 있어야 합니다 · .pptx / .ppt)", padding=6)
         f1.pack(fill="x")
         path_v = tk.StringVar()
+        try:                                       # 지난번에 쓴 PPT 경로를 미리 채움
+            lp = json.load(open(os.path.join(self.ppt_out(), "_last.json"), encoding="utf-8")).get("src", "")
+            if lp and os.path.exists(lp):
+                path_v.set(lp)
+        except Exception:
+            pass
         bold_v = tk.BooleanVar(value=True)
         ttk.Entry(f1, textvariable=path_v).pack(side="left", fill="x", expand=True)
 
@@ -12579,7 +12631,12 @@ class App(tk.Tk):
             if not title_v.get().strip():
                 title_v.set(os.path.splitext(os.path.basename(p))[0])
             bold = bold_v.get()
-            self.run_bg("📥 슬라이드 불러오는 중...", lambda: ppt_export(p, os.path.join(st["dir"], "slides"), self.log_bg, bold), fill)
+            try:
+                os.makedirs(self.ppt_out(), exist_ok=True)
+                atomic_write_text(os.path.join(self.ppt_out(), "_last.json"), json.dumps({"src": p}, ensure_ascii=False))   # 다음에 켤 때 자동으로 채움
+            except Exception:
+                pass
+            self.run_bg("📥 슬라이드 불러오는 중...", lambda: ppt_export_cached(p, os.path.join(st["dir"], "slides"), self.log_bg, bold), fill)
 
         def listen_voices():
             """남녀 성우 톤 미리 듣기 (지금 설정: 톤·밝게·숨소리 지우기)"""
