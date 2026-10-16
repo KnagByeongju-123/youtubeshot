@@ -46,7 +46,7 @@ import tkinter.font as tkfont
 from tkinter import ttk, filedialog, messagebox, colorchooser, simpledialog
 from tkinter.scrolledtext import ScrolledText
 import numpy as np
-from PIL import Image, ImageDraw, ImageFont, ImageTk, ImageFilter
+from PIL import Image, ImageDraw, ImageFont, ImageTk, ImageFilter, ImageEnhance
 
 W, H = 1080, 1920            # 현재 화면 크기 (set_format 으로 바뀜)
 FORMATS = {"쇼츠 세로(1080×1920)": (1080, 1920), "롱폼 가로(1920×1080)": (1920, 1080)}
@@ -188,7 +188,7 @@ LONG_STYLES = {
 
 # 설정 탭 묶음 (화면 형식·표현 방식에 따라 필요한 탭만 보임). mode: all / scroll / sub
 UI_TABS = [
-    ("🎬 화면 형식", "all", ["format", "layout", "fps", "quality", "scene_parts", "scene_trans", "audio_out", "out_dir", "intro_sec", "outro_sec", "outro_text",
+    ("🎬 화면 형식", "all", ["format", "layout", "fps", "quality", "scene_parts", "scene_trans", "audio_out", "thumb_style", "out_dir", "intro_sec", "outro_sec", "outro_text",
                           "progress_bar", "reveal_fx", "hold_start", "hold_end", "safe_guide"]),
     ("🎨 글꼴·색", "all", ["font_path", "title_font_path", "text_color", "title_color", "accent_color", "quote_color", "shadow", "stroke_width"]),
     ("🔤 자막 디자인", "sub", ["style_preset", "sub_layout", "head_pos", "color_preset", "sub_box_color", "sub_box_alpha", "head_style", "head_size",
@@ -198,6 +198,9 @@ UI_TABS = [
                               "speed", "target_sec"]),
     ("📜 스크롤 효과", "scroll", ["fade", "focus", "focus_dim", "focus_y", "ease"]),
 ]
+
+THUMB_STYLES = ["자동(분위기에 맞춰)", "기본(사진 꽉 + 큰 글자)", "반분할(글 패널 + 사진)", "노랑 패널(고대비)", "시네마 띠",
+                "뉴스 속보", "미스터리 다크", "빨간 강조(원 + 화살표)"]   # 요즘 유튜브에서 많이 쓰는 썸네일 스타일
 
 # (탭, 키, 라벨, 타입, 기본값)
 FIELDS = [
@@ -274,6 +277,7 @@ FIELDS = [
     ("영상", "scene_parts", "자막형: 장면별로 나눠 만들기(고친 장면만 다시·끝난 장면 유지)", "choice:on,off", "on"),
     ("영상", "scene_trans", "장면 사이 전환 효과(장면별 제작 때)", "choice:페이드,밀어내기,덮기,닦아내기,확대,섞어서,없음", "페이드"),
     ("영상", "audio_out", "소리 저장 방식", "choice:MP4에 포함,MP4에 포함+MP3 따로,MP3만 따로(무음 MP4)", "MP4에 포함+MP3 따로"),
+    ("영상", "thumb_style", "유튜브 썸네일 스타일(자동 저장용)", "choice:" + ",".join(THUMB_STYLES), THUMB_STYLES[0]),
     ("영상", "out_dir", "저장 폴더", "dir", os.path.join(BASE, "output")),
     ("나레이션", "narration", "나레이션(음성 읽기)", "choice:on,off", "off"),
     ("나레이션", "narr_file", "외부 음성 파일(비우면 성우)", "audio", ""),
@@ -2347,7 +2351,7 @@ def publish_kit(model, base, title, story, category, genre, s, chapters=None, so
         vs = [x for x in (d.get("variants") or []) if isinstance(x, dict) and x.get("big")]
         if vs:
             size = (1080, 1920) if portrait else (1280, 720)
-            im = render_thumb(vs[0], s, best_photo(story), size=size).convert("RGB")
+            im = render_thumb(vs[0], s, best_photo(story), size=size, style=s.get("thumb_style")).convert("RGB")
             out = base + "_썸네일_유튜브.jpg"
             for q in (92, 85, 75, 65):          # 유튜브 썸네일은 2MB 이하
                 im.save(out, "JPEG", quality=q, optimize=True)
@@ -2374,8 +2378,8 @@ def thumb_font_path(s):
     return p if os.path.exists(p) else (s.get("title_font_path") or s.get("font_path"))
 
 
-def render_thumb(v, s, photo_im=None, size=None, font_path=None):
-    """썸네일 시안 v(dict) → PIL 이미지. 인기 스타일: 사진 꽉 채움 + 아래 어둡게 + 아주 큰 글자(검은 테두리) + 강조 단어 색 + 위 작은 띠"""
+def _thumb_basic(v, s, photo_im=None, size=None, font_path=None):
+    """기본 스타일: 사진 꽉 채움 + 아래 어둡게 + 아주 큰 글자(검은 테두리) + 강조 단어 색 + 위 작은 띠"""
     w, h = size or (W, H)
     port = h > w
     mood = v.get("mood") if v.get("mood") in THUMB_MOODS else "충격"
@@ -2444,6 +2448,258 @@ def render_thumb(v, s, photo_im=None, size=None, font_path=None):
                 d.text((cx, y), seg, font=f_, fill=col, stroke_width=sw, stroke_fill="#000000")
                 cx += f_.getlength(seg)
             y += lh
+    return out.convert("RGB")
+
+THUMB_AUTO = {"충격": "빨간 강조(원 + 화살표)", "미스터리": "미스터리 다크", "감동": "시네마 띠", "정보": "반분할(글 패널 + 사진)"}
+
+
+def render_thumb(v, s, photo_im=None, size=None, font_path=None, style=None):
+    """썸네일 시안 v → PIL 이미지. style: THUMB_STYLES 중 하나 ('자동'이면 분위기에 맞춰 고름)"""
+    style = str(style or s.get("thumb_style") or THUMB_STYLES[0])
+    if style.startswith("자동"):
+        style = THUMB_AUTO.get(v.get("mood"), "기본(사진 꽉 + 큰 글자)")
+    fp = font_path or thumb_font_path(s)
+    size = size or (W, H)
+    fn = {"반분할": lambda: _thumb_split(v, s, photo_im, size, fp, yellow=False), "노랑": lambda: _thumb_split(v, s, photo_im, size, fp, yellow=True),
+          "시네마": lambda: _thumb_cinema(v, s, photo_im, size, fp), "뉴스": lambda: _thumb_news(v, s, photo_im, size, fp),
+          "미스터리": lambda: _thumb_mystery(v, s, photo_im, size, fp), "빨간": lambda: _thumb_circle(v, s, photo_im, size, fp)}
+    for k_, f_ in fn.items():
+        if style.startswith(k_):
+            return f_()
+    return _thumb_basic(v, s, photo_im, size, font_path)
+
+
+def _vparts(v):
+    lines = [x for x in (str(v.get("big", "")).strip(), str(v.get("big2", "")).strip()) if x]
+    return lines, str(v.get("emph", "")).strip(), str(v.get("small", "")).strip(), (v.get("mood") if v.get("mood") in THUMB_MOODS else "충격")
+
+
+def _thumb_photo(photo_im, s, w, h, face="center", zoom=1.08, y_bias=0.35):
+    """사진을 (w,h)에 꽉 차게 자름 (없으면 테마 배경)"""
+    if photo_im is None:
+        bg = Image.fromarray(np.clip(Background(s, 2.0).frame(0.0), 0, 255).astype(np.uint8)).convert("RGB")
+        return bg.resize((w, h), Image.LANCZOS)
+    im = photo_im.convert("RGB")
+    k = max(w / im.width, h / im.height) * zoom
+    im = im.resize((int(im.width * k) + 1, int(im.height * k) + 1), Image.LANCZOS)
+    fx = {"left": 0.3, "right": 0.7}.get(face, 0.5)
+    l = int(min(max((im.width - w) * fx, 0), im.width - w))
+    tp = int(min(max((im.height - h) * y_bias, 0), im.height - h))
+    return im.crop((l, tp, l + w, tp + h))
+
+
+def _thumb_fit_font(fp, lines, maxw, start, min_size=28):
+    size_ = int(start)
+    while size_ > min_size:
+        f_ = load_font(fp, size_)
+        if all(f_.getlength(x) <= maxw for x in lines):
+            break
+        size_ -= 6
+    return load_font(fp, size_)
+
+
+def _thumb_lines(d, lines, emph, f_, x0, y, avail, c_big, c_emph, align="center", stroke=True, shadow=True, stroke_col="#000000"):
+    """큰 글자 여러 줄 (강조 단어만 다른 색). 마지막 y 돌려줌"""
+    lh = int(f_.size * 1.12)
+    sw = max(6, f_.size // 9) if stroke else 0
+    for ln in lines:
+        tw = f_.getlength(ln)
+        x = x0 + (avail - tw) / 2 if align == "center" else (x0 + avail - tw if align == "right" else x0)
+        parts = [(ln, c_big)]
+        if emph and emph in ln:
+            i_ = ln.index(emph)
+            parts = [(ln[:i_], c_big), (emph, c_emph), (ln[i_ + len(emph):], c_big)]
+        cx = x
+        for seg, col in parts:
+            if not seg:
+                continue
+            if shadow and sw:
+                d.text((cx + sw * 0.6, y + sw * 0.8), seg, font=f_, fill=(0, 0, 0, 170), stroke_width=sw, stroke_fill=(0, 0, 0, 170))
+            d.text((cx, y), seg, font=f_, fill=col, stroke_width=sw, stroke_fill=stroke_col)
+            cx += f_.getlength(seg)
+        y += lh
+    return y
+
+
+def _thumb_tag(out, small, fp, size_px, x, y, bg, fg, rotate=0.0):
+    """작은 띠(꼬리표)"""
+    if not small:
+        return
+    fs = load_font(fp, int(size_px))
+    pad = int(fs.size * 0.45)
+    band = Image.new("RGBA", (int(fs.getlength(small) + pad * 2 + 24), int(fs.size * 1.5)), (0, 0, 0, 0))
+    bd = ImageDraw.Draw(band)
+    bd.polygon([(12, 0), (band.width, 0), (band.width - 12, band.height), (0, band.height)], fill=tuple(hex_rgb(bg)) + (235,))
+    bd.text((pad + 6, int(fs.size * 0.15)), small, font=fs, fill=fg)
+    if rotate:
+        band = band.rotate(rotate, expand=True, resample=Image.BICUBIC)
+    out.alpha_composite(band, (int(x), int(y)))
+
+
+def _thumb_split(v, s, photo_im, size, fp, yellow=False):
+    """반분할: 한쪽은 단색 패널에 아주 큰 글자, 다른 쪽은 사진 (노랑 패널 = 고대비 버전)"""
+    w, h = size
+    port = h > w
+    lines, emph, small, mood = _vparts(v)
+    panel = (255, 212, 0) if yellow else (15, 23, 42)
+    c_big, c_emph = ("#111111", "#E53935") if yellow else ("#FFFFFF", THUMB_MOODS[mood][1])
+    out = Image.new("RGBA", (w, h), panel + (255,))
+    m = int(w * 0.05)
+    if port:
+        ph_ = int(h * 0.56)
+        out.paste(_thumb_photo(photo_im, s, w, ph_, v.get("face", "center"), 1.05, 0.3), (0, 0))
+        d = ImageDraw.Draw(out)
+        d.polygon([(0, ph_ - int(h * 0.035)), (w, ph_), (w, ph_ + 6), (0, ph_ + 6)], fill=panel + (255,))
+        _thumb_tag(out, small, fp, h * 0.04, m, ph_ + int(h * 0.03), "#E53935" if yellow else THUMB_MOODS[mood][2], "#FFFFFF")
+        d = ImageDraw.Draw(out)
+        f_ = _thumb_fit_font(fp, lines, w - 2 * m, h * 0.1)
+        y = ph_ + int(h * (0.11 if small else 0.06))
+        _thumb_lines(d, lines, emph, f_, m, y, w - 2 * m, c_big, c_emph, "center", stroke=not yellow, shadow=False)
+    else:
+        pw_ = int(w * 0.56)
+        out.paste(_thumb_photo(photo_im, s, pw_ + int(w * 0.06), h, v.get("face", "center"), 1.04, 0.3), (w - pw_ - int(w * 0.06), 0))
+        d = ImageDraw.Draw(out)
+        d.polygon([(0, 0), (w - pw_ + int(w * 0.02), 0), (w - pw_ - int(w * 0.04), h), (0, h)], fill=panel + (255,))
+        _thumb_tag(out, small, fp, h * 0.07, m, int(h * 0.09), "#E53935" if yellow else THUMB_MOODS[mood][2], "#FFFFFF")
+        d = ImageDraw.Draw(out)
+        avail = w - pw_ - int(w * 0.07) - m
+        f_ = _thumb_fit_font(fp, lines, avail, h * 0.17)
+        lh = int(f_.size * 1.12)
+        y = int(h * 0.55) - lh * len(lines) // 2 + int(h * 0.04)
+        _thumb_lines(d, lines, emph, f_, m, y, avail, c_big, c_emph, "left", stroke=not yellow, shadow=False)
+    return out.convert("RGB")
+
+
+def _thumb_cinema(v, s, photo_im, size, fp):
+    """시네마 띠: 위아래 검은 띠 + 가운데 아래 흰 글자 (다큐·감동)"""
+    w, h = size
+    port = h > w
+    lines, emph, small, mood = _vparts(v)
+    bar = int(h * (0.07 if port else 0.12))
+    bg = _thumb_photo(photo_im, s, w, h, v.get("face", "center"), 1.0, 0.4)
+    bg = ImageEnhance.Color(bg).enhance(0.85)
+    arr = np.asarray(bg).astype(np.float32)
+    yy = np.linspace(0, 1, h)[:, None, None]
+    xx = np.linspace(-1, 1, w)[None, :, None]
+    shade = (1 - 0.55 * np.clip((yy - 0.55) / 0.45, 0, 1)) * (1 - 0.3 * np.clip((xx ** 2 + ((yy - 0.5) * 2) ** 2) - 0.7, 0, 1))
+    out = Image.fromarray(np.clip(arr * shade, 0, 255).astype(np.uint8)).convert("RGBA")
+    d = ImageDraw.Draw(out)
+    d.rectangle([0, 0, w, bar], fill=(0, 0, 0, 255))
+    d.rectangle([0, h - bar, w, h], fill=(0, 0, 0, 255))
+    m = int(w * 0.05)
+    if small:
+        fs = load_font(fp, int(bar * 0.5))
+        d.text(((w - fs.getlength(small)) / 2, (bar - fs.size) / 2), small, font=fs, fill=THUMB_MOODS[mood][1])
+    f_ = _thumb_fit_font(fp, lines, w - 2 * m, h * (0.1 if port else 0.16))
+    lh = int(f_.size * 1.12)
+    y = h - bar - lh * len(lines) - int(h * 0.03)
+    sw = max(3, f_.size // 16)
+    for ln in lines:
+        tw = f_.getlength(ln)
+        x = (w - tw) / 2
+        cx = x
+        parts = [(ln, "#FFFFFF")]
+        if emph and emph in ln:
+            i_ = ln.index(emph)
+            parts = [(ln[:i_], "#FFFFFF"), (emph, THUMB_MOODS[mood][1]), (ln[i_ + len(emph):], "#FFFFFF")]
+        for seg, col in parts:
+            if seg:
+                d.text((cx, y), seg, font=f_, fill=col, stroke_width=sw, stroke_fill="#000000")
+                cx += f_.getlength(seg)
+        y += lh
+    return out.convert("RGB")
+
+
+def _thumb_news(v, s, photo_im, size, fp):
+    """뉴스 속보: 왼쪽 위 빨간 띠 + 아래 흰 상자에 검은 글자 (실화·정보)"""
+    w, h = size
+    port = h > w
+    lines, emph, small, mood = _vparts(v)
+    out = _thumb_photo(photo_im, s, w, h, v.get("face", "center"), 1.06, 0.25).convert("RGBA")
+    d = ImageDraw.Draw(out)
+    m = int(w * 0.05)
+    hb = int(h * (0.2 if port else 0.27))
+    d.rectangle([0, h - hb, w, h], fill=(255, 255, 255, 255))
+    d.rectangle([0, h - hb - max(6, h // 110), w, h - hb], fill=(229, 57, 53, 255))
+    tag = small or "실화"
+    fs = load_font(fp, int(h * (0.045 if port else 0.075)))
+    pad = int(fs.size * 0.5)
+    d.rectangle([m, int(h * 0.06), m + fs.getlength(tag) + pad * 2, int(h * 0.06) + int(fs.size * 1.45)], fill=(229, 57, 53, 245))
+    d.text((m + pad, int(h * 0.06) + int(fs.size * 0.18)), tag, font=fs, fill="#FFFFFF")
+    f_ = _thumb_fit_font(fp, lines, w - 2 * m, hb * (0.5 if len(lines) == 1 else 0.42))
+    lh = int(f_.size * 1.08)
+    y = h - hb + (hb - lh * len(lines)) // 2
+    _thumb_lines(d, lines, emph, f_, m, y, w - 2 * m, "#111111", "#D32F2F", "left" if not port else "center", stroke=False, shadow=False)
+    return out.convert("RGB")
+
+
+def _thumb_mystery(v, s, photo_im, size, fp):
+    """미스터리 다크: 어둡고 푸른 사진 + 빛나는 글자"""
+    w, h = size
+    port = h > w
+    lines, emph, small, mood = _vparts(v)
+    bg = _thumb_photo(photo_im, s, w, h, v.get("face", "center"), 1.1, 0.35)
+    bg = ImageEnhance.Brightness(ImageEnhance.Color(bg).enhance(0.45)).enhance(0.6)
+    arr = np.asarray(bg).astype(np.float32)
+    arr = arr * np.array([0.85, 0.92, 1.15], np.float32)[None, None, :]
+    yy = np.linspace(0, 1, h)[:, None, None]
+    xx = np.linspace(-1, 1, w)[None, :, None]
+    vig = 1 - 0.6 * np.clip((xx ** 2 + ((yy - 0.5) * 2) ** 2) - 0.35, 0, 1)
+    out = Image.fromarray(np.clip(arr * vig, 0, 255).astype(np.uint8)).convert("RGBA")
+    m = int(w * 0.05)
+    f_ = _thumb_fit_font(fp, lines, w - 2 * m, h * (0.105 if port else 0.17))
+    lh = int(f_.size * 1.12)
+    y0 = int(h * (0.86 if port else 0.84)) - lh * len(lines)
+    glow = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    gd = ImageDraw.Draw(glow)
+    _thumb_lines(gd, lines, "", f_, m, y0, w - 2 * m, "#4FE3FF", "#4FE3FF", "center", stroke=True, shadow=False, stroke_col="#4FE3FF")
+    glow = glow.filter(ImageFilter.GaussianBlur(max(8, f_.size // 5)))
+    out.alpha_composite(glow)
+    d = ImageDraw.Draw(out)
+    _thumb_lines(d, lines, emph, f_, m, y0, w - 2 * m, "#FFFFFF", "#4FE3FF", "center", stroke=True, shadow=False, stroke_col="#061626")
+    if small:
+        fs = load_font(fp, int(h * (0.04 if port else 0.065)))
+        tw = fs.getlength(small)
+        x = (w - tw) / 2
+        yb = int(h * 0.08)
+        d.rounded_rectangle([x - int(fs.size * 0.5), yb - int(fs.size * 0.2), x + tw + int(fs.size * 0.5), yb + int(fs.size * 1.25)], radius=8,
+                            outline=(79, 227, 255, 230), width=max(3, fs.size // 12))
+        d.text((x, yb), small, font=fs, fill="#CFF6FF")
+    return out.convert("RGB")
+
+
+def _thumb_circle(v, s, photo_im, size, fp):
+    """빨간 강조: 사진에 빨간 원 + 화살표, 노란 글자 (충격·반전)"""
+    w, h = size
+    port = h > w
+    lines, emph, small, mood = _vparts(v)
+    bg = _thumb_photo(photo_im, s, w, h, v.get("face", "center"), 1.05, 0.3)
+    arr = np.asarray(bg).astype(np.float32)
+    yy = np.linspace(0, 1, h)[:, None, None]
+    xx0 = np.linspace(0, 1, w)[None, :, None]
+    shade = (1 - 0.6 * np.clip((yy - 0.6) / 0.4, 0, 1)) if port else (1 - 0.6 * np.clip((0.55 - xx0) / 0.55, 0, 1) * np.clip((yy - 0.3) / 0.5, 0, 1))
+    out = Image.fromarray(np.clip(arr * shade, 0, 255).astype(np.uint8)).convert("RGBA")
+    d = ImageDraw.Draw(out)
+    m = int(w * 0.05)
+    cx, cy = (w // 2, int(h * 0.36)) if port else (int(w * 0.70), int(h * 0.40))
+    r = int(min(w, h) * (0.19 if port else 0.2))
+    lw = max(8, min(w, h) // 70)
+    d.ellipse([cx - r - 3, cy - r - 3, cx + r + 3, cy + r + 3], outline=(255, 255, 255, 200), width=lw + 4)
+    d.ellipse([cx - r, cy - r, cx + r, cy + r], outline=(229, 57, 53, 255), width=lw)
+    f_ = _thumb_fit_font(fp, lines, (w - 2 * m) if port else int(w * 0.5), h * (0.105 if port else 0.17))
+    lh = int(f_.size * 1.12)
+    y0 = int(h * (0.90 if port else 0.86)) - lh * len(lines)
+    _thumb_tag(out, small, fp, h * (0.042 if port else 0.07), m, int(h * 0.07), "#E53935", "#FFFFFF", 2.5)
+    d = ImageDraw.Draw(out)
+    _thumb_lines(d, lines, emph, f_, m, y0, (w - 2 * m) if port else int(w * 0.5), "#FFE135", "#FF3B3B", "center" if port else "left")
+    ax0, ay0 = (w // 2 + int(w * 0.12), y0 - int(h * 0.02)) if port else (m + int(w * 0.46), y0 + lh // 2)   # 화살표: 글자 → 원
+    ax1, ay1 = (cx + int(r * 0.6), cy + r + int(h * 0.01)) if port else (cx - r - int(w * 0.01), cy + int(r * 0.4))
+    d.line([(ax0, ay0), (ax1, ay1)], fill=(229, 57, 53, 255), width=lw)
+    ang = math.atan2(ay1 - ay0, ax1 - ax0)
+    hl = lw * 3.2
+    d.polygon([(ax1 + lw * 0.8 * math.cos(ang), ay1 + lw * 0.8 * math.sin(ang)),
+               (ax1 - hl * math.cos(ang - 0.5), ay1 - hl * math.sin(ang - 0.5)),
+               (ax1 - hl * math.cos(ang + 0.5), ay1 - hl * math.sin(ang + 0.5))], fill=(229, 57, 53, 255))
     return out.convert("RGB")
 
 
@@ -12888,7 +13144,8 @@ class App(tk.Tk):
         ed.pack(fill="x", pady=6)
         overlay = tk.BooleanVar(value=True)
         ttk.Checkbutton(ed, text="문구 입히기 (끄면 붙여넣은 그림 그대로 저장)", variable=overlay, command=lambda: render()).grid(row=0, column=0, columnspan=6, sticky="w")
-        fv = {k_: tk.StringVar() for k_ in ("big", "big2", "emph", "small", "mood")}
+        fv = {k_: tk.StringVar() for k_ in ("big", "big2", "emph", "small", "mood", "style")}
+        fv["style"].set(str(s.get("thumb_style") or THUMB_STYLES[0]))
         ttk.Label(ed, text="큰 글자").grid(row=1, column=0, sticky="e", pady=3)
         ttk.Entry(ed, textvariable=fv["big"], width=16).grid(row=1, column=1, padx=4)
         ttk.Label(ed, text="둘째 줄").grid(row=1, column=2, sticky="e")
@@ -12900,6 +13157,10 @@ class App(tk.Tk):
         ttk.Label(ed, text="분위기(색)").grid(row=2, column=2, sticky="e")
         ttk.Combobox(ed, textvariable=fv["mood"], values=list(THUMB_MOODS), width=10, state="readonly").grid(row=2, column=3, padx=4, sticky="w")
         ttk.Button(ed, text="🔄 다시 그리기", command=lambda: render()).grid(row=2, column=4, columnspan=2, sticky="w")
+        ttk.Label(ed, text="스타일").grid(row=3, column=0, sticky="e", pady=(4, 0))
+        ttk.Combobox(ed, textvariable=fv["style"], values=THUMB_STYLES, width=22, state="readonly").grid(row=3, column=1, columnspan=2, padx=4, sticky="w", pady=(4, 0))
+        ttk.Button(ed, text="🎨 스타일 모두 보기(눌러서 고르기)", command=lambda: style_gallery()).grid(row=3, column=3, columnspan=3, sticky="w", pady=(4, 0))
+        fv["style"].trace_add("write", lambda *_: render())
         bb = ttk.Frame(left)
         bb.pack(fill="x", pady=(8, 0))
         ttk.Button(bb, text="💾 썸네일 저장 (PNG)", command=lambda: save()).pack(side="right")
@@ -12933,7 +13194,7 @@ class App(tk.Tk):
         def render():
             im = base_image()
             if overlay.get() or im is None:
-                out = render_thumb(cur_v(), s, im)
+                out = render_thumb(cur_v(), s, im, style=fv["style"].get())
             else:
                 w_, h_ = W, H
                 k = max(w_ / im.width, h_ / im.height)
@@ -12945,6 +13206,26 @@ class App(tk.Tk):
             pv._img = tk_
             pv.config(image=tk_, width=pw, height=ph)
             pstat2.config(text=("ChatGPT 그림" if pasted["im"] is not None else "대본 사진" if photos else "테마 배경") + (" + 문구" if overlay.get() else " 그대로"))
+
+        def style_gallery():
+            """모든 스타일을 한 번에 그려서 보여 주고, 누르면 그 스타일로"""
+            im = base_image()
+            gw = tk.Toplevel(win)
+            gw.title("썸네일 스타일 - 마음에 드는 것을 누르세요")
+            gw.transient(win)
+            tw_, th_ = (150, 267) if port else (300, 169)
+            cols = 4
+            gw._imgs = []
+            for k, st_ in enumerate(THUMB_STYLES[1:]):
+                try:
+                    pic = render_thumb(cur_v(), s, im, style=st_).resize((tw_, th_), Image.LANCZOS)
+                except Exception:
+                    pic = Image.new("RGB", (tw_, th_), "#333")
+                tki = ImageTk.PhotoImage(pic)
+                gw._imgs.append(tki)
+                b = ttk.Button(gw, text=st_, image=tki, compound="top", command=lambda st_=st_: (fv["style"].set(st_), gw.destroy()))
+                b.grid(row=k // cols, column=k % cols, padx=6, pady=6)
+            ttk.Label(gw, text="자동 저장(MP4 만들 때)용 기본 스타일은 설정 → 🎬 화면 형식 → '유튜브 썸네일 스타일'에서 정합니다", foreground="#666").grid(row=3, column=0, columnspan=4, pady=(4, 8))
 
         def copy_prompt():
             txt = pt.get("1.0", "end").strip()
