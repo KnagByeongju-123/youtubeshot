@@ -13059,6 +13059,11 @@ class App(tk.Tk):
                         rng_txt = f"슬라이드 {grp[0]['n']}~{grp[-1]['n']}" if len(grp) > 1 else f"슬라이드 {grp[0]['n']}"
                         try:
                             sk = dict(s)
+                            if k > 0:                                 # 조각마다 앞에서 멈춰 기다리지 않게 (첫 조각만 시작 정지)
+                                sk["hold_start"] = 0
+                            if k < len(groups) - 1:
+                                sk["hold_end"] = 0
+                            sk["progress_bar"] = "off"                # 위쪽 진행바 없음
                             story_k = ppt_build_story(grp, narr, duo)
                             full_story.append(story_k)
                             shown = story_k
