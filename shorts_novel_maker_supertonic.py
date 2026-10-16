@@ -3835,10 +3835,16 @@ def split_scenes(story):
     scenes, cur = [], None
 
     def new():
-        return {"chapter": "", "img": "", "lines": []}
+        return {"chapter": "", "img": "", "lines": [], "skip": False}
     for p in split_paras(story):
         p = p.strip()
         if not p:
+            continue
+        if p == "[제외]":                       # 이 장면은 영상에서 뺌 (글은 남겨 둠)
+            if cur is None or cur["img"] or cur["lines"] or cur["chapter"]:
+                cur = new()
+                scenes.append(cur)
+            cur["skip"] = True
             continue
         if parse_media(p):
             if cur is None or cur["img"] or cur["lines"]:
@@ -3859,7 +3865,12 @@ def split_scenes(story):
 
 
 def scene_text(sc):
-    return "\n\n".join([x for x in (sc.get("chapter", ""), sc.get("img", "")) if x] + list(sc.get("lines") or []))
+    return "\n\n".join((["[제외]"] if sc.get("skip") else []) + [x for x in (sc.get("chapter", ""), sc.get("img", "")) if x] + list(sc.get("lines") or []))
+
+
+def story_for_video(story):
+    """영상·나레이션에 쓸 본문: [제외] 표시된 장면은 뺌"""
+    return join_scenes([sc for sc in split_scenes(story) if not sc.get("skip")])
 
 
 def join_scenes(scenes):
@@ -5531,7 +5542,7 @@ def narration_paras(story):
     out, idx = [], 0
     for para in (story or "").replace("\r", "").split("\n"):
         para = para.strip()
-        if not para or parse_media(para) or PH_RE.match(para) or HOLD_RE.match(para) or SFX_RE.match(para):
+        if not para or para == "[제외]" or parse_media(para) or PH_RE.match(para) or HOLD_RE.match(para) or SFX_RE.match(para):
             continue
         para = PH_INLINE_RE.sub("", para).strip()
         if not para:
@@ -9033,6 +9044,79 @@ def music_upload_text(title, preset_names, chapters=None, minutes=None, own_audi
     return pkg
 
 
+class ItemTree(ttk.Frame):
+    """체크(영상에 넣기) · 번호 · 내용 · 표시 목록. 위아래 드래그로 순서 바꾸기, ☑ 칸을 누르면 넣기/빼기"""
+
+    def __init__(self, parent, on_select=None, on_toggle=None, on_reorder=None, height=14, width=380):
+        super().__init__(parent)
+        self.on_select, self.on_toggle, self.on_reorder = on_select, on_toggle, on_reorder
+        self.tree = ttk.Treeview(self, columns=("chk", "no", "name", "mark"), show="headings", height=height, selectmode="browse")
+        for c, t, w, anc, stretch in (("chk", "☑", 30, "center", False), ("no", "번호", 42, "e", False),
+                                      ("name", "내용", max(120, width - 170), "w", True), ("mark", "표시", 80, "w", False)):
+            self.tree.heading(c, text=t)
+            self.tree.column(c, width=w, minwidth=w, anchor=anc, stretch=stretch)
+        sb = ttk.Scrollbar(self, command=self.tree.yview)
+        self.tree.configure(yscrollcommand=sb.set)
+        self.tree.pack(side="left", fill="both", expand=True)
+        sb.pack(side="left", fill="y")
+        self.tree.tag_configure("off", foreground="#aaa")
+        self.tree.tag_configure("fast", foreground="#b35900")
+        self._items, self._drag = {}, None
+        self.tree.bind("<Button-1>", self._press)
+        self.tree.bind("<B1-Motion>", self._motion)
+        self.tree.bind("<ButtonRelease-1>", self._release)
+        self.tree.bind("<<TreeviewSelect>>", lambda e: self.on_select and self.on_select(self.selected()))
+
+    def set_items(self, items, select=None):
+        """items: [{"id", "checked", "no", "name", "mark", "tag"}]"""
+        self.tree.delete(*self.tree.get_children())
+        self._items = {}
+        for it in items:
+            iid = str(it["id"])
+            self._items[iid] = it
+            on = it.get("checked", True)
+            tags = ("off",) if not on else ((it["tag"],) if it.get("tag") else ())
+            self.tree.insert("", "end", iid=iid, values=("☑" if on else "☐", it.get("no", ""), it.get("name", ""), it.get("mark", "")), tags=tags)
+        if select is not None and str(select) in self._items:
+            self.tree.selection_set(str(select))
+            self.tree.see(str(select))
+
+    def order(self):
+        return [self._items[i]["id"] for i in self.tree.get_children()]
+
+    def selected(self):
+        s = self.tree.selection()
+        return self._items[s[0]]["id"] if s and s[0] in self._items else None
+
+    def _press(self, e):
+        row = self.tree.identify_row(e.y)
+        self._drag = {"row": row, "y": e.y, "moved": False} if row else None
+        if row and self.tree.identify_column(e.x) == "#1":       # ☑ 칸: 넣기/빼기
+            it = self._items[row]
+            it["checked"] = not it.get("checked", True)
+            self.tree.set(row, "chk", "☑" if it["checked"] else "☐")
+            self.tree.item(row, tags=(() if it["checked"] else ("off",)))
+            self._drag = None
+            if self.on_toggle:
+                self.on_toggle(it["id"], it["checked"])
+            return "break"
+
+    def _motion(self, e):
+        if not self._drag:
+            return
+        if not self._drag["moved"] and abs(e.y - self._drag["y"]) < 6:
+            return
+        target = self.tree.identify_row(e.y)
+        if target and target != self._drag["row"]:
+            self.tree.move(self._drag["row"], "", self.tree.index(target))
+            self._drag["moved"] = True
+
+    def _release(self, e):
+        if self._drag and self._drag["moved"] and self.on_reorder:
+            self.on_reorder(self.order())
+        self._drag = None
+
+
 # ---------------- 화면(GUI) ----------------
 class App(tk.Tk):
     def __init__(self):
@@ -9253,8 +9337,15 @@ class App(tk.Tk):
         self.main_nb.bind("<<NotebookTabChanged>>", on_main_tab)
         main = ttk.Frame(story_tab, padding=(8, 0))
         main.pack(fill="both", expand=True)
-        right = ttk.LabelFrame(main, text="미리보기 (1080×1920)", padding=6)
-        right.pack(side="right", fill="y", padx=(8, 0))
+        rnb = ttk.Notebook(main)
+        rnb.pack(side="right", fill="y", padx=(8, 0))
+        right = ttk.Frame(rnb, padding=6)
+        rnb.add(right, text=" 미리보기 ")
+        scene_tab = ttk.Frame(rnb, padding=6)
+        rnb.add(scene_tab, text=" 🎬 장면 (체크·순서·수정) ")
+        self.right_nb = rnb
+        rnb.bind("<<NotebookTabChanged>>", lambda e: rnb.index("current") == 1 and self.refresh_scene_list())
+        self.build_scene_panel(scene_tab)
         left = ttk.Frame(main)
         left.pack(side="left", fill="both", expand=True)
 
@@ -9959,7 +10050,7 @@ class App(tk.Tk):
                 sec = scene_est_sec(sc, s_now)
                 tot += sec
                 first = (sc["lines"][0] if sc["lines"] else (sc["chapter"][3:] if sc["chapter"] else "(글 없음)"))
-                mark = ("📷" if sc["img"] else "  ") + ("§" if sc["chapter"] else " ")
+                mark = ("✖" if sc.get("skip") else "") + ("📷" if sc["img"] else "  ") + ("§" if sc["chapter"] else " ")
                 lst.insert("end", f"{k + 1:>3}. {mark} {first[:24]}  ·{sec:.0f}초")
                 if not sc["lines"]:
                     lst.itemconfig("end", foreground="#999")
@@ -10126,6 +10217,14 @@ class App(tk.Tk):
         bf2.pack(fill="x", pady=(4, 0))
         ttk.Button(bf2, text="🖼 사진 바꾸기(파일)", command=change_photo).pack(side="left", padx=1)
         ttk.Button(bf2, text="✖ 사진 빼기", command=drop_photo).pack(side="left", padx=1)
+
+        def toggle_skip():
+            store()
+            i = cur["i"]
+            if i is not None:
+                scenes[i]["skip"] = not scenes[i].get("skip")
+                refresh(i)
+        ttk.Button(bf2, text="☐ 영상에서 빼기/넣기", command=toggle_skip).pack(side="left", padx=1)
         ttk.Button(bf2, text="✍ AI로 다시 쓰기", command=rewrite).pack(side="left", padx=1)
         bf3 = ttk.Frame(right)
         bf3.pack(fill="x", pady=(6, 0))
@@ -10676,6 +10775,151 @@ class App(tk.Tk):
     def set_story(self, txt):
         self.story.delete("1.0", "end")
         self.story.insert("1.0", txt)
+        if hasattr(self, "scene_tree"):
+            self.after_idle(self.refresh_scene_list)
+
+    # ---- 🎬 장면 패널 (이야기 탭 오른쪽) ----
+    def build_scene_panel(self, parent):
+        ttk.Label(parent, text="본문을 '사진 + 그 뒤 문단' 장면으로 봅니다. ☑ 해제 = 영상에서 빼기(글은 남음) · 드래그/▲▼ 순서 · 누르면 본문에서 선택",
+                  foreground="#555", wraplength=380, justify="left").pack(anchor="w")
+        self.scene_tree = ItemTree(parent, on_select=self._scene_jump, on_toggle=self._scene_toggle, on_reorder=self._scene_reorder, height=22, width=380)
+        self.scene_tree.pack(fill="both", expand=True, pady=(4, 0))
+        self._scenes = []
+        b1 = ttk.Frame(parent)
+        b1.pack(fill="x", pady=(4, 0))
+        ttk.Button(b1, text="▲", width=3, command=lambda: self._scene_move(-1)).pack(side="left")
+        ttk.Button(b1, text="▼", width=3, command=lambda: self._scene_move(1)).pack(side="left", padx=2)
+        ttk.Button(b1, text="🗑 삭제", command=self._scene_delete).pack(side="left", padx=2)
+        ttk.Button(b1, text="➕ 사진 추가", command=self._scene_add_photo).pack(side="left", padx=2)
+        ttk.Button(b1, text="🔄", width=3, command=self.refresh_scene_list).pack(side="left", padx=2)
+        b2 = ttk.Frame(parent)
+        b2.pack(fill="x", pady=(4, 0))
+        ttk.Button(b2, text="🎬 이 장면만 영상", command=self._scene_video_one).pack(side="left")
+        ttk.Button(b2, text="✍ 장면 편집 창(나누기·합치기·AI)", command=self.scene_editor).pack(side="left", padx=4)
+        self.scene_info = ttk.Label(parent, text="", foreground="#1a5fb4", wraplength=380, justify="left")
+        self.scene_info.pack(anchor="w", pady=(4, 0))
+
+    def refresh_scene_list(self, sel=None):
+        if not hasattr(self, "scene_tree"):
+            return
+        if sel is None:
+            sel = self.scene_tree.selected()
+        self._scenes = split_scenes(self.get_story())
+        s_now = self.get_settings() if hasattr(self, "vars") else {}
+        items, tot = [], 0.0
+        for k, sc in enumerate(self._scenes):
+            sec = scene_est_sec(sc, s_now)
+            if not sc.get("skip"):
+                tot += sec
+            first = sc["lines"][0] if sc["lines"] else (sc["chapter"][3:] if sc["chapter"] else "(사진만)")
+            items.append({"id": k, "checked": not sc.get("skip"), "no": k + 1, "name": first[:26],
+                          "mark": ("📷" if sc["img"] else "") + ("§" if sc["chapter"] else "") + f" {sec:.0f}초"})
+        self.scene_tree.set_items(items, select=sel if sel is not None and sel < len(items) else None)
+        on = sum(1 for sc in self._scenes if not sc.get("skip"))
+        self.scene_info.config(text=f"장면 {len(self._scenes)}개 (영상에 {on}개) · 어림 {int(tot // 60)}분 {int(tot % 60)}초")
+
+    def _scene_apply(self, scenes, sel=None):
+        self.set_story(join_scenes(scenes))
+        self.renderer = None
+        self.refresh_preview()
+        self.after_idle(lambda: self.refresh_scene_list(sel))
+
+    def _scene_jump(self, k):
+        """목록에서 고른 장면을 본문에서 선택·표시하고, 미리보기도 그 장면으로"""
+        if k is None or k >= len(self._scenes):
+            return
+        sc = self._scenes[k]
+        head = sc["chapter"] or sc["img"] or (sc["lines"][0] if sc["lines"] else "")
+        if not head:
+            return
+        idx = self.story.search(head, "1.0", "end")
+        if idx:
+            end = f"{idx}+{len(scene_text(sc))}c"
+            self.story.tag_remove("sel", "1.0", "end")
+            self.story.tag_add("sel", idx, end)
+            self.story.mark_set("insert", idx)
+            self.story.see(idx)
+        first = sc["lines"][0] if sc["lines"] else None
+        r = getattr(self, "renderer", None)
+        if first and r is not None:
+            for sg in getattr(r, "segs", []) or []:
+                if sg.get("text") == first:
+                    self.tvar.set(sg["t0"])
+                    self.show_frame(sg["t0"])
+                    break
+
+    def _scene_toggle(self, k, checked):
+        if k is None or k >= len(self._scenes):
+            return
+        self._scenes[k]["skip"] = not checked
+        self._scene_apply(self._scenes, k)
+
+    def _scene_reorder(self, ids):
+        sc = self._scenes
+        new = [sc[i] for i in ids if i < len(sc)] + [x for j, x in enumerate(sc) if j not in set(ids)]
+        self._scene_apply(new, ids.index(self.scene_tree.selected()) if self.scene_tree.selected() in ids else None)
+
+    def _scene_move(self, d):
+        k = self.scene_tree.selected()
+        if k is None:
+            return
+        j = k + d
+        if 0 <= j < len(self._scenes):
+            sc = list(self._scenes)
+            sc[k], sc[j] = sc[j], sc[k]
+            self._scene_apply(sc, j)
+
+    def _scene_delete(self):
+        k = self.scene_tree.selected()
+        if k is None or len(self._scenes) <= 1:
+            return
+        if messagebox.askyesno("장면 삭제", f"장면 {k + 1}을(를) 본문에서 지울까요? (영상에서만 빼려면 ☑ 체크를 해제하세요)"):
+            sc = list(self._scenes)
+            del sc[k]
+            self._scene_apply(sc, min(k, len(sc) - 1))
+
+    def _scene_add_photo(self):
+        p = filedialog.askopenfilename(filetypes=[("이미지", "*.png *.jpg *.jpeg *.webp *.bmp")])
+        if not p:
+            return
+        k = self.scene_tree.selected()
+        sc = list(self._scenes)
+        if k is not None and k < len(sc) and not sc[k]["img"]:
+            sc[k]["img"] = make_marker(p, "", "", "")          # 사진 없는 장면이면 그 장면 사진으로
+            self._scene_apply(sc, k)
+        else:
+            at = (k + 1) if k is not None else len(sc)
+            sc.insert(at, {"chapter": "", "img": make_marker(p, "", "", ""), "lines": [], "skip": False})
+            self._scene_apply(sc, at)
+            self.write_log("➕ 사진 장면을 넣었습니다. 본문에서 그 사진 줄 아래에 문단을 쓰면 그 장면의 글이 됩니다.")
+
+    def _scene_video_one(self):
+        """고른 장면 하나만 짧은 영상으로 (확인용)"""
+        k = self.scene_tree.selected()
+        if k is None or k >= len(self._scenes):
+            messagebox.showinfo("장면 영상", "목록에서 장면을 고르세요.")
+            return
+        s = self.get_settings()
+        if not str(s.get("layout", "")).startswith("자막형") or s.get("narration") != "on":
+            messagebox.showinfo("장면 영상", "장면 하나만 만들기는 '자막형' + 나레이션 켬일 때 됩니다.")
+            return
+        sc = dict(self._scenes[k])
+        sc["skip"] = False
+        if not sc["img"]:                                       # 앞 장면 사진을 이어받음
+            for j in range(k - 1, -1, -1):
+                if self._scenes[j]["img"]:
+                    sc["img"] = self._scenes[j]["img"]
+                    break
+        story_k = scene_text(sc)
+        title = self.title_var.get().strip() or "장면"
+        style = resolve_style(s, self.genre_var.get())
+        base = os.path.join(s["out_dir"], safe_name(title) + f"_장면{k + 1}")
+        kit = dict(model=self.model_var.get().strip(), category=self.cat_var.get(), genre=self.genre_var.get(), sources=[], notes="")
+        prog = self.progress_cb(f"장면 {k + 1} ")
+        self.write_log(f"🎬 장면 {k + 1}만 영상으로 만듭니다: {base}.mp4")
+        self.run_bg(f"🎬 장면 {k + 1} 영상 만드는 중...",
+                    lambda: self._make_mp4_scenes(story_k, title, s, style, base, base + ".mp4", kit, prog, publish=False),
+                    lambda res: self.write_log(f"✅ 장면 {k + 1} 영상 완료: {res[0]} ({res[3]:.1f}MB)"))
 
     def write_log(self, msg):
         line = time.strftime("[%H:%M:%S] ") + msg + "\n"
@@ -12024,8 +12268,9 @@ class App(tk.Tk):
     def refresh_preview(self):
         try:
             s = self.get_settings()
-            narr = self.narration_cached(self.get_story(), s)
-            self.renderer = make_renderer(self.title_var.get(), self.get_story(), s, narr)
+            story_v = story_for_video(self.get_story())
+            narr = self.narration_cached(story_v, s)
+            self.renderer = make_renderer(self.title_var.get(), story_v, s, narr)
             self.narr_missing = s.get("narration") == "on" and narr is None
         except Exception as e:
             self.on_err(e)
@@ -12721,21 +12966,17 @@ class App(tk.Tk):
                 os.startfile(d)
         ttk.Button(f4, text="📂 폴더", command=open_dir).pack(side="left")
 
-        # 오른쪽: 슬라이드 목록 + 미리보기
-        lf_ = ttk.Frame(right)
-        lf_.pack(fill="both", expand=True)
-        lst = tk.Listbox(lf_, width=36, height=14, exportselection=False)
-        lsb = ttk.Scrollbar(lf_, command=lst.yview)
-        lst.config(yscrollcommand=lsb.set)
-        lsb.pack(side="right", fill="y")
-        lst.pack(side="left", fill="both", expand=True)
+        # 오른쪽: 슬라이드 목록(체크·드래그) + 미리보기
+        tree = ItemTree(right, on_select=lambda n: show(), on_toggle=lambda n, on: toggle_skip(n, on), on_reorder=lambda ids: reorder(ids),
+                        height=14, width=400)
+        tree.pack(fill="both", expand=True)
         ob = ttk.Frame(right)
         ob.pack(fill="x", pady=(4, 0))
         ttk.Button(ob, text="▲", width=3, command=lambda: move(-1)).pack(side="left")
         ttk.Button(ob, text="▼", width=3, command=lambda: move(1)).pack(side="left", padx=2)
-        ttk.Button(ob, text="빼기/넣기", command=lambda: toggle("skip")).pack(side="left")
         ttk.Button(ob, text="⚡ 몽타주", command=lambda: toggle("fast")).pack(side="left", padx=2)
         ttk.Button(ob, text="🔄 이 장만 다시", command=lambda: reload_one()).pack(side="left", padx=2)
+        ttk.Button(ob, text="➕ 그림 추가", command=lambda: add_picture()).pack(side="left", padx=2)
         ob2 = ttk.Frame(right)
         ob2.pack(fill="x", pady=(4, 0))
         min_v = tk.StringVar(value="10")
@@ -12743,7 +12984,10 @@ class App(tk.Tk):
         ttk.Label(ob2, text=" 목표").pack(side="left")
         ttk.Entry(ob2, textvariable=min_v, width=4).pack(side="left")
         ttk.Label(ob2, text="분").pack(side="left")
-        ttk.Label(right, text="▲▼ 영상 순서 · 빼기(✖) · ⚡ 3초씩 빠르게\n(PPT 파일은 그대로, 영상 순서만 바뀜)", foreground="#666", justify="left").pack(anchor="w")
+        ttk.Button(ob2, text="🎬 이 장만 영상", command=lambda: make(cur_n()) if cur_n() is not None else None).pack(side="left", padx=(8, 0))
+        focus_v = tk.BooleanVar(value=True)
+        ttk.Checkbutton(right, text="✎ 고른 슬라이드 대본만 왼쪽에 보이기 (해제하면 전체 대본)", variable=focus_v, command=lambda: switch_focus()).pack(anchor="w", pady=(4, 0))
+        ttk.Label(right, text="☑ 해제 = 영상에서 빼기 · 드래그/▲▼ 순서 · ⚡ 3초씩 빠르게 · 🖼 추가한 그림 (PPT 파일은 그대로)", foreground="#666", wraplength=400, justify="left").pack(anchor="w")
         prev_l = ttk.Label(right)
         prev_l.pack(pady=(6, 0))
         by_n = lambda n: next((x for x in st["slides"] if x["n"] == n), None)
@@ -12753,33 +12997,58 @@ class App(tk.Tk):
             return [dict(by_n(n), fast=n in st["fast"]) for n in st["order"] if n not in st["skip"] and by_n(n)]
 
         def refresh_list(sel_n=None):
-            lst.delete(0, "end")
-            for k, n in enumerate(st["order"]):
+            items = []
+            for n in st["order"]:
                 sl = by_n(n)
                 if not sl:
                     continue
                 first = sl["text"].split("\n")[0] if sl["text"] else "(글 없음)"
-                mark = "✖ " if n in st["skip"] else ("⚡ " if n in st["fast"] else "")
-                lst.insert("end", f"{mark}{n:>3}. {first[:26]}" + (" 📝" if sl["notes"] else "") + (f" 🎬{len(sl['steps'])}" if sl.get("steps") else ""))
-                if n in st["skip"]:
-                    lst.itemconfig("end", foreground="#aaa")
-                elif n in st["fast"]:
-                    lst.itemconfig("end", foreground="#b35900")
-            if sel_n in st["order"]:
-                i = st["order"].index(sel_n)
-                lst.selection_set(i)
-                lst.see(i)
+                mark = ("🖼" if sl.get("custom") else "") + ("📝" if sl["notes"] else "") + (f"🎬{len(sl['steps'])}" if sl.get("steps") else "") + ("⚡" if n in st["fast"] else "")
+                items.append({"id": n, "checked": n not in st["skip"], "no": n if n < 1000 else "＋", "name": first[:26], "mark": mark,
+                              "tag": "fast" if n in st["fast"] else ""})
+            tree.set_items(items, select=sel_n if sel_n in st["order"] else None)
 
         def resync(sel_n=None):
-            st["narr"].update(parse_script())
+            parse_script()
+            if focus_v.get() and sel_n is not None:
+                cur_edit["n"] = sel_n
             txt.delete("1.0", "end")
             txt.insert("1.0", script_text())
             refresh_list(sel_n)
             save_state()
 
         def cur_n():
-            sel = lst.curselection()
-            return st["order"][sel[0]] if sel and sel[0] < len(st["order"]) else None
+            return tree.selected()
+
+        def toggle_skip(n, on):
+            if on:
+                st["skip"].discard(n)
+            else:
+                st["skip"].add(n)
+            resync(n)
+
+        def reorder(ids):
+            st["order"] = [n for n in ids if by_n(n)] + [n for n in st["order"] if n not in set(ids)]
+            resync(cur_n())
+
+        def add_picture():
+            """그림 파일을 슬라이드처럼 끼워 넣기 (PPT 파일은 그대로)"""
+            p = filedialog.askopenfilename(filetypes=[("이미지", "*.png *.jpg *.jpeg *.webp *.bmp")])
+            if not p or not st["dir"]:
+                if not st["dir"]:
+                    messagebox.showinfo("PPT 발표", "먼저 슬라이드를 불러오세요.")
+                return
+            n = 1001 + sum(1 for x in st["slides"] if x.get("custom"))
+            while by_n(n):
+                n += 1
+            st["slides"].append({"n": n, "image": p, "text": "(추가한 그림) " + os.path.splitext(os.path.basename(p))[0], "notes": "",
+                                 "steps": [], "reveal": [], "hires": "", "custom": True})
+            k = cur_n()
+            at = (st["order"].index(k) + 1) if k in st["order"] else len(st["order"])
+            st["order"].insert(at, n)
+            st["narr"].setdefault(n, "")
+            resync(n)
+            self.write_log(f"➕ 그림을 슬라이드로 넣었습니다 ({os.path.basename(p)}). 대본을 쓰거나 ✍ AI 나레이션 쓰기를 누르세요.")
 
         def move(dk):
             n = cur_n()
@@ -12810,22 +13079,41 @@ class App(tk.Tk):
                 prev_l.config(image=prev_l._img)
             except Exception:
                 prev_l.config(image="")
-            idx = txt.search(f"### 슬라이드 {sl['n']}\n", "1.0", "end")   # 대본에서 그 슬라이드로
-            if idx:
-                txt.see(idx)
-        lst.bind("<<ListboxSelect>>", show)
+            if focus_v.get():                                   # 고른 슬라이드 대본만 왼쪽에
+                if cur_edit["n"] is not None and cur_edit["n"] != n:
+                    parse_script()
+                cur_edit["n"] = n
+                txt.delete("1.0", "end")
+                txt.insert("1.0", script_text())
+            else:
+                idx = txt.search(f"### 슬라이드 {sl['n']}\n", "1.0", "end")   # 대본에서 그 슬라이드로
+                if idx:
+                    txt.see(idx)
+
+        cur_edit = {"n": None}      # ✎ 고른 슬라이드만 편집 중일 때 그 번호
 
         def script_text():
+            if focus_v.get() and cur_edit["n"] is not None and by_n(cur_edit["n"]):
+                n = cur_edit["n"]
+                return f"### 슬라이드 {n}" + (" ⚡" if n in st["fast"] else "") + "\n" + (st["narr"].get(n) or "") + "\n"
             return "\n".join(f"### 슬라이드 {sl['n']}" + (" ⚡" if sl.get("fast") else "") + "\n" + (st["narr"].get(sl["n"]) or "") + "\n" for sl in ordered())
 
         def parse_script():
-            narr = {}
+            """왼쪽 글 → {슬라이드 번호: 대본}. 고른 슬라이드만 보일 때는 그 슬라이드만 갱신하고 전체를 돌려줌"""
+            d_ = {}
             for m_ in re.finditer(r"^### 슬라이드 (\d+)([^\n]*)\n(.*?)(?=^### 슬라이드 \d+|\Z)", txt.get("1.0", "end"), re.S | re.M):
                 body, tag = m_.group(3).strip(), re.search(r"\[(남|여)\]", m_.group(2))
                 if tag and body and not SPK_RE.match(body):      # '### 슬라이드 3 [여]' → 그 슬라이드는 여자 성우
                     body = tag.group(1) + ": " + body
-                narr[int(m_.group(1))] = body
-            return narr
+                d_[int(m_.group(1))] = body
+            st["narr"].update(d_)
+            return dict(st["narr"])
+
+        def switch_focus():
+            parse_script()
+            cur_edit["n"] = cur_n() if focus_v.get() else None
+            txt.delete("1.0", "end")
+            txt.insert("1.0", script_text())
 
         def save_state():
             if st["dir"]:
@@ -12836,7 +13124,7 @@ class App(tk.Tk):
                                               "order": st["order"], "skip": sorted(st["skip"]), "fast": sorted(st["fast"]), "plan": st["plan"],
                                               "lang": lang_v.get(), "mode": mode_v.get(), "size": size_v.get(),
                                               "trans": trans_v.get(), "motion": motion_v.get(), "font": font_v.get(), "vi_size": vi_v.get(),
-                                              "bgm": bgm_v.get(), "chunk": chunk_v.get(), "tone": tone_v.get(), "audience": aud_v.get(),
+                                              "bgm": bgm_v.get(), "chunk": chunk_v.get(), "custom": [x for x in st["slides"] if x.get("custom")], "tone": tone_v.get(), "audience": aud_v.get(),
                                               "narr": {str(k): v for k, v in st["narr"].items()}}, ensure_ascii=False, indent=1))
 
         def fill(slides):
@@ -12851,6 +13139,9 @@ class App(tk.Tk):
                     st["meta"] = d.get("meta") or {}
                     st["vi"] = d.get("vi") or {}
                     st["plan"] = d.get("plan") or ""
+                    for c_ in d.get("custom") or []:              # 전에 끼워 넣은 그림 슬라이드
+                        if os.path.exists(c_.get("image", "")) and not any(x["n"] == c_["n"] for x in slides):
+                            slides.append(dict(c_, custom=True))
                     valid = [x["n"] for x in slides]
                     od = [int(n) for n in d.get("order") or [] if int(n) in valid]
                     st["order"] = od + [n for n in valid if n not in od]
@@ -12880,6 +13171,9 @@ class App(tk.Tk):
             p = path_v.get().strip()
             if n is None or not st["slides"]:
                 messagebox.showinfo("PPT 발표", "오른쪽 목록에서 다시 불러올 슬라이드를 고르세요.")
+                return
+            if (by_n(n) or {}).get("custom"):
+                messagebox.showinfo("PPT 발표", "추가한 그림은 PPT에 없어서 다시 불러올 수 없습니다. 지우고 다시 ➕ 그림 추가를 하세요.")
                 return
             if not p or not os.path.exists(p):
                 messagebox.showinfo("PPT 발표", "PPT 파일을 먼저 고르세요.")
@@ -12988,12 +13282,12 @@ class App(tk.Tk):
                 self.write_log(f"📊 발표 나레이션 완료: {len(narr)}/{len(slides)}장 · 성우 {meta.get('voice')} ({meta.get('voice_reason') or ''})")
             self.run_bg("✍ 슬라이드를 보고 나레이션 쓰는 중...", job, done)
 
-        def make():
+        def make(only_n=None):
             if not st["slides"]:
                 messagebox.showinfo("PPT 발표", "먼저 슬라이드를 불러오세요.")
                 return
             narr = parse_script()
-            show_ = ordered()
+            show_ = ordered() if only_n is None else [dict(by_n(only_n), fast=only_n in st["fast"])]
             empty = [sl["n"] for sl in show_ if not narr.get(sl["n"]) and not sl.get("fast")]
             if len(empty) == len([x for x in show_ if not x.get("fast")]):
                 messagebox.showinfo("PPT 발표", "나레이션 대본이 비어 있습니다. ✍ AI 나레이션 쓰기를 먼저 누르세요.")
@@ -13029,7 +13323,7 @@ class App(tk.Tk):
             old_fmt = self.vars["format"].get() if "format" in self.vars else None
             if fmt_name != old_fmt:
                 set_format(fmt_name)        # 만드는 동안만 (끝나면 원래대로)
-            base = os.path.join(st["dir"], safe_name(title))
+            base = os.path.join(st["dir"], safe_name(title) + (f"_슬라이드{only_n if only_n < 1000 else '추가'}" if only_n is not None else ""))
             model, genre = self.model_var.get().strip(), tone_v.get()
             log = self.log_bg
             self.write_log(f"📊 발표 영상 시작: {len(show_)}장 · 성우 {voice} · 감정 {s['st_emotion']} · {fmt_v.get()} · 자막 {lang}")
@@ -13043,7 +13337,7 @@ class App(tk.Tk):
             except ValueError:
                 chunk = 1
             groups = [show_[i:i + chunk] for i in range(0, len(show_), chunk)]
-            parts_dir = os.path.join(st["dir"], "_work", "parts")
+            parts_dir = os.path.join(st["dir"], "_work", "parts" if only_n is None else "parts_single")
 
             def job():
                 import hashlib
@@ -13116,7 +13410,7 @@ class App(tk.Tk):
                     os.makedirs(st["dir"], exist_ok=True)
                     concat_mp4_files(part_files, base + ".mp4")
                     story_all = "\n\n".join(full_story)
-                    if not self.cancel.is_set():
+                    if only_n is None and not self.cancel.is_set():
                         self.q.put(lambda: self.status.config(text="업로드 문구·썸네일 만드는 중... (AI 1~2분)"))
                         publish_kit(model, base, title, story_all, "PPT 발표", genre, s, None, [], "", log)
                     return base + ".mp4", total
@@ -13153,11 +13447,11 @@ class App(tk.Tk):
                      "openai_model", "gemini_model", "image_model", "image_quality", "image_style", "script_engine", "trans_engine", "auto_langs",
                      "fiction_image", "hit_sound", "hit_volume", "reveal_hit", "narr_duck", "scene_parts", "photo_count", "narr_spoken"}
 
-    def _make_mp4_scenes(self, story, title, s, style, base, out, kit, prog):
+    def _make_mp4_scenes(self, story, title, s, style, base, out, kit, prog, publish=True):
         """본문을 장면(사진+문단)마다 따로 그려 조각으로 저장하고, 배경음은 전체에 한 번에 깔아 이어 붙임"""
         import hashlib
         log = self.log_bg
-        scenes = split_scenes(story)
+        scenes = [sc for sc in split_scenes(story) if not sc.get("skip")]
         if not scenes:
             raise RuntimeError("본문이 비어 있습니다.")
         texts, last_img = [], ""
@@ -13277,11 +13571,11 @@ class App(tk.Tk):
         if p.returncode != 0:
             raise RuntimeError("장면 합치기 실패: " + (p.stderr or "")[-500:])
         prog(N * 1000, N * 1000)
-        if chapters:
+        if publish and chapters:
             with open(base + "_타임스탬프.txt", "w", encoding="utf-8") as f_:
                 f_.write("\n".join(f"{hms(t_)} {n_}" for t_, n_ in [(0, "오프닝")] + chapters))
         size_mb = os.path.getsize(out) / 1e6
-        if not self.cancel.is_set():
+        if publish and not self.cancel.is_set():
             self.q.put(lambda: self.status.config(text="업로드 문구·썸네일 만드는 중... (AI 1~2분)"))
             publish_kit(kit["model"], base, title, story, kit["category"], kit["genre"], s, chapters or None, kit["sources"], kit["notes"], log)
         return out, mp3, in_video and has_audio(out), size_mb
@@ -13306,7 +13600,7 @@ class App(tk.Tk):
             self.vars["bgm_seed"].set(str(seed))
             self.write_log(f"  배경음 번호가 없어 새 번호 #{seed}로 만듭니다 (소리 탭에 저장됨)")
 
-        story_now, title_now = self.get_story(), self.title_var.get()
+        story_now, title_now = story_for_video(self.get_story()), self.title_var.get()
         kit = dict(model=self.model_var.get().strip(), category=self.cat_var.get(), genre=self.genre_var.get(),
                    sources=list(getattr(self, "sources", []) or []), notes=getattr(self, "notes", ""))
 
