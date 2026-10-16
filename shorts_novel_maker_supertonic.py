@@ -284,6 +284,8 @@ FIELDS = [
     ("나레이션", "narr_tone_m", "남자 성우 톤(반음, 0=원래 목소리)", "float", 0.0),
     ("나레이션", "narr_bright_f", "여자 목소리 밝게(고음 강조 · 약간 울림)", "choice:on,off", "off"),
     ("나레이션", "narr_breath_cut", "말 시작 숨소리('쓰읍') 지우기", "choice:on,off", "on"),
+    ("나레이션", "narr_replace", "읽기 바꾸기(성우만, 쉼표로: LOT=로트, PIN=핀)", "str",
+     "LOT=로트, PIN=핀, 별도앱=별도의 앱, 별도 앱=별도의 앱, 전자결재 4단계=전자결재 네 단계, 27대=스물일곱 대"),
     ("나레이션", "narr_spoken", "숫자 발음 AI 사전(자막은 맞춤법대로, 성우는 읽는 그대로)", "choice:on,off", "on"),
     ("나레이션", "narr_style", "연기 지시(ChatGPT·Gemini 음성)", "str", "차분하고 또렷한 다큐멘터리 내레이터처럼. 반전 부분은 긴장감 있게."),
     ("나레이션", "openai_tts_model", "ChatGPT 음성 모델", "str", "gpt-4o-mini-tts"),
@@ -4630,9 +4632,9 @@ def ensure_spoken(model, story, cache_dir, log=None, cancel=None):
     헷갈리는 것만 AI에게 (여러 묶음을 동시에). 자막 글은 그대로. 실패하면 프로그램 규칙으로 읽음"""
     log = log or (lambda x: None)
     spoken_load(cache_dir)
-    todo = list(dict.fromkeys(t for _, t in narration_paras(story)
-                              if re.search(r"\d|사번", t) and re.search(r"[가-힣]", t) and not t.startswith("## ")
-                              and t not in SPOKEN and spoken_needs_ai(t)))
+    todo = list(dict.fromkeys(r_ for r_ in (spoken_src(t) for _, t in narration_paras(story))
+                              if re.search(r"\d|사번", r_) and re.search(r"[가-힣]", r_) and not r_.startswith("## ")
+                              and r_ not in SPOKEN and spoken_needs_ai(r_)))
     if not todo:
         return 0
     log(f"🔤 헷갈리는 숫자가 있는 문장 {len(todo)}개만 읽는 법 만드는 중 (나머지 숫자는 바로 읽음)...")
@@ -4673,7 +4675,13 @@ def ensure_spoken(model, story, cache_dir, log=None, cancel=None):
 def tts_clean(text):
     """읽기 좋게 정리: ♪, 따옴표, 챕터 표시 제거 + 한국어 문장의 숫자는 한글 읽기로"""
     t = text.strip()
-    t = SPOKEN.get(t, t)                 # 발음 사전(자막 글 → 읽는 글)
+    r_ = spoken_src(t)                   # 읽기 바꾸기 (LOT → 로트 …)
+    if r_ in SPOKEN:                     # 발음 사전(자막 글 → 읽는 글)
+        t = SPOKEN[r_]
+    elif t in SPOKEN:
+        t = spoken_src(SPOKEN[t])
+    else:
+        t = r_
     if t.startswith("## "):
         t = t[3:]
     t = t.lstrip("♪").strip()
@@ -5137,7 +5145,38 @@ def tts_supertonic(text, voice, rate_pct, out_wav, steps=5, mood="차분"):
 
 
 TTS_CFG = {"style": "", "openai_key": "", "gemini_key": "", "openai_tts_model": "", "gemini_tts_model": "",
-           "tone_f": 0, "tone_m": 0, "bright_f": "off", "breath_cut": "off"}
+           "tone_f": 0, "tone_m": 0, "bright_f": "off", "breath_cut": "off", "replace": []}
+
+
+def parse_replace(text):
+    """'LOT=로트, PIN -> 핀' (쉼표·줄바꿈으로 구분) → [(원래, 읽을 말)] (긴 것부터)"""
+    out = []
+    for item in re.split(r"[,\n;]+", str(text or "")):
+        m_ = re.match(r"\s*(.+?)\s*(?:->|→|=)\s*(.+?)\s*$", item)
+        if m_ and m_.group(1) and m_.group(2):
+            out.append((m_.group(1), m_.group(2)))
+    return sorted(out, key=lambda x: -len(x[0]))
+
+
+def spoken_src(t):
+    """성우가 읽기 전 '읽기 바꾸기' 적용 (자막은 그대로). 영어 단어는 단어째로만 (PIN ≠ PINK)"""
+    for a, b in TTS_CFG.get("replace") or []:
+        pre = r"(?<![A-Za-z0-9])" if re.match(r"[A-Za-z0-9]", a) else ""
+        post = r"(?![A-Za-z])" if re.search(r"[A-Za-z]$", a) else ""
+        t = re.sub(pre + re.escape(a) + post + r"(?:(은|는|이|가|을|를|과|와)(?=[\s,.!?·)]|$))?",
+                   lambda _m, b=b: b + _josa(b, _m.group(1)), t)
+    return t
+
+
+def _josa(word, j):
+    """바꾼 말 받침에 맞춰 조사 고치기 (로트+과 → 로트와)"""
+    if not j:
+        return ""
+    ch = word[-1] if word else ""
+    batchim = "가" <= ch <= "힣" and (ord(ch) - 0xAC00) % 28 != 0
+    pair = {"은": ("은", "는"), "는": ("은", "는"), "이": ("이", "가"), "가": ("이", "가"),
+            "을": ("을", "를"), "를": ("을", "를"), "과": ("과", "와"), "와": ("과", "와")}[j]
+    return pair[0] if batchim else pair[1]
 
 
 def set_tts_cfg(s):
@@ -5148,7 +5187,8 @@ def set_tts_cfg(s):
                    openai_tts_model=str(s.get("openai_tts_model", "")).strip(),
                    gemini_tts_model=str(s.get("gemini_tts_model", "")).strip(),
                    tone_f=s.get("narr_tone_f", 0), tone_m=s.get("narr_tone_m", 0),
-                   bright_f=str(s.get("narr_bright_f", "off")), breath_cut=str(s.get("narr_breath_cut", "off")))
+                   bright_f=str(s.get("narr_bright_f", "off")), breath_cut=str(s.get("narr_breath_cut", "off")),
+                   replace=parse_replace(s.get("narr_replace", "")))
 
 
 AI_VOICE_MALE = {v.lower() for v, d in OPENAI_VOICES + GEMINI_VOICES if d.startswith("남성")}
@@ -7694,7 +7734,8 @@ def ppt_lang_story(story, lang, vi, s):
         for ln in story.split("\n"):
             t = ln.strip()
             if t and not parse_media(t) and t in vi:
-                SPOKEN[vi[t]] = SPOKEN.get(t, t)      # 베트남어 자막 줄 → 한국어로 읽기
+                r_ = spoken_src(t)
+                SPOKEN[vi[t]] = SPOKEN.get(r_, r_)    # 베트남어 자막 줄 → 한국어로 읽기 (읽기 바꾸기 적용)
                 if t in PARA_VOICE:
                     PARA_VOICE[vi[t]] = PARA_VOICE[t]
                 out.append(vi[t])
@@ -12268,6 +12309,11 @@ class App(tk.Tk):
             w_.grid(row=r_, column=c_ + 1, sticky="w", pady=2)
         ttk.Checkbutton(f2, text="AI가 슬라이드 그림(도표·그래프)까지 직접 보고 해석 (Claude)",
                         variable=see_v).grid(row=4, column=0, columnspan=4, sticky="w", padx=8, pady=(4, 0))
+        rpf = ttk.Frame(f2)
+        rpf.grid(row=6, column=0, columnspan=8, sticky="we", padx=8, pady=(4, 0))
+        ttk.Label(rpf, text="읽기 바꾸기 (성우만, 자막·슬라이드는 그대로)").pack(side="left")
+        ttk.Entry(rpf, textvariable=self.vars["narr_replace"], width=110).pack(side="left", padx=6, fill="x", expand=True)
+        ttk.Label(rpf, text="예: LOT=로트, PIN=핀", foreground="#666").pack(side="left")
         ttk.Label(f2, text="2인 진행: 대본 줄 앞 '남:'·'여:'가 성우 (자막 색 남 하늘색·여 분홍색) · 성우는 항상 한국어 (베트남어는 자막만) · 숫자: 자막 2026년 / 성우 '이천이십육 년'",
                   foreground="#666", wraplength=1000).grid(row=5, column=0, columnspan=8, sticky="w", padx=8)
 
