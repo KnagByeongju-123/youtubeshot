@@ -2526,7 +2526,10 @@ def make_thumbnails(model, base, title, story, category, s, log=None):
     for i, (desc, im) in enumerate(cands):
         x, y = 8 + (i % cols) * (tw + 8), 8 + (i // cols) * (th + 30)
         sheet.paste(im.convert("RGB").resize((tw, th), Image.LANCZOS), (x, y))
-        dr.text((x + 2, y + th + 6), f"{i + 1}. {desc[:40]}", font=fnt, fill="white")
+        lab = f"{i + 1}. {desc}"
+        while fnt.getlength(lab) > tw - 4 and len(lab) > 4:   # 칸 폭에 맞게 자름 (겹치지 않게)
+            lab = lab[:-2] + "…"
+        dr.text((x + 2, y + th + 6), lab, font=fnt, fill="white")
     sheet.save(base + "_썸네일_후보.jpg", "JPEG", quality=88)
     # AI가 직접 보고 고름
     best, reason = 1, ""
