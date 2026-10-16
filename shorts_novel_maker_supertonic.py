@@ -44,6 +44,71 @@ ensure_packages()
 import tkinter as tk
 import tkinter.font as tkfont
 from tkinter import ttk, filedialog, messagebox, colorchooser, simpledialog
+
+# ---------------- 버튼 색 (구분별): 글자만 보고 자동으로 색을 정함 ----------------
+# (스타일 이름, 배경, 글자색, 눌렀을 때/마우스 올렸을 때 색)
+BTN_KINDS = {
+    "Danger": ("#C62828", "white", "#E53935"),   # 취소·삭제·중지
+    "Play": ("#1565C0", "white", "#1E88E5"),     # 재생·듣기·정지
+    "AI": ("#6A1B9A", "white", "#8E24AA"),       # AI가 쓰기·추천
+    "Make": ("#2E7D32", "white", "#43A047"),     # 만들기·실행
+    "File": ("#455A64", "white", "#607D8B"),     # 저장·열기·복사·붙여넣기
+    "Edit": ("#F9A825", "black", "#FDD835"),     # 설정·편집·고르기·새로고침
+}
+# 위에서부터 차례로 검사 (먼저 맞는 구분으로)
+BTN_RULES = [
+    ("Edit", ("☐",)),                                    # 켜기/끄기 토글
+    ("Danger", ("취소", "삭제", "중지", "지우기", "빼기", "모두 끄기", "✖", "🗑", "⏹")),
+    ("Play", ("▶", "■", "🎧", "듣기", "들어보기", "재생")),
+    ("AI", ("AI", "✍", "✨", "🎯", "🧭", "🎨", "추천", "실행")),
+    ("File", ("📂", "📥", "💾", "📋", "붙여넣기", "파일에서", "저장")),   # 파일 넣기·저장은 설정/편집보다 먼저
+    ("Edit", ("편집", "설정", "새로고침", "🔄", "다시 그리기", "정리", "⚙", "고르기", "바꾸기", "✔", "적용", "테마", "찾기", "➕", "추가",
+              "🎤", "🌿", "🔤", "📝", "📑", "연결 확인", "키 확인", "📜", "선택", "몽타주", "넣기/빼기", "넣기")),
+    ("Make", ("만들기", "제작", "🎬", "🎙", "🎵", "버전", "✂", "📷", "📚", "📺", "새 곡")),
+    ("File", ("저장", "열기", "불러오기", "📂", "💾", "📥", "📋", "복사", "붙여넣기", "파일", "폴더", "🆕", "닫기")),
+]
+
+
+def btn_kind(text):
+    t = str(text or "")
+    if t.strip() in ("x", "X"):
+        return "Danger"
+    if t.strip() in ("…", "▲", "▼", ""):
+        return ""
+    for kind, words in BTN_RULES:
+        if any(w in t for w in words):
+            return kind
+    return ""
+
+
+def setup_button_styles(root):
+    """색 버튼 스타일 만들기 (clam 테마의 테두리 요소만 빌려와 배경색이 먹게 함). App 이 뜰 때 한 번"""
+    st = ttk.Style(root)
+    try:
+        st.element_create("CB.border", "from", "clam", "Button.border")
+    except tk.TclError:
+        pass
+    st.layout("Color.TButton", [("CB.border", {"sticky": "nswe", "border": 1, "children": [
+        ("Button.focus", {"sticky": "nswe", "children": [("Button.padding", {"sticky": "nswe", "children": [("Button.label", {"sticky": "nswe"})]})]})]})])
+    st.configure("Color.TButton", padding=(4, 1), relief="raised", borderwidth=1)
+    for name, (bg, fg, hov) in BTN_KINDS.items():
+        st.configure(f"{name}.Color.TButton", background=bg, foreground=fg, bordercolor=bg, lightcolor=bg, darkcolor=bg)
+        st.map(f"{name}.Color.TButton", background=[("disabled", "#D6D6D6"), ("pressed", hov), ("active", hov)],
+               foreground=[("disabled", "#8A8A8A")], lightcolor=[("active", hov)], darkcolor=[("active", hov)], bordercolor=[("active", hov)])
+
+
+class _ColorButton(ttk.Button):
+    """ttk.Button 과 같지만 style 을 안 주면 글자(text)를 보고 구분 색을 입힘"""
+
+    def __init__(self, master=None, **kw):
+        if "style" not in kw and kw.get("text") is not None:
+            kind = btn_kind(kw.get("text"))
+            if kind:
+                kw["style"] = f"{kind}.Color.TButton"
+        super().__init__(master, **kw)
+
+
+ttk.Button = _ColorButton
 from tkinter.scrolledtext import ScrolledText
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont, ImageTk, ImageFilter, ImageEnhance
@@ -9673,6 +9738,7 @@ class ItemTree(ttk.Frame):
 class App(tk.Tk):
     def __init__(self):
         super().__init__()
+        setup_button_styles(self)   # 구분별 버튼 색 (만들기=초록 · AI=보라 · 재생=파랑 · 저장/파일=회청 · 취소=빨강 · 설정=노랑)
         self.title("쇼츠 스크롤 영상 메이커 PRO (Claude Max) — 소설 · 실화 · 과학 · 자연현상")
         sh_ = self.winfo_screenheight()
         self.geometry(f"1460x{min(980, max(760, sh_ - 90))}")   # 화면이 작으면 창도 거기에 맞춤
@@ -10019,7 +10085,7 @@ class App(tk.Tk):
             tabs[name] = ttk.Frame(nb, padding=6, style="Tab.TFrame")
             nb.add(tabs[name], text=name)
             tabs[name].n = 0
-            self.tab_btns[name] = ttk.Button(self.tab_row, text=name, command=lambda n_=name: self.open_settings(n_))
+            self.tab_btns[name] = ttk.Button(self.tab_row, text=name, style="Edit.Color.TButton", command=lambda n_=name: self.open_settings(n_))
             self.tab_btns[name].pack(side="left", padx=(4, 0))
         by_key = {k: (lb, t) for _, k, lb, t, _ in FIELDS}
         for name, _, keys in UI_TABS:          # 묶음 순서대로 칸 배치
