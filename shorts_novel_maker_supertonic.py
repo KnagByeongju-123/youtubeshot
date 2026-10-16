@@ -1273,7 +1273,7 @@ def run_cli(args, input_text=None, timeout=CLAUDE_TIMEOUT):
     exe = find_claude()
     if not exe:
         raise RuntimeError("Claude Code가 설치되어 있지 않습니다.\n설치 후 터미널에서 claude 를 실행해 Max 계정으로 로그인하세요.")
-    with tempfile.TemporaryDirectory(prefix="shorts_novel_") as work:
+    with tempfile.TemporaryDirectory(prefix="shorts_novel_", ignore_cleanup_errors=True) as work:
         try:
             p = subprocess.Popen([exe] + args, stdin=subprocess.PIPE, cwd=work, env=safe_env(),
                                  stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
@@ -7495,7 +7495,27 @@ def music_group(name):
 
 
 MUSIC_OVERLAYS = ["없음", "먼지 빛", "반딧불", "눈", "빗줄기", "호흡 가이드"]
-MUSIC_MOTIONS = ["천천히 줌(기본)", "천천히 줌인만", "숨쉬듯 확대·축소", "좌우로 천천히", "위아래로 천천히", "없음(정지)"]
+MUSIC_MOTIONS = ["입체 움직임(2.5D 깊이 AI)", "천천히 줌(기본)", "천천히 줌인만", "숨쉬듯 확대·축소", "좌우로 천천히", "위아래로 천천히", "없음(정지)"]
+
+
+def image_depth_map(im, log=None):
+    """붙여넣은 그림(PIL)의 깊이 지도(L 이미지, 밝을수록 가까움) - 깊이 AI 모델이 있을 때. 평평한 그림·모델 없음이면 None"""
+    if not depth_ready() or _cv2 is None:
+        return None
+    im = im.convert("RGB")
+    small = im.copy()
+    small.thumbnail((1280, 1280))
+    os.makedirs(os.path.join(BASE, "output", "media"), exist_ok=True)
+    key = hashlib.md5(small.tobytes()).hexdigest()[:16]
+    p = os.path.join(BASE, "output", "media", f"_bg_{key}.jpg")
+    if not os.path.exists(p):
+        small.save(p, quality=92)
+    ensure_depth_maps([p], log)
+    d = load_depth(p)
+    if d is None:
+        return None
+    dim = Image.fromarray((d * 255).astype(np.uint8), "L").resize(im.size, Image.BILINEAR)
+    return dim.filter(ImageFilter.GaussianBlur(max(1, im.width // 400)))
 
 MUSIC_PROMPT_SYSTEM = """너는 유튜브 명상·집중·수면 음악 채널의 아트 디렉터다. 음악 종류와 제목, 사용자가 적은 분위기에 맞는 배경 이미지 프롬프트를 만든다.
 - images: 3개. 서로 다른 장면(예: 자연 풍경 / 실내 공간 / 추상 빛). 각 prompt 는 영어 50~80단어: 장소·시간·빛·색감·질감·구도, 아주 고요하고 움직임이 적은 장면, 사람 없음(or 뒷모습 실루엣), 글자·워터마크 금지.
@@ -9357,11 +9377,16 @@ def trim_borders(im, max_frac=0.12):
 class MusicLoop:
     """음악 영상의 그림 부분: 배경 그림이 천천히 줌인·줌아웃(끊김 없이 반복) + 입자 효과 + 제목. duration 초짜리 반복 조각"""
 
-    def __init__(self, s, bg_image, overlay, title, sub, colors, show_text=True, L=32.0, motion="천천히 줌"):
+    def __init__(self, s, bg_image, overlay, title, sub, colors, show_text=True, L=32.0, motion="천천히 줌", depth=None):
         self.s, self.duration, self.L, self.motion = s, L, L, motion
         self.overlay, self.title, self.sub, self.show_text = overlay, title, sub, show_text
+        self.dbig = None
         if bg_image is not None:
             im = trim_borders(bg_image.convert("RGB"))
+            if depth is not None and str(motion).startswith("입체"):
+                dm = depth if depth.size == im.size else depth.resize(im.size, Image.BILINEAR)
+                k0 = max(W / im.width, H / im.height) * 1.12
+                self.dbig = dm.resize((int(im.width * k0) + 2, int(im.height * k0) + 2), Image.BILINEAR)
         else:
             c1, c2 = np.array(hex_rgb(colors[0]), np.float32), np.array(hex_rgb(colors[1]), np.float32)
             g = np.linspace(0, 1, H, dtype=np.float32)[:, None, None]
@@ -9420,6 +9445,8 @@ class MusicLoop:
         s_, c_ = np.sin(2 * np.pi * ph), 0.5 - 0.5 * np.cos(2 * np.pi * ph)
         if mo.startswith("없음"):
             z, dx, dy = 1.06, 0.0, 0.0
+        elif mo.startswith("입체"):   # 카메라가 천천히 돌 듯: 살짝 줌 + 좌우 흐름, 깊이로 앞뒤가 다르게 움직임
+            z, dx, dy = 1.0 + 0.05 * c_, s_ * 0.35, np.sin(4 * np.pi * ph) * 0.08
         elif mo.startswith("숨쉬듯"):
             z, dx, dy = 1.0 + 0.1 * (0.5 - 0.5 * np.cos(4 * np.pi * ph)), 0.0, 0.0
         elif mo.startswith("좌우"):
@@ -9433,7 +9460,11 @@ class MusicLoop:
         cw, ch = W * 1.12 / z, H * 1.12 / z
         cx = self.big.width / 2 + dx * (self.big.width - cw) / 2
         cy = self.big.height / 2 + dy * (self.big.height - ch) / 2
-        bg = extent_resize(self.big, (W, H), (cx - cw / 2, cy - ch / 2, cx + cw / 2, cy + ch / 2))
+        box = (cx - cw / 2, cy - ch / 2, cx + cw / 2, cy + ch / 2)
+        bg = extent_resize(self.big, (W, H), box)
+        if self.dbig is not None:   # 2.5D: 가까운 것은 많이, 먼 것은 조금 밀려 입체감 (주기 L → 끝과 처음이 이어짐)
+            dcrop = np.asarray(extent_resize(self.dbig, (W, H), box), np.float32)
+            bg = parallax_warp(bg, dcrop, W * 0.028 * s_, H * 0.012 * np.sin(2 * np.pi * ph + 1.3))
         arr = (np.asarray(bg).astype(np.float32) * self.vig * 0.92).astype(np.uint8)
         im = Image.fromarray(arr).convert("RGBA")
         ov = self.overlay
@@ -14825,8 +14856,26 @@ class App(tk.Tk):
         ttk.Entry(f, textvariable=sub_v, width=46).grid(row=3, column=1, columnspan=4, sticky="w", padx=4)
         bgf = ttk.LabelFrame(left, text="② 배경 (그림 또는 짧은 반복 영상 · 없으면 색 배경) ", padding=6)
         bgf.pack(fill="x", pady=6)
-        bg = {"im": None, "video": None}
+        bg = {"im": None, "video": None, "depth": None}
         bstat = ttk.Label(bgf, text="그림 없음 → 은은한 색 배경", foreground="gray")
+
+        def calc_depth(im):
+            """그림의 깊이(앞뒤)를 뒤에서 계산 → 끝나면 미리보기 갱신 (입체 움직임용)"""
+            bg["depth"] = None
+            if not depth_ready() or _cv2 is None:
+                return
+
+            def job():
+                try:
+                    d = image_depth_map(trim_borders(im), self.write_log)   # 화면에 쓰는 것과 같은(테두리 잘라낸) 그림으로
+                except Exception as e:
+                    self.write_log("깊이 계산 실패: " + str(e)[:120])
+                    d = None
+                if bg["im"] is im:
+                    bg["depth"] = d
+                    self.q.put(lambda: (bstat.config(text=bstat.cget("text") + (" · 입체 깊이 준비됨" if d is not None else " · (평면 그림이라 입체 움직임 대신 줌)")),
+                                        preview()))
+            threading.Thread(target=job, daemon=True).start()
         r0 = ttk.Frame(bgf)
         r0.pack(fill="x")
         ttk.Label(r0, text="원하는 분위기·장면(선택)").pack(side="left")
@@ -14885,6 +14934,7 @@ class App(tk.Tk):
         def got(im):
             bg["im"] = im.convert("RGB")
             bg["video"] = None
+            calc_depth(bg["im"])
             bstat.config(text=f"✅ 그림 받음 ({im.width}×{im.height})", foreground="#080")
             preview()
 
@@ -14993,7 +15043,7 @@ class App(tk.Tk):
 
         def loop_for():
             P = MUSIC_PRESETS[cur()]
-            return MusicLoop(s, bg["im"], ov.get(), title_v.get(), sub_v.get(), P["colors"], show_text.get(), motion=mo.get())
+            return MusicLoop(s, bg["im"], ov.get(), title_v.get(), sub_v.get(), P["colors"], show_text.get(), motion=mo.get(), depth=bg["depth"])
 
         def preview():
             try:
