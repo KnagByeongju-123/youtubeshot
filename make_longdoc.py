@@ -1,7 +1,9 @@
 """장문(긴 나레이션 다큐) 자동 제작: 대본 → 나레이션 → MP4 → 썸네일·업로드 문구
 - 설정은 '장문_설정.json' (처음 실행하면 기본값으로 만들어짐 - 주제·길이·배경음 크기를 고쳐서 쓰세요)
-- 일시정지: 장문_일시정지.bat (출근 전) / 재개: 장문_재개.bat
-- 창을 닫거나 PC를 꺼도: 장문_만들기.bat 을 다시 실행하면 끝난 단계(조사·구성안·챕터·나레이션 문단·영상 5분 구간)는 건너뛰고 이어서 함
+- 일시정지: 장문_일시정지.bat (출근 전) / 재개: 장문_재개.bat (만들기 창이 꺼져 있으면 새로 띄워서 이어서 함)
+- 끄기 전: 장문_끄기전_정리.bat (지금 단계가 끝나면 멈추고 저장 → PC 끄기/절전 선택)
+- 창을 닫거나 PC를 꺼도: 장문_만들기.bat(또는 장문_재개.bat)을 다시 실행하면 끝난 단계(조사·구성안·챕터·나레이션 문단·영상 구간)는 건너뛰고 이어서 함
+- 주의: 웹 조사·챕터 집필처럼 AI가 답하는 동안(최대 15분)은 중간 저장이 없음 → 그 사이 끄면 그 단계 하나만 다시 함
 - 프로그램 설정 파일(shorts_novel_config.json)은 바꾸지 않음
 """
 import importlib.util
@@ -207,7 +209,8 @@ def safe_stop():
         open(PAUSE, "w").close()
         if not already:
             print("⏸ 일시정지를 요청했어요. 지금 하던 작은 단계가 끝날 때까지 기다립니다...")
-            print("   (AI가 글이나 사진을 찾는 중이면 몇 분 걸릴 수 있어요. 기다리기 싫으면 이 창을 닫고 그냥 꺼도 저장된 곳부터 이어집니다)")
+            print("   (AI가 조사·집필 중이면 그 답이 올 때까지 최대 15분 걸릴 수 있어요. 기다리기 싫으면 이 창을 닫고 그냥 꺼도 되고,")
+            print("    그러면 그 단계 하나만 다시 하게 됩니다. 끝난 단계는 모두 저장되어 있습니다)")
             t0 = time.time()
             while not _paused_in_log(size):
                 if not _job_procs():
@@ -249,11 +252,21 @@ if __name__ == "__main__":
         print("   다시 하려면 장문_재개.bat 을 누르세요. (PC를 꺼도 장문_만들기.bat 으로 이어서 할 수 있어요)")
         sys.exit(0)
     if "--resume" in sys.argv:       # 장문_재개.bat
-        if os.path.exists(PAUSE):
+        import subprocess
+        was_paused = os.path.exists(PAUSE)
+        if was_paused:
             os.remove(PAUSE)
-            print("▶ 재개했습니다. 만들기 창에서 이어서 진행됩니다.")
+        if _job_procs():
+            print("▶ 재개했습니다. 만들기 창에서 이어서 진행됩니다." if was_paused else "이미 만들기가 돌아가고 있어요. (일시정지 상태 아님)")
         else:
-            print("일시정지 상태가 아니에요. (꺼진 상태라면 장문_만들기.bat 을 실행하세요)")
+            # 만들기 창이 없음(끄기 전 정리로 멈췄거나 PC를 껐다 켠 경우) → 만들기를 새 창으로 띄워 저장된 곳부터 이어서
+            print("만들기 창이 꺼져 있어 새로 띄웁니다. 끝난 단계는 건너뛰고 멈춘 곳부터 이어서 합니다.")
+            bat = os.path.join(HERE, "장문_만들기.bat")
+            if os.path.exists(bat):
+                subprocess.Popen(f'start "" "{bat}"', shell=True, cwd=HERE)
+            else:
+                subprocess.Popen([sys.executable, "-X", "utf8", os.path.abspath(__file__)], cwd=HERE,
+                                 creationflags=getattr(subprocess, "CREATE_NEW_CONSOLE", 0))
         sys.exit(0)
     if os.path.exists(PAUSE):        # 일시정지된 채로 PC를 껐다 켠 경우: 다시 만들기를 누르면 바로 진행
         os.remove(PAUSE)

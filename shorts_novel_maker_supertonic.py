@@ -1270,6 +1270,30 @@ def ask_json(model, system, user, tools=None, timeout=None):
     return parse_json(ask_claude(model, system, user, tools, timeout))
 
 
+def ask_json_alive(model, system, user, tools=None, timeout=None, log=None, label="AI 작업", every=120):
+    """ask_json 과 같지만 오래 걸리는 동안(웹 조사 등) every 초마다 '아직 진행 중'을 log 에 남김 → 멈춘 것처럼 보이지 않게"""
+    if not log:
+        return ask_json(model, system, user, tools, timeout)
+    box = {}
+
+    def run():
+        try:
+            box["r"] = ask_json(model, system, user, tools, timeout)
+        except BaseException as e:   # noqa
+            box["e"] = e
+    th = threading.Thread(target=run, daemon=True)
+    th.start()
+    t0 = time.time()
+    lim = timeout or (WEB_TIMEOUT if tools else CLAUDE_TIMEOUT)
+    while th.is_alive():
+        th.join(every)
+        if th.is_alive():
+            log(f"  ⏳ {label} 진행 중... {int((time.time() - t0) / 60)}분 경과 (AI가 작업하는 동안은 기록이 없습니다 · 최대 {int(lim / 60)}분)")
+    if "e" in box:
+        raise box["e"]
+    return box["r"]
+
+
 def explain_api_error(code, body, who=""):
     """API 오류를 쉬운 한국어로"""
     msg = body
@@ -12012,7 +12036,7 @@ class App(tk.Tk):
             if not research:
                 log("ℹ 최신 정보 반영을 위해 다큐는 웹 조사를 항상 합니다")
             log("🔎 웹 검색으로 최신 정보부터 조사 중... (3~10분)")
-            info = ask_json(model, DOC_RESEARCH_SYSTEM, base, tools=WEB_TOOLS)
+            info = ask_json_alive(model, DOC_RESEARCH_SYSTEM, base, tools=WEB_TOOLS, log=log, label="웹 조사")
             topic = info.get("topic") or topic
             sources = [str(x) for x in info.get("sources") or []]
             facts = json.dumps({k: info.get(k) for k in ("topic", "facts", "stories", "questions", "myths", "recent")}, ensure_ascii=False)
