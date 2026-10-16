@@ -141,10 +141,77 @@ def pick_topic(m, app, genre, seen, log):
     return ideas[0]
 
 
+MIN_PER_EP = (4.0, 6.0)   # 10분 영상 한 편에 걸리는 시간(이 PC 실측): 영상 1분당 4~6분 → 10분이면 40~60분
+
+
+def _fmt_hours(mins):
+    h, mm = int(mins // 60), int(round(mins % 60))
+    return ((f"{h}시간 " if h else "") + (f"{mm}분" if mm or not h else "")).strip()
+
+
+def ask_batch_plan(c):
+    """연속 제작 시작 전: 몇 편 만들지 묻고, 예상 시간을 보여 준 뒤 정말 할지 확인. 설정 파일의 연속_편수를 갱신"""
+    out_root = os.path.join(HERE, "output", "장문")
+    st = {}
+    try:
+        st = json.load(open(os.path.join(out_root, "_연속제작_진행.json"), encoding="utf-8"))
+    except Exception:
+        pass
+    done = len(st.get("done") or [])
+    cur = st.get("current") or {}
+    minutes = float(c.get("길이_분", 10))
+    n0 = int(c.get("연속_편수") or 5)
+    print("=" * 60)
+    print(f"🔁 장문 연속 제작  (한 편 = 약 {minutes:.0f}분 영상 · 소재를 돌아가며 AI가 인기 주제를 고름)")
+    if done or cur.get("주제"):
+        print(f"   이미 끝난 편: {done}개" + (f" · 만들다 멈춘 편: {cur.get('주제')}" if cur.get("주제") else "") + "  → 끝난 편 다음부터 이어서 합니다")
+    print("=" * 60)
+    try:
+        ans = input(f"모두 몇 편까지 만들까요? [Enter = {n0}편] : ").strip()
+    except EOFError:
+        ans = ""
+    if ans:
+        try:
+            n0 = max(1, int(float(ans)))
+        except ValueError:
+            print("숫자가 아니어서 기본값을 씁니다.")
+    if n0 <= done:
+        print(f"이미 {done}편이 끝나 있어 더 만들 편이 없습니다. 더 만들려면 {done}보다 큰 숫자를 넣으세요.")
+        return False
+    todo = n0 - done
+    lo, hi = minutes * MIN_PER_EP[0] * todo, minutes * MIN_PER_EP[1] * todo
+    plan_extra = 0 if len(st.get("plan") or []) >= n0 else 10
+    print()
+    print(f"▶ 만들 편수: {todo}편" + (f" (끝난 {done}편 제외, 총 {n0}편)" if done else ""))
+    print(f"▶ 예상 소요: 약 {_fmt_hours(lo + plan_extra)} ~ {_fmt_hours(hi + plan_extra)}"
+          + (f"  (기획·검토 {plan_extra}분 포함, " if plan_extra else "  (") + f"한 편 {_fmt_hours(minutes * MIN_PER_EP[0])}~{_fmt_hours(minutes * MIN_PER_EP[1])})")
+    print(f"   끝나는 시각(예상): {time.strftime('%H:%M', time.localtime(time.time() + (lo + plan_extra) * 60))} ~ "
+          f"{time.strftime('%m/%d %H:%M', time.localtime(time.time() + (hi + plan_extra) * 60))}")
+    print("   중간에 멈추려면 장문_일시정지.bat, PC를 꺼야 하면 장문_끄기전_정리.bat (끝난 편은 남고 이어서 할 수 있음)")
+    try:
+        ok = input("이대로 시작할까요? (y = 시작 / 그 외 = 취소) : ").strip().lower()
+    except EOFError:
+        ok = ""
+    if ok not in ("y", "yes", "ㅇ", "예", "네"):
+        return False
+    if n0 != int(c.get("연속_편수") or 5):
+        c["연속_편수"] = n0
+        try:
+            saved = json.load(open(CFG, encoding="utf-8"))
+            saved["연속_편수"] = n0
+            json.dump(saved, open(CFG, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+        except Exception:
+            pass
+    return True
+
+
 def main():
     if not os.path.exists(CFG):
         json.dump(DEFAULT, open(CFG, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     c = dict(DEFAULT, **json.load(open(CFG, encoding="utf-8")))
+    if BATCH and not ask_batch_plan(c):
+        print("취소했습니다. (아무것도 만들지 않음)")
+        return
     spec = importlib.util.spec_from_file_location("snm", os.path.join(HERE, "shorts_novel_maker_supertonic.py"))
     m = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(m)

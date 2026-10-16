@@ -2361,8 +2361,17 @@ THUMB_SYSTEM = """너는 구독자 100만 유튜브 채널의 썸네일 디자�
 - prompt: 썸네일 그림 생성용 영어 프롬프트(60~90단어). 인기 썸네일 공식대로: 피사체 하나(인물 얼굴 클로즈업·감정이 보이는 표정, 또는 상징물)가 화면을 크게 채우고,
   극적인 조명·강한 색 대비, 배경은 단순하게, 세로 9:16, 아래쪽 35%는 어둡고 단순하게 비워 둠(글자 자리). 글자·워터마크 금지(no text).
   실존 인물 얼굴 재현·유명 캐릭터·상표 금지. 명화 이야기면 그 그림을 베끼지 말고 그 시대 분위기의 장면으로.
-세 시안은 서로 다른 각도(궁금증형 / 숫자·사실형 / 감정형)로.
-반드시 JSON만 출력: {"variants": [{"big": "...", "big2": "...", "emph": "...", "small": "...", "mood": "...", "prompt": "..."}]}"""
+- photo: [사진 목록]에서 이 문구와 가장 어울리는 사진 번호(1부터). 얼굴·상징물이 크게 나오고 글자를 올려도 알아볼 사진. 없으면 0.
+- style: 아래 스타일 중 이 시안에 가장 맞는 것 하나 (이름 그대로):
+  "기본(사진 꽉 + 큰 글자)" 범용 / "반분할(글 패널 + 사진)" 정보·설명형 / "노랑 패널(고대비)" 숫자·사실 강조 / "시네마 띠" 다큐·감동 /
+  "뉴스 속보" 실화·사건 / "미스터리 다크" 미스터리·소름 / "빨간 강조(원 + 화살표)" 충격·반전(사진 속 한 지점을 가리킬 때)
+세 시안은 서로 다른 각도(궁금증형 / 숫자·사실형 / 감정형)로, 사진과 스타일도 가능하면 서로 다르게.
+반드시 JSON만 출력: {"variants": [{"big": "...", "big2": "...", "emph": "...", "small": "...", "mood": "...", "photo": 1, "style": "...", "prompt": "..."}]}"""
+
+THUMB_PICK_SYSTEM = """너는 유튜브 썸네일 A/B 테스트 전문가다. 후보 썸네일 이미지들을 Read 로 직접 열어 보고, 영상 내용에 맞으면서 가장 클릭을 부를 것을 하나 고른다.
+기준: (1) 작은 화면(휴대폰 피드)에서도 글자가 한눈에 읽히는가 (2) 사진이 내용과 맞고 글자에 가려지지 않았는가 (3) 궁금증·감정이 바로 전해지는가
+(4) 과장·오해를 부르지 않는가 (5) 글자 겹침·잘림·사진 어색함 같은 결함이 없는가.
+반드시 JSON만 출력: {"best": 후보 번호(1부터), "reason": "고른 이유 한 줄", "scores": [후보별 1~10점]}"""
 
 THUMB_MOODS = {   # mood: (큰 글자색, 강조색, 작은 띠 배경, 작은 띠 글자)
     "충격": ("#FFE135", "#FF3B3B", "#E53935", "#FFFFFF"),
@@ -2446,25 +2455,95 @@ def publish_kit(model, base, title, story, category, genre, s, chapters=None, so
         log("  📝 업로드 문구·설명란 저장: " + os.path.basename(base) + "_설명란.txt (유튜브 설명란에 그대로 붙여넣기)")
     except Exception as e:
         log("  📝 업로드 문구 자동 생성 실패(📝 버튼으로 다시 만들 수 있어요): " + str(e).splitlines()[0][:100])
-    try:   # 2) 유튜브 썸네일 (AI 문구 + 대본 속 가장 큰 사진)
-        try:
-            download_free_font("ofl/blackhansans/BlackHanSans-Regular.ttf")
-        except Exception:
-            pass
-        plist = "\n".join(f"{i + 1}. {cap}" for i, (_, cap) in enumerate(story_photos(story))) or "(사진 없음)"
-        d = ask_script_json(model, fit_ratio(THUMB_SYSTEM), f"화면: {ratio_ko()}\n콘텐츠 종류: {category}\n[제목] {title}\n\n[본문]\n{body[:3000]}\n\n[사진 목록]\n{plist}")
-        vs = [x for x in (d.get("variants") or []) if isinstance(x, dict) and x.get("big")]
-        if vs:
-            size = (1080, 1920) if portrait else (1280, 720)
-            im = render_thumb(vs[0], s, best_photo(story), size=size, style=s.get("thumb_style")).convert("RGB")
-            out = base + "_썸네일_유튜브.jpg"
-            for q in (92, 85, 75, 65):          # 유튜브 썸네일은 2MB 이하
-                im.save(out, "JPEG", quality=q, optimize=True)
-                if os.path.getsize(out) < 2_000_000:
-                    break
-            log(f"  🖼 유튜브 썸네일 저장: {os.path.basename(out)}  (문구: {vs[0].get('big', '')} {vs[0].get('big2', '')})")
+    try:   # 2) 유튜브 썸네일: 문구 3안 × 어울리는 사진·스타일 → 후보 여러 장 → AI가 직접 보고 하나 고름
+        make_thumbnails(model, base, title, story, category, s, log)
     except Exception as e:
         log("  🖼 썸네일 자동 생성 실패(🎯 AI 썸네일 버튼으로 만들 수 있어요): " + str(e).splitlines()[0][:100])
+
+
+def _save_jpg_2mb(im, out):
+    for q in (92, 85, 75, 65):          # 유튜브 썸네일은 2MB 이하
+        im.save(out, "JPEG", quality=q, optimize=True)
+        if os.path.getsize(out) < 2_000_000:
+            break
+
+
+def make_thumbnails(model, base, title, story, category, s, log=None):
+    """썸네일 기획: AI가 문구 3안과 각각 어울리는 사진·스타일을 정함 → 후보 5~6장 그림 → 후보 모음표 저장 →
+    AI가 후보를 직접 보고(Read) 가장 좋은 것을 _썸네일_유튜브.jpg 로. 나머지는 _썸네일_후보\ 폴더에 남겨 바꿔 쓸 수 있게"""
+    log = log or (lambda x: None)
+    body = story_text_only(story)
+    portrait = H > W
+    try:
+        download_free_font("ofl/blackhansans/BlackHanSans-Regular.ttf")
+    except Exception:
+        pass
+    photos = story_photos(story)
+    plist = "\n".join(f"{i + 1}. {cap}" for i, (_, cap) in enumerate(photos)) or "(사진 없음)"
+    d = ask_script_json(model, fit_ratio(THUMB_SYSTEM), f"화면: {ratio_ko()}\n콘텐츠 종류: {category}\n[제목] {title}\n\n[본문]\n{body[:3000]}\n\n[사진 목록]\n{plist}")
+    vs = [x for x in (d.get("variants") or []) if isinstance(x, dict) and x.get("big")]
+    if not vs:
+        raise RuntimeError("썸네일 문구를 만들지 못했습니다")
+    size = (1080, 1920) if portrait else (1280, 720)
+    fallback = best_photo(story)
+
+    def photo_of(v):
+        try:
+            k = int(v.get("photo") or 0)
+            if 1 <= k <= len(photos):
+                p = photos[k - 1][0]
+                return Image.open(p if os.path.isabs(p) else os.path.join(BASE, p)).convert("RGB")
+        except Exception:
+            pass
+        return fallback
+    user_style = str(s.get("thumb_style") or THUMB_STYLES[0])
+    cands = []   # (설명, PIL)
+    for i, v in enumerate(vs[:3]):
+        st_ = v.get("style") if v.get("style") in THUMB_STYLES else (user_style if not user_style.startswith("자동") else None)
+        cands.append((f"{i + 1}안 '{v.get('big', '')} {v.get('big2', '')}' · {st_ or '자동'}", render_thumb(v, s, photo_of(v), size=size, style=st_)))
+    # 1안은 다른 스타일로도 2장 더 (스타일 비교)
+    used = {c[0].split(" · ")[-1] for c in cands}
+    for st_ in ("빨간 강조(원 + 화살표)", "노랑 패널(고대비)", "시네마 띠", "뉴스 속보", "미스터리 다크"):
+        if len(cands) >= 5:
+            break
+        if st_ not in used:
+            used.add(st_)
+            cands.append((f"1안 '{vs[0].get('big', '')} {vs[0].get('big2', '')}' · {st_}", render_thumb(vs[0], s, photo_of(vs[0]), size=size, style=st_)))
+    cdir = base + "_썸네일_후보"
+    os.makedirs(cdir, exist_ok=True)
+    paths = []
+    for i, (desc, im) in enumerate(cands):
+        p = os.path.join(cdir, f"{i + 1:02d}.jpg")
+        _save_jpg_2mb(im.convert("RGB"), p)
+        paths.append(p)
+    # 후보 모음표 (사람이 한눈에 보고 바꿔 고를 수 있게)
+    tw, th = (240, 427) if portrait else (426, 240)
+    cols = len(cands) if portrait else 3
+    rows = (len(cands) + cols - 1) // cols
+    sheet = Image.new("RGB", (tw * cols + 8 * (cols + 1), (th + 30) * rows + 8), "#202020")
+    dr = ImageDraw.Draw(sheet)
+    fnt = load_font(s.get("font_path"), 15)
+    for i, (desc, im) in enumerate(cands):
+        x, y = 8 + (i % cols) * (tw + 8), 8 + (i // cols) * (th + 30)
+        sheet.paste(im.convert("RGB").resize((tw, th), Image.LANCZOS), (x, y))
+        dr.text((x + 2, y + th + 6), f"{i + 1}. {desc[:40]}", font=fnt, fill="white")
+    sheet.save(base + "_썸네일_후보.jpg", "JPEG", quality=88)
+    # AI가 직접 보고 고름
+    best, reason = 1, ""
+    try:
+        clist = "\n".join(f"{i + 1}. {desc}  → {p}" for i, (desc, _), p in zip(range(len(cands)), cands, paths))
+        pk = ask_json(model, THUMB_PICK_SYSTEM, f"[영상 제목] {title}\n[내용 요약] {body[:800]}\n\n[후보 썸네일 - Read 로 하나씩 열어 볼 것]\n{clist}", tools=["Read"])
+        b = int(pk.get("best") or 1)
+        if 1 <= b <= len(cands):
+            best = b
+        reason = str(pk.get("reason") or "")
+    except Exception as e:
+        log("  썸네일 고르기(AI 보기) 실패 → 1안 사용: " + str(e).splitlines()[0][:80])
+    out = base + "_썸네일_유튜브.jpg"
+    shutil.copyfile(paths[best - 1], out)
+    log(f"  🖼 유튜브 썸네일: 후보 {len(cands)}장 중 {best}번 선택 ({cands[best - 1][0]})" + (f" - {reason[:90]}" if reason else ""))
+    log(f"     다른 후보는 {os.path.basename(cdir)}\\ 와 {os.path.basename(base)}_썸네일_후보.jpg 에서 볼 수 있어요")
+    return out
 
 
 def story_photos(story):
