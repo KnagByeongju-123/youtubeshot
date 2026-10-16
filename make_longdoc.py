@@ -4,7 +4,8 @@
 - 끄기 전: 장문_끄기전_정리.bat (지금 단계가 끝나면 멈추고 저장 → PC 끄기/절전 선택)
 - 창을 닫거나 PC를 꺼도: 장문_만들기.bat(또는 장문_재개.bat)을 다시 실행하면 끝난 단계(조사·구성안·챕터·나레이션 문단·영상 구간)는 건너뛰고 이어서 함
 - 주의: 웹 조사·챕터 집필처럼 AI가 답하는 동안(최대 15분)은 중간 저장이 없음 → 그 사이 끄면 그 단계 하나만 다시 함
-- 연속 제작: 장문_연속제작.bat → AI가 인기 주제를 골라 '연속_편수' 편을 차례로 만듦 (소재는 '연속_소재' 목록을 돌아가며, 비우면 기본 목록)
+- 연속 제작: 장문_연속제작.bat → 기획자 AI가 전체 라인업을 짜고 검토자 AI가 겹침·반응·사실 확인 가능성을 평가해 고친 뒤,
+  그 순서대로 '연속_편수' 편을 만듦 (소재는 '연속_소재' 목록 안에서, 비우면 기본 목록). 기획 기록: output\장문\_연속제작_기획.txt
 - 프로그램 설정 파일(shorts_novel_config.json)은 바꾸지 않음
 """
 import importlib.util
@@ -46,6 +47,69 @@ def log(x):
     print(line, flush=True)
     with open(LOG_FILE, "a", encoding="utf-8") as f:
         f.write(line + "\n")
+
+
+PLANNER_SYSTEM = """너는 한국 유튜브 지식 다큐 채널의 수석 기획자다. 10분짜리 사실 기반 롱폼 영상 여러 편의 라인업(편성표)을 짠다.
+원칙: (1) 실제로 존재하는 사건·장소·풍습·발견만 (지어내지 않는다) (2) 각 편은 제목처럼 궁금증을 부르는 질문·반전형 주제 35자 이내
+(3) 편 사이에 대상·지역·시대·감정(놀라움/감동/소름/유머)이 겹치지 않게 골고루 (4) 최근 1~2년 화제·새 발견과 이어진 편을 절반 이상
+(5) 위키미디어 커먼즈 등에서 무료 사진을 구하기 쉬운 주제 우선 (6) 민감한 주제(참사 피해자 조롱, 특정 종교·민족 비하)는 피한다.
+WebSearch 로 최근 화제와 유튜브에서 비슷한 긴 영상의 반응을 확인하고 고른다.
+반드시 JSON만 출력: {"lineup": [{"genre": "소재(주어진 목록 중 하나 그대로)", "topic": "주제", "why": "왜 지금 반응이 좋을지 한 줄", "hook": "첫 문장 훅 한 줄"}], "note": "라인업 전체 의도 두 줄"}"""
+
+REVIEWER_SYSTEM = """너는 유튜브 지식 다큐 채널의 까다로운 편성 검토자다. 기획자가 낸 라인업을 편마다 평가하고, 문제가 있으면 같은 소재 안에서 더 나은 주제로 바꾼다.
+검토 항목: (a) 겹침 - 다른 편이나 이미 만든 주제와 대상·질문이 비슷한가 (b) 반응 - 제목만 보고 누를 만큼 궁금한가, 너무 교과서적이진 않은가
+(c) 사실 확인 가능성 - 10분을 채울 만큼 공개된 자료(기사·논문·백과)가 충분한가, 루머·음모론에 기대지 않는가 (d) 사진 - 무료 사진을 구할 수 있는 대상인가
+(e) 안전 - 비하·선정·저작권 문제가 없는가. WebSearch 로 의심스러운 편은 실제로 자료가 있는지 확인한다.
+각 편에 keep(그대로) 또는 replace(바꿈)를 정하고, replace 면 새 topic·why·hook 을 쓴다. 바꾸는 편은 전체의 절반을 넘기지 않는다.
+반드시 JSON만 출력: {"review": [{"idx": 0, "verdict": "keep|replace", "score": 1~10, "reason": "한 줄", "topic": "유지면 원래 주제, 바꾸면 새 주제", "genre": "소재", "why": "...", "hook": "..."}], "note": "총평 두 줄"}"""
+
+
+def plan_lineup(m, app, genres, n, minutes, seen, log, out_root):
+    """기획자 AI → 검토자 AI 두 단계로 n편 라인업을 정함. 기록은 _연속제작_기획.txt 에"""
+    model = app.model_var.get().strip()
+    topics = m.cat_info(m.DOC_CATEGORY)[1]
+    glist = "\n".join(f"- {g_}: {topics.get(g_, ('', ''))[0][:120]}" for g_ in genres)
+    seen_txt = ("\n\n[이미 만든 주제 - 같은 것은 물론 비슷한 것도 피한다]\n- " + "\n- ".join(seen[-60:])) if seen else ""
+    base = (f"영상: 각 {minutes}분 사실 기반 나레이션 다큐, 총 {n}편\n오늘: {time.strftime('%Y년 %m월 %d일')}\n"
+            f"쓸 수 있는 소재 목록(각 편의 genre 는 이 중 하나, 가능하면 서로 다른 소재로):\n{glist}" + seen_txt)
+    log(f"🧭 기획자 AI: {n}편 라인업 짜는 중... (웹 검색, 3~8분)")
+    d1 = m.ask_json_alive(model, PLANNER_SYSTEM, base + f"\n\n{n}편 라인업을 짜라.", tools=m.WEB_TOOLS, log=log, label="기획자")
+    lineup = [x for x in (d1.get("lineup") or []) if isinstance(x, dict) and str(x.get("topic", "")).strip()][:n]
+    if not lineup:
+        raise RuntimeError("기획자가 라인업을 만들지 못했습니다")
+    for x in lineup:
+        if x.get("genre") not in topics:
+            x["genre"] = genres[0]
+    for i, x in enumerate(lineup):
+        log(f"   {i + 1}. [{x['genre']}] {x['topic']}  - {str(x.get('why', ''))[:60]}")
+    log("🔍 검토자 AI: 겹침·반응·사실 확인 가능성 평가 중... (웹 검색, 3~8분)")
+    plan_txt = "\n".join(f"{i}. [{x['genre']}] {x['topic']} / 이유: {x.get('why', '')} / 훅: {x.get('hook', '')}" for i, x in enumerate(lineup))
+    d2 = m.ask_json_alive(model, REVIEWER_SYSTEM, base + f"\n\n[기획자 라인업]\n{plan_txt}\n\n편마다 평가하고 고쳐라.", tools=m.WEB_TOOLS, log=log, label="검토자")
+    review = [x for x in (d2.get("review") or []) if isinstance(x, dict)]
+    final, lines = [], []
+    for i, x in enumerate(lineup):
+        r = next((r_ for r_ in review if str(r_.get("idx")) == str(i)), None)
+        item = dict(x)
+        tag = "유지"
+        if r and str(r.get("verdict", "")).lower().startswith("replace") and str(r.get("topic", "")).strip():
+            item = {"genre": r.get("genre") if r.get("genre") in topics else x["genre"], "topic": str(r["topic"]).strip(),
+                    "why": r.get("why") or x.get("why", ""), "hook": r.get("hook") or x.get("hook", "")}
+            tag = f"교체(원래: {x['topic']})"
+        if r and r.get("reason"):
+            item["review"] = str(r.get("reason"))
+        final.append(item)
+        sc = f" {r.get('score')}점" if r and r.get("score") is not None else ""
+        lines.append(f"{i + 1}. [{item['genre']}] {item['topic']}{sc} - {tag}" + (f" / 검토: {r.get('reason', '')}" if r else "")
+                     + f"\n     왜: {item.get('why', '')}\n     훅: {item.get('hook', '')}")
+        log(f"   {i + 1}. [{item['genre']}] {item['topic']}{sc} - {tag}")
+    rec = (f"[{time.strftime('%Y-%m-%d %H:%M')}] 연속 제작 기획 ({n}편 · {minutes}분)\n기획 의도: {d1.get('note', '')}\n검토 총평: {d2.get('note', '')}\n"
+           + "\n".join(lines) + "\n\n")
+    try:
+        with open(os.path.join(out_root, "_연속제작_기획.txt"), "a", encoding="utf-8") as f:
+            f.write(rec)
+    except OSError:
+        pass
+    return final
 
 
 def made_topics(m, out_root):
@@ -110,26 +174,44 @@ def main():
         pass
     done_list = list(st.get("done") or [])
     cur = st.get("current")      # 꺼졌다 켜면 만들던 편부터 이어서
-    log(f"🔁 연속 제작 시작: {n}편 · {c['길이_분']}분 · 소재 {len(genres)}개 돌아가며 (끝난 편 {len(done_list)}개)")
+    plan = list(st.get("plan") or [])
+
+    def save_state():
+        m.atomic_write_text(state_p, json.dumps({"done": done_list, "current": cur, "plan": plan, "offset": st.get("offset", 0)}, ensure_ascii=False, indent=1))
+    log(f"🔁 연속 제작 시작: {n}편 · {c['길이_분']}분 · 소재 {len(genres)}개 (끝난 편 {len(done_list)}개)")
     k = len(done_list)
+    if len(plan) < n and not (cur and cur.get("주제")):   # 라인업이 없거나 편수를 늘렸으면: 기획자 → 검토자
+        seen = made_topics(m, out_root) + [d_.get("주제", "") for d_ in done_list] + [p_.get("topic", "") for p_ in plan]
+        try:
+            plan += plan_lineup(m, app, genres, n - len(plan), c["길이_분"], seen, log, out_root)
+        except Exception as e:
+            log("기획 단계 실패(편마다 주제를 따로 고릅니다): " + str(e)[:150])
+        save_state()
     while k < n:
         if cur and cur.get("주제"):
-            ci = dict(c, 주제=cur["주제"], 소재=cur.get("소재") or c["소재"])
+            ci = dict(c, 주제=cur["주제"], 소재=cur.get("소재") or c["소재"], 기획메모=cur.get("메모", ""))
             log(f"▶ {k + 1}/{n}편 이어서: {ci['주제']} ({ci['소재']})")
         else:
-            genre = genres[(k + int(st.get("offset") or 0)) % len(genres)]
-            log(f"🔎 {k + 1}/{n}편 주제 고르는 중... 소재: {genre}")
-            seen = made_topics(m, out_root) + [d_.get("주제", "") for d_ in done_list]
-            topic = pick_topic(m, app, genre, seen, log)
-            cur = {"주제": topic, "소재": genre, "시작": time.strftime("%Y-%m-%d %H:%M")}
-            m.atomic_write_text(state_p, json.dumps({"done": done_list, "current": cur, "offset": st.get("offset", 0)}, ensure_ascii=False, indent=1))
-            ci = dict(c, 주제=topic, 소재=genre)
+            if k < len(plan) and str(plan[k].get("topic", "")).strip():
+                genre, topic = (plan[k].get("genre") if plan[k].get("genre") in m.cat_info(m.DOC_CATEGORY)[1] else genres[0]), str(plan[k]["topic"]).strip()
+                log(f"🎯 {k + 1}/{n}편 (기획 라인업): {topic} ({genre})")
+                memo = "\n".join(f"- {lab}: {plan[k][key_]}" for lab, key_ in (("왜 지금 반응이 좋을지", "why"), ("첫 문장 훅(참고)", "hook"), ("검토자 주의사항(반드시 반영)", "review")) if plan[k].get(key_))
+                cur_memo = "[기획자·검토자 메모]\n" + memo if memo else ""
+            else:
+                cur_memo = ""
+                genre = genres[(k + int(st.get("offset") or 0)) % len(genres)]
+                log(f"🔎 {k + 1}/{n}편 주제 고르는 중... 소재: {genre}")
+                seen = made_topics(m, out_root) + [d_.get("주제", "") for d_ in done_list]
+                topic = pick_topic(m, app, genre, seen, log)
+            cur = {"주제": topic, "소재": genre, "시작": time.strftime("%Y-%m-%d %H:%M"), "메모": cur_memo}
+            save_state()
+            ci = dict(c, 주제=topic, 소재=genre, 기획메모=cur.get("메모", ""))
         ci["배경음"] = m.SOUND_BY_TOPIC.get(ci["소재"], c.get("배경음") or "잔잔한 패드")
         res = run_doc(m, app, ci, gate)
         done_list.append({"주제": ci["주제"], "소재": ci["소재"], "제목": res.get("title", ""), "완료": time.strftime("%Y-%m-%d %H:%M")})
         cur = None
         k += 1
-        m.atomic_write_text(state_p, json.dumps({"done": done_list, "current": None, "offset": st.get("offset", 0)}, ensure_ascii=False, indent=1))
+        save_state()
         log(f"✅ {k}/{n}편 완료")
     log(f"🏁 연속 제작 {n}편 모두 완료 → {out_root}  (더 만들려면 '연속_편수'를 늘리거나 {os.path.basename(state_p)} 을 지우세요)")
     app.destroy()
@@ -167,7 +249,7 @@ def run_doc(m, app, c, gate):
             log("대본 파일이 깨져 있어 진행 기록에서 다시 합칩니다")
     if res is None:
         res = app.generate_longdoc(model, c["주제"], c["소재"], c["길이_분"], log, research=c["웹조사"], autophoto=c["챕터별_사진"],
-                                   reference="", media_dir=os.path.join(out_root, "media"),
+                                   reference=str(c.get("기획메모") or ""), media_dir=os.path.join(out_root, "media"),
                                    state_path=os.path.join(work, "대본_진행.json"), gate=gate)
         m.atomic_write_text(script_json, json.dumps(res, ensure_ascii=False, indent=1))
         log(f"대본 완성: {res['title']} | {res['note']}")
