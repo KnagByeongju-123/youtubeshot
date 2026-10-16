@@ -4,6 +4,7 @@
 - 끄기 전: 장문_끄기전_정리.bat (지금 단계가 끝나면 멈추고 저장 → PC 끄기/절전 선택)
 - 창을 닫거나 PC를 꺼도: 장문_만들기.bat(또는 장문_재개.bat)을 다시 실행하면 끝난 단계(조사·구성안·챕터·나레이션 문단·영상 구간)는 건너뛰고 이어서 함
 - 주의: 웹 조사·챕터 집필처럼 AI가 답하는 동안(최대 15분)은 중간 저장이 없음 → 그 사이 끄면 그 단계 하나만 다시 함
+- 연속 제작: 장문_연속제작.bat → AI가 인기 주제를 골라 '연속_편수' 편을 차례로 만듦 (소재는 '연속_소재' 목록을 돌아가며, 비우면 기본 목록)
 - 프로그램 설정 파일(shorts_novel_config.json)은 바꾸지 않음
 """
 import importlib.util
@@ -25,7 +26,14 @@ DEFAULT = {
     "챕터별_사진": True,
     "사진_간격_초": 15,
     "영상_구간_분": 2,
+    "연속_편수": 5,
+    "연속_소재": [],
 }
+# 연속 제작 때 '연속_소재'가 비어 있으면 이 소재들을 돌아가며 씀 (10분 롱폼으로 반응 좋은 묶음)
+BATCH_GENRES = ["세계의 축제", "신기한 풍속과 전통", "역사를 바꾼 결정적 순간", "세계의 외딴 마을과 작은 나라", "고고학 발굴 이야기",
+                "세계의 음식 문화", "대형 사고에서 배운 교훈", "도시 하나 깊이 보기", "발명과 우연한 발견", "세계의 신화와 민담 여행",
+                "심해의 세계", "세계의 신기한 법과 예절", "미라와 무덤의 비밀", "세계의 명절과 새해 풍습", "최신 고고학 발견"]
+BATCH = "--batch" in sys.argv
 MORE_PHOTOS = "--more-photos" in sys.argv
 SEG_SEC = 120
 
@@ -38,6 +46,35 @@ def log(x):
     print(line, flush=True)
     with open(LOG_FILE, "a", encoding="utf-8") as f:
         f.write(line + "\n")
+
+
+def made_topics(m, out_root):
+    """이미 만든(만들기 시작한) 장문 주제들 - 연속 제작 때 같은 주제를 피하려고"""
+    if not os.path.isdir(out_root):
+        return []
+    return [n[len("_작업_"):] for n in os.listdir(out_root) if n.startswith("_작업_")]
+
+
+def pick_topic(m, app, genre, seen, log):
+    """연속 제작: AI(웹 검색)가 이 소재로 지금 반응 좋을 10분 다큐 주제 하나를 고름"""
+    topics = m.cat_info(m.DOC_CATEGORY)[1]
+    formula = topics.get(genre, ("(사용자가 직접 정한 소재)", ""))[0]
+    user = (f"콘텐츠 종류: {m.DOC_CATEGORY} (실제 사건·사실만)\n소재: {genre}\n소재 공식: {formula}\n"
+            f"이 소재로 10분 나레이션 다큐로 풀 수 있는, 지금 유튜브에서 반응 좋을 주제 5개를 만들어줘 (제목처럼 궁금증을 부르는 질문·반전형, 35자 이내). "
+            f"오늘({time.strftime('%Y년 %m월')}) 기준 최근 1~2년 화제·새 발견과 이어진 것을 먼저, 나머지는 꾸준히 인기 있는 것으로.\n"
+            "[웹 검색 모드] WebSearch 로 최근 화제가 된 사건·발견·현상을 찾아 그중에서 고른다. 실제로 존재하는 것만. "
+            "유튜브에서 비슷한 주제의 긴 영상이 반응이 좋았는지, 아직 덜 다뤄진 틈새인지도 살핀다.")
+    if seen:
+        user += "\n\n[이미 만든 주제 - 같은 것은 물론 비슷한 것(같은 대상·같은 질문)도 피하고 새로운 대상·각도로]\n- " + "\n- ".join(seen[-60:])
+    user += '\n출력: {"ideas": ["..."], "why": ["..."]} (반응이 좋을 순서대로)'
+    d = m.ask_json_alive(app.model_var.get().strip(), m.IDEA_SYSTEM, user, tools=m.WEB_TOOLS, log=log, label="인기 주제 고르기")
+    ideas = [str(x).strip() for x in (d.get("ideas") or []) if str(x).strip()]
+    ideas = [x for x in ideas if x not in seen] or ideas
+    if not ideas:
+        raise RuntimeError("주제를 고르지 못했습니다")
+    why = (d.get("why") or [""])[0] if isinstance(d.get("why"), list) else ""
+    log(f"🎯 고른 주제: {ideas[0]}" + (f"  ({str(why)[:80]})" if why else ""))
+    return ideas[0]
 
 
 def main():
@@ -54,6 +91,52 @@ def main():
     app = m.App()
     app.withdraw()
     app.update()
+    gate = m.PauseGate(PAUSE, app.cancel, log)
+    app.cancel = gate          # 대본 작성도 일시정지를 따르게
+    if not BATCH:
+        run_doc(m, app, c, gate)
+        app.destroy()
+        return
+    # ---- 연속 제작: 소재를 돌아가며 AI가 주제를 고르고 한 편씩 끝까지 ----
+    n = int(c.get("연속_편수") or 5)
+    genres = [g_ for g_ in (c.get("연속_소재") or []) if g_ in m.cat_info(m.DOC_CATEGORY)[1]] or BATCH_GENRES
+    out_root = os.path.join(app.get_settings()["out_dir"], "장문")
+    os.makedirs(out_root, exist_ok=True)
+    state_p = os.path.join(out_root, "_연속제작_진행.json")
+    st = {}
+    try:
+        st = json.load(open(state_p, encoding="utf-8"))
+    except Exception:
+        pass
+    done_list = list(st.get("done") or [])
+    cur = st.get("current")      # 꺼졌다 켜면 만들던 편부터 이어서
+    log(f"🔁 연속 제작 시작: {n}편 · {c['길이_분']}분 · 소재 {len(genres)}개 돌아가며 (끝난 편 {len(done_list)}개)")
+    k = len(done_list)
+    while k < n:
+        if cur and cur.get("주제"):
+            ci = dict(c, 주제=cur["주제"], 소재=cur.get("소재") or c["소재"])
+            log(f"▶ {k + 1}/{n}편 이어서: {ci['주제']} ({ci['소재']})")
+        else:
+            genre = genres[(k + int(st.get("offset") or 0)) % len(genres)]
+            log(f"🔎 {k + 1}/{n}편 주제 고르는 중... 소재: {genre}")
+            seen = made_topics(m, out_root) + [d_.get("주제", "") for d_ in done_list]
+            topic = pick_topic(m, app, genre, seen, log)
+            cur = {"주제": topic, "소재": genre, "시작": time.strftime("%Y-%m-%d %H:%M")}
+            m.atomic_write_text(state_p, json.dumps({"done": done_list, "current": cur, "offset": st.get("offset", 0)}, ensure_ascii=False, indent=1))
+            ci = dict(c, 주제=topic, 소재=genre)
+        ci["배경음"] = m.SOUND_BY_TOPIC.get(ci["소재"], c.get("배경음") or "잔잔한 패드")
+        res = run_doc(m, app, ci, gate)
+        done_list.append({"주제": ci["주제"], "소재": ci["소재"], "제목": res.get("title", ""), "완료": time.strftime("%Y-%m-%d %H:%M")})
+        cur = None
+        k += 1
+        m.atomic_write_text(state_p, json.dumps({"done": done_list, "current": None, "offset": st.get("offset", 0)}, ensure_ascii=False, indent=1))
+        log(f"✅ {k}/{n}편 완료")
+    log(f"🏁 연속 제작 {n}편 모두 완료 → {out_root}  (더 만들려면 '연속_편수'를 늘리거나 {os.path.basename(state_p)} 을 지우세요)")
+    app.destroy()
+
+
+def run_doc(m, app, c, gate):
+    """한 편 끝까지: 대본 → 사진 → 나레이션 → MP4 → 업로드 문구. 결과 res(dict) 돌려줌"""
     app.cat_var.set(m.DOC_CATEGORY)
     app.on_category()
     if c["소재"] in m.cat_info(m.DOC_CATEGORY)[1]:
@@ -70,8 +153,6 @@ def main():
     m.PHOTO_PLAN.update(sub=True, n=0)
     m.HIT_CTX["category"] = m.DOC_CATEGORY
     m.set_tts_cfg(s)
-    gate = m.PauseGate(PAUSE, app.cancel, log)
-    app.cancel = gate          # 대본 작성도 일시정지를 따르게
     model = app.model_var.get().strip()
     log(f"▶ 시작: {c['주제']} ({c['소재']}, {c['길이_분']}분) · 배경음 {c['배경음']} 크기 {c['배경음_크기']} · {s['fps']}fps")
 
@@ -94,7 +175,7 @@ def main():
     # 사진 보강 (장문_사진보강.bat): 이미 만든 대본에 사진을 더 넣고 영상만 다시 만듦
     done_flag = os.path.join(work, "사진보강_완료.txt")
     req_flag = os.path.join(work, "사진보강_요청.txt")      # 보강 중에 꺼져도 장문_만들기.bat 으로 이어지게
-    if MORE_PHOTOS and not os.path.exists(done_flag):
+    if MORE_PHOTOS and not BATCH and not os.path.exists(done_flag):
         m.atomic_write_text(req_flag, time.strftime("%Y-%m-%d %H:%M"))
     if os.path.exists(req_flag) and not os.path.exists(done_flag):
         bak = os.path.join(work, "대본_사진보강전.json")
@@ -166,8 +247,8 @@ def main():
     # 4) 업로드 문구 + 설명란 완성본 + 유튜브 썸네일
     log("📝 업로드 문구·설명란·유튜브 썸네일 만드는 중...")
     m.publish_kit(model, base, title, story, m.DOC_CATEGORY, c["소재"], s, ch, res.get("sources") or [], res.get("notes", ""), log)
-    app.destroy()
     log("✅ 전부 완료 → " + out_root)
+    return res
 
 
 def _job_procs():
