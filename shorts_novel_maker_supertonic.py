@@ -231,7 +231,7 @@ FIELDS = [
     ("효과", "focus", "읽는 줄 강조", "choice:on,off", "on"),
     ("효과", "focus_dim", "나머지 줄 밝기(0~1)", "float", 0.45),
     ("효과", "focus_y", "강조 위치(화면 비율)", "float", 0.42),
-    ("효과", "progress_bar", "진행바", "choice:on,off", "on"),
+    ("효과", "progress_bar", "진행바(위쪽 가는 띠)", "choice:on,off", "off"),
     ("효과", "reveal_fx", "반전 순간 화면 효과(펀치 줌·흔들림·플래시)", "choice:on,off", "on"),
     ("효과", "ease", "부드러운 시작/끝", "choice:on,off", "on"),
     ("효과", "intro_sec", "제목 카드(초, 0=없음)", "float", 1.8),
@@ -9086,10 +9086,14 @@ class App(tk.Tk):
             st_ = best.get("settings")
             if isinstance(st_, dict):
                 st_.update(narr_tone_f=0.0, narr_tone_m=0.0, narr_bright_f="off", narr_breath_cut="on")
+        if best and not best.get("progress_bar_v2"):  # 위쪽 진행바는 한 번 끔 (필요하면 효과 탭에서 다시 켬)
+            st_ = best.get("settings")
+            if isinstance(st_, dict):
+                st_["progress_bar"] = "off"
         return best
 
     def project_dict(self):
-        return {"ver": 7, "voice_fx_v2": True, "model": self.model_var.get(), "category": self.cat_var.get(), "topic": self.topic_var.get(), "genre": self.genre_var.get(),
+        return {"ver": 7, "voice_fx_v2": True, "progress_bar_v2": True, "model": self.model_var.get(), "category": self.cat_var.get(), "topic": self.topic_var.get(), "genre": self.genre_var.get(),
                 "sources": getattr(self, "sources", []), "notes": getattr(self, "notes", ""),
                 "song": getattr(self, "song", None), "melody": getattr(self, "melody", ""), "bpm": getattr(self, "bpm", 90),
                 "artwork": getattr(self, "artwork", None),
