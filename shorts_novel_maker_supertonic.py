@@ -701,6 +701,9 @@ PHOTO_RULES = """[사진 규칙]
 - 명화 이야기면 그 그림 자체(Wikimedia Commons 의 PD-Art 파일, 화가 사후 70년 경과작만)를 첫 번째로, 그 다음 이야기에 나오는 부분의 확대 이미지나 화가 초상. 한국 그림은 국립중앙박물관·간송미술관 공개 이미지도 가능.
 - 노래 이야기면 그 곡의 옛 악보 표지(sheet music cover, 1929년 이전 출판물은 퍼블릭 도메인), 작곡가·가수의 옛 사진, 당시 공연장 사진을 고른다.
 - 그 사건·현상·장소를 실제로 보여주는 사진만 고른다. 비슷한 다른 사진 금지. 직접 열어서(WebFetch) 맞는지 확인한다
+- [사실관계] 사진의 실제 대상(파일 설명 페이지의 제목·촬영/제작 연도·장소·인물)이 문단이 말하는 사건·시대·장소·인물과 일치해야 한다.
+  같은 시대의 다른 사건, 다른 전투·축제·도시·종(種)의 사진, 후대의 상상화를 '비슷하니까' 쓰지 않는다. 그림(회화·판화)이면 바로 그 사건을 그린 작품인지 확인하고
+  caption 에 '대상 (화가, 연도)'처럼 적는다. 문단이 특정 연도·장소를 말하는데 사진이 다른 연도·장소면 고르지 않는다. 확인이 안 되면 그 사진은 버리고 다른 사진을 찾는다
 - [글과 밀접하게] 사진마다 '붙일 문단'을 먼저 정하고, 그 문단에 이름이 나오는 구체적 대상(인물·장소·유물·생물·실험 장치·사건 현장·지도·도표)을 직접 보여주는 사진을 찾는다. 막연한 풍경·건물 외관·스톡 사진·주제와 비슷하기만 한 사진은 쓰지 않는다
 - caption 에는 그 문단의 핵심 대상 이름을 그대로 넣는다(예: '리벳 실험의 시계', '마리아나 해구 챌린저 해연 위치'). after 는 그 대상이 나오는 바로 그 문단의 앞부분
 - after: 그 사진이 보여주는 문단의 앞부분(원문 그대로 10~20자). 사진은 그 문단 **바로 앞 줄**에 들어간다(사진 → 글 순서). 본문이 아직 없으면 그 사진이 보여주는 사실의 핵심 단어
@@ -1016,7 +1019,12 @@ Read 도구로 사진 파일을 하나씩 실제로 열어 본다(열지 않고 
 - best: 이 사진이 가장 잘 맞는 문단 번호(지금 문단이 제일 맞으면 그 번호). 다른 문단이 훨씬 잘 맞으면 그 번호.
 - best_score(0~10): best 문단과 맞는 정도 (같은 사진이 이미 다른 자리에 쓰였으면 0)
 - what: 사진에 실제로 보이는 것 한 줄(검사 근거)
-반드시 JSON만 출력: {"photos": [{"k": 1, "score": 8, "best": 3, "best_score": 9, "what": "..."}]}"""
+- fact: 사실관계 - 사진의 실제 대상·연도·장소·인물(설명·출처 표기와 보이는 내용으로 판단)이 붙은 문단의 사실과 맞는가.
+  "일치"(같은 사건·대상) / "참고"(같은 대상이지만 다른 시점·장소이거나 일반 자료라 오해 소지는 없음) / "불일치"(다른 사건·전투·축제·도시·인물·종, 또는 문단의 연도·장소와 어긋남, 또는 설명이 사진 내용과 다름).
+  "불일치"면 사진은 빠진다. 사실 콘텐츠에서는 비슷해 보여도 다른 대상이면 "불일치".
+- fact_note: fact 판단 근거 한 줄 (예: '1870년 보불전쟁 그림 - 1812년 러시아 원정과 무관')
+- caption: 설명이 부정확하거나 과장돼 있으면 사진 내용에 맞는 정확한 15자 이내 설명(화가·연도 포함 가능). 지금 설명이 정확하면 빈 문자열.
+반드시 JSON만 출력: {"photos": [{"k": 1, "score": 8, "best": 3, "best_score": 9, "what": "...", "fact": "일치", "fact_note": "...", "caption": ""}]}"""
 
 
 def check_photo_fit(model, text, log=None, min_score=5, fiction=False):
@@ -1050,7 +1058,7 @@ def check_photo_fit(model, text, log=None, min_score=5, fiction=False):
         log("  사진 검사 건너뜀: " + str(e).splitlines()[0][:80])
         return text, 0, 0
     res = {int(r.get("k", 0)): r for r in (d.get("photos") or []) if isinstance(r, dict) and str(r.get("k", "")).isdigit()}
-    drop, moves = set(), {}
+    drop, moves, recap = set(), {}, {}
     for k, x in enumerate(ph):
         r = res.get(k + 1)
         if not r:
@@ -1060,14 +1068,27 @@ def check_photo_fit(model, text, log=None, min_score=5, fiction=False):
             bsc = float(r.get("best_score", sc if best == x[3] else 0))
         except (TypeError, ValueError):
             continue
+        fact = str(r.get("fact") or "").strip()
+        if not fiction and fact.startswith("불일치"):   # 사실관계가 어긋나는 사진은 점수와 관계없이 뺌
+            drop.add(x[0])
+            log(f"  ✂ 사실관계가 안 맞는 사진 뺌: {x[2]} - {str(r.get('fact_note') or r.get('what', ''))[:70]}")
+            continue
+        new_cap = clean_field(r.get("caption"))
+        if new_cap and new_cap != x[2] and len(new_cap) <= 40:    # 설명이 부정확하면 정확한 설명으로
+            recap[x[0]] = new_cap
+            log(f"  ✎ 사진 설명 고침: '{x[2]}' → '{new_cap}'")
         if 1 <= best <= len(items) and best != x[3] and bsc >= max(7, sc + 2):   # 다른 문단에 훨씬 잘 맞으면 옮김
             moves[x[0]] = items[best - 1]
             log(f"  ↪ 사진을 더 맞는 문단으로 옮김 ({sc:.0f}→{bsc:.0f}점): {x[2]} → 문단 {best}")
         elif sc < min_score:
             drop.add(x[0])
             log(f"  ✂ 글과 안 맞는 사진 뺌 ({sc:.0f}점): {x[2]} - {str(r.get('what', ''))[:40]}")
-    if not drop and not moves:
+    if not drop and not moves and not recap:
         return text, 0, 0
+    for i, cap in recap.items():          # 설명만 바꾼 사진 줄 다시 조립
+        md = parse_media(paras[i])
+        if md:
+            paras[i] = media_line(md[0], cap, md[2], md[3])
     out = []
     moved_lines = {}
     for src, dst in moves.items():
@@ -1842,6 +1863,14 @@ def parse_media(line):
         return None
     parts = [x.strip() for x in m.group(1).split("|")] + ["", "", ""]
     return parts[0], parts[1], parts[2], parts[3]
+
+
+def media_line(path, caption="", credit="", page=""):
+    """'[사진: 경로 | 설명 | 출처 | 페이지]' 한 줄로 (빈 뒷부분은 생략)"""
+    parts = [str(path).strip(), clean_field(caption), clean_field(credit), clean_field(page)]
+    while len(parts) > 1 and not parts[-1]:
+        parts.pop()
+    return "[사진: " + " | ".join(parts) + "]"
 
 
 def clean_field(x):
