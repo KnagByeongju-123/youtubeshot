@@ -12886,7 +12886,7 @@ class App(tk.Tk):
             avail = max(300, (self.winfo_height() if self.winfo_height() > 200 else self.winfo_screenheight() - 120) - 400)
         except Exception:
             avail = PREVIEW_H
-        k = min(1.0, avail / PREVIEW_H, 0.92)
+        k = min(1.0, avail / PREVIEW_H, 0.92, 470 / PREVIEW_W)      # 오른쪽 칸이 너무 넓지 않게(롱폼 가로 470px까지)
         return max(160, int(PREVIEW_W * k)), max(160, int(PREVIEW_H * k))
 
     def _on_resize(self, e):
