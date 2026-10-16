@@ -13210,8 +13210,8 @@ class App(tk.Tk):
                     a = build_audio(r, sk, style)          # 나레이션·효과음만 (배경음은 전체에 한 번에)
                     if a is None:
                         a = np.zeros((int(r.duration * SR), 2), np.float32)
-                    export_mp4_resumable(r, part, lambda i, n, k=k: prog(k * 1000 + i * 1000 // max(1, n), N * 1000), self.cancel, None,
-                                         os.path.join(parts_dir, f"work_{k + 1:03d}"), log=log, key=key)
+                    export_mp4_resumable(r, part, lambda i, n, k=k: prog(k * 1000 + i * 1000 // max(1, n), N * 1000), self.cancel, a,
+                                         os.path.join(parts_dir, f"work_{k + 1:03d}"), log=log, key=key)   # 조각에도 나레이션 소리를 넣어 따로 들어볼 수 있게
                     atomic_np_save(part + ".npy", a.astype(np.float32))
                     info = {"key": key, "dur": r.duration, "spans": [(st, len(c) / SR) for st, c in r.narr_at], "chapters": r.chapter_times()}
                     atomic_write_text(part + ".key", json.dumps(info, ensure_ascii=False))
@@ -13270,7 +13270,7 @@ class App(tk.Tk):
         if in_video:
             cmd += ["-i", wav, "-map", "0:v", "-map", "1:a", "-c:v", "copy", "-c:a", "aac", "-b:a", "192k", "-shortest"]
         else:
-            cmd += ["-c", "copy"]
+            cmd += ["-map", "0:v", "-c", "copy"]           # 무음 MP4: 조각의 나레이션은 빼고 그림만
         cmd += ["-movflags", "+faststart", out]
         p = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, errors="replace",
                            creationflags=(subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0))
