@@ -188,7 +188,7 @@ LONG_STYLES = {
 
 # 설정 탭 묶음 (화면 형식·표현 방식에 따라 필요한 탭만 보임). mode: all / scroll / sub
 UI_TABS = [
-    ("🎬 화면 형식", "all", ["format", "layout", "fps", "quality", "audio_out", "out_dir", "intro_sec", "outro_sec", "outro_text",
+    ("🎬 화면 형식", "all", ["format", "layout", "fps", "quality", "scene_parts", "audio_out", "out_dir", "intro_sec", "outro_sec", "outro_text",
                           "progress_bar", "reveal_fx", "hold_start", "hold_end", "safe_guide"]),
     ("🎨 글꼴·색", "all", ["font_path", "title_font_path", "text_color", "title_color", "accent_color", "quote_color", "shadow", "stroke_width"]),
     ("🔤 자막 디자인", "sub", ["style_preset", "sub_layout", "head_pos", "color_preset", "sub_box_color", "sub_box_alpha", "head_style", "head_size",
@@ -270,6 +270,7 @@ FIELDS = [
     ("영상", "hold_end", "끝 정지(초)", "float", 3.0),
     ("영상", "fps", "FPS(60=부드러움, 30=빠른 제작)", "int", 30),
     ("영상", "quality", "화질(crf 18=최고·23=권장·28=작게)", "int", 23),
+    ("영상", "scene_parts", "자막형: 장면별로 나눠 만들기(고친 장면만 다시·끝난 장면 유지)", "choice:on,off", "on"),
     ("영상", "audio_out", "소리 저장 방식", "choice:MP4에 포함,MP4에 포함+MP3 따로,MP3만 따로(무음 MP4)", "MP4에 포함+MP3 따로"),
     ("영상", "out_dir", "저장 폴더", "dir", os.path.join(BASE, "output")),
     ("나레이션", "narration", "나레이션(음성 읽기)", "choice:on,off", "off"),
@@ -3827,6 +3828,57 @@ class SubtitleRenderer:
     def offset(self, t):
         return 0.0
 
+# ---------------- 장면(사진 + 그 뒤 문단) 단위 편집 ----------------
+def split_scenes(story):
+    """본문 → 장면 목록 [{"chapter": "## 제목" 또는 "", "img": "[사진: ...]" 또는 "", "lines": [문단...]}].
+    사진 줄이나 챕터 제목에서 새 장면이 시작 (챕터 제목 바로 뒤 사진은 같은 장면)"""
+    scenes, cur = [], None
+
+    def new():
+        return {"chapter": "", "img": "", "lines": []}
+    for p in split_paras(story):
+        p = p.strip()
+        if not p:
+            continue
+        if parse_media(p):
+            if cur is None or cur["img"] or cur["lines"]:
+                cur = new()
+                scenes.append(cur)
+            cur["img"] = p
+        elif p.startswith("## "):
+            if cur is None or cur["lines"] or cur["chapter"]:
+                cur = new()
+                scenes.append(cur)
+            cur["chapter"] = p
+        else:
+            if cur is None:
+                cur = new()
+                scenes.append(cur)
+            cur["lines"].append(p)
+    return scenes
+
+
+def scene_text(sc):
+    return "\n\n".join([x for x in (sc.get("chapter", ""), sc.get("img", "")) if x] + list(sc.get("lines") or []))
+
+
+def join_scenes(scenes):
+    return "\n\n".join(scene_text(sc) for sc in scenes if sc.get("chapter") or sc.get("img") or sc.get("lines"))
+
+
+def scene_est_sec(sc, s=None):
+    """장면 길이 어림 (나레이션 전): 글자당 약 0.13초 + 문단마다 쉼"""
+    spc = float((s or {}).get("sec_per_char", 0.12) or 0.12) + 0.01
+    sec = sum(len(tts_clean(x)) * spc + 1.1 for x in sc.get("lines") or [])
+    return sec + (2.0 if sc.get("chapter") else 0.0)
+
+
+SCENE_REWRITE_SYSTEM = """너는 유튜브 나레이션 대본 편집자다. 전체 대본 중 '이 장면'의 문단만 다시 쓴다.
+- 앞뒤 장면과 자연스럽게 이어지게 쓰고, 사실·숫자·고유명사·결론은 바꾸지 않는다(사용자 지시가 있으면 지시를 따른다).
+- 분량은 원래와 비슷하게(지시가 있으면 그대로). 귀로 듣는 글이므로 문장은 짧게, 문단은 1~3문장.
+- 사진 줄([사진: ...])과 '## ' 제목 줄, 목록 기호, 이모지는 쓰지 않는다. 숫자는 맞춤법대로 아라비아 숫자.
+반드시 JSON만 출력: {"paragraphs": ["문단1", "문단2"]}"""
+
 
 def screen_title(title):
     """화면·썸네일에 그릴 제목: 이모지는 화면 글꼴에 없어 □로 나오므로 뺌 (유튜브 제목에는 그대로 둠)"""
@@ -4440,7 +4492,8 @@ def duck_env(n, narr, duration, duck, res=100):
     m = int(np.ceil(n / SR * res)) + 2
     e = np.ones(m, np.float64)
     for st, clip in narr:
-        e[int(max(0, st - 0.3) * res):int(min(duration, st + len(clip) / SR + 0.3) * res)] = duck
+        ln = float(clip) if isinstance(clip, (int, float)) else len(clip) / SR
+        e[int(max(0, st - 0.3) * res):int(min(duration, st + ln + 0.3) * res)] = duck
     k = max(1, int(0.4 * res))
     c = np.concatenate([[0.0], np.cumsum(e)])
     idx = np.arange(m)
@@ -9254,6 +9307,7 @@ class App(tk.Tk):
         ttk.Button(r4, text="파일에서 넣기", command=self.add_photo_file).pack(side="left", padx=4)
         ttk.Button(r4, text="붙여넣기 (Ctrl+V)", command=lambda: self.on_paste(from_button=True)).pack(side="left")
         ttk.Button(r4, text="📑 문단별 정리(그림·음성)", command=self.para_board).pack(side="left", padx=4)
+        ttk.Button(r4, text="🎬 장면 편집(순서·수정·사진)", command=self.scene_editor).pack(side="left", padx=(0, 4))
         ttk.Label(r4, text="사진·이미지 주소·파일을 복사해서 본문에 Ctrl+V → 커서 위치에 들어감",
                   foreground="gray").pack(side="left", padx=6)
         self.story = ScrolledText(s1, height=5, wrap="word", font=("맑은 고딕", 11), undo=True)   # 창이 크면 자동으로 늘어남
@@ -9857,6 +9911,226 @@ class App(tk.Tk):
         ttk.Button(bf, text="닫기", command=win.destroy).pack(side="right")
 
     # ---- 📑 문단별 정리: 문단마다 그림·음성을 한 줄씩 ----
+    def scene_editor(self):
+        """🎬 장면 편집: 본문을 '사진 + 그 뒤 문단' 장면으로 나눠 보여 주고, 순서 바꾸기·고치기·나누기·합치기·사진 바꾸기·AI로 다시 쓰기"""
+        scenes = split_scenes(self.get_story())
+        if not scenes:
+            messagebox.showinfo("장면 편집", "먼저 대본을 만들거나 입력하세요.")
+            return
+        s_now = self.get_settings()
+        win = tk.Toplevel(self)
+        win.title("🎬 장면 편집 - 장면 단위로 순서·내용·사진을 고칩니다 (적용을 눌러야 본문에 반영)")
+        win.geometry("1180x720")
+        win.transient(self)
+        left = ttk.Frame(win, padding=8)
+        left.pack(side="left", fill="y")
+        right = ttk.Frame(win, padding=8)
+        right.pack(side="left", fill="both", expand=True)
+        ttk.Label(left, text="장면 (📷 사진 · § 챕터 · 어림 길이)", foreground="#444").pack(anchor="w")
+        lf = ttk.Frame(left)
+        lf.pack(fill="y", expand=True)
+        lst = tk.Listbox(lf, width=48, height=28, exportselection=False, font=("맑은 고딕", 10))
+        lsb = ttk.Scrollbar(lf, command=lst.yview)
+        lst.config(yscrollcommand=lsb.set)
+        lst.pack(side="left", fill="y", expand=True)
+        lsb.pack(side="left", fill="y")
+        cur = {"i": None}
+        thumb = ttk.Label(right)
+        thumb.pack(anchor="w")
+        info = ttk.Label(right, text="", foreground="#1a5fb4", wraplength=820, justify="left")
+        info.pack(anchor="w", pady=(4, 0))
+        txt = ScrolledText(right, wrap="word", font=("맑은 고딕", 11), undo=True, height=14)
+        txt.pack(fill="both", expand=True, pady=(6, 0))
+        ai_row = ttk.Frame(right)
+        ai_row.pack(fill="x", pady=(6, 0))
+        instr = tk.StringVar()
+        ttk.Label(ai_row, text="✍ AI로 이 장면만 다시 쓰기 - 지시:").pack(side="left")
+        ttk.Entry(ai_row, textvariable=instr, width=40).pack(side="left", padx=4)
+        ttk.Label(ai_row, text="예) 더 짧게 · 쉬운 말로 · 숫자 비유 넣어서 · 질문으로 끝내기", foreground="#666").pack(side="left")
+
+        def refresh(sel=None):
+            lst.delete(0, "end")
+            tot = 0.0
+            for k, sc in enumerate(scenes):
+                sec = scene_est_sec(sc, s_now)
+                tot += sec
+                first = (sc["lines"][0] if sc["lines"] else (sc["chapter"][3:] if sc["chapter"] else "(글 없음)"))
+                mark = ("📷" if sc["img"] else "  ") + ("§" if sc["chapter"] else " ")
+                lst.insert("end", f"{k + 1:>3}. {mark} {first[:24]}  ·{sec:.0f}초")
+                if not sc["lines"]:
+                    lst.itemconfig("end", foreground="#999")
+            win.title(f"🎬 장면 편집 - 장면 {len(scenes)}개 · 어림 {int(tot // 60)}분 {int(tot % 60)}초 (적용을 눌러야 본문에 반영)")
+            if sel is not None and 0 <= sel < len(scenes):
+                lst.selection_set(sel)
+                lst.see(sel)
+                cur["i"] = sel
+                show()
+
+        def store():
+            """오른쪽 글을 지금 장면에 저장 (사진 줄을 새로 넣었으면 장면이 늘어남)"""
+            i = cur["i"]
+            if i is None or i >= len(scenes):
+                return
+            parts = split_scenes(txt.get("1.0", "end"))
+            if not parts:
+                scenes[i] = {"chapter": "", "img": "", "lines": []}
+            else:
+                scenes[i:i + 1] = parts
+
+        def show():
+            i = cur["i"]
+            if i is None or i >= len(scenes):
+                return
+            sc = scenes[i]
+            txt.delete("1.0", "end")
+            txt.insert("1.0", scene_text(sc))
+            thumb.config(image="", text="")
+            med = parse_media(sc["img"]) if sc["img"] else None
+            im = load_media_image(med[0]) if med else None
+            if im is not None:
+                im.thumbnail((360, 200))
+                thumb._img = ImageTk.PhotoImage(im)
+                thumb.config(image=thumb._img)
+            elif sc["img"]:
+                thumb.config(text="(사진 파일을 찾을 수 없음: " + med[0][:60] + ")", foreground="#c00")
+            else:
+                thumb.config(text="(사진 없음 - 앞 장면 사진이 이어서 보입니다)", foreground="#888")
+            info.config(text=f"장면 {i + 1}/{len(scenes)} · 문단 {len(sc['lines'])}개 · 어림 {scene_est_sec(sc, s_now):.0f}초"
+                             + (f" · {med[1]}" if med and med[1] else ""))
+
+        def on_select(_e=None):
+            sel = lst.curselection()
+            if not sel:
+                return
+            if cur["i"] is not None and cur["i"] != sel[0]:
+                store()
+                if sel[0] >= len(scenes):
+                    refresh(len(scenes) - 1)
+                    return
+            cur["i"] = sel[0]
+            show()
+        lst.bind("<<ListboxSelect>>", on_select)
+
+        def move(d):
+            store()
+            i = cur["i"]
+            if i is None:
+                return
+            j = i + d
+            if 0 <= j < len(scenes):
+                scenes[i], scenes[j] = scenes[j], scenes[i]
+                refresh(j)
+
+        def delete():
+            store()
+            i = cur["i"]
+            if i is None or len(scenes) <= 1:
+                return
+            if messagebox.askyesno("장면 삭제", f"장면 {i + 1}을(를) 지울까요? (사진·문단 모두)", parent=win):
+                del scenes[i]
+                refresh(min(i, len(scenes) - 1))
+
+        def split_here():
+            """커서가 있는 문단부터 새 장면으로"""
+            i = cur["i"]
+            if i is None:
+                return
+            pos = txt.index("insert")
+            before = txt.get("1.0", pos)
+            n_para = len([p for p in re.split(r"\n\s*\n", before) if p.strip()])
+            store()
+            sc = scenes[cur["i"]]
+            head = (1 if sc["chapter"] else 0) + (1 if sc["img"] else 0)
+            k = max(0, min(len(sc["lines"]), n_para - head))
+            if k <= 0 or k >= len(sc["lines"]):
+                messagebox.showinfo("장면 나누기", "나눌 문단 사이에 커서를 두세요 (첫 문단 앞이나 마지막 문단 뒤는 나눌 수 없음).", parent=win)
+                return
+            new = {"chapter": "", "img": "", "lines": sc["lines"][k:]}
+            sc["lines"] = sc["lines"][:k]
+            scenes.insert(cur["i"] + 1, new)
+            refresh(cur["i"] + 1)
+
+        def merge_next():
+            store()
+            i = cur["i"]
+            if i is None or i + 1 >= len(scenes):
+                return
+            nxt = scenes[i + 1]
+            scenes[i]["lines"] += ([nxt["chapter"]] if nxt["chapter"] else []) + nxt["lines"]
+            if not scenes[i]["img"]:
+                scenes[i]["img"] = nxt["img"]
+            del scenes[i + 1]
+            refresh(i)
+
+        def change_photo():
+            store()
+            i = cur["i"]
+            if i is None:
+                return
+            p = filedialog.askopenfilename(filetypes=[("이미지", "*.png *.jpg *.jpeg *.webp *.bmp")], parent=win)
+            if p:
+                old = parse_media(scenes[i]["img"]) if scenes[i]["img"] else None
+                scenes[i]["img"] = make_marker(p, old[1] if old else "", old[2] if old else "", old[3] if old else "")
+                refresh(i)
+
+        def drop_photo():
+            store()
+            i = cur["i"]
+            if i is None:
+                return
+            scenes[i]["img"] = ""
+            refresh(i)
+
+        def rewrite():
+            store()
+            i = cur["i"]
+            if i is None or not scenes[i]["lines"]:
+                messagebox.showinfo("장면 편집", "다시 쓸 문단이 있는 장면을 고르세요.", parent=win)
+                return
+            model, ins = self.model_var.get().strip(), instr.get().strip()
+            prev_t = "\n".join(scenes[i - 1]["lines"]) if i > 0 else "(없음 - 첫 장면)"
+            next_t = "\n".join(scenes[i + 1]["lines"]) if i + 1 < len(scenes) else "(없음 - 마지막 장면)"
+            cur_t = "\n\n".join(scenes[i]["lines"])
+            user = f"[앞 장면]\n{prev_t}\n\n[이 장면 - 다시 쓸 것]\n{cur_t}\n\n[다음 장면]\n{next_t}\n\n[지시] {ins or '뜻은 그대로, 더 자연스럽고 듣기 좋게'}"
+
+            def job():
+                return ask_script_json(model, SCENE_REWRITE_SYSTEM, user)
+
+            def done(d):
+                paras = [str(x).strip() for x in (d.get("paragraphs") or []) if str(x).strip()]
+                if not paras:
+                    messagebox.showwarning("장면 편집", "AI가 문단을 돌려주지 않았습니다.", parent=win)
+                    return
+                scenes[i]["lines"] = [p.replace("**", "") for p in paras]
+                refresh(i)
+                self.write_log(f"✍ 장면 {i + 1} 다시 씀 ({len(paras)}문단)" + (f" - 지시: {ins}" if ins else ""))
+            self.run_bg("✍ 장면 다시 쓰는 중...", job, done)
+
+        def apply():
+            store()
+            self.set_story(join_scenes(scenes))
+            self.renderer = None
+            self.refresh_preview()
+            self.save_cfg()
+            self.write_log(f"🎬 장면 편집 적용: 장면 {len(scenes)}개")
+            info.config(text="✔ 본문에 적용했습니다 (창을 닫아도 됩니다)")
+        bf = ttk.Frame(left)
+        bf.pack(fill="x", pady=(6, 0))
+        for t_, c_ in (("▲", lambda: move(-1)), ("▼", lambda: move(1)), ("✂ 커서에서 나누기", split_here), ("🔗 다음과 합치기", merge_next), ("🗑 삭제", delete)):
+            ttk.Button(bf, text=t_, command=c_, width=(3 if len(t_) == 1 else None)).pack(side="left", padx=1)
+        bf2 = ttk.Frame(left)
+        bf2.pack(fill="x", pady=(4, 0))
+        ttk.Button(bf2, text="🖼 사진 바꾸기(파일)", command=change_photo).pack(side="left", padx=1)
+        ttk.Button(bf2, text="✖ 사진 빼기", command=drop_photo).pack(side="left", padx=1)
+        ttk.Button(bf2, text="✍ AI로 다시 쓰기", command=rewrite).pack(side="left", padx=1)
+        bf3 = ttk.Frame(right)
+        bf3.pack(fill="x", pady=(6, 0))
+        ttk.Button(bf3, text="✔ 본문에 적용", command=apply).pack(side="right")
+        ttk.Button(bf3, text="닫기", command=win.destroy).pack(side="right", padx=6)
+        ttk.Label(bf3, text="오른쪽 글을 고치면 다른 장면을 고를 때 저장됩니다. 글 안에 [사진: 경로] 줄을 넣으면 그 자리에서 장면이 나뉩니다.",
+                  foreground="#666", wraplength=620, justify="left").pack(side="left")
+        refresh(0)
+
     def para_board(self):
         story = self.get_story()
         items = narration_paras(story)
@@ -12865,6 +13139,144 @@ class App(tk.Tk):
     def ppt_out(self):
         return os.path.join(self.vars["out_dir"].get() or os.path.join(BASE, "output"), "발표")
 
+    # ---- 장면별로 나눠 만들기 (자막형): 고친 장면만 다시, 오류 나도 끝난 장면은 남음 ----
+    SCENE_FP_SKIP = {"out_dir", "bgm_mode", "bgm_style", "bgm_volume", "bgm_seed", "bgm_path", "audio_out", "openai_key", "gemini_key",
+                     "openai_model", "gemini_model", "image_model", "image_quality", "image_style", "script_engine", "trans_engine", "auto_langs",
+                     "fiction_image", "hit_sound", "hit_volume", "reveal_hit", "narr_duck", "scene_parts", "photo_count", "narr_spoken"}
+
+    def _make_mp4_scenes(self, story, title, s, style, base, out, kit, prog):
+        """본문을 장면(사진+문단)마다 따로 그려 조각으로 저장하고, 배경음은 전체에 한 번에 깔아 이어 붙임"""
+        import hashlib
+        log = self.log_bg
+        scenes = split_scenes(story)
+        if not scenes:
+            raise RuntimeError("본문이 비어 있습니다.")
+        texts, last_img = [], ""
+        for sc in scenes:                         # 사진 없는 장면은 앞 장면 사진을 이어서 보여줌
+            if sc["img"]:
+                last_img = sc["img"]
+            img = sc["img"] or last_img
+            texts.append("\n\n".join([x for x in (sc["chapter"], img) if x] + sc["lines"]))
+        N = len(texts)
+        parts_dir = os.path.join(s["out_dir"], "_장면", safe_name(title))
+        os.makedirs(parts_dir, exist_ok=True)
+        fp = {k: v for k, v in s.items() if k not in self.SCENE_FP_SKIP}
+        fp_txt = json.dumps(fp, ensure_ascii=False, sort_keys=True, default=str)
+        total, parts, offsets, spans, chapters = 0.0, [], [], [], []
+        log(f"🎬 장면 {N}개로 나눠 만듭니다 (고친 장면만 다시 · 끝난 장면은 남음)")
+        for k, text_k in enumerate(texts):
+            if self.cancel.is_set():
+                raise RuntimeError("취소됨")
+            first = (scenes[k]["lines"][0] if scenes[k]["lines"] else scenes[k]["chapter"])[:28]
+            try:
+                sk = dict(s)
+                sk.update(bgm_mode="없음", reveal_hit="off", progress_bar="off")
+                if k > 0:
+                    sk.update(intro_sec=0, hold_start=0)
+                if k < N - 1:
+                    sk.update(outro_sec=0, outro_text="", hold_end=0)
+                imgs = []
+                for ln in text_k.split("\n"):
+                    med = parse_media(ln)
+                    p_ = resolve_media(med[0]) if med else None
+                    if p_:
+                        imgs.append((os.path.basename(p_), int(os.path.getmtime(p_)), os.path.getsize(p_)))
+                key = hashlib.md5((text_k + "|" + (title if k == 0 else "") + f"|{k == 0}|{k == N - 1}|{W}x{H}|" + fp_txt
+                                   + json.dumps(imgs)).encode("utf-8")).hexdigest()
+                part = os.path.join(parts_dir, f"scene_{k + 1:03d}.mp4")
+                info = {}
+                try:
+                    info = json.load(open(part + ".key", encoding="utf-8"))
+                except Exception:
+                    pass
+                if os.path.exists(part) and is_done(part) and info.get("key") == key and os.path.exists(part + ".npy"):
+                    dur = float(info.get("dur") or 0)
+                    log(f"  ⏭ 장면 {k + 1}/{N} 이미 완료 - 건너뜀: {first}")
+                else:
+                    log(f"🎬 장면 {k + 1}/{N} 만드는 중: {first}")
+                    narr_a = self.narration_for(text_k, sk, log, self.cancel)
+                    r = make_renderer(title, text_k, sk, narr_a)
+                    if k == 0:
+                        save_auto_thumb(r, base)
+                    a = build_audio(r, sk, style)          # 나레이션·효과음만 (배경음은 전체에 한 번에)
+                    if a is None:
+                        a = np.zeros((int(r.duration * SR), 2), np.float32)
+                    export_mp4_resumable(r, part, lambda i, n, k=k: prog(k * 1000 + i * 1000 // max(1, n), N * 1000), self.cancel, None,
+                                         os.path.join(parts_dir, f"work_{k + 1:03d}"), log=log, key=key)
+                    atomic_np_save(part + ".npy", a.astype(np.float32))
+                    info = {"key": key, "dur": r.duration, "spans": [(st, len(c) / SR) for st, c in r.narr_at], "chapters": r.chapter_times()}
+                    atomic_write_text(part + ".key", json.dumps(info, ensure_ascii=False))
+                    mark_done(part)
+                    dur = r.duration
+                    del r, narr_a, a
+                parts.append(part)
+                offsets.append(total)
+                spans += [(total + float(st), float(d)) for st, d in (info.get("spans") or [])]
+                chapters += [(total + float(t_), n_) for t_, n_ in (info.get("chapters") or [])]
+                total += dur
+            except Exception as e:
+                if str(e) == "취소됨":
+                    raise
+                raise RuntimeError(f"장면 {k + 1}/{N} ({first})에서 오류: {e}\n\n끝난 장면 {k}개는 남아 있습니다. 다시 'MP4 만들기'를 누르면 이 장면부터 이어서 만듭니다.") from e
+        # 소리: 배경음(전체, 말할 때 낮춤) + 장면별 나레이션 조각
+        log("🎵 배경음을 전체에 깔고 장면 소리를 합치는 중...")
+        self.q.put(lambda: self.status.config(text="소리 합치는 중..."))
+        n = int(total * SR)
+        audio = np.zeros((n, 2), np.float32)
+        music = make_music(s, style, min(n, LONG_MUSIC_SEC * SR) if n > LONG_MUSIC_SEC * 1.2 * SR else n)
+        if music is not None:
+            music = loudness_fit(music) * max(0, s["bgm_volume"])
+            if n > LONG_MUSIC_SEC * 1.2 * SR:
+                music = loop_xfade(music.astype(np.float32), n)
+            t = np.arange(n, dtype=np.float32) / SR
+            g = np.minimum(1, t / 1.5) * np.clip((total - t) / 2.5, 0, 1)
+            if spans:
+                g = g * duck_env(n, spans, total, float(s.get("narr_duck", 0.35)))
+            audio += music[:n] * g[:, None].astype(np.float32)
+            del music, g, t
+        for part, off in zip(parts, offsets):
+            a = np.load(part + ".npy")
+            i0 = int(off * SR)
+            seg = a[: max(0, n - i0)]
+            if len(seg):
+                audio[i0:i0 + len(seg)] += seg
+        peak = float(np.abs(audio).max())
+        if peak > 0.95:
+            audio *= 0.95 / peak
+        mp3 = ""
+        if "MP3" in s["audio_out"]:
+            mp3 = base + "_배경음.mp3"
+            write_mp3(mp3, audio)
+        in_video = "MP4에 포함" in s["audio_out"]
+        wav = os.path.join(parts_dir, "audio.wav")
+        if in_video:
+            write_wav(wav, audio)
+        del audio
+        log(f"🔗 장면 {len(parts)}개 합치는 중...")
+        lst = os.path.join(parts_dir, "list.txt")
+        with open(lst, "w", encoding="utf-8") as f_:
+            for p_ in parts:
+                f_.write(f"file '{os.path.abspath(p_).replace(chr(92), '/')}'\n")
+        cmd = [get_ffmpeg(), "-y", "-v", "error", "-f", "concat", "-safe", "0", "-i", lst]
+        if in_video:
+            cmd += ["-i", wav, "-map", "0:v", "-map", "1:a", "-c:v", "copy", "-c:a", "aac", "-b:a", "192k", "-shortest"]
+        else:
+            cmd += ["-c", "copy"]
+        cmd += ["-movflags", "+faststart", out]
+        p = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, errors="replace",
+                           creationflags=(subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0))
+        if p.returncode != 0:
+            raise RuntimeError("장면 합치기 실패: " + (p.stderr or "")[-500:])
+        prog(N * 1000, N * 1000)
+        if chapters:
+            with open(base + "_타임스탬프.txt", "w", encoding="utf-8") as f_:
+                f_.write("\n".join(f"{hms(t_)} {n_}" for t_, n_ in [(0, "오프닝")] + chapters))
+        size_mb = os.path.getsize(out) / 1e6
+        if not self.cancel.is_set():
+            self.q.put(lambda: self.status.config(text="업로드 문구·썸네일 만드는 중... (AI 1~2분)"))
+            publish_kit(kit["model"], base, title, story, kit["category"], kit["genre"], s, chapters or None, kit["sources"], kit["notes"], log)
+        return out, mp3, in_video and has_audio(out), size_mb
+
     def make_mp4(self):
         self.playing = False
         self.refresh_preview()
@@ -12891,6 +13303,9 @@ class App(tk.Tk):
 
         def job():
             nonlocal r
+            if (str(s.get("layout", "")).startswith("자막형") and str(s.get("scene_parts", "on")) == "on" and s.get("narration") == "on"
+                    and not str(s.get("narr_file", "")).strip() and not (getattr(self, "para_audio", {}) or {})):
+                return self._make_mp4_scenes(story_now, title_now, s, style, base, out, kit, prog)
             if s.get("narration") == "on" and not r.keys:
                 self.q.put(lambda: self.status.config(text="나레이션 만드는 중..."))
                 narr = self.narration_for(story_now, s, self.log_bg, self.cancel)
