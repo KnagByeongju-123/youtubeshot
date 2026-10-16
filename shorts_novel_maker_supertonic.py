@@ -1022,6 +1022,8 @@ Read 도구로 사진 파일을 하나씩 실제로 열어 본다(열지 않고 
 - fact: 사실관계 - 사진의 실제 대상·연도·장소·인물(설명·출처 표기와 보이는 내용으로 판단)이 붙은 문단의 사실과 맞는가.
   "일치"(같은 사건·대상) / "참고"(같은 대상이지만 다른 시점·장소이거나 일반 자료라 오해 소지는 없음) / "불일치"(다른 사건·전투·축제·도시·인물·종, 또는 문단의 연도·장소와 어긋남, 또는 설명이 사진 내용과 다름).
   "불일치"면 사진은 빠진다. 사실 콘텐츠에서는 비슷해 보여도 다른 대상이면 "불일치".
+  판단에는 '출처'와 '원본 페이지'(파일 이름에 사건·연도·장소가 들어 있는 경우가 많음)를 함께 쓴다. 예: 파일명이 'Desfile_de_Dia_de_Muertos_2025'면 그 행진 현장 사진이므로
+  외국 참가단이 찍혔어도 "일치"일 수 있다. 반대로 설명을 바꿔야 할 만큼 다른 나라·다른 축제·다른 인물·다른 시대의 사진인데 출처로도 연결이 안 되면 "불일치".
 - fact_note: fact 판단 근거 한 줄 (예: '1870년 보불전쟁 그림 - 1812년 러시아 원정과 무관')
 - caption: 설명이 부정확하거나 과장돼 있으면 사진 내용에 맞는 정확한 15자 이내 설명(화가·연도 포함 가능). 지금 설명이 정확하면 빈 문자열.
 반드시 JSON만 출력: {"photos": [{"k": 1, "score": 8, "best": 3, "best_score": 9, "what": "...", "fact": "일치", "fact_note": "...", "caption": ""}]}"""
@@ -1048,7 +1050,10 @@ def check_photo_fit(model, text, log=None, min_score=5, fiction=False):
     eng = str((SCRIPT_ENGINE.get("s") or {}).get("script_engine", "Claude"))
     if not (eng.startswith("Claude") or eng.startswith("자동")):
         return text, 0, 0           # 사진을 직접 보는 건 Claude 만 가능
-    plist = "\n".join(f"사진{k + 1}: {x[1] if os.path.isabs(x[1]) else os.path.join(BASE, x[1])} | 설명: {x[2]} | 붙은 문단: {x[3]}"
+    def _src_of(i_):
+        md_ = parse_media(paras[i_]) or ("", "", "", "")
+        return (f" | 출처: {md_[2]}" if md_[2] else "") + (f" | 원본 페이지: {md_[3]}" if md_[3] else "")
+    plist = "\n".join(f"사진{k + 1}: {x[1] if os.path.isabs(x[1]) else os.path.join(BASE, x[1])} | 설명: {x[2]}{_src_of(x[0])} | 붙은 문단: {x[3]}"
                       for k, x in enumerate(ph))
     tlist = "\n".join(f"[{n + 1}] {story_text_only(paras[i])[:220]}" for n, i in enumerate(items))
     try:
