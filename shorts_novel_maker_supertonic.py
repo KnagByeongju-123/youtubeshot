@@ -188,7 +188,7 @@ LONG_STYLES = {
 
 # 설정 탭 묶음 (화면 형식·표현 방식에 따라 필요한 탭만 보임). mode: all / scroll / sub
 UI_TABS = [
-    ("🎬 화면 형식", "all", ["format", "layout", "fps", "quality", "scene_parts", "audio_out", "out_dir", "intro_sec", "outro_sec", "outro_text",
+    ("🎬 화면 형식", "all", ["format", "layout", "fps", "quality", "scene_parts", "scene_trans", "audio_out", "out_dir", "intro_sec", "outro_sec", "outro_text",
                           "progress_bar", "reveal_fx", "hold_start", "hold_end", "safe_guide"]),
     ("🎨 글꼴·색", "all", ["font_path", "title_font_path", "text_color", "title_color", "accent_color", "quote_color", "shadow", "stroke_width"]),
     ("🔤 자막 디자인", "sub", ["style_preset", "sub_layout", "head_pos", "color_preset", "sub_box_color", "sub_box_alpha", "head_style", "head_size",
@@ -271,6 +271,7 @@ FIELDS = [
     ("영상", "fps", "FPS(60=부드러움, 30=빠른 제작)", "int", 30),
     ("영상", "quality", "화질(crf 18=최고·23=권장·28=작게)", "int", 23),
     ("영상", "scene_parts", "자막형: 장면별로 나눠 만들기(고친 장면만 다시·끝난 장면 유지)", "choice:on,off", "on"),
+    ("영상", "scene_trans", "장면 사이 전환 효과(장면별 제작 때)", "choice:페이드,밀어내기,덮기,닦아내기,확대,섞어서,없음", "페이드"),
     ("영상", "audio_out", "소리 저장 방식", "choice:MP4에 포함,MP4에 포함+MP3 따로,MP3만 따로(무음 MP4)", "MP4에 포함+MP3 따로"),
     ("영상", "out_dir", "저장 폴더", "dir", os.path.join(BASE, "output")),
     ("나레이션", "narration", "나레이션(음성 읽기)", "choice:on,off", "off"),
@@ -5993,6 +5994,143 @@ def concat_mp4_files(files, out):
         pass
     if p.returncode != 0:
         raise RuntimeError("조각 합치기 실패: " + (p.stderr or "")[-500:])
+
+
+def grab_frame(mp4, first=True):
+    """MP4 의 첫/마지막 프레임 (PIL RGB) - 조각 사이 전환 효과 만들 때"""
+    tmp = mp4 + (".first.png" if first else ".last.png")
+    flags = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
+    cmd = [get_ffmpeg(), "-y", "-v", "error"] + ([] if first else ["-sseof", "-0.12"]) + ["-i", mp4, "-frames:v", "1", "-update", "1", tmp]
+    subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=flags)
+    if not os.path.exists(tmp) and not first:            # 아주 짧은 조각: 처음부터 읽어 마지막 프레임
+        subprocess.run([get_ffmpeg(), "-y", "-v", "error", "-i", mp4, "-vf", "select='eq(n\\,0)'", "-frames:v", "1", "-update", "1", tmp],
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=flags)
+    im = Image.open(tmp).convert("RGB")
+    im.load()
+    try:
+        os.remove(tmp)
+    except OSError:
+        pass
+    return im
+
+
+class _TransClip:
+    """두 정지 화면 사이의 전환 효과 영상 (export_mp4 가 쓰는 r 인터페이스: duration, frame(t), s)"""
+
+    def __init__(self, a, b, kind, sec, s):
+        self.a, self.b = a.resize((W, H)), b.resize((W, H))
+        self.kind, self.sec, self.duration, self.s = kind, sec, sec, dict(s)
+
+    def frame(self, t):
+        e = float(smoothstep(min(1.0, max(0.0, t / self.sec))))
+        return np.asarray(SubtitleRenderer._transition(self.a, self.b, e, self.kind).convert("RGB")).copy()
+
+
+def duck_env_from_audio(a, n, duration, duck):
+    """소리(나레이션)가 나는 구간을 찾아 그때 배경음을 낮추는 곡선 (조각을 합친 소리에서 바로)"""
+    fr = max(1, SR // 100)
+    m = len(a) // fr
+    if m == 0:
+        return np.ones(n, np.float32)
+    rms = np.sqrt((a[:m * fr].astype(np.float32).reshape(m, fr, -1) ** 2).mean(axis=(1, 2)))
+    on = rms > 0.012
+    spans, k = [], 0
+    while k < m:
+        if on[k]:
+            j = k
+            while j < m and (on[j] or (j + 15 < m and on[j:j + 15].any())):   # 0.15초 안의 짧은 쉼은 이어서
+                j += 1
+            spans.append((k / 100.0, (j - k) / 100.0))
+            k = j
+        else:
+            k += 1
+    return duck_env(n, spans, duration, duck) if spans else np.ones(n, np.float32)
+
+
+TRANS_ROT = ["밀어내기", "덮기", "닦아내기", "확대"]
+
+
+def merge_parts_with_fx(parts, out, s, kind, log=None, cancel=None, work_dir=None, bgm_style=None, want_audio=True, need_mix=False):
+    """나레이션이 든 조각 MP4 들을 '전환 효과'를 끼워 이어 붙이고, 배경음은 마지막에 전체에 한 번에 깔기.
+    kind: 밀어내기·덮기·닦아내기·확대·페이드·섞어서·없음.  돌려줌: 섞은 소리(스테레오) 또는 None"""
+    log = log or (lambda x: None)
+    ff = get_ffmpeg()
+    flags = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
+    work_dir = work_dir or (os.path.splitext(out)[0] + "_합치기")
+    os.makedirs(work_dir, exist_ok=True)
+    kind = str(kind or "없음").split(" ")[0]
+    seq = []
+    for k, p in enumerate(parts):
+        if k > 0 and kind != "없음":
+            kk = TRANS_ROT[k % 4] if kind.startswith("섞어") else kind
+            sec = 0.4 if kk.startswith("페이드") else 0.6
+            key = (f"{int(os.path.getmtime(parts[k - 1]))}|{os.path.getsize(parts[k - 1])}|{int(os.path.getmtime(p))}|{os.path.getsize(p)}|"
+                   f"{kk}|{sec}|{W}x{H}|{s['fps']}|{s['quality']}")
+            tp = os.path.join(work_dir, f"trans_{k:03d}.mp4")
+            ok = False
+            try:
+                ok = os.path.exists(tp) and open(tp + ".key", encoding="utf-8").read() == key
+            except OSError:
+                pass
+            if not ok:
+                if cancel is not None and cancel.is_set():
+                    raise RuntimeError("취소됨")
+                clip = _TransClip(grab_frame(parts[k - 1], first=False), grab_frame(p, first=True), kk, sec, s)
+                export_mp4(clip, tp, lambda i, n: None, cancel, np.zeros((int(sec * SR), 2), np.float32))
+                atomic_write_text(tp + ".key", key)
+            seq.append(tp)
+        seq.append(p)
+    log(f"🔗 조각 {len(parts)}개" + (f" + 전환 효과 {len(seq) - len(parts)}개({kind})" if len(seq) > len(parts) else "") + " 합치는 중...")
+    joined = os.path.join(work_dir, "joined.mp4")
+    concat_mp4_files(seq, joined)
+    bgm_on = str(s.get("bgm_mode", "없음")) != "없음"
+    mixed = None
+    if bgm_on or not want_audio or need_mix:
+        p_ = subprocess.run([ff, "-v", "error", "-i", joined, "-f", "f32le", "-ac", "2", "-ar", str(SR), "-"],
+                            stdout=subprocess.PIPE, stderr=subprocess.PIPE, creationflags=flags)
+        narr = np.frombuffer(p_.stdout, np.float32).reshape(-1, 2).copy() if p_.returncode == 0 and p_.stdout else np.zeros((0, 2), np.float32)
+        n = len(narr)
+        if n == 0:
+            q_ = subprocess.run([ff, "-i", joined], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, errors="replace", creationflags=flags)
+            m_ = re.search(r"Duration: (\d+):(\d+):([\d.]+)", q_.stderr or "")
+            n = int((int(m_.group(1)) * 3600 + int(m_.group(2)) * 60 + float(m_.group(3))) * SR) if m_ else SR
+        total = n / SR
+        mixed = np.zeros((n, 2), np.float32)
+        mixed[:len(narr)] += narr
+        if bgm_on:
+            log("🎵 배경음을 전체에 깔고 말할 때는 낮추는 중...")
+            long_ = n > LONG_MUSIC_SEC * 1.2 * SR
+            music = make_music(s, bgm_style or "잔잔한 패드", min(n, LONG_MUSIC_SEC * SR) if long_ else n)
+            if music is not None:
+                music = loudness_fit(music) * max(0, s["bgm_volume"])
+                if long_:
+                    music = loop_xfade(music.astype(np.float32), n)
+                t = np.arange(n, dtype=np.float32) / SR
+                g = np.minimum(1, t / 1.5) * np.clip((total - t) / 2.5, 0, 1)
+                g = g * duck_env_from_audio(narr, n, total, float(s.get("narr_duck", 0.35)))
+                mixed += music[:n] * g[:, None].astype(np.float32)
+                del music, g, t
+        del narr
+        peak = float(np.abs(mixed).max()) if n else 0.0
+        if peak > 0.95:
+            mixed *= 0.95 / peak
+    if want_audio and mixed is not None and bgm_on:
+        wav = os.path.join(work_dir, "audio_mix.wav")
+        write_wav(wav, mixed)
+        cmd = [ff, "-y", "-v", "error", "-i", joined, "-i", wav, "-map", "0:v", "-map", "1:a", "-c:v", "copy", "-c:a", "aac", "-b:a", "192k",
+               "-shortest", "-movflags", "+faststart", out]
+    elif want_audio:
+        cmd = [ff, "-y", "-v", "error", "-i", joined, "-c", "copy", "-movflags", "+faststart", out]
+    else:
+        cmd = [ff, "-y", "-v", "error", "-i", joined, "-map", "0:v", "-c", "copy", "-an", "-movflags", "+faststart", out]
+    p = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, errors="replace", creationflags=flags)
+    if p.returncode != 0:
+        raise RuntimeError("합치기 실패: " + (p.stderr or "")[-500:])
+    try:
+        os.remove(joined)
+    except OSError:
+        pass
+    return mixed
 
 
 def write_package(path_base, title, story, pkg):
@@ -13358,6 +13496,7 @@ class App(tk.Tk):
                             if k < len(groups) - 1:
                                 sk["hold_end"] = 0
                             sk["progress_bar"] = "off"                # 위쪽 진행바 없음
+                            sk["bgm_mode"] = "없음"                   # 배경음은 합칠 때 전체에 한 번에
                             story_k = ppt_build_story(grp, narr, duo)
                             full_story.append(story_k)
                             shown = story_k
@@ -13405,10 +13544,11 @@ class App(tk.Tk):
                                 raise
                             raise RuntimeError(f"조각 {k + 1}/{len(groups)} ({rng_txt})에서 오류: {e}\n\n"
                                                f"끝난 조각 {k}개는 남아 있습니다. 다시 '🎬 발표 영상 만들기'를 누르면 이 조각부터 이어서 만듭니다.") from e
-                    log(f"🔗 조각 {len(part_files)}개 합치는 중...")
-                    self.q.put(lambda: self.status.config(text="조각 합치는 중..."))
+                    self.q.put(lambda: self.status.config(text="전환 효과 넣고 합치는 중..."))
                     os.makedirs(st["dir"], exist_ok=True)
-                    concat_mp4_files(part_files, base + ".mp4")
+                    mixed = merge_parts_with_fx(part_files, base + ".mp4", s, s.get("slide_trans", "밀어내기"), log, self.cancel,
+                                                os.path.join(parts_dir, "_합치기"), bgm_style=resolve_style(s, "발표"))
+                    del mixed
                     story_all = "\n\n".join(full_story)
                     if only_n is None and not self.cancel.is_set():
                         self.q.put(lambda: self.status.config(text="업로드 문구·썸네일 만드는 중... (AI 1~2분)"))
@@ -13465,7 +13605,7 @@ class App(tk.Tk):
         os.makedirs(parts_dir, exist_ok=True)
         fp = {k: v for k, v in s.items() if k not in self.SCENE_FP_SKIP}
         fp_txt = json.dumps(fp, ensure_ascii=False, sort_keys=True, default=str)
-        total, parts, offsets, spans, chapters = 0.0, [], [], [], []
+        total, parts, offsets, chapters = 0.0, [], [], []
         log(f"🎬 장면 {N}개로 나눠 만듭니다 (고친 장면만 다시 · 끝난 장면은 남음)")
         for k, text_k in enumerate(texts):
             if self.cancel.is_set():
@@ -13492,7 +13632,7 @@ class App(tk.Tk):
                     info = json.load(open(part + ".key", encoding="utf-8"))
                 except Exception:
                     pass
-                if os.path.exists(part) and is_done(part) and info.get("key") == key and os.path.exists(part + ".npy"):
+                if os.path.exists(part) and is_done(part) and info.get("key") == key:
                     dur = float(info.get("dur") or 0)
                     log(f"  ⏭ 장면 {k + 1}/{N} 이미 완료 - 건너뜀: {first}")
                 else:
@@ -13506,70 +13646,28 @@ class App(tk.Tk):
                         a = np.zeros((int(r.duration * SR), 2), np.float32)
                     export_mp4_resumable(r, part, lambda i, n, k=k: prog(k * 1000 + i * 1000 // max(1, n), N * 1000), self.cancel, a,
                                          os.path.join(parts_dir, f"work_{k + 1:03d}"), log=log, key=key)   # 조각에도 나레이션 소리를 넣어 따로 들어볼 수 있게
-                    atomic_np_save(part + ".npy", a.astype(np.float32))
-                    info = {"key": key, "dur": r.duration, "spans": [(st, len(c) / SR) for st, c in r.narr_at], "chapters": r.chapter_times()}
+                    info = {"key": key, "dur": r.duration, "chapters": r.chapter_times()}
                     atomic_write_text(part + ".key", json.dumps(info, ensure_ascii=False))
                     mark_done(part)
                     dur = r.duration
                     del r, narr_a, a
                 parts.append(part)
                 offsets.append(total)
-                spans += [(total + float(st), float(d)) for st, d in (info.get("spans") or [])]
                 chapters += [(total + float(t_), n_) for t_, n_ in (info.get("chapters") or [])]
                 total += dur
             except Exception as e:
                 if str(e) == "취소됨":
                     raise
                 raise RuntimeError(f"장면 {k + 1}/{N} ({first})에서 오류: {e}\n\n끝난 장면 {k}개는 남아 있습니다. 다시 'MP4 만들기'를 누르면 이 장면부터 이어서 만듭니다.") from e
-        # 소리: 배경음(전체, 말할 때 낮춤) + 장면별 나레이션 조각
-        log("🎵 배경음을 전체에 깔고 장면 소리를 합치는 중...")
-        self.q.put(lambda: self.status.config(text="소리 합치는 중..."))
-        n = int(total * SR)
-        audio = np.zeros((n, 2), np.float32)
-        music = make_music(s, style, min(n, LONG_MUSIC_SEC * SR) if n > LONG_MUSIC_SEC * 1.2 * SR else n)
-        if music is not None:
-            music = loudness_fit(music) * max(0, s["bgm_volume"])
-            if n > LONG_MUSIC_SEC * 1.2 * SR:
-                music = loop_xfade(music.astype(np.float32), n)
-            t = np.arange(n, dtype=np.float32) / SR
-            g = np.minimum(1, t / 1.5) * np.clip((total - t) / 2.5, 0, 1)
-            if spans:
-                g = g * duck_env(n, spans, total, float(s.get("narr_duck", 0.35)))
-            audio += music[:n] * g[:, None].astype(np.float32)
-            del music, g, t
-        for part, off in zip(parts, offsets):
-            a = np.load(part + ".npy")
-            i0 = int(off * SR)
-            seg = a[: max(0, n - i0)]
-            if len(seg):
-                audio[i0:i0 + len(seg)] += seg
-        peak = float(np.abs(audio).max())
-        if peak > 0.95:
-            audio *= 0.95 / peak
-        mp3 = ""
-        if "MP3" in s["audio_out"]:
-            mp3 = base + "_배경음.mp3"
-            write_mp3(mp3, audio)
+        self.q.put(lambda: self.status.config(text="전환 효과 넣고 합치는 중..."))
         in_video = "MP4에 포함" in s["audio_out"]
-        wav = os.path.join(parts_dir, "audio.wav")
-        if in_video:
-            write_wav(wav, audio)
-        del audio
-        log(f"🔗 장면 {len(parts)}개 합치는 중...")
-        lst = os.path.join(parts_dir, "list.txt")
-        with open(lst, "w", encoding="utf-8") as f_:
-            for p_ in parts:
-                f_.write(f"file '{os.path.abspath(p_).replace(chr(92), '/')}'\n")
-        cmd = [get_ffmpeg(), "-y", "-v", "error", "-f", "concat", "-safe", "0", "-i", lst]
-        if in_video:
-            cmd += ["-i", wav, "-map", "0:v", "-map", "1:a", "-c:v", "copy", "-c:a", "aac", "-b:a", "192k", "-shortest"]
-        else:
-            cmd += ["-map", "0:v", "-c", "copy"]           # 무음 MP4: 조각의 나레이션은 빼고 그림만
-        cmd += ["-movflags", "+faststart", out]
-        p = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, errors="replace",
-                           creationflags=(subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0))
-        if p.returncode != 0:
-            raise RuntimeError("장면 합치기 실패: " + (p.stderr or "")[-500:])
+        mixed = merge_parts_with_fx(parts, out, s, s.get("scene_trans", "페이드"), log, self.cancel, os.path.join(parts_dir, "_합치기"),
+                                    bgm_style=style, want_audio=in_video, need_mix=("MP3" in s["audio_out"]))
+        mp3 = ""
+        if "MP3" in s["audio_out"] and mixed is not None:
+            mp3 = base + "_배경음.mp3"
+            write_mp3(mp3, mixed)
+        del mixed
         prog(N * 1000, N * 1000)
         if publish and chapters:
             with open(base + "_타임스탬프.txt", "w", encoding="utf-8") as f_:
