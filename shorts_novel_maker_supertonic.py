@@ -2535,14 +2535,19 @@ def make_thumbnails(model, base, title, story, category, s, log=None):
     for i, v in enumerate(vs[:3]):
         st_ = v.get("style") if v.get("style") in THUMB_STYLES else (user_style if not user_style.startswith("자동") else None)
         cands.append((f"{i + 1}안 '{v.get('big', '')} {v.get('big2', '')}' · {st_ or '자동'}", render_thumb(v, s, photo_of(v), size=size, style=st_)))
-    # 1안은 다른 스타일로도 2장 더 (스타일 비교)
+    # 얼굴이 가장 크게 나온 사진을 쓴 시안(없으면 1안)을 다른 스타일로도 2장 더 (사람 얼굴이 있는 썸네일이 보통 더 잘 눌림)
+    def face_area(v):
+        fs = thumb_faces(photo_of(v))
+        return fs[0][2] * fs[0][3] if fs else 0.0
+    j = max(range(len(vs[:3])), key=lambda i: face_area(vs[i]))
+    vj = vs[j]
     used = {c[0].split(" · ")[-1] for c in cands}
-    for st_ in ("빨간 강조(원 + 화살표)", "노랑 패널(고대비)", "시네마 띠", "뉴스 속보", "미스터리 다크"):
+    for st_ in ("빨간 강조(원 + 화살표)", "시네마 띠", "노랑 패널(고대비)", "뉴스 속보", "미스터리 다크"):
         if len(cands) >= 5:
             break
         if st_ not in used:
             used.add(st_)
-            cands.append((f"1안 '{vs[0].get('big', '')} {vs[0].get('big2', '')}' · {st_}", render_thumb(vs[0], s, photo_of(vs[0]), size=size, style=st_)))
+            cands.append((f"{j + 1}안 '{vj.get('big', '')} {vj.get('big2', '')}' · {st_}", render_thumb(vj, s, photo_of(vj), size=size, style=st_)))
     cdir = base + "_썸네일_후보"
     os.makedirs(cdir, exist_ok=True)
     paths = []
