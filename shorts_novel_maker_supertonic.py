@@ -1291,7 +1291,7 @@ def hex_rgb(h):
 
 def safe_name(s):
     s = re.sub(r'[\\/:*?"<>|\n\r\t]', "", s).strip()
-    return s[:40] or "short_novel"
+    return s[:40].rstrip(" .") or "short_novel"      # 자른 끝의 공백·점 제거 (윈도우가 폴더 이름 끝 공백을 지워 경로가 안 맞던 문제)
 
 
 # ---------------- Claude (Claude Code CLI · Max 구독, API 키 사용 안 함) ----------------
