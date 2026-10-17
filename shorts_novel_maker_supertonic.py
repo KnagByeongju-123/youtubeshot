@@ -283,6 +283,7 @@ IMAGE_STYLES = {
     "짱구풍 코믹 애니": "simple comedic Japanese TV anime style, round simplified characters with thick outlines, flat bright colors, minimal detail, playful exaggerated expressions",
     "레트로 로봇 애니": "1970s Korean retro giant robot animation style, bold mechanical designs, dramatic heroic poses, cel shaded, vintage poster colors, action scene",
     "동화책 수채화": "children's picture book illustration, soft watercolor texture, warm gentle colors, rounded friendly shapes",
+    "애니 수채화풍": "children's picture book illustration, soft watercolor texture, warm gentle colors, rounded friendly shapes",
     "3D 애니(픽사풍)": "3D animated feature film style, soft global illumination, rounded stylized characters, expressive faces, cinematic composition",
 }
 IMAGE_STYLE_NEG = {   # 스타일별로 빼야 할 것
@@ -2272,7 +2273,6 @@ SD_MODELS = {"dreamshaper": (SD_MODEL_DIR, 5, 5.0), "anime": (SD_ANIME_DIR, 6, 1
 # 화풍 보조 파일(LoRA): 스타일 → (파일, 세기, 프롬프트 앞에 붙일 말). 파일이 없으면 보조 없이 그림
 SD_STYLE_LORA = {
     "동화책 수채화": ("models/lora_watercolor/fladdict-watercolor-sd-1-5.safetensors", 0.6, "watercolor painting, "),
-    "드로잉+가벼운 채색": ("models/lora_watercolor/fladdict-watercolor-sd-1-5.safetensors", 0.6, "ink drawing, watercolor painting, rough sketch, "),
 }
 
 
@@ -2287,7 +2287,8 @@ def sd_style_lora(preset):
 
 # 그림 스타일 → 어울리는 모델 (애니·만화 모델이 없으면 dreamshaper 로)
 SD_STYLE_MODEL = {"웹툰": "anime", "지브리풍 손그림 애니": "anime", "70~80년대 순정만화": "anime", "70~80년대 레트로 SF 애니": "anime",
-                  "짱구풍 코믹 애니": "anime", "레트로 로봇 애니": "anime", "풀컬러 만화(코믹스)": "anime"}   # 동화책 수채화는 일러스트 모델 + 수채화 보조가 가장 수채화다움
+                  "짱구풍 코믹 애니": "anime", "레트로 로봇 애니": "anime", "풀컬러 만화(코믹스)": "anime",
+                  "애니 수채화풍": "anime", "동화책 수채화": "anime"}   # 수채화도 애니 모델(동화책 수채화는 + 수채화 보조). 일러스트 모델은 쓰지 않음
 
 
 def sd_ready():
