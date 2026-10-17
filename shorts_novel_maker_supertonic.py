@@ -13686,8 +13686,8 @@ class App(tk.Tk):
         s = self.get_settings()
         top = ttk.Frame(win, padding=(10, 8))
         top.pack(fill="x")
-        ttk.Label(top, text="① 화풍·화풍 샘플·그림 수 정하고 ✨ 프롬프트 만들기  ② 📦 프롬프트 ZIP 만들기 → Gemini/ChatGPT 에 ZIP 올리고 복사된 안내 붙여넣기"
-                            "(또는 📋 묶음 복사)  ③ 받은 그림을 ZIP 으로 묶어 🗜 ZIP 넣기 (번호 순서대로 문단 앞에 들어감)",
+        ttk.Label(top, text="① 화풍·화풍 샘플·그림 수 정하고 ✨ 프롬프트 만들기  ② ▶ 한 장씩 넣기: 브라우저가 열리고 프롬프트가 복사됨 → 붙여넣고 Enter → 그림의 '이미지 복사'(또는 다운로드)"
+                            " → 자동으로 그 문단 앞에 들어가고 다음 프롬프트가 복사됨  ※ 여러 장 한꺼번에: 📦 프롬프트 ZIP → 받은 그림 ZIP 을 🗜 그림 ZIP 넣기",
                   foreground="#444", wraplength=950).pack(anchor="w")
         r1 = ttk.Frame(win, padding=(10, 0))
         r1.pack(fill="x")
@@ -13958,7 +13958,133 @@ class App(tk.Tk):
             self.write_log(f"🗜 Gemini 그림 {n_ok}장을 문단 앞에 넣음")
             stat.config(text=f"✅ {n_ok}장 넣음")
             show()
+        # ---- 한 장씩: 프롬프트 복사 → (사용자) 붙여넣고 Enter → '이미지 복사' 또는 다운로드 → 프로그램이 알아채 넣고 다음 프롬프트 복사 ----
+        one = {"on": False, "k": None, "base": None, "seen": set(), "t0": 0.0, "job": None}
+        dl_dir = os.path.join(os.path.expanduser("~"), "Downloads")
+
+        def clip_sig():
+            try:
+                from PIL import ImageGrab
+                c = ImageGrab.grabclipboard()
+            except Exception:
+                return None, None
+            if isinstance(c, Image.Image):
+                t = c.convert("RGB").resize((16, 16))
+                return hashlib.md5(t.tobytes()).hexdigest(), c
+            return None, None
+
+        def one_text(it):
+            lead = "이미지를 그려 줘: " if target_var.get() == "ChatGPT" else "이미지 생성: "
+            return lead + full_prompt(it)
+
+        def one_next(start=0):
+            its = items()
+            for k in range(start, len(its)):
+                if not its[k].get("done"):
+                    return k
+            return None
+
+        def one_copy(k):
+            its = items()
+            self.clipboard_clear()
+            self.clipboard_append(one_text(its[k]))
+            stat.config(text=f"▶ {k + 1}/{len(its)} 「{its[k].get('ko', '')}」 프롬프트 복사됨 → {target_var.get()}에 붙여넣고 Enter → 그림의 '이미지 복사' 또는 다운로드")
+            self.set_status(f"▶ 그림 {k + 1}/{len(its)} 프롬프트 복사됨")
+
+        def one_put(im, src):
+            its = items()
+            k = one["k"]
+            path = save_media_image(im, self.media_dir(), time.strftime("gemimg_%Y%m%d_%H%M%S") + f"_{k + 1}")
+            marker = make_marker(path, its[k].get("ko") or "장면", f"AI 생성 이미지 ({target_var.get()})")
+            if self.insert_before_para(its[k]["text"], marker):
+                its[k]["done"], its[k]["file"] = True, src
+            else:
+                self.insert_marker(marker)
+                its[k]["done"], its[k]["file"] = True, src + " (커서 위치)"
+            self.save_cfg()
+            self.write_log(f"▶ 그림 {k + 1}/{len(its)} 넣음: {its[k].get('ko', '')} ({src})")
+            show()
+            nk = one_next(k + 1)
+            if nk is None:
+                nk = one_next(0)
+            if nk is None:
+                one_stop(f"✅ {len(its)}장 모두 넣었어요")
+                return
+            one["k"] = nk
+            one_copy(nk)
+
+        def one_poll():
+            if not one["on"] or not win.winfo_exists():
+                return
+            sig, im = clip_sig()
+            if sig and sig != one["base"]:
+                one["base"] = sig
+                one_put(im, "클립보드")
+            else:
+                try:   # 다운로드 폴더에 새로 생긴 그림 (다 받아질 때까지 크기가 멈춘 것만)
+                    for fn in os.listdir(dl_dir):
+                        p = os.path.join(dl_dir, fn)
+                        if not fn.lower().endswith(IMG_EXT) or p in one["seen"] or os.path.getmtime(p) < one["t0"]:
+                            continue
+                        sz = os.path.getsize(p)
+                        if sz < 10000 or one.get("sz", {}).get(p) != sz:
+                            one.setdefault("sz", {})[p] = sz
+                            continue
+                        one["seen"].add(p)
+                        im2 = Image.open(p)
+                        im2.load()
+                        one_put(im2, fn)
+                        break
+                except Exception:
+                    pass
+            if one["on"]:
+                one["job"] = win.after(800, one_poll)
+
+        def one_start():
+            its = items()
+            if not its:
+                messagebox.showinfo("한 장씩 넣기", "먼저 ✨ 프롬프트 만들기를 누르세요.", parent=win)
+                return
+            k = one_next(0)
+            if k is None:
+                if not messagebox.askyesno("한 장씩 넣기", "모든 장면에 이미 그림을 넣었어요. 처음부터 다시 넣을까요? (같은 문단의 그림은 바뀜)", parent=win):
+                    return
+                for it in its:
+                    it["done"] = False
+                k = 0
+            one.update(on=True, k=k, base=clip_sig()[0], t0=time.time(), seen=set(), sz={})
+            import webbrowser
+            webbrowser.open("https://chatgpt.com/" if target_var.get() == "ChatGPT" else "https://gemini.google.com/app")
+            one_copy(k)
+            one_btn.config(text="■ 한 장씩 멈춤", command=lambda: one_stop("■ 멈춤"))
+            self.write_log(f"▶ {target_var.get()} 한 장씩 넣기 시작: 프롬프트 붙여넣기 → Enter → 그림 '이미지 복사'(또는 다운로드)를 반복하면 순서대로 들어갑니다")
+            one_poll()
+
+        def one_stop(msg):
+            one["on"] = False
+            if one.get("job"):
+                try:
+                    win.after_cancel(one["job"])
+                except Exception:
+                    pass
+            if win.winfo_exists():
+                stat.config(text=msg)
+                one_btn.config(text="▶ 한 장씩 넣기", command=one_start)
+
+        def one_skip():
+            if not one["on"]:
+                return
+            nk = one_next(one["k"] + 1)
+            if nk is None:
+                one_stop("■ 마지막 장면이었어요")
+                return
+            one["k"] = nk
+            one_copy(nk)
+        win.bind("<Destroy>", lambda e: one.update(on=False) if e.widget is win else None, add="+")
         ttk.Button(bar, text="✨ 프롬프트 만들기", command=make).pack(side="left")
+        one_btn = ttk.Button(bar, text="▶ 한 장씩 넣기", command=one_start)
+        one_btn.pack(side="left", padx=(6, 0))
+        ttk.Button(bar, text="⏭", width=3, command=one_skip).pack(side="left")
         ttk.Button(bar, text="📦 프롬프트 ZIP 만들기", command=make_zip).pack(side="left", padx=6)
         ttk.Button(bar, text="🗜 그림 ZIP 넣기", command=put_zip).pack(side="left")
         stat.pack(side="left", padx=8)
