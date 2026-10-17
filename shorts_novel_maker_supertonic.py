@@ -2392,7 +2392,7 @@ def check_image_defects(model, paths, log=None):
 
 # 대본 쓸 때 넣을 이미지: 웹 근거 사진 또는 (사실 주제여도) 이 PC에서 그린 그림
 IMG_SOURCE_WEB = "근거 사진(웹)"
-IMG_SOURCE_PRESET = {"그림: 애니(웹툰)": "웹툰", "그림: 애니+수채화": "동화책 수채화", "그림: 애니 수채화풍": "애니 수채화풍"}
+IMG_SOURCE_PRESET = {"그림: 애니(웹툰)": "웹툰", "그림: 애니+수채화": "동화책 수채화", "그림: 애니 모델 그대로": "애니 수채화풍"}   # 애니 모델 + 수채화 지시(보조 없음)
 IMG_SOURCE = {"mode": IMG_SOURCE_WEB}
 
 
@@ -10738,6 +10738,7 @@ class App(tk.Tk):
         self.research_var.set(bool(c.get("research", True)))
         self.autophoto_var.set(bool(c.get("autophoto", True)))
         _src = str(c.get("img_source") or IMG_SOURCE_WEB)
+        _src = {"그림: 애니 수채화풍": "그림: 애니 모델 그대로"}.get(_src, _src)
         self.img_src_var.set(_src if _src in IMG_SOURCE_PRESET else IMG_SOURCE_WEB)
         IMG_SOURCE["mode"] = self.img_src_var.get()
         self.set_reference(c.get("reference", ""))
