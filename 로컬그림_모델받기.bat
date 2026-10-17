@@ -13,4 +13,7 @@ echo [3/3] Downloading anime/comic model Counterfeit-V3.0 (OpenRAIL-M, 2.1GB) + 
 .sd_venv\Scripts\python.exe -X utf8 -c "from huggingface_hub import hf_hub_download; hf_hub_download('gsdf/Counterfeit-V3.0', 'Counterfeit-V3.0_fix_fp16.safetensors', local_dir=r'models/_dl'); hf_hub_download('latent-consistency/lcm-lora-sdv1-5', 'pytorch_lora_weights.safetensors', local_dir=r'models/lcm-lora-sdv1-5'); print('OK')"
 .sd_venv\Scripts\python.exe -X utf8 sd_convert_anime.py
 if errorlevel 1 (echo FAILED anime model - illustration model still works) else (echo Done. Anime/comic styles are now available.)
+echo [4/4] Downloading watercolor style LoRA (fladdict/watercolor, CreativeML OpenRAIL-M, 302MB) ...
+.sd_venv\Scripts\python.exe -X utf8 -c "from huggingface_hub import hf_hub_download; hf_hub_download('fladdict/watercolor', 'fladdict-watercolor-sd-1-5.safetensors', local_dir=r'models/lora_watercolor'); print('OK')"
+if errorlevel 1 (echo FAILED watercolor LoRA - other styles still work) else (echo Done. Watercolor style is now available.)
 pause

@@ -1,6 +1,7 @@
 """로컬 그림 생성 워커 (별도 가상환경 .sd_venv 에서 실행): LCM Dreamshaper v7 (MIT) · CPU 전용
 사용: python sd_worker.py <모델폴더> <작업.json> <저장폴더>
-작업.json: {"items": [{"id": "a1", "prompt": "...", "negative": "...", "width": 768, "height": 432, "seed": 1}], "steps": 4, "guidance": 8.0}
+작업.json: {"items": [{"id": "a1", "prompt": "...", "negative": "...", "width": 768, "height": 432, "seed": 1}], "steps": 4, "guidance": 8.0,
+           "lora": {"path": "models/lora_watercolor/....safetensors", "scale": 0.7}}  (lora 는 없어도 됨)
 출력: 그림마다 'OK id 경로' 한 줄, 실패는 'ERR id 이유', 진행은 'PROG k/n'"""
 import json
 import os
@@ -21,6 +22,14 @@ def main():
     pipe.scheduler = LCMScheduler.from_config(pipe.scheduler.config)
     pipe.set_progress_bar_config(disable=True)
     pipe.to("cpu")
+    lora = job.get("lora") or {}
+    if lora.get("path") and os.path.exists(lora["path"]):   # 화풍 보조 파일(LoRA): 예) 수채화
+        try:
+            pipe.load_lora_weights(os.path.dirname(lora["path"]), weight_name=os.path.basename(lora["path"]), adapter_name="style")
+            pipe.set_adapters(["style"], adapter_weights=[float(lora.get("scale", 0.7))])
+            print(f"LORA {os.path.basename(lora['path'])} x{float(lora.get('scale', 0.7)):.2f}", flush=True)
+        except Exception as e:
+            print(f"WARN LoRA 적용 실패(보조 없이 그림): {str(e)[:160]}", flush=True)
     print(f"LOADED {time.time() - t0:.1f}s", flush=True)
     steps = int(job.get("steps") or 4)
     guidance = float(job.get("guidance") or 8.0)

@@ -2269,9 +2269,25 @@ SD_ANIME_NEGATIVE = ("(worst quality, low quality:1.4), lowres, (bad anatomy:1.2
                      "(fused fingers:1.3), missing fingers, too many fingers, malformed limbs, extra arms, text, watermark, signature, blurry, nsfw")
 # 모델별 기본값: (폴더, 단계 수, 가이던스)
 SD_MODELS = {"dreamshaper": (SD_MODEL_DIR, 5, 5.0), "anime": (SD_ANIME_DIR, 6, 1.5)}
+# 화풍 보조 파일(LoRA): 스타일 → (파일, 세기, 프롬프트 앞에 붙일 말). 파일이 없으면 보조 없이 그림
+SD_STYLE_LORA = {
+    "동화책 수채화": ("models/lora_watercolor/fladdict-watercolor-sd-1-5.safetensors", 0.6, "watercolor painting, "),
+    "드로잉+가벼운 채색": ("models/lora_watercolor/fladdict-watercolor-sd-1-5.safetensors", 0.6, "ink drawing, watercolor painting, rough sketch, "),
+}
+
+
+def sd_style_lora(preset):
+    """그 스타일에 얹을 LoRA {"path", "scale"} 와 앞말. 없으면 (None, "")"""
+    v = SD_STYLE_LORA.get(preset)
+    if not v:
+        return None, ""
+    p = os.path.join(BASE, v[0])
+    return ({"path": p, "scale": v[1]} if os.path.exists(p) else None), (v[2] if os.path.exists(p) else "")
+
+
 # 그림 스타일 → 어울리는 모델 (애니·만화 모델이 없으면 dreamshaper 로)
 SD_STYLE_MODEL = {"웹툰": "anime", "지브리풍 손그림 애니": "anime", "70~80년대 순정만화": "anime", "70~80년대 레트로 SF 애니": "anime",
-                  "짱구풍 코믹 애니": "anime", "레트로 로봇 애니": "anime", "풀컬러 만화(코믹스)": "anime", "동화책 수채화": "anime"}
+                  "짱구풍 코믹 애니": "anime", "레트로 로봇 애니": "anime", "풀컬러 만화(코믹스)": "anime"}   # 동화책 수채화는 일러스트 모델 + 수채화 보조가 가장 수채화다움
 
 
 def sd_ready():
@@ -2282,7 +2298,7 @@ def sd_anime_ready():
     return sd_ready() and os.path.exists(os.path.join(SD_ANIME_DIR, "model_index.json"))
 
 
-def sd_generate(items, out_dir, log=None, cancel=None, steps=None, guidance=None, model="dreamshaper"):
+def sd_generate(items, out_dir, log=None, cancel=None, steps=None, guidance=None, model="dreamshaper", lora=None):
     """로컬 그림 생성: items [{id, prompt, negative?, width?, height?, seed?}] → {id: png 경로}. 모델은 한 번만 올려 여러 장.
     model: 'dreamshaper'(일러스트·사실·드로잉) 또는 'anime'(애니·만화, 없으면 dreamshaper)"""
     log = log or (lambda x: None)
@@ -2294,7 +2310,7 @@ def sd_generate(items, out_dir, log=None, cancel=None, steps=None, guidance=None
     steps, guidance = (steps or st_), (guidance if guidance is not None else gd_)
     os.makedirs(out_dir, exist_ok=True)
     job = os.path.join(out_dir, f"_job_{int(time.time())}.json")
-    atomic_write_text(job, json.dumps({"items": items, "steps": steps, "guidance": guidance}, ensure_ascii=False))
+    atomic_write_text(job, json.dumps({"items": items, "steps": steps, "guidance": guidance, **({"lora": lora} if lora else {})}, ensure_ascii=False))
     cmd = [SD_PYTHON, "-X", "utf8", "-u", os.path.join(BASE, "sd_worker.py"), mdir, job, out_dir]
     got = {}
     try:
@@ -2315,6 +2331,10 @@ def sd_generate(items, out_dir, log=None, cancel=None, steps=None, guidance=None
                 log("    그림 실패: " + ln[4:][:100])
             elif ln.startswith("LOADED"):
                 log("    그림 모델 준비됨 " + ln[6:].strip())
+            elif ln.startswith("LORA "):
+                log("    🎨 화풍 보조: " + ln[5:].strip())
+            elif ln.startswith("WARN "):
+                log("    " + ln[5:].strip())
         p.wait()
     finally:
         try:
@@ -2369,6 +2389,120 @@ def check_image_defects(model, paths, log=None):
     return bad
 
 
+def inject_cast_looks(items, cap_key="caption"):
+    """그림 항목마다 나오는 인물의 외모 설명(IMAGE_CAST)을 prompt 앞에 붙여 고정. 붙인 인물 이름 목록을 it["cast_used"] 에 남김"""
+    looks = {c["name"]: c["look"] for c in (IMAGE_CAST.get("chars") or []) if c.get("name") and c.get("look")}
+    if not looks:
+        return items
+    base_of = {nm: re.split(r"[(\[]", nm)[0].strip() for nm in looks}           # '한동수(1979년, 20세)' → '한동수'
+    n_base = {}
+    for nm, b_ in base_of.items():
+        n_base[b_] = n_base.get(b_, 0) + 1
+    for it in items:
+        names = [str(x) for x in (it.get("chars") or []) if str(x) in looks]
+        got_bases = {base_of[x] for x in names}
+        txt_ = str(it.get(cap_key, "")) + " " + str(it.get("prompt", ""))
+        for nm, b_ in base_of.items():   # 이름만 나온 경우: 나이별 항목이 여럿이면 어느 시기인지 모르므로 붙이지 않음
+            if nm in names or b_ in got_bases or n_base[b_] > 1:
+                continue
+            if b_ in txt_ or (len(b_) >= 3 and b_[1:] in txt_):
+                names.append(nm)
+        miss = [looks[nm] for nm in names if looks[nm][:25].lower() not in str(it.get("prompt", "")).lower()]
+        if miss:
+            it["prompt"] = "; ".join(miss) + ". " + str(it["prompt"])
+        it["cast_used"] = names
+    return items
+
+
+GEMINI_PROMPT_SYSTEM = """너는 유튜브 영상의 아트 디렉터다. 사용자가 Gemini(나노 바나나)에서 직접 그릴 장면 그림 프롬프트를 만든다.
+- 그림 수: 사용자가 정한 수만큼. 번호 붙은 문단 중에서 이야기 전체에 고르게 퍼지도록 그 수만큼 문단을 골라(첫 문단 포함, 이야기 흐름 순서대로) 문단마다 한 장.
+  중요한 장면(만남·전환·절정·결말)은 꼭 들어가게. 같은 구도 반복 금지(와이드/중간 샷/뒷모습/풍경/소품 클로즈업 섞기).
+- prompt: 영어 60~90단어. 장면의 핵심 행동을 앞쪽에, 장소·시대·계절·시간·빛·색감·구도·분위기를 구체적으로.
+  인물은 한 번에 1~2명, 중간 샷 이상으로 크게. 손이 크게 보이는 구도는 피한다. 글자·간판 문구·자막·워터마크 금지(no text).
+  실존 인물·유명 캐릭터·상표 금지. 잔인·선정 묘사 금지. 화풍 문구는 넣지 않는다(프로그램이 모든 그림에 같은 화풍을 붙임).
+- chars: 그 그림에 나오는 인물 이름 목록([등장인물 외모]의 이름 그대로, 괄호 속 시기까지 정확히). 같은 인물이 나이별로 여러 항목이면 그 장면 시기에 맞는 하나만.
+  그 인물의 외모 설명(look)은 prompt 안에 한 글자도 바꾸지 말고 그대로 넣는다.
+- [등장인물 외모]가 주어지지 않았으면 cast 를 먼저 정한다: 주요 인물마다 name(한국어 이름, 회상 등으로 나이가 달라지면 "이름(1979년, 20세)"처럼 시기별로 따로),
+  look(영어 25~40단어: 나이·성별·얼굴형·머리 길이와 색·안경 유무와 색·체형·대표 옷차림. 인물끼리 겹치지 않게), look_ko(한국어 요약). 주어졌으면 cast 는 [].
+- ko: 15자 이내 한국어 장면 설명
+반드시 JSON만 출력: {"cast": [{"name": "...", "look": "...", "look_ko": "..."}], "prompts": [{"para": 문단번호, "ko": "...", "prompt": "...", "chars": ["이름"]}]}"""
+
+
+def zip_image_files(zip_path, out_dir):
+    """ZIP 속 그림을 순서대로 꺼내 out_dir 에 저장 → [(원래 이름, 저장 경로)].
+    순서: 파일 이름에 1,2,3… 번호가 하나씩 붙어 있으면 번호 순, 아니면 ZIP 에 기록된 저장 시각(받은 순서) → 이름 순"""
+    import zipfile
+    os.makedirs(out_dir, exist_ok=True)
+    with zipfile.ZipFile(zip_path) as z:
+        infos = [i for i in z.infolist() if not i.is_dir() and os.path.basename(i.filename).lower().endswith(IMG_EXT + (".heic",))
+                 and not os.path.basename(i.filename).startswith(("._", ".")) and "__MACOSX" not in i.filename and i.file_size < 60 * 1024 * 1024]
+        if not infos:
+            return []
+        def num(i):
+            ns = re.findall(r"\d+", os.path.splitext(os.path.basename(i.filename))[0])
+            return int(ns[-1]) if len(ns) == 1 and len(ns[-1]) <= 3 else None
+        nums = [num(i) for i in infos]
+        if all(x is not None for x in nums) and len(set(nums)) == len(nums):
+            infos = [i for _, i in sorted(zip(nums, infos), key=lambda t: t[0])]
+        else:
+            order = {id(i): k for k, i in enumerate(infos)}
+            infos.sort(key=lambda i: (i.date_time, natural_key(os.path.basename(i.filename)), order[id(i)]))
+        out = []
+        for k, i in enumerate(infos):
+            ext = os.path.splitext(i.filename)[1].lower()
+            p = os.path.join(out_dir, f"zip_{k + 1:03d}{ext}")
+            with z.open(i) as src, open(p, "wb") as dst:
+                dst.write(src.read())
+            out.append((os.path.basename(i.filename), p))
+        return out
+
+
+ZIP_LIMIT = 20 * 1024 * 1024   # Gemini·ChatGPT 에 올릴 ZIP 한도
+
+
+def make_prompt_zip(zip_path, samples, files_text, limit=ZIP_LIMIT):
+    """화풍 샘플 그림 + 안내·프롬프트 글을 ZIP 하나로 (limit 를 넘지 않게 샘플을 줄이고, 그래도 크면 뒤 샘플부터 뺌)
+    files_text: {"00_먼저_읽기.txt": "..."} → (경로, 바이트, 넣은 샘플 수)"""
+    import zipfile
+    ims = []
+    for p in samples or []:
+        try:
+            im = Image.open(p)
+            im.load()
+            ims.append(im.convert("RGB"))
+        except Exception:
+            continue
+    texts = {k: v.encode("utf-8") for k, v in files_text.items()}
+    for side, q in ((1536, 88), (1280, 85), (1024, 80), (800, 75), (640, 70)):
+        blobs = []
+        for im in ims:
+            c = im.copy()
+            c.thumbnail((side, side), Image.LANCZOS)
+            b = io.BytesIO()
+            c.save(b, "JPEG", quality=q)
+            blobs.append(b.getvalue())
+        while True:
+            total = sum(len(x) for x in blobs) + sum(len(x) for x in texts.values()) + 4096
+            if total <= limit * 0.97 or not blobs:
+                break
+            if side > 640:
+                break
+            blobs.pop()                      # 가장 작게 줄여도 넘치면 뒤 샘플부터 뺌
+        if total <= limit * 0.97:
+            break
+    os.makedirs(os.path.dirname(zip_path) or ".", exist_ok=True)
+    with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as z:
+        for k, v in texts.items():
+            z.writestr(k, v)
+        for k, b in enumerate(blobs):
+            z.writestr(f"style_sample_{k + 1:02d}.jpg", b)
+    return zip_path, os.path.getsize(zip_path), len(blobs)
+
+
+def natural_key(name):
+    return [int(t) if t.isdigit() else t.lower() for t in re.split(r"(\d+)", str(name))]
+
+
 def make_ai_images(model, category, title, story, n, s, media_dir, log, cancel=None):
     """이야기에 맞는 그림을 기획(대본 AI) → ChatGPT 또는 로컬 모델로 그려서 저장 → [{path, caption, credit, after}]"""
     local = str(s.get("fiction_image", "")).startswith("로컬")
@@ -2386,23 +2520,7 @@ def make_ai_images(model, category, title, story, n, s, media_dir, log, cancel=N
                            + f"\n[제목] {title}\n\n[본문]\n{story_text_only(story)}")
     items = [x for x in (plan.get("images") or []) if isinstance(x, dict) and x.get("prompt")][:n]
     if cast:   # 기획이 외모를 빠뜨려도 프로그램이 앞에 붙여 고정 (이름이 chars 에 있거나 caption/prompt 에 나오면)
-        looks = {c["name"]: c["look"] for c in (IMAGE_CAST.get("chars") or []) if c.get("name") and c.get("look")}
-        base_of = {nm: re.split(r"[(\[]", nm)[0].strip() for nm in looks}           # '한동수(1979년, 20세)' → '한동수'
-        n_base = {}
-        for nm, b_ in base_of.items():
-            n_base[b_] = n_base.get(b_, 0) + 1
-        for it in items:
-            names = [str(x) for x in (it.get("chars") or []) if str(x) in looks]
-            got_bases = {base_of[x] for x in names}
-            txt_ = str(it.get("caption", "")) + " " + str(it.get("prompt", ""))
-            for nm, b_ in base_of.items():   # 이름만 나온 경우: 나이별 항목이 여럿이면 어느 시기인지 모르므로 붙이지 않음
-                if nm in names or b_ in got_bases or n_base[b_] > 1:
-                    continue
-                if b_ in txt_ or (len(b_) >= 3 and b_[1:] in txt_):
-                    names.append(nm)
-            miss = [looks[nm] for nm in names if looks[nm][:25].lower() not in str(it.get("prompt", "")).lower()]
-            if miss:
-                it["prompt"] = "; ".join(miss) + ". " + str(it["prompt"])
+        inject_cast_looks(items)
     got = []
     if local:   # 이 PC에서 무료로 (한 장 1~3분, 모델은 한 번만 올림)
         port = H > W
@@ -2421,8 +2539,12 @@ def make_ai_images(model, category, title, story, n, s, media_dir, log, cancel=N
                 neg = SD_NEGATIVE + ", " + IMAGE_STYLE_NEG["사실 묘사"]
             jobs = [{"id": f"i{k}", "prompt": it["prompt"] + (f" Style: {style}." if style else "") + ", highly detailed",
                      "negative": neg, "width": w_, "height": h_, "seed": 1000 + k} for k, it in enumerate(items)]
-        log(f"  🖌 그림 모델: {'애니·만화(Counterfeit)' if model_ == 'anime' else '일러스트(Dreamshaper)'}")
-        paths = sd_generate(jobs, os.path.join(media_dir, "_sd"), log, cancel, model=model_)
+        lora_, lead_ = sd_style_lora(preset)
+        if lora_:
+            for j in jobs:
+                j["prompt"] = lead_ + j["prompt"]
+        log(f"  🖌 그림 모델: {'애니·만화(Counterfeit)' if model_ == 'anime' else '일러스트(Dreamshaper)'}" + (" + 수채화 보조" if lora_ else ""))
+        paths = sd_generate(jobs, os.path.join(media_dir, "_sd"), log, cancel, model=model_, lora=lora_)
         # 손·얼굴 결함 검사 → 문제 있는 것만 손을 숨기는 지시와 다른 시드로 한 번 더 (최대 4장)
         done_paths = [paths.get(f"i{k}") for k in range(len(items))]
         if any(done_paths):
@@ -2439,7 +2561,7 @@ def make_ai_images(model, category, title, story, n, s, media_dir, log, cancel=N
                     j["seed"] = int(j.get("seed", 0)) + 777
                     j["id"] = f"r{k}"
                     jobs2.append(j)
-                paths2 = sd_generate(jobs2, os.path.join(media_dir, "_sd"), log, cancel, model=model_)
+                paths2 = sd_generate(jobs2, os.path.join(media_dir, "_sd"), log, cancel, model=model_, lora=lora_)
                 for k in redo:
                     p2 = paths2.get(f"r{k}")
                     if p2:
@@ -10563,6 +10685,8 @@ class App(tk.Tk):
                 "length": self.len_var.get(), "judge": self.judge_var.get(), "theme": self.theme_var.get(),
                 "research": self.research_var.get(), "autophoto": self.autophoto_var.get(),
                 "reference": getattr(self, "reference", ""), "img_prompts": getattr(self, "img_prompts", []),
+                "gem_prompts": getattr(self, "gem_prompts", []), "cast": list(IMAGE_CAST.get("chars") or []),
+                "gem_samples": getattr(self, "gem_samples", []), "gem_target": getattr(self, "gem_target", "Gemini"),
                 "para_audio": getattr(self, "para_audio", {}), "narr_style": getattr(self, "narr_style_cache", {}),
                 "title": self.title_var.get(), "story": self.get_story(), "settings": self.get_settings()}
 
@@ -10600,6 +10724,10 @@ class App(tk.Tk):
         self.autophoto_var.set(bool(c.get("autophoto", True)))
         self.set_reference(c.get("reference", ""))
         self.img_prompts = list(c.get("img_prompts") or [])
+        self.gem_prompts = list(c.get("gem_prompts") or [])
+        self.gem_samples = [str(p) for p in (c.get("gem_samples") or []) if os.path.exists(str(p))]
+        self.gem_target = str(c.get("gem_target") or "Gemini")
+        IMAGE_CAST["chars"] = [x for x in (c.get("cast") or []) if isinstance(x, dict) and x.get("name")]
         self.para_audio = {str(k): v for k, v in (c.get("para_audio") or {}).items()}
         self.narr_style_cache = dict(c.get("narr_style") or {})
         self.set_sources(c.get("sources", []), c.get("notes", ""))
@@ -10781,6 +10909,7 @@ class App(tk.Tk):
         ttk.Button(r4, text="파일에서 넣기", command=self.add_photo_file).pack(side="left", padx=4)
         ttk.Button(r4, text="붙여넣기 (Ctrl+V)", command=lambda: self.on_paste(from_button=True)).pack(side="left")
         ttk.Button(r4, text="📑 문단별 정리(그림·음성)", command=self.para_board).pack(side="left", padx=4)
+        ttk.Button(r4, text="🗜 Gemini·ChatGPT 그림(ZIP)", command=self.gemini_zip_window).pack(side="left", padx=(0, 4))
         ttk.Button(r4, text="🎬 장면 편집(순서·수정·사진)", command=self.scene_editor).pack(side="left", padx=(0, 4))
         ttk.Label(r4, text="사진·이미지 주소·파일을 복사해서 본문에 Ctrl+V → 커서 위치에 들어감",
                   foreground="gray").pack(side="left", padx=6)
@@ -13136,6 +13265,8 @@ class App(tk.Tk):
         CURRENT_MELODY["melody"], CURRENT_MELODY["bpm"] = "", 90
         self.set_reference("")
         self.img_prompts = []
+        self.gem_prompts = []
+        IMAGE_CAST["chars"] = []
         self.para_audio = {}
         self.cmd_var.set("")
         self.last_review = self.last_verify = None
@@ -13407,6 +13538,300 @@ class App(tk.Tk):
             lab.pack(side="left", padx=6)
         if not items:
             ttk.Label(body, text="프롬프트가 없습니다. '다시 만들기'를 누르세요.").pack(pady=20)
+
+    # ---- Gemini 그림 (프롬프트 묶음 복사 → Gemini 에서 그림 → ZIP 으로 한 번에 넣기) ----
+    def gemini_zip_window(self):
+        story = self.get_story()
+        paras = prompt_paras(story)
+        if not paras:
+            messagebox.showinfo("Gemini 그림", "먼저 대본을 만들거나 입력하세요.")
+            return
+        if getattr(self, "_gem_win", None) is not None and self._gem_win.winfo_exists():
+            self._gem_win.destroy()
+        win = tk.Toplevel(self)
+        self._gem_win = win
+        win.title("Gemini·ChatGPT 그림 - 프롬프트(ZIP) 올리기 → 그리기 → 받은 그림을 ZIP 으로 묶어 넣기")
+        win.geometry("980x780")
+        s = self.get_settings()
+        top = ttk.Frame(win, padding=(10, 8))
+        top.pack(fill="x")
+        ttk.Label(top, text="① 화풍·화풍 샘플·그림 수 정하고 ✨ 프롬프트 만들기  ② 📦 프롬프트 ZIP 만들기 → Gemini/ChatGPT 에 ZIP 올리고 복사된 안내 붙여넣기"
+                            "(또는 📋 묶음 복사)  ③ 받은 그림을 ZIP 으로 묶어 🗜 ZIP 넣기 (번호 순서대로 문단 앞에 들어감)",
+                  foreground="#444", wraplength=950).pack(anchor="w")
+        r1 = ttk.Frame(win, padding=(10, 0))
+        r1.pack(fill="x")
+        ttk.Label(r1, text="그릴 곳").pack(side="left")
+        target_var = tk.StringVar(value=getattr(self, "gem_target", "Gemini") or "Gemini")
+        ttk.Combobox(r1, textvariable=target_var, values=["Gemini", "ChatGPT"], state="readonly", width=9).pack(side="left", padx=(4, 12))
+        ttk.Label(r1, text="화풍").pack(side="left")
+        cur = str(s.get("image_style_preset", "") or "")
+        style_var = tk.StringVar(value=cur if cur in IMAGE_STYLES else "동화책 수채화")
+        ttk.Combobox(r1, textvariable=style_var, values=list(IMAGE_STYLES), state="readonly", width=24).pack(side="left", padx=4)
+        ttk.Label(r1, text="그림 수").pack(side="left", padx=(12, 0))
+        old = [x for x in (getattr(self, "gem_prompts", []) or []) if x.get("text") in paras]
+        n_var = tk.IntVar(value=len(old) if old else max(1, min(len(paras), photo_target(story) if PHOTO_PLAN.get("sub") else 10)))
+        ttk.Spinbox(r1, from_=1, to=max(1, min(60, len(paras))), textvariable=n_var, width=5).pack(side="left", padx=4)
+        ttk.Label(r1, text=f"(문단 {len(paras)}개)", foreground="gray").pack(side="left")
+        ttk.Label(r1, text="한 번에 복사").pack(side="left", padx=(12, 0))
+        chunk_var = tk.IntVar(value=4)
+        ttk.Spinbox(r1, from_=1, to=20, textvariable=chunk_var, width=4).pack(side="left", padx=4)
+        ttk.Label(r1, text="장씩", foreground="gray").pack(side="left")
+        r2 = ttk.Frame(win, padding=(10, 4, 10, 0))
+        r2.pack(fill="x")
+        ttk.Label(r2, text="화풍 샘플").pack(side="left")
+        samp_lab = ttk.Label(r2, text="", foreground="#555")
+        thumbs = ttk.Frame(r2)
+
+        def show_samples():
+            self.gem_samples = [p for p in (getattr(self, "gem_samples", []) or []) if os.path.exists(p)]
+            for w_ in thumbs.winfo_children():
+                w_.destroy()
+            self._gem_thumbs = []
+            for p in self.gem_samples[:8]:
+                try:
+                    im = Image.open(p)
+                    im.thumbnail((64, 40))
+                    ph = ImageTk.PhotoImage(im)
+                    self._gem_thumbs.append(ph)
+                    ttk.Label(thumbs, image=ph).pack(side="left", padx=1)
+                except Exception:
+                    pass
+            samp_lab.config(text=f"{len(self.gem_samples)}장 (이 그림들의 선·채색·색감을 따라 그리게 함)" if self.gem_samples else
+                            "없음 - 원하는 화풍 그림(예: Gemini 로 만든 수채화 몇 장)을 고르면 ZIP 에 같이 들어감")
+
+        def pick_samples():
+            fs = filedialog.askopenfilenames(parent=win, title="화풍 샘플 그림 고르기 (여러 장)", filetypes=[("그림", "*.png *.jpg *.jpeg *.webp")])
+            if fs:
+                self.gem_samples = list(fs)[:12]
+                self.save_cfg()
+                show_samples()
+        ttk.Button(r2, text="🖼 고르기", command=pick_samples).pack(side="left", padx=4)
+        ttk.Button(r2, text="지우기", command=lambda: (setattr(self, "gem_samples", []), self.save_cfg(), show_samples())).pack(side="left")
+        thumbs.pack(side="left", padx=6)
+        samp_lab.pack(side="left", padx=4)
+        show_samples()
+        cf = ttk.LabelFrame(win, text=" 등장인물 외모 (모든 그림에 그대로 들어감 · 고쳐 써도 됨 · 비워 두면 AI 가 정함)  형식: 이름: 영어 외모 설명 ", padding=6)
+        cf.pack(fill="x", padx=10, pady=6)
+        cast_box = tk.Text(cf, height=5, wrap="word", font=("맑은 고딕", 9))
+        cast_box.pack(fill="x")
+
+        def fill_cast():
+            cast_box.delete("1.0", "end")
+            cast_box.insert("1.0", "\n".join(f"{c['name']}: {c['look']}" for c in IMAGE_CAST.get("chars") or [] if c.get("name") and c.get("look")))
+        fill_cast()
+
+        def read_cast():
+            chars, keep = [], {c.get("name"): c for c in IMAGE_CAST.get("chars") or []}
+            for ln in cast_box.get("1.0", "end").splitlines():
+                if ":" in ln:
+                    nm, lk = ln.split(":", 1)
+                    nm, lk = nm.strip(" -•\t"), lk.strip()
+                    if nm and lk:
+                        chars.append({"name": nm, "look": lk, "look_ko": (keep.get(nm) or {}).get("look_ko", "")})
+            IMAGE_CAST["chars"] = chars
+            return chars
+        bar = ttk.Frame(win, padding=(10, 0))
+        bar.pack(fill="x")
+        stat = ttk.Label(bar, text="", foreground="#06c")
+        outer = ttk.Frame(win)
+        outer.pack(fill="both", expand=True, pady=(6, 0))
+        cv = tk.Canvas(outer, highlightthickness=0)
+        sb = ttk.Scrollbar(outer, orient="vertical", command=cv.yview)
+        body = ttk.Frame(cv)
+        body.bind("<Configure>", lambda e: cv.configure(scrollregion=cv.bbox("all")))
+        cv.create_window((0, 0), window=body, anchor="nw")
+        cv.configure(yscrollcommand=sb.set)
+        cv.pack(side="left", fill="both", expand=True)
+        sb.pack(side="right", fill="y")
+        win.bind("<MouseWheel>", lambda e: cv.yview_scroll(int(-e.delta / 120), "units"))
+        labs = []
+
+        def items():
+            cur_paras = prompt_paras(self.get_story())
+            return [x for x in (getattr(self, "gem_prompts", []) or []) if x.get("text") in cur_paras]
+
+        def full_prompt(it):
+            st = IMAGE_STYLES.get(style_var.get(), "")
+            return (str(it.get("prompt", "")).strip().rstrip(".") + "." + (f" Art style: {st}." if st else "")
+                    + (" Wide 16:9 landscape composition." if is_landscape() else " Vertical 9:16 composition.") + " No text, no letters, no watermark.")
+
+        def header(k0, k1, total, zipped=False):
+            cast = cast_text(read_cast())
+            samp = bool(getattr(self, "gem_samples", None))
+            gpt = target_var.get() == "ChatGPT"
+            return ((f"이 ZIP 안의 style_sample 그림들은 화풍 견본이야. 견본의 선·채색 방식·색감·종이 질감을 그대로 따라 그려 줘(견본 속 인물·장면은 따라 하지 말 것).\n" if zipped and samp else "")
+                    + f"아래 장면 {k0}~{k1}번(전체 {total}장 중)을 번호 순서대로 한 장씩 각각 따로 그려 줘. 한 장에 여러 장면을 합치지 말 것.\n"
+                    + ("한 번에 한 장씩 그리고, 내가 '다음'이라고 하면 다음 번호를 그려 줘.\n" if gpt else "")
+                    + f"모든 그림은 같은 화풍과 같은 인물 외모를 유지해 줘. 화면 비율 {ratio_ko()}, 그림 안에 글자·워터마크 없이.\n"
+                    f"[화풍] {IMAGE_STYLES.get(style_var.get(), '')}\n"
+                    + (f"[등장인물 외모 - 모든 장면에서 똑같이]\n{cast}\n" if cast else ""))
+
+        def make_zip():
+            its = items()
+            if not its:
+                messagebox.showinfo("프롬프트 ZIP", "먼저 ✨ 프롬프트 만들기를 누르세요.", parent=win)
+                return
+            self.gem_target = target_var.get()
+            body_txt = header(1, len(its), len(its), zipped=True) + "\n" + "\n\n".join(f"[{k + 1}] {it.get('ko', '')}\n{full_prompt(it)}" for k, it in enumerate(its))
+            base = safe_name(self.title_var.get() or "그림") or "그림"
+            zp = os.path.join(self.vars["out_dir"].get() or os.path.join(BASE, "output"), "그림_프롬프트", f"{base}_{target_var.get()}_프롬프트.zip")
+            try:
+                zp, size, n_s = make_prompt_zip(zp, getattr(self, "gem_samples", []), {"00_먼저_읽기.txt": body_txt})
+            except Exception as e:
+                messagebox.showerror("프롬프트 ZIP", f"ZIP 을 만들지 못했어요: {e}", parent=win)
+                return
+            short = (f"첨부한 ZIP 의 00_먼저_읽기.txt 안내대로" + (" style_sample 그림의 화풍을 따라" if n_s else "")
+                     + f" 장면 1번부터 번호 순서대로 한 장씩 그려 줘. 전체 {len(its)}장."
+                     + (" 한 번에 한 장씩 그리고 내가 '다음'이라고 하면 다음 번호를 그려 줘." if target_var.get() == "ChatGPT" else ""))
+            self.clipboard_clear()
+            self.clipboard_append(short)
+            lost = len(getattr(self, "gem_samples", []) or []) - n_s
+            stat.config(text=f"📦 ZIP {size / 1024 / 1024:.1f}MB (샘플 {n_s}장{f', 20MB 넘어 {lost}장 뺌' if lost > 0 else ''}) · 안내 문장 복사됨")
+            self.write_log(f"📦 {target_var.get()} 프롬프트 ZIP: {zp} ({size / 1024 / 1024:.1f}MB, 20MB 이하)")
+            self.save_cfg()
+            try:
+                os.startfile(os.path.dirname(zp))
+            except Exception:
+                pass
+
+        def copy_chunk(c0):
+            its = items()
+            if not its:
+                messagebox.showinfo("Gemini 그림", "먼저 ✨ 프롬프트 만들기를 누르세요.", parent=win)
+                return
+            n_ = max(1, int(chunk_var.get() or 4))
+            part = its[c0:c0 + n_]
+            txt = header(c0 + 1, c0 + len(part), len(its)) + "\n" + "\n\n".join(f"[{c0 + k + 1}] {it.get('ko', '')}\n{full_prompt(it)}" for k, it in enumerate(part))
+            self.clipboard_clear()
+            self.clipboard_append(txt)
+            stat.config(text=f"📋 {c0 + 1}~{c0 + len(part)}번 복사됨 → Gemini 에 붙여넣기")
+            self.set_status(f"📋 Gemini 프롬프트 {c0 + 1}~{c0 + len(part)}번 복사됨")
+
+        def show():
+            for w_ in body.winfo_children():
+                w_.destroy()
+            labs.clear()
+            its = items()
+            if not its:
+                ttk.Label(body, text="프롬프트가 없습니다. 위에서 ✨ 프롬프트 만들기를 누르세요.").pack(pady=20)
+                return
+            n_ = max(1, int(chunk_var.get() or 4))
+            cb = ttk.Frame(body)
+            cb.pack(fill="x", padx=10, pady=4)
+            ttk.Label(cb, text="📋 묶음 복사:").pack(side="left")
+            for c0 in range(0, len(its), n_):
+                ttk.Button(cb, text=f"{c0 + 1}~{min(len(its), c0 + n_)}", width=7, command=lambda c0=c0: copy_chunk(c0)).pack(side="left", padx=1)
+            for k, it in enumerate(its):
+                fr = ttk.LabelFrame(body, text=f" {k + 1}. {it.get('ko', '')} " + (f"  👤 {', '.join(it.get('cast_used') or [])}" if it.get("cast_used") else ""), padding=6)
+                fr.pack(fill="x", padx=10, pady=3)
+                short = story_text_only(it["text"]).replace("\n", " ").strip()
+                ttk.Label(fr, text="문단: " + short[:90] + ("…" if len(short) > 90 else ""), foreground="#666", wraplength=900).pack(anchor="w")
+                ttk.Label(fr, text=it.get("prompt", ""), wraplength=900, font=("맑은 고딕", 9)).pack(anchor="w", pady=2)
+                lab = ttk.Label(fr, text=("✅ 넣음 " + it.get("file", "")) if it.get("done") else "", foreground="#080")
+                lab.pack(anchor="w")
+                labs.append(lab)
+
+        def make():
+            story_ = self.get_story()
+            paras_ = prompt_paras(story_)
+            n = max(1, min(len(paras_), int(n_var.get() or 1)))
+            chars = read_cast()
+            model, title, cat = self.model_var.get().strip(), self.title_var.get(), self.cat_var.get()
+
+            def job():
+                numbered = "\n\n".join(f"[{i + 1}] {story_text_only(x).strip()}" for i, x in enumerate(paras_))
+                d = ask_script_json(model, fit_ratio(GEMINI_PROMPT_SYSTEM), f"화면: {ratio_ko()}\n콘텐츠 종류: {cat}\n그림 수: {n}장\n화풍(참고만, prompt 에 넣지 말 것): {style_var.get()}"
+                                    + (f"\n\n[등장인물 외모 - 모든 그림에서 그대로, prompt 에 그대로 복사]\n{cast_text(chars)}" if chars else "")
+                                    + f"\n[제목] {title}\n\n[문단 {len(paras_)}개]\n{numbered}")
+                if not chars:
+                    IMAGE_CAST["chars"] = [{"name": str(x.get("name", "")), "look": str(x.get("look", "")), "look_ko": str(x.get("look_ko", ""))}
+                                           for x in (d.get("cast") or []) if isinstance(x, dict) and x.get("name") and x.get("look")]
+                out, seen = [], set()
+                for it in d.get("prompts") or []:
+                    try:
+                        i = int(it.get("para")) - 1
+                    except (TypeError, ValueError):
+                        continue
+                    if 0 <= i < len(paras_) and i not in seen and it.get("prompt"):
+                        seen.add(i)
+                        out.append({"i": i, "text": paras_[i], "ko": str(it.get("ko", "")), "prompt": str(it["prompt"]),
+                                    "chars": [str(c) for c in it.get("chars") or []]})
+                out.sort(key=lambda x: x["i"])
+                inject_cast_looks(out, cap_key="ko")
+                return out[:n]
+
+            def done(res):
+                self.gem_prompts = res
+                self.vars["image_style_preset"].set(style_var.get()) if "image_style_preset" in self.vars else None
+                self.save_cfg()
+                fill_cast()
+                self.write_log(f"🗜 Gemini 그림 프롬프트 {len(res)}개 완성 (화풍: {style_var.get()})")
+                stat.config(text=f"✨ {len(res)}개 완성 → 📋 묶음 복사")
+                if win.winfo_exists():
+                    show()
+            self.write_log(f"🗜 Gemini 그림 프롬프트 {n}개 만드는 중..." + ("" if chars else " (등장인물 외모도 함께 정함)"))
+            self.run_bg("Gemini 그림 프롬프트 만드는 중...", job, done)
+
+        def put_zip():
+            its = items()
+            if not its:
+                messagebox.showinfo("그림 ZIP 넣기", "먼저 ✨ 프롬프트 만들기를 누르세요.\n(프롬프트 번호 순서대로 그림을 넣습니다)", parent=win)
+                return
+            fs = filedialog.askopenfilenames(parent=win, title="Gemini 에서 받은 그림 ZIP (또는 그림 여러 장)",
+                                             filetypes=[("ZIP 또는 그림", "*.zip *.png *.jpg *.jpeg *.webp"), ("ZIP", "*.zip")])
+            if not fs:
+                return
+            tmp = os.path.join(self.media_dir(), "_zip_" + time.strftime("%H%M%S"))
+            files = []
+            try:
+                for f_ in fs:
+                    if f_.lower().endswith(".zip"):
+                        files += zip_image_files(f_, tmp)
+                    elif f_.lower().endswith(IMG_EXT):
+                        files.append((os.path.basename(f_), f_))
+            except Exception as e:
+                messagebox.showerror("Gemini 그림", f"ZIP 을 열지 못했어요: {e}", parent=win)
+                return
+            if not any(f_.lower().endswith(".zip") for f_ in fs):
+                files.sort(key=lambda t: natural_key(t[0]))
+            if not files:
+                messagebox.showinfo("Gemini 그림", "ZIP 안에 그림 파일이 없어요.", parent=win)
+                return
+            plan = "\n".join(f"{k + 1}. {its[k].get('ko', '')}  ←  {nm}" for k, (nm, _) in enumerate(files[:len(its)]))
+            more = ""
+            if len(files) < len(its):
+                more = f"\n\n그림이 {len(files)}장이라 {len(files) + 1}번부터는 비워 둡니다."
+            elif len(files) > len(its):
+                more = f"\n\n그림이 {len(files)}장으로 프롬프트({len(its)}개)보다 많아 남는 {len(files) - len(its)}장은 넣지 않습니다."
+            if not messagebox.askyesno("Gemini 그림 넣기", "이 순서로 넣을까요? (그 문단 바로 앞, 이미 넣은 그림은 바꿈)\n\n" + plan + more, parent=win):
+                return
+            n_ok = 0
+            for k, (nm, p_) in enumerate(files[:len(its)]):
+                try:
+                    im = Image.open(p_)
+                    im.load()
+                except Exception:
+                    self.write_log(f"  그림 열기 실패(건너뜀): {nm}")
+                    continue
+                path = save_media_image(im, self.media_dir(), time.strftime("gemimg_%Y%m%d_%H%M%S") + f"_{k + 1}")
+                marker = make_marker(path, its[k].get("ko") or "장면", f"AI 생성 이미지 ({target_var.get()})")
+                if self.insert_before_para(its[k]["text"], marker):
+                    its[k]["done"], its[k]["file"] = True, nm
+                    n_ok += 1
+            try:
+                import shutil
+                shutil.rmtree(tmp, ignore_errors=True)
+            except Exception:
+                pass
+            self.save_cfg()
+            self.write_log(f"🗜 Gemini 그림 {n_ok}장을 문단 앞에 넣음")
+            stat.config(text=f"✅ {n_ok}장 넣음")
+            show()
+        ttk.Button(bar, text="✨ 프롬프트 만들기", command=make).pack(side="left")
+        ttk.Button(bar, text="📦 프롬프트 ZIP 만들기", command=make_zip).pack(side="left", padx=6)
+        ttk.Button(bar, text="🗜 그림 ZIP 넣기", command=put_zip).pack(side="left")
+        stat.pack(side="left", padx=8)
+        show()
 
     def insert_before_para(self, para_text, marker):
         """본문에서 para_text 문단 바로 앞에 사진 줄 삽입 (사진 → 글). 이미 앞에 사진이 있으면 그 사진을 바꿈"""
