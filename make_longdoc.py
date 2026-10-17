@@ -32,6 +32,7 @@ DEFAULT = {
     "제목_표시": "왼쪽 위 작게",      # 위 가운데 / 왼쪽 위 작게 / 숨김  (10분 다큐는 큰 제목이 화면을 가려 작게)
     "자막_스타일": "자동",            # 자동(소재에 맞춰) 또는 프로그램의 '인기 롱폼 스타일' 이름 그대로
     "끝나면": "그대로",              # 연속 제작이 끝난 뒤: 그대로 / 절전 / 끄기  (시작할 때 물어봄)
+    "채널_소개": "DreamArt - 세계의 축제·풍속, 역사, 과학, 미스터리 등 여러 주제를 10분 지식 다큐로 쉽게 풀어 주는 채널",
 }
 # 소재 → 가장 어울리는 자막 스타일 (프로그램의 LONG_STYLES 이름). 없는 소재는 '지식 다큐'
 STYLE_BY_GENRE = {
@@ -92,13 +93,17 @@ REVIEWER_SYSTEM = """너는 유튜브 지식 다큐 채널의 까다로운 편�
 반드시 JSON만 출력: {"review": [{"idx": 0, "verdict": "keep|replace", "score": 1~10, "reason": "한 줄", "topic": "유지면 원래 주제, 바꾸면 새 주제", "genre": "소재", "why": "...", "hook": "..."}], "note": "총평 두 줄"}"""
 
 
+CHANNEL_NOTE = DEFAULT["채널_소개"]
+
+
 def plan_lineup(m, app, genres, n, minutes, seen, log, out_root):
     """기획자 AI → 검토자 AI 두 단계로 n편 라인업을 정함. 기록은 _연속제작_기획.txt 에"""
     model = app.model_var.get().strip()
     topics = m.cat_info(m.DOC_CATEGORY)[1]
     glist = "\n".join(f"- {g_}: {topics.get(g_, ('', ''))[0][:120]}" for g_ in genres)
     seen_txt = ("\n\n[이미 만든 주제 - 같은 것은 물론 비슷한 것도 피한다]\n- " + "\n- ".join(seen[-60:])) if seen else ""
-    base = (f"영상: 각 {minutes}분 사실 기반 나레이션 다큐, 총 {n}편\n오늘: {time.strftime('%Y년 %m월 %d일')}\n"
+    base = (f"채널: {CHANNEL_NOTE}\n영상: 각 {minutes}분 사실 기반 나레이션 다큐, 총 {n}편\n오늘: {time.strftime('%Y년 %m월 %d일')}\n"
+            "라인업은 이 채널의 방향(여러 주제를 번갈아, 구독자가 '다음 편도 보고 싶게')에 맞춘다.\n"
             f"쓸 수 있는 소재 목록(각 편의 genre 는 이 중 하나, 가능하면 서로 다른 소재로):\n{glist}" + seen_txt)
     log(f"🧭 기획자 AI: {n}편 라인업 짜는 중... (웹 검색, 3~8분)")
     d1 = m.ask_json_alive(model, PLANNER_SYSTEM, base + f"\n\n{n}편 라인업을 짜라.", tools=m.WEB_TOOLS, log=log, label="기획자")
@@ -244,6 +249,8 @@ def main():
     if not os.path.exists(CFG):
         json.dump(DEFAULT, open(CFG, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     c = dict(DEFAULT, **json.load(open(CFG, encoding="utf-8")))
+    global CHANNEL_NOTE
+    CHANNEL_NOTE = str(c.get("채널_소개") or DEFAULT["채널_소개"])
     if BATCH and not ask_batch_plan(c):
         print("취소했습니다. (아무것도 만들지 않음)")
         return
