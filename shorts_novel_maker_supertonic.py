@@ -331,7 +331,7 @@ FIELDS = [
     ("자막형", "sub_max_chars", "자막 한 번에 글자 수", "int", 28),
     ("자막형", "img_motion", "사진 움직임", "choice:영상처럼(확대·이동·전환),천천히 확대만,없음", "영상처럼(확대·이동·전환)"),
     ("자막형", "img_depth", "사진 입체 움직임(2.5D · 깊이 AI, 앞뒤가 다르게 움직임)", "choice:on,off", "on"),
-    ("자막형", "img_depth_amt", "입체 움직임 세기(카메라 무빙)", "choice:약하게,보통,강하게", "강하게"),
+    ("자막형", "img_depth_amt", "입체 움직임 세기(카메라 무빙)", "choice:약하게,보통,강하게", "약하게"),   # 세게 하면 가장자리 사물이 겹쳐 보임
     ("자막형", "shot_sec", "한 장면 최대 길이(초)", "float", 4.5),
     ("자막형", "img_fill", "사진 배치", "choice:전체 화면(글자가 사진 위에),가운데 상자", "전체 화면(글자가 사진 위에)"),
     ("자막형", "img_bg", "상자 모드: 뒤 배경을 사진 흐림으로", "choice:on,off", "on"),
@@ -4077,7 +4077,7 @@ class SubtitleRenderer:
         if dbig is None:
             return extent_resize(big, (bw, bh), (l, tp, l + cw, tp + ch)), mask
         # 2.5D 카메라 무빙: 장면이 진행되는 동안 한쪽으로 천천히 돌아가며(드리프트) + 7초 주기로 살짝 흔들림. 가까운 것은 많이, 먼 것은 조금 밀림
-        ax_, ay_ = DEPTH_AMP.get(str(self.s.get("img_depth_amt", "강하게")), DEPTH_AMP["강하게"])
+        ax_, ay_ = DEPTH_AMP.get(str(self.s.get("img_depth_amt", "약하게")), DEPTH_AMP["약하게"])
         ph = 2 * np.pi * t / 7.0
         ox = bw * ax_ * (0.55 * np.sin(ph) + 0.75 * (2 * p - 1))
         oy = bh * ay_ * np.sin(ph * 0.5 + 1.0)
@@ -4546,7 +4546,7 @@ DEPTH_DIR = os.path.join(BASE, "output", "depth_cache")
 _DEPTH_CACHE = {}
 _DEPTH_WARNED = set()
 _GRID_CACHE = {}
-DEPTH_AMP = {"약하게": (0.018, 0.008), "보통": (0.032, 0.014), "강하게": (0.05, 0.022)}   # (가로, 세로) 최대 밀림 = 화면 크기 비율
+DEPTH_AMP = {"약하게": (0.02, 0.009), "보통": (0.03, 0.013), "강하게": (0.045, 0.02)}   # (가로, 세로) 최대 밀림 = 화면 크기 비율
 
 
 def depth_key(path):
@@ -9773,7 +9773,7 @@ class MusicLoop:
         bg = extent_resize(self.big, (W, H), box)
         if self.dbig is not None:   # 2.5D: 가까운 것은 많이, 먼 것은 조금 밀려 입체감 (주기 L → 끝과 처음이 이어짐)
             dcrop = np.asarray(extent_resize(self.dbig, (W, H), box), np.float32)
-            bg = parallax_warp(bg, dcrop, W * 0.038 * s_, H * 0.016 * np.sin(2 * np.pi * ph + 1.3))
+            bg = parallax_warp(bg, dcrop, W * 0.028 * s_, H * 0.012 * np.sin(2 * np.pi * ph + 1.3))
         arr = (np.asarray(bg).astype(np.float32) * self.vig * 0.92).astype(np.uint8)
         im = Image.fromarray(arr).convert("RGBA")
         ov = self.overlay

@@ -32,8 +32,17 @@ DEFAULT = {
     "제목_표시": "왼쪽 위 작게",      # 위 가운데 / 왼쪽 위 작게 / 숨김  (10분 다큐는 큰 제목이 화면을 가려 작게)
     "자막_스타일": "자동",            # 자동(소재에 맞춰) 또는 프로그램의 '인기 롱폼 스타일' 이름 그대로
     "끝나면": "그대로",              # 연속 제작이 끝난 뒤: 그대로 / 절전 / 끄기  (시작할 때 물어봄)
-    "채널_소개": "DreamArt - 세계의 축제·풍속, 역사, 과학, 미스터리 등 여러 주제를 10분 지식 다큐로 쉽게 풀어 주는 채널",
+    "채널_소개": "DreamArt - 보고 나면 가벼운 지식이 남는 10분 다큐, 잠들기 전 마음을 가라앉히는 명상·수면 음악, 가끔 웃음이 나는 이야기까지 여러 주제를 다루는 채널",
+    # 연속 제작 구성: 순서대로 돌아가며 (지식 = 10분 지식 다큐, 명상 = 명상·수면 음악 영상, 재미 = 웃기거나 뭉클한 이야기 낭독)
+    "연속_구성": ["지식", "지식", "명상", "지식", "재미"],
+    "명상_분": 20,
+    "명상_프리셋": [],      # 비우면 아래 MEDITATION_PRESETS 를 돌아가며
+    "재미_소재": [],        # 비우면 아래 FUN_GENRES 를 돌아가며
 }
+MEDITATION_PRESETS = ["명상 · 싱잉볼", "싱잉볼 · 깊은 수면", "오르골 · 캐논", "싱잉볼 · 432Hz", "오르골 자장가 · 브람스", "싱잉볼 · 7 차크라",
+                      "오르골 · 꿈속의 고향", "싱잉볼 · 528Hz", "오르골 · 어메이징 그레이스", "싱잉볼 · 노래하는 볼(문지르기)"]
+FUN_GENRES = ["[이야기] 코믹 일상 장편 썰", "[이야기] 조선 야담·기담", "[이야기] 감동 휴먼 드라마", "[이야기] 사연 낭독(가족·시댁·이혼)", "[이야기] 시니어 인생 사연"]
+MIN_PER_MUSIC = (0.6, 1.0)   # 명상 음악 영상 1분당 걸리는 시간(분): 20분 영상 → 12~20분
 # 소재 → 가장 어울리는 자막 스타일 (프로그램의 LONG_STYLES 이름). 없는 소재는 '지식 다큐'
 STYLE_BY_GENRE = {
     "시네마 다큐(위아래 검은 띠)": ["심해의 세계", "극지와 빙하", "동굴과 지하 세계", "우주의 비밀", "양자물리·현실의 본질", "지구의 역사와 대멸종",
@@ -156,6 +165,20 @@ def pick_topic(m, app, genre, seen, log):
     """연속 제작: AI(웹 검색)가 이 소재로 지금 반응 좋을 10분 다큐 주제 하나를 고름"""
     topics = m.cat_info(m.DOC_CATEGORY)[1]
     formula = topics.get(genre, ("(사용자가 직접 정한 소재)", ""))[0]
+    if m.doc_is_fiction(genre):   # 이야기 낭독: 창작 설정 (웹 검색 없이)
+        user = (f"콘텐츠 종류: 장편 창작 이야기 낭독 (허구)\n소재: {genre}\n소재 공식: {formula}\n"
+                "이 장르로 10분 낭독용 이야기 5개를 만들어줘. 각 주제는 '장르 표시 + 주인공의 상황과 갈등 한 줄'(35자 이내, 결말 금지, "
+                "예: '[코믹] 엄마가 ChatGPT를 배우고 집안이 뒤집혔다'). 요즘 유튜브 장편 낭독에서 반응 좋은 설정으로, 실존 인물·기존 작품 금지.")
+        if seen:
+            user += "\n\n[이미 만든 주제 - 비슷한 설정도 피한다]\n- " + "\n- ".join(seen[-60:])
+        user += '\n출력: {"ideas": ["..."], "why": ["..."]} (반응이 좋을 순서대로)'
+        d = m.ask_json_alive(app.model_var.get().strip(), m.IDEA_SYSTEM, user, log=log, label="이야기 주제 고르기")
+        ideas = [str(x).strip() for x in (d.get("ideas") or []) if str(x).strip()]
+        ideas = [x for x in ideas if x not in seen] or ideas
+        if not ideas:
+            raise RuntimeError("주제를 고르지 못했습니다")
+        log(f"🎯 고른 이야기: {ideas[0]}")
+        return ideas[0]
     user = (f"콘텐츠 종류: {m.DOC_CATEGORY} (실제 사건·사실만)\n소재: {genre}\n소재 공식: {formula}\n"
             f"이 소재로 10분 나레이션 다큐로 풀 수 있는, 지금 유튜브에서 반응 좋을 주제 5개를 만들어줘 (제목처럼 궁금증을 부르는 질문·반전형, 35자 이내). "
             f"오늘({time.strftime('%Y년 %m월')}) 기준 최근 1~2년 화제·새 발견과 이어진 것을 먼저, 나머지는 꾸준히 인기 있는 것으로.\n"
@@ -212,10 +235,16 @@ def ask_batch_plan(c):
         print(f"이미 {done}편이 끝나 있어 더 만들 편이 없습니다. 더 만들려면 {done}보다 큰 숫자를 넣으세요.")
         return False
     todo = n0 - done
-    lo, hi = minutes * MIN_PER_EP[0] * todo, minutes * MIN_PER_EP[1] * todo
-    plan_extra = 0 if len(st.get("plan") or []) >= n0 else 10
+    comp = [str(x) for x in (c.get("연속_구성") or ["지식"]) if str(x) in ("지식", "명상", "재미")] or ["지식"]
+    kinds = [comp[i % len(comp)] for i in range(done, n0)]
+    med_min = float(c.get("명상_분", 20))
+    n_med = kinds.count("명상")
+    lo = minutes * MIN_PER_EP[0] * (todo - n_med) + med_min * MIN_PER_MUSIC[0] * n_med
+    hi = minutes * MIN_PER_EP[1] * (todo - n_med) + med_min * MIN_PER_MUSIC[1] * n_med
+    plan_extra = 0 if len(st.get("plan") or []) >= kinds.count("지식") else 10
     print()
-    print(f"▶ 만들 편수: {todo}편" + (f" (끝난 {done}편 제외, 총 {n0}편)" if done else ""))
+    print(f"▶ 만들 편수: {todo}편" + (f" (끝난 {done}편 제외, 총 {n0}편)" if done else "")
+          + f"  → 지식 다큐 {kinds.count('지식')}편 · 명상 음악 {n_med}편({med_min:.0f}분) · 재미 이야기 {kinds.count('재미')}편   (구성 순서: {' → '.join(comp)})")
     print(f"▶ 예상 소요: 약 {_fmt_hours(lo + plan_extra)} ~ {_fmt_hours(hi + plan_extra)}"
           + (f"  (기획·검토 {plan_extra}분 포함, " if plan_extra else "  (") + f"한 편 {_fmt_hours(minutes * MIN_PER_EP[0])}~{_fmt_hours(minutes * MIN_PER_EP[1])})")
     print(f"   끝나는 시각(예상): {time.strftime('%H:%M', time.localtime(time.time() + (lo + plan_extra) * 60))} ~ "
@@ -287,24 +316,53 @@ def main():
 
     def save_state():
         m.atomic_write_text(state_p, json.dumps({"done": done_list, "current": cur, "plan": plan, "offset": st.get("offset", 0)}, ensure_ascii=False, indent=1))
-    log(f"🔁 연속 제작 시작: {n}편 · {c['길이_분']}분 · 소재 {len(genres)}개 (끝난 편 {len(done_list)}개)")
+    comp = [str(x) for x in (c.get("연속_구성") or ["지식"]) if str(x) in ("지식", "명상", "재미")] or ["지식"]
+    kinds = [comp[i % len(comp)] for i in range(n)]                      # 편마다 종류
+    kn_slots = [i for i in range(n) if kinds[i] == "지식"]                # 지식 편만 기획자·검토자 라인업
+    med_presets = [p_ for p_ in (c.get("명상_프리셋") or []) if p_ in m.MUSIC_PRESETS] or MEDITATION_PRESETS
+    fun_genres = [g_ for g_ in (c.get("재미_소재") or []) if g_ in m.cat_info(m.DOC_CATEGORY)[1]] or FUN_GENRES
+    log(f"🔁 연속 제작 시작: {n}편 · 구성 {'/'.join(comp)} · 지식 {kinds.count('지식')}편(10분 다큐) · 명상 {kinds.count('명상')}편({c.get('명상_분', 20)}분 음악) · 재미 {kinds.count('재미')}편  (끝난 편 {len(done_list)}개)")
     k = len(done_list)
-    if len(plan) < n and not (cur and cur.get("주제")):   # 라인업이 없거나 편수를 늘렸으면: 기획자 → 검토자
+    if len(plan) < len(kn_slots) and not (cur and cur.get("주제")):   # 라인업이 없거나 편수를 늘렸으면: 기획자 → 검토자
         seen = made_topics(m, out_root) + [d_.get("주제", "") for d_ in done_list] + [p_.get("topic", "") for p_ in plan]
         try:
-            plan += plan_lineup(m, app, genres, n - len(plan), c["길이_분"], seen, log, out_root)
+            plan += plan_lineup(m, app, genres, len(kn_slots) - len(plan), c["길이_분"], seen, log, out_root)
         except Exception as e:
             log("기획 단계 실패(편마다 주제를 따로 고릅니다): " + str(e)[:150])
         save_state()
     while k < n:
+        kind = kinds[k]
+        if kind == "명상":
+            mi = sum(1 for i in range(k) if kinds[i] == "명상")
+            preset = med_presets[mi % len(med_presets)]
+            cur = {"주제": "", "종류": "명상", "프리셋": preset, "시작": time.strftime("%Y-%m-%d %H:%M")}
+            save_state()
+            log(f"🧘 {k + 1}/{n}편 (명상 음악): {preset}")
+            res = run_music(m, app, c, gate, preset, float(c.get("명상_분", 20)))
+            done_list.append({"종류": "명상", "주제": res.get("title", preset), "소재": preset, "제목": res.get("title", ""), "완료": time.strftime("%Y-%m-%d %H:%M")})
+            cur = None
+            k += 1
+            save_state()
+            log(f"✅ {k}/{n}편 완료")
+            continue
         if cur and cur.get("주제"):
             ci = dict(c, 주제=cur["주제"], 소재=cur.get("소재") or c["소재"], 기획메모=cur.get("메모", ""))
             log(f"▶ {k + 1}/{n}편 이어서: {ci['주제']} ({ci['소재']})")
+        elif kind == "재미":
+            fi = sum(1 for i in range(k) if kinds[i] == "재미")
+            genre = fun_genres[fi % len(fun_genres)]
+            log(f"😄 {k + 1}/{n}편 (재미 · 이야기 낭독) 주제 고르는 중... 소재: {genre}")
+            seen = made_topics(m, out_root) + [d_.get("주제", "") for d_ in done_list]
+            topic = pick_topic(m, app, genre, seen, log)
+            cur = {"주제": topic, "소재": genre, "종류": "재미", "시작": time.strftime("%Y-%m-%d %H:%M"), "메모": ""}
+            save_state()
+            ci = dict(c, 주제=topic, 소재=genre, 기획메모="")
         else:
-            if k < len(plan) and str(plan[k].get("topic", "")).strip():
-                genre, topic = (plan[k].get("genre") if plan[k].get("genre") in m.cat_info(m.DOC_CATEGORY)[1] else genres[0]), str(plan[k]["topic"]).strip()
+            pi = kn_slots.index(k) if k in kn_slots else len(plan)
+            if pi < len(plan) and str(plan[pi].get("topic", "")).strip():
+                genre, topic = (plan[pi].get("genre") if plan[pi].get("genre") in m.cat_info(m.DOC_CATEGORY)[1] else genres[0]), str(plan[pi]["topic"]).strip()
                 log(f"🎯 {k + 1}/{n}편 (기획 라인업): {topic} ({genre})")
-                memo = "\n".join(f"- {lab}: {plan[k][key_]}" for lab, key_ in (("왜 지금 반응이 좋을지", "why"), ("첫 문장 훅(참고)", "hook"), ("검토자 주의사항(반드시 반영)", "review")) if plan[k].get(key_))
+                memo = "\n".join(f"- {lab}: {plan[pi][key_]}" for lab, key_ in (("왜 지금 반응이 좋을지", "why"), ("첫 문장 훅(참고)", "hook"), ("검토자 주의사항(반드시 반영)", "review")) if plan[pi].get(key_))
                 cur_memo = "[기획자·검토자 메모]\n" + memo if memo else ""
             else:
                 cur_memo = ""
@@ -317,7 +375,7 @@ def main():
             ci = dict(c, 주제=topic, 소재=genre, 기획메모=cur.get("메모", ""))
         ci["배경음"] = m.SOUND_BY_TOPIC.get(ci["소재"], c.get("배경음") or "잔잔한 패드")
         res = run_doc(m, app, ci, gate)
-        done_list.append({"주제": ci["주제"], "소재": ci["소재"], "제목": res.get("title", ""), "완료": time.strftime("%Y-%m-%d %H:%M")})
+        done_list.append({"종류": kind, "주제": ci["주제"], "소재": ci["소재"], "제목": res.get("title", ""), "완료": time.strftime("%Y-%m-%d %H:%M")})
         cur = None
         k += 1
         save_state()
@@ -347,6 +405,76 @@ def after_batch(mode):
         subprocess.run(["shutdown", "/s", "/t", "5"])
     else:
         subprocess.run(["shutdown", "/h"])
+
+
+def run_music(m, app, c, gate, preset, minutes):
+    """명상·수면 음악 영상 한 편: 프로그램이 음악을 작곡 → 분위기에 맞는 무료 사진(없으면 색 배경) 위에 2.5D 움직임·입자 효과·제목 → MP4·썸네일·업로드 문구"""
+    if preset not in m.MUSIC_PRESETS:
+        preset = MEDITATION_PRESETS[0]
+    P = m.MUSIC_PRESETS[preset]
+    title = P["title"]
+    s = app.get_settings()
+    out_dir = os.path.join(s["out_dir"], "music")
+    os.makedirs(out_dir, exist_ok=True)
+    base = os.path.join(out_dir, m.safe_name(title) + f"_{int(minutes)}분")
+    if os.path.exists(base + ".mp4") and os.path.exists(base + ".json"):
+        log(f"🎵 이미 만든 음악 영상 → 건너뜀: {os.path.basename(base)}.mp4")
+        return {"title": title}
+    log(f"🎵 명상 음악 영상 시작: {title} ({minutes}분 · {preset})")
+    seed = int(time.time()) % 9000 + 1
+    wav = base + "_tmp.wav"
+    last = [0]
+
+    def prog(i, n, lab="음악"):
+        p_ = int(i * 100 / max(1, n))
+        if p_ >= last[0] + 25:
+            last[0] = p_
+            log(f"  {lab} {p_}%")
+    sec = m.render_music_track(preset, minutes, seed, wav, progress=prog, cancel=gate)
+    # 배경 사진: AI가 분위기에 맞는 무료 사진을 찾음 (못 찾으면 프리셋 색 배경)
+    bg_im, depth = None, None
+    try:
+        model = app.model_var.get().strip()
+        pd_ = m.ask_json_alive(model, m.PHOTO_SYSTEM, f"콘텐츠 종류: 허구 단편소설 (분위기 사진)\n[제목] {title}\n\n[본문]\n{P.get('desc', '')}. "
+                               f"장면: {P.get('prompt', '')}" + m.photo_note(3, "허구 단편소설")
+                               + "\n(사람 얼굴·글자·워터마크 없는, 고요하고 넓은 풍경·공간 사진. 아래 3분의 1에 글자가 올라가도 되는 단순한 구도)",
+                               tools=m.WEB_TOOLS, log=log, label="배경 사진 찾기")
+        ph = m.fetch_photos(pd_.get("photos"), os.path.join(s["out_dir"], "media"), log, limit=3)
+        for p_ in ph:
+            try:
+                im_ = m.Image.open(p_["path"]).convert("RGB")
+                if im_.width >= 1200:
+                    bg_im = im_
+                    log(f"  🖼 배경 사진: {p_.get('caption', '')} ({p_.get('credit', '')})")
+                    break
+            except Exception:
+                continue
+        if bg_im is not None:
+            depth = m.image_depth_map(m.trim_borders(bg_im), log)
+    except Exception as e:
+        log("  배경 사진 찾기 실패(색 배경 사용): " + str(e).splitlines()[0][:100])
+    sk = dict(s, fps=min(30, int(s["fps"])))
+    loop = m.MusicLoop(sk, bg_im, P.get("overlay", "먼지 빛"), title, "", P["colors"], True,
+                       motion=m.MUSIC_MOTIONS[0] if depth is not None else "천천히 줌(기본)", depth=depth)
+    loop.s = sk
+    loop_mp4 = base + "_loop.mp4"
+    last[0] = 0
+    log("  🎬 화면 그리는 중 (32초 반복 조각)...")
+    m.export_mp4(loop, loop_mp4, lambda i, n: prog(i, n, "화면"), gate, None)
+    log("  🎞 음악과 화면 합치는 중...")
+    m.mux_music_video(loop_mp4, wav, base + ".mp4", sec)
+    for tmp_ in (loop_mp4, wav):
+        try:
+            os.remove(tmp_)
+        except OSError:
+            pass
+    m.Image.fromarray(loop.frame(3.0)).save(base + "_썸네일.png")
+    with open(base + ".json", "w", encoding="utf-8") as jf:
+        json.dump({"title": title, "sec": sec, "preset": preset, "seed": seed, "audio_file": "", "nature": None}, jf, ensure_ascii=False)
+    pkg = m.music_upload_text(title, [preset], minutes=minutes)
+    m.write_package(base, title, "", pkg)
+    log(f"🎵 음악 영상 완성: {os.path.basename(base)}.mp4 ({m.hms(sec)}) · 썸네일 · 업로드 문구")
+    return {"title": title}
 
 
 def run_doc(m, app, c, gate):
