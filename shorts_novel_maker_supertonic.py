@@ -376,6 +376,9 @@ def genre_profile(genre, fiction=None):
     if fiction:
         p["fiction_image"] = "로컬 그림 생성(무료 · 이 PC · 느림)" if sd_ready() else "분위기 웹 사진 찾기"
         p["image_style_preset"] = GENRE_IMAGE_STYLE.get(genre, "웹툰")
+    if str(genre).startswith("[교육]"):   # 교육 영상: 실제 사람 사진 대신 그림 (초상권·개인정보 걱정 없음, 상황극을 그대로 그림)
+        p["img_source"] = "그림: 애니(웹툰)"
+        p["image_style_preset"] = "웹툰"
     return p
 
 
@@ -989,6 +992,42 @@ DOC_FICTION = {
     "[이야기] 코믹 일상 장편 썰": ("회사·학교·가족 사이의 황당한 사건이 꼬리를 무는 코믹 장편. 등장인물 캐릭터를 확실히, 회차마다 빵 터지는 장면, 마지막은 훈훈하게.", "웹툰", "밝은 오르골"),
 }
 DOC_FICTION_TOPICS = set(DOC_FICTION)
+
+# 장문 '교육' 소재: 중소기업 법정 의무교육·사내 교육 자료 (소재 이름 앞 [교육])
+DOC_EDU_COMMON = "사내 교육 영상 문체: 차분하고 친절한 강사 말투('~입니다', '~해야 합니다'). 구성은 왜 중요한가(실제 통계·제재) → 법이 정한 것(조항·의무·과태료) → 가상 직원들의 짧은 상황극 사례 2~3개(이름은 가명, 실존 기업·인물 금지) → 이렇게 하세요 / 이건 안 됩니다 → 신고·처리 절차와 상담 창구 → 마지막 핵심 정리 3가지. 법 조항·과태료 금액·시행 연도·기관 연락처는 웹 조사로 최신 내용을 확인한 것만 쓰고, 개정 중이거나 확실하지 않으면 '확인 필요'로 표시한다. 법률 자문처럼 단정하지 않는다."
+DOC_EDU = {
+    "[교육] 직장 내 성희롱 예방": ("남녀고용평등법에 따른 연 1회 이상 의무교육. 교육에 꼭 들어가야 할 내용(성희롱 관련 법령, 사업주의 조치 의무, 피해 근로자 고충 상담·구제 절차, "
+                             "가해자 징계 등 조치 기준, 예방에 필요한 사항)을 빠짐없이. 언어적·시각적·육체적 성희롱의 구분, 회식·메신저·고객에 의한 성희롱, 2차 피해 금지.", "종이 노트", "잔잔한 패드"),
+    "[교육] 개인정보보호": ("개인정보 보호법과 개인정보취급자 교육. 개인정보·민감정보·고유식별정보의 구분, 수집·이용·제공 동의, 보관·파기, 비밀번호·암호화·접근 권한, "
+                        "메일·메신저·USB·출력물로 새는 경로, 유출 사고 시 신고·통지 절차. 사무실에서 바로 지킬 수 있는 수칙 중심.", "종이 노트", "잔잔한 패드"),
+    "[교육] 장애인 인식개선": ("장애인고용촉진법에 따른 직장 내 장애인 인식개선 연 1회 의무교육. 장애의 정의와 유형(보이지 않는 장애 포함), 장애인 고용 의무와 지원 제도, "
+                           "편견과 사실, 함께 일할 때의 배려·소통 에티켓(도움 전에 먼저 묻기 등), 정당한 편의 제공, 차별 금지.", "감동 웜톤", "감성 오르골"),
+    "[교육] 직장 내 괴롭힘 예방": ("근로기준법의 직장 내 괴롭힘 금지 규정. 판단 기준(지위·관계의 우위, 업무상 적정 범위를 넘음, 신체적·정신적 고통·근무환경 악화), 유형별 사례(폭언, 따돌림, "
+                              "사적 심부름, 부당한 업무 배제), 신고 시 사용자의 조사·보호·조치 의무, 불리한 처우 금지와 과태료. 의무교육 여부 등 최근 법 개정은 확인해서 정확히.", "종이 노트", "잔잔한 패드"),
+    "[교육] 산업안전보건": ("산업안전보건법에 따른 근로자 정기 안전보건교육. 업종별 흔한 사고(넘어짐·끼임·떨어짐·부딪힘), 사무실 안전, 보호구, 위험성평가 참여, "
+                        "작업중지권, 응급 상황 대처, 중대재해처벌법이 바꾼 것. 실제 재해 통계와 예방 수칙 중심.", "시네마 다크", "어두운 드론"),
+    "[교육] 퇴직연금 제도": ("근로자퇴직급여보장법에 따른 퇴직연금 가입자 교육. 퇴직금과 퇴직연금의 차이, DB형·DC형·IRP, 중도 인출 요건, 세제 혜택, 운용 방법 변경. "
+                         "특정 상품 추천이나 투자 권유는 하지 않고 제도 설명만.", "종이 노트", "잔잔한 패드"),
+}
+DOC_EDU_TOPICS = {   # 주제 칸 ▼ 예시
+    "[교육] 직장 내 성희롱 예방": ["이것도 성희롱일까? 사례로 보는 직장 내 성희롱 판단 기준", "회식 자리에서 생긴 일 - 성희롱 예방과 올바른 대처",
+                             "피해를 당했거나 목격했다면 - 신고 절차와 회사의 조치 의무", "고객에게 당한 성희롱도 회사가 지켜야 할까?"],
+    "[교육] 개인정보보호": ["엑셀 파일 하나가 부른 사고 - 사무실 개인정보보호 기본 수칙", "우리 회사 개인정보, 어디서 새고 있을까?",
+                        "개인정보 유출 사고가 났을 때 해야 할 일", "동의 없이 써도 될까? 개인정보 수집·이용·제공의 기준"],
+    "[교육] 장애인 인식개선": ["보이지 않는 장애도 있습니다 - 직장 내 장애인 인식개선", "함께 일하는 동료를 위한 배려와 소통 에티켓",
+                           "장애인 고용에 대한 편견과 사실", "도움을 주기 전에 먼저 물어보세요 - 일터의 정당한 편의"],
+    "[교육] 직장 내 괴롭힘 예방": ["이것도 직장 내 괴롭힘일까? 판단 기준 3가지", "사례로 보는 직장 내 괴롭힘과 신고 절차",
+                              "괴롭힘 없는 팀을 만드는 말과 행동", "신고했더니 불이익? 회사의 조사·보호 의무"],
+    "[교육] 산업안전보건": ["작은 부주의가 큰 사고로 - 넘어짐·끼임·떨어짐 예방", "사무실도 안전하지 않다 - 사무직 안전보건 수칙",
+                        "위험성평가, 우리가 함께 하는 이유", "위험하면 멈추세요 - 작업중지권과 응급 상황 대처"],
+    "[교육] 퇴직연금 제도": ["퇴직금과 퇴직연금, 무엇이 다를까?", "DB형·DC형·IRP 한 번에 이해하기", "퇴직연금 중도 인출, 언제 가능할까?"],
+}
+DOC_EDU_TOPIC_SET = set(DOC_EDU)
+CATEGORIES[DOC_CATEGORY][1].update({k: (v[0] + " " + DOC_EDU_COMMON, v[1]) for k, v in DOC_EDU.items()})
+for _t, _v in DOC_EDU.items():
+    SOUND_BY_TOPIC.setdefault(_t, _v[2])
+    _GENRE_SUB_OF[_t] = "뉴스·이슈 해설(하단 띠)"        # 교육 영상: 아래 정보 띠 자막
+GENRE_SUB_STYLE["뉴스·이슈 해설(하단 띠)"] += [t for t in DOC_EDU if t not in GENRE_SUB_STYLE["뉴스·이슈 해설(하단 띠)"]]
 CATEGORIES[DOC_CATEGORY][1].update({k: (v[0], v[1]) for k, v in DOC_FICTION.items()})
 for _t, _v in DOC_FICTION.items():
     SOUND_BY_TOPIC.setdefault(_t, _v[2])
@@ -12832,6 +12871,15 @@ class App(tk.Tk):
     def on_genre(self, *_):
         topics = cat_info(self.cat_var.get())[1]
         g = self.genre_var.get()
+        ex = DOC_EDU_TOPICS.get(g) if self.cat_var.get() == DOC_CATEGORY else None
+        if ex:     # 교육 소재: 주제 칸 ▼ 에 예시 주제
+            try:
+                old = list(self.topic_box.cget("values") or [])
+                self.topic_box.config(values=ex + [x for x in old if x not in ex and not any(x in v for v in DOC_EDU_TOPICS.values())])
+                if not self.topic_var.get().strip() or any(self.topic_var.get() in v for v in DOC_EDU_TOPICS.values()):
+                    self.topic_var.set(ex[0])
+            except Exception:
+                pass
         if g in topics:
             self.apply_theme(topics[g][1])
             if self.cat_var.get() == DOC_CATEGORY and str(self.vars.get("genre_auto").get() if self.vars.get("genre_auto") else "on") != "off":
@@ -12849,6 +12897,8 @@ class App(tk.Tk):
                     self.vars[k].set(p[k])
         put()
         self.after_idle(put)      # 인기 스타일이 고른 뒤 한 번 더 적용되므로(제목 위치 등) 그 뒤에 다시 맞춤
+        if p.get("img_source") and hasattr(self, "img_src_var"):
+            self.img_src_var.set(p["img_source"])
         try:
             self.research_var.set(bool(p["research"]))
             self.autophoto_var.set(bool(p["autophoto"]))
@@ -12868,8 +12918,10 @@ class App(tk.Tk):
         if not quiet:
             fn = lambda r_: os.path.splitext(os.path.basename(r_))[0]
             msg = f"🎯 소재 '{genre}' 기본 설정: 자막 {p['style_preset']} · 제목 {p['head_pos']} · 글꼴 {fn(p['fonts'][0])}/{fn(p['fonts'][1])}"
-            if "image_style_preset" in p:
-                msg += f" · 그림 {p['image_style_preset']} ({'이 PC에서 그림' if p['fiction_image'].startswith('로컬') else '분위기 웹 사진'}) · 대사 자막"
+            if p.get("img_source"):
+                msg += f" · 이미지 {p['img_source']} (실제 사람 사진 대신 그림) · 웹 조사 켬(법 조항 최신 확인)"
+            elif "image_style_preset" in p:
+                msg += f" · 그림 {p['image_style_preset']} ({'이 PC에서 그림' if p.get('fiction_image', '').startswith('로컬') else '분위기 웹 사진'}) · 대사 자막"
             else:
                 msg += " · 근거 사진·웹 조사 켬"
             self.write_log(msg + "  (설정 → 화면 형식 → '소재 고르면 자동'에서 끌 수 있음)")

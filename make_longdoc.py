@@ -487,6 +487,8 @@ def run_doc(m, app, c, gate):
     app.update()
     log(f"🎨 자막 스타일: {app.vars['style_preset'].get()}" + (" (소재에 맞춰 자동)" if want_sub == "자동" else ""))
     src_ = str(c.get("이미지") or m.IMG_SOURCE_WEB)
+    if src_ == m.IMG_SOURCE_WEB and str(c["소재"]).startswith("[교육]"):     # 교육 소재는 기본이 그림 (실제 사람 사진 대신)
+        src_ = m.genre_profile(c["소재"]).get("img_source", src_)
     m.IMG_SOURCE["mode"] = src_ if src_ in m.IMG_SOURCE_PRESET else m.IMG_SOURCE_WEB
     if m.IMG_SOURCE["mode"] != m.IMG_SOURCE_WEB:
         log(f"🖌 이미지: {m.IMG_SOURCE['mode']} (사실 주제도 웹 사진 대신 이 PC에서 그림)")
