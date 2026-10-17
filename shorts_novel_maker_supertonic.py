@@ -249,8 +249,8 @@ LONG_STYLES = {
     "깔끔 미니멀(얇은 흰 자막)": dict(sub_layout=SUB_LAYOUTS[5], head_pos="숨김", color_preset="다큐 화이트", sub_style="글자 탭 글자색+검은테두리",
                                 sub_split=_SPLIT_LINE, sub_anim="페이드", sub_size=72, head_show="보임", img_motion="천천히 확대만",
                                 punch_in="off", shot_sec=7.0, sub_box_alpha=0.6),
-    "영화 리뷰(대사 자막 · 흰 글자+검은 테두리)": dict(sub_layout=SUB_LAYOUTS[5], head_pos="숨김", color_preset="다큐 화이트", sub_style="흰글자+검은테두리",
-                                            sub_split=_SPLIT_LINE, sub_anim="없음", sub_size=84, head_show="안 보임(제목 카드만)", img_motion="영상처럼(확대·이동·전환)",
+    "영화 리뷰(대사 자막 · 흰 글자+검은 테두리)": dict(sub_layout=SUB_LAYOUTS[0], head_pos="숨김", color_preset="다큐 화이트", sub_style="흰글자+검은테두리",
+                                            sub_split=_SPLIT_LINE, sub_anim="없음", sub_size=92, head_show="안 보임(제목 카드만)", img_motion="영상처럼(확대·이동·전환)",
                                             punch_in="off", shot_sec=6.0, sub_box_alpha=0.0, sub_dialog="대사 앞에 - 표시(영화 자막처럼)"),
 }
 
