@@ -249,6 +249,9 @@ LONG_STYLES = {
     "깔끔 미니멀(얇은 흰 자막)": dict(sub_layout=SUB_LAYOUTS[5], head_pos="숨김", color_preset="다큐 화이트", sub_style="글자 탭 글자색+검은테두리",
                                 sub_split=_SPLIT_LINE, sub_anim="페이드", sub_size=72, head_show="보임", img_motion="천천히 확대만",
                                 punch_in="off", shot_sec=7.0, sub_box_alpha=0.6),
+    "영화 리뷰(대사 자막 · 흰 글자+검은 테두리)": dict(sub_layout=SUB_LAYOUTS[5], head_pos="숨김", color_preset="다큐 화이트", sub_style="흰글자+검은테두리",
+                                            sub_split=_SPLIT_LINE, sub_anim="없음", sub_size=84, head_show="안 보임(제목 카드만)", img_motion="영상처럼(확대·이동·전환)",
+                                            punch_in="off", shot_sec=6.0, sub_box_alpha=0.0, sub_dialog="대사 앞에 - 표시(영화 자막처럼)"),
 }
 
 # 설정 탭 묶음 (화면 형식·표현 방식에 따라 필요한 탭만 보임). mode: all / scroll / sub
@@ -257,7 +260,7 @@ UI_TABS = [
                           "progress_bar", "reveal_fx", "hold_start", "hold_end", "safe_guide"]),
     ("🎨 글꼴·색", "all", ["font_path", "title_font_path", "text_color", "title_color", "accent_color", "quote_color", "shadow", "stroke_width"]),
     ("🔤 자막 디자인", "sub", ["style_preset", "sub_layout", "head_pos", "color_preset", "sub_box_color", "sub_box_alpha", "head_style", "head_size",
-                            "head_show", "sub_size", "sub_font_path", "sub_style", "sub_split", "sub_anim", "sub_max_chars", "sec_per_char"]),
+                            "head_show", "sub_size", "sub_font_path", "sub_style", "sub_split", "sub_dialog", "sub_anim", "sub_max_chars", "sec_per_char"]),
     ("🖼 사진·장면", "sub", ["img_fill", "img_motion", "img_depth", "img_depth_amt", "shot_sec", "punch_in", "img_frame", "img_bg", "photo_count", "img_radius"]),
     ("📜 스크롤 글자", "scroll", ["font_size", "title_size", "line_gap", "para_gap", "margin_x", "margin_right", "align", "photo_h",
                               "speed", "target_sec"]),
@@ -321,6 +324,7 @@ FIELDS = [
     ("자막형", "sub_box_alpha", "자막 상자·띠 진하기(0~1)", "float", 0.6),
     ("자막형", "head_show", "위 큰 제목", "choice:보임,안 보임(제목 카드만)", "보임"),
     ("자막형", "sub_split", "자막 나누기", "choice:문단 통째로,한 줄씩(문장·쉼표로 나눠 차례로)", "문단 통째로"),
+    ("자막형", "sub_dialog", "대사 자막(따옴표 안 말)", "choice:없음,대사 앞에 - 표시(영화 자막처럼),대사만 자막(나레이션은 음성만)", "없음"),
     ("자막형", "sub_anim", "자막 등장 효과", "choice:팝(튀어나옴),올라옴,페이드,없음", "팝(튀어나옴)"),
     ("자막형", "punch_in", "장면 시작 펀치 줌", "choice:on,off", "on"),
     ("자막형", "img_frame", "사진 테두리(상자 모드)", "choice:없음,만화 테두리(검정),흰 테두리", "없음"),
@@ -2986,6 +2990,11 @@ def load_font(path, size):
 
 
 def wrap(text, font, maxw):
+    if "\n" in text:
+        out = []
+        for part in text.split("\n"):
+            out += wrap(part, font, maxw) if part.strip() else []
+        return out
     lines, cur = [], ""
     for ch in text:
         t = cur + ch
@@ -4219,31 +4228,95 @@ class SubtitleRenderer:
             d.rounded_rectangle([x0 - 4, y0 - 4, x1 + 4, y1 + 4], radius=int(self.s["img_radius"]) + 4, outline=col, width=10)
         return canvas
 
+    _QUOTE_RE = re.compile(r'[\u201c"\u300c\u300e]([^\u201d"\u300d\u300f]{4,120})[\u201d"\u300d\u300f]')
+
+    def _dialog_segs(self, text):
+        """글을 (조각, 대사인가) 로 나눔. 따옴표(“ ” " " 「」『』) 안 4자 이상이 대사. 대사 앞뒤의 아주 짧은 서술('라고 말했다')은 옆 서술에 붙임"""
+        segs, pos = [], 0
+        for m_ in self._QUOTE_RE.finditer(text):
+            before = text[pos:m_.start()].strip(" ,")
+            if before:
+                segs.append([before, False])
+            segs.append([m_.group(1).strip(), True])
+            pos = m_.end()
+        tail = text[pos:].strip(" ,")
+        if tail:
+            segs.append([tail, False])
+        out = []
+        for sg_ in segs:
+            if not sg_[1] and len(sg_[0]) < 6 and out and not out[-1][1]:
+                out[-1][0] = out[-1][0] + " " + sg_[0]
+            elif not sg_[1] and len(sg_[0]) < 6 and out:
+                out.append(sg_)      # 대사 뒤 짧은 서술은 다음 서술과 합쳐짐 (아래)
+            else:
+                out.append(sg_)
+        merged = []
+        for sg_ in out:
+            if merged and not sg_[1] and not merged[-1][1] and len(merged[-1][0]) < 6:
+                merged[-1][0] = merged[-1][0] + " " + sg_[0]
+            else:
+                merged.append(sg_)
+        return merged
+
+    def _dialog_text(self, text):
+        """문단 통째 자막용: 대사는 줄을 바꿔 '- 대사'로. (바뀐 글, 대사 있음) 돌려줌"""
+        mode = str(self.s.get("sub_dialog", "없음"))
+        if mode.startswith("없음"):
+            return text, True
+        segs = self._dialog_segs(text)
+        has = any(d_ for _, d_ in segs)
+        if not has:
+            return text, False
+        if mode.startswith("대사만"):
+            return "\n".join("- " + t_ for t_, d_ in segs if d_), True
+        return "\n".join(("- " + t_) if d_ else t_ for t_, d_ in segs), True
+
     def _chunks(self, sg):
-        """자막 한 줄씩 나누기: 줄바꿈·문장 끝·쉼표 기준, 한 줄 최대 글자 수(sub_max_chars) 이내로"""
+        """자막 한 줄씩 나누기: 줄바꿈·문장 끝·쉼표 기준, 한 줄 최대 글자 수(sub_max_chars) 이내로.
+        sub_dialog 가 켜져 있으면 따옴표 안 대사는 '- 대사' 조각으로(두 사람 대사가 이어지면 두 줄로 함께), sg['chunk_dlg'] 에 대사 여부 표시"""
         if not str(self.s.get("sub_split", "")).startswith("한 줄"):
             return [sg["text"]]
         if "chunks" in sg:
             return sg["chunks"]
         mx = max(8, int(float(self.s.get("sub_max_chars", 28) or 28)))
-        parts = []
-        for ln in sg["text"].split("\n"):
-            for piece in re.split(r"(?<=[.!?。…])\s+|(?<=[,，])\s+", ln.strip()):
-                piece = piece.strip()
-                while len(piece) > mx:   # 너무 길면 띄어쓰기에서 자름
-                    cut = piece.rfind(" ", 0, mx)
-                    cut = cut if cut > mx // 3 else mx
-                    parts.append(piece[:cut].strip())
-                    piece = piece[cut:].strip()
-                if piece:
-                    parts.append(piece)
-        merged = []   # 너무 짧은 조각은 앞 조각에 붙임
-        for p_ in parts:
-            if merged and (len(p_) < 5 or len(merged[-1]) < 5) and len(merged[-1]) + len(p_) + 1 <= mx:
-                merged[-1] = merged[-1] + " " + p_
-            else:
-                merged.append(p_)
-        sg["chunks"] = merged or [sg["text"]]
+        dlg_on = not str(self.s.get("sub_dialog", "없음")).startswith("없음")
+        segs = self._dialog_segs(sg["text"]) if dlg_on else [[sg["text"], False]]
+
+        def split_one(txt):
+            parts_ = []
+            for ln in txt.split("\n"):
+                for piece in re.split(r"(?<=[.!?。…])\s+|(?<=[,，])\s+", ln.strip()):
+                    piece = piece.strip()
+                    while len(piece) > mx:   # 너무 길면 띄어쓰기에서 자름
+                        cut = piece.rfind(" ", 0, mx)
+                        cut = cut if cut > mx // 3 else mx
+                        parts_.append(piece[:cut].strip())
+                        piece = piece[cut:].strip()
+                    if piece:
+                        parts_.append(piece)
+            merged_ = []   # 너무 짧은 조각은 앞 조각에 붙임
+            for p_ in parts_:
+                if merged_ and (len(p_) < 5 or len(merged_[-1]) < 5) and len(merged_[-1]) + len(p_) + 1 <= mx:
+                    merged_[-1] = merged_[-1] + " " + p_
+                else:
+                    merged_.append(p_)
+            return merged_
+        chunks, flags = [], []
+        for txt, is_dlg in segs:
+            for p_ in split_one(txt):
+                chunks.append(("- " + p_) if is_dlg else p_)
+                flags.append(is_dlg)
+        if dlg_on:   # 짧은 대사 두 개가 이어지면 영화 자막처럼 두 줄로 한 번에
+            c2, f2 = [], []
+            for c_, d_ in zip(chunks, flags):
+                if d_ and c2 and f2[-1] and "\n" not in c2[-1] and len(c2[-1]) <= mx * 0.75 and len(c_) <= mx * 0.75:
+                    c2[-1] = c2[-1] + "\n" + c_
+                else:
+                    c2.append(c_)
+                    f2.append(d_)
+            chunks, flags = c2, f2
+        sg["chunks"] = chunks or [sg["text"]]
+        sg["chunk_dlg"] = flags if chunks else [True]
         return sg["chunks"]
 
     def _intro_bg(self, t):
@@ -4341,10 +4414,23 @@ class SubtitleRenderer:
                         if age < nxt or j == len(chunks) - 1:
                             break
                         acc = nxt
-                    lay = self._sub_layer(("tx", sg["i"], j), chunks[j])
+                    only_dlg = str(self.s.get("sub_dialog", "없음")).startswith("대사만")
+                    flags = sg.get("chunk_dlg") or []
+                    if only_dlg and j < len(flags) and not flags[j]:
+                        lay = None                                   # 나레이션 조각: 소리만
+                    else:
+                        lay = self._sub_layer(("tx", sg["i"], j), chunks[j])
                     age = age - acc
                 else:
-                    lay = self._sub_layer(("tx", sg["i"]), sg["text"])
+                    txt1 = chunks[0] if chunks else sg["text"]
+                    if "chunk_dlg" in sg:                                # 한 줄씩 모드에서 조각이 하나뿐
+                        has1 = bool(sg["chunk_dlg"] and sg["chunk_dlg"][0])
+                    else:
+                        txt1, has1 = self._dialog_text(sg["text"])
+                    if str(self.s.get("sub_dialog", "없음")).startswith("대사만") and not has1:
+                        lay = None
+                    else:
+                        lay = self._sub_layer(("tx", sg["i"]), txt1)
             if lay is not None:
                 lay = self._animate_sub(lay, age)
                 canvas.alpha_composite(lay)
