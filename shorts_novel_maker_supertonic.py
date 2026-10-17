@@ -130,7 +130,7 @@ TAB_BG = "#FFF8D6"   # 디자인·영상 설정 탭 배경(연노랑)
 CONFIG_PATH = os.path.join(BASE, "shorts_novel_config.json")
 CONFIG_PATH2 = os.path.join(os.path.expanduser("~"), "shorts_novel_config.json")  # 프로그램 폴더에 못 쓸 때 대신 저장
 SECRET_KEYS = {"openai_key", "gemini_key"}                       # 프로젝트 파일에는 안 넣음
-KEEP_KEYS = SECRET_KEYS | {"script_engine", "trans_engine", "openai_model", "gemini_model", "image_model", "image_quality"}  # 프로젝트 열어도 유지
+KEEP_KEYS = SECRET_KEYS | {"script_engine", "trans_engine", "openai_model", "gemini_model", "image_model", "image_quality", "image_style_preset"}  # 프로젝트 열어도 유지
 PREVIEW_W, PREVIEW_H = 360, 640
 
 
@@ -270,6 +270,36 @@ UI_TABS = [
 THUMB_STYLES = ["자동(분위기에 맞춰)", "기본(사진 꽉 + 큰 글자)", "반분할(글 패널 + 사진)", "노랑 패널(고대비)", "시네마 띠",
                 "뉴스 속보", "미스터리 다크", "빨간 강조(원 + 화살표)"]   # 요즘 유튜브에서 많이 쓰는 썸네일 스타일
 
+# 허구 이야기 그림 스타일 (이름 → 그림 AI에 주는 영어 지시). 실제 작품·작가 이름은 쓰지 않고 특징으로 묘사
+IMAGE_STYLES = {
+    "사실 묘사": "realistic cinematic digital painting, detailed, natural lighting, film still look",
+    "연필 드로잉(선만)": "black and white pencil and ink line drawing on white paper, clean confident lines, light hatching, no color, sketchbook page",
+    "드로잉+가벼운 채색": "loose ink line drawing with light watercolor wash, soft muted colors, white paper background, sketchy and charming",
+    "풀컬러 만화(코믹스)": "full color comic book illustration, bold ink outlines, dynamic shading, vivid colors, halftone texture",
+    "웹툰": "Korean webtoon manhwa style, clean outlines, flat cel shading, bright pastel colors, expressive faces, vertical scroll comic look",
+    "지브리풍 손그림 애니": "classic hand-drawn Japanese animation film style, lush painted watercolor backgrounds, soft natural light, gentle rounded character design, nostalgic and warm, film still",
+    "70~80년대 순정만화": "1970s retro shoujo manga anime style, very large sparkling eyes with star highlights, flowing hair, soft pastel tones, screentone shading, vintage cel animation look",
+    "70~80년대 레트로 SF 애니": "late 1970s retro Japanese sci-fi adventure anime cel style, muted earthy colors, film grain, simple flat shading, vintage animation still, dramatic skies",
+    "짱구풍 코믹 애니": "simple comedic Japanese TV anime style, round simplified characters with thick outlines, flat bright colors, minimal detail, playful exaggerated expressions",
+    "레트로 로봇 애니": "1970s Korean retro giant robot animation style, bold mechanical designs, dramatic heroic poses, cel shaded, vintage poster colors, action scene",
+    "동화책 수채화": "children's picture book illustration, soft watercolor texture, warm gentle colors, rounded friendly shapes",
+    "3D 애니(픽사풍)": "3D animated feature film style, soft global illumination, rounded stylized characters, expressive faces, cinematic composition",
+}
+IMAGE_STYLE_NEG = {   # 스타일별로 빼야 할 것
+    "연필 드로잉(선만)": "color, photo, realistic, painting",
+    "드로잉+가벼운 채색": "photo, realistic, 3d render, heavy shading",
+    "사실 묘사": "cartoon, anime, comic, sketch",
+}
+
+
+def image_style_text(s):
+    """설정의 그림 스타일: 고른 프리셋이 있으면 그 영어 지시, '직접 입력'이면 직접 쓴 글"""
+    p = str(s.get("image_style_preset", "") or "")
+    if p in IMAGE_STYLES:
+        return IMAGE_STYLES[p]
+    return str(s.get("image_style", "") or "").strip()
+
+
 # (탭, 키, 라벨, 타입, 기본값)
 FIELDS = [
     ("글자", "font_path", "본문 글꼴", "font", find_font()),
@@ -382,7 +412,8 @@ FIELDS = [
     ("AI 엔진", "fiction_image", "허구·만화: 대본 쓸 때 이미지 자동", "choice:안 함(그림 프롬프트로 직접),분위기 웹 사진 찾기,로컬 그림 생성(무료 · 이 PC · 느림),ChatGPT 그림 생성(API),둘 다(그림+웹 사진)", "안 함(그림 프롬프트로 직접)"),
     ("AI 엔진", "image_model", "ChatGPT 그림 모델", "str", "gpt-image-2"),
     ("AI 엔진", "image_quality", "그림 품질(low=약 7원, medium=약 55원/장)", "choice:low,medium,high", "medium"),
-    ("AI 엔진", "image_style", "그림 스타일", "str", "영화 장면 같은 사실적인 사진, 분위기 있는 조명"),
+    ("AI 엔진", "image_style_preset", "그림 스타일 고르기(허구 이야기)", "choice:직접 입력(아래 칸)," + ",".join(IMAGE_STYLES), "웹툰"),
+    ("AI 엔진", "image_style", "그림 스타일 직접 입력", "str", "영화 장면 같은 사실적인 사진, 분위기 있는 조명"),
     ("소리", "bgm_mode", "배경음", "choice:자동생성,파일,없음", "자동생성"),
     ("소리", "bgm_style", "배경음 스타일", "choice:" + ",".join(["자동(소재별)"] + SOUND_STYLE_NAMES), "자동(소재별)"),
     ("소리", "bgm_volume", "배경음 볼륨(0~2)", "float", 0.5),
@@ -2151,8 +2182,9 @@ def make_ai_images(model, category, title, story, n, s, media_dir, log, cancel=N
         raise RuntimeError("로컬 그림 모델이 없습니다 (로컬그림_모델받기.bat 실행)")
     if not local and not key:
         raise RuntimeError("ChatGPT 그림에는 ChatGPT API 키가 필요합니다 (AI 엔진 탭)")
-    style = str(s.get("image_style", "")).strip()
-    log(f"🎨 그림 {n}장 기획 중...")
+    style = image_style_text(s)
+    preset = str(s.get("image_style_preset", "") or "")
+    log(f"🎨 그림 {n}장 기획 중... (스타일: {preset if preset in IMAGE_STYLES else '직접 입력'})")
     plan = ask_script_json(model, fit_ratio(IMAGE_PLAN_SYSTEM), f"화면: {ratio_ko()}\n콘텐츠 종류: {category}\n그림 수: {n}장\n그림 스타일(모든 그림 공통): {style or '사실적인 영화 장면'}"
                            f"\n[제목] {title}\n\n[본문]\n{story_text_only(story)}")
     items = [x for x in (plan.get("images") or []) if isinstance(x, dict) and x.get("prompt")][:n]
@@ -2161,8 +2193,11 @@ def make_ai_images(model, category, title, story, n, s, media_dir, log, cancel=N
         port = H > W
         w_, h_ = (448, 768) if port else (768, 432)
         log(f"  🖌 로컬 그림 {len(items)}장 그리는 중... (한 장 1~3분)")
-        jobs = [{"id": f"i{k}", "prompt": it["prompt"] + (f" Style: {style}." if style else "") + ", highly detailed, cinematic lighting",
-                 "negative": SD_NEGATIVE, "width": w_, "height": h_, "seed": 1000 + k} for k, it in enumerate(items)]
+        neg = SD_NEGATIVE + (", " + IMAGE_STYLE_NEG[preset] if preset in IMAGE_STYLE_NEG else ", photo, realistic")
+        if preset == "사실 묘사":
+            neg = SD_NEGATIVE + ", " + IMAGE_STYLE_NEG["사실 묘사"]
+        jobs = [{"id": f"i{k}", "prompt": it["prompt"] + (f" Style: {style}." if style else "") + ", highly detailed",
+                 "negative": neg, "width": w_, "height": h_, "seed": 1000 + k} for k, it in enumerate(items)]
         paths = sd_generate(jobs, os.path.join(media_dir, "_sd"), log, cancel)
         for k, it in enumerate(items):
             p_ = paths.get(f"i{k}")
@@ -4167,6 +4202,8 @@ class SubtitleRenderer:
             ph = 2 * np.pi * t / 7.0
             ox = bw * ax_ * (0.55 * np.sin(ph) + 0.75 * (2 * p - 1))
             oy = bh * ay_ * np.sin(ph * 0.5 + 1.0)
+        zk = 1.0 / max(1.0, float(z)) ** 1.5                          # 확대(줌)된 장면은 밀림을 줄임 (클로즈업에서 겹침이 더 잘 보임)
+        ox, oy = ox * zk, oy * zk
         mx, my = int(bw * ax_ * 1.4) + 2, int(bh * ay_ * 1.4) + 2          # 밀린 만큼 바깥 여유를 미리 잘라 두면 가장자리가 안 깨짐
         ex, ey = cw * mx / bw, ch * my / bh
         box = (l - ex, tp - ey, l + cw + ex, tp + ch + ey)
@@ -4736,6 +4773,7 @@ def parallax_warp_np(arr, dcrop, amp_x, amp_y):
     xs, ys = g
     d = dcrop if dcrop.dtype == np.float32 else dcrop.astype(np.float32)
     sx, sy = float(amp_x) / 255.0, float(amp_y) / 255.0            # dcrop 은 0~255 (가까울수록 큼)
+    d = _cv2.min(d, 127.5)                                          # 가까운 것(앞 인물·사물)은 고정, 먼 배경만 움직임 → 앞 사물 가장자리가 두 겹으로 안 보임
     map_x = _cv2.addWeighted(xs, 1.0, d, -sx, 127.5 * sx)          # xs - (d-127.5)*amp/255  (SIMD 한 번에)
     map_y = _cv2.addWeighted(ys, 1.0, d, -sy, 127.5 * sy)
     return _cv2.remap(arr, map_x, map_y, interpolation=_cv2.INTER_LINEAR, borderMode=_cv2.BORDER_REFLECT)
@@ -14588,7 +14626,7 @@ class App(tk.Tk):
 
     # ---- 장면별로 나눠 만들기 (자막형): 고친 장면만 다시, 오류 나도 끝난 장면은 남음 ----
     SCENE_FP_SKIP = {"out_dir", "bgm_mode", "bgm_style", "bgm_volume", "bgm_seed", "bgm_path", "audio_out", "openai_key", "gemini_key",
-                     "openai_model", "gemini_model", "image_model", "image_quality", "image_style", "script_engine", "trans_engine", "auto_langs",
+                     "openai_model", "gemini_model", "image_model", "image_quality", "image_style", "image_style_preset", "script_engine", "trans_engine", "auto_langs",
                      "fiction_image", "hit_sound", "hit_volume", "reveal_hit", "narr_duck", "scene_parts", "photo_count", "narr_spoken"}
 
     def _make_mp4_scenes(self, story, title, s, style, base, out, kit, prog, publish=True):
