@@ -114,3 +114,11 @@ AI 모델: https://huggingface.co/supertone-oss-archive/supertonic-3
 장문_끄기전_정리.bat : PC 끄기 전에 안전하게 멈춤 → 다시 켠 뒤 장문_만들기.bat(또는 연속제작.bat)으로 이어서
 장문_사진보강.bat   : 이미 만든 대본에 사진을 더 넣고 영상만 다시
 * 한 편(10분)에 이 PC 기준 약 40~60분 걸립니다 (조사·집필 10~15분, 사진 5~10분, 나레이션·영상 20~30분).
+
+[다른 PC에서 올린 최신 내용으로 이 폴더 덮어쓰기]
+깃허브_최신으로_덮어쓰기.bat : 이 폴더(예: 다운로드\short_samsung)를 GitHub의 최신 파일로 덮어씀.
+  - 처음 1회: GitHub에서 ZIP으로 받아 푼 폴더에 이 .bat 을 넣고 더블클릭.
+  - 이후: 다른 PC에서 푸시할 때마다 더블클릭 한 번이면 끝. (Git이 깔려 있으면 git 사용, 없으면 ZIP 자동 다운로드)
+  - 프로그램 파일(py/bat/txt 등)만 GitHub 버전으로 바뀌고, output\, shorts_novel_config.json(API 키),
+    models\, .supertonic_venv\, 만든 영상 등 개인 파일은 그대로 둠.
+  - 주의: 이 폴더 안에서 직접 고친 프로그램 파일은 GitHub 내용으로 되돌아감. 고칠 땐 GitHub에 올리는 PC에서 고칠 것.
