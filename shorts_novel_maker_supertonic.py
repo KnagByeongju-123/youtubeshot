@@ -4669,7 +4669,8 @@ DEPTH_DIR = os.path.join(BASE, "output", "depth_cache")
 _DEPTH_CACHE = {}
 _DEPTH_WARNED = set()
 _GRID_CACHE = {}
-DEPTH_AMP = {"약하게": (0.022, 0.010), "보통": (0.03, 0.013), "강하게": (0.045, 0.02)}   # (가로, 세로) 최대 밀림 = 화면 크기 비율
+DEPTH_AMP = {"약하게": (0.022, 0.010), "보통": (0.03, 0.013), "강하게": (0.045, 0.02)}
+RENDER_VER = "2026-10-17b"   # 그리는 방식이 바뀌면 올림 → 장문 영상 구간 캐시를 새로 그림   # (가로, 세로) 최대 밀림 = 화면 크기 비율
 
 
 def depth_key(path):
