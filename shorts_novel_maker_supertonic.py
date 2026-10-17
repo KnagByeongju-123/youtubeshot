@@ -2357,15 +2357,21 @@ def cast_text(chars=None):
     return "\n".join(f"- {c.get('name', '')}: {c.get('look', '')}" for c in chars if c.get("name") and c.get("look"))
 
 
-IMAGE_CHECK_SYSTEM = """너는 만화·일러스트 검수자다. 그림 파일을 Read 로 하나씩 직접 열어 보고, 영상에 그대로 써도 되는지 판정한다.
-탈락 기준(하나라도 있으면 ok=false): 손가락이 6개 이상이거나 붙었거나 비틀림, 손이 뭉개짐, 한 사람에게 손이 3개 이상 보이거나 팔·다리가 3개 이상(소매·배경에서 튀어나온 손도 셈),
-얼굴·눈이 심하게 일그러짐, 글자·워터마크가 크게 보임, 인물이 두 겹으로 겹침. 손은 반드시 하나하나 세어 본다.
-사소한 것(배경 왜곡, 작은 소품 이상)은 통과. 손이 화면에 안 보이면 손 문제는 없음.
-반드시 JSON만 출력: {"images": [{"k": 1, "ok": true, "problem": ""}, {"k": 2, "ok": false, "problem": "오른손 손가락 6개"}]}"""
+IMAGE_CHECK_SYSTEM = """너는 만화·일러스트 검수자다. 그림 파일을 Read 로 하나씩 직접 열어 보고, 영상에 그대로 써도 되는지 엄격하게 판정한다.
+탈락 기준(하나라도 있으면 ok=false):
+- 손: 화면에 손이 보이면 손가락을 하나씩 센다. 6개 이상·4개 이하(가려진 경우 제외)·붙음·비틀림·뭉개져서 셀 수 없음, 한 사람에게 손이 3개 이상, 팔·다리가 3개 이상(소매·배경에서 튀어나온 손도 셈)
+- 얼굴·눈이 심하게 일그러짐, 인물이 두 겹으로 겹침, 몸이 기형(목·어깨·허리가 꺾임)
+- 주요 소품 모양이 망가짐: 기타·악기(몸통이 찌그러짐, 목이 휘거나 두 개, 줄·사운드홀이 엉망), 우산·의자·책상·자전거·카세트·전화기 등이 녹아내리거나
+  부서지거나 공중에 떠 있음, 사람이 들고 있어야 할 물건이 손 없이 떠 있음
+- 글자·워터마크가 보임, 위아래·양옆에 흰 띠·검은 띠(액자 테두리)가 생김
+배경의 사소한 왜곡, 작고 흐린 먼 배경 소품은 통과.
+탈락이면 fix 에 다시 그릴 때 프롬프트에 덧붙일 영어 지시를 쓴다(예: "hands out of frame, close-up on face" / "remove the guitar, guitar case closed against the wall instead" / "full-bleed image, no border").
+반드시 JSON만 출력: {"images": [{"k": 1, "ok": true, "problem": "", "fix": ""}, {"k": 2, "ok": false, "problem": "오른손 손가락 6개", "fix": "hands hidden in pockets, upper body shot"}]}"""
 
 
-def check_image_defects(model, paths, log=None):
-    """생성 그림의 손·얼굴 결함을 Claude가 직접 보고 검사 → 다시 그릴 번호 목록 (0부터). 실패하면 빈 목록"""
+def check_image_defects(model, paths, log=None, want_fix=False):
+    """생성 그림의 손·얼굴·소품 결함을 Claude가 직접 보고 검사 → 다시 그릴 번호 목록 (0부터).
+    want_fix 면 [(번호, 덧붙일 영어 지시)] 로. 검사를 못 하면 빈 목록"""
     log = log or (lambda x: None)
     if not paths:
         return []
@@ -2385,7 +2391,7 @@ def check_image_defects(model, paths, log=None):
         except (TypeError, ValueError):
             continue
         if 0 <= k < len(paths) and r.get("ok") is False:
-            bad.append(k)
+            bad.append((k, str(r.get("fix") or "")[:200]) if want_fix else k)
             log(f"  ✂ 그림 {k + 1} 다시 그림: {str(r.get('problem', ''))[:60]}")
     return bad
 
@@ -2563,31 +2569,45 @@ def make_ai_images(model, category, title, story, n, s, media_dir, log, cancel=N
                 j["prompt"] = lead_ + j["prompt"]
         log(f"  🖌 그림 모델: {'애니·만화(Counterfeit)' if model_ == 'anime' else '일러스트(Dreamshaper)'}" + (" + 수채화 보조" if lora_ else ""))
         paths = sd_generate(jobs, os.path.join(media_dir, "_sd"), log, cancel, model=model_, lora=lora_)
-        # 손·얼굴 결함 검사 → 문제 있는 것만 손을 숨기는 지시와 다른 시드로 한 번 더 (최대 4장)
-        done_paths = [paths.get(f"i{k}") for k in range(len(items))]
-        if any(done_paths):
-            log("  🔍 그림의 손·얼굴이 제대로 그려졌는지 직접 보고 검사 중...")
-            bad = [k for k in check_image_defects(model, [p_ for p_ in done_paths if p_], log) if k < len(items)]
-            idx_map = [k for k, p_ in enumerate(done_paths) if p_]          # 검사 목록 번호 → items 번호
-            redo = [idx_map[k] for k in bad if k < len(idx_map)][:4]
-            if redo:
-                log(f"  🖌 {len(redo)}장 다시 그리는 중 (손 숨기기·다른 시드)...")
-                jobs2 = []
-                for k in redo:
-                    j = dict(jobs[k])
-                    j["prompt"] = j["prompt"] + ", hands hidden, hands in pockets or behind back, arms crossed, focus on face and expression"
-                    j["seed"] = int(j.get("seed", 0)) + 777
-                    j["id"] = f"r{k}"
-                    jobs2.append(j)
-                paths2 = sd_generate(jobs2, os.path.join(media_dir, "_sd"), log, cancel, model=model_, lora=lora_)
-                for k in redo:
-                    p2 = paths2.get(f"r{k}")
-                    if p2:
-                        try:
-                            os.remove(paths.get(f"i{k}") or "")
-                        except OSError:
-                            pass
-                        paths[f"i{k}"] = p2
+        # 다 그린 뒤 검증: Claude 가 직접 보고 손·얼굴·소품 결함을 찾음 → 고칠 지시를 붙여 다른 시드로 다시 그림 → 다시 그린 것도 또 검사 (최대 3번)
+        todo = [k for k in range(len(items)) if paths.get(f"i{k}")]
+        fixes = {}
+        base_ = {k: (jobs[k]["prompt"], int(jobs[k].get("seed", 0))) for k in range(len(jobs))}   # 고칠 지시는 원래 프롬프트에 한 번만 붙임
+        for rnd in range(3):
+            if not todo:
+                break
+            log("  🔍 그림 검증 중" + (f" ({rnd + 1}번째, 다시 그린 {len(todo)}장)" if rnd else f" ({len(todo)}장 · 손·얼굴·소품을 직접 보고)") + "...")
+            res_ = check_image_defects(model, [paths[f"i{k}"] for k in todo], log, want_fix=True)
+            redo = [(todo[j], fx) for j, fx in res_ if j < len(todo)]
+            if not redo:
+                log("  ✅ 그림 검증 통과" + (f" (다시 그린 것 포함)" if rnd else ""))
+                break
+            if rnd == 2:
+                log(f"  ⚠ {len(redo)}장은 3번 다시 그려도 검증을 통과하지 못해 마지막 그림을 씀 (장면 편집에서 바꿀 수 있음)")
+                break
+            log(f"  🖌 {len(redo)}장 다시 그리는 중 (고칠 점 반영·다른 시드)...")
+            jobs2 = []
+            for k, fx in redo:
+                fixes[k] = (fixes.get(k, "") + ", " + fx).strip(", ") if fx else fixes.get(k, "")
+                j = dict(jobs[k])
+                hint = fixes[k] or "hands hidden, hands in pockets or behind back, focus on face and expression"
+                j["prompt"] = base_[k][0] + ", " + hint
+                j["seed"] = base_[k][1] + 777 * (rnd + 1)
+                j["id"] = f"r{rnd}_{k}"
+                jobs2.append(j)
+            paths2 = sd_generate(jobs2, os.path.join(media_dir, "_sd"), log, cancel, model=model_, lora=lora_)
+            todo = []
+            for j in jobs2:
+                k = int(j["id"].split("_")[1])
+                p2 = paths2.get(j["id"])
+                if p2:
+                    try:
+                        os.remove(paths.get(f"i{k}") or "")
+                    except OSError:
+                        pass
+                    paths[f"i{k}"] = p2
+                    jobs[k] = dict(jobs[k], prompt=j["prompt"], seed=j["seed"])
+                    todo.append(k)
         for k, it in enumerate(items):
             p_ = paths.get(f"i{k}")
             if not p_:
