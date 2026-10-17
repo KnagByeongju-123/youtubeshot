@@ -2533,6 +2533,20 @@ def zip_image_files(zip_path, out_dir):
         return out
 
 
+IMAGE_STYLES_KO = {   # Claude·Gemini 에 한국어로 줄 화풍 설명
+    "동화책 수채화": "부드러운 수채화 그림책 일러스트, 따뜻하고 은은한 색, 종이 질감.",
+    "애니 수채화풍": "부드러운 수채화 그림책 일러스트, 애니메이션 영화 같은 따뜻하고 차분한 색감, 종이 질감.",
+    "웹툰": "한국 웹툰 스타일, 깔끔한 선, 셀 채색, 밝은 파스텔 색.",
+    "지브리풍 손그림 애니": "손으로 그린 일본 애니메이션 영화 느낌, 수채화 배경, 부드러운 자연광.",
+    "사실 묘사": "사실적인 영화 장면 같은 디지털 페인팅, 자연스러운 빛.",
+}
+
+
+def style_vec_ko(name):
+    """화풍 이름 → 한국어 설명 (없으면 영어 지시 그대로)"""
+    return IMAGE_STYLES_KO.get(name) or IMAGE_STYLES.get(name, "") or str(name)
+
+
 ZIP_LIMIT = 20 * 1024 * 1024   # Gemini·ChatGPT 에 올릴 ZIP 한도
 
 
@@ -14081,10 +14095,74 @@ class App(tk.Tk):
             one["k"] = nk
             one_copy(nk)
         win.bind("<Destroy>", lambda e: one.update(on=False) if e.widget is win else None, add="+")
+
+        # ---- Claude 에게 맡기기: 작업 폴더(작업.json) + Claude 에 붙여넣을 지시문 ----
+        has_marks = any(parse_media(x) for x in split_paras(self.get_story()))
+        repl_var = tk.BooleanVar(value=has_marks and not items())
+
+        def claude_job():
+            story_ = self.get_story()
+            paras_ = split_paras(story_)
+            tgt = target_var.get()
+            slots = []
+            if repl_var.get():        # 지금 대본의 사진 자리마다 새 그림으로 바꿈 (프롬프트는 Claude 가 문단을 보고 씀)
+                for pi, x in enumerate(paras_):
+                    mm = parse_media(x)
+                    if not mm:
+                        continue
+                    nxt = next((q for q in paras_[pi + 1:] if not parse_media(q)), "")
+                    slots.append({"n": len(slots) + 1, "mode": "replace", "pi": pi, "para": nxt,
+                                  "ko": str(mm[1] or ""), "prompt": ""})
+                if not slots:
+                    messagebox.showinfo("Claude 작업", "대본에 사진 자리가 없어요. '기존 사진 자리' 체크를 끄고 ✨ 프롬프트 만들기를 먼저 하세요.", parent=win)
+                    return
+            else:
+                its = items()
+                if not its:
+                    messagebox.showinfo("Claude 작업", "먼저 ✨ 프롬프트 만들기를 누르세요.\n(또는 대본에 사진이 있으면 '기존 사진 자리' 체크)", parent=win)
+                    return
+                slots = [{"n": k + 1, "mode": "insert", "pi": None, "para": it["text"], "ko": it.get("ko", ""), "prompt": full_prompt(it)}
+                         for k, it in enumerate(its)]
+            d = self.project_dict()
+            d["settings"] = {k: v for k, v in d["settings"].items() if k not in SECRET_KEYS}
+            d["story"] = story_
+            jd = os.path.join(self.vars["out_dir"].get() or os.path.join(BASE, "output"), "그림작업",
+                              (safe_name(self.title_var.get() or "그림") or "그림")[:40] + time.strftime("_%m%d_%H%M"))
+            os.makedirs(jd, exist_ok=True)
+            style_ = IMAGE_STYLES.get(style_var.get(), "")
+            cast_ = cast_text(read_cast())
+            atomic_write_text(os.path.join(jd, "작업.json"), json.dumps(
+                {"target": tgt, "style_name": style_var.get(), "style": style_, "cast": cast_, "ratio": ratio_ko(), "project": d, "slots": slots},
+                ensure_ascii=False, indent=1))
+            tool = os.path.join(BASE, "gemini_job.py")
+            url = "https://chatgpt.com/" if tgt == "ChatGPT" else "https://gemini.google.com/app"
+            ask = "이미지를 그려 줘: " if tgt == "ChatGPT" else "이미지 생성: "
+            dl_btn = "그림 위 다운로드 버튼" if tgt == "ChatGPT" else "그림 위 '원본 크기 이미지 다운로드' 버튼"
+            txt = (f"[Claude 작업 요청 - {tgt} 그림 {len(slots)}장을 대본에 넣기]\n"
+                   f"작업 폴더: {jd}\n"
+                   f"1. 작업 폴더의 작업.json 을 읽는다. slots 의 prompt 가 비어 있으면 para(그림 바로 뒤에 오는 문단)에 맞는 장면 프롬프트를 한국어로 직접 쓴다.\n"
+                   f"   모든 프롬프트 끝에 같은 화풍 문구를 붙인다: '화풍: {style_vec_ko(style_var.get())} 화면 {ratio_ko()}, 그림 안에 글자·숫자·워터마크 없이.'\n"
+                   + (f"   등장인물은 작업.json 의 cast 외모를 그대로 넣는다.\n" if cast_ else "")
+                   + f"   실존 인물은 뒷모습·먼 거리로, 잔혹한 묘사 없이. 쓴 프롬프트는 작업.json 의 slots 에 저장한다.\n"
+                   f"2. 오른쪽 내장 브라우저로 {url} 를 열고 새 대화에서 slot 번호 순서대로: 입력창에 '{ask}<prompt>' 입력 → Enter → 그림이 나오면 직접 보고\n"
+                   f"   손가락·소품 모양이 이상하거나 글자가 들어가면 다시 그리게 한 뒤 → {dl_btn}을 누른다 (사용자가 저장 창에서 '저장'을 누름).\n"
+                   f"3. 한 장 받을 때마다 실행: py -3.11 -X utf8 \"{tool}\" put \"{jd}\" <번호>\n"
+                   f"   (다운로드 폴더의 새 그림을 <번호>.png 로 옮김. NO FILE 이면 다운로드 버튼을 다시 누르고 사용자에게 저장을 부탁)\n"
+                   f"4. 다 받으면 실행: py -3.11 -X utf8 \"{tool}\" apply \"{jd}\" → 만들어진 프로젝트 파일 경로를 알려 준다.\n"
+                   f"   진행 확인: py -3.11 -X utf8 \"{tool}\" status \"{jd}\"\n"
+                   f"다운로드 허락: 이 작업의 {tgt} 그림 {len(slots)}장(장당 약 10MB, 다운로드 폴더) 다운로드를 허락합니다. 답은 한국어로.")
+            self.clipboard_clear()
+            self.clipboard_append(txt)
+            atomic_write_text(os.path.join(jd, "Claude_작업요청.txt"), txt)
+            stat.config(text=f"🤖 Claude 작업 지시문 복사됨 ({len(slots)}장) → Claude 대화창에 붙여넣기")
+            self.write_log(f"🤖 Claude 작업 만들기: {jd} ({tgt} 그림 {len(slots)}장, {'기존 사진 자리 바꾸기' if repl_var.get() else '문단 앞에 넣기'}) · 지시문이 복사됨 → Claude 에 붙여넣기")
+            self.write_log("   다 끝나면 Claude 가 알려 주는 프로젝트 파일을 「프로젝트 열기」로 여세요.")
         ttk.Button(bar, text="✨ 프롬프트 만들기", command=make).pack(side="left")
         one_btn = ttk.Button(bar, text="▶ 한 장씩 넣기", command=one_start)
         one_btn.pack(side="left", padx=(6, 0))
         ttk.Button(bar, text="⏭", width=3, command=one_skip).pack(side="left")
+        ttk.Button(bar, text="🤖 Claude 에게 맡기기", command=claude_job).pack(side="left", padx=(8, 0))
+        ttk.Checkbutton(bar, text="기존 사진 자리 바꾸기", variable=repl_var).pack(side="left", padx=(2, 0))
         ttk.Button(bar, text="📦 프롬프트 ZIP 만들기", command=make_zip).pack(side="left", padx=6)
         ttk.Button(bar, text="🗜 그림 ZIP 넣기", command=put_zip).pack(side="left")
         stat.pack(side="left", padx=8)
