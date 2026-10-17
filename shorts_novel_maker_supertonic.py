@@ -1303,12 +1303,31 @@ def find_claude():
     if explicit and os.path.exists(explicit):
         return explicit
     if os.name == "nt":
-        for p in [os.path.expandvars(r"%USERPROFILE%\.local\bin\claude.exe"),
+        for p in [os.path.expandvars(r"%USERPROFILE%\.local\bin\claude.exe"),      # 공식 설치(install.ps1)
                   os.path.expandvars(r"%USERPROFILE%\.local\bin\claude.cmd"),
-                  os.path.expandvars(r"%APPDATA%\npm\claude.cmd")]:
+                  os.path.expandvars(r"%APPDATA%\npm\claude.cmd"),                    # npm 설치
+                  os.path.expandvars(r"%LOCALAPPDATA%\Microsoft\WinGet\Links\claude.exe")]:   # winget 설치
             if os.path.exists(p):
                 return p
-    return shutil.which("claude")
+    hit = shutil.which("claude")
+    if hit or os.name != "nt":
+        return hit
+    # 설치하기 전에 켠 창(또는 탐색기)은 예전 PATH를 갖고 있어 못 찾음 → 레지스트리의 최신 PATH로 한 번 더 찾기
+    try:
+        import winreg
+        paths = []
+        for root, sub in ((winreg.HKEY_CURRENT_USER, "Environment"),
+                          (winreg.HKEY_LOCAL_MACHINE, r"SYSTEM\CurrentControlSet\Control\Session Manager\Environment")):
+            try:
+                with winreg.OpenKey(root, sub) as k:
+                    paths.append(os.path.expandvars(str(winreg.QueryValueEx(k, "Path")[0])))
+            except OSError:
+                pass
+        if paths:
+            return shutil.which("claude", path=os.pathsep.join(paths))
+    except Exception:
+        pass
+    return None
 
 
 def safe_env():
@@ -1350,7 +1369,10 @@ class _Done:
 def run_cli(args, input_text=None, timeout=CLAUDE_TIMEOUT):
     exe = find_claude()
     if not exe:
-        raise RuntimeError("Claude Code가 설치되어 있지 않습니다.\n설치 후 터미널에서 claude 를 실행해 Max 계정으로 로그인하세요.")
+        raise RuntimeError("Claude Code를 찾을 수 없습니다 (켜 둘 필요는 없고 설치·로그인만 하면 됨)\n"
+                           "1) PowerShell에서 설치: irm https://claude.ai/install.ps1 | iex\n"
+                           "2) 새 명령창에서 claude 실행 → Max 계정으로 로그인 → /exit\n"
+                           "3) 이 프로그램을 껐다 다시 켜기")
     with tempfile.TemporaryDirectory(prefix="shorts_novel_", ignore_cleanup_errors=True) as work:
         try:
             p = subprocess.Popen([exe] + args, stdin=subprocess.PIPE, cwd=work, env=safe_env(),
