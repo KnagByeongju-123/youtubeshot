@@ -2125,23 +2125,39 @@ def openai_image(prompt, key, model="gpt-image-2", quality="medium", size=None):
 
 
 SD_MODEL_DIR = os.path.join(BASE, "models", "LCM_Dreamshaper_v7")      # 로컬 그림 모델 (MIT) · 다운로드: 로컬그림_모델받기.bat
+SD_ANIME_DIR = os.path.join(BASE, "models", "Counterfeit_V3_lcm")       # 애니·만화 전용 (Counterfeit-V3.0 + LCM-LoRA, OpenRAIL-M)
 SD_PYTHON = os.path.join(BASE, ".sd_venv", "Scripts", "python.exe")
 SD_NEGATIVE = "text, letters, watermark, signature, logo, blurry, deformed hands, extra fingers, extra limbs, lowres, bad anatomy, nsfw"
+SD_ANIME_NEGATIVE = "(worst quality, low quality:1.4), lowres, bad anatomy, bad hands, extra fingers, text, watermark, signature, blurry, nsfw"
+# 모델별 기본값: (폴더, 단계 수, 가이던스)
+SD_MODELS = {"dreamshaper": (SD_MODEL_DIR, 5, 5.0), "anime": (SD_ANIME_DIR, 6, 1.5)}
+# 그림 스타일 → 어울리는 모델 (애니·만화 모델이 없으면 dreamshaper 로)
+SD_STYLE_MODEL = {"웹툰": "anime", "지브리풍 손그림 애니": "anime", "70~80년대 순정만화": "anime", "70~80년대 레트로 SF 애니": "anime",
+                  "짱구풍 코믹 애니": "anime", "레트로 로봇 애니": "anime", "풀컬러 만화(코믹스)": "anime", "동화책 수채화": "anime"}
 
 
 def sd_ready():
     return os.path.exists(os.path.join(SD_MODEL_DIR, "model_index.json")) and os.path.exists(SD_PYTHON) and os.path.exists(os.path.join(BASE, "sd_worker.py"))
 
 
-def sd_generate(items, out_dir, log=None, cancel=None, steps=5, guidance=5.0):
-    """로컬 그림 생성: items [{id, prompt, negative?, width?, height?, seed?}] → {id: png 경로}. 모델은 한 번만 올려 여러 장"""
+def sd_anime_ready():
+    return sd_ready() and os.path.exists(os.path.join(SD_ANIME_DIR, "model_index.json"))
+
+
+def sd_generate(items, out_dir, log=None, cancel=None, steps=None, guidance=None, model="dreamshaper"):
+    """로컬 그림 생성: items [{id, prompt, negative?, width?, height?, seed?}] → {id: png 경로}. 모델은 한 번만 올려 여러 장.
+    model: 'dreamshaper'(일러스트·사실·드로잉) 또는 'anime'(애니·만화, 없으면 dreamshaper)"""
     log = log or (lambda x: None)
     if not sd_ready() or not items:
         return {}
+    if model == "anime" and not sd_anime_ready():
+        model = "dreamshaper"
+    mdir, st_, gd_ = SD_MODELS.get(model, SD_MODELS["dreamshaper"])
+    steps, guidance = (steps or st_), (guidance if guidance is not None else gd_)
     os.makedirs(out_dir, exist_ok=True)
     job = os.path.join(out_dir, f"_job_{int(time.time())}.json")
     atomic_write_text(job, json.dumps({"items": items, "steps": steps, "guidance": guidance}, ensure_ascii=False))
-    cmd = [SD_PYTHON, "-X", "utf8", "-u", os.path.join(BASE, "sd_worker.py"), SD_MODEL_DIR, job, out_dir]
+    cmd = [SD_PYTHON, "-X", "utf8", "-u", os.path.join(BASE, "sd_worker.py"), mdir, job, out_dir]
     got = {}
     try:
         p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, encoding="utf-8", errors="replace",
@@ -2193,12 +2209,21 @@ def make_ai_images(model, category, title, story, n, s, media_dir, log, cancel=N
         port = H > W
         w_, h_ = (448, 768) if port else (768, 432)
         log(f"  🖌 로컬 그림 {len(items)}장 그리는 중... (한 장 1~3분)")
-        neg = SD_NEGATIVE + (", " + IMAGE_STYLE_NEG[preset] if preset in IMAGE_STYLE_NEG else ", photo, realistic")
-        if preset == "사실 묘사":
-            neg = SD_NEGATIVE + ", " + IMAGE_STYLE_NEG["사실 묘사"]
-        jobs = [{"id": f"i{k}", "prompt": it["prompt"] + (f" Style: {style}." if style else "") + ", highly detailed",
-                 "negative": neg, "width": w_, "height": h_, "seed": 1000 + k} for k, it in enumerate(items)]
-        paths = sd_generate(jobs, os.path.join(media_dir, "_sd"), log, cancel)
+        model_ = SD_STYLE_MODEL.get(preset, "dreamshaper")
+        if model_ == "anime" and not sd_anime_ready():
+            model_ = "dreamshaper"
+        if model_ == "anime":
+            neg = SD_ANIME_NEGATIVE + ", photo, realistic, 3d render"
+            jobs = [{"id": f"i{k}", "prompt": "masterpiece, best quality, " + it["prompt"] + (f" {style}." if style else ""),
+                     "negative": neg, "width": w_, "height": h_, "seed": 1000 + k} for k, it in enumerate(items)]
+        else:
+            neg = SD_NEGATIVE + (", " + IMAGE_STYLE_NEG[preset] if preset in IMAGE_STYLE_NEG else ", photo, realistic")
+            if preset == "사실 묘사":
+                neg = SD_NEGATIVE + ", " + IMAGE_STYLE_NEG["사실 묘사"]
+            jobs = [{"id": f"i{k}", "prompt": it["prompt"] + (f" Style: {style}." if style else "") + ", highly detailed",
+                     "negative": neg, "width": w_, "height": h_, "seed": 1000 + k} for k, it in enumerate(items)]
+        log(f"  🖌 그림 모델: {'애니·만화(Counterfeit)' if model_ == 'anime' else '일러스트(Dreamshaper)'}")
+        paths = sd_generate(jobs, os.path.join(media_dir, "_sd"), log, cancel, model=model_)
         for k, it in enumerate(items):
             p_ = paths.get(f"i{k}")
             if not p_:
