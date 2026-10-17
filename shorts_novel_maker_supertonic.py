@@ -13743,7 +13743,7 @@ class App(tk.Tk):
         def done(res):
             p, saved = res
             self.bgm_made = {"path": p, "seed": s["bgm_seed"], "style": style, "dur": round(r.duration, 2),
-                             "mode": s["bgm_mode"], "src": s["bgm_path"] if s["bgm_mode"] == "파일" else ""}
+                             "mode": s["bgm_mode"], "src": s["bgm_path"] if s["bgm_mode"] == "파일" else "", "narr": self._narr_sig(s)}
             what = f"{style} #{s['bgm_seed']}" if s["bgm_mode"] == "자동생성" else "파일 " + os.path.basename(s["bgm_path"])
             self.write_log(f"🎵 배경음 만들기 완료: {what}"
                            + (f" · 반전 효과음 {r.reveal_t:.1f}초" if r.reveal_t and s["reveal_hit"] == "on" else "")
@@ -13757,15 +13757,32 @@ class App(tk.Tk):
         self.write_log("🎵 배경음 만드는 중...")
         self.run_bg("배경음 만드는 중...", job, done)
 
+    def _narr_sig(self, s=None):
+        """지금 미리보기의 나레이션 지문 (없으면 None) - 나레이션이 바뀌면 재생용 소리를 다시 만들기 위해"""
+        s = s or self.get_settings()
+        r = self.renderer
+        narr = getattr(r, "narr_at", []) if (r and s.get("narration", "off") == "on") else []
+        if not narr:
+            return None
+        return (len(narr), round(sum(len(c) for _, c in narr) / SR, 2), round(float(s.get("narr_volume", 1.0)), 2))
+
     def bgm_ready(self):
-        """지금 설정과 맞는 배경음 파일이 준비돼 있으면 경로, 소리가 없는 설정이면 "", 만들어야 하면 None"""
+        """지금 설정과 맞는 재생용 소리(배경음+나레이션) 파일이 준비돼 있으면 경로, 소리가 없는 설정이면 "", 만들어야 하면 None"""
         s = self.get_settings()
+        sig = self._narr_sig(s)
         if s["bgm_mode"] == "없음" and s["reveal_hit"] != "on":
-            return ""
+            if not sig:
+                return ""
+            pm = getattr(self, "preview_mix", None)     # 배경음 없이 나레이션만
+            if pm and os.path.exists(pm["path"]) and pm["sig"] == sig and abs(pm["dur"] - self.renderer.duration) <= 0.05:
+                return pm["path"]
+            return None
         made = getattr(self, "bgm_made", None)
         if not made or not os.path.exists(made["path"]):
             return None
         if made["mode"] != s["bgm_mode"]:
+            return None
+        if made.get("narr") != sig:          # 배경음을 만든 뒤 나레이션이 생기거나 바뀜 → 같은 번호로 다시 섞음
             return None
         if s["bgm_mode"] == "파일" and made.get("src") != s["bgm_path"]:
             return None
@@ -13796,9 +13813,28 @@ class App(tk.Tk):
             return path
 
         def done(p):
-            self.bgm_made.update(dur=round(r.duration, 2), style=style)
+            self.bgm_made.update(dur=round(r.duration, 2), style=style, narr=self._narr_sig(s))
             self.replay_bgm()
-        self.run_bg("배경음 맞추는 중...", job, done)
+        self.run_bg("배경음 맞추는 중..." + (" (나레이션 포함)" if self._narr_sig(s) else ""), job, done)
+
+    def _make_preview_mix(self):
+        """배경음 '없음'일 때 재생용: 나레이션(+효과음)만 섞은 소리 파일을 만들고 바로 재생"""
+        r, s, style = self.renderer, self.get_settings(), self.cur_style()
+        path = os.path.join(tempfile.gettempdir(), "shorts_preview_narration.wav")
+        sig = self._narr_sig(s)
+
+        def job():
+            a = build_audio(r, s, style)
+            if a is None:
+                raise RuntimeError("들려줄 소리가 없습니다 (나레이션이 아직 없어요).")
+            write_wav(path, a)
+            return path
+
+        def done(p):
+            self.preview_mix = {"path": p, "sig": sig, "dur": round(r.duration, 2)}
+            self.replay_bgm()
+        self.write_log("  배경음은 '없음'이라 나레이션만 들려 드립니다 (재생용 소리 준비 중, 몇 초)...")
+        self.run_bg("나레이션 소리 준비 중...", job, done)
 
     def save_bgm_named(self):
         """지금 배경음을 원하는 이름으로 저장하고, 그 파일을 배경음으로 지정 (다시 듣기·MP4 모두 이 파일 사용)"""
@@ -13883,6 +13919,9 @@ class App(tk.Tk):
                     return
                 made = getattr(self, "bgm_made", None)
                 s = self.get_settings()
+                if s["bgm_mode"] == "없음" and s["reveal_hit"] != "on":
+                    self._make_preview_mix()
+                    return   # 준비되면 자동으로 재생됨
                 same = made and os.path.exists(made["path"]) and made["mode"] == s["bgm_mode"] and \
                     (s["bgm_mode"] != "자동생성" or str(made["seed"]) == str(s["bgm_seed"])) and \
                     (s["bgm_mode"] != "파일" or made.get("src") == s["bgm_path"])
