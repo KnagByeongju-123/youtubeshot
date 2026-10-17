@@ -3,6 +3,9 @@
 프로그램의 「🤖 Claude 작업 만들기」가 output/그림작업/<제목>/작업.json 을 만들고, Claude 가 오른쪽 내장 브라우저로
 Gemini 에서 한 장씩 그려 다운로드하면 이 도구로 모아서 프로젝트에 넣는다.
 
+  py -3.11 -X utf8 gemini_job.py new   <프로젝트.json> [--target Gemini|ChatGPT] [--style "화풍 설명"] [--every 45] [--replace]
+                                                                     대본에서 그림 자리(나레이션 약 every 초마다, 사진이 있으면 그 자리)를 골라 작업 폴더를 만듦 → 'JOB <폴더>'
+                                                                     각 slot 의 prompt 는 비어 있음 → Claude 가 para(그림 바로 뒤 문단)를 보고 채워 작업.json 에 저장
   py -3.11 -X utf8 gemini_job.py put   <작업폴더> <번호> [그림파일]   다운로드 폴더의 새 Gemini 그림(또는 지정 파일)을 <번호>.png 로 옮김
   py -3.11 -X utf8 gemini_job.py status <작업폴더>                     받은 번호·남은 번호
   py -3.11 -X utf8 gemini_job.py apply <작업폴더>                      받은 그림을 대본에 넣어 <제목>_Gemini.json 프로젝트로 저장
@@ -108,7 +111,49 @@ def apply(job_dir):
     return 0
 
 
+def new(a):
+    """프로젝트 → 작업 폴더(작업.json). 사진 자리가 있으면(또는 --replace) 그 자리를 바꾸고, 없으면 나레이션 every 초마다 문단 앞에 넣음"""
+    import argparse
+    ap = argparse.ArgumentParser()
+    ap.add_argument("project")
+    ap.add_argument("--target", default="Gemini", choices=["Gemini", "ChatGPT"])
+    ap.add_argument("--style", default="")
+    ap.add_argument("--every", type=float, default=45)
+    ap.add_argument("--replace", action="store_true")
+    o = ap.parse_args(a)
+    proj = json.load(open(o.project, encoding="utf-8"))
+    paras = [x.strip() for x in re.split(r"\n\s*\n", (proj.get("story") or "").strip()) if x.strip()]
+    marks = [i for i, x in enumerate(paras) if MARK.match(x)]
+    text_of = lambda x: not MARK.match(x) and not x.startswith("#")
+    slots = []
+    if marks:                                # 이미 사진이 있으면 그 자리마다 새 그림으로 바꿈
+        for i in marks:
+            nxt = next((q for q in paras[i + 1:] if text_of(q)), "")
+            cap = (MARK.match(paras[i]).group(2) or "").strip()
+            slots.append({"n": len(slots) + 1, "mode": "replace", "pi": i, "para": nxt, "ko": cap, "prompt": ""})
+    else:                                    # 나레이션 약 every 초(1분 ≈ 420자)마다 한 장, 첫 문단부터
+        per = 420 * o.every / 60
+        acc = per
+        for i, x in enumerate(paras):
+            if not text_of(x):
+                continue
+            if acc >= per:
+                slots.append({"n": len(slots) + 1, "mode": "insert", "pi": None, "para": x, "ko": "", "prompt": ""})
+                acc = 0
+            acc += len(x)
+    title = re.sub(r'[\\/:*?"<>|]', " ", proj.get("title") or "그림").strip()[:40].rstrip(" .")
+    jd = os.path.join(BASE, "output", "그림작업", f"{title}_{o.target}" + time.strftime("_%m%d_%H%M"))
+    os.makedirs(jd, exist_ok=True)
+    json.dump({"target": o.target, "style": o.style, "project": proj, "slots": slots}, open(os.path.join(jd, "작업.json"), "w", encoding="utf-8"),
+              ensure_ascii=False, indent=1)
+    print(f"그림 자리 {len(slots)}곳 ({'기존 사진 자리 바꾸기' if marks else f'약 {o.every:g}초마다 문단 앞'})")
+    print("JOB " + jd)
+    return 0
+
+
 def main(a):
+    if a and a[0] == "new" and len(a) > 1:
+        return new(a[1:])
     if len(a) < 2 or a[0] not in ("put", "status", "apply"):
         print(__doc__)
         return 2

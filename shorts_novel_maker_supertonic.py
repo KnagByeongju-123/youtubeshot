@@ -11070,6 +11070,7 @@ class App(tk.Tk):
         self.ref_label.pack(side="left")
         ttk.Button(r1, text="✍ AI로 대본 쓰기", command=self.ai_write).pack(side="right", padx=4)
         ttk.Button(r1, text="📷 사진으로 만들기", command=self.photo_blog).pack(side="right")
+        ttk.Button(r1, text="🤖 Claude 작업 프롬프트", command=self.claude_full_prompt).pack(side="right", padx=4)
         r2 = ttk.Frame(s1)
         r2.pack(fill="x", pady=4)
         ttk.Label(r2, text="제목").pack(side="left")
@@ -14225,6 +14226,95 @@ class App(tk.Tk):
         ttk.Button(bar, text="🗜 그림 ZIP 넣기", command=put_zip).pack(side="left")
         stat.pack(side="left", padx=8)
         show()
+
+    # ---- 다른 Claude 대화에 붙여넣을 '대본 → Gemini/ChatGPT 그림 → MP4' 작업 지시문 ----
+    def claude_full_prompt(self):
+        win = tk.Toplevel(self)
+        win.title("🤖 Claude 작업 프롬프트 - 다른 Claude 대화에 붙여넣으면 대본부터 MP4까지 진행")
+        win.geometry("900x640")
+        top = ttk.Frame(win, padding=(10, 8))
+        top.pack(fill="x")
+        ttk.Label(top, text="지금 고른 종류·소재·주제·길이로 지시문을 만듭니다. Claude Code(이 폴더) 새 대화에 붙여넣으면, Claude 가 대본을 쓰고 오른쪽 내장 브라우저로 "
+                            "그림을 한 장씩 받아(그림마다 '저장'만 눌러 주세요) 문단에 넣고 MP4 까지 만듭니다.", wraplength=870, foreground="#444").pack(anchor="w")
+        r = ttk.Frame(win, padding=(10, 4))
+        r.pack(fill="x")
+        ttk.Label(r, text="그릴 곳").pack(side="left")
+        tgt = tk.StringVar(value=getattr(self, "gem_target", "Gemini") or "Gemini")
+        ttk.Combobox(r, textvariable=tgt, values=["Gemini", "ChatGPT"], state="readonly", width=9).pack(side="left", padx=(4, 12))
+        ttk.Label(r, text="화풍").pack(side="left")
+        cur = str(self.vars["image_style_preset"].get() if "image_style_preset" in self.vars else "")
+        sty = tk.StringVar(value=cur if cur in IMAGE_STYLES else "지브리풍 손그림 애니")
+        ttk.Combobox(r, textvariable=sty, values=list(IMAGE_STYLES), state="readonly", width=22).pack(side="left", padx=(4, 12))
+        ttk.Label(r, text="그림 간격(초)").pack(side="left")
+        every = tk.IntVar(value=45)
+        ttk.Spinbox(r, from_=15, to=120, increment=5, textvariable=every, width=5).pack(side="left", padx=(4, 12))
+        kit = tk.BooleanVar(value=True)
+        ttk.Checkbutton(r, text="업로드 문구·썸네일까지", variable=kit).pack(side="left")
+        box = tk.Text(win, wrap="word", font=("맑은 고딕", 9))
+        box.pack(fill="both", expand=True, padx=10, pady=6)
+
+        def build(*_):
+            cat, genre, topic = self.cat_var.get(), self.genre_var.get(), self.topic_var.get().strip()
+            doc = cat == DOC_CATEGORY
+            try:
+                ln = float(self.len_var.get())
+            except ValueError:
+                ln = 10 if doc else 60
+            t = tgt.get()
+            url = "https://chatgpt.com/" if t == "ChatGPT" else "https://gemini.google.com/app"
+            ask = "이미지를 그려 줘: " if t == "ChatGPT" else "이미지 생성: "
+            dl = "그림 위 다운로드 버튼" if t == "ChatGPT" else "그림 위 '원본 크기 이미지 다운로드' 버튼"
+            sk = style_vec_ko(sty.get())
+            ratio = ratio_ko()
+            q = lambda x: x.replace('"', "'")
+            length = f"--minutes {ln:g}" if doc else f"--seconds {ln:g}"
+            txt = f"""[Claude 작업 요청 - 대본 → {t} 그림 → MP4]
+작업 폴더: {BASE}  (이 폴더에서 작업. 답은 한국어로, 진행 상황을 짧게 알려 줄 것)
+
+1. 대본 쓰기 (몇 분 걸림, 백그라운드로 돌리고 끝나면 확인):
+   py -3.11 -X utf8 make_script.py --category "{q(cat)}" --genre "{q(genre)}" --topic "{q(topic)}" {length}{' --research' if self.research_var.get() else ''}
+   {'(주제가 비어 있으면 소재에 어울리는 주제를 직접 정해 --topic 에 넣는다)' if not topic else ''}
+   → 마지막 줄 'PROJECT <경로>'. '⚠ 확인 필요' 줄이 있으면 내용을 나에게 알려 준다.
+   대본을 읽어 보고 작성 안내 문구가 나레이션에 섞였거나 어색한 곳이 있으면 알려 준다.
+
+2. 그림 자리 만들기:
+   py -3.11 -X utf8 gemini_job.py new "<PROJECT 경로>" --target {t} --every {every.get()}
+   → 'JOB <작업 폴더>'. 작업 폴더의 작업.json 을 열어 slots 마다 prompt 를 한국어로 채워 저장한다.
+   - para(그 그림 바로 뒤에 나오는 문단)의 핵심 장면을 그린다. 장면마다 구도를 바꾼다(넓은 풍경/중간 샷/소품 클로즈업/뒷모습).
+   - 반복해서 나오는 인물은 외모(나이·성별·머리 길이와 색·안경·옷)를 먼저 정해 모든 프롬프트에 똑같이 넣는다.
+   - 실존 인물은 뒷모습·먼 거리로. 잔혹·선정 묘사 금지. ko 에는 15자 이내 한국어 장면 설명.
+   - 모든 prompt 끝에 똑같이: '화풍: {sk} 화면 {ratio}, 그림 안에 글자·숫자·워터마크 없이.'
+
+3. 그림 받기: 오른쪽 내장 브라우저로 {url} 를 열고 새 대화에서 slot 번호 순서대로
+   입력창에 '{ask}<prompt>' → Enter → 그림이 나오면 직접 보고 손가락·소품 모양이 이상하거나 글자가 들어가면 다시 그리게 한다
+   → {dl}을 누른다 (내가 저장 창에서 '저장'을 누름) → 실행: py -3.11 -X utf8 gemini_job.py put "<작업 폴더>" <번호>
+   ('NO FILE' 이면 다운로드 버튼을 다시 누르고 나에게 저장을 부탁. 진행 확인: gemini_job.py status "<작업 폴더>")
+
+4. 대본에 넣기: py -3.11 -X utf8 gemini_job.py apply "<작업 폴더>" → 새 프로젝트 파일 경로
+
+5. MP4 만들기 (오래 걸림, 백그라운드로 돌리고 진행 확인. 꺼져도 다시 실행하면 이어서 만듦):
+   py -3.11 -X utf8 render_project.py "<4번의 프로젝트 파일>"{' --kit' if kit.get() else ''}
+
+6. 완성되면 영상에서 두세 장면을 뽑아 그림이 문단에 맞게 나오는지 확인하고, MP4·썸네일·설명란 파일 위치를 알려 준다.
+
+다운로드 허락: 이 작업의 {t} 그림(다운로드 폴더, 장당 약 10MB) 다운로드를 허락합니다. 그 밖의 결제·계정 변경은 하지 말 것."""
+            box.delete("1.0", "end")
+            box.insert("1.0", txt)
+        for v in (tgt, sty, every, kit):
+            v.trace_add("write", build)
+        build()
+
+        def copy():
+            self.gem_target = tgt.get()
+            self.clipboard_clear()
+            self.clipboard_append(box.get("1.0", "end").strip())
+            self.set_status("📋 Claude 작업 프롬프트 복사됨 → Claude Code 새 대화에 붙여넣기")
+            self.write_log("🤖 Claude 작업 프롬프트 복사됨: " + f"{self.genre_var.get()} / {self.topic_var.get().strip() or '(주제 자동)'} / {tgt.get()} · {sty.get()}")
+        b = ttk.Frame(win, padding=(10, 0, 10, 8))
+        b.pack(fill="x")
+        ttk.Button(b, text="📋 복사", command=copy).pack(side="right")
+        ttk.Label(b, text="※ 내장 브라우저에서 Gemini·ChatGPT 에 로그인돼 있어야 합니다. 그림이 나올 때마다 저장 창의 '저장'을 눌러 주세요.",
+                  foreground="gray").pack(side="left")
 
     def insert_before_para(self, para_text, marker):
         """본문에서 para_text 문단 바로 앞에 사진 줄 삽입 (사진 → 글). 이미 앞에 사진이 있으면 그 사진을 바꿈"""
