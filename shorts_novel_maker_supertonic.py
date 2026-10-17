@@ -256,7 +256,7 @@ LONG_STYLES = {
 
 # 설정 탭 묶음 (화면 형식·표현 방식에 따라 필요한 탭만 보임). mode: all / scroll / sub
 UI_TABS = [
-    ("🎬 화면 형식", "all", ["format", "layout", "fps", "quality", "scene_parts", "scene_trans", "audio_out", "thumb_style", "out_dir", "intro_sec", "outro_sec", "outro_text",
+    ("🎬 화면 형식", "all", ["format", "layout", "fps", "quality", "scene_parts", "scene_trans", "audio_out", "thumb_style", "genre_auto", "out_dir", "intro_sec", "outro_sec", "outro_text",
                           "progress_bar", "reveal_fx", "hold_start", "hold_end", "safe_guide"]),
     ("🎨 글꼴·색", "all", ["font_path", "title_font_path", "text_color", "title_color", "accent_color", "quote_color", "shadow", "stroke_width"]),
     ("🔤 자막 디자인", "sub", ["style_preset", "sub_layout", "head_pos", "color_preset", "sub_box_color", "sub_box_alpha", "head_style", "head_size",
@@ -290,6 +290,50 @@ IMAGE_STYLE_NEG = {   # 스타일별로 빼야 할 것
     "드로잉+가벼운 채색": "photo, realistic, 3d render, heavy shading",
     "사실 묘사": "cartoon, anime, comic, sketch",
 }
+
+
+# ---------------- 소재별 기본 설정 (장문): 소재를 고르면 자막 스타일·그림·대사 자막·제목 위치가 한 번에 맞춰짐 ----------------
+# 자막 스타일(LONG_STYLES 이름) → 소재들
+GENRE_SUB_STYLE = {
+    "시네마 다큐(위아래 검은 띠)": ["심해의 세계", "극지와 빙하", "동굴과 지하 세계", "우주의 비밀", "양자물리·현실의 본질", "지구의 역사와 대멸종",
+                          "역사를 바꾼 결정적 순간", "세계사 인물 일대기", "공학의 걸작", "해저 고고학과 난파선", "세계의 외딴 마을과 작은 나라",
+                          "세계의 신화와 민담 여행", "도시 하나 깊이 보기"],
+    "미스터리·공포(어두운 미니멀)": ["고대 문명 미스터리", "미라와 무덤의 비밀", "사라진 도시와 유적", "고대 문자와 암호 해독", "뇌와 의식·심리",
+                             "[이야기] 공포 괴담 장편", "[이야기] 미스터리 추리 장편"],
+    "뉴스·이슈 해설(하단 띠)": ["대형 사고에서 배운 교훈", "최신 고고학 발견", "미래 과학과 기술", "화폐와 경제의 역사", "세계의 신기한 법과 예절"],
+    "다큐 상자형(왼쪽 아래 상자)": ["식물의 숨은 능력", "미생물의 세계", "생명과 인체의 신비", "음식과 요리의 과학", "세계의 음식 문화", "고생물학과 공룡"],
+    "지식 다큐(아래 흰 자막)": ["세계의 축제", "신기한 풍속과 전통", "세계의 명절과 새해 풍습", "세계의 결혼·장례 풍습", "세계 무형문화유산",
+                        "고고학 발굴 이야기", "한국 고고학", "발명과 우연한 발견", "의학의 결정적 순간", "품질의 역사와 원리", "시간과 달력의 역사",
+                        "색과 빛의 과학", "수학의 미스터리", "과학자의 생각법", "인류의 기원과 진화", "철학의 큰 질문"],
+    # 이야기(허구): 그림이 화면을 꽉 채우고 아래에 영화 자막처럼 '- 대사' (가운데 큰 자막은 그림을 어둡게 가려서 안 씀)
+    "썰·사연 낭독(노란 자막)": ["[이야기] 사연 낭독(가족·시댁·이혼)", "[이야기] 시니어 인생 사연", "[이야기] 코믹 일상 장편 썰", "[이야기] 미니드라마(복수·반전)"],
+    "영화 리뷰(대사 자막 · 흰 글자+검은 테두리)": ["[이야기] 무협소설", "[이야기] 회귀·빙의 판타지", "[이야기] 로맨스 판타지", "[이야기] 현대 판타지(헌터)",
+                                        "[이야기] 조선 야담·기담", "[이야기] 궁중 사극", "[이야기] 감동 휴먼 드라마", "[이야기] SF·디스토피아"],
+}
+# 이야기 소재 → 그림 스타일 (IMAGE_STYLES 이름)
+GENRE_IMAGE_STYLE = {"[이야기] 코믹 일상 장편 썰": "짱구풍 코믹 애니", "[이야기] 조선 야담·기담": "드로잉+가벼운 채색",
+                     "[이야기] 감동 휴먼 드라마": "지브리풍 손그림 애니", "[이야기] 사연 낭독(가족·시댁·이혼)": "웹툰",
+                     "[이야기] 시니어 인생 사연": "동화책 수채화", "[이야기] 공포 괴담 장편": "연필 드로잉(선만)",
+                     "[이야기] 미스터리 추리 장편": "풀컬러 만화(코믹스)", "[이야기] 로맨스 판타지": "70~80년대 순정만화",
+                     "[이야기] SF·디스토피아": "70~80년대 레트로 SF 애니", "[이야기] 현대 판타지(헌터)": "풀컬러 만화(코믹스)",
+                     "[이야기] 무협소설": "드로잉+가벼운 채색", "[이야기] 궁중 사극": "지브리풍 손그림 애니",
+                     "[이야기] 회귀·빙의 판타지": "웹툰", "[이야기] 미니드라마(복수·반전)": "웹툰"}
+_GENRE_SUB_OF = {g_: st_ for st_, gs in GENRE_SUB_STYLE.items() for g_ in gs}
+
+
+def genre_profile(genre, fiction=None):
+    """장문 소재의 기본 설정 dict: 자막 스타일·대사 자막·제목 위치·그림 방식·그림 스타일·웹 조사·근거 사진·길이(분)"""
+    if fiction is None:
+        fiction = str(genre).startswith("[이야기]")
+    p = {"style_preset": _GENRE_SUB_OF.get(genre, "지식 다큐(아래 흰 자막)"),
+         "head_pos": "숨김" if fiction else "왼쪽 위 작게",
+         "sub_dialog": "대사 앞에 - 표시(영화 자막처럼)" if fiction else "없음",
+         "img_depth": "on", "img_depth_amt": "약하게",
+         "research": not fiction, "autophoto": True, "minutes": 10}
+    if fiction:
+        p["fiction_image"] = "로컬 그림 생성(무료 · 이 PC · 느림)" if sd_ready() else "분위기 웹 사진 찾기"
+        p["image_style_preset"] = GENRE_IMAGE_STYLE.get(genre, "웹툰")
+    return p
 
 
 def image_style_text(s):
@@ -378,6 +422,7 @@ FIELDS = [
     ("영상", "scene_trans", "장면 사이 전환 효과(장면별 제작 때)", "choice:페이드,밀어내기,덮기,닦아내기,확대,섞어서,없음", "페이드"),
     ("영상", "audio_out", "소리 저장 방식", "choice:MP4에 포함,MP4에 포함+MP3 따로,MP3만 따로(무음 MP4)", "MP4에 포함+MP3 따로"),
     ("영상", "thumb_style", "유튜브 썸네일 스타일(자동 저장용)", "choice:" + ",".join(THUMB_STYLES), THUMB_STYLES[0]),
+    ("영상", "genre_auto", "장문: 소재 고르면 자막·그림 설정 자동", "choice:on,off", "on"),
     ("영상", "out_dir", "저장 폴더", "dir", os.path.join(BASE, "output")),
     ("나레이션", "narration", "나레이션(음성 읽기)", "choice:on,off", "off"),
     ("나레이션", "narr_file", "외부 음성 파일(비우면 성우)", "audio", ""),
@@ -12388,6 +12433,35 @@ class App(tk.Tk):
         g = self.genre_var.get()
         if g in topics:
             self.apply_theme(topics[g][1])
+            if self.cat_var.get() == DOC_CATEGORY and str(self.vars.get("genre_auto").get() if self.vars.get("genre_auto") else "on") != "off":
+                self.apply_genre_profile(g)
+
+    def apply_genre_profile(self, genre, quiet=False):
+        """장문 소재별 기본 설정을 한 번에 적용 (자막 스타일 → 대사 자막·제목 위치 → 그림 방식·스타일 → 조사·사진 체크)"""
+        p = genre_profile(genre, doc_is_fiction(genre))
+        if p["style_preset"] in LONG_STYLES:
+            self.vars["style_preset"].set(p["style_preset"])
+            self.apply_style_preset()
+        def put():
+            for k in ("head_pos", "sub_dialog", "img_depth", "img_depth_amt", "fiction_image", "image_style_preset"):
+                if k in p and k in self.vars:
+                    self.vars[k].set(p[k])
+        put()
+        self.after_idle(put)      # 인기 스타일이 고른 뒤 한 번 더 적용되므로(제목 위치 등) 그 뒤에 다시 맞춤
+        try:
+            self.research_var.set(bool(p["research"]))
+            self.autophoto_var.set(bool(p["autophoto"]))
+            self.judge_var.set(False)
+        except Exception:
+            pass
+        if not quiet:
+            msg = f"🎯 소재 '{genre}' 기본 설정: 자막 {p['style_preset']} · 제목 {p['head_pos']}"
+            if "image_style_preset" in p:
+                msg += f" · 그림 {p['image_style_preset']} ({'이 PC에서 그림' if p['fiction_image'].startswith('로컬') else '분위기 웹 사진'}) · 대사 자막"
+            else:
+                msg += " · 근거 사진·웹 조사 켬"
+            self.write_log(msg + "  (설정 → 화면 형식 → '소재 고르면 자동'에서 끌 수 있음)")
+        return p
 
     def set_song(self, song, melody="", bpm=90):
         self.song = song if isinstance(song, dict) else None

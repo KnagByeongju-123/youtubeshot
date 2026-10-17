@@ -41,42 +41,10 @@ DEFAULT = {
     "재미_소재": [],        # 비우면 아래 FUN_GENRES 를 돌아가며
     "그림_스타일": "자동(돌아가며)",   # 이야기 편 그림 스타일: 자동 또는 프로그램의 그림 스타일 이름(웹툰, 지브리풍 손그림 애니, 70~80년대 순정만화 …) 또는 직접 쓴 영어 지시
 }
-# 재미(이야기) 소재별 어울리는 그림 스타일, 그 외는 아래 순환
-STYLE_BY_FUN = {"[이야기] 코믹 일상 장편 썰": "짱구풍 코믹 애니", "[이야기] 조선 야담·기담": "드로잉+가벼운 채색", "[이야기] 감동 휴먼 드라마": "지브리풍 손그림 애니",
-                "[이야기] 사연 낭독(가족·시댁·이혼)": "웹툰", "[이야기] 시니어 인생 사연": "동화책 수채화", "[이야기] 공포 괴담 장편": "연필 드로잉(선만)",
-                "[이야기] 미스터리 추리 장편": "풀컬러 만화(코믹스)", "[이야기] 로맨스 판타지": "70~80년대 순정만화", "[이야기] SF·디스토피아": "70~80년대 레트로 SF 애니",
-                "[이야기] 현대 판타지(헌터)": "풀컬러 만화(코믹스)", "[이야기] 무협소설": "드로잉+가벼운 채색", "[이야기] 궁중 사극": "지브리풍 손그림 애니",
-                "[이야기] 회귀·빙의 판타지": "웹툰", "[이야기] 미니드라마(복수·반전)": "웹툰"}
-FUN_STYLE_CYCLE = ["웹툰", "지브리풍 손그림 애니", "짱구풍 코믹 애니", "동화책 수채화", "풀컬러 만화(코믹스)"]
 MEDITATION_PRESETS = ["명상 · 싱잉볼", "싱잉볼 · 깊은 수면", "오르골 · 캐논", "싱잉볼 · 432Hz", "오르골 자장가 · 브람스", "싱잉볼 · 7 차크라",
                       "오르골 · 꿈속의 고향", "싱잉볼 · 528Hz", "오르골 · 어메이징 그레이스", "싱잉볼 · 노래하는 볼(문지르기)"]
 FUN_GENRES = ["[이야기] 코믹 일상 장편 썰", "[이야기] 조선 야담·기담", "[이야기] 감동 휴먼 드라마", "[이야기] 사연 낭독(가족·시댁·이혼)", "[이야기] 시니어 인생 사연"]
 MIN_PER_MUSIC = (0.6, 1.0)   # 명상 음악 영상 1분당 걸리는 시간(분): 20분 영상 → 12~20분
-# 소재 → 가장 어울리는 자막 스타일 (프로그램의 LONG_STYLES 이름). 없는 소재는 '지식 다큐'
-STYLE_BY_GENRE = {
-    "시네마 다큐(위아래 검은 띠)": ["심해의 세계", "극지와 빙하", "동굴과 지하 세계", "우주의 비밀", "양자물리·현실의 본질", "지구의 역사와 대멸종",
-                          "역사를 바꾼 결정적 순간", "세계사 인물 일대기", "공학의 걸작", "해저 고고학과 난파선", "세계의 외딴 마을과 작은 나라",
-                          "세계의 신화와 민담 여행", "도시 하나 깊이 보기"],
-    "미스터리·공포(어두운 미니멀)": ["고대 문명 미스터리", "미라와 무덤의 비밀", "사라진 도시와 유적", "고대 문자와 암호 해독", "뇌와 의식·심리"],
-    "뉴스·이슈 해설(하단 띠)": ["대형 사고에서 배운 교훈", "최신 고고학 발견", "미래 과학과 기술", "화폐와 경제의 역사", "세계의 신기한 법과 예절"],
-    "다큐 상자형(왼쪽 아래 상자)": ["식물의 숨은 능력", "미생물의 세계", "생명과 인체의 신비", "음식과 요리의 과학", "세계의 음식 문화", "고생물학과 공룡"],
-    "지식 다큐(아래 흰 자막)": ["세계의 축제", "신기한 풍속과 전통", "세계의 명절과 새해 풍습", "세계의 결혼·장례 풍습", "세계 무형문화유산",
-                        "고고학 발굴 이야기", "한국 고고학", "발명과 우연한 발견", "의학의 결정적 순간", "품질의 역사와 원리", "시간과 달력의 역사",
-                        "색과 빛의 과학", "수학의 미스터리", "과학자의 생각법", "인류의 기원과 진화", "철학의 큰 질문"],
-    # 이야기(허구) 낭독: 그림이 화면을 꽉 채우고 아래에 영화 자막처럼 '- 대사' (가운데 큰 자막은 그림을 어둡게 가려서 안 씀)
-    "썰·사연 낭독(노란 자막)": ["[이야기] 사연 낭독(가족·시댁·이혼)", "[이야기] 시니어 인생 사연", "[이야기] 코믹 일상 장편 썰", "[이야기] 미니드라마(복수·반전)"],
-    "영화 리뷰(대사 자막 · 흰 글자+검은 테두리)": ["[이야기] 무협소설", "[이야기] 회귀·빙의 판타지", "[이야기] 로맨스 판타지", "[이야기] 현대 판타지(헌터)",
-                                        "[이야기] 조선 야담·기담", "[이야기] 궁중 사극", "[이야기] 감동 휴먼 드라마", "[이야기] SF·디스토피아"],
-    "미스터리·공포(어두운 미니멀) ": ["[이야기] 공포 괴담 장편", "[이야기] 미스터리 추리 장편"],
-}
-_STYLE_OF = {g_: st_.strip() for st_, gs in STYLE_BY_GENRE.items() for g_ in gs}
-
-
-def pick_style(genre, want):
-    """자막 스타일 결정: 설정이 '자동'이면 소재 표에서, 아니면 설정 이름 그대로"""
-    if want and want != "자동":
-        return want
-    return _STYLE_OF.get(genre, "지식 다큐(아래 흰 자막)")
 # 연속 제작 때 '연속_소재'가 비어 있으면 이 소재들을 돌아가며 씀 (10분 롱폼으로 반응 좋은 묶음)
 BATCH_GENRES = ["세계의 축제", "신기한 풍속과 전통", "역사를 바꾼 결정적 순간", "세계의 외딴 마을과 작은 나라", "고고학 발굴 이야기",
                 "세계의 음식 문화", "대형 사고에서 배운 교훈", "도시 하나 깊이 보기", "발명과 우연한 발견", "세계의 신화와 민담 여행",
@@ -507,29 +475,25 @@ def run_doc(m, app, c, gate):
         app.genre_var.set(c["소재"])
         app.on_genre()
     app.topic_var.set(c["주제"])
-    style = pick_style(c["소재"], str(c.get("자막_스타일", "자동")).strip())
-    if style in m.LONG_STYLES:            # 소재에 맞는 인기 롱폼 스타일 (배치·색·자막 나누기·효과·대사 자막까지 한 번에)
-        app.vars["style_preset"].set(style)
+    prof = app.apply_genre_profile(c["소재"], quiet=True)     # 소재별 기본 설정 (메인 프로그램의 표)
+    want_sub = str(c.get("자막_스타일", "자동")).strip()
+    if want_sub != "자동" and want_sub in m.LONG_STYLES:     # 설정 파일에서 직접 고른 자막 스타일
+        app.vars["style_preset"].set(want_sub)
         app.apply_style_preset()
         app.update()
-        log(f"🎨 자막 스타일: {style}" + ("" if str(c.get("자막_스타일", "자동")) != "자동" else " (소재에 맞춰 자동)"))
-    if m.doc_is_fiction(c["소재"]):      # 이야기 낭독: 대사는 영화 자막처럼 '- 대사', 그림은 이 PC에서 그림 (모델 있으면)
-        app.vars["sub_dialog"].set("대사 앞에 - 표시(영화 자막처럼)")
-        if m.sd_ready():
-            app.vars["fiction_image"].set("로컬 그림 생성(무료 · 이 PC · 느림)")
-            want = str(c.get("그림_스타일") or "자동(돌아가며)")
-            if want in m.IMAGE_STYLES:
-                app.vars["image_style_preset"].set(want)
-            elif want.startswith("자동"):      # 재미 편마다 스타일을 돌아가며 (소재에 어울리게)
-                pick = STYLE_BY_FUN.get(c["소재"]) or FUN_STYLE_CYCLE[int(time.time() // 3600) % len(FUN_STYLE_CYCLE)]
-                app.vars["image_style_preset"].set(pick)
-            else:
-                app.vars["image_style_preset"].set("직접 입력(아래 칸)")
-                app.vars["image_style"].set(want)
-            log(f"🎨 그림 스타일: {app.vars['image_style_preset'].get()}")
-            log("🖌 이야기 그림: 이 PC에서 직접 그림 (LCM Dreamshaper, 무료)")
-        else:
-            app.vars["fiction_image"].set("분위기 웹 사진 찾기")
+        app.vars["head_pos"].set(prof["head_pos"])
+        app.vars["sub_dialog"].set(prof["sub_dialog"])
+    app.update()
+    log(f"🎨 자막 스타일: {app.vars['style_preset'].get()}" + (" (소재에 맞춰 자동)" if want_sub == "자동" else ""))
+    if m.doc_is_fiction(c["소재"]):
+        want = str(c.get("그림_스타일") or "자동(돌아가며)")
+        if want in m.IMAGE_STYLES:
+            app.vars["image_style_preset"].set(want)
+        elif not want.startswith("자동"):
+            app.vars["image_style_preset"].set("직접 입력(아래 칸)")
+            app.vars["image_style"].set(want)
+        log(f"🎨 그림 스타일: {app.vars['image_style_preset'].get()} · "
+            + ("이 PC에서 직접 그림" if str(app.vars['fiction_image'].get()).startswith("로컬") else "분위기 웹 사진"))
     if str(c.get("제목_표시", "")).strip() in ("위 가운데", "왼쪽 위 작게", "숨김"):
         app.vars["head_pos"].set(str(c["제목_표시"]).strip())
     app.vars["bgm_mode"].set("자동생성")
