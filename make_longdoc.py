@@ -30,7 +30,34 @@ DEFAULT = {
     "연속_편수": 5,
     "연속_소재": [],
     "제목_표시": "왼쪽 위 작게",      # 위 가운데 / 왼쪽 위 작게 / 숨김  (10분 다큐는 큰 제목이 화면을 가려 작게)
+    "자막_스타일": "자동",            # 자동(소재에 맞춰) 또는 프로그램의 '인기 롱폼 스타일' 이름 그대로
+    "끝나면": "그대로",              # 연속 제작이 끝난 뒤: 그대로 / 절전 / 끄기  (시작할 때 물어봄)
 }
+# 소재 → 가장 어울리는 자막 스타일 (프로그램의 LONG_STYLES 이름). 없는 소재는 '지식 다큐'
+STYLE_BY_GENRE = {
+    "시네마 다큐(위아래 검은 띠)": ["심해의 세계", "극지와 빙하", "동굴과 지하 세계", "우주의 비밀", "양자물리·현실의 본질", "지구의 역사와 대멸종",
+                          "역사를 바꾼 결정적 순간", "세계사 인물 일대기", "공학의 걸작", "해저 고고학과 난파선", "세계의 외딴 마을과 작은 나라",
+                          "세계의 신화와 민담 여행", "도시 하나 깊이 보기"],
+    "미스터리·공포(어두운 미니멀)": ["고대 문명 미스터리", "미라와 무덤의 비밀", "사라진 도시와 유적", "고대 문자와 암호 해독", "뇌와 의식·심리"],
+    "뉴스·이슈 해설(하단 띠)": ["대형 사고에서 배운 교훈", "최신 고고학 발견", "미래 과학과 기술", "화폐와 경제의 역사", "세계의 신기한 법과 예절"],
+    "다큐 상자형(왼쪽 아래 상자)": ["식물의 숨은 능력", "미생물의 세계", "생명과 인체의 신비", "음식과 요리의 과학", "세계의 음식 문화", "고생물학과 공룡"],
+    "지식 다큐(아래 흰 자막)": ["세계의 축제", "신기한 풍속과 전통", "세계의 명절과 새해 풍습", "세계의 결혼·장례 풍습", "세계 무형문화유산",
+                        "고고학 발굴 이야기", "한국 고고학", "발명과 우연한 발견", "의학의 결정적 순간", "품질의 역사와 원리", "시간과 달력의 역사",
+                        "색과 빛의 과학", "수학의 미스터리", "과학자의 생각법", "인류의 기원과 진화", "철학의 큰 질문"],
+    # 이야기(허구) 낭독: 대사가 많으니 영화 자막처럼 '- 대사'
+    "썰·사연 낭독(노란 자막)": ["[이야기] 사연 낭독(가족·시댁·이혼)", "[이야기] 시니어 인생 사연", "[이야기] 코믹 일상 장편 썰", "[이야기] 미니드라마(복수·반전)"],
+    "오디오북·낭독(가운데 큰 자막)": ["[이야기] 무협소설", "[이야기] 회귀·빙의 판타지", "[이야기] 로맨스 판타지", "[이야기] 현대 판타지(헌터)",
+                             "[이야기] 조선 야담·기담", "[이야기] 궁중 사극", "[이야기] 감동 휴먼 드라마", "[이야기] SF·디스토피아"],
+    "미스터리·공포(어두운 미니멀) ": ["[이야기] 공포 괴담 장편", "[이야기] 미스터리 추리 장편"],
+}
+_STYLE_OF = {g_: st_.strip() for st_, gs in STYLE_BY_GENRE.items() for g_ in gs}
+
+
+def pick_style(genre, want):
+    """자막 스타일 결정: 설정이 '자동'이면 소재 표에서, 아니면 설정 이름 그대로"""
+    if want and want != "자동":
+        return want
+    return _STYLE_OF.get(genre, "지식 다큐(아래 흰 자막)")
 # 연속 제작 때 '연속_소재'가 비어 있으면 이 소재들을 돌아가며 씀 (10분 롱폼으로 반응 좋은 묶음)
 BATCH_GENRES = ["세계의 축제", "신기한 풍속과 전통", "역사를 바꾼 결정적 순간", "세계의 외딴 마을과 작은 나라", "고고학 발굴 이야기",
                 "세계의 음식 문화", "대형 사고에서 배운 교훈", "도시 하나 깊이 보기", "발명과 우연한 발견", "세계의 신화와 민담 여행",
@@ -195,6 +222,13 @@ def ask_batch_plan(c):
         ok = ""
     if ok not in ("y", "yes", "ㅇ", "예", "네"):
         return False
+    try:
+        after = input("다 끝나면 PC를 어떻게 할까요? [Enter = 그대로 / 1 = 절전(최대 절전) / 2 = 끄기] : ").strip()
+    except EOFError:
+        after = ""
+    c["끝나면"] = {"1": "절전", "2": "끄기"}.get(after, "그대로")
+    if c["끝나면"] != "그대로":
+        print(f"   → 모두 끝나면 1분 뒤 {c['끝나면']} (취소: 그 창에서 아무 키)")
     if n0 != int(c.get("연속_편수") or 5):
         c["연속_편수"] = n0
         try:
@@ -283,6 +317,29 @@ def main():
         log(f"✅ {k}/{n}편 완료")
     log(f"🏁 연속 제작 {n}편 모두 완료 → {out_root}  (더 만들려면 '연속_편수'를 늘리거나 {os.path.basename(state_p)} 을 지우세요)")
     app.destroy()
+    after_batch(c.get("끝나면", "그대로"))
+
+
+def after_batch(mode):
+    """연속 제작이 끝난 뒤 PC 절전/끄기 (1분 유예, 아무 키나 누르면 취소)"""
+    import subprocess
+    if mode not in ("절전", "끄기"):
+        return
+    print(f"⏻ 1분 뒤 PC를 {mode}합니다. 취소하려면 아무 키나 누르세요...", flush=True)
+    try:
+        import msvcrt
+        for _ in range(600):
+            if msvcrt.kbhit():
+                msvcrt.getch()
+                print("취소했습니다.")
+                return
+            time.sleep(0.1)
+    except ImportError:
+        time.sleep(60)
+    if mode == "끄기":
+        subprocess.run(["shutdown", "/s", "/t", "5"])
+    else:
+        subprocess.run(["shutdown", "/h"])
 
 
 def run_doc(m, app, c, gate):
@@ -293,6 +350,14 @@ def run_doc(m, app, c, gate):
         app.genre_var.set(c["소재"])
         app.on_genre()
     app.topic_var.set(c["주제"])
+    style = pick_style(c["소재"], str(c.get("자막_스타일", "자동")).strip())
+    if style in m.LONG_STYLES:            # 소재에 맞는 인기 롱폼 스타일 (배치·색·자막 나누기·효과·대사 자막까지 한 번에)
+        app.vars["style_preset"].set(style)
+        app.apply_style_preset()
+        app.update()
+        log(f"🎨 자막 스타일: {style}" + ("" if str(c.get("자막_스타일", "자동")) != "자동" else " (소재에 맞춰 자동)"))
+    if m.doc_is_fiction(c["소재"]):      # 이야기 낭독: 대사는 영화 자막처럼 '- 대사'
+        app.vars["sub_dialog"].set("대사 앞에 - 표시(영화 자막처럼)")
     if str(c.get("제목_표시", "")).strip() in ("위 가운데", "왼쪽 위 작게", "숨김"):
         app.vars["head_pos"].set(str(c["제목_표시"]).strip())
     app.vars["bgm_mode"].set("자동생성")
@@ -385,7 +450,7 @@ def run_doc(m, app, c, gate):
             last[0] = p
             log(f"  MP4 {p}%")
     import hashlib
-    key = hashlib.md5((story + "|" + json.dumps({k: s.get(k) for k in ("fps", "format", "layout", "img_fill", "img_motion", "img_depth", "img_depth_amt", "head_style", "head_pos", "head_size", "head_show", "sub_style", "sub_size", "sub_layout",
+    key = hashlib.md5((story + "|" + json.dumps({k: s.get(k) for k in ("fps", "format", "layout", "img_fill", "img_motion", "img_depth", "img_depth_amt", "head_style", "head_pos", "head_size", "head_show", "sub_style", "sub_size", "sub_layout", "sub_dialog", "sub_anim", "sub_split", "style_preset", "text_color", "sub_box_alpha",
                                                                          "font_path", "title_font_path", "bgm_volume")}, ensure_ascii=False)
                        + "|" + title).encode("utf-8")).hexdigest()
     m.export_mp4_resumable(r, base + ".mp4", prog, gate, audio, work_dir=os.path.join(work, "영상구간"), seg_sec=SEG_SEC, log=log, key=key)
