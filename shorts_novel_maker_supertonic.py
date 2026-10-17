@@ -2606,13 +2606,7 @@ def _thumb_basic(v, s, photo_im=None, size=None, font_path=None):
     mood = v.get("mood") if v.get("mood") in THUMB_MOODS else "충격"
     c_big, c_emph, c_band, c_band_t = THUMB_MOODS[mood]
     if photo_im is not None:
-        im = photo_im.convert("RGB")
-        k = max(w / im.width, h / im.height) * 1.08
-        im = im.resize((int(im.width * k) + 1, int(im.height * k) + 1), Image.LANCZOS)
-        fx = {"left": 0.3, "right": 0.7}.get(v.get("face", "center"), 0.5)
-        l = int(min(max((im.width - w) * fx, 0), im.width - w))
-        tp = int(min(max((im.height - h) * 0.35, 0), im.height - h))
-        bg = im.crop((l, tp, l + w, tp + h))
+        bg = _thumb_photo(photo_im, s, w, h, v.get("face", "center"), 1.08, 0.35, target=(0.5, 0.34))
     else:
         bg = Image.fromarray(np.clip(Background(s, 2.0).frame(0.0), 0, 255).astype(np.uint8)).convert("RGB")
     arr = np.asarray(bg).astype(np.float32)
@@ -2695,13 +2689,64 @@ def _vparts(v):
     return lines, str(v.get("emph", "")).strip(), str(v.get("small", "")).strip(), (v.get("mood") if v.get("mood") in THUMB_MOODS else "충격")
 
 
-def _thumb_photo(photo_im, s, w, h, face="center", zoom=1.08, y_bias=0.35):
-    """사진을 (w,h)에 꽉 차게 자름 (없으면 테마 배경)"""
+FACE_MODEL = os.path.join(BASE, "models", "face_detection_yunet_2023mar.onnx")   # OpenCV YuNet (Apache-2.0, 230KB)
+_FACE_DET = {}
+
+
+def thumb_faces(photo_im):
+    """사진 속 얼굴들 [(x, y, w, h)] (0~1 비율, 큰 얼굴부터). 모델이 없거나 OpenCV 5 미만이면 []. 같은 사진은 한 번만"""
+    if photo_im is None:
+        return []
+    cached = getattr(photo_im, "_faces", None)
+    if cached is not None:
+        return cached
+    faces = []
+    try:
+        if _cv2 is not None and hasattr(_cv2, "FaceDetectorYN_create") and os.path.exists(FACE_MODEL):
+            det = _FACE_DET.get("d")
+            if det is None:
+                det = _FACE_DET["d"] = _cv2.FaceDetectorYN_create(FACE_MODEL, "", (320, 320), 0.6, 0.3, 500)
+            arr = np.asarray(photo_im.convert("RGB"))[:, :, ::-1]
+            h0, w0 = arr.shape[:2]
+            k = 640 / max(w0, h0)
+            sm = _cv2.resize(np.ascontiguousarray(arr), (max(1, int(w0 * k)), max(1, int(h0 * k))))
+            det.setInputSize((sm.shape[1], sm.shape[0]))
+            _, det_out = det.detect(sm)
+            if det_out is not None:
+                for row in det_out:
+                    x, y, fw, fh = [float(v_) for v_ in row[:4]]
+                    faces.append((x / k / w0, y / k / h0, fw / k / w0, fh / k / h0))
+            faces.sort(key=lambda b: -b[2] * b[3])
+    except Exception:
+        faces = []
+    try:
+        photo_im._faces = faces
+    except Exception:
+        pass
+    return faces
+
+
+def _thumb_photo(photo_im, s, w, h, face="center", zoom=1.08, y_bias=0.35, target=None):
+    """사진을 (w,h)에 꽉 차게 자름 (없으면 테마 배경).
+    target=(tx, ty): 사진에 얼굴이 있으면 가장 큰 얼굴의 중심이 결과의 (tx·w, ty·h)에 오도록 자르고, 얼굴이 작으면 조금 더 확대 → 글자가 얼굴을 안 가림"""
     if photo_im is None:
         bg = Image.fromarray(np.clip(Background(s, 2.0).frame(0.0), 0, 255).astype(np.uint8)).convert("RGB")
         return bg.resize((w, h), Image.LANCZOS)
     im = photo_im.convert("RGB")
-    k = max(w / im.width, h / im.height) * zoom
+    base_k = max(w / im.width, h / im.height)
+    faces = thumb_faces(photo_im) if target else []
+    if faces:
+        fx0, fy0, fw0, fh0 = faces[0]
+        k = base_k * zoom
+        want = 0.13 * w                                       # 얼굴 폭이 화면의 13% 이상 되게 (너무 작으면 확대, 최대 1.8배)
+        if fw0 * im.width * k < want:
+            k = min(base_k * 1.8, max(k, want / max(1e-6, fw0 * im.width)))
+        big = im.resize((int(im.width * k) + 1, int(im.height * k) + 1), Image.LANCZOS)
+        cx, cy = (fx0 + fw0 / 2) * big.width, (fy0 + fh0 / 2) * big.height
+        l = int(min(max(cx - target[0] * w, 0), big.width - w))
+        tp = int(min(max(cy - target[1] * h, 0), big.height - h))
+        return big.crop((l, tp, l + w, tp + h))
+    k = base_k * zoom
     im = im.resize((int(im.width * k) + 1, int(im.height * k) + 1), Image.LANCZOS)
     fx = {"left": 0.3, "right": 0.7}.get(face, 0.5)
     l = int(min(max((im.width - w) * fx, 0), im.width - w))
@@ -2768,7 +2813,7 @@ def _thumb_split(v, s, photo_im, size, fp, yellow=False):
     m = int(w * 0.05)
     if port:
         ph_ = int(h * 0.56)
-        out.paste(_thumb_photo(photo_im, s, w, ph_, v.get("face", "center"), 1.05, 0.3), (0, 0))
+        out.paste(_thumb_photo(photo_im, s, w, ph_, v.get("face", "center"), 1.05, 0.3, target=(0.5, 0.42)), (0, 0))
         d = ImageDraw.Draw(out)
         d.polygon([(0, ph_ - int(h * 0.035)), (w, ph_), (w, ph_ + 6), (0, ph_ + 6)], fill=panel + (255,))
         _thumb_tag(out, small, fp, h * 0.04, m, ph_ + int(h * 0.03), "#E53935" if yellow else THUMB_MOODS[mood][2], "#FFFFFF")
@@ -2778,7 +2823,7 @@ def _thumb_split(v, s, photo_im, size, fp, yellow=False):
         _thumb_lines(d, lines, emph, f_, m, y, w - 2 * m, c_big, c_emph, "center", stroke=not yellow, shadow=False)
     else:
         pw_ = int(w * 0.56)
-        out.paste(_thumb_photo(photo_im, s, pw_ + int(w * 0.06), h, v.get("face", "center"), 1.04, 0.3), (w - pw_ - int(w * 0.06), 0))
+        out.paste(_thumb_photo(photo_im, s, pw_ + int(w * 0.06), h, v.get("face", "center"), 1.04, 0.3, target=(0.56, 0.42)), (w - pw_ - int(w * 0.06), 0))
         d = ImageDraw.Draw(out)
         d.polygon([(0, 0), (w - pw_ + int(w * 0.02), 0), (w - pw_ - int(w * 0.04), h), (0, h)], fill=panel + (255,))
         _thumb_tag(out, small, fp, h * 0.07, m, int(h * 0.09), "#E53935" if yellow else THUMB_MOODS[mood][2], "#FFFFFF")
@@ -2797,7 +2842,7 @@ def _thumb_cinema(v, s, photo_im, size, fp):
     port = h > w
     lines, emph, small, mood = _vparts(v)
     bar = int(h * (0.07 if port else 0.12))
-    bg = _thumb_photo(photo_im, s, w, h, v.get("face", "center"), 1.0, 0.4)
+    bg = _thumb_photo(photo_im, s, w, h, v.get("face", "center"), 1.0, 0.4, target=(0.5, 0.36 if port else 0.38))
     bg = ImageEnhance.Color(bg).enhance(0.85)
     arr = np.asarray(bg).astype(np.float32)
     yy = np.linspace(0, 1, h)[:, None, None]
@@ -2836,7 +2881,7 @@ def _thumb_news(v, s, photo_im, size, fp):
     w, h = size
     port = h > w
     lines, emph, small, mood = _vparts(v)
-    out = _thumb_photo(photo_im, s, w, h, v.get("face", "center"), 1.06, 0.25).convert("RGBA")
+    out = _thumb_photo(photo_im, s, w, h, v.get("face", "center"), 1.06, 0.25, target=(0.5, 0.36)).convert("RGBA")
     d = ImageDraw.Draw(out)
     m = int(w * 0.05)
     hb = int(h * (0.2 if port else 0.27))
@@ -2859,7 +2904,7 @@ def _thumb_mystery(v, s, photo_im, size, fp):
     w, h = size
     port = h > w
     lines, emph, small, mood = _vparts(v)
-    bg = _thumb_photo(photo_im, s, w, h, v.get("face", "center"), 1.1, 0.35)
+    bg = _thumb_photo(photo_im, s, w, h, v.get("face", "center"), 1.1, 0.35, target=(0.5, 0.34))
     bg = ImageEnhance.Brightness(ImageEnhance.Color(bg).enhance(0.45)).enhance(0.6)
     arr = np.asarray(bg).astype(np.float32)
     arr = arr * np.array([0.85, 0.92, 1.15], np.float32)[None, None, :]
@@ -2894,7 +2939,8 @@ def _thumb_circle(v, s, photo_im, size, fp):
     w, h = size
     port = h > w
     lines, emph, small, mood = _vparts(v)
-    bg = _thumb_photo(photo_im, s, w, h, v.get("face", "center"), 1.05, 0.3)
+    cx, cy = (w // 2, int(h * 0.36)) if port else (int(w * 0.70), int(h * 0.40))
+    bg = _thumb_photo(photo_im, s, w, h, v.get("face", "center"), 1.05, 0.3, target=(cx / w, cy / h))
     arr = np.asarray(bg).astype(np.float32)
     yy = np.linspace(0, 1, h)[:, None, None]
     xx0 = np.linspace(0, 1, w)[None, :, None]
@@ -2902,7 +2948,6 @@ def _thumb_circle(v, s, photo_im, size, fp):
     out = Image.fromarray(np.clip(arr * shade, 0, 255).astype(np.uint8)).convert("RGBA")
     d = ImageDraw.Draw(out)
     m = int(w * 0.05)
-    cx, cy = (w // 2, int(h * 0.36)) if port else (int(w * 0.70), int(h * 0.40))
     r = int(min(w, h) * (0.19 if port else 0.2))
     lw = max(8, min(w, h) // 70)
     d.ellipse([cx - r - 3, cy - r - 3, cx + r + 3, cy + r + 3], outline=(255, 255, 255, 200), width=lw + 4)
