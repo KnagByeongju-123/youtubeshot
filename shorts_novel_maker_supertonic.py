@@ -6540,6 +6540,21 @@ def _tts_clip_sel(text, voice_name, rate_pct, cache_dir, pitch_hz=0, emotion="�
     return _tts_clip(text, voice_name, rate_pct, cache_dir, pitch_hz)
 
 
+ST_SENT_GAP = 0.22   # 문장을 나눠 읽을 때 문장 사이 쉼(초)
+
+
+def _split_sentences(text):
+    """문장 끝(. ! ? … 。)에서 나눔. 너무 짧은 조각은 앞 문장에 붙임"""
+    parts = [p.strip() for p in re.split(r"(?<=[.!?。…])\s+", text) if p.strip()]
+    out = []
+    for p in parts:
+        if out and len(p) < 8:
+            out[-1] = out[-1] + " " + p
+        else:
+            out.append(p)
+    return out
+
+
 def _tts_clip(text, voice_name, rate_pct, cache_dir, pitch_hz=0, emotion="차분", steps=5):
     text = tts_clean(text)
     if not text:
@@ -6547,6 +6562,18 @@ def _tts_clip(text, voice_name, rate_pct, cache_dir, pitch_hz=0, emotion="차분
     voice = voice_code(voice_name)
     ai = voice.startswith(("openai:", "gemini:"))
     is_st = voice.startswith("supertonic:")
+    if is_st and len(text) > 45:   # Supertonic 은 긴 문단을 한 번에 읽으면 단어를 두 번 말하거나 건너뛰는 일이 있어 문장마다 따로
+        sents = _split_sentences(text)
+        if len(sents) > 1:
+            gap = np.zeros(int(ST_SENT_GAP * SR), np.float32)
+            pieces = []
+            for k, sent in enumerate(sents):
+                a_, _ = _tts_clip(sent, voice_name, rate_pct, cache_dir, pitch_hz, emotion, steps)
+                if len(a_) > 1:
+                    pieces += ([gap] if pieces else []) + [a_.astype(np.float32)]
+            if pieces:
+                a = np.concatenate(pieces)
+                return a, len(a) / SR
     key_text = (supertonic_cache_text(text, emotion, steps) if is_st else (TTS_CFG["style"] + "|" if ai else "") + text)
     key = tts_key(voice, rate_pct, pitch_hz, key_text)
     os.makedirs(cache_dir, exist_ok=True)
@@ -10693,7 +10720,7 @@ class App(tk.Tk):
         ttk.Button(tr, text="🎙 나레이션 만들기", command=self.prepare_narration).pack(side="left", padx=(0, 6))
         ttk.Button(tr, text="🗣 AI 성우 프롬프트", command=self.narr_prompt).pack(side="left", padx=(0, 6))
         ttk.Button(tr, text="🎵 배경음 만들기", command=self.make_bgm).pack(side="left")
-        ttk.Button(tr, text="▶ 다시 듣기", command=self.replay_bgm).pack(side="left", padx=(4, 0))
+        ttk.Button(tr, text="▶ 배경음 듣기", command=self.preview_bgm_only).pack(side="left", padx=(4, 0))
         ttk.Button(tr, text="■ 소리 정지", command=stop_wav).pack(side="left", padx=4)
         ttk.Button(tr, text="💾 다른 이름으로 저장", command=self.save_bgm_named).pack(side="left")
         ttk.Button(tr, text="라이브용 긴 버전", command=self.save_bgm_wav).pack(side="left", padx=(4, 0))
@@ -10736,6 +10763,8 @@ class App(tk.Tk):
             tabs[name].n = 0
             self.tab_btns[name] = ttk.Button(self.tab_row, text=name, style="Edit.Color.TButton", command=lambda n_=name: self.open_settings(n_))
             self.tab_btns[name].pack(side="left", padx=(4, 0))
+        self._bgm_pick_row = ttk.Frame(self.tab_row)
+        self._bgm_pick_row.pack(side="right", padx=(8, 0))
         by_key = {k: (lb, t) for _, k, lb, t, _ in FIELDS}
         for name, _, keys in UI_TABS:          # 묶음 순서대로 칸 배치
             for k in keys:
@@ -10749,6 +10778,15 @@ class App(tk.Tk):
                 self.make_field(fr, k, lb, t, fr.n // 2, fr.n % 2)
                 fr.n += 1
         self.nb, self.nb_tabs, self.nb_order = nb, tabs, order
+        ttk.Label(self._bgm_pick_row, text="🎵 배경음").pack(side="left")
+        self.bgm_pick = tk.StringVar()
+        cb_ = ttk.Combobox(self._bgm_pick_row, textvariable=self.bgm_pick, state="readonly", width=16,
+                           values=["없음", "자동(소재별)"] + SOUND_STYLE_NAMES + ["음악 파일 고르기…"])
+        cb_.pack(side="left", padx=4)
+        cb_.bind("<<ComboboxSelected>>", lambda e: self.on_bgm_pick())
+        for k_ in ("bgm_mode", "bgm_style", "bgm_path"):
+            self.vars[k_].trace_add("write", lambda *_: self.after_idle(self.sync_bgm_pick))
+        self.after_idle(self.sync_bgm_pick)
         for k_ in ("format", "layout"):
             self.vars[k_].trace_add("write", lambda *_: self.after_idle(self.update_tabs))
         self.vars["color_preset"].trace_add("write", lambda *_: self.after_idle(self.apply_color_preset))
@@ -13765,6 +13803,62 @@ class App(tk.Tk):
         if not narr:
             return None
         return (len(narr), round(sum(len(c) for _, c in narr) / SR, 2), round(float(s.get("narr_volume", 1.0)), 2))
+
+    def sync_bgm_pick(self):
+        """배경음 선택 칸을 지금 설정에 맞게 표시"""
+        if not hasattr(self, "bgm_pick"):
+            return
+        mode = self.vars["bgm_mode"].get()
+        if mode == "없음":
+            self.bgm_pick.set("없음")
+        elif mode == "파일":
+            fn = os.path.basename(self.vars["bgm_path"].get() or "")
+            self.bgm_pick.set(("파일: " + fn[:14]) if fn else "파일(아직 안 고름)")
+        else:
+            self.bgm_pick.set(self.vars["bgm_style"].get() or "자동(소재별)")
+
+    def on_bgm_pick(self):
+        """배경음 선택: 없음 / 자동(소재별) / 스타일 / 음악 파일 → MP4 만들 때 그대로 쓰임"""
+        v = self.bgm_pick.get()
+        if v == "없음":
+            self.vars["bgm_mode"].set("없음")
+        elif v.startswith("음악 파일"):
+            p = filedialog.askopenfilename(title="배경음 파일", filetypes=[("음악", "*.mp3 *.wav *.m4a *.ogg *.flac"), ("모든 파일", "*.*")])
+            if p:
+                self.vars["bgm_path"].set(p)
+                self.vars["bgm_mode"].set("파일")
+        else:
+            self.vars["bgm_mode"].set("자동생성")
+            self.vars["bgm_style"].set(v)
+        self.sync_bgm_pick()
+        self.write_log(f"🎵 배경음: {self.bgm_pick.get()} → '▶ 배경음 듣기'로 미리 들어 보고, MP4 만들 때 그대로 들어갑니다")
+        self.save_cfg()
+
+    def preview_bgm_only(self):
+        """▶ 배경음 듣기: 지금 고른 배경음만 30초 (나레이션 없이)"""
+        stop_wav()
+        s = self.get_settings()
+        if s["bgm_mode"] == "없음":
+            messagebox.showinfo("배경음 듣기", "배경음이 '없음'입니다. 옆의 '🎵 배경음' 칸에서 스타일이나 음악 파일을 고르세요.")
+            return
+        style = self.cur_style()
+        path = os.path.join(tempfile.gettempdir(), "shorts_bgm_preview.wav")
+
+        def job():
+            if s["bgm_mode"] == "파일":
+                a = load_audio_file(s["bgm_path"])
+                a = a[: 30 * SR] if a is not None else None
+            else:
+                a = make_music(s, style, 30 * SR)
+            if a is None:
+                raise RuntimeError("배경음을 만들지 못했습니다.")
+            write_wav(path, _norm(a, 0.9))
+            return path
+
+        def done(p):
+            play_wav(p)
+            self.set_status(f"🎵 배경음 30초 미리듣기: {style if s['bgm_mode'] != '파일' else os.path.basename(s['bgm_path'])} (■ 소리 정지로 멈춤)")
+        self.run_bg("배경음 미리듣기 만드는 중...", job, done)
 
     def bgm_ready(self):
         """지금 설정과 맞는 재생용 소리(배경음+나레이션) 파일이 준비돼 있으면 경로, 소리가 없는 설정이면 "", 만들어야 하면 None"""
