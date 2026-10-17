@@ -4155,10 +4155,15 @@ class SubtitleRenderer:
         if dbig is None:
             return extent_resize(big, (bw, bh), (l, tp, l + cw, tp + ch)), mask
         # 2.5D 카메라 무빙: 장면이 진행되는 동안 한쪽으로 천천히 돌아가며(드리프트) + 7초 주기로 살짝 흔들림. 가까운 것은 많이, 먼 것은 조금 밀림
-        ax_, ay_ = DEPTH_AMP.get(str(self.s.get("img_depth_amt", "약하게")), DEPTH_AMP["약하게"])
-        ph = 2 * np.pi * t / 7.0
-        ox = bw * ax_ * (0.55 * np.sin(ph) + 0.75 * (2 * p - 1))
-        oy = bh * ay_ * np.sin(ph * 0.5 + 1.0)
+        amt = str(self.s.get("img_depth_amt", "약하게"))
+        ax_, ay_ = DEPTH_AMP.get(amt, DEPTH_AMP["약하게"])
+        if amt.startswith("약"):                                   # 약하게 = 맨 처음 방식 그대로 (9초 주기로 살짝 흔들림, 드리프트 없음)
+            ph = 2 * np.pi * t / 9.0
+            ox, oy = bw * 0.022 * np.sin(ph), bh * 0.010 * np.sin(ph * 0.5 + 1.0)
+        else:                                                      # 보통·강하게 = 장면 동안 한쪽으로 도는 드리프트 + 7초 흔들림
+            ph = 2 * np.pi * t / 7.0
+            ox = bw * ax_ * (0.55 * np.sin(ph) + 0.75 * (2 * p - 1))
+            oy = bh * ay_ * np.sin(ph * 0.5 + 1.0)
         mx, my = int(bw * ax_ * 1.4) + 2, int(bh * ay_ * 1.4) + 2          # 밀린 만큼 바깥 여유를 미리 잘라 두면 가장자리가 안 깨짐
         ex, ey = cw * mx / bw, ch * my / bh
         box = (l - ex, tp - ey, l + cw + ex, tp + ch + ey)
@@ -4624,7 +4629,7 @@ DEPTH_DIR = os.path.join(BASE, "output", "depth_cache")
 _DEPTH_CACHE = {}
 _DEPTH_WARNED = set()
 _GRID_CACHE = {}
-DEPTH_AMP = {"약하게": (0.02, 0.009), "보통": (0.03, 0.013), "강하게": (0.045, 0.02)}   # (가로, 세로) 최대 밀림 = 화면 크기 비율
+DEPTH_AMP = {"약하게": (0.022, 0.010), "보통": (0.03, 0.013), "강하게": (0.045, 0.02)}   # (가로, 세로) 최대 밀림 = 화면 크기 비율
 
 
 def depth_key(path):
