@@ -13923,6 +13923,14 @@ class App(tk.Tk):
         if s["bgm_mode"] == "없음":
             messagebox.showinfo("배경음 듣기", "배경음이 '없음'입니다. 옆의 '🎵 배경음' 칸에서 스타일이나 음악 파일을 고르세요.")
             return
+        if s["bgm_mode"] == "파일" and not (s.get("bgm_path") and os.path.exists(s["bgm_path"])):
+            # 파일 모드인데 파일이 없음 (지정 안 했거나 옮겨짐) → 지금 고르게 하고, 취소하면 안내
+            if messagebox.askyesno("배경음 듣기", "배경음이 '음악 파일'로 되어 있는데 파일이 지정되지 않았거나 찾을 수 없습니다.\n\n지금 음악 파일을 고를까요?\n(아니요 → '🎵 배경음' 칸에서 잔잔한 패드 같은 스타일을 고르면 프로그램이 만들어 줍니다)"):
+                self.bgm_pick.set("음악 파일 고르기…")
+                self.on_bgm_pick()
+                s = self.get_settings()
+            if not (s.get("bgm_path") and os.path.exists(s["bgm_path"])):
+                return
         style = self.cur_style()
         path = os.path.join(tempfile.gettempdir(), "shorts_bgm_preview.wav")
 
