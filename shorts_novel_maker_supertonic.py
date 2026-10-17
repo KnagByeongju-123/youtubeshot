@@ -2542,17 +2542,20 @@ def make_ai_images(model, category, title, story, n, s, media_dir, log, cancel=N
         w_, h_ = (448, 768) if port else (768, 432)
         log(f"  🖌 로컬 그림 {len(items)}장 그리는 중... (한 장 1~3분)")
         model_ = SD_STYLE_MODEL.get(preset, "dreamshaper")
+
+        def has_style(p_):   # 기획이 이미 스타일 문구를 넣었으면 또 붙이지 않음 (같은 말 두 번 → 프롬프트 낭비)
+            return style[:40].lower() in str(p_).lower()
         if model_ == "anime" and not sd_anime_ready():
             model_ = "dreamshaper"
         if model_ == "anime":
             neg = SD_ANIME_NEGATIVE + ", photo, realistic, 3d render"
-            jobs = [{"id": f"i{k}", "prompt": "masterpiece, best quality, " + it["prompt"] + (f" {style}." if style else ""),
+            jobs = [{"id": f"i{k}", "prompt": "masterpiece, best quality, " + it["prompt"] + (f" {style}." if style and not has_style(it["prompt"]) else ""),
                      "negative": neg, "width": w_, "height": h_, "seed": 1000 + k} for k, it in enumerate(items)]
         else:
             neg = SD_NEGATIVE + (", " + IMAGE_STYLE_NEG[preset] if preset in IMAGE_STYLE_NEG else ", photo, realistic")
             if preset == "사실 묘사":
                 neg = SD_NEGATIVE + ", " + IMAGE_STYLE_NEG["사실 묘사"]
-            jobs = [{"id": f"i{k}", "prompt": it["prompt"] + (f" Style: {style}." if style else "") + ", highly detailed",
+            jobs = [{"id": f"i{k}", "prompt": it["prompt"] + (f" Style: {style}." if style and not has_style(it["prompt"]) else "") + ", highly detailed",
                      "negative": neg, "width": w_, "height": h_, "seed": 1000 + k} for k, it in enumerate(items)]
         lora_, lead_ = sd_style_lora(preset)
         if lora_:
