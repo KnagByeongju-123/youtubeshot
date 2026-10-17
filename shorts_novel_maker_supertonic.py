@@ -2568,7 +2568,8 @@ def make_thumbnails(model, base, title, story, category, s, log=None):
     # AI가 직접 보고 고름
     best, reason = 1, ""
     try:
-        clist = "\n".join(f"{i + 1}. {desc}  → {p}" for i, (desc, _), p in zip(range(len(cands)), cands, paths))
+        clist = "\n".join(f"{i + 1}. {desc}  → {p if os.path.isabs(p) else os.path.join(os.getcwd(), p)}"
+                          for i, (desc, _), p in zip(range(len(cands)), cands, paths))   # AI는 다른 폴더에서 열므로 절대 경로로
         pk = ask_json(model, THUMB_PICK_SYSTEM, f"[영상 제목] {title}\n[내용 요약] {body[:800]}\n\n[후보 썸네일 - Read 로 하나씩 열어 볼 것]\n{clist}", tools=["Read"])
         b = int(pk.get("best") or 1)
         if 1 <= b <= len(cands):
