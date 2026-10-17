@@ -38,6 +38,7 @@ DEFAULT = {
     "명상_분": 20,
     "명상_프리셋": [],      # 비우면 아래 MEDITATION_PRESETS 를 돌아가며
     "재미_소재": [],        # 비우면 아래 FUN_GENRES 를 돌아가며
+    "그림_스타일": "따뜻한 색감의 한국 웹툰·동화책 일러스트, 깔끔한 선, 부드러운 채색, 표정이 잘 보이는 장면",   # 이야기 편 로컬 그림 스타일
 }
 MEDITATION_PRESETS = ["명상 · 싱잉볼", "싱잉볼 · 깊은 수면", "오르골 · 캐논", "싱잉볼 · 432Hz", "오르골 자장가 · 브람스", "싱잉볼 · 7 차크라",
                       "오르골 · 꿈속의 고향", "싱잉볼 · 528Hz", "오르골 · 어메이징 그레이스", "싱잉볼 · 노래하는 볼(문지르기)"]
@@ -491,8 +492,14 @@ def run_doc(m, app, c, gate):
         app.apply_style_preset()
         app.update()
         log(f"🎨 자막 스타일: {style}" + ("" if str(c.get("자막_스타일", "자동")) != "자동" else " (소재에 맞춰 자동)"))
-    if m.doc_is_fiction(c["소재"]):      # 이야기 낭독: 대사는 영화 자막처럼 '- 대사'
+    if m.doc_is_fiction(c["소재"]):      # 이야기 낭독: 대사는 영화 자막처럼 '- 대사', 그림은 이 PC에서 그림 (모델 있으면)
         app.vars["sub_dialog"].set("대사 앞에 - 표시(영화 자막처럼)")
+        if m.sd_ready():
+            app.vars["fiction_image"].set("로컬 그림 생성(무료 · 이 PC · 느림)")
+            app.vars["image_style"].set(str(c.get("그림_스타일") or "따뜻한 색감의 한국 웹툰·동화책 일러스트, 깔끔한 선, 부드러운 채색, 표정이 잘 보이는 장면"))
+            log("🖌 이야기 그림: 이 PC에서 직접 그림 (LCM Dreamshaper, 무료)")
+        else:
+            app.vars["fiction_image"].set("분위기 웹 사진 찾기")
     if str(c.get("제목_표시", "")).strip() in ("위 가운데", "왼쪽 위 작게", "숨김"):
         app.vars["head_pos"].set(str(c["제목_표시"]).strip())
     app.vars["bgm_mode"].set("자동생성")

@@ -379,7 +379,7 @@ FIELDS = [
     ("AI 엔진", "openai_model", "ChatGPT 모델", "str", "gpt-4o-mini"),
     ("AI 엔진", "gemini_key", "Gemini API 키", "secret", ""),
     ("AI 엔진", "gemini_model", "Gemini 모델", "str", "gemini-2.5-flash"),
-    ("AI 엔진", "fiction_image", "허구·만화: 대본 쓸 때 이미지 자동", "choice:안 함(그림 프롬프트로 직접),분위기 웹 사진 찾기,ChatGPT 그림 생성(API),둘 다(그림+웹 사진)", "안 함(그림 프롬프트로 직접)"),
+    ("AI 엔진", "fiction_image", "허구·만화: 대본 쓸 때 이미지 자동", "choice:안 함(그림 프롬프트로 직접),분위기 웹 사진 찾기,로컬 그림 생성(무료 · 이 PC · 느림),ChatGPT 그림 생성(API),둘 다(그림+웹 사진)", "안 함(그림 프롬프트로 직접)"),
     ("AI 엔진", "image_model", "ChatGPT 그림 모델", "str", "gpt-image-2"),
     ("AI 엔진", "image_quality", "그림 품질(low=약 7원, medium=약 55원/장)", "choice:low,medium,high", "medium"),
     ("AI 엔진", "image_style", "그림 스타일", "str", "영화 장면 같은 사실적인 사진, 분위기 있는 조명"),
@@ -2093,10 +2093,63 @@ def openai_image(prompt, key, model="gpt-image-2", quality="medium", size=None):
     raise last or APIError("ChatGPT 그림 실패")
 
 
+SD_MODEL_DIR = os.path.join(BASE, "models", "LCM_Dreamshaper_v7")      # 로컬 그림 모델 (MIT) · 다운로드: 로컬그림_모델받기.bat
+SD_PYTHON = os.path.join(BASE, ".sd_venv", "Scripts", "python.exe")
+SD_NEGATIVE = "text, letters, watermark, signature, logo, blurry, deformed hands, extra fingers, extra limbs, lowres, bad anatomy, nsfw"
+
+
+def sd_ready():
+    return os.path.exists(os.path.join(SD_MODEL_DIR, "model_index.json")) and os.path.exists(SD_PYTHON) and os.path.exists(os.path.join(BASE, "sd_worker.py"))
+
+
+def sd_generate(items, out_dir, log=None, cancel=None, steps=4, guidance=8.0):
+    """로컬 그림 생성: items [{id, prompt, negative?, width?, height?, seed?}] → {id: png 경로}. 모델은 한 번만 올려 여러 장"""
+    log = log or (lambda x: None)
+    if not sd_ready() or not items:
+        return {}
+    os.makedirs(out_dir, exist_ok=True)
+    job = os.path.join(out_dir, f"_job_{int(time.time())}.json")
+    atomic_write_text(job, json.dumps({"items": items, "steps": steps, "guidance": guidance}, ensure_ascii=False))
+    cmd = [SD_PYTHON, "-X", "utf8", "-u", os.path.join(BASE, "sd_worker.py"), SD_MODEL_DIR, job, out_dir]
+    got = {}
+    try:
+        p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, encoding="utf-8", errors="replace",
+                             creationflags=(subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0))
+        _RUNNING["procs"].add(p)
+        for ln in p.stdout:
+            ln = ln.strip()
+            if cancel is not None and cancel.is_set():
+                p.kill()
+                raise RuntimeError("취소됨")
+            if ln.startswith("OK "):
+                parts = ln.split(" ", 2)
+                path_t = parts[2].rsplit(" ", 1)
+                got[parts[1]] = path_t[0]
+                log(f"    🖌 그림 완성 ({len(got)}/{len(items)}) {path_t[1] if len(path_t) > 1 else ''}")
+            elif ln.startswith("ERR "):
+                log("    그림 실패: " + ln[4:][:100])
+            elif ln.startswith("LOADED"):
+                log("    그림 모델 준비됨 " + ln[6:].strip())
+        p.wait()
+    finally:
+        try:
+            _RUNNING["procs"].discard(p)
+        except Exception:
+            pass
+        try:
+            os.remove(job)
+        except OSError:
+            pass
+    return got
+
+
 def make_ai_images(model, category, title, story, n, s, media_dir, log, cancel=None):
-    """이야기에 맞는 그림을 기획(대본 AI) → ChatGPT로 그려서 저장 → [{path, caption, credit, after}]"""
+    """이야기에 맞는 그림을 기획(대본 AI) → ChatGPT 또는 로컬 모델로 그려서 저장 → [{path, caption, credit, after}]"""
+    local = str(s.get("fiction_image", "")).startswith("로컬")
     key = (s.get("openai_key") or os.environ.get("OPENAI_API_KEY", "")).strip()
-    if not key:
+    if local and not sd_ready():
+        raise RuntimeError("로컬 그림 모델이 없습니다 (로컬그림_모델받기.bat 실행)")
+    if not local and not key:
         raise RuntimeError("ChatGPT 그림에는 ChatGPT API 키가 필요합니다 (AI 엔진 탭)")
     style = str(s.get("image_style", "")).strip()
     log(f"🎨 그림 {n}장 기획 중...")
@@ -2104,6 +2157,31 @@ def make_ai_images(model, category, title, story, n, s, media_dir, log, cancel=N
                            f"\n[제목] {title}\n\n[본문]\n{story_text_only(story)}")
     items = [x for x in (plan.get("images") or []) if isinstance(x, dict) and x.get("prompt")][:n]
     got = []
+    if local:   # 이 PC에서 무료로 (한 장 1~3분, 모델은 한 번만 올림)
+        port = H > W
+        w_, h_ = (448, 768) if port else (768, 432)
+        log(f"  🖌 로컬 그림 {len(items)}장 그리는 중... (한 장 1~3분)")
+        jobs = [{"id": f"i{k}", "prompt": it["prompt"] + (f" Style: {style}." if style else "") + ", highly detailed, cinematic lighting",
+                 "negative": SD_NEGATIVE, "width": w_, "height": h_, "seed": 1000 + k} for k, it in enumerate(items)]
+        paths = sd_generate(jobs, os.path.join(media_dir, "_sd"), log, cancel)
+        for k, it in enumerate(items):
+            p_ = paths.get(f"i{k}")
+            if not p_:
+                continue
+            try:
+                im = Image.open(p_).convert("RGB")
+                up = (1080, 1920) if port else (1920, 1080)      # 영상 크기로 키움 (부드럽게)
+                im = im.resize(up, Image.LANCZOS).filter(ImageFilter.UnsharpMask(radius=1.2, percent=60, threshold=2))
+            except Exception:
+                continue
+            path = save_media_image(im, media_dir, time.strftime("aiimg_%Y%m%d_%H%M%S") + f"_{k}")
+            got.append({"path": path, "caption": it.get("caption", ""), "credit": "AI 생성 이미지 (로컬)", "page": "", "after": it.get("after", "")})
+            try:
+                os.remove(p_)
+            except OSError:
+                pass
+        log(f"  그림 {len(got)}장 완성")
+        return got
     for k, it in enumerate(items):
         if cancel is not None and cancel.is_set():
             raise RuntimeError("취소됨")
@@ -10207,7 +10285,7 @@ class App(tk.Tk):
             s["fps"] = 60  # 부드러운 스크롤 기본값으로 올림
         if c.get("settings") and c.get("ver", 1) < 7:   # 허구 분위기 사진 자동 찾기는 옵션으로
             fi = str(s.get("fiction_image", ""))
-            s["fiction_image"] = ("ChatGPT 그림 생성(API)" if fi.startswith("ChatGPT") else fi if fi.startswith("둘 다")
+            s["fiction_image"] = ("ChatGPT 그림 생성(API)" if fi.startswith("ChatGPT") else fi if fi.startswith(("둘 다", "로컬"))
                                   else DEFAULTS["fiction_image"])
         if c.get("settings") and c.get("ver", 1) < 6:   # 자막형도 '글자' 탭 색을 따르게
             if s.get("head_style") == "흰색+하늘색":
@@ -12323,8 +12401,7 @@ class App(tk.Tk):
             if category == ART_CATEGORY and details and not _artist_recent(artwork):
                 photos = photos[:1] + crop_details(photos[0]["path"], details, media_dir, log) + photos[1:]
             story = place_photos(story, photos)
-        elif not factual and autophoto and "ChatGPT" in str((SCRIPT_ENGINE.get("s") or {}).get("fiction_image", "")) \
-                or not factual and autophoto and str((SCRIPT_ENGINE.get("s") or {}).get("fiction_image", "")).startswith("둘 다"):
+        elif not factual and autophoto and str((SCRIPT_ENGINE.get("s") or {}).get("fiction_image", "")).startswith(("ChatGPT", "둘 다", "로컬")):
             s_ = SCRIPT_ENGINE.get("s") or {}
             n_ph = photo_target(story, sec)
             try:
@@ -12523,7 +12600,18 @@ class App(tk.Tk):
             sources += [str(x) for x in d.get("sources") or [] if str(x) not in sources]
             if d.get("notes") and not fiction:
                 notes.append(f"{i + 1}장: {d['notes']}")
-            if autophoto:   # 챕터마다 근거 사진 (1분에 한 장 정도)
+            use_sd = fiction and sd_ready() and str((SCRIPT_ENGINE.get("s") or {}).get("fiction_image", "")).startswith("로컬")
+            if autophoto and use_sd:   # 이야기: 이 PC에서 그림을 그려 넣음 (무료)
+                stop()
+                n_ph = doc_photo_target(st)
+                log(f"  🖌 {unit} {i + 1} 그림 {n_ph}장 그리는 중 (로컬 · 한 장 1~3분)...")
+                try:
+                    ph = make_ai_images(model, photo_cat, f"{title} - {c['title']}", st, n_ph, SCRIPT_ENGINE.get("s") or {}, media_dir, log, cancel)
+                    if ph:
+                        st = place_photos(st, ph)
+                except Exception as e:
+                    log("  그림 그리기 실패(글만 사용): " + str(e).splitlines()[0][:100])
+            elif autophoto:   # 챕터마다 근거 사진 (1분에 한 장 정도)
                 stop()
                 n_ph = doc_photo_target(st)
                 log(f"  🔎 {unit} {i + 1} {'분위기 ' if fiction else ''}사진 찾는 중... (목표 {n_ph}장)")
@@ -12542,6 +12630,18 @@ class App(tk.Tk):
             save_state()
             log(f"  {unit} {i + 1} 완성: {len(story_text_only(st)):,}자")
         opening = st8.get("opening_ph") or doc_clean(o.get("opening", ""))
+        if autophoto and "opening_ph" not in st8 and fiction and sd_ready() and str((SCRIPT_ENGINE.get("s") or {}).get("fiction_image", "")).startswith("로컬"):
+            stop()
+            n_ph = max(2, doc_photo_target(opening))
+            log(f"  🖌 오프닝 그림 {n_ph}장 그리는 중 (로컬)...")
+            try:
+                ph = make_ai_images(model, photo_cat, f"{title} - 오프닝", opening, n_ph, SCRIPT_ENGINE.get("s") or {}, media_dir, log, cancel)
+                if ph:
+                    opening = place_photos(opening, ph)
+            except Exception as e:
+                log("  오프닝 그림 실패(글만 사용): " + str(e).splitlines()[0][:100])
+            st8["opening_ph"] = opening
+            save_state()
         if autophoto and "opening_ph" not in st8:   # 오프닝에도 사진 (첫 화면이 중요)
             stop()
             n_ph = max(2, doc_photo_target(opening))
