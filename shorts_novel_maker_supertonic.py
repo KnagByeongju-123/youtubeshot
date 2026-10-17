@@ -2390,6 +2390,20 @@ def check_image_defects(model, paths, log=None):
     return bad
 
 
+# 대본 쓸 때 넣을 이미지: 웹 근거 사진 또는 (사실 주제여도) 이 PC에서 그린 그림
+IMG_SOURCE_WEB = "근거 사진(웹)"
+IMG_SOURCE_PRESET = {"그림: 애니(웹툰)": "웹툰", "그림: 애니+수채화": "동화책 수채화", "그림: 애니 수채화풍": "애니 수채화풍"}
+IMG_SOURCE = {"mode": IMG_SOURCE_WEB}
+
+
+def draw_settings():
+    """이미지 고르기가 '그림: …'이면 그 스타일로 이 PC에서 그리는 설정(dict), 웹 사진이거나 그림 모델이 없으면 None"""
+    p = IMG_SOURCE_PRESET.get(IMG_SOURCE.get("mode"))
+    if not p or not sd_ready():
+        return None
+    return dict(SCRIPT_ENGINE.get("s") or {}, fiction_image="로컬 그림 생성(무료 · 이 PC · 느림)", image_style_preset=p)
+
+
 def inject_cast_looks(items, cap_key="caption"):
     """그림 항목마다 나오는 인물의 외모 설명(IMAGE_CAST)을 prompt 앞에 붙여 고정. 붙인 인물 이름 목록을 it["cast_used"] 에 남김"""
     looks = {c["name"]: c["look"] for c in (IMAGE_CAST.get("chars") or []) if c.get("name") and c.get("look")}
@@ -10684,7 +10698,7 @@ class App(tk.Tk):
                 "song": getattr(self, "song", None), "melody": getattr(self, "melody", ""), "bpm": getattr(self, "bpm", 90),
                 "artwork": getattr(self, "artwork", None),
                 "length": self.len_var.get(), "judge": self.judge_var.get(), "theme": self.theme_var.get(),
-                "research": self.research_var.get(), "autophoto": self.autophoto_var.get(),
+                "research": self.research_var.get(), "autophoto": self.autophoto_var.get(), "img_source": self.img_src_var.get(),
                 "reference": getattr(self, "reference", ""), "img_prompts": getattr(self, "img_prompts", []),
                 "gem_prompts": getattr(self, "gem_prompts", []), "cast": list(IMAGE_CAST.get("chars") or []),
                 "gem_samples": getattr(self, "gem_samples", []), "gem_target": getattr(self, "gem_target", "Gemini"),
@@ -10723,6 +10737,9 @@ class App(tk.Tk):
         self.genre_var.set(g or list(topics)[0])
         self.research_var.set(bool(c.get("research", True)))
         self.autophoto_var.set(bool(c.get("autophoto", True)))
+        _src = str(c.get("img_source") or IMG_SOURCE_WEB)
+        self.img_src_var.set(_src if _src in IMG_SOURCE_PRESET else IMG_SOURCE_WEB)
+        IMG_SOURCE["mode"] = self.img_src_var.get()
         self.set_reference(c.get("reference", ""))
         self.img_prompts = list(c.get("img_prompts") or [])
         self.gem_prompts = list(c.get("gem_prompts") or [])
@@ -10890,7 +10907,25 @@ class App(tk.Tk):
         self.research_var = tk.BooleanVar(value=True)
         ttk.Checkbutton(r1, text="🔎 웹 검색으로 조사", variable=self.research_var).pack(side="left", padx=4)
         self.autophoto_var = tk.BooleanVar(value=True)
-        ttk.Checkbutton(r1, text="근거 사진 자동(사실일 때)", variable=self.autophoto_var).pack(side="left", padx=4)
+        ttk.Checkbutton(r1, text="사진·그림 자동", variable=self.autophoto_var).pack(side="left", padx=(4, 0))
+        self.img_src_var = tk.StringVar(value=IMG_SOURCE_WEB)
+        cb_src = ttk.Combobox(r1, textvariable=self.img_src_var, values=[IMG_SOURCE_WEB] + list(IMG_SOURCE_PRESET), state="readonly", width=17)
+        cb_src.pack(side="left", padx=(2, 4))
+
+        def on_src(*_):
+            IMG_SOURCE["mode"] = self.img_src_var.get()
+            p = IMG_SOURCE_PRESET.get(IMG_SOURCE["mode"])
+            if p:
+                if not sd_ready():
+                    self.write_log("⚠ 이 PC 그림 모델이 없어 웹 사진으로 넣습니다 (로컬그림_모델받기.bat 실행)")
+                elif p == "동화책 수채화" and not sd_style_lora(p)[0]:
+                    self.write_log("⚠ 수채화 보조 파일이 없어 애니 모델만으로 그립니다 (로컬그림_모델받기.bat 실행)")
+                if "image_style_preset" in self.vars:
+                    self.vars["image_style_preset"].set(p)
+                self.write_log(f"🖌 이미지: 이 PC에서 그림 ({IMG_SOURCE['mode'][4:]}) · 사실 주제여도 웹 근거 사진 대신 그림을 넣음")
+            else:
+                self.write_log("🔎 이미지: 사실 주제는 웹 근거 사진, 이야기는 설정대로")
+        self.img_src_var.trace_add("write", on_src)
         ttk.Button(r1, text="참고자료 붙여넣기", command=self.edit_reference).pack(side="left", padx=4)
         self.ref_label = ttk.Label(r1, text="", foreground="gray")
         self.ref_label.pack(side="left")
@@ -12879,15 +12914,17 @@ class App(tk.Tk):
         factual = cat_info(category)[0]
         media_dir = media_dir or os.path.join(DEFAULTS["out_dir"], "media")
         info, photos, sources = None, [], []
+        draw_s = draw_settings() if autophoto else None
+        web_ph = factual and autophoto and not draw_s      # 사실 주제 + 웹 근거 사진
         if research:
             log("🔎 웹 검색으로 조사 중... (1~4분)")
             n_ph = photo_target(sec=sec)
             info = ask_json(model, RESEARCH_SYSTEM, self.story_prompt(category, topic, genre, sec, reference=reference)
-                            + (photo_note(n_ph, category) if factual and autophoto else ""), tools=WEB_TOOLS)
+                            + (photo_note(n_ph, category) if web_ph else ""), tools=WEB_TOOLS)
             topic = info.get("topic") or topic
             sources = [str(x) for x in info.get("sources") or []]
             log(f"  조사 완료: {topic}  (사실 {len(info.get('facts') or [])}개, 출처 {len(sources)}개)")
-            if factual and autophoto and info.get("photos"):
+            if web_ph and info.get("photos"):
                 photos = fetch_photos(info.get("photos"), media_dir, log, limit=n_ph)
         user = self.story_prompt(category, topic, genre, sec, info, reference, photos)
         single_sys, multi_sys = systems_for(category)
@@ -12929,8 +12966,10 @@ class App(tk.Tk):
             if category == ART_CATEGORY and details and not _artist_recent(artwork):
                 photos = photos[:1] + crop_details(photos[0]["path"], details, media_dir, log) + photos[1:]
             story = place_photos(story, photos)
-        elif not factual and autophoto and str((SCRIPT_ENGINE.get("s") or {}).get("fiction_image", "")).startswith(("ChatGPT", "둘 다", "로컬")):
-            s_ = SCRIPT_ENGINE.get("s") or {}
+        elif draw_s or not factual and autophoto and str((SCRIPT_ENGINE.get("s") or {}).get("fiction_image", "")).startswith(("ChatGPT", "둘 다", "로컬")):
+            s_ = draw_s or SCRIPT_ENGINE.get("s") or {}
+            if draw_s and factual:
+                IMAGE_CAST["chars"] = []          # 사실 주제: 지난 이야기 인물 외모가 섞이지 않게
             n_ph = photo_target(story, sec)
             try:
                 photos = make_ai_images(model, category, title, story, n_ph, s_, media_dir, log, RATE_HOOK.get("cancel"))
@@ -13089,6 +13128,8 @@ class App(tk.Tk):
             notes.append(str(o["notes"]))
         toc = "\n".join(f"{i + 1}. {c['title']} - " + " / ".join(str(p) for p in (c.get("points") or []))
                         + (f" → 끝 장면: {c.get('cliffhanger')}" if c.get("cliffhanger") else "") for i, c in enumerate(chapters))
+        if not fiction:
+            IMAGE_CAST["chars"] = []              # 사실 주제: 지난 이야기 인물 외모가 그림에 섞이지 않게
         if fiction:   # 등장인물 외모를 그림 단계에 고정 (모든 회차의 모든 그림이 같은 얼굴·머리·안경·복장)
             IMAGE_CAST["chars"] = [{"name": str(x.get("name", "")), "look": str(x.get("look", "")), "look_ko": str(x.get("look_ko", ""))}
                                    for x in (o.get("characters") or []) if isinstance(x, dict) and x.get("name")]
@@ -13134,13 +13175,14 @@ class App(tk.Tk):
             sources += [str(x) for x in d.get("sources") or [] if str(x) not in sources]
             if d.get("notes") and not fiction:
                 notes.append(f"{i + 1}장: {d['notes']}")
-            use_sd = fiction and sd_ready() and str((SCRIPT_ENGINE.get("s") or {}).get("fiction_image", "")).startswith("로컬")
-            if autophoto and use_sd:   # 이야기: 이 PC에서 그림을 그려 넣음 (무료)
+            draw_s = draw_settings()
+            use_sd = bool(draw_s) or fiction and sd_ready() and str((SCRIPT_ENGINE.get("s") or {}).get("fiction_image", "")).startswith("로컬")
+            if autophoto and use_sd:   # 이야기(또는 그림 고르기): 이 PC에서 그림을 그려 넣음 (무료)
                 stop()
                 n_ph = doc_photo_target(st)
                 log(f"  🖌 {unit} {i + 1} 그림 {n_ph}장 그리는 중 (로컬 · 한 장 1~3분)...")
                 try:
-                    ph = make_ai_images(model, photo_cat, f"{title} - {c['title']}", st, n_ph, SCRIPT_ENGINE.get("s") or {}, media_dir, log, cancel)
+                    ph = make_ai_images(model, photo_cat, f"{title} - {c['title']}", st, n_ph, draw_s or SCRIPT_ENGINE.get("s") or {}, media_dir, log, cancel)
                     if ph:
                         st = place_photos(st, ph)
                 except Exception as e:
@@ -13164,12 +13206,12 @@ class App(tk.Tk):
             save_state()
             log(f"  {unit} {i + 1} 완성: {len(story_text_only(st)):,}자")
         opening = st8.get("opening_ph") or doc_clean(o.get("opening", ""))
-        if autophoto and "opening_ph" not in st8 and fiction and sd_ready() and str((SCRIPT_ENGINE.get("s") or {}).get("fiction_image", "")).startswith("로컬"):
+        if autophoto and "opening_ph" not in st8 and (draw_settings() or fiction and sd_ready() and str((SCRIPT_ENGINE.get("s") or {}).get("fiction_image", "")).startswith("로컬")):
             stop()
             n_ph = max(2, doc_photo_target(opening))
             log(f"  🖌 오프닝 그림 {n_ph}장 그리는 중 (로컬)...")
             try:
-                ph = make_ai_images(model, photo_cat, f"{title} - 오프닝", opening, n_ph, SCRIPT_ENGINE.get("s") or {}, media_dir, log, cancel)
+                ph = make_ai_images(model, photo_cat, f"{title} - 오프닝", opening, n_ph, draw_settings() or SCRIPT_ENGINE.get("s") or {}, media_dir, log, cancel)
                 if ph:
                     opening = place_photos(opening, ph)
             except Exception as e:

@@ -40,6 +40,7 @@ DEFAULT = {
     "명상_프리셋": [],      # 비우면 아래 MEDITATION_PRESETS 를 돌아가며
     "재미_소재": [],        # 비우면 아래 FUN_GENRES 를 돌아가며
     "그림_스타일": "자동(돌아가며)",   # 이야기 편 그림 스타일: 자동 또는 프로그램의 그림 스타일 이름(웹툰, 지브리풍 손그림 애니, 70~80년대 순정만화 …) 또는 직접 쓴 영어 지시
+    "이미지": "근거 사진(웹)",   # 사실 주제 이미지: 근거 사진(웹) / 그림: 애니(웹툰) / 그림: 애니+수채화 / 그림: 애니 수채화풍 (그림은 이 PC에서 그림)
 }
 MEDITATION_PRESETS = ["명상 · 싱잉볼", "싱잉볼 · 깊은 수면", "오르골 · 캐논", "싱잉볼 · 432Hz", "오르골 자장가 · 브람스", "싱잉볼 · 7 차크라",
                       "오르골 · 꿈속의 고향", "싱잉볼 · 528Hz", "오르골 · 어메이징 그레이스", "싱잉볼 · 노래하는 볼(문지르기)"]
@@ -485,6 +486,10 @@ def run_doc(m, app, c, gate):
         app.vars["sub_dialog"].set(prof["sub_dialog"])
     app.update()
     log(f"🎨 자막 스타일: {app.vars['style_preset'].get()}" + (" (소재에 맞춰 자동)" if want_sub == "자동" else ""))
+    src_ = str(c.get("이미지") or m.IMG_SOURCE_WEB)
+    m.IMG_SOURCE["mode"] = src_ if src_ in m.IMG_SOURCE_PRESET else m.IMG_SOURCE_WEB
+    if m.IMG_SOURCE["mode"] != m.IMG_SOURCE_WEB:
+        log(f"🖌 이미지: {m.IMG_SOURCE['mode']} (사실 주제도 웹 사진 대신 이 PC에서 그림)")
     if m.doc_is_fiction(c["소재"]):
         want = str(c.get("그림_스타일") or "자동(돌아가며)")
         if want in m.IMAGE_STYLES:
