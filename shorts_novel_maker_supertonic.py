@@ -6638,6 +6638,12 @@ def _tts_clip(text, voice_name, rate_pct, cache_dir, pitch_hz=0, emotion="차분
                     pieces += ([gap] if pieces else []) + [a_.astype(np.float32)]
             if pieces:
                 a = np.concatenate(pieces)
+                try:   # 문단 전체 소리도 예전과 같은 캐시 이름으로 저장 → 미리보기가 '나레이션 준비됨'으로 알아봄 (예전 반복 소리도 덮어씀)
+                    os.makedirs(cache_dir, exist_ok=True)
+                    pkey = tts_key(voice, rate_pct, pitch_hz, supertonic_cache_text(text, emotion, steps))
+                    atomic_np_save(os.path.join(cache_dir, pkey + ".npy"), a)
+                except Exception:
+                    pass
                 return a, len(a) / SR
     key_text = (supertonic_cache_text(text, emotion, steps) if is_st else (TTS_CFG["style"] + "|" if ai else "") + text)
     key = tts_key(voice, rate_pct, pitch_hz, key_text)
@@ -13845,7 +13851,9 @@ class App(tk.Tk):
         def job():
             a = build_audio(r, s, style)
             if a is None:
-                raise RuntimeError("배경음이 '없음'이고 반전 효과음도 꺼져 있습니다.")
+                if s["bgm_mode"] == "파일":
+                    raise RuntimeError("배경음이 '음악 파일'로 되어 있는데 파일이 지정되지 않았습니다. 오른쪽 '🎵 배경음' 칸에서 스타일이나 음악 파일을 고르세요.")
+                raise RuntimeError("배경음이 '없음'이고 반전 효과음도 꺼져 있습니다. 오른쪽 '🎵 배경음' 칸에서 스타일을 고르세요.")
             os.makedirs(media, exist_ok=True)
             name = (f"배경음_{safe_name(style)}_{s['bgm_seed']}.wav" if s["bgm_mode"] == "자동생성"
                     else f"믹스_{os.path.splitext(os.path.basename(s['bgm_path']))[0]}.wav")
@@ -13950,11 +13958,18 @@ class App(tk.Tk):
             self.set_status(f"🎵 배경음 30초 미리듣기: {style if s['bgm_mode'] != '파일' else os.path.basename(s['bgm_path'])} (■ 소리 정지로 멈춤)")
         self.run_bg("배경음 미리듣기 만드는 중...", job, done)
 
+    def _no_music(self, s):
+        """배경음이 없음이거나, '음악 파일'인데 파일이 지정되지 않았거나 없음"""
+        return s["bgm_mode"] == "없음" or (s["bgm_mode"] == "파일" and not (s.get("bgm_path") and os.path.exists(s["bgm_path"])))
+
     def bgm_ready(self):
         """지금 설정과 맞는 재생용 소리(배경음+나레이션) 파일이 준비돼 있으면 경로, 소리가 없는 설정이면 "", 만들어야 하면 None"""
         s = self.get_settings()
         sig = self._narr_sig(s)
-        if s["bgm_mode"] == "없음" and s["reveal_hit"] != "on":
+        if self._no_music(s) and s["reveal_hit"] != "on":
+            if s["bgm_mode"] == "파일" and not getattr(self, "_warned_nofile", False):
+                self._warned_nofile = True
+                self.write_log("ℹ 배경음이 '음악 파일'인데 파일이 없어 배경음 없이 재생합니다 (오른쪽 '🎵 배경음' 칸에서 스타일이나 파일을 고르세요)")
             if not sig:
                 return ""
             pm = getattr(self, "preview_mix", None)     # 배경음 없이 나레이션만
@@ -14103,7 +14118,7 @@ class App(tk.Tk):
                     return
                 made = getattr(self, "bgm_made", None)
                 s = self.get_settings()
-                if s["bgm_mode"] == "없음" and s["reveal_hit"] != "on":
+                if self._no_music(s) and s["reveal_hit"] != "on":
                     self._make_preview_mix()
                     return   # 준비되면 자동으로 재생됨
                 same = made and os.path.exists(made["path"]) and made["mode"] == s["bgm_mode"] and \
