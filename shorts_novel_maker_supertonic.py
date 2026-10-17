@@ -319,6 +319,47 @@ GENRE_IMAGE_STYLE = {"[이야기] 코믹 일상 장편 썰": "짱구풍 코믹 �
                      "[이야기] 무협소설": "드로잉+가벼운 채색", "[이야기] 궁중 사극": "지브리풍 손그림 애니",
                      "[이야기] 회귀·빙의 판타지": "웹툰", "[이야기] 미니드라마(복수·반전)": "웹툰"}
 _GENRE_SUB_OF = {g_: st_ for st_, gs in GENRE_SUB_STYLE.items() for g_ in gs}
+# 글꼴 (google/fonts 저장소의 무료 OFL 글꼴, 처음 쓸 때 한 번 내려받아 fonts/ 에 둠): 자막 스타일 → (자막 글꼴, 제목 글꼴)
+GENRE_FONT_BY_STYLE = {
+    "지식 다큐(아래 흰 자막)": ("ofl/nanumgothic/NanumGothic-ExtraBold.ttf", "ofl/blackhansans/BlackHanSans-Regular.ttf"),
+    "다큐 상자형(왼쪽 아래 상자)": ("ofl/nanumgothic/NanumGothic-ExtraBold.ttf", "ofl/blackhansans/BlackHanSans-Regular.ttf"),
+    "뉴스·이슈 해설(하단 띠)": ("ofl/gothica1/GothicA1-Black.ttf", "ofl/blackhansans/BlackHanSans-Regular.ttf"),
+    "시네마 다큐(위아래 검은 띠)": ("ofl/nanummyeongjo/NanumMyeongjo-Bold.ttf", "ofl/songmyung/SongMyung-Regular.ttf"),
+    "미스터리·공포(어두운 미니멀)": ("ofl/dohyeon/DoHyeon-Regular.ttf", "ofl/dohyeon/DoHyeon-Regular.ttf"),
+    "썰·사연 낭독(노란 자막)": ("ofl/jua/Jua-Regular.ttf", "ofl/blackhansans/BlackHanSans-Regular.ttf"),
+    "영화 리뷰(대사 자막 · 흰 글자+검은 테두리)": ("ofl/dohyeon/DoHyeon-Regular.ttf", "ofl/gothica1/GothicA1-Black.ttf"),
+}
+# 소재별로 더 어울리는 글꼴이 있으면 여기서 덮어씀
+GENRE_FONT_BY_GENRE = {
+    "[이야기] 조선 야담·기담": ("ofl/songmyung/SongMyung-Regular.ttf", "ofl/nanumbrushscript/NanumBrushScript-Regular.ttf"),
+    "[이야기] 궁중 사극": ("ofl/songmyung/SongMyung-Regular.ttf", "ofl/nanumbrushscript/NanumBrushScript-Regular.ttf"),
+    "[이야기] 무협소설": ("ofl/songmyung/SongMyung-Regular.ttf", "ofl/nanumbrushscript/NanumBrushScript-Regular.ttf"),
+    "[이야기] 코믹 일상 장편 썰": ("ofl/jua/Jua-Regular.ttf", "ofl/poorstory/PoorStory-Regular.ttf"),
+    "[이야기] 로맨스 판타지": ("ofl/jua/Jua-Regular.ttf", "ofl/yeonsung/YeonSung-Regular.ttf"),
+    "[이야기] 감동 휴먼 드라마": ("ofl/nanummyeongjo/NanumMyeongjo-Bold.ttf", "ofl/yeonsung/YeonSung-Regular.ttf"),
+    "[이야기] 시니어 인생 사연": ("ofl/nanummyeongjo/NanumMyeongjo-Bold.ttf", "ofl/yeonsung/YeonSung-Regular.ttf"),
+    "[이야기] SF·디스토피아": ("ofl/gothica1/GothicA1-Black.ttf", "ofl/gugi/Gugi-Regular.ttf"),
+    "[이야기] 공포 괴담 장편": ("ofl/dohyeon/DoHyeon-Regular.ttf", "ofl/dohyeon/DoHyeon-Regular.ttf"),
+    "한국 고고학": ("ofl/nanumgothic/NanumGothic-ExtraBold.ttf", "ofl/songmyung/SongMyung-Regular.ttf"),
+    "세계의 신화와 민담 여행": ("ofl/nanummyeongjo/NanumMyeongjo-Bold.ttf", "ofl/nanumbrushscript/NanumBrushScript-Regular.ttf"),
+}
+
+
+def genre_fonts(genre, style):
+    """(자막 글꼴 repo 경로, 제목 글꼴 repo 경로) - 소재 우선, 없으면 자막 스타일 기준"""
+    return GENRE_FONT_BY_GENRE.get(genre) or GENRE_FONT_BY_STYLE.get(style) or GENRE_FONT_BY_STYLE["지식 다큐(아래 흰 자막)"]
+
+
+def ensure_genre_fonts(genre, style, log=None):
+    """소재 글꼴을 내려받아(없을 때만) {"sub_font_path", "title_font_path"} 로. 실패하면 빈 dict (지금 글꼴 유지)"""
+    out = {}
+    for key, repo in zip(("sub_font_path", "title_font_path"), genre_fonts(genre, style)):
+        try:
+            out[key] = download_free_font(repo)
+        except Exception as e:
+            if log:
+                log(f"  글꼴 받기 실패({os.path.basename(repo)}): {str(e)[:60]} → 지금 글꼴 유지")
+    return out
 
 
 def genre_profile(genre, fiction=None):
@@ -326,6 +367,7 @@ def genre_profile(genre, fiction=None):
     if fiction is None:
         fiction = str(genre).startswith("[이야기]")
     p = {"style_preset": _GENRE_SUB_OF.get(genre, "지식 다큐(아래 흰 자막)"),
+         "fonts": genre_fonts(genre, _GENRE_SUB_OF.get(genre, "지식 다큐(아래 흰 자막)")),
          "head_pos": "숨김" if fiction else "왼쪽 위 작게",
          "sub_dialog": "대사 앞에 - 표시(영화 자막처럼)" if fiction else "없음",
          "img_depth": "on", "img_depth_amt": "약하게",
@@ -12497,7 +12539,7 @@ class App(tk.Tk):
             if self.cat_var.get() == DOC_CATEGORY and str(self.vars.get("genre_auto").get() if self.vars.get("genre_auto") else "on") != "off":
                 self.apply_genre_profile(g)
 
-    def apply_genre_profile(self, genre, quiet=False):
+    def apply_genre_profile(self, genre, quiet=False, sync=False):
         """장문 소재별 기본 설정을 한 번에 적용 (자막 스타일 → 대사 자막·제목 위치 → 그림 방식·스타일 → 조사·사진 체크)"""
         p = genre_profile(genre, doc_is_fiction(genre))
         if p["style_preset"] in LONG_STYLES:
@@ -12515,8 +12557,19 @@ class App(tk.Tk):
             self.judge_var.set(False)
         except Exception:
             pass
+        if sync:
+            got = ensure_genre_fonts(genre, p["style_preset"], self.write_log)
+            for k, v in got.items():
+                self.vars[k].set(v)
+        else:
+            def fetch():
+                got = ensure_genre_fonts(genre, p["style_preset"])
+                if got:
+                    self.q.put(lambda: [self.vars[k].set(v) for k, v in got.items()] and self.refresh_preview())
+            threading.Thread(target=fetch, daemon=True).start()
         if not quiet:
-            msg = f"🎯 소재 '{genre}' 기본 설정: 자막 {p['style_preset']} · 제목 {p['head_pos']}"
+            fn = lambda r_: os.path.splitext(os.path.basename(r_))[0]
+            msg = f"🎯 소재 '{genre}' 기본 설정: 자막 {p['style_preset']} · 제목 {p['head_pos']} · 글꼴 {fn(p['fonts'][0])}/{fn(p['fonts'][1])}"
             if "image_style_preset" in p:
                 msg += f" · 그림 {p['image_style_preset']} ({'이 PC에서 그림' if p['fiction_image'].startswith('로컬') else '분위기 웹 사진'}) · 대사 자막"
             else:

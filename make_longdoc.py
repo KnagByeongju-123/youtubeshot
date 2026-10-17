@@ -475,7 +475,7 @@ def run_doc(m, app, c, gate):
         app.genre_var.set(c["소재"])
         app.on_genre()
     app.topic_var.set(c["주제"])
-    prof = app.apply_genre_profile(c["소재"], quiet=True)     # 소재별 기본 설정 (메인 프로그램의 표)
+    prof = app.apply_genre_profile(c["소재"], quiet=True, sync=True)     # 소재별 기본 설정 (메인 프로그램의 표, 글꼴은 바로 받음)
     want_sub = str(c.get("자막_스타일", "자동")).strip()
     if want_sub != "자동" and want_sub in m.LONG_STYLES:     # 설정 파일에서 직접 고른 자막 스타일
         app.vars["style_preset"].set(want_sub)
