@@ -32,10 +32,11 @@ def put(job_dir, n, src=None, wait=180):
     """새 그림을 <번호>.png 로. src 가 없으면 다운로드 폴더에 새로 생긴 Gemini 그림을 기다림(다 받아질 때까지)"""
     seen_f = os.path.join(job_dir, ".받은파일.txt")
     seen = set(open(seen_f, encoding="utf-8").read().splitlines()) if os.path.exists(seen_f) else set()
+    born = os.path.getmtime(os.path.join(job_dir, "작업.json"))   # 작업을 만든 뒤에 받은 그림만 (예전 다운로드 제외)
     t0 = time.time()
     while not src and time.time() - t0 < wait:
         cands = [p for p in glob.glob(os.path.join(DL, "Gemini_Generated_Image_*.*")) + glob.glob(os.path.join(DL, "ChatGPT Image*.png"))
-                 if p not in seen and p.lower().endswith((".png", ".jpg", ".jpeg", ".webp"))]
+                 if p not in seen and p.lower().endswith((".png", ".jpg", ".jpeg", ".webp")) and os.path.getmtime(p) >= born - 5]
         for p in sorted(cands, key=os.path.getmtime):
             s1 = os.path.getsize(p)
             time.sleep(1)
