@@ -111,7 +111,7 @@ class _ColorButton(ttk.Button):
 ttk.Button = _ColorButton
 from tkinter.scrolledtext import ScrolledText
 import numpy as np
-from PIL import Image, ImageDraw, ImageFont, ImageTk, ImageFilter, ImageEnhance
+from PIL import Image, ImageDraw, ImageFont, ImageTk, ImageFilter, ImageEnhance, ImageOps
 
 W, H = 1080, 1920            # 현재 화면 크기 (set_format 으로 바뀜)
 FORMATS = {"쇼츠 세로(1080×1920)": (1080, 1920), "롱폼 가로(1920×1080)": (1920, 1080)}
@@ -2102,7 +2102,7 @@ def sd_ready():
     return os.path.exists(os.path.join(SD_MODEL_DIR, "model_index.json")) and os.path.exists(SD_PYTHON) and os.path.exists(os.path.join(BASE, "sd_worker.py"))
 
 
-def sd_generate(items, out_dir, log=None, cancel=None, steps=4, guidance=8.0):
+def sd_generate(items, out_dir, log=None, cancel=None, steps=5, guidance=5.0):
     """로컬 그림 생성: items [{id, prompt, negative?, width?, height?, seed?}] → {id: png 경로}. 모델은 한 번만 올려 여러 장"""
     log = log or (lambda x: None)
     if not sd_ready() or not items:
@@ -2170,6 +2170,9 @@ def make_ai_images(model, category, title, story, n, s, media_dir, log, cancel=N
                 continue
             try:
                 im = Image.open(p_).convert("RGB")
+                im = ImageOps.autocontrast(im, cutoff=1)                       # LCM 결과는 뿌옇게 나와 대비·채도를 살림
+                im = ImageEnhance.Color(im).enhance(1.25)
+                im = ImageEnhance.Contrast(im).enhance(1.08)
                 up = (1080, 1920) if port else (1920, 1080)      # 영상 크기로 키움 (부드럽게)
                 im = im.resize(up, Image.LANCZOS).filter(ImageFilter.UnsharpMask(radius=1.2, percent=60, threshold=2))
             except Exception:
