@@ -2369,6 +2369,49 @@ IMAGE_CHECK_SYSTEM = """너는 만화·일러스트 검수자다. 그림 파일�
 반드시 JSON만 출력: {"images": [{"k": 1, "ok": true, "problem": "", "fix": ""}, {"k": 2, "ok": false, "problem": "오른손 손가락 6개", "fix": "hands hidden in pockets, upper body shot"}]}"""
 
 
+def trim_bands(im, tol=12):
+    """그림 가장자리의 단색 띠(검은·흰 레터박스, 액자 테두리)를 잘라내고 원래 비율로 맞춤. 띠가 없으면 그대로.
+    띠 = 거의 완전한 단색(아주 어둡거나 아주 밝음) 줄. 한쪽 최대 12%까지만 (어두운 벽·흰 하늘은 건드리지 않음)"""
+    a = np.asarray(im.convert("L"), dtype=np.int16)
+    h, w = a.shape
+
+    def flat(line):
+        m = np.median(line)
+        return (m < 28 or m > 235) and np.mean(np.abs(line - m) < tol) >= 0.97
+
+    t, b, l, r = 0, h, 0, w
+    while t < h * 0.12 and flat(a[t]):
+        t += 1
+    while b > h * 0.88 and flat(a[b - 1]):
+        b -= 1
+    while l < w * 0.12 and flat(a[t:b, l]):
+        l += 1
+    while r > w * 0.88 and flat(a[t:b, r - 1]):
+        r -= 1
+    def jump(band, inner):   # 진짜 띠는 경계에서 밝기가 확 바뀜 (어두운 벽·비네팅은 서서히 바뀌어 제외)
+        return band.size and inner.size and abs(float(np.median(band)) - float(np.median(inner))) > 30
+
+    if t and not jump(a[:t], a[t:t + 6]):
+        t = 0
+    if b < h and not jump(a[b:], a[b - 6:b]):
+        b = h
+    if l and not jump(a[t:b, :l], a[t:b, l:l + 6]):
+        l = 0
+    if r < w and not jump(a[t:b, r:], a[t:b, r - 6:r]):
+        r = w
+    if max(t, h - b) < 3 and max(l, w - r) < 3:      # 띠 없음 (1~2줄 잔선은 무시)
+        return im
+    t, b = t + int(h * 0.006), b - int(h * 0.006)     # 경계 잔선까지 살짝 더
+    l, r = l + int(w * 0.006), r - int(w * 0.006)
+    cw, ch = r - l, b - t
+    want = w / h                                       # 원래 비율로 가운데 맞춰 자름 (늘리면 찌그러짐)
+    if cw / ch > want:
+        nw = int(ch * want); l += (cw - nw) // 2; r = l + nw
+    else:
+        nh = int(cw / want); t += (ch - nh) // 2; b = t + nh
+    return im.crop((l, t, r, b))
+
+
 def check_image_defects(model, paths, log=None, want_fix=False):
     """생성 그림의 손·얼굴·소품 결함을 Claude가 직접 보고 검사 → 다시 그릴 번호 목록 (0부터).
     want_fix 면 [(번호, 덧붙일 영어 지시)] 로. 검사를 못 하면 빈 목록"""
@@ -2378,21 +2421,33 @@ def check_image_defects(model, paths, log=None, want_fix=False):
     eng = str((SCRIPT_ENGINE.get("s") or {}).get("script_engine", "Claude"))
     if not (eng.startswith("Claude") or eng.startswith("자동")):
         return []
-    plist = "\n".join(f"그림{k + 1}: {os.path.abspath(p)}" for k, p in enumerate(paths))
-    try:
-        d = ask_json(model, IMAGE_CHECK_SYSTEM, "[그림 - Read 로 하나씩 열어 볼 것]\n" + plist, tools=["Read"])
-    except Exception as e:
-        log("  그림 검사 건너뜀: " + str(e).splitlines()[0][:80])
-        return []
-    bad = []
-    for r in d.get("images") or []:
-        try:
-            k = int(r.get("k")) - 1
-        except (TypeError, ValueError):
+    bad, step = [], 4     # 한 번에 많이 보면 대충 보고 넘김 → 4장씩
+    for g0 in range(0, len(paths), step):
+        grp = paths[g0:g0 + step]
+        plist = "\n".join(f"그림{k + 1}: {os.path.abspath(p)}" for k, p in enumerate(grp))
+        d = None
+        for _try in range(2):
+            try:
+                d = ask_json(model, IMAGE_CHECK_SYSTEM, f"[그림 {len(grp)}장 - Read 로 하나씩 열어 손가락·소품·테두리를 확인할 것]\n" + plist, tools=["Read"])
+                break
+            except Exception as e:
+                err = str(e).splitlines()[0][:80] if str(e).strip() else type(e).__name__
+                log(f"  ⚠ 그림 검증 실패({_try + 1}/2): {err}")
+        if d is None:
             continue
-        if 0 <= k < len(paths) and r.get("ok") is False:
-            bad.append((k, str(r.get("fix") or "")[:200]) if want_fix else k)
-            log(f"  ✂ 그림 {k + 1} 다시 그림: {str(r.get('problem', ''))[:60]}")
+        seen = set()
+        for r in d.get("images") or []:
+            try:
+                k = int(r.get("k")) - 1
+            except (TypeError, ValueError):
+                continue
+            if 0 <= k < len(grp):
+                seen.add(k)
+            if 0 <= k < len(grp) and r.get("ok") is False:
+                bad.append((g0 + k, str(r.get("fix") or "")[:200]) if want_fix else g0 + k)
+                log(f"  ✂ 그림 {g0 + k + 1} 다시 그림: {str(r.get('problem', ''))[:60]}")
+        if len(seen) < len(grp):
+            log(f"  ⚠ 그림 {len(grp) - len(seen)}장은 검증 답이 없어 통과로 둠")
     return bad
 
 
@@ -2614,6 +2669,7 @@ def make_ai_images(model, category, title, story, n, s, media_dir, log, cancel=N
                 continue
             try:
                 im = Image.open(p_).convert("RGB")
+                im = trim_bands(im)                                            # 위아래·옆 테두리 띠 제거 (뒤에서 화면 크기로 늘림)
                 im = ImageOps.autocontrast(im, cutoff=1)                       # LCM 결과는 뿌옇게 나와 대비·채도를 살림
                 im = ImageEnhance.Color(im).enhance(1.25)
                 im = ImageEnhance.Contrast(im).enhance(1.08)
@@ -12531,6 +12587,14 @@ class App(tk.Tk):
 
     def write_log(self, msg):
         line = time.strftime("[%H:%M:%S] ") + msg + "\n"
+        try:
+            lp = os.path.join(BASE, "작업기록.txt")
+            if os.path.exists(lp) and os.path.getsize(lp) > 2 * 1024 * 1024:
+                os.replace(lp, lp[:-4] + "_이전.txt")
+            with open(lp, "a", encoding="utf-8") as fh:
+                fh.write(time.strftime("%m-%d ") + line)
+        except Exception:
+            pass
         self.log.config(state="normal")
         self.log.insert("end", line)
         self.log.see("end")

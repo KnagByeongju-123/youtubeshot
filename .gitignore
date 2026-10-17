@@ -28,3 +28,5 @@ models/
 # 자연의 소리 녹음은 자연의소리_녹음받기.bat 으로 받음 (출처 목록만 저장소에)
 nature_sounds/*
 !nature_sounds/credits.json
+작업기록.txt
+작업기록_이전.txt
