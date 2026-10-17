@@ -385,7 +385,7 @@ def run_doc(m, app, c, gate):
             last[0] = p
             log(f"  MP4 {p}%")
     import hashlib
-    key = hashlib.md5((story + "|" + json.dumps({k: s.get(k) for k in ("fps", "format", "layout", "img_fill", "img_motion", "img_depth", "head_style", "head_pos", "head_size", "head_show", "sub_style", "sub_size", "sub_layout",
+    key = hashlib.md5((story + "|" + json.dumps({k: s.get(k) for k in ("fps", "format", "layout", "img_fill", "img_motion", "img_depth", "img_depth_amt", "head_style", "head_pos", "head_size", "head_show", "sub_style", "sub_size", "sub_layout",
                                                                          "font_path", "title_font_path", "bgm_volume")}, ensure_ascii=False)
                        + "|" + title).encode("utf-8")).hexdigest()
     m.export_mp4_resumable(r, base + ".mp4", prog, gate, audio, work_dir=os.path.join(work, "영상구간"), seg_sec=SEG_SEC, log=log, key=key)

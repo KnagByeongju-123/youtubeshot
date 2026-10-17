@@ -258,7 +258,7 @@ UI_TABS = [
     ("🎨 글꼴·색", "all", ["font_path", "title_font_path", "text_color", "title_color", "accent_color", "quote_color", "shadow", "stroke_width"]),
     ("🔤 자막 디자인", "sub", ["style_preset", "sub_layout", "head_pos", "color_preset", "sub_box_color", "sub_box_alpha", "head_style", "head_size",
                             "head_show", "sub_size", "sub_font_path", "sub_style", "sub_split", "sub_anim", "sub_max_chars", "sec_per_char"]),
-    ("🖼 사진·장면", "sub", ["img_fill", "img_motion", "img_depth", "shot_sec", "punch_in", "img_frame", "img_bg", "photo_count", "img_radius"]),
+    ("🖼 사진·장면", "sub", ["img_fill", "img_motion", "img_depth", "img_depth_amt", "shot_sec", "punch_in", "img_frame", "img_bg", "photo_count", "img_radius"]),
     ("📜 스크롤 글자", "scroll", ["font_size", "title_size", "line_gap", "para_gap", "margin_x", "margin_right", "align", "photo_h",
                               "speed", "target_sec"]),
     ("📜 스크롤 효과", "scroll", ["fade", "focus", "focus_dim", "focus_y", "ease"]),
@@ -327,6 +327,7 @@ FIELDS = [
     ("자막형", "sub_max_chars", "자막 한 번에 글자 수", "int", 28),
     ("자막형", "img_motion", "사진 움직임", "choice:영상처럼(확대·이동·전환),천천히 확대만,없음", "영상처럼(확대·이동·전환)"),
     ("자막형", "img_depth", "사진 입체 움직임(2.5D · 깊이 AI, 앞뒤가 다르게 움직임)", "choice:on,off", "on"),
+    ("자막형", "img_depth_amt", "입체 움직임 세기(카메라 무빙)", "choice:약하게,보통,강하게", "강하게"),
     ("자막형", "shot_sec", "한 장면 최대 길이(초)", "float", 4.5),
     ("자막형", "img_fill", "사진 배치", "choice:전체 화면(글자가 사진 위에),가운데 상자", "전체 화면(글자가 사진 위에)"),
     ("자막형", "img_bg", "상자 모드: 뒤 배경을 사진 흐림으로", "choice:on,off", "on"),
@@ -4063,14 +4064,22 @@ class SubtitleRenderer:
         cx = big.width / 2 + (ax + (bx - ax) * p) * sx
         cy = big.height / 2 + (ay + (by - ay) * p) * sy
         l, tp = cx - cw / 2, cy - ch / 2
-        crop = extent_resize(big, (bw, bh), (l, tp, l + cw, tp + ch))
-        if getattr(self, "depth_on", False):
-            dbig = self._depth_for(sh["img"], big.size)
-            if dbig is not None:
-                dcrop = np.asarray(extent_resize(dbig, (bw, bh), (l, tp, l + cw, tp + ch)))        # uint8 0~255
-                ph = 2 * np.pi * t / 9.0                              # 9초 주기로 천천히 좌우·상하로 흔들리듯
-                crop = parallax_warp(crop, dcrop, bw * 0.022 * np.sin(ph), bh * 0.010 * np.sin(ph * 0.5 + 1.0))
-        return crop, mask
+        dbig = self._depth_for(sh["img"], big.size) if getattr(self, "depth_on", False) else None
+        if dbig is None:
+            return extent_resize(big, (bw, bh), (l, tp, l + cw, tp + ch)), mask
+        # 2.5D 카메라 무빙: 장면이 진행되는 동안 한쪽으로 천천히 돌아가며(드리프트) + 7초 주기로 살짝 흔들림. 가까운 것은 많이, 먼 것은 조금 밀림
+        ax_, ay_ = DEPTH_AMP.get(str(self.s.get("img_depth_amt", "강하게")), DEPTH_AMP["강하게"])
+        ph = 2 * np.pi * t / 7.0
+        ox = bw * ax_ * (0.55 * np.sin(ph) + 0.75 * (2 * p - 1))
+        oy = bh * ay_ * np.sin(ph * 0.5 + 1.0)
+        mx, my = int(bw * ax_ * 1.4) + 2, int(bh * ay_ * 1.4) + 2          # 밀린 만큼 바깥 여유를 미리 잘라 두면 가장자리가 안 깨짐
+        ex, ey = cw * mx / bw, ch * my / bh
+        box = (l - ex, tp - ey, l + cw + ex, tp + ch + ey)
+        size_p = (bw + 2 * mx, bh + 2 * my)
+        crop_pad = extent_np(img_np(big), size_p, box)                       # uint8 (PIL 변환 없이)
+        dcrop = extent_np(dbig, size_p, box)                                 # float32 0~255
+        warped = parallax_warp_np(crop_pad, dcrop, ox, oy)
+        return Image.fromarray(np.ascontiguousarray(warped[my:my + bh, mx:mx + bw])), mask
 
     def _depth_for(self, idx, size):
         """idx 사진의 깊이 지도를 큰 사진 크기의 L 이미지로 (캐시)"""
@@ -4080,8 +4089,9 @@ class SubtitleRenderer:
         d = load_depth(paths[idx]) if idx < len(paths) else None
         im = None
         if d is not None:
-            im = Image.fromarray((d * 255).astype(np.uint8), "L").resize(size, Image.BILINEAR)
-            im = im.filter(ImageFilter.GaussianBlur(max(1, size[0] // 400)))   # 경계가 딱 끊기지 않게
+            im = _cv2.resize((d * 255.0).astype(np.float32), (int(size[0]), int(size[1])), interpolation=_cv2.INTER_LINEAR)
+            k_ = max(1, size[0] // 400) * 2 + 1
+            im = _cv2.GaussianBlur(im, (k_, k_), 0)                              # 경계가 딱 끊기지 않게 (float32 0~255)
         if len(self._depth_big) >= 6:
             self._depth_big.pop(next(iter(self._depth_big)))
         self._depth_big[idx] = im
@@ -4450,6 +4460,7 @@ DEPTH_DIR = os.path.join(BASE, "output", "depth_cache")
 _DEPTH_CACHE = {}
 _DEPTH_WARNED = set()
 _GRID_CACHE = {}
+DEPTH_AMP = {"약하게": (0.018, 0.008), "보통": (0.032, 0.014), "강하게": (0.05, 0.022)}   # (가로, 세로) 최대 밀림 = 화면 크기 비율
 
 
 def depth_key(path):
@@ -4512,9 +4523,10 @@ def load_depth(path):
         d = np.load(npy).astype(np.float32)
     except Exception:
         return None
-    rows = d.mean(axis=1)                       # 지도·도표처럼 평평한 그림(깊이가 위→아래 기울기뿐)은 입체 움직임 안 함
-    corr = abs(float(np.corrcoef(rows, np.arange(len(rows)))[0, 1])) if len(rows) > 2 and rows.std() > 1e-6 else 0.0
-    if corr > 0.92 or float(d.std()) < 0.06:
+    rows = d.mean(axis=1, keepdims=True)        # 평평한 그림(깊이가 위→아래 기울기뿐, 줄 안에서는 변화 없음)만 입체 움직임 제외
+    corr = abs(float(np.corrcoef(rows[:, 0], np.arange(len(rows)))[0, 1])) if len(rows) > 2 and rows.std() > 1e-6 else 0.0
+    resid = float((d - rows).std())             # 줄 평균을 뺀 나머지 변화 (실제 사진은 0.06 이상, 순수 기울기 그림은 거의 0)
+    if float(d.std()) < 0.06 or (corr > 0.9 and resid < 0.05):
         d = None
     if len(_DEPTH_CACHE) >= 24:
         _DEPTH_CACHE.pop(next(iter(_DEPTH_CACHE)))
@@ -4534,10 +4546,14 @@ def story_photo_paths(story):
 
 
 def parallax_warp(crop, dcrop, amp_x, amp_y):
-    """깊이에 따라 픽셀을 옆으로 밀어 입체감 (가까운 것은 많이, 먼 것은 조금). crop: PIL RGB, dcrop: 같은 크기 float32 0~1"""
+    """깊이에 따라 픽셀을 옆으로 밀어 입체감 (가까운 것은 많이, 먼 것은 조금). crop: PIL RGB, dcrop: 같은 크기 0~255"""
     if _cv2 is None:
         return crop
-    arr = np.asarray(crop)
+    return Image.fromarray(parallax_warp_np(np.asarray(crop), dcrop, amp_x, amp_y))
+
+
+def parallax_warp_np(arr, dcrop, amp_x, amp_y):
+    """parallax_warp 의 numpy 판: arr(uint8 HxWx3) → 밀린 배열 (PIL 변환 없이, 영상 그릴 때 빠르게)"""
     h, w = arr.shape[:2]
     g = _GRID_CACHE.get((h, w))
     if g is None:                                   # 좌표 격자는 크기마다 한 번만
@@ -4550,8 +4566,7 @@ def parallax_warp(crop, dcrop, amp_x, amp_y):
     sx, sy = float(amp_x) / 255.0, float(amp_y) / 255.0            # dcrop 은 0~255 (가까울수록 큼)
     map_x = _cv2.addWeighted(xs, 1.0, d, -sx, 127.5 * sx)          # xs - (d-127.5)*amp/255  (SIMD 한 번에)
     map_y = _cv2.addWeighted(ys, 1.0, d, -sy, 127.5 * sy)
-    out = _cv2.remap(arr, map_x, map_y, interpolation=_cv2.INTER_LINEAR, borderMode=_cv2.BORDER_REFLECT)
-    return Image.fromarray(out)
+    return _cv2.remap(arr, map_x, map_y, interpolation=_cv2.INTER_LINEAR, borderMode=_cv2.BORDER_REFLECT)
 
 
 def screen_title(title):
@@ -4564,6 +4579,27 @@ try:
     import cv2 as _cv2   # 있으면 사진 확대·이동을 훨씬 빠르게 (pip install opencv-python-headless)
 except Exception:
     _cv2 = None
+
+
+def extent_np(arr, size, box):
+    """numpy 배열(uint8/float32)의 box 부분을 size 로 (OpenCV warpAffine). 결과도 numpy"""
+    l, t, r_, b = box
+    sx, sy = (r_ - l) / size[0], (b - t) / size[1]
+    M = np.array([[sx, 0, l + 0.5 * sx - 0.5], [0, sy, t + 0.5 * sy - 0.5]], np.float32)
+    return _cv2.warpAffine(arr, M, (int(size[0]), int(size[1])), flags=_cv2.INTER_LINEAR | _cv2.WARP_INVERSE_MAP,
+                           borderMode=_cv2.BORDER_REPLICATE)
+
+
+def img_np(img):
+    """PIL 이미지의 numpy 배열 (같은 사진은 한 번만 바꿔 캐시)"""
+    arr = getattr(img, "_np_cache", None)
+    if arr is None:
+        arr = np.ascontiguousarray(np.asarray(img))
+        try:
+            img._np_cache = arr
+        except Exception:
+            pass
+    return arr
 
 
 def extent_resize(img, size, box):
@@ -9651,7 +9687,7 @@ class MusicLoop:
         bg = extent_resize(self.big, (W, H), box)
         if self.dbig is not None:   # 2.5D: 가까운 것은 많이, 먼 것은 조금 밀려 입체감 (주기 L → 끝과 처음이 이어짐)
             dcrop = np.asarray(extent_resize(self.dbig, (W, H), box), np.float32)
-            bg = parallax_warp(bg, dcrop, W * 0.028 * s_, H * 0.012 * np.sin(2 * np.pi * ph + 1.3))
+            bg = parallax_warp(bg, dcrop, W * 0.038 * s_, H * 0.016 * np.sin(2 * np.pi * ph + 1.3))
         arr = (np.asarray(bg).astype(np.float32) * self.vig * 0.92).astype(np.uint8)
         im = Image.fromarray(arr).convert("RGBA")
         ov = self.overlay
