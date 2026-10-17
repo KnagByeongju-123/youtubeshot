@@ -2080,6 +2080,8 @@ IMAGE_PLAN_SYSTEM = """너는 유튜브 쇼츠 영상의 아트 디렉터다. �
 - 그림 수: 사용자가 정한 수만큼. 이야기 흐름 순서대로, 문단 1~2개마다 한 장. 같은 장면 반복 금지.
 - prompt: 이미지 생성 AI에 줄 영어 프롬프트(60~90단어). 장소·시간·빛·구도(클로즈업/와이드)·분위기를 구체적으로.
   인물이 있는 장면은 인물을 중간 샷(medium shot) 이상으로 크게 잡고 한 번에 1~2명만, 배경은 단순하게 (여러 명이 작게 나오면 얼굴·손이 깨짐).
+  손은 그림 AI가 자주 틀리므로 손가락이 크게 보이는 구도(손 클로즈업, 손으로 뭔가 가리키기·쥐기)는 피하고, 손은 주머니·등 뒤·소매·책상 아래·화면 밖에 두거나
+  작게 처리한다(hands hidden / hands in pockets / arms crossed 같은 표현). 얼굴 표정과 몸짓으로 감정을 보여 준다.
   그 장면의 핵심 행동(무엇을 하고 있는지)을 문장 앞쪽에 분명히 쓴다.
   등장인물은 매번 같은 외모 설명(나이·머리·옷)을 그대로 반복해서 넣어 일관되게. 세로 화면(9:16)에 맞는 구도.
   글자·간판 문구·자막·워터마크 넣지 말 것(no text). 실존 인물·유명 캐릭터·상표 금지. 잔인하거나 선정적인 묘사 금지.
@@ -2167,8 +2169,10 @@ def openai_image(prompt, key, model="gpt-image-2", quality="medium", size=None):
 SD_MODEL_DIR = os.path.join(BASE, "models", "LCM_Dreamshaper_v7")      # 로컬 그림 모델 (MIT) · 다운로드: 로컬그림_모델받기.bat
 SD_ANIME_DIR = os.path.join(BASE, "models", "Counterfeit_V3_lcm")       # 애니·만화 전용 (Counterfeit-V3.0 + LCM-LoRA, OpenRAIL-M)
 SD_PYTHON = os.path.join(BASE, ".sd_venv", "Scripts", "python.exe")
-SD_NEGATIVE = "text, letters, watermark, signature, logo, blurry, deformed hands, extra fingers, extra limbs, lowres, bad anatomy, nsfw"
-SD_ANIME_NEGATIVE = "(worst quality, low quality:1.4), lowres, bad anatomy, bad hands, extra fingers, text, watermark, signature, blurry, nsfw"
+SD_NEGATIVE = ("text, letters, watermark, signature, logo, blurry, (deformed hands:1.3), (extra fingers:1.4), fused fingers, missing fingers, "
+               "extra limbs, lowres, bad anatomy, nsfw")
+SD_ANIME_NEGATIVE = ("(worst quality, low quality:1.4), lowres, (bad anatomy:1.2), (bad hands:1.4), (mutated hands:1.3), (extra fingers:1.4), "
+                     "(fused fingers:1.3), missing fingers, too many fingers, malformed limbs, extra arms, text, watermark, signature, blurry, nsfw")
 # 모델별 기본값: (폴더, 단계 수, 가이던스)
 SD_MODELS = {"dreamshaper": (SD_MODEL_DIR, 5, 5.0), "anime": (SD_ANIME_DIR, 6, 1.5)}
 # 그림 스타일 → 어울리는 모델 (애니·만화 모델이 없으면 dreamshaper 로)
@@ -2230,6 +2234,38 @@ def sd_generate(items, out_dir, log=None, cancel=None, steps=None, guidance=None
     return got
 
 
+IMAGE_CHECK_SYSTEM = """너는 만화·일러스트 검수자다. 그림 파일을 Read 로 하나씩 직접 열어 보고, 영상에 그대로 써도 되는지 판정한다.
+탈락 기준(하나라도 있으면 ok=false): 손가락이 6개 이상이거나 붙었거나 비틀림, 손이 뭉개짐, 팔·다리가 3개 이상, 얼굴·눈이 심하게 일그러짐, 글자·워터마크가 크게 보임, 인물이 두 겹으로 겹침.
+사소한 것(배경 왜곡, 작은 소품 이상)은 통과. 손이 화면에 안 보이면 손 문제는 없음.
+반드시 JSON만 출력: {"images": [{"k": 1, "ok": true, "problem": ""}, {"k": 2, "ok": false, "problem": "오른손 손가락 6개"}]}"""
+
+
+def check_image_defects(model, paths, log=None):
+    """생성 그림의 손·얼굴 결함을 Claude가 직접 보고 검사 → 다시 그릴 번호 목록 (0부터). 실패하면 빈 목록"""
+    log = log or (lambda x: None)
+    if not paths:
+        return []
+    eng = str((SCRIPT_ENGINE.get("s") or {}).get("script_engine", "Claude"))
+    if not (eng.startswith("Claude") or eng.startswith("자동")):
+        return []
+    plist = "\n".join(f"그림{k + 1}: {os.path.abspath(p)}" for k, p in enumerate(paths))
+    try:
+        d = ask_json(model, IMAGE_CHECK_SYSTEM, "[그림 - Read 로 하나씩 열어 볼 것]\n" + plist, tools=["Read"])
+    except Exception as e:
+        log("  그림 검사 건너뜀: " + str(e).splitlines()[0][:80])
+        return []
+    bad = []
+    for r in d.get("images") or []:
+        try:
+            k = int(r.get("k")) - 1
+        except (TypeError, ValueError):
+            continue
+        if 0 <= k < len(paths) and r.get("ok") is False:
+            bad.append(k)
+            log(f"  ✂ 그림 {k + 1} 다시 그림: {str(r.get('problem', ''))[:60]}")
+    return bad
+
+
 def make_ai_images(model, category, title, story, n, s, media_dir, log, cancel=None):
     """이야기에 맞는 그림을 기획(대본 AI) → ChatGPT 또는 로컬 모델로 그려서 저장 → [{path, caption, credit, after}]"""
     local = str(s.get("fiction_image", "")).startswith("로컬")
@@ -2264,6 +2300,31 @@ def make_ai_images(model, category, title, story, n, s, media_dir, log, cancel=N
                      "negative": neg, "width": w_, "height": h_, "seed": 1000 + k} for k, it in enumerate(items)]
         log(f"  🖌 그림 모델: {'애니·만화(Counterfeit)' if model_ == 'anime' else '일러스트(Dreamshaper)'}")
         paths = sd_generate(jobs, os.path.join(media_dir, "_sd"), log, cancel, model=model_)
+        # 손·얼굴 결함 검사 → 문제 있는 것만 손을 숨기는 지시와 다른 시드로 한 번 더 (최대 4장)
+        done_paths = [paths.get(f"i{k}") for k in range(len(items))]
+        if any(done_paths):
+            log("  🔍 그림의 손·얼굴이 제대로 그려졌는지 직접 보고 검사 중...")
+            bad = [k for k in check_image_defects(model, [p_ for p_ in done_paths if p_], log) if k < len(items)]
+            idx_map = [k for k, p_ in enumerate(done_paths) if p_]          # 검사 목록 번호 → items 번호
+            redo = [idx_map[k] for k in bad if k < len(idx_map)][:4]
+            if redo:
+                log(f"  🖌 {len(redo)}장 다시 그리는 중 (손 숨기기·다른 시드)...")
+                jobs2 = []
+                for k in redo:
+                    j = dict(jobs[k])
+                    j["prompt"] = j["prompt"] + ", hands hidden, hands in pockets or behind back, arms crossed, focus on face and expression"
+                    j["seed"] = int(j.get("seed", 0)) + 777
+                    j["id"] = f"r{k}"
+                    jobs2.append(j)
+                paths2 = sd_generate(jobs2, os.path.join(media_dir, "_sd"), log, cancel, model=model_)
+                for k in redo:
+                    p2 = paths2.get(f"r{k}")
+                    if p2:
+                        try:
+                            os.remove(paths.get(f"i{k}") or "")
+                        except OSError:
+                            pass
+                        paths[f"i{k}"] = p2
         for k, it in enumerate(items):
             p_ = paths.get(f"i{k}")
             if not p_:
@@ -2278,6 +2339,11 @@ def make_ai_images(model, category, title, story, n, s, media_dir, log, cancel=N
             except Exception:
                 continue
             path = save_media_image(im, media_dir, time.strftime("aiimg_%Y%m%d_%H%M%S") + f"_{k}")
+            try:   # 나중에 이 그림만 다시 그릴 수 있게 프롬프트를 옆에 저장
+                atomic_write_text(path + ".prompt.json", json.dumps({"prompt": jobs[k]["prompt"], "negative": jobs[k]["negative"], "model": model_,
+                                                                      "width": w_, "height": h_, "seed": jobs[k]["seed"], "caption": it.get("caption", "")}, ensure_ascii=False))
+            except Exception:
+                pass
             got.append({"path": path, "caption": it.get("caption", ""), "credit": "AI 생성 이미지 (로컬)", "page": "", "after": it.get("after", "")})
             try:
                 os.remove(p_)
