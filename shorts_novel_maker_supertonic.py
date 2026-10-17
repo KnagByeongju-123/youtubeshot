@@ -1299,16 +1299,54 @@ CLAUDE_TIMEOUT = int(os.environ.get("CLAUDE_MAX_TIMEOUT", "300"))
 
 
 def find_claude():
+    """Claude Code 실행 파일 찾기. 순서: 환경변수 MES_CLAUDE_CLI → 설정 파일의 claude_path → 흔한 설치 위치 → PATH.
+    (다른 PC에서 '인지하지 못함'이 나오면 장문_설정.json 또는 shorts_novel_config.json 에 claude_path 로 경로를 적어 주면 됨)"""
     explicit = os.environ.get("MES_CLAUDE_CLI", "").strip().strip('"')
     if explicit and os.path.exists(explicit):
         return explicit
+    for cfg in (os.path.join(BASE, "장문_설정.json"), os.path.join(BASE, "shorts_novel_config.json")):
+        try:
+            d = json.load(open(cfg, encoding="utf-8"))
+            p = str((d.get("claude_path") or d.get("클로드_경로") or (d.get("settings") or {}).get("claude_path") or "")).strip().strip('"')
+            if p and os.path.exists(p):
+                return p
+        except Exception:
+            pass
+    cands = []
     if os.name == "nt":
-        for p in [os.path.expandvars(r"%USERPROFILE%\.local\bin\claude.exe"),
-                  os.path.expandvars(r"%USERPROFILE%\.local\bin\claude.cmd"),
-                  os.path.expandvars(r"%APPDATA%\npm\claude.cmd")]:
+        home = os.path.expandvars("%USERPROFILE%")
+        cands += [os.path.join(home, ".local", "bin", "claude.exe"), os.path.join(home, ".local", "bin", "claude.cmd"),
+                  os.path.expandvars(r"%APPDATA%\npm\claude.cmd"), os.path.expandvars(r"%APPDATA%\npm\claude"),
+                  os.path.expandvars(r"%LOCALAPPDATA%\Programs\claude\claude.exe"),
+                  os.path.expandvars(r"%ProgramFiles%\nodejs\claude.cmd"), os.path.expandvars(r"%LOCALAPPDATA%\pnpm\claude.cmd"),
+                  os.path.expandvars(r"%USERPROFILE%\scoop\shims\claude.exe"), os.path.expandvars(r"%USERPROFILE%\scoop\shims\claude.cmd")]
+        for p in cands:                                    # 흔한 위치에 있으면 npm 을 부를 필요 없음
             if os.path.exists(p):
                 return p
-    return shutil.which("claude")
+        try:   # npm 전역 경로가 다른 드라이브에 있을 때
+            npm_root = subprocess.run(["npm", "root", "-g"], capture_output=True, text=True, timeout=15, shell=True, encoding="utf-8",
+                                      errors="replace", creationflags=subprocess.CREATE_NO_WINDOW).stdout.strip()
+            if npm_root:
+                cands += [os.path.join(os.path.dirname(npm_root), "claude.cmd"), os.path.join(os.path.dirname(npm_root), "claude")]
+        except Exception:
+            pass
+    else:
+        cands += [os.path.expanduser("~/.local/bin/claude"), "/usr/local/bin/claude", "/opt/homebrew/bin/claude"]
+    for p in cands:
+        if p and os.path.exists(p):
+            return p
+    for name in ("claude", "claude.exe", "claude.cmd"):
+        w = shutil.which(name)
+        if w:
+            return w
+    return None
+
+
+CLAUDE_INSTALL_HELP = ("Claude Code를 찾지 못했습니다. 이 PC에서 아래 중 하나를 해 주세요.\n"
+                       "  1) 설치: PowerShell 에서  irm https://claude.ai/install.ps1 | iex   (또는  npm install -g @anthropic-ai/claude-code)\n"
+                       "  2) 설치 후 터미널에서  claude  를 한 번 실행해 Max 계정으로 로그인\n"
+                       "  3) 그래도 안 되면 장문_설정.json 에  \"claude_path\": \"C:\\\\Users\\\\<이름>\\\\.local\\\\bin\\\\claude.exe\"  처럼 실제 경로를 적어 주세요\n"
+                       "     (경로 확인: PowerShell 에서  Get-Command claude | Select-Object Source )")
 
 
 def safe_env():
@@ -1350,7 +1388,7 @@ class _Done:
 def run_cli(args, input_text=None, timeout=CLAUDE_TIMEOUT):
     exe = find_claude()
     if not exe:
-        raise RuntimeError("Claude Code가 설치되어 있지 않습니다.\n설치 후 터미널에서 claude 를 실행해 Max 계정으로 로그인하세요.")
+        raise RuntimeError(CLAUDE_INSTALL_HELP)
     with tempfile.TemporaryDirectory(prefix="shorts_novel_", ignore_cleanup_errors=True) as work:
         try:
             p = subprocess.Popen([exe] + args, stdin=subprocess.PIPE, cwd=work, env=safe_env(),

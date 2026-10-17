@@ -114,3 +114,11 @@ AI 모델: https://huggingface.co/supertone-oss-archive/supertonic-3
 장문_끄기전_정리.bat : PC 끄기 전에 안전하게 멈춤 → 다시 켠 뒤 장문_만들기.bat(또는 연속제작.bat)으로 이어서
 장문_사진보강.bat   : 이미 만든 대본에 사진을 더 넣고 영상만 다시
 * 한 편(10분)에 이 PC 기준 약 40~60분 걸립니다 (조사·집필 10~15분, 사진 5~10분, 나레이션·영상 20~30분).
+
+[Claude Code 를 인지하지 못할 때 (장문 연속 제작이 시작되지 않을 때)]
+1) Claude Code 설치: PowerShell 에서  irm https://claude.ai/install.ps1 | iex   (또는  npm install -g @anthropic-ai/claude-code)
+2) 설치 뒤 터미널에서  claude  를 한 번 실행해 Max 계정으로 로그인 (한 번만)
+3) 그래도 "찾지 못했습니다"가 나오면 PowerShell 에서  Get-Command claude | Select-Object Source  로 경로를 확인한 뒤
+   장문_설정.json 의  "claude_path"  에 그 경로를 적어 줍니다 (역슬래시는 두 번: C:\\Users\\이름\\.local\\bin\\claude.exe)
+   프로그램이 찾는 위치: %USERPROFILE%\.local\bin, %APPDATA%\npm, npm 전역 폴더, scoop, PATH
+* 장문_연속제작.bat 은 시작할 때 Claude Code 경로와 연결 상태를 먼저 출력합니다.
