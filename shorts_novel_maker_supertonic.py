@@ -7434,7 +7434,7 @@ def export_mp4_resumable(r, out, progress, cancel=None, audio=None, work_dir=Non
     lst = os.path.join(work_dir, "list.txt")
     with open(lst, "w", encoding="utf-8") as f:
         for k in range(len(segs)):
-            f.write(f"file '{os.path.join(work_dir, f'seg_{k:03d}.mp4').replace(chr(92), '/')}'\n")
+            f.write(concat_file_line(os.path.join(work_dir, f"seg_{k:03d}.mp4")))
     cmd = [get_ffmpeg(), "-y", "-v", "error", "-f", "concat", "-safe", "0", "-i", lst]
     if audio is not None:
         cmd += ["-i", wav, "-map", "0:v", "-map", "1:a", "-c:v", "copy", "-c:a", "aac", "-b:a", "192k", "-shortest"]
@@ -7448,12 +7448,18 @@ def export_mp4_resumable(r, out, progress, cancel=None, audio=None, work_dir=Non
     progress(n_all, n_all)
 
 
+def concat_file_line(path):
+    """ffmpeg concat 목록의 한 줄. 경로 속 작은따옴표(예: 주제의 '마을')는 '\\'' 로 바꿔야 목록이 깨지지 않음"""
+    p = os.path.abspath(path).replace(chr(92), "/").replace("'", "'\\''")
+    return f"file '{p}'\n"
+
+
 def concat_mp4_files(files, out):
     """같은 설정으로 만든 MP4 조각들을 다시 압축하지 않고 하나로 이어 붙임"""
     lst = out + ".list.txt"
     with open(lst, "w", encoding="utf-8") as f:
         for p in files:
-            f.write(f"file '{os.path.abspath(p).replace(chr(92), '/')}'\n")
+            f.write(concat_file_line(p))
     cmd = [get_ffmpeg(), "-y", "-v", "error", "-f", "concat", "-safe", "0", "-i", lst, "-c", "copy", "-movflags", "+faststart", out]
     p = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, errors="replace",
                        creationflags=(subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0))
