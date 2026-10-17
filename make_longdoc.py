@@ -95,6 +95,26 @@ def log(x):
         f.write(line + "\n")
 
 
+def no_quickedit():
+    """Windows 명령창을 마우스로 클릭하면 '선택' 모드가 되어 출력이 멈춤(프로그램이 멈춘 것처럼 보임) → 실행 중에는 그 기능을 끔.
+    끝나면(오류로 멈춰도) 원래대로 되돌려서 오류 글자를 마우스로 복사할 수 있게 함"""
+    if os.name != "nt":
+        return
+    try:
+        import atexit
+        import ctypes
+        k = ctypes.windll.kernel32
+        h = k.GetStdHandle(-10)                      # 키보드·마우스 입력 핸들
+        mode = ctypes.c_uint32()
+        if not k.GetConsoleMode(h, ctypes.byref(mode)):
+            return
+        old = mode.value
+        k.SetConsoleMode(h, (old & ~0x0040) | 0x0080)   # 빠른 편집(0x40) 끔, 확장 플래그(0x80) 켬
+        atexit.register(lambda: k.SetConsoleMode(h, old))
+    except Exception:
+        pass
+
+
 PLANNER_SYSTEM = """너는 한국 유튜브 지식 다큐 채널의 수석 기획자다. 10분짜리 사실 기반 롱폼 영상 여러 편의 라인업(편성표)을 짠다.
 원칙: (1) 실제로 존재하는 사건·장소·풍습·발견만 (지어내지 않는다) (2) 각 편은 제목처럼 궁금증을 부르는 질문·반전형 주제 35자 이내
 (3) 편 사이에 대상·지역·시대·감정(놀라움/감동/소름/유머)이 겹치지 않게 골고루 (4) 최근 1~2년 화제·새 발견과 이어진 편을 절반 이상
@@ -230,6 +250,7 @@ def ask_batch_plan(c):
     if done or cur.get("주제"):
         print(f"   이미 끝난 편: {done}개" + (f" · 만들다 멈춘 편: {cur.get('주제')}" if cur.get("주제") else "") + "  → 끝난 편 다음부터 이어서 합니다")
     print("=" * 60)
+    print("👉 아래 질문에 답해야 시작합니다. 숫자를 치고 Enter (그냥 Enter = 기본값)")
     try:
         ans = input(f"모두 몇 편까지 만들까요? [Enter = {n0}편] : ").strip()
     except EOFError:
@@ -291,6 +312,7 @@ def main():
     if BATCH and not ask_batch_plan(c):
         print("취소했습니다. (아무것도 만들지 않음)")
         return
+    log("⏳ 프로그램 불러오는 중... (30초~1분 걸릴 수 있어요. 창을 닫지 말고 기다려 주세요)")
     spec = importlib.util.spec_from_file_location("snm", os.path.join(HERE, "shorts_novel_maker_supertonic.py"))
     m = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(m)
@@ -301,6 +323,7 @@ def main():
     app = m.App()
     app.withdraw()
     app.update()
+    log("✅ 준비 완료")
     gate = m.PauseGate(PAUSE, app.cancel, log)
     app.cancel = gate          # 대본 작성도 일시정지를 따르게
     if not BATCH:
@@ -726,6 +749,7 @@ if __name__ == "__main__":
         sys.exit(0)
     if os.path.exists(PAUSE):        # 일시정지된 채로 PC를 껐다 켠 경우: 다시 만들기를 누르면 바로 진행
         os.remove(PAUSE)
+    no_quickedit()
     try:
         main()
     except Exception as e:
