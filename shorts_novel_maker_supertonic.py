@@ -10790,11 +10790,24 @@ class App(tk.Tk):
         ttk.Separator(tr, orient="vertical").pack(side="left", fill="y", padx=8)
         ttk.Button(tr, text="🎙 나레이션 만들기", command=self.prepare_narration).pack(side="left", padx=(0, 6))
         ttk.Button(tr, text="🗣 AI 성우 프롬프트", command=self.narr_prompt).pack(side="left", padx=(0, 6))
-        ttk.Button(tr, text="🎵 배경음 만들기", command=self.make_bgm).pack(side="left")
-        ttk.Button(tr, text="▶ 배경음 듣기", command=self.preview_bgm_only).pack(side="left", padx=(4, 0))
-        ttk.Button(tr, text="■ 소리 정지", command=stop_wav).pack(side="left", padx=4)
-        ttk.Button(tr, text="💾 다른 이름으로 저장", command=self.save_bgm_named).pack(side="left")
-        ttk.Button(tr, text="라이브용 긴 버전", command=self.save_bgm_wav).pack(side="left", padx=(4, 0))
+        ttk.Separator(tr, orient="vertical").pack(side="left", fill="y", padx=8)
+        bg_ = ttk.Frame(tr)               # 배경음은 여기 한 곳에서: 고르기 → 듣기 → (마음에 안 들면) 다른 곡 → 저장
+        bg_.pack(side="left")
+        ttk.Label(bg_, text="🎵 배경음").pack(side="left")
+        self.bgm_pick = tk.StringVar()
+        self.bgm_pick_box = ttk.Combobox(bg_, textvariable=self.bgm_pick, state="readonly", width=15,
+                                         values=["없음", "자동(소재별)"] + SOUND_STYLE_NAMES + ["음악 파일 고르기…"])
+        self.bgm_pick_box.pack(side="left", padx=4)
+        self.bgm_pick_box.bind("<<ComboboxSelected>>", lambda e: self.on_bgm_pick())
+        ttk.Button(bg_, text="▶ 듣기", command=self.preview_bgm_only).pack(side="left")
+        ttk.Button(bg_, text="🎲 다른 곡", command=self.make_bgm).pack(side="left", padx=(4, 0))
+        ttk.Button(bg_, text="■ 정지", command=stop_wav).pack(side="left", padx=4)
+        mb_ = ttk.Menubutton(bg_, text="💾 저장 ▾")
+        menu_ = tk.Menu(mb_, tearoff=0)
+        menu_.add_command(label="지금 배경음을 이름 붙여 저장 (다른 영상에도 쓰기)", command=self.save_bgm_named)
+        menu_.add_command(label="라이브·ASMR용 긴 버전 저장 (최대 5분, MP4에는 안 들어감)", command=self.save_bgm_wav)
+        mb_["menu"] = menu_
+        mb_.pack(side="left")
         st_ = ttk.Style(self)
         st_.configure("Tab.TFrame", background=TAB_BG)          # 설정 탭 영역은 연노랑으로 구분
         st_.configure("Tab.TLabel", background=TAB_BG)
@@ -10834,8 +10847,7 @@ class App(tk.Tk):
             tabs[name].n = 0
             self.tab_btns[name] = ttk.Button(self.tab_row, text=name, style="Edit.Color.TButton", command=lambda n_=name: self.open_settings(n_))
             self.tab_btns[name].pack(side="left", padx=(4, 0))
-        self._bgm_pick_row = ttk.Frame(self.tab_row)
-        self._bgm_pick_row.pack(side="right", padx=(8, 0))
+
         by_key = {k: (lb, t) for _, k, lb, t, _ in FIELDS}
         for name, _, keys in UI_TABS:          # 묶음 순서대로 칸 배치
             for k in keys:
@@ -10843,18 +10855,19 @@ class App(tk.Tk):
                     fr = tabs[name]
                     self.make_field(fr, k, by_key[k][0], by_key[k][1], fr.n // 2, fr.n % 2)
                     fr.n += 1
+        BGM_IN_TOOLBAR = {"bgm_mode", "bgm_style", "bgm_path"}      # 도구 줄 '🎵 배경음'에서 고름 (설정 창에는 안 보임)
         for sec, k, lb, t, _ in FIELDS:
             if tab_of[k] == sec and k not in {kk for _, _, ks in UI_TABS for kk in ks}:
+                if k in BGM_IN_TOOLBAR:
+                    self.vars[k] = tk.StringVar()
+                    continue
                 fr = tabs[sec]
                 self.make_field(fr, k, lb, t, fr.n // 2, fr.n % 2)
                 fr.n += 1
+        if "소리" in tabs:
+            ttk.Label(tabs["소리"], text="🎵 배경음 종류·스타일·음악 파일은 위 도구 줄의 '🎵 배경음' 칸에서 고릅니다 (▶ 듣기 · 🎲 다른 곡 · 💾 저장도 거기)",
+                      foreground="#666", style="Tab.TLabel").grid(row=tabs["소리"].n // 2 + 1, column=0, columnspan=4, sticky="w", padx=8, pady=(8, 0))
         self.nb, self.nb_tabs, self.nb_order = nb, tabs, order
-        ttk.Label(self._bgm_pick_row, text="🎵 배경음").pack(side="left")
-        self.bgm_pick = tk.StringVar()
-        cb_ = ttk.Combobox(self._bgm_pick_row, textvariable=self.bgm_pick, state="readonly", width=16,
-                           values=["없음", "자동(소재별)"] + SOUND_STYLE_NAMES + ["음악 파일 고르기…"])
-        cb_.pack(side="left", padx=4)
-        cb_.bind("<<ComboboxSelected>>", lambda e: self.on_bgm_pick())
         for k_ in ("bgm_mode", "bgm_style", "bgm_path"):
             self.vars[k_].trace_add("write", lambda *_: self.after_idle(self.sync_bgm_pick))
         self.after_idle(self.sync_bgm_pick)
@@ -13873,7 +13886,7 @@ class App(tk.Tk):
             self.bgm_made = {"path": p, "seed": s["bgm_seed"], "style": style, "dur": round(r.duration, 2),
                              "mode": s["bgm_mode"], "src": s["bgm_path"] if s["bgm_mode"] == "파일" else "", "narr": self._narr_sig(s)}
             what = f"{style} #{s['bgm_seed']}" if s["bgm_mode"] == "자동생성" else "파일 " + os.path.basename(s["bgm_path"])
-            self.write_log(f"🎵 배경음 만들기 완료: {what}"
+            self.write_log(f"🎲 새 배경음으로 바꿈: {what}"
                            + (f" · 반전 효과음 {r.reveal_t:.1f}초" if r.reveal_t and s["reveal_hit"] == "on" else "")
                            + (" → 이 소리가 MP4에 그대로 들어갑니다 (마음에 안 들면 한 번 더 누르기)" if s["bgm_mode"] == "자동생성"
                               else " → 이 파일이 MP4에 그대로 들어갑니다"))
