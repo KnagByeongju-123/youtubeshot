@@ -525,6 +525,7 @@ def run_doc(m, app, c, gate):
         m.atomic_write_text(script_json, json.dumps(res, ensure_ascii=False, indent=1))
         log(f"대본 완성: {res['title']} | {res['note']}")
     title, story = res["title"], res["story"]
+    m.IMAGE_CAST["chars"] = list(res.get("cast") or [])     # 등장인물 외모 (다시 그릴 때도 같은 얼굴)
     # 사진 보강 (장문_사진보강.bat): 이미 만든 대본에 사진을 더 넣고 영상만 다시 만듦
     done_flag = os.path.join(work, "사진보강_완료.txt")
     req_flag = os.path.join(work, "사진보강_요청.txt")      # 보강 중에 꺼져도 장문_만들기.bat 으로 이어지게

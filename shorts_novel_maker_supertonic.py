@@ -963,7 +963,10 @@ DOC_FICTION_OUTLINE_SYSTEM = """너는 유튜브 장편 낭독(오디오드라�
 - title: 클릭하고 싶은 드라마 제목 20~40자. 장르가 바로 보이게(예: '[무협] 몰락한 문파의 막내, 사부가 남긴 마지막 초식'). 결말 금지, 이모지 0~1개.
 - logline: 이야기 한 줄 요약
 - setting: 시대·장소·세계관 2~4문장
-- characters: 주요 인물 3~6명. 각 {{"name": "", "age": "", "role": "주인공/조력자/악역 등", "personality": "", "speech": "말투 특징"}}
+- characters: 주요 인물 3~6명. 각 {{"name": "", "age": "", "role": "주인공/조력자/악역 등", "personality": "", "speech": "말투 특징",
+  "look": "그림 AI용 외모 고정 설명(영어 25~40단어): 나이대·성별, 얼굴형(둥근/갸름한/각진), 머리 길이·색·스타일, 안경 유무와 테 색, 눈 색, 체격·키, 기본 복장. 예: 18-year-old Korean boy, oval face, short messy black hair, no glasses, dark brown eyes, slim average height, navy school uniform",
+  "look_ko": "같은 내용 한국어 한 줄"}}
+  인물마다 서로 구별되는 외모(머리색·길이·안경 등이 겹치지 않게)로 정하고, 이 외모는 모든 회차·모든 그림에서 그대로 유지된다.
 - opening: 오프닝 나레이션 3~6문단(약 {open_chars}자). 인사 없이 사건 한가운데나 가장 강한 장면으로 시작해서 '이 이야기를 끝까지 들어야 하는 이유'를 심는다.
 - chapters: {n_ch}개 회차. 각 {{"title": "회차 제목(15자 이내, 번호 없이)", "points": ["이 회차의 사건·장면 3~6개(누가 무엇을)"], "cliffhanger": "회차 마지막 장면", "chars": 목표 글자 수}}. chars 합계는 약 {body_chars}자.
   발단 → 갈등 고조 → 위기 → 절정 → 결말. 중반에 큰 반전 1개 이상. 마지막 회차는 결말(떡밥 회수).
@@ -971,7 +974,7 @@ DOC_FICTION_OUTLINE_SYSTEM = """너는 유튜브 장편 낭독(오디오드라�
 
 """ + DOC_FICTION_STYLE + """
 
-반드시 JSON만 출력: {{"title": "", "logline": "", "setting": "", "characters": [{{"name": "", "age": "", "role": "", "personality": "", "speech": ""}}], "opening": "", "chapters": [{{"title": "", "points": [""], "cliffhanger": "", "chars": 1500}}], "closing": "", "notes": ""}}"""
+반드시 JSON만 출력: {{"title": "", "logline": "", "setting": "", "characters": [{{"name": "", "age": "", "role": "", "personality": "", "speech": "", "look": "", "look_ko": ""}}], "opening": "", "chapters": [{{"title": "", "points": [""], "cliffhanger": "", "chars": 1500}}], "closing": "", "notes": ""}}"""
 
 DOC_FICTION_CHAPTER_SYSTEM = """너는 유튜브 장편 낭독(오디오드라마) 채널의 메인 작가다. 구성안 중 '지금 쓸 회차' 하나의 본문만 쓴다.
 """ + KO_NUM_RULE + """- 분량: 목표 글자 수(공백 포함)의 90~110%. 장면과 대사를 충분히 넣어 채운다(요약하듯 쓰지 않는다).
@@ -2132,7 +2135,8 @@ IMAGE_PLAN_SYSTEM = """너는 유튜브 쇼츠 영상의 아트 디렉터다. �
   글자·간판 문구·자막·워터마크 넣지 말 것(no text). 실존 인물·유명 캐릭터·상표 금지. 잔인하거나 선정적인 묘사 금지.
 - after: 그림이 들어갈 위치 = 본문에서 그림 바로 앞 문장의 일부(원문 그대로 10~20자)
 - caption: 15자 이내 한국어 장면 설명
-반드시 JSON만 출력: {"images": [{"after": "...", "prompt": "...", "caption": "..."}]}"""
+- chars: 그 그림에 나오는 등장인물 이름 목록(아래 [등장인물 외모]에 있는 이름 그대로, 없으면 []). 그 인물의 외모 설명(look)을 prompt 안에 한 글자도 바꾸지 말고 그대로 넣는다.
+반드시 JSON만 출력: {"images": [{"after": "...", "prompt": "...", "caption": "...", "chars": ["이름"]}]}"""
 
 
 _IMG_OK = {}
@@ -2279,6 +2283,14 @@ def sd_generate(items, out_dir, log=None, cancel=None, steps=None, guidance=None
     return got
 
 
+IMAGE_CAST = {"chars": []}   # 지금 이야기의 등장인물 외모 [{name, look, look_ko}] (구성안에서 정함 → 모든 그림에 그대로)
+
+
+def cast_text(chars=None):
+    chars = chars if chars is not None else IMAGE_CAST.get("chars") or []
+    return "\n".join(f"- {c.get('name', '')}: {c.get('look', '')}" for c in chars if c.get("name") and c.get("look"))
+
+
 IMAGE_CHECK_SYSTEM = """너는 만화·일러스트 검수자다. 그림 파일을 Read 로 하나씩 직접 열어 보고, 영상에 그대로 써도 되는지 판정한다.
 탈락 기준(하나라도 있으면 ok=false): 손가락이 6개 이상이거나 붙었거나 비틀림, 손이 뭉개짐, 한 사람에게 손이 3개 이상 보이거나 팔·다리가 3개 이상(소매·배경에서 튀어나온 손도 셈),
 얼굴·눈이 심하게 일그러짐, 글자·워터마크가 크게 보임, 인물이 두 겹으로 겹침. 손은 반드시 하나하나 세어 본다.
@@ -2323,9 +2335,20 @@ def make_ai_images(model, category, title, story, n, s, media_dir, log, cancel=N
     style = image_style_text(s)
     preset = str(s.get("image_style_preset", "") or "")
     log(f"🎨 그림 {n}장 기획 중... (스타일: {preset if preset in IMAGE_STYLES else '직접 입력'})")
+    cast = cast_text()
     plan = ask_script_json(model, fit_ratio(IMAGE_PLAN_SYSTEM), f"화면: {ratio_ko()}\n콘텐츠 종류: {category}\n그림 수: {n}장\n그림 스타일(모든 그림 공통): {style or '사실적인 영화 장면'}"
-                           f"\n[제목] {title}\n\n[본문]\n{story_text_only(story)}")
+                           + (f"\n\n[등장인물 외모 - 모든 그림에서 그대로 유지, prompt 에 그대로 복사]\n{cast}" if cast else "")
+                           + f"\n[제목] {title}\n\n[본문]\n{story_text_only(story)}")
     items = [x for x in (plan.get("images") or []) if isinstance(x, dict) and x.get("prompt")][:n]
+    if cast:   # 기획이 외모를 빠뜨려도 프로그램이 앞에 붙여 고정 (이름이 chars 에 있거나 caption/prompt 에 나오면)
+        looks = {c["name"]: c["look"] for c in (IMAGE_CAST.get("chars") or []) if c.get("name") and c.get("look")}
+        for it in items:
+            names = [str(x) for x in (it.get("chars") or []) if str(x) in looks]
+            txt_ = str(it.get("caption", "")) + " " + str(it.get("prompt", ""))
+            names += [nm for nm in looks if nm not in names and (nm in txt_ or (len(nm) >= 3 and nm[1:] in txt_))]   # 성 없이 이름만 나와도
+            miss = [looks[nm] for nm in names if looks[nm][:25].lower() not in str(it.get("prompt", "")).lower()]
+            if miss:
+                it["prompt"] = "; ".join(miss) + ". " + str(it["prompt"])
     got = []
     if local:   # 이 PC에서 무료로 (한 장 1~3분, 모델은 한 번만 올림)
         port = H > W
@@ -12852,8 +12875,14 @@ class App(tk.Tk):
             notes.append(str(o["notes"]))
         toc = "\n".join(f"{i + 1}. {c['title']} - " + " / ".join(str(p) for p in (c.get("points") or []))
                         + (f" → 끝 장면: {c.get('cliffhanger')}" if c.get("cliffhanger") else "") for i, c in enumerate(chapters))
+        if fiction:   # 등장인물 외모를 그림 단계에 고정 (모든 회차의 모든 그림이 같은 얼굴·머리·안경·복장)
+            IMAGE_CAST["chars"] = [{"name": str(x.get("name", "")), "look": str(x.get("look", "")), "look_ko": str(x.get("look_ko", ""))}
+                                   for x in (o.get("characters") or []) if isinstance(x, dict) and x.get("name")]
+            if cast_text():
+                log("  👤 등장인물 외모 고정:\n" + "\n".join(f"     {c['name']}: {c['look_ko'] or c['look']}" for c in IMAGE_CAST["chars"] if c.get("look")))
         if fiction:   # 인물·세계관을 모든 회차에 넘김 (이름·말투가 끝까지 같게)
             cast = "\n".join(f"- {x.get('name', '')} ({x.get('age', '')}, {x.get('role', '')}): {x.get('personality', '')} / 말투: {x.get('speech', '')}"
+                             + (f" / 외모: {x.get('look_ko')}" if x.get("look_ko") else "")
                              for x in (o.get("characters") or []) if isinstance(x, dict))
             toc = f"[한 줄 요약] {o.get('logline', '')}\n[세계관] {o.get('setting', '')}\n[등장인물]\n{cast}\n\n[회차 구성]\n" + toc
         log("  " + title + "\n  " + " / ".join(f"{i + 1}.{c['title']}" for i, c in enumerate(chapters)))
@@ -12956,7 +12985,7 @@ class App(tk.Tk):
         note = f"장문{' 이야기' if fiction else ''} {len(bodies)}{unit} · {n_chars:,}자 · 예상 약 {n_chars / DOC_CHARS_PER_MIN:.0f}분"
         if fiction:
             notes.insert(0, "창작 이야기(픽션)")
-        return {"title": title, "story": story, "note": note, "sources": sources, "notes": " / ".join(notes)[:1500],
+        return {"title": title, "story": story, "note": note, "sources": sources, "notes": " / ".join(notes)[:1500], "cast": list(IMAGE_CAST.get("chars") or []),
                 "topic": topic, "song": None, "melody": "", "bpm": 90, "artwork": None}
 
     def ai_write(self):
