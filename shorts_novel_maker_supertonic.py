@@ -5300,7 +5300,8 @@ def ko_numbers(text):
             return ko_native(n)
         if n == 4 and after.startswith("번") and not after.startswith(("번째", "번이나", "번만", "번씩", "번도", "번을", "번 더")):
             return "네"          # '사 번'은 '사번(사원번호)'처럼 들림 → 네 번
-        if n % 10 == 4 and n <= 31 and after.startswith("일") and not after.startswith(("일본", "일부", "일반", "일단", "일정", "일상", "일종", "일으", "일어", "일자", "일하")):
+        if (n % 10 == 4 and after.startswith("일") and not after.startswith(("일본", "일반", "일단", "일정", "일상", "일종", "일으", "일어", "일자", "일하"))
+                and not (after.startswith("일부") and not after.startswith("일부터"))):
             return ko_sino(n) + " "   # 4일 → '사 일' (붙여 쓰면 성우가 '싸일'로 읽음)
         if n >= 1 and after.startswith("번째"):
             return "첫" if n == 1 else ko_native(n) if n <= 99 else ko_sino(n)
