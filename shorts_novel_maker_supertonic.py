@@ -1009,6 +1009,8 @@ DOC_FICTION_OUTLINE_SYSTEM = """너는 유튜브 장편 낭독(오디오드라�
   "look": "그림 AI용 외모 고정 설명(영어 25~40단어): 나이대·성별, 얼굴형(둥근/갸름한/각진), 머리 길이·색·스타일, 안경 유무와 테 색, 눈 색, 체격·키, 기본 복장. 예: 18-year-old Korean boy, oval face, short messy black hair, no glasses, dark brown eyes, slim average height, navy school uniform",
   "look_ko": "같은 내용 한국어 한 줄"}}
   인물마다 서로 구별되는 외모(머리색·길이·안경 등이 겹치지 않게)로 정하고, 이 외모는 모든 회차·모든 그림에서 그대로 유지된다.
+  회상·과거 장면이나 시간 이동으로 같은 인물이 다른 나이로 나오면 나이별로 항목을 따로 만든다. name 뒤에 괄호로 시기를 붙인다
+  (예: "한동수(1979년, 20세)", "한동수(현재, 66세)"). 젊은 시절 항목은 그 시대 복장·머리 모양으로 쓴다.
 - opening: 오프닝 나레이션 3~6문단(약 {open_chars}자). 인사 없이 사건 한가운데나 가장 강한 장면으로 시작해서 '이 이야기를 끝까지 들어야 하는 이유'를 심는다.
 - chapters: {n_ch}개 회차. 각 {{"title": "회차 제목(15자 이내, 번호 없이)", "points": ["이 회차의 사건·장면 3~6개(누가 무엇을)"], "cliffhanger": "회차 마지막 장면", "chars": 목표 글자 수}}. chars 합계는 약 {body_chars}자.
   발단 → 갈등 고조 → 위기 → 절정 → 결말. 중반에 큰 반전 1개 이상. 마지막 회차는 결말(떡밥 회수).
@@ -2177,7 +2179,8 @@ IMAGE_PLAN_SYSTEM = """너는 유튜브 쇼츠 영상의 아트 디렉터다. �
   글자·간판 문구·자막·워터마크 넣지 말 것(no text). 실존 인물·유명 캐릭터·상표 금지. 잔인하거나 선정적인 묘사 금지.
 - after: 그림이 들어갈 위치 = 본문에서 그림 바로 앞 문장의 일부(원문 그대로 10~20자)
 - caption: 15자 이내 한국어 장면 설명
-- chars: 그 그림에 나오는 등장인물 이름 목록(아래 [등장인물 외모]에 있는 이름 그대로, 없으면 []). 그 인물의 외모 설명(look)을 prompt 안에 한 글자도 바꾸지 말고 그대로 넣는다.
+- chars: 그 그림에 나오는 등장인물 이름 목록(아래 [등장인물 외모]에 있는 이름 그대로, 괄호 속 시기까지 정확히. 없으면 []). 그 인물의 외모 설명(look)을 prompt 안에 한 글자도 바꾸지 말고 그대로 넣는다.
+  같은 인물이 나이별로 여러 항목이면, 그 장면의 시기(회상인지 현재인지)에 맞는 항목 하나만 고른다.
 반드시 JSON만 출력: {"images": [{"after": "...", "prompt": "...", "caption": "...", "chars": ["이름"]}]}"""
 
 
@@ -2384,10 +2387,19 @@ def make_ai_images(model, category, title, story, n, s, media_dir, log, cancel=N
     items = [x for x in (plan.get("images") or []) if isinstance(x, dict) and x.get("prompt")][:n]
     if cast:   # 기획이 외모를 빠뜨려도 프로그램이 앞에 붙여 고정 (이름이 chars 에 있거나 caption/prompt 에 나오면)
         looks = {c["name"]: c["look"] for c in (IMAGE_CAST.get("chars") or []) if c.get("name") and c.get("look")}
+        base_of = {nm: re.split(r"[(\[]", nm)[0].strip() for nm in looks}           # '한동수(1979년, 20세)' → '한동수'
+        n_base = {}
+        for nm, b_ in base_of.items():
+            n_base[b_] = n_base.get(b_, 0) + 1
         for it in items:
             names = [str(x) for x in (it.get("chars") or []) if str(x) in looks]
+            got_bases = {base_of[x] for x in names}
             txt_ = str(it.get("caption", "")) + " " + str(it.get("prompt", ""))
-            names += [nm for nm in looks if nm not in names and (nm in txt_ or (len(nm) >= 3 and nm[1:] in txt_))]   # 성 없이 이름만 나와도
+            for nm, b_ in base_of.items():   # 이름만 나온 경우: 나이별 항목이 여럿이면 어느 시기인지 모르므로 붙이지 않음
+                if nm in names or b_ in got_bases or n_base[b_] > 1:
+                    continue
+                if b_ in txt_ or (len(b_) >= 3 and b_[1:] in txt_):
+                    names.append(nm)
             miss = [looks[nm] for nm in names if looks[nm][:25].lower() not in str(it.get("prompt", "")).lower()]
             if miss:
                 it["prompt"] = "; ".join(miss) + ". " + str(it["prompt"])
