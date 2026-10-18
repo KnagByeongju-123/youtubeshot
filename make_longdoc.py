@@ -17,6 +17,7 @@ import time
 HERE = os.path.dirname(os.path.abspath(__file__))
 CFG = os.path.join(HERE, "장문_설정.json")
 PAUSE = os.path.join(HERE, "장문_일시정지중.flag")
+SEED = os.path.join(HERE, "실화_주제목록.txt")   # --실화 때 AI 기획 대신 쓸 '정해진 주제' 목록 (있으면 순서대로)
 DEFAULT = {
     "주제": "수심 1만 미터, 마리아나 해구 바닥에는 무엇이 살고 있을까?",
     "소재": "심해의 세계",
@@ -50,7 +51,12 @@ MIN_PER_MUSIC = (0.6, 1.0)   # 명상 음악 영상 1분당 걸리는 시간(분
 BATCH_GENRES = ["세계의 축제", "신기한 풍속과 전통", "역사를 바꾼 결정적 순간", "세계의 외딴 마을과 작은 나라", "고고학 발굴 이야기",
                 "세계의 음식 문화", "대형 사고에서 배운 교훈", "도시 하나 깊이 보기", "발명과 우연한 발견", "세계의 신화와 민담 여행",
                 "심해의 세계", "세계의 신기한 법과 예절", "미라와 무덤의 비밀", "세계의 명절과 새해 풍습", "최신 고고학 발견"]
-BATCH = "--batch" in sys.argv
+# --실화(또는 --true-story): 실화 소재만 돌아가며 10분 다큐 연속 제작 (모두 지식 다큐 · 명상/재미 섞지 않음)
+TRUE_STORY_GENRES = ["[실화] 과학이 밝혀낸 미스터리", "[실화] 극한 생존기", "[실화] 미제 사건의 기록", "[실화] 사라진 사람과 배·비행기",
+                     "[실화] 믿기 힘든 우연", "[실화] 희대의 사기와 범죄", "[실화] 평범한 사람의 위대한 순간", "[실화] 재난에서 살아남은 날",
+                     "[실화] 불가능에 도전한 사람들"]
+BATCH = "--batch" in sys.argv or "--실화" in sys.argv or "--true-story" in sys.argv
+TRUE_STORY = "--실화" in sys.argv or "--true-story" in sys.argv
 MORE_PHOTOS = "--more-photos" in sys.argv
 SEG_SEC = 120
 
@@ -130,6 +136,35 @@ def plan_lineup(m, app, genres, n, minutes, seen, log, out_root):
     except OSError:
         pass
     return final
+
+
+def load_seed_lineup(m):
+    """실화_주제목록.txt 를 읽어 [{genre, topic}] 라인업으로. 한 줄 = 한 편.
+    형식: '소재 | 주제' (소재 생략 시 '[실화] 과학이 밝혀낸 미스터리'). '#' 줄·빈 줄 무시."""
+    if not os.path.exists(SEED):
+        return []
+    topics_map = m.cat_info(m.DOC_CATEGORY)[1]
+    default_genre = "[실화] 과학이 밝혀낸 미스터리"
+    if default_genre not in topics_map:
+        default_genre = next(iter(topics_map))
+    out = []
+    try:
+        for raw in open(SEED, encoding="utf-8"):
+            line = raw.strip()
+            if not line or line.startswith("#"):
+                continue
+            if "|" in line:
+                g, t = (x.strip() for x in line.split("|", 1))
+            else:
+                g, t = default_genre, line
+            if not t:
+                continue
+            if g not in topics_map:
+                g = default_genre
+            out.append({"genre": g, "topic": t})
+    except OSError:
+        return []
+    return out
 
 
 def made_topics(m, out_root):
@@ -258,6 +293,10 @@ def main():
     c = dict(DEFAULT, **json.load(open(CFG, encoding="utf-8")))
     global CHANNEL_NOTE
     CHANNEL_NOTE = str(c.get("채널_소개") or DEFAULT["채널_소개"])
+    if TRUE_STORY:     # 실화 모드: 실화 소재만, 전부 지식 다큐로 (설정 파일의 연속_소재·연속_구성 무시)
+        c["연속_소재"] = list(TRUE_STORY_GENRES)
+        c["연속_구성"] = ["지식"]
+        print("📖 실화 연속 제작 모드: 실화 소재만 돌아가며 10분 다큐를 만듭니다 (명상·재미 편 없음)")
     if BATCH and not ask_batch_plan(c):
         print("취소했습니다. (아무것도 만들지 않음)")
         return
@@ -310,6 +349,12 @@ def main():
     comp = [str(x) for x in (c.get("연속_구성") or ["지식"]) if str(x) in ("지식", "명상", "재미")] or ["지식"]
     kinds = [comp[i % len(comp)] for i in range(n)]                      # 편마다 종류
     kn_slots = [i for i in range(n) if kinds[i] == "지식"]                # 지식 편만 기획자·검토자 라인업
+    if TRUE_STORY and not plan and not (cur and cur.get("주제")):         # 정해둔 주제 목록이 있으면 AI 기획 대신 그걸 순서대로
+        seed = load_seed_lineup(m)
+        if seed:
+            plan = seed[:len(kn_slots)]
+            save_state()
+            log(f"📑 정해둔 주제 {len(plan)}개를 순서대로 만듭니다 (실화_주제목록.txt). 편수가 더 많으면 나머지는 AI가 채웁니다.")
     med_presets = [p_ for p_ in (c.get("명상_프리셋") or []) if p_ in m.MUSIC_PRESETS] or MEDITATION_PRESETS
     fun_genres = [g_ for g_ in (c.get("재미_소재") or []) if g_ in m.cat_info(m.DOC_CATEGORY)[1]] or FUN_GENRES
     log(f"🔁 연속 제작 시작: {n}편 · 구성 {'/'.join(comp)} · 지식 {kinds.count('지식')}편(10분 다큐) · 명상 {kinds.count('명상')}편({c.get('명상_분', 20)}분 음악) · 재미 {kinds.count('재미')}편  (끝난 편 {len(done_list)}개)")

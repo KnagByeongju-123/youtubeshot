@@ -1,7 +1,10 @@
 """프로젝트 파일(.json) 하나를 바로 MP4 로 (장문 연속 제작과 같은 순서: 나레이션 → 영상 → 썸네일·타임스탬프)
 
-  py -3.11 -X utf8 render_project.py <프로젝트.json> [--kit] [--vi]
+  py -3.11 -X utf8 render_project.py <프로젝트.json> [--kit] [--vi] [--소재프로필] [--사진 [초]]
 
+  - --소재프로필 : 손으로 쓴 대본을 그 소재의 기본 스타일(다큐 자막·제목 위치·근거 사진·웹 조사)로 맞춤
+  - --사진 [초] : 대본에 사진이 적으면 웹에서 근거 사진을 자동으로 찾아 넣음 (나레이션 '초'마다 한 장, 기본 15초).
+                  넣은 뒤 프로젝트 파일에 저장 → 다시 실행하면 사진은 건너뜀
   - --suffix 이름 : 결과 파일 이름 끝에 _이름 (같은 제목으로 덧붙일 부분을 따로 만들 때. 화면 제목은 그대로)
   - --vi : 한글 자막 위에 베트남어 자막을 함께 (자막 조각마다 번역해 프로젝트 파일에 저장, 다시 만들 때는 저장된 번역을 씀)
            결과 파일 이름 끝에 _베트남어자막
@@ -53,6 +56,14 @@ def main(a):
     except Exception:
         cfg = {}
     genre = c.get("genre") or ""
+    if "--소재프로필" in a and genre:          # 손으로 쓴 대본을 소재 기본 스타일(다큐 자막·제목·근거 사진)로
+        app.cat_var.set(c.get("category") or m.DOC_CATEGORY)
+        app.on_category()
+        if genre in m.cat_info(app.cat_var.get())[1]:
+            app.genre_var.set(genre)
+            app.on_genre()
+            app.apply_genre_profile(genre, quiet=True, sync=True)
+        app.update()
     bgm = str((c.get("settings") or {}).get("bgm_style") or "").strip() or m.SOUND_BY_TOPIC.get(genre, "잔잔한 패드")   # 프로젝트에 정한 배경음 우선
     app.vars["bgm_mode"].set("자동생성")
     app.vars["bgm_volume"].set(str(cfg.get("배경음_크기", 25)))
@@ -70,6 +81,20 @@ def main(a):
     m.set_tts_cfg(s)
     gate = m.PauseGate(os.path.join(HERE, "장문_일시정지중.flag"), app.cancel, log)
     app.cancel = gate
+    if "--사진" in a:          # 대본에 사진이 적으면 웹에서 근거 사진을 자동으로 찾아 넣음
+        os.makedirs(os.path.join(out_root, "media"), exist_ok=True)
+        try:
+            i_ = a.index("--사진")
+            if i_ + 1 < len(a) and a[i_ + 1].replace(".", "", 1).isdigit():
+                m.DOC_PHOTO_SEC = max(8, float(a[i_ + 1]))
+        except ValueError:
+            pass
+        before = len(m.photo_credits(story))
+        log(f"📷 사진 자동 넣기: 지금 {before}장 → 나레이션 {m.DOC_PHOTO_SEC:g}초마다 한 장 목표 (웹 조사)")
+        story, n_add = m.doc_add_photos(app.model_var.get().strip(), title, story, os.path.join(out_root, "media"), log, gate, fiction=m.doc_is_fiction(genre))
+        app.set_story(story)
+        m.atomic_write_text(proj_path, json.dumps(app.project_dict(), ensure_ascii=False, indent=1))
+        log(f"📷 사진 {n_add}장 추가 (총 {len(m.photo_credits(story))}장) → 프로젝트에 저장")
     log(f"▶ 프로젝트로 영상 만들기: {title} ({genre}) · 사진 {len(m.photo_credits(story))}장 · 배경음 {bgm}")
     base = os.path.join(out_root, m.safe_name(title) + suf)
     m.atomic_write_text(base + "_프로젝트.json", json.dumps(app.project_dict(), ensure_ascii=False, indent=1))
