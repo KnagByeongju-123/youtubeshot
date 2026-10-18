@@ -907,7 +907,8 @@ PHOTO_RULES = """[사진 규칙]
 - [글과 밀접하게] 사진마다 '붙일 문단'을 먼저 정하고, 그 문단에 이름이 나오는 구체적 대상(인물·장소·유물·생물·실험 장치·사건 현장·지도·도표)을 직접 보여주는 사진을 찾는다. 막연한 풍경·건물 외관·스톡 사진·주제와 비슷하기만 한 사진은 쓰지 않는다
 - caption 에는 그 문단의 핵심 대상 이름을 그대로 넣는다(예: '리벳 실험의 시계', '마리아나 해구 챌린저 해연 위치'). after 는 그 대상이 나오는 바로 그 문단의 앞부분
 - after: 그 사진이 보여주는 문단의 앞부분(원문 그대로 10~20자). 사진은 그 문단 **바로 앞 줄**에 들어간다(사진 → 글 순서). 본문이 아직 없으면 그 사진이 보여주는 사실의 핵심 단어
-- caption: 15자 이내 한국어 설명 / credit: "작가 또는 기관 / 라이선스" / page: 출처 페이지 URL"""
+- caption: 15자 이내 한국어 설명 / credit: "작가 또는 기관 / 라이선스" / page: 출처 페이지 URL
+- q: 그 대상을 Wikimedia Commons 에서 찾을 영어 검색어(고유명사 위주, 2~4단어). 예: "Gwanggaeto Stele", "Rosetta Stone", "Meroe pyramids". url 을 못 찾아도 q 는 꼭 적는다(프로그램이 q 로 실제 파일을 직접 검색해 받는다)."""
 
 RESEARCH_SYSTEM = """너는 유튜브 쇼츠 대본을 위한 자료조사원이다. WebSearch 로 주제를 검색하고, 중요한 내용은 WebFetch 로 원문을 열어 확인한다.
 주제가 비어 있으면 해당 소재에서 쇼츠로 반응이 좋을 실제 주제를 하나 골라서 조사한다.
@@ -927,14 +928,14 @@ RESEARCH_SYSTEM = """너는 유튜브 쇼츠 대본을 위한 자료조사원이
 
 """ + PHOTO_RULES + """
 
-반드시 JSON만 출력: {"topic": "조사한 주제", "facts": ["..."], "hook": "...", "twist": "...", "sources": ["이름 - URL"], "photos": [{"after": "...", "url": "...", "caption": "...", "credit": "...", "page": "..."}]}"""
+반드시 JSON만 출력: {"topic": "조사한 주제", "facts": ["..."], "hook": "...", "twist": "...", "sources": ["이름 - URL"], "photos": [{"after": "...", "url": "...", "q": "영어 검색어", "caption": "...", "credit": "...", "page": "..."}]}"""
 
 PHOTO_SYSTEM = """너는 유튜브 쇼츠 사실 콘텐츠의 사진 자료조사원이다. WebSearch/WebFetch 로 아래 대본의 사실을 뒷받침하는 실제 사진을 1~3장 찾는다.
 사진은 그 장면을 설명하는 문단 바로 앞에 놓인다(사진 → 글). 첫 문단 앞도 좋다. 사진끼리 붙지 않게 떨어뜨린다.
 
 """ + PHOTO_RULES + """
 
-반드시 JSON만 출력: {"photos": [{"after": "...", "url": "...", "caption": "...", "credit": "...", "page": "..."}]}"""
+반드시 JSON만 출력: {"photos": [{"after": "...", "url": "...", "q": "영어 검색어", "caption": "...", "credit": "...", "page": "..."}]}"""
 
 WEB_VERIFY_BLOCK = """
 
@@ -2343,6 +2344,62 @@ def fix_image_url(url):
 _last_dl = [0.0]
 
 
+_COMMONS_SEEN = set()   # 한 번 쓴 파일 페이지는 다시 고르지 않음
+
+
+def commons_search(query, limit=6, log=None, fresh=True):
+    """Wikimedia Commons 에서 실제 존재하는 사진 파일을 코드로 직접 검색.
+    AI가 기억으로 URL을 지어내는 대신, 검색어로 진짜 PD·CC 사진 목록을 가져온다.
+    반환: [{"url": 원본주소, "caption": 파일설명, "credit": "작가/라이선스", "page": 파일페이지}]"""
+    import urllib.request, urllib.parse, urllib.error
+    q = (query or "").strip()
+    if not q:
+        return []
+    api = "https://commons.wikimedia.org/w/api.php?" + urllib.parse.urlencode({
+        "action": "query", "format": "json", "generator": "search",
+        "gsrsearch": "filetype:bitmap " + q, "gsrnamespace": "6", "gsrlimit": str(max(limit * 3, 12)),
+        "prop": "imageinfo", "iiprop": "url|extmetadata|mime|size",
+    })
+    try:
+        gap = time.time() - _last_dl[0]
+        if gap < 1.0:
+            time.sleep(1.0 - gap)
+        _last_dl[0] = time.time()
+        req = urllib.request.Request(api, headers={"User-Agent": UA, "Accept": "application/json"})
+        with urllib.request.urlopen(req, timeout=40) as r:
+            data = json.loads(r.read().decode("utf-8", "replace"))
+    except Exception as e:
+        if log:
+            log(f"  커먼즈 검색 실패({q[:30]}): {str(e)[:50]}")
+        return []
+    pages = ((data.get("query") or {}).get("pages") or {}).values()
+    rows = sorted(pages, key=lambda p: p.get("index", 999))
+    out = []
+    for p in rows:
+        ii = (p.get("imageinfo") or [{}])[0]
+        url = ii.get("url") or ""
+        mime = ii.get("mime") or ""
+        if mime not in ("image/jpeg", "image/png"):
+            continue
+        if min(ii.get("width", 0), ii.get("height", 0)) < 400:
+            continue
+        page = ii.get("descriptionurl") or ("https://commons.wikimedia.org/wiki/" + urllib.parse.quote(p.get("title", "")))
+        if fresh and page in _COMMONS_SEEN:
+            continue
+        ex = ii.get("extmetadata") or {}
+        def _ex(k):
+            return re.sub(r"<[^>]+>", "", str((ex.get(k) or {}).get("value", ""))).strip()
+        lic = _ex("LicenseShortName") or "Wikimedia Commons"
+        author = _ex("Artist") or _ex("Attribution") or ""
+        desc = _ex("ObjectName") or _ex("ImageDescription") or p.get("title", "").replace("File:", "")
+        desc = desc[:40]
+        credit = (author[:40] + " / " + lic) if author else lic
+        out.append({"url": url, "caption": desc, "credit": credit, "page": page})
+        if len(out) >= limit:
+            break
+    return out
+
+
 def download_image(url, media_dir, stem=None):
     """사진 내려받기. 위키미디어 429(너무 자주 요청)면 잠시 기다렸다 최대 3번 재시도"""
     import urllib.request, urllib.error
@@ -2387,15 +2444,34 @@ def fetch_photos(items, media_dir, log, limit=3):
     for it in items or []:
         if len(got) >= limit:
             break
-        if not isinstance(it, dict) or not it.get("url"):
+        if not isinstance(it, dict):
             continue
-        try:
-            path = download_image(str(it["url"]), media_dir)
-            got.append({"path": path, "caption": it.get("caption", ""), "credit": it.get("credit", ""),
-                        "page": it.get("page", ""), "after": it.get("after", "")})
-            log(f"  사진 받음: {it.get('caption', '')} ({it.get('credit', '')})")
-        except Exception as e:
-            log(f"  사진 받기 실패: {str(it.get('url'))[:60]} ({str(e)[:40]})")
+        # 1) AI가 준 URL 시도
+        if it.get("url"):
+            try:
+                path = download_image(str(it["url"]), media_dir)
+                got.append({"path": path, "caption": it.get("caption", ""), "credit": it.get("credit", ""),
+                            "page": it.get("page", ""), "after": it.get("after", "")})
+                if it.get("page"):
+                    _COMMONS_SEEN.add(it.get("page"))
+                log(f"  사진 받음: {it.get('caption', '')} ({it.get('credit', '')})")
+                continue
+            except Exception as e:
+                log(f"  사진 받기 실패: {str(it.get('url'))[:60]} ({str(e)[:40]})")
+        # 2) 폴백: 검색어(q)/캡션으로 커먼즈에서 실제 파일을 코드가 직접 찾아 받음
+        query = (it.get("q") or it.get("caption") or "").strip()
+        if not query:
+            continue
+        for cand in commons_search(query, limit=5, log=log):
+            try:
+                path = download_image(cand["url"], media_dir)
+                got.append({"path": path, "caption": it.get("caption") or cand["caption"], "credit": cand["credit"],
+                            "page": cand["page"], "after": it.get("after", "")})
+                _COMMONS_SEEN.add(cand["page"])
+                log(f"  사진 찾음(커먼즈 '{query[:24]}'): {cand['caption']} ({cand['credit']})")
+                break
+            except Exception as e:
+                log(f"  커먼즈 후보 실패: {str(cand['url'])[:50]} ({str(e)[:30]})")
     return got
 
 
