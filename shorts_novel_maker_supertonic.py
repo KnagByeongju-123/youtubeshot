@@ -5102,7 +5102,7 @@ class SubtitleRenderer:
         cx = big.width / 2 + (ax + (bx - ax) * p) * sx
         cy = big.height / 2 + (ay + (by - ay) * p) * sy
         l, tp = cx - cw / 2, cy - ch / 2
-        dbig = self._depth_for(sh["img"], big.size) if getattr(self, "depth_on", False) else None
+        dbig = self._depth_for(sh["img"], big.size) if (getattr(self, "depth_on", False) and z < 1.22) else None   # 확대(줌)된 장면은 2.5D 안 함 (가장자리 겹침이 더 잘 보임)
         if dbig is None:
             return extent_resize(big, (bw, bh), (l, tp, l + cw, tp + ch)), mask
         # 2.5D 카메라 무빙: 장면이 진행되는 동안 한쪽으로 천천히 돌아가며(드리프트) + 7초 주기로 살짝 흔들림. 가까운 것은 많이, 먼 것은 조금 밀림
