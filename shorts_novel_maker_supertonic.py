@@ -309,9 +309,23 @@ IMAGE_STYLES = {
     "MJ: 사이버펑크 네온": "cyberpunk neon city at night, glowing pink and cyan neon signs without text, rain-soaked reflections, futuristic, cinematic",
     "MJ: 니들펠트 인형": "needle felted wool figures, soft fuzzy felt texture, handmade craft, cute miniature scene, gentle studio light",
     "MJ: 플랫 미니멀 일러스트": "minimalist flat vector illustration, simple geometric shapes, limited pastel palette, clean negative space, modern editorial style",
+    "유화(붓터치)": "oil painting with thick visible brush strokes, impasto texture, rich colors, painterly",
+    "우키요에 목판화": "ukiyo-e japanese woodblock print, shin hanga style, flat colors, bold outlines",
+    "펜화 판화": "black and white engraving, pen and ink cross-hatching, fine line work, high contrast",
+    "크레용 그림": "children's crayon drawing, waxy crayon texture, bright simple colors, naive childlike",
+    "모네 인상주의": "Monet style impressionist painting, loose dappled brush strokes, soft light, outdoor scene",
+    "잉크 스케치": "loose ink sketch, expressive hand-drawn ink lines, minimal, spontaneous",
+    "인상주의 유화": "impressionism painting, visible oil paint texture, vibrant broken color, atmospheric light",
     "3D 애니(픽사풍)": "3D animated feature film style, soft global illumination, rounded stylized characters, expressive faces, cinematic composition",
 }
 IMAGE_STYLE_NEG = {   # 스타일별로 빼야 할 것
+    "인상주의 유화": "photo, line art, flat, 3d render",
+    "잉크 스케치": "photo, color, 3d render, detailed shading",
+    "모네 인상주의": "photo, line art, flat, 3d render",
+    "크레용 그림": "photo, realistic, detailed, 3d render",
+    "펜화 판화": "color, photo, 3d render, blur",
+    "우키요에 목판화": "photo, 3d render, gradient, realistic",
+    "유화(붓터치)": "photo, flat, line art, 3d render",
     "MJ: 플랫 미니멀 일러스트": "photo, texture, 3d render, detailed",
     "MJ: 니들펠트 인형": "photo, 2d, flat, glossy",
     "MJ: 사이버펑크 네온": "daylight, flat, cartoon",
@@ -2484,6 +2498,13 @@ SD_MODELS = {"dreamshaper": (SD_MODEL_DIR, 5, 5.0), "anime": (SD_ANIME_DIR, 6, 1
 # 화풍 보조 파일(LoRA): 스타일 → (파일, 세기, 프롬프트 앞에 붙일 말). 파일이 없으면 보조 없이 그림
 SD_STYLE_LORA = {
     "동화책 수채화": ("models/lora_watercolor/fladdict-watercolor-sd-1-5.safetensors", 0.6, "watercolor painting, "),
+    "유화(붓터치)": ("models/lora_styles/sd15_japanese_woodblock.safetensors", 0.75, "oil painting, thick brush strokes, "),
+    "우키요에 목판화": ("models/lora_styles/sd15_oil_paint.safetensors", 0.7, "shin hanga style, woodblock print, "),
+    "펜화 판화": ("models/lora_styles/sd15_pen_ink_engraving.safetensors", 0.8, "black and white engraving, "),
+    "크레용 그림": ("models/lora_styles/sd15_crayon_drawing.safetensors", 0.8, "children's crayon drawing, "),
+    "모네 인상주의": ("models/lora_styles/sd15_monet_impressionism.safetensors", 0.7, "Monet Style, "),
+    "잉크 스케치": ("models/lora_styles/sd15_ink_sketch.safetensors", 0.8, "ink sketch, "),
+    "인상주의 유화": ("models/lora_styles/sd15_impressionist_painting.safetensors", 0.7, "impressionism painting, "),
 }
 
 
@@ -2499,7 +2520,9 @@ def sd_style_lora(preset):
 # 그림 스타일 → 어울리는 모델 (애니·만화 모델이 없으면 dreamshaper 로)
 SD_STYLE_MODEL = {"웹툰": "anime", "지브리풍 손그림 애니": "anime", "70~80년대 순정만화": "anime", "70~80년대 레트로 SF 애니": "anime",
                   "짱구풍 코믹 애니": "anime", "레트로 로봇 애니": "anime", "풀컬러 만화(코믹스)": "anime",
-                  "애니 수채화풍": "anime", "동화책 수채화": "anime"}   # 수채화도 애니 모델(동화책 수채화는 + 수채화 보조). 일러스트 모델은 쓰지 않음
+                  "애니 수채화풍": "anime", "동화책 수채화": "anime",   # 수채화도 애니 모델(동화책 수채화는 + 수채화 보조). 일러스트 모델은 쓰지 않음
+                  "유화(붓터치)": "anime", "우키요에 목판화": "anime", "펜화 판화": "anime", "크레용 그림": "anime",
+                  "모네 인상주의": "anime", "잉크 스케치": "anime", "인상주의 유화": "anime"}
 
 
 def sd_ready():
@@ -2669,7 +2692,9 @@ IMG_SOURCE_PRESET = {"그림: 애니(웹툰)": "웹툰", "그림: 애니+수채�
                      "그림: 색칠공부 밑그림": "색칠공부 밑그림(선만)", "그림: 동화 난쟁이 마을": "동화 난쟁이 마을",
                      "그림: 연필 윤곽 스케치": "연필 윤곽 스케치", "그림: 필터 색연필": "필터: 색연필", "그림: 필터 목탄": "필터: 목탄 스케치",
                      "그림: 필터 파스텔": "필터: 파스텔", "그림: 필터 펜화": "필터: 펜화(그래픽 펜)", "그림: 필터 컷아웃": "필터: 컷아웃(포스터화)",
-                     "그림: 필터 유화": "필터: 유화(드라이 브러시)", "그림: 필터 하프톤": "필터: 하프톤(망점 인쇄)", "그림: 필터 스테인드글라스": "필터: 스테인드글라스"}
+                     "그림: 필터 유화": "필터: 유화(드라이 브러시)", "그림: 필터 하프톤": "필터: 하프톤(망점 인쇄)", "그림: 필터 스테인드글라스": "필터: 스테인드글라스",
+                     "그림: 유화 보조": "유화(붓터치)", "그림: 우키요에 보조": "우키요에 목판화", "그림: 펜화 보조": "펜화 판화",
+                     "그림: 크레용 보조": "크레용 그림", "그림: 모네 보조": "모네 인상주의", "그림: 잉크 보조": "잉크 스케치"}
 IMG_SOURCE = {"mode": IMG_SOURCE_WEB}
 
 
@@ -2750,6 +2775,13 @@ def zip_image_files(zip_path, out_dir):
 
 
 IMAGE_STYLES_KO = {   # Claude·Gemini 에 한국어로 줄 화풍 설명
+    "인상주의 유화": "인상주의 유화, 유화 질감이 보이는 그림, 선명하게 쪼갠 색, 분위기 있는 빛.",
+    "잉크 스케치": "자유로운 잉크 스케치, 손으로 그린 표현적인 잉크 선, 간결하고 즉흥적.",
+    "모네 인상주의": "모네풍 인상주의 그림, 점점이 흩어진 붓질, 부드러운 빛, 야외 장면.",
+    "크레용 그림": "아이가 그린 크레용 그림, 왁스 크레용 질감, 밝고 단순한 색.",
+    "펜화 판화": "검은 펜 판화, 교차 빗금으로 명암을 낸 가는 선, 강한 대비, 흑백.",
+    "우키요에 목판화": "우키요에 일본 목판화, 신한가 화풍, 납작한 색면과 굵은 윤곽.",
+    "유화(붓터치)": "두꺼운 붓 자국이 보이는 유화, 임파스토 질감, 풍부한 색.",
     "MJ: 플랫 미니멀 일러스트": "미니멀한 플랫 벡터 일러스트, 단순한 도형, 적은 파스텔 색, 깔끔한 여백, 잡지 삽화풍.",
     "MJ: 니들펠트 인형": "양모 니들펠트로 만든 인형처럼, 보송한 펠트 질감, 손으로 만든 작은 장면, 부드러운 조명.",
     "MJ: 사이버펑크 네온": "사이버펑크 밤 도시, 분홍·청록 네온(글자 없이), 비에 젖은 반사, 미래적인 영화 장면.",

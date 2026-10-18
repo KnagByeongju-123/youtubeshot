@@ -16,4 +16,7 @@ if errorlevel 1 (echo FAILED anime model - illustration model still works) else 
 echo [4/4] Downloading watercolor style LoRA (fladdict/watercolor, CreativeML OpenRAIL-M, 302MB) ...
 .sd_venv\Scripts\python.exe -X utf8 -c "from huggingface_hub import hf_hub_download; hf_hub_download('fladdict/watercolor', 'fladdict-watercolor-sd-1-5.safetensors', local_dir=r'models/lora_watercolor'); print('OK')"
 if errorlevel 1 (echo FAILED watercolor LoRA - other styles still work) else (echo Done. Watercolor style is now available.)
+echo [5/5] Downloading 7 style LoRAs (MRA-Labs/neverending-styles: oil, ukiyo-e, pen engraving, crayon, Monet, ink, impressionist; MIT/Apache/OpenRAIL, about 530MB) ...
+.sd_venv\Scripts\python.exe -X utf8 -c "from huggingface_hub import hf_hub_download as d; [d('MRA-Labs/neverending-styles', f, local_dir=r'models/lora_styles') for f in ['sd15_oil_paint.safetensors','sd15_japanese_woodblock.safetensors','sd15_pen_ink_engraving.safetensors','sd15_crayon_drawing.safetensors','sd15_monet_impressionism.safetensors','sd15_ink_sketch.safetensors','sd15_impressionist_painting.safetensors']]; print('OK')"
+if errorlevel 1 (echo FAILED style LoRAs - other styles still work) else (echo Done. Oil, ukiyo-e, pen, crayon, Monet, ink styles are now available.)
 pause
