@@ -1,44 +1,16 @@
 # Claude → Codex 쪽지함
 
-밤·새벽 감성 영상 그림 13장입니다. 저장 위치: short_\_ai공유\받은그림\밤_새벽_감성\  (번호_이름.png)
+## 썸네일 배경 그림 요청
+저장 위치: short_\_ai공유\받은그림\썸네일\  (1.png 등)
 
-[ChatGPT 유화 그림 13장 - 밤·새벽 감성, 번호 순서대로 한 장씩. 그림이 나오면 받은그림 폴더(또는 지정 폴더)에 번호_이름.png 로 저장. 같은 대화에서 이어 그리면 화풍이 더 잘 맞습니다]
+[유튜브 썸네일 배경 그림 - '새벽 감성은 착각일까? 2026년 뇌 실험이 밝혀낸 '밤에 흔들리는 마음'의 정체']
+글자 없이 배경만 그려 주세요(문구는 프로그램이 얹습니다). 가로 16:9. 1안을 먼저, 마음에 들면 1장만 그려도 됩니다.
 
-1. 잠 못 드는 밤
-이미지를 그려 줘: 뇌 스캐너처럼 보이는 밝은 의료 장비 안, 머리에 센서를 붙이고 누운 사람의 평온한 옆모습, 푸른빛 모니터, 차분한 연구실. 화풍: 부드러운 유화, 밤과 새벽의 차분하고 몽환적인 색감(짙은 남색·보라·따뜻한 램프 불빛), 은은한 빛과 유리창 반사, 너무 어둡지 않게 감성적이고 서정적으로, 부드러운 붓터치. 가로 16:9, 그림 안에 글자·숫자·워터마크 없이.
+1안 (얹을 문구: 새벽 6시의 비밀 이 시간엔 믿지 마세요)
+이미지를 그려 줘: Bright pastel oil painting, extreme close-up of a young woman's face on the right side of the frame, her eyes glistening with unshed tears, a soft melancholic and longing expression, gently lit by the pale glow of a smartphone screen from below, clear transparent colors, clean luminous highlights on her cheeks and eyelashes, background a simple smooth gradient of soft lavender and powder blue dawn sky through a window, strong contrast between the warm-lit face and the cool calm background, left side of the frame left open and uncluttered for text space, romantic and warm mood, no yellowish tint, painterly brush texture, 16:9 horizontal composition, no text, no letters, no words, no numbers, no watermark no text, no letters, no numbers, no watermark. 화풍: 화사하고 밝은 파스텔 색의 유화, 맑고 투명한 색감, 깨끗한 하이라이트, 누런 기 없이, 로맨틱하고 따뜻하게.
 
-2. 오늘 밤의 감정
-이미지를 그려 줘: 창가 침대에 앉아 무릎을 안고 생각에 잠긴 지윤(20대 후반 한국 여성, 갸름한 얼굴, 긴 검은 생머리, 안경 없음, 보통 키의 날씬한 체형, 베이지 니트 잠옷), 밤 도시 불빛이 창에 비치고 머리맡 램프의 따뜻한 빛. 화풍: 부드러운 유화, 밤과 새벽의 차분하고 몽환적인 색감(짙은 남색·보라·따뜻한 램프 불빛), 은은한 빛과 유리창 반사, 너무 어둡지 않게 감성적이고 서정적으로, 부드러운 붓터치. 가로 16:9, 그림 안에 글자·숫자·워터마크 없이.
+2안 (얹을 문구: 뇌 브레이크가 풀린다 밤마다 벌어지는 일)
+이미지를 그려 줘: Bright pastel oil painting, large close-up profile of a young man's face filling the right half of the frame, eyes wide open and restless with sleepless emotion, a translucent glowing brain softly visible inside his head with a small warm coral-pink spark of emotion flickering at its center, clear transparent colors, clean crisp highlights, face lit half by cool mint-blue night light and half by soft peach dawn light, background a simple smooth gradient from deep periwinkle to pale rose, high contrast and clean, upper left area kept empty and minimal for text, romantic and warm atmosphere, no yellowish tint, delicate painterly brushwork, 16:9 horizontal composition, no text, no letters, no words, no numbers, no watermark no text, no letters, no numbers, no watermark. 화풍: 화사하고 밝은 파스텔 색의 유화, 맑고 투명한 색감, 깨끗한 하이라이트, 누런 기 없이, 로맨틱하고 따뜻하게.
 
-3. 아침의 호르몬
-이미지를 그려 줘: 커튼 사이로 들어오는 환한 아침 햇살에 기지개를 켜는 여성의 실루엣, 밝고 상쾌한 침실, 노란 아침빛. 화풍: 부드러운 유화, 밤과 새벽의 차분하고 몽환적인 색감(짙은 남색·보라·따뜻한 램프 불빛), 은은한 빛과 유리창 반사, 너무 어둡지 않게 감성적이고 서정적으로, 부드러운 붓터치. 가로 16:9, 그림 안에 글자·숫자·워터마크 없이.
-
-4. 기분의 하루 리듬
-이미지를 그려 줘: 하루의 시간 흐름을 담은 그림, 왼쪽은 밝은 아침 창가 오른쪽은 어두워지는 저녁, 하늘색에서 남보라로 그라데이션. 화풍: 부드러운 유화, 밤과 새벽의 차분하고 몽환적인 색감(짙은 남색·보라·따뜻한 램프 불빛), 은은한 빛과 유리창 반사, 너무 어둡지 않게 감성적이고 서정적으로, 부드러운 붓터치. 가로 16:9, 그림 안에 글자·숫자·워터마크 없이.
-
-5. 새벽 3시의 말
-이미지를 그려 줘: 깊은 새벽, 어두운 방에서 휴대폰 불빛만으로 얼굴이 비치는 지윤(20대 후반 한국 여성, 갸름한 얼굴, 긴 검은 생머리, 안경 없음, 보통 키의 날씬한 체형, 베이지 니트 잠옷), 생각에 잠긴 표정, 짙은 남색 어둠과 작은 화면 빛. 화풍: 부드러운 유화, 밤과 새벽의 차분하고 몽환적인 색감(짙은 남색·보라·따뜻한 램프 불빛), 은은한 빛과 유리창 반사, 너무 어둡지 않게 감성적이고 서정적으로, 부드러운 붓터치. 가로 16:9, 그림 안에 글자·숫자·워터마크 없이.
-
-6. 예민해진 경보
-이미지를 그려 줘: 사람 머리 옆얼굴 실루엣 안에 빛나는 뇌, 한 부분이 붉게 강하게 빛나고 앞쪽은 희미한, 추상적이고 감성적인 표현, 남보라 배경. 화풍: 부드러운 유화, 밤과 새벽의 차분하고 몽환적인 색감(짙은 남색·보라·따뜻한 램프 불빛), 은은한 빛과 유리창 반사, 너무 어둡지 않게 감성적이고 서정적으로, 부드러운 붓터치. 가로 16:9, 그림 안에 글자·숫자·워터마크 없이.
-
-7. 쌓이는 피로
-이미지를 그려 줘: 책상에 엎드려 지친 듯 눈을 감은 여성, 창밖은 푸른 새벽, 탁상 램프의 따뜻한 빛, 고요하고 나른한 분위기. 화풍: 부드러운 유화, 밤과 새벽의 차분하고 몽환적인 색감(짙은 남색·보라·따뜻한 램프 불빛), 은은한 빛과 유리창 반사, 너무 어둡지 않게 감성적이고 서정적으로, 부드러운 붓터치. 가로 16:9, 그림 안에 글자·숫자·워터마크 없이.
-
-8. 밤에 당기는 것
-이미지를 그려 줘: 늦은 밤 부엌, 냉장고 불빛 앞에서 야식을 꺼내려는 지윤(20대 후반 한국 여성, 갸름한 얼굴, 긴 검은 생머리, 안경 없음, 보통 키의 날씬한 체형, 베이지 니트 잠옷)의 뒷모습, 따뜻한 주황 불빛과 어두운 실내. 화풍: 부드러운 유화, 밤과 새벽의 차분하고 몽환적인 색감(짙은 남색·보라·따뜻한 램프 불빛), 은은한 빛과 유리창 반사, 너무 어둡지 않게 감성적이고 서정적으로, 부드러운 붓터치. 가로 16:9, 그림 안에 글자·숫자·워터마크 없이.
-
-9. 흔한 오해
-이미지를 그려 줘: 창밖 보름달과 별, 머리맡의 작은 알약 한 알과 물컵을 비추는 은은한 달빛, 차분하고 신비로운 밤 정물. 화풍: 부드러운 유화, 밤과 새벽의 차분하고 몽환적인 색감(짙은 남색·보라·따뜻한 램프 불빛), 은은한 빛과 유리창 반사, 너무 어둡지 않게 감성적이고 서정적으로, 부드러운 붓터치. 가로 16:9, 그림 안에 글자·숫자·워터마크 없이.
-
-10. 원시의 밤
-이미지를 그려 줘: 아주 먼 옛날 모닥불 가에서 밤을 지키며 어둠을 경계하는 사람의 실루엣, 별이 가득한 밤하늘, 따뜻한 불빛. 화풍: 부드러운 유화, 밤과 새벽의 차분하고 몽환적인 색감(짙은 남색·보라·따뜻한 램프 불빛), 은은한 빛과 유리창 반사, 너무 어둡지 않게 감성적이고 서정적으로, 부드러운 붓터치. 가로 16:9, 그림 안에 글자·숫자·워터마크 없이.
-
-11. 남은 질문
-이미지를 그려 줘: 새벽 2시를 가리키는 둥근 벽시계와 그 아래 잠든 사람과 깨어 있는 사람을 나란히, 한쪽은 어둡고 한쪽은 램프 빛, 대비. 화풍: 부드러운 유화, 밤과 새벽의 차분하고 몽환적인 색감(짙은 남색·보라·따뜻한 램프 불빛), 은은한 빛과 유리창 반사, 너무 어둡지 않게 감성적이고 서정적으로, 부드러운 붓터치. 가로 16:9, 그림 안에 글자·숫자·워터마크 없이.
-
-12. 아침에 맡기기
-이미지를 그려 줘: 잠들기 전 침대 옆 노트에 내일 할 일을 적는 지윤(20대 후반 한국 여성, 갸름한 얼굴, 긴 검은 생머리, 안경 없음, 보통 키의 날씬한 체형, 베이지 니트 잠옷), 조명을 낮춘 아늑한 침실, 따뜻하고 평온한 밤. 화풍: 부드러운 유화, 밤과 새벽의 차분하고 몽환적인 색감(짙은 남색·보라·따뜻한 램프 불빛), 은은한 빛과 유리창 반사, 너무 어둡지 않게 감성적이고 서정적으로, 부드러운 붓터치. 가로 16:9, 그림 안에 글자·숫자·워터마크 없이.
-
-13. 아침을 보여 주기
-이미지를 그려 줘: 밝은 아침, 창가에서 환하게 미소 지으며 커피잔을 든 지윤(20대 후반 한국 여성, 갸름한 얼굴, 긴 검은 생머리, 안경 없음, 보통 키의 날씬한 체형, 베이지 니트 잠옷), 상쾌한 햇살과 맑은 하늘, 희망적이고 따뜻하게. 화풍: 부드러운 유화, 밤과 새벽의 차분하고 몽환적인 색감(짙은 남색·보라·따뜻한 램프 불빛), 은은한 빛과 유리창 반사, 너무 어둡지 않게 감성적이고 서정적으로, 부드러운 붓터치. 가로 16:9, 그림 안에 글자·숫자·워터마크 없이.
+3안 (얹을 문구: 새벽에 보낸 그 문자 아침에 후회하는 이유)
+이미지를 그려 줘: Bright pastel oil painting, dramatic close-up of a young woman lying in soft white bedsheets on the right side of the frame, her face half hidden by the blanket, wistful hesitant eyes looking at a glowing smartphone held close, thumb hovering over the screen, the phone screen shown as a soft blank glow with no interface, clear transparent colors, clean shimmering highlights, background a simple calm gradient of misty pink and pale sky blue early dawn light, strong contrast between the luminous phone glow and the soft background, left third of the frame left open and empty for text, romantic warm emotional mood, no yellowish tint, smooth painterly brush strokes, 16:9 horizontal composition, no text, no letters, no words, no numbers, no watermark no text, no letters, no numbers, no watermark. 화풍: 화사하고 밝은 파스텔 색의 유화, 맑고 투명한 색감, 깨끗한 하이라이트, 누런 기 없이, 로맨틱하고 따뜻하게.
