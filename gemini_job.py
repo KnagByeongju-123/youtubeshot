@@ -161,6 +161,8 @@ LOOK_PARTS = {   # 외모 설명에 꼭 들어갈 것 (한국어·영어 둘 다
     "얼굴형": ("얼굴", "face"),
     "머리": ("머리", "hair", "bald", "대머리"),
     "체형·키": ("체형", "체격", "키", "마른", "통통", "날씬", "건장", "slim", "tall", "short", "build", "height", "stocky", "petite", "chubby"),
+    "안경": ("안경", "glasses", "spectacles"),
+    "수염(남성)": ("수염", "콧수염", "턱수염", "면도", "beard", "mustache", "moustache", "stubble", "clean-shaven", "shaven", "goatee", "sideburns"),
     "옷": ("옷", "셔츠", "니트", "정장", "블라우스", "조끼", "교복", "한복", "원피스", "재킷", "코트", "uniform", "shirt", "suit", "dress", "jacket", "sweater", "coat"),
 }
 
@@ -193,7 +195,8 @@ def check(job_dir):
     if not cast:
         probs.append("cast 가 비어 있음 - 두 장 이상 나오는 인물이 있으면 먼저 외모를 등록할 것")
     for c in cast:
-        miss = [k for k, ws in LOOK_PARTS.items() if not any(w in c["look"].lower() for w in ws)]
+        male = any(w in c["look"].lower() for w in ("남성", "남자", "할아버지", "소년", "아저씨", " man", "boy", "male", "gentleman"))
+        miss = [k for k, ws in LOOK_PARTS.items() if not any(w in c["look"].lower() for w in ws) and not (k.startswith("수염") and not male)]
         if miss:
             probs.append(f"외모 항목 부족 - {c['name']}: {', '.join(miss)} 없음")
     base = {c["name"]: re.split(r"[(\[]", c["name"])[0].strip() for c in cast}
