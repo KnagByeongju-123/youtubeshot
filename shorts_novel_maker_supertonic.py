@@ -3472,7 +3472,15 @@ def publish_kit(model, base, title, story, category, genre, s, chapters=None, so
             heads = [p for p in split_paras(body) if p.startswith("## ")]
             user = (f"콘텐츠 종류: {'장편 창작 이야기 낭독(픽션)' if fic else '장문 지식 다큐'} ({len(body)}자)\n소재: {genre}\n[지금 제목] {title}\n\n"
                     f"[{'회차' if fic else '챕터'}]\n" + "\n".join(heads) + "\n\n[본문 앞부분]\n" + body[:4000])
+            if notes and not fic:   # 대본의 사실 확인 메모: 가설·검증 중인 내용을 제목·설명에서 단정하지 않게
+                user += ("\n\n[사실 확인 메모 - 반드시 지킬 것]\n" + str(notes) +
+                         "\n- 메모에서 가설·추정·검증 중·논쟁·미해결로 적힌 내용은 제목·설명·고정댓글에서 사실로 단정하지 않는다"
+                         "('밝혀졌다' 대신 '유력한 가설', '검증 중' 등). 숫자는 추정치면 '약'·'추정'을 붙인다."
+                         '\n- JSON에 "caveat" 도 추가: 시청자용 1~2문장, 무엇이 아직 가설·검증 중·추정인지 쉬운 말로 (메모의 작가용 지시는 빼고)')
             pkg = ask_script_json(model, DOC_FICTION_PACKAGE_SYSTEM if fic else DOC_PACKAGE_SYSTEM, user)
+            cav = str(pkg.get("caveat") or "").strip() if isinstance(pkg, dict) else ""
+            if cav and cav not in str(pkg.get("description", "")):
+                pkg["description"] = (str(pkg.get("description", "")).rstrip() + "\n\n※ " + cav.lstrip("※ ")).strip()
             doc_date_note(pkg, fic)
         else:
             pkg = ask_script_json(model, PACKAGE_SYSTEM, f"콘텐츠 종류: {category}\n소재: {genre}\n[지금 제목] {title}\n\n[본문]\n{body[:6000]}")
