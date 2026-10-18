@@ -7575,6 +7575,23 @@ def build_narration(story, s, cache_dir, log=None, cancel=None, para_audio=None)
         res.append((i, a, d))
         if log and (k % 5 == 0 or k == len(items) - 1):
             log(f"  🎙 나레이션 {k + 1}/{len(items)}")
+    # 문단끼리 음량 고르기: 각 문단 RMS를 전체 중앙값에 맞춤 (문단마다 '작았다 커졌다' 하던 것 방지. 파일로 넣은 음성 포함)
+    rmss = [r for r in (float(np.sqrt(np.mean(a.astype(np.float64) ** 2))) for i, a, d in res if d > 0.3 and len(a) > SR * 0.3) if r > 1e-4]
+    if len(rmss) >= 2:
+        tgt = float(np.median(rmss))
+        fixed = []
+        for i, a, d in res:
+            if d > 0.15 and len(a) > 10:
+                r = float(np.sqrt(np.mean(a.astype(np.float64) ** 2)))
+                if r > 1e-4:
+                    a = (a * max(0.5, min(2.2, tgt / r))).astype(np.float32)
+                    pk = float(np.abs(a).max())
+                    if pk > 0.98:
+                        a = (a * (0.98 / pk)).astype(np.float32)
+            fixed.append((i, a, d))
+        res = fixed
+        if log:
+            log(f"  🔊 문단 음량 고르게 맞춤 ({len(rmss)}문단 기준)")
     return res
 
 
