@@ -310,6 +310,7 @@ IMAGE_STYLES = {
     "MJ: 니들펠트 인형": "needle felted wool figures, soft fuzzy felt texture, handmade craft, cute miniature scene, gentle studio light",
     "MJ: 플랫 미니멀 일러스트": "minimalist flat vector illustration, simple geometric shapes, limited pastel palette, clean negative space, modern editorial style",
     "유화(붓터치)": "oil painting with thick visible brush strokes, impasto texture, rich colors, painterly",
+    "유화(화사한 색)": "oil painting, soft bright pastel colors, fresh airy luminous palette, clean white highlights, delicate romantic brushwork, cheerful and warm",
     "우키요에 목판화": "ukiyo-e japanese woodblock print, shin hanga style, flat colors, bold outlines",
     "펜화 판화": "black and white engraving, pen and ink cross-hatching, fine line work, high contrast",
     "크레용 그림": "children's crayon drawing, waxy crayon texture, bright simple colors, naive childlike",
@@ -326,6 +327,7 @@ IMAGE_STYLE_NEG = {   # 스타일별로 빼야 할 것
     "펜화 판화": "color, photo, 3d render, blur",
     "우키요에 목판화": "photo, 3d render, gradient, realistic",
     "유화(붓터치)": "photo, flat, line art, 3d render",
+    "유화(화사한 색)": "yellow tint, sepia, muddy dark colors, brown wash, dull, grimy, gloomy, photo, 3d render",
     "MJ: 플랫 미니멀 일러스트": "photo, texture, 3d render, detailed",
     "MJ: 니들펠트 인형": "photo, 2d, flat, glossy",
     "MJ: 사이버펑크 네온": "daylight, flat, cartoon",
@@ -2504,6 +2506,7 @@ SD_MODELS = {"dreamshaper": (SD_MODEL_DIR, 5, 5.0), "anime": (SD_ANIME_DIR, 6, 1
 SD_STYLE_LORA = {
     "동화책 수채화": ("models/lora_watercolor/fladdict-watercolor-sd-1-5.safetensors", 0.6, "watercolor painting, "),
     "유화(붓터치)": ("models/lora_styles/sd15_oil_paint.safetensors", 0.75, "oil painting, thick brush strokes, "),
+    "유화(화사한 색)": ("models/lora_styles/sd15_oil_paint.safetensors", 0.55, "oil painting, bright soft colors, "),
     "우키요에 목판화": ("models/lora_styles/sd15_japanese_woodblock.safetensors", 0.7, "shin hanga style, woodblock print, "),
     "펜화 판화": ("models/lora_styles/sd15_pen_ink_engraving.safetensors", 0.8, "black and white engraving, "),
     "크레용 그림": ("models/lora_styles/sd15_crayon_drawing.safetensors", 0.8, "children's crayon drawing, "),
@@ -2526,7 +2529,7 @@ def sd_style_lora(preset):
 SD_STYLE_MODEL = {"웹툰": "anime", "지브리풍 손그림 애니": "anime", "70~80년대 순정만화": "anime", "70~80년대 레트로 SF 애니": "anime",
                   "짱구풍 코믹 애니": "anime", "레트로 로봇 애니": "anime", "풀컬러 만화(코믹스)": "anime",
                   "애니 수채화풍": "anime", "동화책 수채화": "anime",   # 수채화도 애니 모델(동화책 수채화는 + 수채화 보조). 일러스트 모델은 쓰지 않음
-                  "유화(붓터치)": "anime", "우키요에 목판화": "anime", "펜화 판화": "anime", "크레용 그림": "anime",
+                  "유화(붓터치)": "anime", "유화(화사한 색)": "anime", "우키요에 목판화": "anime", "펜화 판화": "anime", "크레용 그림": "anime",
                   "모네 인상주의": "anime", "잉크 스케치": "anime", "인상주의 유화": "anime"}
 
 
@@ -2787,6 +2790,7 @@ IMAGE_STYLES_KO = {   # Claude·Gemini 에 한국어로 줄 화풍 설명
     "펜화 판화": "검은 펜 판화, 교차 빗금으로 명암을 낸 가는 선, 강한 대비, 흑백.",
     "우키요에 목판화": "우키요에 일본 목판화, 신한가 화풍, 납작한 색면과 굵은 윤곽.",
     "유화(붓터치)": "두꺼운 붓 자국이 보이는 유화, 임파스토 질감, 풍부한 색.",
+    "유화(화사한 색)": "화사하고 밝은 파스텔 색의 유화, 맑고 투명한 색감, 깨끗한 하이라이트, 누런 기 없이, 로맨틱하고 따뜻하게.",
     "MJ: 플랫 미니멀 일러스트": "미니멀한 플랫 벡터 일러스트, 단순한 도형, 적은 파스텔 색, 깔끔한 여백, 잡지 삽화풍.",
     "MJ: 니들펠트 인형": "양모 니들펠트로 만든 인형처럼, 보송한 펠트 질감, 손으로 만든 작은 장면, 부드러운 조명.",
     "MJ: 사이버펑크 네온": "사이버펑크 밤 도시, 분홍·청록 네온(글자 없이), 비에 젖은 반사, 미래적인 영화 장면.",
@@ -13674,7 +13678,8 @@ class App(tk.Tk):
             if not research:
                 log("ℹ 최신 정보 반영을 위해 다큐는 웹 조사를 항상 합니다")
             log("🔎 웹 검색으로 최신 정보부터 조사 중... (3~10분)")
-            info = ask_json_alive(model, DOC_RESEARCH_SYSTEM, base, tools=WEB_TOOLS, log=log, label="웹 조사")
+            from research_agents import research_with_agents
+            info = research_with_agents(ask_json_alive, DOC_RESEARCH_SYSTEM, base, model, WEB_TOOLS, log, state_path)
             topic = info.get("topic") or topic
             sources = [str(x) for x in info.get("sources") or []]
             facts = json.dumps({k: info.get(k) for k in ("topic", "facts", "stories", "questions", "myths", "recent")}, ensure_ascii=False)
