@@ -6079,7 +6079,7 @@ def ko_numbers(text):
         if after.startswith("월") and 1 <= n <= 12:                     # 6월 → 유월, 10월 → 시월
             return {6: "유", 10: "시"}.get(n, ko_sino(n))
         before = m_.string[max(0, m_.start() - 1):m_.start()]
-        if 1 <= n <= 99 and before != "제" and after.startswith(_KO_NATIVE_UNITS) and not after.startswith(
+        if 1 <= n <= 99 and before != "제" and after.startswith(_KO_NATIVE_UNITS) and not (after.startswith("시간") and n >= 20) and not after.startswith(
                 ("시대", "시즌", "개월", "번째", "가지고", "달러", "개국", "배터", "배우", "시청", "장관", "장면", "장소", "장군", "통계", "곡선")):
             return ko_native(n)
         if n == 4 and after.startswith("번") and not after.startswith(("번째", "번이나", "번만", "번씩", "번도", "번을", "번 더")):
