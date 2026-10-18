@@ -13479,6 +13479,8 @@ class App(tk.Tk):
             self.write_log(f"대본 완성: {res['title']}" + (f"  [{res['note']}]" if res["note"] else ""))
             if doc:
                 self.write_log("다음 순서: 🎙 나레이션 만들기 → 🎬 MP4 만들기 → 📝 제목·업로드 문구 (챕터 목차가 설명란에 자동으로 들어가요)")
+            if not autophoto:       # 사진·그림 자동을 끈 대본: 그림은 Claude 작업 프롬프트로 (Gemini·ChatGPT)
+                self.write_log("🖼 나레이션만 썼어요. 그림은 「🤖 Claude 작업 프롬프트」 → '지금 대본 그대로'로 Gemini·ChatGPT 그림을 받아 넣고 MP4 까지 만들 수 있어요.")
             self.refresh_preview()
             self.save_cfg()
         msg = "Claude가 대본을 쓰는 중..."
@@ -14289,6 +14291,16 @@ class App(tk.Tk):
         ttk.Spinbox(r, from_=15, to=120, increment=5, textvariable=every, width=5).pack(side="left", padx=(4, 12))
         kit = tk.BooleanVar(value=True)
         ttk.Checkbutton(r, text="업로드 문구·썸네일까지", variable=kit).pack(side="left")
+        has_story = bool(story_text_only(self.get_story()).strip())
+        r2 = ttk.Frame(win, padding=(10, 0))
+        r2.pack(fill="x")
+        use_cur = tk.BooleanVar(value=has_story)
+        ttk.Radiobutton(r2, text="지금 대본 그대로 (대본 쓰기 건너뛰고 그림 → MP4)", variable=use_cur, value=True,
+                        state="normal" if has_story else "disabled").pack(side="left")
+        ttk.Radiobutton(r2, text="새로 대본 쓰기 (지금 종류·소재·주제·길이)", variable=use_cur, value=False).pack(side="left", padx=12)
+        out_root = self.vars["out_dir"].get() if "out_dir" in self.vars else os.path.join(BASE, "output")
+        cur_path = os.path.join(out_root or os.path.join(BASE, "output"), "그림작업", "_대본",
+                                (safe_name(self.title_var.get().strip() or self.topic_var.get().strip() or "대본") or "대본")[:50] + "_프로젝트.json")
         box = tk.Text(win, wrap="word", font=("맑은 고딕", 9))
         box.pack(fill="both", expand=True, padx=10, pady=6)
 
@@ -14307,14 +14319,20 @@ class App(tk.Tk):
             ratio = ratio_ko()
             q = lambda x: x.replace('"', "'")
             length = f"--minutes {ln:g}" if doc else f"--seconds {ln:g}"
-            txt = f"""[Claude 작업 요청 - 대본 → {t} 그림 → MP4]
+            if use_cur.get():
+                step1 = (f"1. 대본: 이미 있음 (프로그램에서 쓴 나레이션 대본) → PROJECT 경로: {cur_path}\n"
+                         f"   대본을 읽어 보고 작성 안내 문구가 나레이션에 섞였거나 어색한 곳이 있으면 알려만 준다(대본은 고치지 않음).\n"
+                         f"   대본에 이미 사진 줄이 있으면 2번에서 그 자리를 새 그림으로 바꾼다.")
+            else:
+                step1 = (f"1. 대본 쓰기 (몇 분 걸림, 백그라운드로 돌리고 끝나면 확인):\n"
+                         f"   py -3.11 -X utf8 make_script.py --category \"{q(cat)}\" --genre \"{q(genre)}\" --topic \"{q(topic)}\" {length}{' --research' if self.research_var.get() else ''}\n"
+                         + ("   (주제가 비어 있으면 소재에 어울리는 주제를 직접 정해 --topic 에 넣는다)\n" if not topic else "")
+                         + "   → 마지막 줄 'PROJECT <경로>'. '⚠ 확인 필요' 줄이 있으면 내용을 나에게 알려 준다.\n"
+                         "   대본을 읽어 보고 작성 안내 문구가 나레이션에 섞였거나 어색한 곳이 있으면 알려 준다.")
+            txt = f"""[Claude 작업 요청 - {'지금 대본' if use_cur.get() else '대본'} → {t} 그림 → MP4]
 작업 폴더: {BASE}  (이 폴더에서 작업. 답은 한국어로, 진행 상황을 짧게 알려 줄 것)
 
-1. 대본 쓰기 (몇 분 걸림, 백그라운드로 돌리고 끝나면 확인):
-   py -3.11 -X utf8 make_script.py --category "{q(cat)}" --genre "{q(genre)}" --topic "{q(topic)}" {length}{' --research' if self.research_var.get() else ''}
-   {'(주제가 비어 있으면 소재에 어울리는 주제를 직접 정해 --topic 에 넣는다)' if not topic else ''}
-   → 마지막 줄 'PROJECT <경로>'. '⚠ 확인 필요' 줄이 있으면 내용을 나에게 알려 준다.
-   대본을 읽어 보고 작성 안내 문구가 나레이션에 섞였거나 어색한 곳이 있으면 알려 준다.
+{step1}
 
 2. 그림 자리 만들기:
    py -3.11 -X utf8 gemini_job.py new "<PROJECT 경로>" --target {t} --every {every.get()}
@@ -14339,12 +14357,18 @@ class App(tk.Tk):
 다운로드 허락: 이 작업의 {t} 그림(다운로드 폴더, 장당 약 10MB) 다운로드를 허락합니다. 그 밖의 결제·계정 변경은 하지 말 것."""
             box.delete("1.0", "end")
             box.insert("1.0", txt)
-        for v in (tgt, sty, every, kit):
+        for v in (tgt, sty, every, kit, use_cur):
             v.trace_add("write", build)
         build()
 
         def copy():
             self.gem_target = tgt.get()
+            if use_cur.get():          # 지금 대본을 프로젝트 파일로 저장 (Claude 가 이 파일로 그림·MP4 작업)
+                d = self.project_dict()
+                d["settings"] = {k: v for k, v in d["settings"].items() if k not in SECRET_KEYS}
+                os.makedirs(os.path.dirname(cur_path), exist_ok=True)
+                atomic_write_text(cur_path, json.dumps(d, ensure_ascii=False, indent=1))
+                self.write_log("💾 지금 대본을 프로젝트로 저장: " + cur_path)
             self.clipboard_clear()
             self.clipboard_append(box.get("1.0", "end").strip())
             self.set_status("📋 Claude 작업 프롬프트 복사됨 → Claude Code 새 대화에 붙여넣기")
