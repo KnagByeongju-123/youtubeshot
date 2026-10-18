@@ -8,6 +8,7 @@ Gemini 에서 한 장씩 그려 다운로드하면 이 도구로 모아서 프�
                                                                      각 slot 의 prompt 는 비어 있음 → Claude 가 para(그림 바로 뒤 문단)를 보고 채워 작업.json 에 저장
   py -3.11 -X utf8 gemini_job.py put   <작업폴더> <번호> [그림파일]   다운로드 폴더의 새 Gemini 그림(또는 지정 파일)을 <번호>.png 로 옮김
   py -3.11 -X utf8 gemini_job.py status <작업폴더>                     받은 번호·남은 번호
+  py -3.11 -X utf8 gemini_job.py check  <작업폴더>                     등장인물 외모(cast) 등록·프롬프트 반영 확인
   py -3.11 -X utf8 gemini_job.py apply <작업폴더>                      받은 그림을 대본에 넣어 <제목>_Gemini.json 프로젝트로 저장
 """
 import glob
@@ -144,16 +145,96 @@ def new(a):
     title = re.sub(r'[\\/:*?"<>|]', " ", proj.get("title") or "그림").strip()[:40].rstrip(" .")
     jd = os.path.join(BASE, "output", "그림작업", f"{title}_{o.target}" + time.strftime("_%m%d_%H%M"))
     os.makedirs(jd, exist_ok=True)
-    json.dump({"target": o.target, "style": o.style, "project": proj, "slots": slots}, open(os.path.join(jd, "작업.json"), "w", encoding="utf-8"),
+    cast = [{"name": c.get("name", ""), "look": c.get("look_ko") or c.get("look", "")} for c in (proj.get("cast") or []) if isinstance(c, dict) and c.get("name")]
+    for sl in slots:
+        sl["chars"] = []
+    json.dump({"target": o.target, "style": o.style, "cast": cast, "project": proj, "slots": slots}, open(os.path.join(jd, "작업.json"), "w", encoding="utf-8"),
               ensure_ascii=False, indent=1)
     print(f"그림 자리 {len(slots)}곳 ({'기존 사진 자리 바꾸기' if marks else f'약 {o.every:g}초마다 문단 앞'})")
+    if cast:
+        print("등장인물 외모 " + str(len(cast)) + "명 (대본을 쓸 때 정한 것): " + ", ".join(c["name"] for c in cast))
     print("JOB " + jd)
+    return 0
+
+
+LOOK_PARTS = {   # 외모 설명에 꼭 들어갈 것 (한국어·영어 둘 다 인정)
+    "얼굴형": ("얼굴", "face"),
+    "머리": ("머리", "hair", "bald", "대머리"),
+    "체형·키": ("체형", "체격", "키", "마른", "통통", "날씬", "건장", "slim", "tall", "short", "build", "height", "stocky", "petite", "chubby"),
+    "옷": ("옷", "셔츠", "니트", "정장", "블라우스", "조끼", "교복", "한복", "원피스", "재킷", "코트", "uniform", "shirt", "suit", "dress", "jacket", "sweater", "coat"),
+}
+
+
+def parse_cast(v):
+    """cast: [{"name","look"}] 목록 또는 예전 형식의 글('이름: 외모' / '이름(외모)' 줄)"""
+    if isinstance(v, list):
+        return [c for c in v if isinstance(c, dict) and c.get("name") and c.get("look")]
+    out = []
+    for ln in str(v or "").splitlines():
+        ln = ln.strip(" -•\t")
+        if ":" in ln:
+            nm, lk = ln.split(":", 1)
+        elif "(" in ln and ln.endswith(")"):
+            nm, lk = ln.split("(", 1)
+            lk = lk[:-1]
+        else:
+            continue
+        nm = re.sub(r"\s+(대리|주임|사원|팀장|과장|부장|대표|씨)$", "", nm.strip())
+        if nm and lk.strip():
+            out.append({"name": nm.strip(), "look": lk.strip()})
+    return out
+
+
+def check(job_dir):
+    """등장인물 외모가 등록됐는지, 얼굴형·머리·체형·옷이 다 들어갔는지, 인물이 나오는 장면 프롬프트에 외모가 그대로 들어갔는지"""
+    j = load(job_dir)
+    cast = parse_cast(j.get("cast"))
+    probs = []
+    if not cast:
+        probs.append("cast 가 비어 있음 - 두 장 이상 나오는 인물이 있으면 먼저 외모를 등록할 것")
+    for c in cast:
+        miss = [k for k, ws in LOOK_PARTS.items() if not any(w in c["look"].lower() for w in ws)]
+        if miss:
+            probs.append(f"외모 항목 부족 - {c['name']}: {', '.join(miss)} 없음")
+    base = {c["name"]: re.split(r"[(\[]", c["name"])[0].strip() for c in cast}
+    for sl in j["slots"]:
+        p = str(sl.get("prompt") or "")
+        if not p:
+            probs.append(f"{sl['n']}번: prompt 비어 있음")
+            continue
+        names = [n for n in (sl.get("chars") or []) if n in base]
+        for nm in [x for x in sl.get("chars") or [] if x not in base]:
+            probs.append(f"{sl['n']}번: chars 의 '{nm}' 이(가) cast 에 없음")
+        got = {base[x] for x in names}
+        txt = str(sl.get("para", "")) + " " + p
+        for b in dict.fromkeys(base.values()):          # 이름(성 포함) 또는 '이름+조사'가 나오는데 chars 에 없는 인물
+            if not b or b in got:
+                continue
+            given = b[1:] if len(b) >= 3 else ""
+            hit = b in txt or (given and re.search(re.escape(given) + r"(은|는|이가|이는|이를|이의|이에게|이와|씨|에게|와|과|의|가|를|이)(?=\s|[,.!?]|$)", str(sl.get("para", ""))))
+            if not hit:
+                continue
+            same = [x for x in base if base[x] == b]
+            if len(same) == 1:
+                names.append(same[0])
+            else:
+                probs.append(f"{sl['n']}번: '{b}' 가 나오는데 어느 시기 외모인지 chars 에 없음")
+        for nm in names:
+            look = next(c["look"] for c in cast if c["name"] == nm)
+            if look[:20] not in p:
+                probs.append(f"{sl['n']}번: {nm} 의 외모 설명이 prompt 에 그대로 들어가 있지 않음")
+    if probs:
+        print("확인 필요 " + str(len(probs)) + "건:\n- " + "\n- ".join(probs))
+        return 1
+    print(f"OK 등장인물 {len(cast)}명 외모 등록·{len(j['slots'])}장 프롬프트 반영 확인")
     return 0
 
 
 def main(a):
     if a and a[0] == "new" and len(a) > 1:
         return new(a[1:])
+    if len(a) == 2 and a[0] == "check":
+        return check(os.path.abspath(a[1]))
     if len(a) < 2 or a[0] not in ("put", "status", "apply"):
         print(__doc__)
         return 2
