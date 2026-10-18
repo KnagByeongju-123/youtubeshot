@@ -287,9 +287,29 @@ IMAGE_STYLES = {
     "크라프트지 손그림(귀여운 낙서)": "naive childlike hand-drawn illustration on recycled brown kraft paper, flat opaque gouache shapes, black marker outlines, simple dot eyes, rosy pink cheeks, tiny smile, striped and dotted clothes, crayon texture, whimsical folk art doodle, muted pink, blue, yellow, white and black palette, paper texture visible",
     "실루엣(노을 그림자)": "silhouette art, figures and objects as solid pure black silhouettes with crisp clean edges, no facial details, against a glowing gradient sunset sky in orange, pink and purple, layered paper-cut landscape, minimalist, high contrast, cinematic",
     "색칠공부 밑그림(선만)": "coloring book page, clean bold black outlines only on pure white background, no color, no shading, no gray, simple closed shapes easy to color in, cute friendly characters, line art, printable coloring sheet",
+    "동화 난쟁이 마을": "whimsical classic children's fairy tale storybook illustration, tiny gnome village with mushroom houses and round wooden doors, little gnomes with pointed red hats and white beards, cozy forest, soft watercolor and fine ink lines, warm golden light, detailed and charming",
+    "연필 윤곽 스케치": "simple loose graphite pencil outline sketch on white paper, light quick contour lines only, minimal detail, no shading, no color, unfinished sketchbook look",
+    "필터: 색연필": "colored pencil drawing, visible pencil strokes and paper grain, soft layered hatching, gentle vivid colors on white paper",
+    "필터: 목탄 스케치": "charcoal drawing on textured paper, bold smudged black strokes, dramatic light and shadow, grayscale, expressive sketch",
+    "필터: 파스텔": "soft rough pastel drawing on toned paper, chalky textured strokes, blended dreamy colors, gentle light",
+    "필터: 펜화(그래픽 펜)": "black ink pen drawing with fine cross-hatching and stippling, detailed line work, high contrast, white background, engraving-like illustration",
+    "필터: 컷아웃(포스터화)": "cutout paper collage illustration, flat posterized color shapes with few colors, simplified forms, crisp edges, layered paper look",
+    "필터: 유화(드라이 브러시)": "oil painting with visible thick brush strokes and dry brush texture, impasto, rich colors, painterly canvas look",
+    "필터: 하프톤(망점 인쇄)": "retro halftone print illustration, visible dot pattern shading, limited CMYK colors, vintage comic and newspaper print look, slight misregistration",
+    "필터: 스테인드글라스": "stained glass window art, bold dark lead lines dividing glowing colored glass pieces, light shining through, jewel tones",
     "3D 애니(픽사풍)": "3D animated feature film style, soft global illumination, rounded stylized characters, expressive faces, cinematic composition",
 }
 IMAGE_STYLE_NEG = {   # 스타일별로 빼야 할 것
+    "필터: 스테인드글라스": "photo, realistic, 3d render, soft blur",
+    "필터: 하프톤(망점 인쇄)": "photo, smooth gradient, 3d render, realistic",
+    "필터: 유화(드라이 브러시)": "photo, smooth, flat vector, 3d render, line art",
+    "필터: 컷아웃(포스터화)": "photo, detailed texture, gradient, 3d render, realistic",
+    "필터: 펜화(그래픽 펜)": "color, photo, smooth shading, 3d render, blur",
+    "필터: 파스텔": "photo, sharp digital lines, 3d render, glossy",
+    "필터: 목탄 스케치": "color, photo, clean lines, 3d render",
+    "필터: 색연필": "photo, smooth digital painting, 3d render, flat vector",
+    "연필 윤곽 스케치": "color, shading, heavy lines, ink, photo, realistic, 3d render, filled areas",
+    "동화 난쟁이 마을": "photo, realistic, 3d render, dark, scary, anime",
     "색칠공부 밑그림(선만)": "color, colored, shading, gray, gradient, shadow, photo, realistic, texture, filled areas",
     "실루엣(노을 그림자)": "detailed face, facial features, color on figures, photo, realistic texture, 3d render, clutter",
     "크라프트지 손그림(귀여운 낙서)": "photo, realistic, 3d render, anime, detailed shading, glossy, gradient, complex background",
@@ -2503,7 +2523,10 @@ def check_image_defects(model, paths, log=None, want_fix=False):
 IMG_SOURCE_WEB = "근거 사진(웹)"
 IMG_SOURCE_PRESET = {"그림: 애니(웹툰)": "웹툰", "그림: 애니+수채화": "동화책 수채화", "그림: 애니 모델 그대로": "애니 수채화풍",   # 애니 모델 + 수채화 지시(보조 없음)
                      "그림: 크라프트지 낙서": "크라프트지 손그림(귀여운 낙서)", "그림: 실루엣": "실루엣(노을 그림자)",
-                     "그림: 색칠공부 밑그림": "색칠공부 밑그림(선만)"}
+                     "그림: 색칠공부 밑그림": "색칠공부 밑그림(선만)", "그림: 동화 난쟁이 마을": "동화 난쟁이 마을",
+                     "그림: 연필 윤곽 스케치": "연필 윤곽 스케치", "그림: 필터 색연필": "필터: 색연필", "그림: 필터 목탄": "필터: 목탄 스케치",
+                     "그림: 필터 파스텔": "필터: 파스텔", "그림: 필터 펜화": "필터: 펜화(그래픽 펜)", "그림: 필터 컷아웃": "필터: 컷아웃(포스터화)",
+                     "그림: 필터 유화": "필터: 유화(드라이 브러시)", "그림: 필터 하프톤": "필터: 하프톤(망점 인쇄)", "그림: 필터 스테인드글라스": "필터: 스테인드글라스"}
 IMG_SOURCE = {"mode": IMG_SOURCE_WEB}
 
 
@@ -2584,6 +2607,16 @@ def zip_image_files(zip_path, out_dir):
 
 
 IMAGE_STYLES_KO = {   # Claude·Gemini 에 한국어로 줄 화풍 설명
+    "필터: 스테인드글라스": "포토샵 스테인드글라스 필터처럼, 굵은 검은 납선으로 나뉜 빛나는 색유리 조각, 빛이 비쳐 드는 보석 같은 색.",
+    "필터: 하프톤(망점 인쇄)": "포토샵 하프톤 패턴 필터처럼, 망점으로 명암을 낸 옛날 인쇄물·만화 느낌, 적은 색, 살짝 어긋난 인쇄.",
+    "필터: 유화(드라이 브러시)": "포토샵 드라이 브러시·유화 필터처럼, 두꺼운 붓 자국이 보이는 유화, 캔버스 질감, 풍부한 색.",
+    "필터: 컷아웃(포스터화)": "포토샵 컷아웃 필터처럼, 색 수를 줄인 납작한 색면을 종이 오려 붙인 듯 겹친 그림, 단순한 형태, 또렷한 가장자리.",
+    "필터: 펜화(그래픽 펜)": "포토샵 그래픽 펜 필터처럼, 검은 펜의 가는 빗금·점묘로 명암을 낸 펜화, 강한 대비, 흰 바탕.",
+    "필터: 파스텔": "포토샵 거친 파스텔 필터처럼, 색 있는 종이 위 분필 같은 파스텔 결, 부드럽게 섞인 몽환적인 색.",
+    "필터: 목탄 스케치": "포토샵 목탄 필터처럼, 거친 종이 위 굵고 번진 검은 목탄 선, 극적인 명암, 흑백.",
+    "필터: 색연필": "포토샵 색연필 필터처럼, 색연필 결과 종이 질감이 보이는 그림, 겹겹이 쌓은 부드러운 빗금, 흰 종이 위 선명한 색.",
+    "연필 윤곽 스케치": "흰 종이에 연필로 빠르게 그린 간단한 윤곽선 스케치, 가볍고 자유로운 선만, 명암·색 없음, 덜 끝낸 스케치북 느낌.",
+    "동화 난쟁이 마을": "고전 어린이 동화책 삽화처럼, 버섯 지붕 집과 둥근 나무 문이 있는 작은 난쟁이 마을, 뾰족한 빨간 모자와 흰 수염의 난쟁이들, 아늑한 숲, 부드러운 수채와 가는 잉크 선, 따뜻한 금빛.",
     "색칠공부 밑그림(선만)": "색칠공부 책의 밑그림처럼 흰 바탕에 굵고 깔끔한 검은 선만, 색칠·명암·회색 없음, 칠하기 쉬운 닫힌 모양, 귀엽고 단순한 인물.",
     "실루엣(노을 그림자)": "모든 인물과 사물을 얼굴 없는 새까만 실루엣(그림자)으로, 또렷한 가장자리, 주황·분홍·보라로 번지는 노을빛 하늘 배경, 종이를 오려 겹친 듯한 풍경, 단순하고 강한 대비.",
     "크라프트지 손그림(귀여운 낙서)": "갈색 크라프트지(재생지) 위에 그린 아이 그림 같은 귀여운 손그림, 납작하게 칠한 불투명 과슈 물감과 검은 펜 테두리, 점 같은 눈, 분홍 볼, 작은 웃음, 줄무늬·물방울무늬 옷, 크레용 질감, 분홍·파랑·노랑·흰색·검정 위주의 소박한 색, 종이 질감이 보이게.",
