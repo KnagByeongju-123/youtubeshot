@@ -6208,8 +6208,12 @@ _GEON_WORD = r"(?:[일이삼사오육칠팔구십백천만억]{2,}|[십백천만
 
 
 def geon_kkeon(t):
-    """세는 말 '건'(件)은 숫자 뒤에서 [껀]으로 읽음: 1건 → 한 껀, 29건 → 스물아홉 껀, 447건 → 447 껀, 네 건 → 네 껀 ('이 건(이것)'·건물·건강은 그대로)"""
+    """세는 말 '건'(件)은 숫자 뒤에서 [껀]으로 읽음: 1건 → 한 껀, 29건 → 스물아홉 껀, 447건 → 사백사십일곱 껀, 네 건 → 네 껀 ('이 건(이것)'·건물·건강은 그대로)"""
     t = re.sub(r"(?<![\d.,])([1-9]\d?)\s?건" + _GEON_FOLLOW, lambda m_: ko_native(int(m_.group(1))) + " 껀", t)   # 1~99건 → 한 껀 … 스물아홉 껀 … 아흔아홉 껀
+    def big_(m_):
+        n = int(m_.group(1).replace(",", ""))
+        return (ko_sino(n - n % 10) + ko_native(n % 10) if n % 10 else ko_sino(n)) + " 껀"
+    t = re.sub(r"(?<![\d.])(\d{1,3}(?:,\d{3})+|[1-9]\d{2,})\s?건" + _GEON_FOLLOW, big_, t)   # 447건 → 사백사십일곱 껀
     t = re.sub(r"(\d)\s?건" + _GEON_FOLLOW, r"\1 껀", t)
     return re.sub(r"(?<![가-힣])(" + _GEON_WORD + r")\s?건" + _GEON_FOLLOW, r"\1 껀", t)
 
@@ -6232,6 +6236,10 @@ def tts_clean(text):
     t = re.sub(r"[\"“”'‘’]", "", t)
     if re.search(r"[가-힣]", t):
         t = geon_kkeon(t)                # 447건 → 447 껀 (숫자로 읽기 전에), 사백사십칠 건 → 사백사십칠 껀
+        t = re.sub(r"(?<![\d])(\d{2,4})-(\d{3,4})(?:-(\d{4}))?(?!\d)",          # 전화번호 → 한 자리씩 (1833-6972 → 일팔삼삼 육구칠이)
+                   lambda m_: " ".join("".join(_KO_DIG[int(c)] for c in g) for g in m_.groups() if g), t)
+        t = re.sub(r"(국번\s*없이|전화|번호는?|신고센터|콜센터)(\s*)(\d{3,4})(?=번|\s|[,.)]|$)",     # 국번 없이 118 → 일일팔
+                   lambda m_: m_.group(1) + m_.group(2) + "".join(_KO_DIG[int(c)] for c in m_.group(3)), t)
         t = re.sub(r"(?<![0-9가-힣])사번(은|이|을|과)?(?=[\s,.!?·:]|[도만의에처보까부]|$)",              # 낱말 '사번' ↔ 숫자 '4번' 구분
                    lambda m_: "사원번호" + {"은": "는", "이": "가", "을": "를", "과": "와"}.get(m_.group(1) or "", ""), t)
         if re.search(r"\d", t):
