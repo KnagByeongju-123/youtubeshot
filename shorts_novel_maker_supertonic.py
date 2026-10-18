@@ -284,9 +284,11 @@ IMAGE_STYLES = {
     "레트로 로봇 애니": "1970s Korean retro giant robot animation style, bold mechanical designs, dramatic heroic poses, cel shaded, vintage poster colors, action scene",
     "동화책 수채화": "children's picture book illustration, soft watercolor texture, warm gentle colors, rounded friendly shapes",
     "애니 수채화풍": "children's picture book illustration, soft watercolor texture, warm gentle colors, rounded friendly shapes",
+    "크라프트지 손그림(귀여운 낙서)": "naive childlike hand-drawn illustration on recycled brown kraft paper, flat opaque gouache shapes, black marker outlines, simple dot eyes, rosy pink cheeks, tiny smile, striped and dotted clothes, crayon texture, whimsical folk art doodle, muted pink, blue, yellow, white and black palette, paper texture visible",
     "3D 애니(픽사풍)": "3D animated feature film style, soft global illumination, rounded stylized characters, expressive faces, cinematic composition",
 }
 IMAGE_STYLE_NEG = {   # 스타일별로 빼야 할 것
+    "크라프트지 손그림(귀여운 낙서)": "photo, realistic, 3d render, anime, detailed shading, glossy, gradient, complex background",
     "연필 드로잉(선만)": "color, photo, realistic, painting",
     "드로잉+가벼운 채색": "photo, realistic, 3d render, heavy shading",
     "사실 묘사": "cartoon, anime, comic, sketch",
@@ -2495,7 +2497,8 @@ def check_image_defects(model, paths, log=None, want_fix=False):
 
 # 대본 쓸 때 넣을 이미지: 웹 근거 사진 또는 (사실 주제여도) 이 PC에서 그린 그림
 IMG_SOURCE_WEB = "근거 사진(웹)"
-IMG_SOURCE_PRESET = {"그림: 애니(웹툰)": "웹툰", "그림: 애니+수채화": "동화책 수채화", "그림: 애니 모델 그대로": "애니 수채화풍"}   # 애니 모델 + 수채화 지시(보조 없음)
+IMG_SOURCE_PRESET = {"그림: 애니(웹툰)": "웹툰", "그림: 애니+수채화": "동화책 수채화", "그림: 애니 모델 그대로": "애니 수채화풍",   # 애니 모델 + 수채화 지시(보조 없음)
+                     "그림: 크라프트지 낙서": "크라프트지 손그림(귀여운 낙서)"}
 IMG_SOURCE = {"mode": IMG_SOURCE_WEB}
 
 
@@ -2576,6 +2579,7 @@ def zip_image_files(zip_path, out_dir):
 
 
 IMAGE_STYLES_KO = {   # Claude·Gemini 에 한국어로 줄 화풍 설명
+    "크라프트지 손그림(귀여운 낙서)": "갈색 크라프트지(재생지) 위에 그린 아이 그림 같은 귀여운 손그림, 납작하게 칠한 불투명 과슈 물감과 검은 펜 테두리, 점 같은 눈, 분홍 볼, 작은 웃음, 줄무늬·물방울무늬 옷, 크레용 질감, 분홍·파랑·노랑·흰색·검정 위주의 소박한 색, 종이 질감이 보이게.",
     "동화책 수채화": "부드러운 수채화 그림책 일러스트, 따뜻하고 은은한 색, 종이 질감.",
     "애니 수채화풍": "부드러운 수채화 그림책 일러스트, 애니메이션 영화 같은 따뜻하고 차분한 색감, 종이 질감.",
     "웹툰": "한국 웹툰 스타일, 깔끔한 선, 셀 채색, 밝은 파스텔 색.",
