@@ -538,7 +538,7 @@ FIELDS = [
     ("영상", "fps", "FPS(60=부드러움, 30=빠른 제작)", "int", 30),
     ("영상", "quality", "화질(crf 18=최고·23=권장·28=작게)", "int", 23),
     ("영상", "scene_parts", "자막형: 장면별로 나눠 만들기(고친 장면만 다시·끝난 장면 유지)", "choice:on,off", "on"),
-    ("영상", "scene_trans", "장면 사이 전환 효과(장면별 제작 때)", "choice:페이드,밀어내기,덮기,닦아내기,확대,섞어서,없음", "페이드"),
+    ("영상", "scene_trans", "장면 사이 전환 효과(장면별 제작 때)", "choice:페이드,밀어내기,덮기,닦아내기,확대,시대전환(느린 디졸브),섞어서,없음", "페이드"),
     ("영상", "audio_out", "소리 저장 방식", "choice:MP4에 포함,MP4에 포함+MP3 따로,MP3만 따로(무음 MP4)", "MP4에 포함+MP3 따로"),
     ("영상", "thumb_style", "유튜브 썸네일 스타일(자동 저장용)", "choice:" + ",".join(THUMB_STYLES), THUMB_STYLES[0]),
     ("영상", "genre_auto", "장문: 소재 고르면 자막·그림 설정 자동", "choice:on,off", "on"),
@@ -5350,7 +5350,7 @@ class SubtitleRenderer:
         kind = str(self.s.get("slide_trans", "밀어내기"))
         if kind.startswith("섞어"):
             n = self._slide_no(idx)
-            return ["밀어내기", "덮기", "닦아내기", "확대"][(n if isinstance(n, int) else idx) % 4]
+            return ["밀어내기", "덮기", "닦아내기", "확대", "시대전환"][(n if isinstance(n, int) else idx) % 5]   # 가끔 시대 전환 섞임
         return kind.split(" ")[0]
 
     @staticmethod
@@ -5382,6 +5382,12 @@ class SubtitleRenderer:
                 cw, ch = w / z, h / z
                 return extent_resize(img, (w, h), ((w - cw) / 2, (h - ch) / 2, (w + cw) / 2, (h + ch) / 2))
             return Image.blend(zm(a, 1 + 0.25 * e), zm(b, 1.12 - 0.12 * e) if e < 1 else b, e)
+        if kind.startswith("시대"):                 # 시대 전환: 배경이 천천히 녹아들며 카메라가 완만히 들어감(같은 자리에서 시대가 바뀌는 느낌)
+            def zc(img, z):
+                cw, ch = w / z, h / z
+                return extent_resize(img, (w, h), ((w - cw) / 2, (h - ch) / 2, (w + cw) / 2, (h + ch) / 2))
+            z = 1 + 0.06 * e                        # 앞·뒤 사진을 같은 비율로 살짝 확대 → 피사체 위치가 유지된 채 배경만 바뀌는 듯
+            return Image.blend(zc(a, z), zc(b, z), float(smoothstep(e)))
         return Image.blend(a, b, e)                 # 페이드
 
     def _zoom_rect(self, idx, whole=False):
@@ -5437,7 +5443,7 @@ class SubtitleRenderer:
             p_ = self.shots[k - 1]
             if self._slide_no(p_["img"]) != self._slide_no(sh["img"]):
                 kind = self._trans_kind(sh["img"])
-                T = 0.6
+                T = 1.8 if kind.startswith("시대") else 0.6
                 if kind != "없음" and t - sh["t0"] < T:
                     trans = (p_, float(smoothstep((t - sh["t0"]) / T)), kind)
                 prev = None
@@ -8185,8 +8191,11 @@ def merge_parts_with_fx(parts, out, s, kind, log=None, cancel=None, work_dir=Non
     seq = []
     for k, p in enumerate(parts):
         if k > 0 and kind != "없음":
-            kk = TRANS_ROT[k % 4] if kind.startswith("섞어") else kind
-            sec = 0.4 if kk.startswith("페이드") else 0.6
+            if kind.startswith("섞어"):
+                kk = "시대전환" if k % 5 == 0 else TRANS_ROT[k % 4]   # 섞어서: 가끔(5번째 전환마다) 시대 전환
+            else:
+                kk = kind
+            sec = 0.4 if kk.startswith("페이드") else (1.8 if kk.startswith("시대") else 0.6)
             key = (f"{int(os.path.getmtime(parts[k - 1]))}|{os.path.getsize(parts[k - 1])}|{int(os.path.getmtime(p))}|{os.path.getsize(p)}|"
                    f"{kk}|{sec}|{W}x{H}|{s['fps']}|{s['quality']}")
             tp = os.path.join(work_dir, f"trans_{k:03d}.mp4")
@@ -10125,7 +10134,7 @@ def ppt_narrate(model, slides, tone, audience, length, log=None, cancel=None, us
 
 PPT_SUB_LANGS = ["한국어", "베트남어", "한국어+베트남어"]
 PPT_SIZES = ["화면 가득 (자막은 화면 안 아래)", "작게 (자막은 슬라이드 아래)"]
-PPT_TRANS = ["밀어내기", "덮기", "닦아내기", "확대", "페이드", "섞어서 (장마다 다르게)", "없음"]
+PPT_TRANS = ["밀어내기", "덮기", "닦아내기", "확대", "페이드", "시대전환 (느린 디졸브)", "섞어서 (장마다 다르게)", "없음"]
 PPT_MOTION = ["천천히 다가가기", "멈춤"]
 VI_FONT = next((p for p in (r"C:\Windows\Fonts\segoeuib.ttf", r"C:\Windows\Fonts\arialbd.ttf", r"C:\Windows\Fonts\tahomabd.ttf",
                             "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf") if os.path.exists(p)), "")   # 베트남어 성조 글자가 있는 글꼴
