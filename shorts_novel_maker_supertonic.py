@@ -5110,7 +5110,7 @@ class SubtitleRenderer:
         ax_, ay_ = DEPTH_AMP.get(amt, DEPTH_AMP["약하게"])
         if amt.startswith("약"):                                   # 약하게 = 맨 처음 방식 그대로 (9초 주기로 살짝 흔들림, 드리프트 없음)
             ph = 2 * np.pi * t / 9.0
-            ox, oy = bw * 0.022 * np.sin(ph), bh * 0.010 * np.sin(ph * 0.5 + 1.0)
+            ox, oy = bw * 0.007 * np.sin(ph), bh * 0.003 * np.sin(ph * 0.5 + 1.0)
         else:                                                      # 보통·강하게 = 장면 동안 한쪽으로 도는 드리프트 + 7초 흔들림
             ph = 2 * np.pi * t / 7.0
             ox = bw * ax_ * (0.55 * np.sin(ph) + 0.75 * (2 * p - 1))
@@ -5590,7 +5590,7 @@ DEPTH_DIR = os.path.join(BASE, "output", "depth_cache")
 _DEPTH_CACHE = {}
 _DEPTH_WARNED = set()
 _GRID_CACHE = {}
-DEPTH_AMP = {"약하게": (0.022, 0.010), "보통": (0.03, 0.013), "강하게": (0.045, 0.02)}
+DEPTH_AMP = {"약하게": (0.007, 0.003), "보통": (0.022, 0.010), "강하게": (0.035, 0.016)}   # 약하게는 아주 은은하게(기본)
 RENDER_VER = "2026-10-17b"   # 그리는 방식이 바뀌면 올림 → 장문 영상 구간 캐시를 새로 그림   # (가로, 세로) 최대 밀림 = 화면 크기 비율
 
 
