@@ -2,6 +2,7 @@
 
   py -3.11 -X utf8 render_project.py <프로젝트.json> [--kit] [--vi]
 
+  - --suffix 이름 : 결과 파일 이름 끝에 _이름 (같은 제목으로 덧붙일 부분을 따로 만들 때. 화면 제목은 그대로)
   - --vi : 한글 자막 위에 베트남어 자막을 함께 (자막 조각마다 번역해 프로젝트 파일에 저장, 다시 만들 때는 저장된 번역을 씀)
            결과 파일 이름 끝에 _베트남어자막
 
@@ -60,7 +61,8 @@ def main(a):
     s = app.get_settings()
     title, story = app.title_var.get().strip() or "제목 없음", app.get_story()
     out_root = os.path.join(s["out_dir"], "장문")
-    work = os.path.join(out_root, "_작업_" + m.safe_name(title)[:40])
+    suf = ("_" + a[a.index("--suffix") + 1]) if "--suffix" in a and a.index("--suffix") + 1 < len(a) else ""
+    work = os.path.join(out_root, "_작업_" + m.safe_name(title)[:40] + suf)
     os.makedirs(work, exist_ok=True)
     m.SCRIPT_ENGINE["s"] = s
     m.PHOTO_PLAN.update(sub=True, n=0)
@@ -69,7 +71,7 @@ def main(a):
     gate = m.PauseGate(os.path.join(HERE, "장문_일시정지중.flag"), app.cancel, log)
     app.cancel = gate
     log(f"▶ 프로젝트로 영상 만들기: {title} ({genre}) · 사진 {len(m.photo_credits(story))}장 · 배경음 {bgm}")
-    base = os.path.join(out_root, m.safe_name(title))
+    base = os.path.join(out_root, m.safe_name(title) + suf)
     m.atomic_write_text(base + "_프로젝트.json", json.dumps(app.project_dict(), ensure_ascii=False, indent=1))
 
     log("🎙 나레이션 만드는 중... (이미 만든 문단은 건너뜀)")
