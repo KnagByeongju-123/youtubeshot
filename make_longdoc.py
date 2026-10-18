@@ -50,7 +50,11 @@ MIN_PER_MUSIC = (0.6, 1.0)   # 명상 음악 영상 1분당 걸리는 시간(분
 BATCH_GENRES = ["세계의 축제", "신기한 풍속과 전통", "역사를 바꾼 결정적 순간", "세계의 외딴 마을과 작은 나라", "고고학 발굴 이야기",
                 "세계의 음식 문화", "대형 사고에서 배운 교훈", "도시 하나 깊이 보기", "발명과 우연한 발견", "세계의 신화와 민담 여행",
                 "심해의 세계", "세계의 신기한 법과 예절", "미라와 무덤의 비밀", "세계의 명절과 새해 풍습", "최신 고고학 발견"]
-BATCH = "--batch" in sys.argv
+# --실화(또는 --true-story): 실화 소재만 돌아가며 10분 다큐 연속 제작 (모두 지식 다큐 · 명상/재미 섞지 않음)
+TRUE_STORY_GENRES = ["[실화] 극한 생존기", "[실화] 미제 사건의 기록", "[실화] 사라진 사람과 배·비행기", "[실화] 믿기 힘든 우연",
+                     "[실화] 희대의 사기와 범죄", "[실화] 평범한 사람의 위대한 순간", "[실화] 재난에서 살아남은 날", "[실화] 불가능에 도전한 사람들"]
+BATCH = "--batch" in sys.argv or "--실화" in sys.argv or "--true-story" in sys.argv
+TRUE_STORY = "--실화" in sys.argv or "--true-story" in sys.argv
 MORE_PHOTOS = "--more-photos" in sys.argv
 SEG_SEC = 120
 
@@ -258,6 +262,10 @@ def main():
     c = dict(DEFAULT, **json.load(open(CFG, encoding="utf-8")))
     global CHANNEL_NOTE
     CHANNEL_NOTE = str(c.get("채널_소개") or DEFAULT["채널_소개"])
+    if TRUE_STORY:     # 실화 모드: 실화 소재만, 전부 지식 다큐로 (설정 파일의 연속_소재·연속_구성 무시)
+        c["연속_소재"] = list(TRUE_STORY_GENRES)
+        c["연속_구성"] = ["지식"]
+        print("📖 실화 연속 제작 모드: 실화 소재만 돌아가며 10분 다큐를 만듭니다 (명상·재미 편 없음)")
     if BATCH and not ask_batch_plan(c):
         print("취소했습니다. (아무것도 만들지 않음)")
         return
