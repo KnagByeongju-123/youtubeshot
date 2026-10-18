@@ -516,11 +516,11 @@ FIELDS = [
     ("자막형", "img_frame", "사진 테두리(상자 모드)", "choice:없음,만화 테두리(검정),흰 테두리", "없음"),
     ("자막형", "sub_max_chars", "자막 한 번에 글자 수", "int", 28),
     ("자막형", "img_motion", "사진 움직임", "choice:영상처럼(확대·이동·전환),천천히 확대만,없음", "영상처럼(확대·이동·전환)"),
-    ("자막형", "motion_count", "모션: 숫자 카운트업(통계 수치가 올라감)", "choice:on,off", "on"),
-    ("자막형", "motion_chart", "모션: 그래프 성장(% 수치 막대·게이지)", "choice:on,off", "on"),
-    ("자막형", "motion_icon", "모션: 강조 아이콘(체크·경고 등장)", "choice:on,off", "on"),
-    ("자막형", "motion_lower", "모션: 로어서드(챕터 제목 띠가 슬라이드)", "choice:on,off", "on"),
-    ("자막형", "motion_popup", "모션: 키워드 팝업(핵심어·대사가 튀어나옴)", "choice:on,off", "on"),
+    ("자막형", "motion_count", "모션: 숫자 카운트업(통계 수치가 올라감)", "choice:on,off", "off"),
+    ("자막형", "motion_chart", "모션: 그래프 성장(% 수치 막대·게이지)", "choice:on,off", "off"),
+    ("자막형", "motion_icon", "모션: 강조 아이콘(체크·경고 등장)", "choice:on,off", "off"),
+    ("자막형", "motion_lower", "모션: 로어서드(챕터 제목 띠가 슬라이드)", "choice:on,off", "off"),
+    ("자막형", "motion_popup", "모션: 키워드 팝업(핵심어·대사가 튀어나옴)", "choice:on,off", "off"),
     ("자막형", "img_depth", "사진 입체 움직임(2.5D · 깊이 AI, 앞뒤가 다르게 움직임)", "choice:on,off", "on"),
     ("자막형", "img_filter", "사진 필터(포토샵풍 · 모든 그림·사진에 덧씌움)", "choice:없음,연필 스케치,색연필,수채화,유화,컷아웃(포스터화),하프톤(망점),펜화(선),목탄,카툰,크라프트지 질감", "없음"),
     ("자막형", "img_depth_amt", "입체 움직임 세기(카메라 무빙)", "choice:약하게,보통,강하게", "약하게"),   # 세게 하면 가장자리 사물이 겹쳐 보임
@@ -4608,7 +4608,7 @@ class SubtitleRenderer:
         """문단마다 모션그래픽 요소를 미리 정함: 숫자 카운트업·그래프·아이콘·로어서드·키워드 팝업"""
         self.mgfx = {}
         s = self.s
-        on = lambda k: str(s.get(k, "on")) == "on"
+        on = lambda k: str(s.get(k, "off")) == "on"
         if self.slide or self.slide_full or not any(on(k) for k in ("motion_count", "motion_chart", "motion_icon", "motion_lower", "motion_popup")):
             return
         num_re = re.compile(r"([0-9][0-9,]*(?:\.[0-9]+)?)\s*(억|만|천)?\s*(%|퍼센트|배|건|명|원|개국|개|가지|위|시간|년|달러|톤|㎞|km|배로)")
@@ -5434,7 +5434,7 @@ class SubtitleRenderer:
             if age < 0:      # 첫 문단 시작 전(시작 정지 구간): 자막을 미리 보이지 않음 → 나레이션과 함께 한 번만 등장
                 lay = None
             elif sg["kind"] == "chapter":
-                lay = None if str(self.s.get("motion_lower", "on")) == "on" and getattr(self, "mgfx", None) else self._sub_layer(("ch", sg["i"]), "— " + sg["text"] + " —")
+                lay = None if str(self.s.get("motion_lower", "off")) == "on" and getattr(self, "mgfx", None) else self._sub_layer(("ch", sg["i"]), "— " + sg["text"] + " —")
             elif sg["kind"] == "lyric":
                 lay = self._sub_layer(("ly", sg["i"]), sg.get("sub", ""), lyric=sg["text"])
             elif sg["kind"] == "hold":
