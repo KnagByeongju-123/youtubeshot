@@ -2498,8 +2498,8 @@ SD_MODELS = {"dreamshaper": (SD_MODEL_DIR, 5, 5.0), "anime": (SD_ANIME_DIR, 6, 1
 # 화풍 보조 파일(LoRA): 스타일 → (파일, 세기, 프롬프트 앞에 붙일 말). 파일이 없으면 보조 없이 그림
 SD_STYLE_LORA = {
     "동화책 수채화": ("models/lora_watercolor/fladdict-watercolor-sd-1-5.safetensors", 0.6, "watercolor painting, "),
-    "유화(붓터치)": ("models/lora_styles/sd15_japanese_woodblock.safetensors", 0.75, "oil painting, thick brush strokes, "),
-    "우키요에 목판화": ("models/lora_styles/sd15_oil_paint.safetensors", 0.7, "shin hanga style, woodblock print, "),
+    "유화(붓터치)": ("models/lora_styles/sd15_oil_paint.safetensors", 0.75, "oil painting, thick brush strokes, "),
+    "우키요에 목판화": ("models/lora_styles/sd15_japanese_woodblock.safetensors", 0.7, "shin hanga style, woodblock print, "),
     "펜화 판화": ("models/lora_styles/sd15_pen_ink_engraving.safetensors", 0.8, "black and white engraving, "),
     "크레용 그림": ("models/lora_styles/sd15_crayon_drawing.safetensors", 0.8, "children's crayon drawing, "),
     "모네 인상주의": ("models/lora_styles/sd15_monet_impressionism.safetensors", 0.7, "Monet Style, "),
