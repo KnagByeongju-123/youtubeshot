@@ -53,7 +53,7 @@ def main(a):
     except Exception:
         cfg = {}
     genre = c.get("genre") or ""
-    bgm = m.SOUND_BY_TOPIC.get(genre, "잔잔한 패드")
+    bgm = str((c.get("settings") or {}).get("bgm_style") or "").strip() or m.SOUND_BY_TOPIC.get(genre, "잔잔한 패드")   # 프로젝트에 정한 배경음 우선
     app.vars["bgm_mode"].set("자동생성")
     app.vars["bgm_volume"].set(str(cfg.get("배경음_크기", 25)))
     app.vars["target_sec"].set("0")
