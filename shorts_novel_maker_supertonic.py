@@ -261,7 +261,7 @@ UI_TABS = [
     ("🎨 글꼴·색", "all", ["font_path", "title_font_path", "text_color", "title_color", "accent_color", "quote_color", "shadow", "stroke_width"]),
     ("🔤 자막 디자인", "sub", ["style_preset", "sub_layout", "head_pos", "color_preset", "sub_box_color", "sub_box_alpha", "head_style", "head_size",
                             "head_show", "sub_size", "sub_font_path", "sub_style", "sub_split", "sub_dialog", "sub_anim", "sub_max_chars", "sec_per_char"]),
-    ("🖼 사진·장면", "sub", ["img_fill", "img_motion", "img_depth", "img_depth_amt", "shot_sec", "punch_in", "img_frame", "img_bg", "photo_count", "img_radius"]),
+    ("🖼 사진·장면", "sub", ["img_fill", "img_motion", "img_depth", "img_depth_amt", "img_filter", "shot_sec", "punch_in", "img_frame", "img_bg", "photo_count", "img_radius"]),
     ("📜 스크롤 글자", "scroll", ["font_size", "title_size", "line_gap", "para_gap", "margin_x", "margin_right", "align", "photo_h",
                               "speed", "target_sec"]),
     ("📜 스크롤 효과", "scroll", ["fade", "focus", "focus_dim", "focus_y", "ease"]),
@@ -297,9 +297,33 @@ IMAGE_STYLES = {
     "필터: 유화(드라이 브러시)": "oil painting with visible thick brush strokes and dry brush texture, impasto, rich colors, painterly canvas look",
     "필터: 하프톤(망점 인쇄)": "retro halftone print illustration, visible dot pattern shading, limited CMYK colors, vintage comic and newspaper print look, slight misregistration",
     "필터: 스테인드글라스": "stained glass window art, bold dark lead lines dividing glowing colored glass pieces, light shining through, jewel tones",
+    "MJ: 시네마틱 영화 장면": "cinematic film still, dramatic volumetric lighting, shallow depth of field, anamorphic lens, rich color grading, highly detailed, 35mm film",
+    "MJ: 판타지 디지털 페인팅": "epic fantasy digital painting, concept art, luminous magical light, intricate details, painterly brushwork, grand scale",
+    "MJ: 아이소메트릭 미니어처": "isometric 3D miniature diorama, tilt-shift, tiny detailed world on a floating base, soft studio lighting, cute and clean",
+    "MJ: 클레이 애니메이션": "claymation style, handmade plasticine clay figures, soft fingerprints texture, stop-motion set, warm lighting, cute rounded shapes",
+    "MJ: 종이 공예(페이퍼 아트)": "layered paper craft art, cut paper shadow box, depth with soft shadows between paper layers, pastel colors, handmade",
+    "MJ: 우키요에 목판화": "ukiyo-e woodblock print style, flat colors, bold outlines, traditional Japanese printmaking texture, stylized waves and clouds",
+    "MJ: 수묵화(동양화)": "East Asian ink wash painting, sumi-e, expressive black ink brush strokes, soft gray washes, empty space, rice paper texture",
+    "MJ: 아르누보 포스터": "art nouveau poster illustration, ornamental floral borders, flowing lines, elegant figures, muted gold and pastel palette, decorative",
+    "MJ: 빈티지 여행 포스터": "vintage travel poster, mid-century flat illustration, bold simple shapes, limited retro palette, grainy print texture",
+    "MJ: 사이버펑크 네온": "cyberpunk neon city at night, glowing pink and cyan neon signs without text, rain-soaked reflections, futuristic, cinematic",
+    "MJ: 니들펠트 인형": "needle felted wool figures, soft fuzzy felt texture, handmade craft, cute miniature scene, gentle studio light",
+    "MJ: 플랫 미니멀 일러스트": "minimalist flat vector illustration, simple geometric shapes, limited pastel palette, clean negative space, modern editorial style",
     "3D 애니(픽사풍)": "3D animated feature film style, soft global illumination, rounded stylized characters, expressive faces, cinematic composition",
 }
 IMAGE_STYLE_NEG = {   # 스타일별로 빼야 할 것
+    "MJ: 플랫 미니멀 일러스트": "photo, texture, 3d render, detailed",
+    "MJ: 니들펠트 인형": "photo, 2d, flat, glossy",
+    "MJ: 사이버펑크 네온": "daylight, flat, cartoon",
+    "MJ: 빈티지 여행 포스터": "photo, 3d render, detailed realism",
+    "MJ: 아르누보 포스터": "photo, 3d render, modern",
+    "MJ: 수묵화(동양화)": "color, photo, 3d render",
+    "MJ: 우키요에 목판화": "photo, 3d render, gradient",
+    "MJ: 종이 공예(페이퍼 아트)": "photo, 3d render, glossy",
+    "MJ: 클레이 애니메이션": "photo, 2d, flat, anime",
+    "MJ: 아이소메트릭 미니어처": "photo, flat 2d, messy",
+    "MJ: 판타지 디지털 페인팅": "photo, flat, simple",
+    "MJ: 시네마틱 영화 장면": "cartoon, flat, low detail",
     "필터: 스테인드글라스": "photo, realistic, 3d render, soft blur",
     "필터: 하프톤(망점 인쇄)": "photo, smooth gradient, 3d render, realistic",
     "필터: 유화(드라이 브러시)": "photo, smooth, flat vector, 3d render, line art",
@@ -477,6 +501,7 @@ FIELDS = [
     ("자막형", "sub_max_chars", "자막 한 번에 글자 수", "int", 28),
     ("자막형", "img_motion", "사진 움직임", "choice:영상처럼(확대·이동·전환),천천히 확대만,없음", "영상처럼(확대·이동·전환)"),
     ("자막형", "img_depth", "사진 입체 움직임(2.5D · 깊이 AI, 앞뒤가 다르게 움직임)", "choice:on,off", "on"),
+    ("자막형", "img_filter", "사진 필터(포토샵풍 · 모든 그림·사진에 덧씌움)", "choice:없음,연필 스케치,색연필,수채화,유화,컷아웃(포스터화),하프톤(망점),펜화(선),목탄,카툰,크라프트지 질감", "없음"),
     ("자막형", "img_depth_amt", "입체 움직임 세기(카메라 무빙)", "choice:약하게,보통,강하게", "약하게"),   # 세게 하면 가장자리 사물이 겹쳐 보임
     ("자막형", "shot_sec", "한 장면 최대 길이(초)", "float", 4.5),
     ("자막형", "img_fill", "사진 배치", "choice:전체 화면(글자가 사진 위에),가운데 상자", "전체 화면(글자가 사진 위에)"),
@@ -2134,6 +2159,124 @@ def resolve_media(path):
     return q if os.path.exists(q) else None
 
 
+def _kraft_bg(w, h):
+    """갈색 재생지(크라프트지) 바탕: 섬유 점과 얼룩"""
+    rng = np.random.default_rng(7)
+    base = np.ones((h, w, 3), np.float32) * np.array([196, 172, 140], np.float32)
+    n = rng.normal(0, 9, (h // 4 + 1, w // 4 + 1, 1)).astype(np.float32)
+    n = np.asarray(Image.fromarray(np.clip(n[..., 0] + 128, 0, 255).astype(np.uint8)).resize((w, h), Image.BILINEAR), np.float32)[..., None] - 128
+    base += n
+    fib = rng.random((h, w)) > 0.996
+    base[fib] *= 0.55
+    return np.clip(base, 0, 255)
+
+
+def img_filter(im, name):
+    """포토샵 필터풍 효과를 그림에 덧씌움 (없음이면 그대로). OpenCV·PIL 만 사용"""
+    name = str(name or "없음")
+    if name == "없음" or im is None:
+        return im
+    im = im.convert("RGB")
+    a = np.asarray(im)
+    try:
+        if name in ("연필 스케치", "색연필", "목탄") and _cv2 is not None:      # 포토샵식: 흑백 → 반전 → 흐림 → 색상 닷지
+            gray = _cv2.cvtColor(a, _cv2.COLOR_RGB2GRAY)
+            blur = _cv2.GaussianBlur(255 - gray, (0, 0), 6 if name != "목탄" else 9)
+            sk = _cv2.divide(gray, 255 - blur, scale=256)
+            if name == "목탄":
+                sk = np.clip((sk.astype(np.float32) - 255) * 2.2 + 255, 0, 255).astype(np.uint8)
+                sk = _cv2.GaussianBlur(sk, (0, 0), 0.8)
+            else:
+                sk = np.clip((sk.astype(np.float32) - 255) * 1.3 + 255, 0, 255).astype(np.uint8)
+            if name == "색연필":
+                soft = _cv2.GaussianBlur(a, (0, 0), 3).astype(np.float32)
+                tint = 255 - (255 - soft) * 0.55                                  # 연하게 칠한 색
+                out = tint * (sk.astype(np.float32)[..., None] / 255)
+                return Image.fromarray(np.clip(out, 0, 255).astype(np.uint8))
+            return Image.fromarray(sk).convert("RGB")
+        if name == "수채화" and _cv2 is not None:
+            out = _cv2.stylization(_cv2.cvtColor(a, _cv2.COLOR_RGB2BGR), sigma_s=60, sigma_r=0.45)
+            return Image.fromarray(_cv2.cvtColor(out, _cv2.COLOR_BGR2RGB))
+        if name == "유화" and _cv2 is not None:      # 붓 자국처럼 뭉친 색면 + 살짝 선명
+            b = _cv2.cvtColor(a, _cv2.COLOR_RGB2BGR)
+            for _ in range(3):
+                b = _cv2.bilateralFilter(b, 9, 45, 9)
+            b = _cv2.medianBlur(b, 5)
+            p = Image.fromarray(_cv2.cvtColor(b, _cv2.COLOR_BGR2RGB)).filter(ImageFilter.UnsharpMask(radius=2, percent=80, threshold=3))
+            return ImageEnhance.Color(p).enhance(1.2)
+        if name == "컷아웃(포스터화)":
+            p = im.filter(ImageFilter.MedianFilter(7)).quantize(colors=8, method=Image.Quantize.MEDIANCUT).convert("RGB")
+            return p.filter(ImageFilter.ModeFilter(5))
+        if name == "하프톤(망점)":
+            w, h = im.size
+            cell = max(6, w // 160)
+            g = np.asarray(im.convert("L").resize((w // cell, h // cell), Image.BILINEAR), np.float32) / 255
+            col = np.asarray(im.resize((w // cell, h // cell), Image.BILINEAR))
+            out = Image.new("RGB", (w, h), (246, 240, 226))
+            dr = ImageDraw.Draw(out)
+            for yy in range(g.shape[0]):
+                for xx in range(g.shape[1]):
+                    r_ = (1 - g[yy, xx]) * cell * 0.75
+                    if r_ > 0.6:
+                        cx, cy = xx * cell + cell / 2, yy * cell + cell / 2
+                        dr.ellipse([cx - r_, cy - r_, cx + r_, cy + r_], fill=tuple(int(v * 0.8) for v in col[yy, xx]))
+            return out
+        if name == "펜화(선)" and _cv2 is not None:
+            gray = _cv2.cvtColor(a, _cv2.COLOR_RGB2GRAY)
+            gray = _cv2.medianBlur(gray, 5)
+            edge = _cv2.adaptiveThreshold(gray, 255, _cv2.ADAPTIVE_THRESH_MEAN_C, _cv2.THRESH_BINARY, 9, 7)
+            return Image.fromarray(edge).convert("RGB")
+        if name == "카툰" and _cv2 is not None:
+            bgr = _cv2.cvtColor(a, _cv2.COLOR_RGB2BGR)
+            col = bgr
+            for _ in range(2):
+                col = _cv2.bilateralFilter(col, 9, 60, 60)
+            gray = _cv2.medianBlur(_cv2.cvtColor(bgr, _cv2.COLOR_BGR2GRAY), 7)
+            edge = _cv2.adaptiveThreshold(gray, 255, _cv2.ADAPTIVE_THRESH_MEAN_C, _cv2.THRESH_BINARY, 9, 4)
+            out = _cv2.bitwise_and(col, col, mask=edge)
+            return Image.fromarray(_cv2.cvtColor(out, _cv2.COLOR_BGR2RGB))
+        if name == "크라프트지 질감":
+            w, h = im.size
+            paper = _kraft_bg(w, h)
+            src = np.asarray(im.filter(ImageFilter.MedianFilter(3)), np.float32)
+            light = src.mean(axis=2, keepdims=True) > 225                     # 아주 밝은 곳(흰 바탕)은 종이가 보이게
+            out = np.where(light, paper, src * (paper / 255) ** 0.6 * 1.08)        # 종이에 물감이 스민 듯 (곱하기)
+            return Image.fromarray(np.clip(out, 0, 255).astype(np.uint8))
+    except Exception:
+        return im
+    return im
+
+
+def filtered_media(path, name):
+    """사진 줄의 그림 + 필터 (필터 결과는 output/filter_cache 에 저장해 다시 쓰지 않음)"""
+    im = load_media_image(path)
+    if im is None or str(name or "없음") == "없음":
+        return im
+    import hashlib
+    q = resolve_media(path) or path
+    try:
+        stamp = f"{os.path.getsize(q)}_{int(os.path.getmtime(q))}"
+    except OSError:
+        stamp = ""
+    key = hashlib.md5(f"{q}|{stamp}|{name}|v1".encode("utf-8")).hexdigest()[:16]
+    cdir = os.path.join(BASE, "output", "filter_cache")
+    cp = os.path.join(cdir, key + ".jpg")
+    if os.path.exists(cp):
+        try:
+            c = Image.open(cp)
+            c.load()
+            return c.convert("RGB")
+        except Exception:
+            pass
+    out = img_filter(im, name)
+    try:
+        os.makedirs(cdir, exist_ok=True)
+        out.save(cp, quality=92)
+    except Exception:
+        pass
+    return out
+
+
 def load_media_image(path):
     q = resolve_media(path)
     if not q:
@@ -2607,6 +2750,18 @@ def zip_image_files(zip_path, out_dir):
 
 
 IMAGE_STYLES_KO = {   # Claude·Gemini 에 한국어로 줄 화풍 설명
+    "MJ: 플랫 미니멀 일러스트": "미니멀한 플랫 벡터 일러스트, 단순한 도형, 적은 파스텔 색, 깔끔한 여백, 잡지 삽화풍.",
+    "MJ: 니들펠트 인형": "양모 니들펠트로 만든 인형처럼, 보송한 펠트 질감, 손으로 만든 작은 장면, 부드러운 조명.",
+    "MJ: 사이버펑크 네온": "사이버펑크 밤 도시, 분홍·청록 네온(글자 없이), 비에 젖은 반사, 미래적인 영화 장면.",
+    "MJ: 빈티지 여행 포스터": "옛날 여행 포스터처럼, 1950~60년대 납작한 일러스트, 단순하고 굵은 형태, 레트로 색, 인쇄 질감.",
+    "MJ: 아르누보 포스터": "아르누보 포스터처럼, 꽃무늬 장식 테두리, 흐르는 곡선, 우아한 인물, 금빛과 파스텔 색.",
+    "MJ: 수묵화(동양화)": "동양 수묵화처럼, 먹의 번짐과 힘 있는 붓질, 연한 먹빛, 넉넉한 여백, 한지 질감.",
+    "MJ: 우키요에 목판화": "우키요에 목판화처럼, 납작한 색면과 굵은 윤곽, 전통 판화 질감, 양식화된 물결과 구름.",
+    "MJ: 종이 공예(페이퍼 아트)": "여러 겹의 종이를 오려 붙인 페이퍼 아트, 종이 사이 부드러운 그림자, 파스텔 색.",
+    "MJ: 클레이 애니메이션": "점토 인형 애니메이션(클레이메이션)처럼, 손으로 빚은 찰흙 인물과 세트, 손자국 질감, 따뜻한 조명.",
+    "MJ: 아이소메트릭 미니어처": "아이소메트릭 시점의 작은 3D 미니어처 디오라마, 떠 있는 받침 위의 작은 세상, 틸트시프트, 부드러운 조명.",
+    "MJ: 판타지 디지털 페인팅": "웅장한 판타지 콘셉트 아트 디지털 페인팅, 빛나는 마법 같은 빛, 섬세한 묘사, 붓 터치.",
+    "MJ: 시네마틱 영화 장면": "영화 한 장면 같은 시네마틱 사진풍, 극적인 빛줄기, 얕은 심도, 와이드 렌즈, 영화 색보정, 아주 정교하게.",
     "필터: 스테인드글라스": "포토샵 스테인드글라스 필터처럼, 굵은 검은 납선으로 나뉜 빛나는 색유리 조각, 빛이 비쳐 드는 보석 같은 색.",
     "필터: 하프톤(망점 인쇄)": "포토샵 하프톤 패턴 필터처럼, 망점으로 명암을 낸 옛날 인쇄물·만화 느낌, 적은 색, 살짝 어긋난 인쇄.",
     "필터: 유화(드라이 브러시)": "포토샵 드라이 브러시·유화 필터처럼, 두꺼운 붓 자국이 보이는 유화, 캔버스 질감, 풍부한 색.",
@@ -4287,7 +4442,7 @@ class SubtitleRenderer:
             med = parse_media(para)
             if med:
                 if med[0] not in imcache:          # 같은 그림(확대 장면 등)은 한 번만 읽음
-                    imcache[med[0]] = load_media_image(med[0])
+                    imcache[med[0]] = filtered_media(med[0], s.get("img_filter", "없음"))   # 사진 필터(포토샵풍)
                 im = imcache[med[0]]
                 if im is not None:
                     self.images.append((im, med[1]))
