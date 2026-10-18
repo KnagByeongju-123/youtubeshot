@@ -268,7 +268,8 @@ UI_TABS = [
 ]
 
 THUMB_STYLES = ["자동(분위기에 맞춰)", "기본(사진 꽉 + 큰 글자)", "반분할(글 패널 + 사진)", "노랑 패널(고대비)", "시네마 띠",
-                "뉴스 속보", "미스터리 다크", "빨간 강조(원 + 화살표)"]   # 요즘 유튜브에서 많이 쓰는 썸네일 스타일
+                "뉴스 속보", "미스터리 다크", "빨간 강조(원 + 화살표)",
+                "파스텔 하단 띠(감성)", "상단 큰 질문", "좌측 세로 띠", "하단 그라데이션(깔끔)", "메모지(손글씨 느낌)"]   # 요즘 유튜브에서 많이 쓰는 썸네일 스타일
 
 # 허구 이야기 그림 스타일 (이름 → 그림 AI에 주는 영어 지시). 실제 작품·작가 이름은 쓰지 않고 특징으로 묘사
 IMAGE_STYLES = {
@@ -3578,7 +3579,10 @@ def render_thumb(v, s, photo_im=None, size=None, font_path=None, style=None):
     size = size or (W, H)
     fn = {"반분할": lambda: _thumb_split(v, s, photo_im, size, fp, yellow=False), "노랑": lambda: _thumb_split(v, s, photo_im, size, fp, yellow=True),
           "시네마": lambda: _thumb_cinema(v, s, photo_im, size, fp), "뉴스": lambda: _thumb_news(v, s, photo_im, size, fp),
-          "미스터리": lambda: _thumb_mystery(v, s, photo_im, size, fp), "빨간": lambda: _thumb_circle(v, s, photo_im, size, fp)}
+          "미스터리": lambda: _thumb_mystery(v, s, photo_im, size, fp), "빨간": lambda: _thumb_circle(v, s, photo_im, size, fp),
+          "파스텔": lambda: _thumb_pastel(v, s, photo_im, size, fp), "상단": lambda: _thumb_topq(v, s, photo_im, size, fp),
+          "좌측": lambda: _thumb_sidebar(v, s, photo_im, size, fp), "하단 그라": lambda: _thumb_gradient(v, s, photo_im, size, fp),
+          "메모지": lambda: _thumb_memo(v, s, photo_im, size, fp)}
     for k_, f_ in fn.items():
         if style.startswith(k_):
             return f_()
@@ -3867,6 +3871,124 @@ def _thumb_circle(v, s, photo_im, size, fp):
     d.polygon([(ax1 + lw * 0.8 * math.cos(ang), ay1 + lw * 0.8 * math.sin(ang)),
                (ax1 - hl * math.cos(ang - 0.5), ay1 - hl * math.sin(ang - 0.5)),
                (ax1 - hl * math.cos(ang + 0.5), ay1 - hl * math.sin(ang + 0.5))], fill=(229, 57, 53, 255))
+    return out.convert("RGB")
+
+
+def _thumb_pastel(v, s, photo_im, size, fp):
+    """파스텔 하단 띠(감성): 밝은 사진 + 아래 반투명 흰 띠에 또렷한 글자. 유화·감성물에 어울림"""
+    w, h = size
+    port = h > w
+    lines, emph, small, mood = _vparts(v)
+    bg = _thumb_photo(photo_im, s, w, h, v.get("face", "center"), 1.06, 0.3)
+    bg = ImageEnhance.Color(ImageEnhance.Brightness(bg).enhance(1.05)).enhance(1.1)
+    out = bg.convert("RGBA")
+    d = ImageDraw.Draw(out)
+    m = int(w * 0.045)
+    f_ = _thumb_fit_font(fp, lines, w - 2 * m, h * (0.1 if port else 0.155))
+    lh = int(f_.size * 1.16)
+    bandh = lh * len(lines) + int(f_.size * 0.9)
+    by0 = h - bandh
+    band = Image.new("RGBA", (w, bandh), (255, 255, 255, 200))
+    out.alpha_composite(band, (0, by0))
+    d.rectangle([0, by0, w, by0 + max(5, h // 160)], fill=tuple(hex_rgb(s.get("accent_color", "#FF6FA5"))) + (255,))
+    y0 = by0 + int(f_.size * 0.45)
+    _thumb_lines(d, lines, emph, f_, m, y0, w - 2 * m, "#2B2B2B", s.get("accent_color", "#E24FA0"), "center", stroke=False, shadow=False)
+    if small:
+        _thumb_tag(out, small, fp, h * (0.042 if port else 0.065), m, int(h * 0.06), s.get("accent_color", "#FF6FA5"), "#FFFFFF", 0)
+    return out.convert("RGB")
+
+
+def _thumb_topq(v, s, photo_im, size, fp):
+    """상단 큰 질문: 위쪽 어두운 띠에 큰 질문 문구, 아래는 사진 (질문형 제목에 강함)"""
+    w, h = size
+    port = h > w
+    lines, emph, small, mood = _vparts(v)
+    bg = _thumb_photo(photo_im, s, w, h, v.get("face", "center"), 1.06, 0.5, target=(0.5, 0.62))
+    out = bg.convert("RGBA")
+    m = int(w * 0.05)
+    f_ = _thumb_fit_font(fp, lines, w - 2 * m, h * (0.1 if port else 0.17))
+    lh = int(f_.size * 1.12)
+    bandh = lh * len(lines) + int(f_.size * 0.8)
+    grad = Image.new("RGBA", (w, bandh), (0, 0, 0, 0))
+    ga = np.linspace(230, 90, bandh).astype(np.uint8)
+    arr = np.zeros((bandh, w, 4), np.uint8)
+    arr[..., 3] = ga[:, None]
+    arr[..., 0], arr[..., 1], arr[..., 2] = 12, 14, 26
+    out.alpha_composite(Image.fromarray(arr), (0, 0))
+    d = ImageDraw.Draw(out)
+    y0 = int(f_.size * 0.4)
+    _thumb_lines(d, lines, emph, f_, m, y0, w - 2 * m, "#FFFFFF", "#FFE135", "center", stroke=True, shadow=False, stroke_col="#0A0A1A")
+    return out.convert("RGB")
+
+
+def _thumb_sidebar(v, s, photo_im, size, fp):
+    """좌측 세로 띠: 왼쪽 색 띠에 세로로 쌓은 큰 글자, 오른쪽은 사진 (가로 영상 전용)"""
+    w, h = size
+    lines, emph, small, mood = _vparts(v)
+    pw = int(w * 0.44)
+    bg = _thumb_photo(photo_im, s, w - pw, h, v.get("face", "center"), 1.05, 0.3)
+    out = Image.new("RGBA", (w, h), tuple(hex_rgb(s.get("accent_color", "#1F6FEB"))) + (255,))
+    out.paste(bg, (pw, 0))
+    d = ImageDraw.Draw(out)
+    grad = Image.new("RGBA", (int(w * 0.08), h), (0, 0, 0, 0))
+    out.alpha_composite(grad, (pw, 0))
+    m = int(w * 0.035)
+    f_ = _thumb_fit_font(fp, lines, pw - 2 * m, h * 0.17)
+    lh = int(f_.size * 1.14)
+    y0 = (h - lh * len(lines)) // 2
+    _thumb_lines(d, lines, emph, f_, m, y0, pw - 2 * m, "#FFFFFF", "#FFE135", "left", stroke=True, shadow=False, stroke_col="#0A1A3A")
+    if small:
+        fs = load_font(fp, int(h * 0.06))
+        d.text((m, int(h * 0.06)), small, font=fs, fill="#FFE135")
+    return out.convert("RGB")
+
+
+def _thumb_gradient(v, s, photo_im, size, fp):
+    """하단 그라데이션(깔끔): 사진 아래가 자연스럽게 어두워지고 흰 글자. 어디에나 무난"""
+    w, h = size
+    port = h > w
+    lines, emph, small, mood = _vparts(v)
+    bg = _thumb_photo(photo_im, s, w, h, v.get("face", "center"), 1.05, 0.3)
+    out = bg.convert("RGBA")
+    gh = int(h * 0.55)
+    arr = np.zeros((gh, w, 4), np.uint8)
+    arr[..., 3] = np.linspace(0, 225, gh).astype(np.uint8)[:, None]
+    arr[..., 0], arr[..., 1], arr[..., 2] = 10, 10, 14
+    out.alpha_composite(Image.fromarray(arr), (0, h - gh))
+    d = ImageDraw.Draw(out)
+    m = int(w * 0.05)
+    f_ = _thumb_fit_font(fp, lines, w - 2 * m, h * (0.1 if port else 0.165))
+    lh = int(f_.size * 1.14)
+    y0 = int(h * (0.9 if port else 0.88)) - lh * len(lines)
+    _thumb_lines(d, lines, emph, f_, m, y0, w - 2 * m, "#FFFFFF", s.get("accent_color", "#FFE135"), "center" if port else "left", stroke=False, shadow=True)
+    if small:
+        _thumb_tag(out, small, fp, h * (0.04 if port else 0.062), m, int(h * 0.07), s.get("accent_color", "#FF4D4D"), "#FFFFFF", 0)
+    return out.convert("RGB")
+
+
+def _thumb_memo(v, s, photo_im, size, fp):
+    """메모지(손글씨 느낌): 사진 위에 살짝 기울인 종이쪽지 + 글자 (일상·감성·고백형)"""
+    w, h = size
+    port = h > w
+    lines, emph, small, mood = _vparts(v)
+    bg = _thumb_photo(photo_im, s, w, h, v.get("face", "center"), 1.05, 0.3)
+    bg = ImageEnhance.Brightness(bg).enhance(0.9)
+    out = bg.convert("RGBA")
+    m = int(w * 0.06)
+    f_ = _thumb_fit_font(fp, lines, int(w * 0.84), h * (0.095 if port else 0.15))
+    lh = int(f_.size * 1.18)
+    pad = int(f_.size * 0.6)
+    pw = int(w * 0.84) + pad * 2
+    ph = lh * len(lines) + pad * 2
+    note = Image.new("RGBA", (pw, ph), (0, 0, 0, 0))
+    nd = ImageDraw.Draw(note)
+    nd.rounded_rectangle([0, 0, pw - 1, ph - 1], radius=int(f_.size * 0.3), fill=(252, 250, 242, 244), outline=(40, 40, 40, 255), width=max(3, f_.size // 16))
+    _thumb_lines(nd, lines, emph, f_, pad, pad, pw - 2 * pad, "#222222", s.get("accent_color", "#D23A6A"), "center", stroke=False, shadow=False)
+    note = note.rotate(-3, expand=True, resample=Image.BICUBIC)
+    out.alpha_composite(note, ((w - note.width) // 2, int(h * (0.6 if port else 0.5) - note.height * 0.4)))
+    if small:
+        d = ImageDraw.Draw(out)
+        _thumb_tag(out, small, fp, h * (0.042 if port else 0.065), m, int(h * 0.07), s.get("accent_color", "#D23A6A"), "#FFFFFF", -3)
     return out.convert("RGB")
 
 
