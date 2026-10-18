@@ -514,6 +514,11 @@ FIELDS = [
     ("자막형", "img_frame", "사진 테두리(상자 모드)", "choice:없음,만화 테두리(검정),흰 테두리", "없음"),
     ("자막형", "sub_max_chars", "자막 한 번에 글자 수", "int", 28),
     ("자막형", "img_motion", "사진 움직임", "choice:영상처럼(확대·이동·전환),천천히 확대만,없음", "영상처럼(확대·이동·전환)"),
+    ("자막형", "motion_count", "모션: 숫자 카운트업(통계 수치가 올라감)", "choice:on,off", "on"),
+    ("자막형", "motion_chart", "모션: 그래프 성장(% 수치 막대·게이지)", "choice:on,off", "on"),
+    ("자막형", "motion_icon", "모션: 강조 아이콘(체크·경고 등장)", "choice:on,off", "on"),
+    ("자막형", "motion_lower", "모션: 로어서드(챕터 제목 띠가 슬라이드)", "choice:on,off", "on"),
+    ("자막형", "motion_popup", "모션: 키워드 팝업(핵심어·대사가 튀어나옴)", "choice:on,off", "on"),
     ("자막형", "img_depth", "사진 입체 움직임(2.5D · 깊이 AI, 앞뒤가 다르게 움직임)", "choice:on,off", "on"),
     ("자막형", "img_filter", "사진 필터(포토샵풍 · 모든 그림·사진에 덧씌움)", "choice:없음,연필 스케치,색연필,수채화,유화,컷아웃(포스터화),하프톤(망점),펜화(선),목탄,카툰,크라프트지 질감", "없음"),
     ("자막형", "img_depth_amt", "입체 움직임 세기(카메라 무빙)", "choice:약하게,보통,강하게", "약하게"),   # 세게 하면 가장자리 사물이 겹쳐 보임
@@ -4593,6 +4598,131 @@ class SubtitleRenderer:
         fo = load_font(s["font_path"], int(s["font_size"] * 0.85))
         self.outro_layer = build_card([s["outro_text"].strip()], fo, s["accent_color"], s, H * 0.72) if self.outro > 0 else None
         self.reveal_t = self.find_reveal()
+        self._prep_motion()
+
+    def _prep_motion(self):
+        """문단마다 모션그래픽 요소를 미리 정함: 숫자 카운트업·그래프·아이콘·로어서드·키워드 팝업"""
+        self.mgfx = {}
+        s = self.s
+        on = lambda k: str(s.get(k, "on")) == "on"
+        if self.slide or self.slide_full or not any(on(k) for k in ("motion_count", "motion_chart", "motion_icon", "motion_lower", "motion_popup")):
+            return
+        num_re = re.compile(r"([0-9][0-9,]*(?:\.[0-9]+)?)\s*(억|만|천)?\s*(%|퍼센트|배|건|명|원|개국|개|가지|위|시간|년|달러|톤|㎞|km|배로)")
+        warn_kw = ("과태료", "벌금", "징역", "과징금", "처벌")
+        for k, sg in enumerate(self.segs):
+            sg["_k"] = k
+            if sg["kind"] == "chapter":
+                if on("motion_lower"):
+                    self.mgfx[k] = {"type": "lower", "text": sg["text"]}
+                continue
+            if sg["kind"] != "text":
+                continue
+            txt = str(sg.get("text") or "")
+            m = None
+            for mm in num_re.finditer(txt):
+                rv = float(mm.group(1).replace(",", ""))
+                if mm.group(3) == "년" and 1900 <= rv <= 2200:   # 연도는 카운트업 안 함
+                    continue
+                m = mm
+                break
+            if m and (on("motion_count") or on("motion_chart")):
+                raw = float(m.group(1).replace(",", ""))
+                unit = m.group(3)
+                pct = raw if unit in ("%", "퍼센트") else None
+                disp = m.group(0).strip()
+                warn = any(w in txt for w in warn_kw)
+                self.mgfx[k] = {"type": "number", "disp": disp, "raw": raw, "unit": unit, "pct": pct,
+                                "chart": on("motion_chart") and pct is not None, "icon": on("motion_icon"), "warn": warn}
+                continue
+            if on("motion_popup"):
+                q = re.search(r"[\"\u201c\u201d]([^\"\u201c\u201d]{2,16})[\"\u201c\u201d]", txt) or re.search(r"[\u2018\u2019'\u0027]([^\u2018\u2019'\u0027]{3,16})[\u2018\u2019'\u0027]", txt)
+                if q and not q.group(1).strip().isdigit():
+                    self.mgfx[k] = {"type": "popup", "text": q.group(1).strip()}
+
+    def _motion_layer(self, info, age, sg):
+        """모션그래픽 한 장 (RGBA). age=이 문단 시작 뒤 지난 초. 나타났다가 유지(끝에 잠깐 안 넘침)"""
+        s = self.s
+        W_, H_ = W, H
+        layer = Image.new("RGBA", (W_, H_), (0, 0, 0, 0))
+        d = ImageDraw.Draw(layer)
+        acc = tuple(hex_rgb(s["accent_color"]))
+        warn_col = (220, 60, 60)
+        ease = lambda u: 1 - (1 - max(0.0, min(1.0, u))) ** 3     # easeOutCubic
+        dur = max(0.6, float(sg.get("dur", 3)))
+        typ = info["type"]
+        if typ == "lower":            # 챕터 제목이 화면 왼쪽 아래에서 슬라이드로 (챕터 세그먼트 동안)
+            txt = str(info["text"])
+            fz = int(H_ * 0.045)
+            fnt = load_font(s["title_font_path"] or s["font_path"], fz)
+            tw = int(d.textlength(txt, font=fnt))
+            bw, bh = tw + fz * 2, int(fz * 1.9)
+            u = ease(age / 0.6)
+            x = int(-bw + (W//12 + bw) * u)         # 왼쪽 밖에서 들어옴
+            y = int(H_ * 0.80)
+            a_ = int(235 * min(1.0, age / 0.3)) if age < dur - 0.4 else int(235 * max(0.0, (dur - age) / 0.4))
+            d.rectangle([x, y, x + bw, y + bh], fill=(20, 20, 20, a_))
+            d.rectangle([x, y, x + int(fz * 0.3), y + bh], fill=acc + (a_,))
+            d.text((x + fz, y + bh // 2), txt, font=fnt, fill=(255, 255, 255, a_), anchor="lm")
+            return layer
+        up = int(H_ * 0.28)        # 제목(상단) 아래, 자막(하단) 위 빈 자리
+        cx = int(W_ * 0.76)
+        if typ == "number":
+            u = ease(age / 1.4)
+            cur = info["raw"] * u
+            if info["unit"] in ("%", "퍼센트"):
+                txt = f"{cur:.0f}%"
+            elif info["raw"] == int(info["raw"]):
+                txt = f"{int(round(cur)):,}{info['unit']}"
+            else:
+                txt = f"{cur:.1f}{info['unit']}"
+            col = warn_col if info["warn"] else acc
+            fz = int(H_ * 0.085)
+            fnt = load_font(s["title_font_path"] or s["font_path"], fz)
+            pop = ease(age / 0.35)
+            fz2 = max(10, int(fz * (0.6 + 0.4 * pop)))
+            fnt = load_font(s["title_font_path"] or s["font_path"], fz2)
+            a_ = int(255 * min(1.0, age / 0.25))
+            tw = int(d.textlength(txt, font=fnt))
+            pad = int(fz * 0.4)
+            bx0, by0 = cx - tw // 2 - pad, up
+            d.rounded_rectangle([bx0 - pad, by0 - pad, cx + tw // 2 + pad * 2, by0 + fz2 + pad], radius=int(fz * 0.2), fill=(255, 255, 255, int(a_ * 0.92)))
+            ix = bx0
+            if info["icon"]:          # 체크(일반) 또는 경고(!) 아이콘
+                r = fz2 // 2
+                icx, icy = bx0 - pad // 2, by0 + fz2 // 2
+                d.ellipse([icx - r, icy - r, icx + r, icy + r], fill=col + (a_,))
+                if info["warn"]:
+                    d.text((icx, icy - r * 0.08), "!", font=load_font(s["title_font_path"] or s["font_path"], int(r * 1.5)), fill=(255, 255, 255, a_), anchor="mm")
+                else:
+                    d.line([(icx - r * 0.45, icy), (icx - r * 0.1, icy + r * 0.4), (icx + r * 0.5, icy - r * 0.4)], fill=(255, 255, 255, a_), width=max(3, r // 4))
+                ix = bx0 + r
+            d.text((cx, by0 + fz2 // 2), txt, font=fnt, fill=col + (a_,), anchor="mm")
+            if info["chart"] and info["pct"] is not None:    # 아래에 가로 막대 게이지가 그 %만큼 차오름
+                gy = by0 + fz2 + pad + int(fz * 0.25)
+                gw = int(W_ * 0.22)
+                gx0 = cx - gw // 2
+                gh = int(fz * 0.22)
+                d.rounded_rectangle([gx0, gy, gx0 + gw, gy + gh], radius=gh // 2, fill=(255, 255, 255, int(a_ * 0.5)))
+                fillw = int(gw * min(1.0, info["pct"] / 100) * u)
+                if fillw > gh:
+                    d.rounded_rectangle([gx0, gy, gx0 + fillw, gy + gh], radius=gh // 2, fill=col + (a_,))
+            return layer
+        if typ == "popup":
+            txt = str(info["text"])
+            u = ease(age / 0.4)
+            fz = int(H_ * 0.07 * (0.5 + 0.5 * u))
+            fnt = load_font(s["title_font_path"] or s["font_path"], max(12, fz))
+            a_ = int(255 * min(1.0, age / 0.3)) if age < 2.6 else int(255 * max(0.0, (3.2 - age) / 0.6))
+            if a_ <= 2:
+                return layer
+            tw = int(d.textlength(txt, font=fnt))
+            x = cx if not self.full else int(W_ * 0.5)
+            y = up + int(H_ * 0.02)
+            pad = int(fz * 0.45)
+            d.rounded_rectangle([x - tw // 2 - pad, y - pad, x + tw // 2 + pad, y + fz + pad], radius=int(fz * 0.25), fill=acc + (int(a_ * 0.92),))
+            d.text((x, y + fz // 2), txt, font=fnt, fill=(255, 255, 255, a_), anchor="mm")
+            return layer
+        return layer
 
     # --- 배치 (자막 배치·제목 위치) ---
     def _apply_layout(self, s, m):
@@ -5300,7 +5430,7 @@ class SubtitleRenderer:
             if age < 0:      # 첫 문단 시작 전(시작 정지 구간): 자막을 미리 보이지 않음 → 나레이션과 함께 한 번만 등장
                 lay = None
             elif sg["kind"] == "chapter":
-                lay = self._sub_layer(("ch", sg["i"]), "— " + sg["text"] + " —")
+                lay = None if str(self.s.get("motion_lower", "on")) == "on" and getattr(self, "mgfx", None) else self._sub_layer(("ch", sg["i"]), "— " + sg["text"] + " —")
             elif sg["kind"] == "lyric":
                 lay = self._sub_layer(("ly", sg["i"]), sg.get("sub", ""), lyric=sg["text"])
             elif sg["kind"] == "hold":
@@ -5336,6 +5466,14 @@ class SubtitleRenderer:
             if lay is not None:
                 lay = self._animate_sub(lay, age)
                 canvas.alpha_composite(lay)
+            mg = getattr(self, "mgfx", None)
+            if mg:
+                info = mg.get(sg.get("_k"))
+                if info is not None and (t - sg["t0"]) >= 0:
+                    try:
+                        canvas.alpha_composite(self._motion_layer(info, t - sg["t0"], sg))
+                    except Exception:
+                        pass
         else:
             canvas.alpha_composite(self.head_layer)
         out = canvas.convert("RGB")
