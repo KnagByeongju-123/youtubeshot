@@ -4486,7 +4486,8 @@ class SubtitleRenderer:
         x0, y0, x1, y1 = self.sub_box
         size = int(s["sub_size"] * getattr(self, "sub_scale", 1.0))
         fpath = s.get("sub_font_path") or s["title_font_path"] or s["font_path"]
-        trans = None if lyric else (s.get("sub_trans") or {}).get(text.strip())     # 두 언어 자막: 아래 줄에 번역
+        trans = None if lyric else (s.get("sub_trans") or {}).get(text.strip())     # 두 언어 자막: 번역 줄 (기본 아래, sub2_above=on 이면 위)
+        above = str(s.get("sub2_above", "off")) == "on"
 
         def lay(sz):
             f_ = load_font(fpath, sz)
@@ -4508,9 +4509,12 @@ class SubtitleRenderer:
             tw = max(font.getlength(ln) for ln in lines)
             pad = int(size * 0.55)
             a_ = int(255 * max(0.0, min(1.0, float(s.get("sub_box_alpha", 0.6) or 0))))
-            d.rounded_rectangle([x0 - pad, y - pad * 0.8, x0 + tw + pad, y + lh * len(lines) - lh * 0.15 + pad * 0.6], radius=int(size * 0.35),
+            if lines2:   # 두 언어 자막: 상자가 번역 줄까지 덮게
+                tw = max([tw] + [font2.getlength(ln) for ln in lines2])
+            bh_ = (tot - lh * 0.15) if lines2 else (lh * len(lines) - lh * 0.15)
+            d.rounded_rectangle([x0 - pad, y - pad * 0.8, x0 + tw + pad, y + bh_ + pad * 0.6], radius=int(size * 0.35),
                                 fill=tuple(hex_rgb(s.get("sub_box_color", "#000000"))) + (a_,))
-            d.rectangle([x0 - pad, y - pad * 0.8, x0 - pad + 9, y + lh * len(lines) - lh * 0.15 + pad * 0.6], fill=tuple(hex_rgb(s["accent_color"])) + (255,))
+            d.rectangle([x0 - pad, y - pad * 0.8, x0 - pad + 9, y + bh_ + pad * 0.6], fill=tuple(hex_rgb(s["accent_color"])) + (255,))
         if getattr(self, "sub_pill", False) and lines:   # 화면 가득 슬라이드: 자막 뒤 반투명 상자 (글자가 슬라이드 위에서도 잘 보이게)
             ws_ = [font.getlength(ln) for ln in lines] + ([font2.getlength(ln) for ln in lines2] if lines2 else [])
             pad, cx_ = int(size * 0.55), (x0 + x1) / 2
@@ -4543,14 +4547,16 @@ class SubtitleRenderer:
         thin = getattr(self, "sub_thin", False) or getattr(self, "sub_boxed", False)
         sw = 0 if (band or bubble or thin) else self._stroke(size)
         shadow = (s.get("shadow", "on") == "on" or thin) and not (band or bubble)
-        for ln in lines:
-            x = x0 if left else x0 + ((x1 - x0) - font.getlength(ln)) / 2
-            if shadow:
-                d.text((x + size // 18, y + size // 14), ln, font=font, fill=(0, 0, 0, 150), stroke_width=sw, stroke_fill=(0, 0, 0, 150))
-            d.text((x, y), ln, font=font, fill=col, stroke_width=sw, stroke_fill="#000000")
-            y += lh
-        if lines2:                                   # 번역 줄 (작게, 다른 색)
-            y += int(size * 0.15)
+        def draw_main(y):
+            for ln in lines:
+                x = x0 if left else x0 + ((x1 - x0) - font.getlength(ln)) / 2
+                if shadow:
+                    d.text((x + size // 18, y + size // 14), ln, font=font, fill=(0, 0, 0, 150), stroke_width=sw, stroke_fill=(0, 0, 0, 150))
+                d.text((x, y), ln, font=font, fill=col, stroke_width=sw, stroke_fill="#000000")
+                y += lh
+            return y
+
+        def draw_trans(y):                            # 번역 줄 (작게, 다른 색)
             col2 = "#1a5fb4" if bubble else ("#FFFFFF" if str(col).upper() == "#FFE135" else "#FFE135")
             sw2 = 0 if (band or bubble or thin) else self._stroke(font2.size)
             for ln in lines2:
@@ -4559,6 +4565,14 @@ class SubtitleRenderer:
                     d.text((x + font2.size // 18, y + font2.size // 14), ln, font=font2, fill=(0, 0, 0, 150), stroke_width=sw2, stroke_fill=(0, 0, 0, 150))
                 d.text((x, y), ln, font=font2, fill=col2, stroke_width=sw2, stroke_fill="#000000")
                 y += int(font2.size * 1.3)
+            return y
+        if lines2 and above:                          # 번역 줄을 위에, 한글을 아래에
+            y = draw_trans(y) + int(size * 0.15)
+            y = draw_main(y)
+        else:
+            y = draw_main(y)
+            if lines2:
+                y = draw_trans(y + int(size * 0.15))
         if lyric:   # 가사 원문은 사진 위에 노란 글자로
             fl = load_font(s.get("sub_font_path") or s["title_font_path"] or s["font_path"], int(size * 0.95))
             ix0, iy0, ix1, iy1 = self.img_box
