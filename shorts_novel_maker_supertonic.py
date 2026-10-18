@@ -7335,12 +7335,20 @@ def _tts_clip(text, voice_name, rate_pct, cache_dir, pitch_hz=0, emotion="차분
         sents = _split_sentences(text)
         if len(sents) > 1:
             gap = np.zeros(int(ST_SENT_GAP * SR), np.float32)
-            pieces = []
-            for k, sent in enumerate(sents):
+            clips = []
+            for sent in sents:
                 a_, _ = _tts_clip(sent, voice_name, rate_pct, cache_dir, pitch_hz, emotion, steps)
                 if len(a_) > 1:
-                    pieces += ([gap] if pieces else []) + [a_.astype(np.float32)]
-            if pieces:
+                    clips.append(a_.astype(np.float32))
+            if clips:   # 문장마다 음량이 조금씩 달라 '작아졌다 커졌다' 하던 것 → 문장별 음량(RMS)을 중앙값으로 맞춤
+                rmss = [r for r in (float(np.sqrt(np.mean(c ** 2))) for c in clips) if r > 1e-4]
+                tgt = float(np.median(rmss)) if rmss else 0.0
+                pieces = []
+                for c in clips:
+                    r = float(np.sqrt(np.mean(c ** 2)))
+                    if tgt > 0 and r > 1e-4:
+                        c = (c * (tgt / r)).astype(np.float32)
+                    pieces += ([gap] if pieces else []) + [c]
                 a = np.concatenate(pieces)
                 try:   # 문단 전체 소리도 예전과 같은 캐시 이름으로 저장 → 미리보기가 '나레이션 준비됨'으로 알아봄 (예전 반복 소리도 덮어씀)
                     os.makedirs(cache_dir, exist_ok=True)
