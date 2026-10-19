@@ -68,7 +68,13 @@ def main(a):
         app.update()
     bgm = str((c.get("settings") or {}).get("bgm_style") or "").strip() or m.SOUND_BY_TOPIC.get(genre, "잔잔한 패드")   # 프로젝트에 정한 배경음 우선
     app.vars["bgm_mode"].set("자동생성")
-    app.vars["bgm_volume"].set(str(cfg.get("배경음_크기", 25)))
+    try:
+        bgm_vol = float(cfg.get("배경음_크기", 0.03))
+    except (TypeError, ValueError):
+        bgm_vol = 0.03
+    if bgm_vol > 2:          # 25 처럼 퍼센트로 적었으면 0.25 로 (0~2 범위가 아니면 배경음이 목소리를 덮음)
+        bgm_vol /= 100
+    app.vars["bgm_volume"].set(str(max(0.0, min(2.0, bgm_vol))))
     app.vars["target_sec"].set("0")
     app.update()
     s = app.get_settings()

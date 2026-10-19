@@ -17,7 +17,7 @@
  "length": "0",
  "theme": "시네마 다크",
  "settings": {
-  "narr_voice": "선히 (여성, 차분)",
+  "narr_voice": "Supertonic M2 (남성, 무료 로컬) [supertonic:M2]",
   "narr_style": "차분하고 또렷한 다큐멘터리 내레이터처럼. 반전 부분은 긴장감 있게.",
   "narr_rate": 5.0,
   "narr_pitch": 0.0,
@@ -25,7 +25,7 @@
   "narr_gap": 0.5,
   "narr_spoken": "on",
   "narr_breath_cut": "on",
-  "narr_duck": 0.5,
+  "narr_duck": 0.3,
   "narr_tone_f": 0.0,
   "narr_tone_m": 0.0,
   "narr_bright_f": "off",
@@ -39,6 +39,7 @@
   "narration": "on",
   "img_fill": "전체 화면(글자가 사진 위에)",
   "img_motion": "영상처럼(확대·이동·전환)",
-  "fps": "30"
+  "fps": "30",
+  "bgm_volume": 0.03
  }
 }
