@@ -2,6 +2,7 @@ r"""실화 소재 탐색 → 주제 목록·기획메모·썸네일을 장문 �
 
   py -3.11 -X utf8 실화_소재탐색.py                       # 최근 180일 저널·뉴스에서 5편 고르고 실화_주제목록.txt 에 추가
   py -3.11 -X utf8 실화_소재탐색.py --편수 3 --days 365     # 1년치에서 3편
+  py -3.11 -X utf8 실화_소재탐색.py --발견                 # 최신 발견 모드: 최근 90일, 수수께끼가 아니어도 새로 밝혀진 사실 (실화_최신발견탐색.bat)
   py -3.11 -X utf8 실화_소재탐색.py --bg-commons           # 썸네일 배경에 위키미디어 공용 자유 이용 사진 사용 (켤 때만, 출처 자동 기록)
   py -3.11 -X utf8 실화_소재탐색.py --목록만               # 실화_주제목록.txt 는 건드리지 않고 기획메모·리포트만 만듦
   py -3.11 -X utf8 실화_소재탐색.py --규칙제목             # Claude Code 로 한국어 주제 다듬기 생략 (규칙 기반 제목)
@@ -31,6 +32,7 @@ TF_DIR = os.path.join(HERE, "소재탐색")
 sys.path.insert(0, TF_DIR)
 SEED = os.path.join(HERE, "실화_주제목록.txt")
 GENRE = "[실화] 과학이 밝혀낸 미스터리"
+DISCOVERY_GENRE = "[실화] 최근 밝혀진 과학 발견"   # --발견: 수수께끼가 아니어도 최근 새로 밝혀진 사실
 HISTORY = os.path.join(HERE, "output", "장문", "_소재탐색", "넘긴_소재_기록.json")
 LOG_FILE = os.path.join(HERE, "장문_진행기록.txt")
 
@@ -179,16 +181,22 @@ def load_main_module():
 def main():
     ap = argparse.ArgumentParser(description="실화 소재 탐색 → 주제 목록·기획메모·썸네일")
     ap.add_argument("--편수", type=int, default=5, help="실화_주제목록.txt 에 넘길 편수 (기본 5)")
-    ap.add_argument("--days", type=int, default=180, help="검색 기간(일), 기본 180")
+    ap.add_argument("--days", type=int, default=None, help="검색 기간(일), 기본 180 (--발견 이면 90)")
+    ap.add_argument("--발견", action="store_true",
+                    help=f"수수께끼가 아니어도 최근 새로 밝혀진 사실을 찾음(최신일수록 우대). 소재 기본값은 '{DISCOVERY_GENRE}'")
     ap.add_argument("--bg-commons", action="store_true", help="썸네일 배경에 위키미디어 공용 자유 이용 사진 사용 (켤 때만)")
     ap.add_argument("--no-youtube", action="store_true", help="유튜브 수요·경쟁 확인 생략 (빠름)")
     ap.add_argument("--no-thumbs", action="store_true", help="썸네일·해시태그 생략")
     ap.add_argument("--목록만", action="store_true", help="실화_주제목록.txt 는 건드리지 않음")
     ap.add_argument("--규칙제목", action="store_true", help="Claude Code 로 한국어 주제 다듬기 생략")
-    ap.add_argument("--소재", default=GENRE, help=f"주제 목록에 적을 소재 (기본: {GENRE})")
+    ap.add_argument("--소재", default=None, help=f"주제 목록에 적을 소재 (기본: {GENRE}, --발견 이면 {DISCOVERY_GENRE})")
     ap.add_argument("--썸네일선택", default="자동", choices=["자동", "없음"],
                     help="소재별 썸네일 3안 중 최종 1장 자동 선택(기본). 직접 고르려면 '없음' 뒤 썸네일_고르기.bat 로 소재 폴더를 열기")
     a = ap.parse_args()
+    if a.days is None:
+        a.days = 90 if a.발견 else 180
+    if a.소재 is None:
+        a.소재 = DISCOVERY_GENRE if a.발견 else GENRE
     if a.편수 < 1:
         ap.error("--편수 는 1 이상이어야 합니다.")
     if not os.path.exists(os.path.join(TF_DIR, "topic_finder.py")):
@@ -208,8 +216,9 @@ def main():
         argv.append("--no-youtube")
     if a.no_thumbs:
         argv.append("--no-thumbs")
-    argv += ["--썸네일선택", a.썸네일선택]
-    log(f"▶ 소재 탐색 시작: 최근 {a.days}일 · 후보 {pick}개 중 {a.편수}편 선정" + (" · 공용 사진" if a.bg_commons else ""))
+    argv += ["--썸네일선택", a.썸네일선택, "--mode", "발견" if a.발견 else "미스터리"]
+    log(f"▶ 소재 탐색 시작: 최근 {a.days}일 · 후보 {pick}개 중 {a.편수}편 선정" + (" · 최신 발견 모드" if a.발견 else "")
+        + (" · 공용 사진" if a.bg_commons else ""))
     res = tf.main(argv)
     picks = res["picks"]
     if not picks:
