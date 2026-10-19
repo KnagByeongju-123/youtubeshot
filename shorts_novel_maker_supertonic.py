@@ -2351,7 +2351,7 @@ def fix_image_url(url):
     m = re.match(r"https?://(?:commons\.wikimedia\.org|[\w-]+\.wikipedia\.org)/wiki/(?:File|파일|Datei|Fichier|Archivo|Fichier):([^?#]+)", url)
     if m:
         name = m.group(1)
-    m = re.match(r"https?://upload\.wikimedia\.org/wikipedia/(?:commons|[a-z]{2,3})/thumb/[0-9a-f]/[0-9a-f]{2}/([^/?#]+)/\d+px-[^/?#]+", url)
+    m = re.match(r"https?://(?:upload|thumb)\.wikimedia\.org/wikipedia/(?:commons|[a-z]{2,3})/thumb/[0-9a-f]/[0-9a-f]{2}/([^/?#]+)/[^/?#]*\d+px-[^/?#]+", url)   # lossy-page1-1600px- 같은 꼴도
     if m:
         name = m.group(1)
     m = re.match(r"https?://upload\.wikimedia\.org/wikipedia/(?:commons|[a-z]{2,3})/[0-9a-f]/[0-9a-f]{2}/([^/?#]+)$", url)
@@ -2447,6 +2447,11 @@ def download_image(url, media_dir, stem=None):
                 continue
             if e.code == 429:
                 raise ValueError("위키미디어가 요청을 잠시 막음(429) - 1~2분 뒤 'AI 근거사진 찾기'를 다시 눌러보세요")
+            m_ = re.search(r"wikimedia\.org/wikipedia/(?:commons|[a-z]{2,3})/(?:thumb/)?[0-9a-f]/[0-9a-f]{2}/([^/?#]+)", target)
+            if e.code == 400 and m_ and "Special:FilePath" not in target and attempt < 2:   # 정해진 크기만 받는 썸네일 주소 → 파일 이름으로 다시
+                from urllib.parse import quote, unquote
+                target = "https://commons.wikimedia.org/wiki/Special:FilePath/" + quote(unquote(m_.group(1))) + f"?width={IMG_WIDTH}"
+                continue
             raise
     if data is None:
         raise ValueError("내려받기 실패")
