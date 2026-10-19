@@ -31,3 +31,5 @@ nature_sounds/*
 작업기록.txt
 작업기록_이전.txt
 _ai공유/받은그림/
+
+.claude/settings.local.json
