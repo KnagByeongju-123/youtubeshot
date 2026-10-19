@@ -59,6 +59,8 @@ def main(a):
     if "--소재프로필" in a and genre:          # 손으로 쓴 대본을 소재 기본 스타일(다큐 자막·제목·근거 사진)로
         app.cat_var.set(c.get("category") or m.DOC_CATEGORY)
         app.on_category()
+        if app.cat_var.get() == m.DOC_CATEGORY:     # on_category 는 화면 크기만 가로로 바꾸므로 설정 칸도 맞춤 (저장된 파일을 다시 열어도 가로)
+            app.vars["format"].set("롱폼 가로(1920×1080)")
         if genre in m.cat_info(app.cat_var.get())[1]:
             app.genre_var.set(genre)
             app.on_genre()
@@ -66,7 +68,13 @@ def main(a):
         app.update()
     bgm = str((c.get("settings") or {}).get("bgm_style") or "").strip() or m.SOUND_BY_TOPIC.get(genre, "잔잔한 패드")   # 프로젝트에 정한 배경음 우선
     app.vars["bgm_mode"].set("자동생성")
-    app.vars["bgm_volume"].set(str(cfg.get("배경음_크기", 25)))
+    try:
+        bgm_vol = float(cfg.get("배경음_크기", 0.03))
+    except (TypeError, ValueError):
+        bgm_vol = 0.03
+    if bgm_vol > 2:          # 25 처럼 퍼센트로 적었으면 0.25 로 (0~2 범위가 아니면 배경음이 목소리를 덮음)
+        bgm_vol /= 100
+    app.vars["bgm_volume"].set(str(max(0.0, min(2.0, bgm_vol))))
     app.vars["target_sec"].set("0")
     app.update()
     s = app.get_settings()
@@ -93,7 +101,9 @@ def main(a):
         log(f"📷 사진 자동 넣기: 지금 {before}장 → 나레이션 {m.DOC_PHOTO_SEC:g}초마다 한 장 목표 (웹 조사)")
         story, n_add = m.doc_add_photos(app.model_var.get().strip(), title, story, os.path.join(out_root, "media"), log, gate, fiction=m.doc_is_fiction(genre))
         app.set_story(story)
-        m.atomic_write_text(proj_path, json.dumps(app.project_dict(), ensure_ascii=False, indent=1))
+        d_ = app.project_dict()
+        d_["settings"] = {k: v for k, v in d_["settings"].items() if k not in m.SECRET_KEYS}   # 저장소에 올라가는 파일이라 API 키는 빼고 저장
+        m.atomic_write_text(proj_path, json.dumps(d_, ensure_ascii=False, indent=1))
         log(f"📷 사진 {n_add}장 추가 (총 {len(m.photo_credits(story))}장) → 프로젝트에 저장")
     log(f"▶ 프로젝트로 영상 만들기: {title} ({genre}) · 사진 {len(m.photo_credits(story))}장 · 배경음 {bgm}")
     base = os.path.join(out_root, m.safe_name(title) + suf)

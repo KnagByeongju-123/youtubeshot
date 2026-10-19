@@ -145,21 +145,15 @@ def find_font(bold=False):
     return ""
 
 
-TTS_VOICES = {
-    "선히 (여성, 차분)": "ko-KR-SunHiNeural",
-    "인준 (남성, 안정)": "ko-KR-InJoonNeural",
-    "현수 (남성, 자연스러움)": "ko-KR-HyunsuMultilingualNeural",
+DEFAULT_VOICE = "Supertonic M2 (남성, 무료 로컬) [supertonic:M2]"   # 성우를 따로 정하지 않으면 이 목소리
+TTS_VOICES = {   # 마이크로소프트 온라인(Edge) 음성은 쓰지 않음. 옛 설정에 적힌 Edge 이름은 voice_code 가 DEFAULT_VOICE 로 바꿈
     "윈도우 내장 음성": "sapi",
-    "Aria (영어 여성)": "en-US-AriaNeural",
-    "Guy (영어 남성)": "en-US-GuyNeural",
-    "Nanami (일본어 여성)": "ja-JP-NanamiNeural",
-    "Keita (일본어 남성)": "ja-JP-KeitaNeural",
 }
 
 LANGS = {   # 코드: (이름, 기본 목소리, 마무리 문구, 파일 꼬리표)
-    "ko": ("한국어", "선히 (여성, 차분)", "구독하면 다음 이야기가 이어집니다", ""),
-    "en": ("영어", "Aria (영어 여성)", "Subscribe for the next story", "_EN"),
-    "ja": ("일본어", "Nanami (일본어 여성)", "次の話はチャンネル登録で", "_JA"),
+    "ko": ("한국어", DEFAULT_VOICE, "구독하면 다음 이야기가 이어집니다", ""),
+    "en": ("영어", DEFAULT_VOICE, "Subscribe for the next story", "_EN"),
+    "ja": ("일본어", DEFAULT_VOICE, "次の話はチャンネル登録で", "_JA"),
 }
 
 
@@ -545,12 +539,11 @@ FIELDS = [
     ("영상", "out_dir", "저장 폴더", "dir", os.path.join(BASE, "output")),
     ("나레이션", "narration", "나레이션(음성 읽기)", "choice:on,off", "off"),
     ("나레이션", "narr_file", "외부 음성 파일(비우면 성우)", "audio", ""),
-    ("나레이션", "narr_voice", "성우", "voice", "선히 (여성, 차분)"),
-    ("나레이션", "narr_pitch", "음 높낮이(Hz, 엣지 음성만)", "float", 0),
+    ("나레이션", "narr_voice", "성우", "voice", DEFAULT_VOICE),
+    ("나레이션", "narr_pitch", "음 높낮이(Hz, 지금 성우들에는 적용 안 됨)", "float", 0),
     ("나레이션", "st_emotion", "로컬 성우 감정", "choice:자동(문단별),차분,공포·긴장,슬픔·감동,놀람·반전,분노·갈등,밝음·유머", "자동(문단별)"),
     ("나레이션", "st_emotion_map", "문단별 지정(예: 2=슬픔,4=놀람)", "str", ""),
     ("나레이션", "st_steps", "로컬 성우 품질(5~12)", "int", 5),
-    ("나레이션", "st_edge_fallback", "로컬 성우 실패시 Edge 전환", "choice:on,off", "on"),
     ("나레이션", "narr_tone_f", "여자 성우 톤(반음, 0=원래 목소리 · 올리면 약간 울림)", "float", 0.0),
     ("나레이션", "narr_tone_m", "남자 성우 톤(반음, 0=원래 목소리)", "float", 0.0),
     ("나레이션", "narr_bright_f", "여자 목소리 밝게(고음 강조 · 약간 울림)", "choice:on,off", "off"),
@@ -565,7 +558,7 @@ FIELDS = [
     ("나레이션", "narr_volume", "나레이션 볼륨(0~2)", "float", 1.0),
     ("나레이션", "narr_gap", "문단 사이 쉼(초)", "float", 0.5),
     ("나레이션", "narr_photo_pause", "사진 보는 시간(초)", "float", 1.5),
-    ("나레이션", "narr_duck", "말할 때 배경음 크기(0~1)", "float", 0.5),
+    ("나레이션", "narr_duck", "말할 때 배경음 크기(0~1)", "float", 0.3),
     ("AI 엔진", "script_engine", "대본 작성 AI", "choice:Claude,ChatGPT,Gemini,자동(키 있으면 ChatGPT→Gemini→Claude)", "Claude"),
     ("AI 엔진", "trans_engine", "번역 AI", "choice:자동(키 있으면 ChatGPT→Gemini→Claude),Claude,ChatGPT,Gemini", "자동(키 있으면 ChatGPT→Gemini→Claude)"),
     ("AI 엔진", "auto_langs", "MP4 만들 때 다른 언어도", "choice:안 함,영어,일본어,영어+일본어", "안 함"),
@@ -580,7 +573,7 @@ FIELDS = [
     ("AI 엔진", "image_style", "그림 스타일 직접 입력", "str", "영화 장면 같은 사실적인 사진, 분위기 있는 조명"),
     ("소리", "bgm_mode", "배경음", "choice:자동생성,파일,없음", "자동생성"),
     ("소리", "bgm_style", "배경음 스타일", "choice:" + ",".join(["자동(소재별)"] + SOUND_STYLE_NAMES), "자동(소재별)"),
-    ("소리", "bgm_volume", "배경음 볼륨(0~2)", "float", 0.12),
+    ("소리", "bgm_volume", "배경음 볼륨(0~2, 0.03=거의 안 들림)", "float", 0.03),
     ("소리", "reveal_hit", "반전 효과음", "choice:on,off", "on"),
     ("소리", "hit_sound", "반전 효과음 종류", "choice:자동(코미디=두둥탁),쿵(반전),두둥탁(개그 드럼),띠링(밝은 종)", "자동(코미디=두둥탁)"),
     ("소리", "hit_volume", "효과음 볼륨(0~2)", "float", 0.6),
@@ -1039,6 +1032,7 @@ CATEGORIES[DOC_CATEGORY] = (True, {
     "[실화] 재난에서 살아남은 날": ("실제 지진·쓰나미·화산·대형 침몰 당시 사람들이 어떻게 살아남았는지. 공식 조사와 생존자 증언 기반. 평범한 아침 → 재난의 순간 → 목숨을 살린 판단과 도움 → 그 뒤 바뀐 대비. 희생을 자극적으로 그리지 않고 배운 것에 무게를 둔다.", "시네마 다크"),
     "[실화] 불가능에 도전한 사람들": ("실제 기록에 남은 탐험·도전(최초의 횡단·등정·잠수·비행). 왜 아무도 못 했나 → 준비와 실패 → 결정적 고비 → 해낸 순간과 그 대가. 이미 아주 유명한 사례는 덜 알려진 각도로.", "네온 시티"),
     "[실화] 과학이 밝혀낸 미스터리": ("오랫동안 풀리지 않던 수수께끼를 최근 과학 연구(네이처·사이언스 등 동료 심사 논문)가 풀어내거나 새로 설명한 이야기. AI든 실험이든 관측이든 가리지 않는다. 구성: 무엇이 오래 수수께끼였나 → 왜 아무도 못 풀었나 → 결정적 단서와 방법 → 밝혀진 답 → 아직 남은 의문. 반드시 웹 조사로 논문·기관·연도를 확인하고, '확인된 사실'과 '아직 검증 중인 가설'을 분명히 나눈다. '완전히 끝났다' 같은 단정·과장은 하지 않는다.", "시네마 다크"),
+    "[실화] 최근 밝혀진 과학 발견": ("최근 1~3개월 사이에 동료 심사 논문(네이처·사이언스 등)이나 연구기관 발표로 새로 밝혀진 과학 사실. 수수께끼가 아니어도 된다: 첫 증거, 가장 오래된 기록, 새로 발견된 생물·천체, 상식을 뒤집은 결과. 구성: 발표 날짜·저널·연구팀으로 신선함을 바로 알림 → 이전까지 우리가 알던 것 → 무엇을 어떻게 발견했나 → 왜 중요한가 → 아직 확인이 필요한 부분과 반론. 반드시 웹 조사로 발표 날짜·저널·기관을 확인하고 제목이나 오프닝에 '2026년 ○월' 같은 시점을 넣는다. 막 나온 연구는 바뀔 수 있으니 '밝혀졌다'로 단정하지 말고 검증 단계(후속 연구·반론)를 분명히 밝힌다.", "네온 시티"),
 })
 for _t, _snd in (("우주의 비밀", "우주"), ("양자물리·현실의 본질", "우주"), ("과학자의 생각법", "잔잔한 패드"),
                  ("인류의 기원과 진화", "바람"), ("고대 문명 미스터리", "어두운 드론"), ("역사를 바꾼 결정적 순간", "잔잔한 패드"),
@@ -1061,7 +1055,7 @@ for _t, _snd in (("세계의 축제", "밝은 오르골"), ("신기한 풍속과
 for _t, _snd in (("[실화] 극한 생존기", "바람"), ("[실화] 미제 사건의 기록", "어두운 드론"), ("[실화] 사라진 사람과 배·비행기", "심해"),
                  ("[실화] 믿기 힘든 우연", "밝은 오르골"), ("[실화] 희대의 사기와 범죄", "긴장 펄스"), ("[실화] 평범한 사람의 위대한 순간", "잔잔한 패드"),
                  ("[실화] 재난에서 살아남은 날", "어두운 드론"), ("[실화] 불가능에 도전한 사람들", "바람"),
-                 ("[실화] 과학이 밝혀낸 미스터리", "어두운 드론")):
+                 ("[실화] 과학이 밝혀낸 미스터리", "어두운 드론"), ("[실화] 최근 밝혀진 과학 발견", "우주")):
     SOUND_BY_TOPIC.setdefault(_t, _snd)
 
 # 장문 '이야기'(허구) 소재: 유튜브 장편 낭독·오디오드라마로 인기 있는 장르 (소재 이름 앞 [이야기])
@@ -6875,12 +6869,7 @@ def tts_clean(text):
     return t
 
 
-VOICE_CACHE_FILE = os.path.join(BASE, "voices_cache.json")
-VOICE_LOCALES = {"ko-KR": "한국어", "en-US": "영어(미국)", "en-GB": "영어(영국)", "ja-JP": "일본어", "openai": "ChatGPT 음성", "gemini": "Gemini 음성"}
-VOICE_KO_NAMES = {"SunHi": "선히", "InJoon": "인준", "Hyunsu": "현수", "BongJin": "봉진", "GookMin": "국민", "JiMin": "지민",
-                  "SeoHyeon": "서현", "SoonBok": "순복", "YuJin": "유진", "Aria": "아리아", "Guy": "가이", "Jenny": "제니",
-                  "Christopher": "크리스토퍼", "Ana": "아나", "Andrew": "앤드루", "Emma": "엠마", "Brian": "브라이언",
-                  "Nanami": "나나미", "Keita": "케이타", "Sonia": "소니아", "Ryan": "라이언"}
+VOICE_LOCALES = {"ko-KR": "한국어", "openai": "ChatGPT 음성", "gemini": "Gemini 음성"}
 
 
 OPENAI_VOICES = [("alloy", "중성, 차분"), ("ash", "남성, 또렷"), ("ballad", "남성, 부드러움"), ("coral", "여성, 밝음"),
@@ -6908,124 +6897,20 @@ def ai_voice_list():
 
 
 def voice_code(voice_name):
-    """설정에 적힌 성우 이름 → 음성 코드. '[ko-KR-XxxNeural]' '[openai:nova]' '[gemini:Kore]' 형식이면 괄호 안을 씀"""
+    """설정에 적힌 성우 이름 → 음성 코드. '[supertonic:M2]' '[openai:nova]' '[gemini:Kore]' 형식이면 괄호 안을 씀"""
     if voice_name in TTS_VOICES:
         return TTS_VOICES[voice_name]
-    m = re.search(r"\[((?:openai|gemini):[A-Za-z]+|supertonic:[MF][1-5]|[a-z]{2}-[A-Z]{2}-[A-Za-z0-9]+)\]", voice_name or "")
+    m = re.search(r"\[((?:openai|gemini):[A-Za-z]+|supertonic:[MF][1-5])\]", voice_name or "")
     if m:
         return m.group(1)
-    if re.fullmatch(r"(?:supertonic:[MF][1-5]|[a-z]{2}-[A-Z]{2}-[A-Za-z0-9]+)", (voice_name or "").strip()):
+    if re.fullmatch(r"supertonic:[MF][1-5]", (voice_name or "").strip()):
         return voice_name.strip()
-    return "ko-KR-SunHiNeural"
-
-
-def voice_display(short, gender, locale):
-    base = short.split("-")[-1].replace("Neural", "").replace("Multilingual", "")
-    ko = VOICE_KO_NAMES.get(base, base)
-    g = {"Female": "여성", "Male": "남성"}.get(gender, gender)
-    multi = " · 다국어" if "Multilingual" in short else ""
-    return f"{ko} ({g}, {VOICE_LOCALES.get(locale, locale)}{multi}) [{short}]"
+    return "supertonic:M2"     # 성우 미지정·옛 마이크로소프트 온라인 성우 이름 → 남자 성우 2
 
 
 def list_voices(refresh=False):
-    """엣지 음성 서버에서 성우 목록 받기 (한국어·영어·일본어). 실패하면 캐시/기본 목록"""
-    if not refresh and os.path.exists(VOICE_CACHE_FILE):
-        try:
-            with open(VOICE_CACHE_FILE, encoding="utf-8") as f:
-                data = json.load(f)
-            if data:
-                return data
-        except Exception:
-            pass
-    try:
-        import edge_tts, asyncio
-        loop = asyncio.new_event_loop()
-        try:
-            vs = loop.run_until_complete(edge_tts.list_voices())
-        finally:
-            loop.close()
-        data = [{"short": v["ShortName"], "gender": v.get("Gender", ""), "locale": v.get("Locale", ""),
-                 "name": voice_display(v["ShortName"], v.get("Gender", ""), v.get("Locale", ""))}
-                for v in vs if v.get("Locale") in VOICE_LOCALES]
-        data.sort(key=lambda d: (list(VOICE_LOCALES).index(d["locale"]), d["gender"], d["short"]))
-        if data:
-            with open(VOICE_CACHE_FILE, "w", encoding="utf-8") as f:
-                json.dump(data, f, ensure_ascii=False, indent=1)
-            return data
-    except Exception:
-        pass
-    return [{"short": c, "gender": "", "locale": c[:5], "name": n} for n, c in TTS_VOICES.items() if c != "sapi"]
-
-
-_EDGE_PLAIN_DNS = {"on": os.name == "nt"}   # 윈도우는 처음부터 기본 DNS 방식
-
-
-def tts_edge(text, voice, rate_pct, out_mp3, pitch_hz=0):
-    """마이크로소프트 엣지 음성 (인터넷 필요, 무료)"""
-    try:
-        import edge_tts
-    except ImportError:
-        ok, _ = pip_install("edge-tts")
-        importlib.invalidate_caches()
-        if not ok:
-            raise RuntimeError("edge-tts 설치 실패")
-        import edge_tts
-    import asyncio
-    rate = f"{'+' if rate_pct >= 0 else ''}{int(rate_pct)}%"
-    pitch = f"{'+' if pitch_hz >= 0 else ''}{int(pitch_hz)}Hz"
-
-    async def run(plain_dns):
-        kw = {}
-        conn = None
-        if plain_dns:
-            # 윈도우에서 aiodns(c-ares)가 깔려 있으면 주소 찾기(DNS)가 실패하는 경우가 있음
-            # → 윈도우 기본 방식(ThreadedResolver) + IPv4 로 접속
-            import aiohttp, socket
-
-            class _KeepConn(aiohttp.TCPConnector):
-                # 글이 길면 edge-tts가 여러 번 접속하는데, 첫 접속이 끝날 때 연결기를 닫아버려
-                # 두 번째부터 'Session is closed' 오류가 남 → 중간에는 닫지 않고 맨 끝에 닫음
-                async def close(self, *a, **k):
-                    return None
-            conn = _KeepConn(resolver=aiohttp.ThreadedResolver(), family=socket.AF_INET)
-            kw["connector"] = conn
-        try:
-            await edge_tts.Communicate(text, voice, rate=rate, pitch=pitch, **kw).save(out_mp3)
-        except TypeError:
-            if not kw:
-                raise
-            await edge_tts.Communicate(text, voice, rate=rate, pitch=pitch).save(out_mp3)   # 옛 edge-tts (connector 없음)
-        finally:
-            if conn is not None:
-                try:
-                    r = aiohttp.TCPConnector.close(conn)
-                    if hasattr(r, "__await__"):
-                        await r
-                except Exception:
-                    pass
-    try:
-        loop = asyncio.new_event_loop()
-        try:
-            try:
-                loop.run_until_complete(run(_EDGE_PLAIN_DNS["on"]))
-            except Exception as e:
-                if _EDGE_PLAIN_DNS["on"] or "DNS" not in type(e).__name__ + str(e):
-                    raise
-                _EDGE_PLAIN_DNS["on"] = True            # 주소 찾기 실패 → 기본 방식으로 다시
-                loop.run_until_complete(run(True))
-        finally:
-            loop.close()
-    except Exception as e:
-        ver = getattr(edge_tts, "__version__", "?")
-        msg = str(e)[:120]
-        if "403" in msg:
-            # 토큰(Sec-MS-GEC)이 서버와 안 맞을 때 → 보통 마이크로소프트 쪽이 바뀐 것
-            msg += (f"\n\n마이크로소프트 서버가 접속을 거부했습니다(403). 설치된 edge-tts {ver}, 파이썬 {sys.executable}"
-                    "\n· 잠시(수십 분~하루) 뒤 다시 해보거나, 다른 인터넷(휴대폰 핫스팟)으로 시도"
-                    "\n· PC 시계가 맞는지 확인(자동 설정)"
-                    "\n· 급하면 성우를 '윈도우 내장 음성' 또는 ChatGPT/Gemini 음성으로 바꾸세요")
-        raise RuntimeError(f"엣지 음성 실패({type(e).__name__}): {msg}")
-
+    """예전 온라인(Edge) 성우 목록 자리. 지금은 성우 창이 ai_voice_list()(Supertonic·ChatGPT·Gemini)와 윈도우 내장 음성만 보여줌"""
+    return []
 
 def tts_openai(text, voice, rate_pct, style, out_mp3, key, model):
     """ChatGPT 음성 API (gpt-4o-mini-tts: 연기 지시 가능)"""
@@ -7145,7 +7030,7 @@ def tts_sapi(text, rate_pct, out_wav):
 def tts_key(voice, rate_pct, pitch_hz, text):
     import hashlib
     if not (voice == "sapi" or voice.startswith(("openai:", "gemini:"))):
-        voice = "e2|" + voice     # 엣지 성우: 예전에 윈도우 음성이 잘못 저장된 캐시를 버리기 위해 새 이름
+        voice = "e2|" + voice     # 캐시 이름 구분용 (바꾸면 이미 만들어 둔 Supertonic 음성 캐시를 다시 만들어야 함)
     return hashlib.md5(f"{voice}|{float(rate_pct)}|{float(pitch_hz)}|{text}".encode("utf-8")).hexdigest()[:16]
 
 
@@ -7376,17 +7261,11 @@ _FALLBACK_SAID = set()
 
 
 def fallback_voice(voice, text):
-    """AI 음성 한도가 끝났을 때 대신 쓸 무료 성우(edge) - 글 언어와 남/여에 맞춤"""
+    """AI 음성 한도가 끝났을 때 대신 쓸 무료 로컬 성우(Supertonic) - 남/여에 맞춤 (언어는 Supertonic 이 글자를 보고 고름)"""
     male = voice.split(":", 1)[-1].lower() in AI_VOICE_MALE
-    if re.search(r"[가-힣]", text):
-        return "ko-KR-InJoonNeural" if male else "ko-KR-SunHiNeural"
-    if re.search(r"[぀-ヿ]", text):
-        return "ja-JP-KeitaNeural" if male else "ja-JP-NanamiNeural"
-    return "en-US-AndrewNeural" if male else "en-US-AriaNeural"
+    return "supertonic:M2" if male else "supertonic:F2"
 
 
-_EDGE_UPGRADED = {"done": False}
-EDGE_FAIL_TO_SAPI = False   # 엣지 실패 시 몰래 윈도우 음성으로 바꾸지 않고 오류를 보여줌
 LAST_TTS = {"voice": ""}   # 마지막으로 실제 읽은 성우 (대체됐는지 확인용)
 
 
@@ -7520,15 +7399,9 @@ def _tts_clip_sel(text, voice_name, rate_pct, cache_dir, pitch_hz=0, emotion="�
             LAST_TTS["voice"] = voice
             return _tts_clip(text, voice_name, rate_pct, cache_dir, pitch_hz, emotion, steps)
         except Exception as exc:
-            if not fallback:
-                raise
-            fb = "ko-KR-InJoonNeural" if voice.endswith(tuple("M" + str(i) for i in range(1, 6))) else "ko-KR-SunHiNeural"
-            msg = str(exc).splitlines()[0]
-            if msg not in _ST_FALLBACK_SHOWN:
-                _ST_FALLBACK_SHOWN.add(msg)
-                notify("⚠ Supertonic 실패 → Edge로 전환: " + msg[:140])
-            LAST_TTS["voice"] = fb
-            return _tts_clip(text, fb, rate_pct, cache_dir, pitch_hz)
+            msg = (str(exc).splitlines() or [type(exc).__name__])[0]
+            raise RuntimeError("로컬 성우(Supertonic) 실패: " + msg[:200]
+                               + "\nsetup_supertonic_windows.bat 를 다시 실행해 보세요. (다른 목소리로 몰래 바꾸지 않습니다)") from exc
     if voice.startswith(("openai:", "gemini:")):
         svc = voice.split(":", 1)[0]
         if not QUOTA_OUT.get(svc):
@@ -7624,30 +7497,7 @@ def _tts_clip(text, voice_name, rate_pct, cache_dir, pitch_hz=0, emotion="차분
             raise RuntimeError("Gemini 음성에는 API 키가 필요합니다 (AI 엔진 탭에 입력)")
         tts_gemini(text, voice.split(":", 1)[1], rate_pct, TTS_CFG["style"], src, TTS_CFG["gemini_key"], TTS_CFG["gemini_tts_model"])
     else:
-        try:
-            tts_edge(text, voice, rate_pct, src, pitch_hz)
-        except Exception as e:
-            err = e
-            if not _EDGE_UPGRADED["done"]:      # 엣지 음성 서버가 바뀌면 옛 버전이 막힘 → 한 번 업데이트 후 다시
-                _EDGE_UPGRADED["done"] = True
-                notify("엣지 음성 실패 → edge-tts 업데이트 후 다시 시도합니다")
-                pip_install("-U", "edge-tts")
-                for mod in [k for k in sys.modules if k == "edge_tts" or k.startswith("edge_tts.")]:
-                    sys.modules.pop(mod, None)
-                importlib.invalidate_caches()
-                try:
-                    tts_edge(text, voice, rate_pct, src, pitch_hz)
-                    err = None
-                except Exception as e2:
-                    err = e2
-            if err is not None:
-                if os.name == "nt" and EDGE_FAIL_TO_SAPI:
-                    notify(f"⚠ 엣지 성우({voice}) 연결 실패 → 윈도우 내장 음성(여성)으로 대신 읽습니다: {str(err)[:80]}")
-                    LAST_TTS["voice"] = "sapi"
-                    return _tts_clip(text, "윈도우 내장 음성", rate_pct, cache_dir, pitch_hz)   # 엣지 이름으로 저장하지 않음
-                raise RuntimeError(f"엣지 성우({voice})로 읽기 실패\n\n{err}\n\n"
-                                   "인터넷 연결·백신/방화벽(speech.platform.bing.com)을 확인하거나, "
-                                   "명령 프롬프트에서 'pip install -U edge-tts' 를 실행해 보세요.")
+        raise RuntimeError(f"지원하지 않는 성우 코드: {voice}")
     a = _decode_full(src)
     # 앞뒤 무음 다듬기 + 크기 맞추기
     thr = 0.01
@@ -7808,8 +7658,7 @@ def build_narration(story, s, cache_dir, log=None, cancel=None, para_audio=None)
             is_st = voice_code(vname).startswith("supertonic:")
             mood = supertonic_mood(text, k, len(items), s) if is_st else "차분"
             a, d = tts_clip(text, vname, float(s["narr_rate"]), cache_dir,
-                            float(s.get("narr_pitch", 0)), mood, int(s.get("st_steps", 5)),
-                            str(s.get("st_edge_fallback", "on")) == "on")
+                            float(s.get("narr_pitch", 0)), mood, int(s.get("st_steps", 5)))
         res.append((i, a, d))
         if log and (k % 5 == 0 or k == len(items) - 1):
             log(f"  🎙 나레이션 {k + 1}/{len(items)}")
@@ -10091,7 +9940,7 @@ PPT_DUO_SYSTEM = """{role}
 - 분량: 슬라이드마다 공백 포함 {min_c}~{max_c}자(대화 슬라이드는 1.3배까지). 표지는 두 사람의 밝은 인사와 오늘 주제, 마지막 슬라이드는 둘이 함께 핵심 요약과 마무리 인사.
 - 말투: {tone}. 청중: {audience}.
 - 목록·제목 기호(#, -, *)와 이모지 금지.
-""" + PPT_CLICK_RULE + PPT_FX_RULE + KO_NUM_RULE + """- 성우: 아래 [성우 목록]에서 남자 1명, 여자 1명을 목록의 이름 그대로 고른다(가능하면 같은 종류끼리: 둘 다 Supertonic 또는 둘 다 엣지). 감정 톤도 고른다.
+""" + PPT_CLICK_RULE + PPT_FX_RULE + KO_NUM_RULE + """- 성우: 아래 [성우 목록]에서 남자 1명, 여자 1명을 목록의 이름 그대로 고른다(둘 다 Supertonic 무료 로컬 성우). 감정 톤도 고른다.
 반드시 JSON만 출력: {{"title": "발표 영상 제목(30자 이내)", "voice_m": "남자 성우 이름 그대로", "voice_f": "여자 성우 이름 그대로", "voice_reason": "두 성우를 고른 이유 한 줄", "emotion": "차분|밝음·유머|슬픔·감동|놀람·반전|공포·긴장|분노·갈등 중 하나", "slides": [{{"n": 1, "narration": "남: ...\\n\\n여: ..."}}]}}"""
 
 
@@ -10107,9 +9956,8 @@ def ppt_duo_clean(text):
 
 
 def ppt_voice_catalog():
-    """AI에게 줄 성우 목록 (무료 로컬 성우 + 엣지 한국어 성우)"""
-    names = [v["name"] for v in SUPERTONIC_VOICES] + [k for k, c in TTS_VOICES.items() if str(c).startswith("ko-KR")]
-    return names
+    """AI에게 줄 성우 목록 (무료 로컬 성우)"""
+    return [v["name"] for v in SUPERTONIC_VOICES]
 
 
 def ppt_narrate(model, slides, tone, audience, length, log=None, cancel=None, use_images=True, duo=False, plan_note="", style=""):
@@ -10155,7 +10003,7 @@ def ppt_narrate(model, slides, tone, audience, length, log=None, cancel=None, us
         women = [v for v in voices if ppt_voice_gender(v) == "여"]
         if meta.get("voice_m") not in men:
             meta["voice_m"] = men[0]
-        if meta.get("voice_f") not in women:       # 남자 성우와 같은 종류(로컬/엣지)로
+        if meta.get("voice_f") not in women:       # 남자 성우와 같은 종류로
             st_ = "Supertonic" in meta["voice_m"]
             meta["voice_f"] = next((v for v in women if ("Supertonic" in v) == st_), women[0])
         meta["voice"] = meta["voice_m"]
@@ -13023,7 +12871,6 @@ class App(tk.Tk):
         lb_lang.pack(side="left", padx=4)
         status = ttk.Label(top, text="", foreground="gray")
         status.pack(side="right")
-        ttk.Button(top, text="목록 새로고침(서버)", command=lambda: load(True)).pack(side="right", padx=4)
         mid = ttk.Frame(f)
         mid.pack(fill="both", expand=True, pady=6)
         lst = tk.Listbox(mid, font=("맑은 고딕", 11), activestyle="none", exportselection=False)
@@ -13071,7 +12918,7 @@ class App(tk.Tk):
             voices.clear()
             voices.extend(data + ai_voice_list())
             show()
-            status.config(text=f"성우 {len(data)}명" + ("" if os.path.exists(VOICE_CACHE_FILE) else " (기본 목록 - 인터넷 연결 시 새로고침)"))
+            status.config(text=f"성우 {len(voices)}명")
 
         def show(*_):
             lst.delete(0, "end")
@@ -13103,9 +12950,6 @@ class App(tk.Tk):
                 messagebox.showinfo("성우", "목록에서 성우를 고르세요.", parent=dlg)
                 return
             text, rate, pitch = sample_var.get().strip(), rate_var.get(), pitch_var.get()
-            if voice_code(name)[:3] in ("en-", "ja-") and re.search(r"[가-힣]", text):
-                text = {"en": "Hello. Today I will tell you a story nobody knew. Stay until the end.",
-                        "ja": "こんにちは。今日は誰も知らなかった話をお届けします。最後までご覧ください。"}[voice_code(name)[:2]]
             status.config(text="샘플 만드는 중...")
             s_now = self.get_settings()
             s_now["narr_style"] = style_var.get()
@@ -13122,17 +12966,13 @@ class App(tk.Tk):
             def worker():
                 try:
                     mood = supertonic_mood(text, 0, 1, s_now)
-                    a, d = tts_clip(text, name, rate, cache, pitch, mood, int(s_now.get("st_steps", 5)),
-                                    str(s_now.get("st_edge_fallback", "on")) == "on")
+                    a, d = tts_clip(text, name, rate, cache, pitch, mood, int(s_now.get("st_steps", 5)))
                     p = os.path.join(tempfile.gettempdir(), "shorts_voice_sample.wav")
                     write_wav(p, np.stack([a, a], 1))
                     real = LAST_TTS["voice"]
                     msg = f"재생 중 ({d:.1f}초)"
-                    if real == "sapi" and code != "sapi":
-                        msg = "⚠ 엣지 성우 연결 실패 → 윈도우 내장 음성(여성)으로 대신 들려줌 (작업 기록 확인)"
-                    elif real != code:
-                        msg = (f"⚠ Supertonic 로컬 음성 실패 → Edge {real} 로 대체" if code.startswith("supertonic:")
-                               else f"⚠ {'Gemini' if code.startswith('gemini') else 'ChatGPT'} 오늘 한도 소진 → 대신 {real} 로 들려줌")
+                    if real != code:
+                        msg = f"⚠ {'Gemini' if code.startswith('gemini') else 'ChatGPT'} 오늘 한도 소진 → 대신 {real} 로 들려줌"
                     self.q.put(lambda msg=msg: (status.config(text=msg), play_wav(p)))
                 except Exception as e:
                     short = getattr(e, "short", str(e).splitlines()[0] if str(e) else "실패")

@@ -61,6 +61,11 @@ JOURNAL_SEARCHES = [
     "decipher", "solves", "resolves", "origin of", "ancient DNA",
     "archaeological", "lost civilization",
 ]
+# --mode 발견: 수수께끼가 아니어도 '새로 밝혀진 사실'(첫 증거·가장 오래된·상식을 뒤집은 발견)을 찾음
+DISCOVERY_SEARCHES = [
+    "discovery", "first evidence", "earliest", "oldest known", "new species", "unexpected",
+    "surprising", "overturns", "first ever", "never before seen", "solves", "resolves",
+]
 
 # 과학/고고학 뉴스 RSS ("발행처 세부" 형식: 같은 발행처의 여러 피드는 독립 보도로 세지 않음)
 NEWS_FEEDS = {
@@ -97,6 +102,12 @@ MYSTERY_PATTERNS = [
     (r"\b(?:decades|century|centuries|millennia)[- ]old\b|\bcenturies\b|\bmillennia\b", 3),
     (r"\blong-?standing\b", 3), (r"\blost\b|\bmissing\b|\bhidden\b", 2),
     (r"\bdebat\w*|\bcontrovers\w*", 2), (r"\borigins?\b", 1),
+]
+DISCOVERY_PATTERNS = [   # --mode 발견 에서만 점수에 들어감
+    (r"\bdiscover(?:y|ies|ed|s)?\b", 3), (r"\bfirst (?:ever|evidence|time|known|direct)\b", 4),
+    (r"\bearliest\b|\boldest\b", 3), (r"\bnew(?:ly)? (?:species|found|discovered|identified)\b", 3),
+    (r"\bunexpected(?:ly)?\b|\bsurpris\w*", 3), (r"\bnever (?:before )?seen\b|\bunprecedented\b", 3),
+    (r"\boverturn\w*|\brewrit\w*|\bchalleng(?:e|es|ed) (?:the )?(?:long-held|textbook|conventional)\b", 4),
 ]
 # 아직 풀리지 않았다는 표현 (해결 신호보다 우선해서 상태 판단)
 OPEN_PATTERNS = re.compile(
@@ -246,7 +257,7 @@ def openalex_abstract(inv):
     return " ".join(pos[i] for i in sorted(pos))
 
 
-def collect_journals(days, mailto=""):
+def collect_journals(days, mailto="", searches=None):
     """OpenAlex 는 무료지만 요청 한도가 있음. mailto(이메일)를 붙이면 더 넉넉한 'polite pool' 한도를 줌 (선택)."""
     log("[1/5] 주요 과학저널 검색 중 (OpenAlex)...")
     since = (datetime.now(timezone.utc) - timedelta(days=days)).strftime("%Y-%m-%d")
@@ -279,7 +290,8 @@ def collect_journals(days, mailto=""):
     limited = []
 
     with ThreadPoolExecutor(2 if not mailto else 4) as ex:   # 한도 때문에 동시 요청을 줄임 (mailto 있으면 4)
-        for term, res in zip(JOURNAL_SEARCHES, ex.map(one, JOURNAL_SEARCHES)):
+        searches = searches or JOURNAL_SEARCHES
+        for term, res in zip(searches, ex.map(one, searches)):
             log(f"  - '{term}': {len(res)}건")
             for w in res:
                 title = clean(w.get("title") or "")
@@ -480,18 +492,20 @@ def evidence_status(g):
     return "뉴스만", 0
 
 
-def score_items(groups, days, focus, now=None):
+def score_items(groups, days, focus, now=None, mode="미스터리"):
     now = now or datetime.now(timezone.utc)
+    disc = mode == "발견"
     out = []
     for it in groups:
         text = it["title"] + " " + it["summary"]
         m, mh = pattern_score(text, MYSTERY_PATTERNS)
         s, sh = pattern_score(NEG_SOLVE.sub(" ", text), SOLVED_PATTERNS)
+        dv, dh = pattern_score(text, DISCOVERY_PATTERNS) if disc else (0, [])
         arch = count_hits(text, ARCH_WORDS)
         strong = count_hits(text, ARCH_STRONG)
         tech = list(dict.fromkeys(TECH_WORDS[k] for k in TECH_WORDS if k in text.lower()))
-        if m == 0 and not (arch and s):
-            continue  # 미스터리 요소가 없는 일반 연구는 제외
+        if m == 0 and not (arch and s) and not dv:
+            continue  # 미스터리 요소(발견 모드면 새 발견 신호도)가 없는 일반 연구는 제외
         if re.match(r"^[A-Z][a-z]+ [A-Z][a-z]+: ", it["title"]):
             continue  # "이름 성: ..." 형식의 인물 인터뷰/프로필 기사
         if it["origin"] == "논문" and len(it["links"]) == 1:
@@ -499,7 +513,8 @@ def score_items(groups, days, focus, now=None):
             # ("Deciphering X signaling" 처럼 해결 동사가 방법 설명으로만 쓰인 논문도 거름)
             tm, _ = pattern_score(it["title"], MYSTERY_PATTERNS)
             ts, _ = pattern_score(it["title"], SOLVED_PATTERNS)
-            if m < 4 or (tm < 2 and ts < 4) or JARGON.search(it["title"]) \
+            td = pattern_score(it["title"], DISCOVERY_PATTERNS)[0] if disc else 0
+            if m + dv < 4 or (tm < 2 and ts < 4 and td < 3) or JARGON.search(it["title"]) \
                     or len(JARGON.findall(text)) >= 3:
                 continue
         d = parse_date(it["date"]) if it["date"] else None
@@ -510,17 +525,17 @@ def score_items(groups, days, focus, now=None):
         ev, ev_pts = evidence_status(it)
         age = (now - d).days if d else days
         score = (
-            m * 2.0 + s * 1.5
+            m * 2.0 + s * 1.5 + dv * 2.0
             + STATUS_BONUS[status]
             + (min(len(arch), 4) * (5 if focus == "고고학" else 3) if is_arch else 0)
             + min(len(tech), 3) * 2
             + ev_pts
-            + max(0, 1 - age / max(days, 1)) * 8
+            + max(0, 1 - age / max(days, 1)) * (16 if disc else 8)    # 발견 모드는 최신일수록 더 우대
             + min(math.log10(it.get("cited", 0) + 1) * 3, 6)
             + (it["coverage"] - 1) * 4                 # 서로 다른 발행처의 독립 보도
         )
         it.update({
-            "signals": ", ".join(mh + sh), "arch": is_arch, "tech": ", ".join(tech),
+            "signals": ", ".join(mh + sh + dh), "arch": is_arch, "tech": ", ".join(tech),
             "status": status, "evidence": ev, "base_score": round(score, 1),
             "field": "고고학/인류" if is_arch else guess_field(text),
         })
@@ -1079,6 +1094,8 @@ def main(argv=None):
     ap.add_argument("--pick", type=int, default=20, help="최종 선정 개수, 기본 20")
     ap.add_argument("--pool", type=int, default=45, help="유튜브로 확인할 후보 수 (pick 이상), 기본 45")
     ap.add_argument("--focus", default="고고학", help="가중치를 더 줄 분야 (기본: 고고학)")
+    ap.add_argument("--mode", default="미스터리", choices=["미스터리", "발견"],
+                    help="미스터리(기본): 풀린/안 풀린 수수께끼 · 발견: 수수께끼가 아니어도 새로 밝혀진 사실(첫 증거·가장 오래된·상식을 뒤집은 발견), 최신일수록 우대")
     ap.add_argument("--channel", default=CHANNEL_URL, help="중복 확인할 내 채널 주소")
     ap.add_argument("--no-youtube", action="store_true", help="유튜브 수요/경쟁 확인 생략")
     ap.add_argument("--no-translate", action="store_true", help="한국어 번역 생략")
@@ -1118,6 +1135,7 @@ def main(argv=None):
         now = parse_stamp(raw.get("collected", "")) or datetime.now(timezone.utc)
         settings = raw.get("settings", {})
         days, focus = settings.get("days", raw.get("days", args.days)), settings.get("focus", args.focus)
+        mode = settings.get("mode", args.mode)
         channel = raw.get("channel")
         rules = raw.get("exclude_rules")
         checks["수집"] = (f"오프라인 재현 — 저장본 {os.path.basename(args.from_raw)} "
@@ -1131,8 +1149,8 @@ def main(argv=None):
         else:
             checks["채널 영상 목록"] = f"저장본 사용 {len(channel)}개"
     else:
-        now, days, focus = datetime.now(timezone.utc), args.days, args.focus
-        j_items, j_fail = collect_journals(days, args.mailto)
+        now, days, focus, mode = datetime.now(timezone.utc), args.days, args.focus, args.mode
+        j_items, j_fail = collect_journals(days, args.mailto, DISCOVERY_SEARCHES if mode == "발견" else None)
         n_items, n_fail = collect_news()
         items, yt_cache = j_items + n_items, {}
         tr_cache = load_json(TR_CACHE_FILE, {})
@@ -1154,7 +1172,7 @@ def main(argv=None):
     checks["_days"], checks["_channel"] = days, channel
 
     groups = merge_items(items)
-    cands = score_items(groups, days, focus, now)
+    cands = score_items(groups, days, focus, now, mode)
     log(f"  => 원본 {len(items)}건 → 병합 {len(groups)}개 → 미스터리 후보 {len(cands)}개")
     checks["후보"] = f"원본 {len(items)}건 → 중복 병합 {len(groups)}개 → 미스터리 후보 {len(cands)}개"
 
@@ -1262,7 +1280,7 @@ def main(argv=None):
     if not offline:
         raw_path = unique_path(os.path.join(args.out, f"raw_{stamp}.json"))
         with open(raw_path, "w", encoding="utf-8") as f:
-            json.dump({"version": 3, "collected": stamp, "settings": {"days": days, "focus": focus},
+            json.dump({"version": 3, "collected": stamp, "settings": {"days": days, "focus": focus, "mode": mode},
                        "channel": channel, "exclude_rules": rules,
                        "items": items, "yt_cache": yt_cache, "tr_cache": tr_cache},
                       f, ensure_ascii=False)
