@@ -284,6 +284,10 @@ def main(argv=None):
     ap.add_argument("--위", type=float, default=None, help="잘라낼 위쪽 띠 비율(제목). 기본: 자동 감지")
     ap.add_argument("--아래", type=float, default=None, help="잘라낼 아래쪽 띠 비율(자막). 기본: 자동 감지")
     ap.add_argument("--후보폴더", action="store_true", help="<영상이름>_썸네일_후보\\ 에도 '외부_mp4_' 이름으로 복사")
+    ap.add_argument("--썸네일선택", default="수동", choices=["자동", "수동", "없음"],
+                    help="후보 중 최종 1장 고르기: 자동(점수) / 수동(클릭 창, 기본) / 없음")
+    ap.add_argument("--최종적용", action="store_true",
+                    help="고른 썸네일을 <영상이름>_썸네일_유튜브.jpg 로 저장 (기존 파일은 _이전.jpg 로 보관)")
     ap.add_argument("--ffmpeg", default="")
     ap.add_argument("--out", default="", help="결과 폴더 (기본: <영상 폴더>\\<영상이름>_썸네일_mp4)")
     a = ap.parse_args(argv)
@@ -362,6 +366,17 @@ def main(argv=None):
             shutil.copy(p, os.path.join(cdir, "외부_mp4_" + os.path.basename(p)))
         print(f"후보 폴더에도 복사: {cdir}\\외부_mp4_*.jpg")
     print(f"완료: 후보 {len(cands)}장 → {out_dir}\n  모음표: {os.path.join(out_dir, '후보_모음표.jpg')}")
+    # ---- 최종 1장 고르기 (자동 / 수동 / 없음)
+    if cands and a.썸네일선택 != "없음":
+        import thumb_pick
+        final, msg = thumb_pick.pick(out_dir, a.썸네일선택, title=title)
+        print("  " + msg)
+        if final and a.최종적용:
+            dest = os.path.join(os.path.dirname(video), stem + "_썸네일_유튜브.jpg")
+            if os.path.exists(dest):
+                shutil.copy(dest, os.path.splitext(dest)[0] + "_이전.jpg")
+            shutil.copy(final, dest)
+            print(f"  유튜브 썸네일로 적용: {dest} (기존 파일은 _이전.jpg 로 보관)")
     return 0
 
 

@@ -589,7 +589,7 @@ def build_variants(it, photos, copies, font_path, d, prefer_compare=None):
 
 
 def make_assets(picks, out_root, font=None, bg_paths=None, bg_credit="", glossary=None, translate=None,
-                commons=False, http_get=None, bg_dir=None):
+                commons=False, http_get=None, bg_dir=None, pick_mode="없음"):
     """선정 소재마다 문구 3안 · 썸네일 3안 · 해시태그 · 출처/편집 메타데이터를 폴더에 저장.
     실사(사용자 사진 또는 --bg-commons 공용 사진)가 있으면 실사 편집 레이아웃(A/B/C), 없으면 기본 그래픽을 '임시' 로 표시."""
     glossary = glossary if glossary is not None else load_glossary()
@@ -679,6 +679,15 @@ def make_assets(picks, out_root, font=None, bg_paths=None, bg_credit="", glossar
         }
         with open(os.path.join(d, "meta.json"), "w", encoding="utf-8") as f:
             json.dump(meta, f, ensure_ascii=False, indent=2, default=str)
+        # 최종 1장 자동 선택 (수동은 일괄 처리에서 창을 띄울 수 없어 썸네일_고르기.bat 로 따로)
+        thumb_final, pick_note = "", ""
+        if pick_mode == "자동" and images:
+            try:
+                import thumb_pick
+                thumb_final, pick_note = thumb_pick.pick(d, "자동")
+            except Exception as e:
+                pick_note = f"자동 선택 실패({e})"
+            summary["auto_picked"] = summary.get("auto_picked", 0) + (1 if thumb_final else 0)
 
         first = photos[0] if photos else None
         if first and first.get("source") == "위키미디어 공용":
@@ -693,7 +702,8 @@ def make_assets(picks, out_root, font=None, bg_paths=None, bg_credit="", glossar
         it.update({"asset_dir": d, "thumb_copies": copies, "hashtags": tags, "topic_name": name,
                    "thumb_images": images, "thumb_layouts": [m.get("layout", "") for m in metas],
                    "thumb_notes": " | ".join(img_notes), "term_notes": ", ".join(notes),
-                   "bg_credit": credit, "bg_page": first.get("page", "") if first else "", "thumb_mode": mode})
+                   "bg_credit": credit, "bg_page": first.get("page", "") if first else "", "thumb_mode": mode,
+                   "thumb_final": thumb_final, "pick_note": pick_note})
         summary["topics"] += 1
     return summary
 

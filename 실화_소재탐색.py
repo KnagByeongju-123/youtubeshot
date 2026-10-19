@@ -186,6 +186,8 @@ def main():
     ap.add_argument("--목록만", action="store_true", help="실화_주제목록.txt 는 건드리지 않음")
     ap.add_argument("--규칙제목", action="store_true", help="Claude Code 로 한국어 주제 다듬기 생략")
     ap.add_argument("--소재", default=GENRE, help=f"주제 목록에 적을 소재 (기본: {GENRE})")
+    ap.add_argument("--썸네일선택", default="자동", choices=["자동", "없음"],
+                    help="소재별 썸네일 3안 중 최종 1장 자동 선택(기본). 직접 고르려면 '없음' 뒤 썸네일_고르기.bat 로 소재 폴더를 열기")
     a = ap.parse_args()
     if a.편수 < 1:
         ap.error("--편수 는 1 이상이어야 합니다.")
@@ -206,6 +208,7 @@ def main():
         argv.append("--no-youtube")
     if a.no_thumbs:
         argv.append("--no-thumbs")
+    argv += ["--썸네일선택", a.썸네일선택]
     log(f"▶ 소재 탐색 시작: 최근 {a.days}일 · 후보 {pick}개 중 {a.편수}편 선정" + (" · 공용 사진" if a.bg_commons else ""))
     res = tf.main(argv)
     picks = res["picks"]
@@ -253,7 +256,7 @@ def main():
                 shutil.copy(p, d)
             except OSError:
                 pass
-        for name in ("hashtags.txt", "source.txt", "meta.json", "copy.txt"):
+        for name in ("hashtags.txt", "source.txt", "meta.json", "copy.txt", "썸네일_최종.jpg", "선택_기록.json"):
             src = os.path.join(it.get("asset_dir") or "", name)
             if it.get("asset_dir") and os.path.exists(src):
                 shutil.copy(src, d)

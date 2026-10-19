@@ -331,5 +331,33 @@ th.make_assets([cm2], os.path.join(sroot, "assets3"), glossary=gl, commons=True,
 s3 = open(os.path.join(cm2["asset_dir"], "source.txt"), encoding="utf-8").read()
 check("공용 사진 다운로드(허용 1장) → 실사 편집 + 출처·라이선스 기록", (cm2["thumb_mode"], "CC BY-SA 4.0" in s3, "Jane Doe" in s3, os.path.exists(os.path.join(cm2["asset_dir"], "photo_1.jpg"))), ("실사 편집", True, True, True))
 
+# ---------------- v7: 썸네일 최종 선택 (자동 / 수동)
+import thumb_pick as tp
+pk = tempfile.mkdtemp()
+from PIL import Image as _I2
+for name, color in (("thumb_A.jpg", (40, 40, 40)), ("thumb_B.jpg", (40, 40, 40)), ("thumb_C.jpg", (40, 40, 40))):
+    _I2.new("RGB", (1280, 720), color).save(os.path.join(pk, name))
+json.dump({"mode": "실사 편집", "variants": [{"file": "thumb_A.jpg", "layout": "A 피사체 중심형", "text_overflow": True},
+                                           {"file": "thumb_B.jpg", "layout": "B 좌우 비교형"},
+                                           {"file": "thumb_C.jpg", "layout": "C 증거 확대형"}]},
+          open(os.path.join(pk, "meta.json"), "w", encoding="utf-8"), ensure_ascii=False)
+cands_pk = tp.list_candidates(pk)
+check("후보 목록 3장", len(cands_pk), 3)
+best, why, table = tp.auto_pick(cands_pk, pk)
+check("자동: A가 문구 넘침이면 B 선택", os.path.basename(best), "thumb_B.jpg")
+check("자동 선택 이유 기록", "문구 넘침" in [r for r in table if r["file"] == "thumb_A.jpg"][0]["why"], True)
+best2, _, _ = tp.auto_pick(cands_pk, pk, pref=["C", "B", "A"])
+check("선호 순서 바꾸면 C 선택", os.path.basename(best2), "thumb_C.jpg")
+out_f, msg = tp.pick(pk, "자동")
+check("최종 파일·선택 기록 생성", (os.path.exists(os.path.join(pk, "썸네일_최종.jpg")), os.path.exists(os.path.join(pk, "선택_기록.json"))), (True, True))
+check("최종 파일은 후보 목록에서 제외", len(tp.list_candidates(pk)), 3)
+answers = iter(["9", "x", "2"])
+check("수동(번호 입력): 잘못된 입력 재질문 후 2번", os.path.basename(tp._console_pick(cands_pk, input_fn=lambda _: next(answers))), "thumb_B.jpg")
+check("수동(번호 입력): 엔터=취소", tp._console_pick(cands_pk, input_fn=lambda _: ""), "")
+# make_assets pick_mode=자동 → thumb_final 기록
+pa = dict(samp)
+th.make_assets([pa], os.path.join(pk, "assets"), glossary=gl, bg_dir=bgd, pick_mode="자동")
+check("make_assets 자동 선택 → thumb_final", bool(pa.get("thumb_final")) and os.path.exists(pa["thumb_final"]), True)
+
 print("\n실패", fails, "건")
 sys.exit(1 if fails else 0)

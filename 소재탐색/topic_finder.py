@@ -989,6 +989,21 @@ def write_report(picks, cands, excluded, checks, args, stamp):
         L.append("훅 제목 틀 ([소재]에 짧은 한국어 소재명을 넣어 쓰세요):")
         L += [f"- {h}" for h in it.get("hooks", [])]
         L.append(f"\n구성 방향: {STRUCTURE[it['status']]}")
+        if it.get("thumb_copies"):
+            L.append(f"\n썸네일 문구 3안 (소재명 `{it.get('topic_name', '')}`"
+                     + (f", 용어 메모: {it['term_notes']}" if it.get("term_notes") else "") + "):")
+            for label, c in zip("ABC", it["thumb_copies"]):
+                L.append(f"- [{label}] {c.replace(chr(10), ' / ')}")
+            rel_dir = os.path.relpath(it["asset_dir"], args.out).replace(os.sep, "/") if it.get("asset_dir") else ""
+            imgs = " · ".join(f"[{os.path.basename(p)[:-4]}]({rel_dir}/{os.path.basename(p)})" for p in it.get("thumb_images", []))
+            lay = " / ".join(l for l in it.get("thumb_layouts", []) if l)
+            L.append(f"- 썸네일 이미지 ({it.get('thumb_mode', '')}{': ' + lay if lay else ''}): {imgs or '생성 안 됨'}"
+                     f" (폴더 `{rel_dir}`, 편집 내역 `meta.json`)" + (f" — {it['thumb_notes']}" if it.get("thumb_notes") else ""))
+            if it.get("bg_credit"):
+                L.append(f"- 배경 사진: {it['bg_credit']}" + (f" — [원본 페이지]({it['bg_page']})" if it.get("bg_page") else ""))
+            L.append(f"- 해시태그: {' '.join(it.get('hashtags', []))}")
+            if it.get("thumb_final"):
+                L.append(f"- 최종 선택(자동): [{os.path.basename(it['thumb_final'])}]({rel_dir}/{os.path.basename(it['thumb_final'])}) — {it.get('pick_note', '')}")
         if it.get("yt_query"):
             L.append(f"\n유튜브 (검색어 `{it['yt_query']}`, 식별어 `{it.get('yt_ids', '')}`, "
                      f"{it.get('yt_checked', '')}): {fmt_yt(it)}")
@@ -1075,6 +1090,8 @@ def main(argv=None):
     ap.add_argument("--bg-commons", action="store_true",
                     help="사용자 이미지가 없을 때 위키미디어 공용의 자유 이용 사진을 배경으로 받음 (켤 때만 동작, 출처·라이선스 자동 기록)")
     ap.add_argument("--assets-out", help="썸네일·해시태그 폴더 위치 (기본: output/assets_날짜)")
+    ap.add_argument("--썸네일선택", default="없음", choices=["자동", "없음"],
+                    help="소재마다 썸네일 3안 중 최종 1장을 자동으로 고름(점수) → 썸네일_최종.jpg. 직접 고르려면 썸네일_고르기.bat 로 폴더별로")
     ap.add_argument("--from-raw", help="저장된 raw_*.json 으로 오프라인 재채점 (네트워크 사용 안 함)")
     ap.add_argument("--mailto", default=os.environ.get("OPENALEX_MAILTO", ""),
                     help="OpenAlex 요청에 붙일 이메일 (선택, 요청 한도가 넉넉해짐; 환경변수 OPENALEX_MAILTO 로도 지정)")
@@ -1225,7 +1242,7 @@ def main(argv=None):
                 if args.bg_commons and offline:
                     checks["위키미디어 공용"] = "오프라인 재현 모드라 건너뜀 (네트워크 사용 안 함)"
                 sm = thumbs.make_assets(picks, assets_root, args.font, bgs, args.bg_credit, translate=tr,
-                                        commons=use_commons, bg_dir=args.bg_dir)
+                                        commons=use_commons, bg_dir=args.bg_dir, pick_mode=args.썸네일선택)
                 if use_commons:
                     checks["위키미디어 공용"] = (f"{sm['commons_ok']}/{sm['topics']}개 소재에 자유 이용 사진 사용 "
                                             f"(출처·라이선스는 각 폴더 source.txt) — 나머지는 기본 그래픽")
@@ -1234,6 +1251,8 @@ def main(argv=None):
                     f"실사 편집 {sm['photo_topics']}개(비교형 가능 {sm['compare_topics']}개) · 기본 그래픽(임시) {sm['graphic_topics']}개 · "
                     f"사진 출처: {sm['bg']} · 폰트: {os.path.basename(sm['font'])}"
                     + (" · rembg 배경 제거 사용" if sm.get("rembg") else " · rembg 미설치(배경 제거 생략)")
+                    + (f" · 최종 자동 선택 {sm.get('auto_picked', 0)}개(썸네일_최종.jpg)" if args.썸네일선택 == "자동"
+                       else " · 최종 선택 안 함(썸네일_고르기.bat 로 고르거나 --썸네일선택 자동)")
                     + ("" if sm["pillow"] else " · Pillow 없음(문구·해시태그 텍스트만 저장)")
                     + (" · YAKE 키워드 보조 사용" if sm["yake"] else ""))
             except Exception as e:

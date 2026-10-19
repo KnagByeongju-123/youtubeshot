@@ -42,6 +42,8 @@ DEFAULT = {
     "재미_소재": [],        # 비우면 아래 FUN_GENRES 를 돌아가며
     "그림_스타일": "자동(돌아가며)",   # 이야기 편 그림 스타일: 자동 또는 프로그램의 그림 스타일 이름(웹툰, 지브리풍 손그림 애니, 70~80년대 순정만화 …) 또는 직접 쓴 영어 지시
     "이미지": "근거 사진(웹)",   # 사실 주제 이미지: 근거 사진(웹) / 그림: 애니(웹툰) / 그림: 애니+수채화 / 그림: 애니 모델 그대로 (그림은 이 PC에서 그림)
+    "썸네일_선택": "프로그램",   # 유튜브 썸네일 최종본: 프로그램(AI가 고른 것 그대로) / 외부 자동(소재탐색 썸네일 중 점수로 고른 것을 최종으로, 프로그램 것은 _프로그램.jpg 로 보관)
+                               # 직접 고르려면: 영상이 끝난 뒤 썸네일_고르기.bat 에 <제목>_썸네일_후보 폴더를 끌어다 놓기 (프로그램 후보 + 외부 후보를 한 화면에서)
 }
 MEDITATION_PRESETS = ["명상 · 싱잉볼", "싱잉볼 · 깊은 수면", "오르골 · 캐논", "싱잉볼 · 432Hz", "오르골 자장가 · 브람스", "싱잉볼 · 7 차크라",
                       "오르골 · 꿈속의 고향", "싱잉볼 · 528Hz", "오르골 · 어메이징 그레이스", "싱잉볼 · 노래하는 볼(문지르기)"]
@@ -679,14 +681,15 @@ def run_doc(m, app, c, gate):
     # 4) 업로드 문구 + 설명란 완성본 + 유튜브 썸네일
     log("📝 업로드 문구·설명란·유튜브 썸네일 만드는 중...")
     m.publish_kit(model, base, title, story, m.DOC_CATEGORY, c["소재"], s, ch, res.get("sources") or [], res.get("notes", ""), log)
-    add_external_thumbs(c.get("소재탐색_폴더", ""), base, log)
+    add_external_thumbs(c.get("소재탐색_폴더", ""), base, log, str(c.get("썸네일_선택") or "프로그램"))
     log("✅ 전부 완료 → " + out_root)
     return res
 
 
-def add_external_thumbs(folder, base, log):
-    """소재탐색(실화_소재탐색.py)이 미리 만든 썸네일 3안을 _썸네일_후보 폴더에 '외부_' 이름으로 추가 (고른 썸네일은 바꾸지 않음).
-    출처·라이선스 메모(source.txt)도 함께 복사해 공용 사진 표기를 잊지 않게."""
+def add_external_thumbs(folder, base, log, choice="프로그램"):
+    """소재탐색(실화_소재탐색.py)이 미리 만든 썸네일 3안을 _썸네일_후보 폴더에 '외부_' 이름으로 추가.
+    출처·라이선스 메모(source.txt)도 함께 복사해 공용 사진 표기를 잊지 않게.
+    choice='외부 자동' 이면 외부 후보 중 점수가 높은 것을 <제목>_썸네일_유튜브.jpg 로 (프로그램 것은 _썸네일_유튜브_프로그램.jpg 로 보관)."""
     if not folder or not os.path.isdir(folder):
         return
     import glob
@@ -698,11 +701,30 @@ def add_external_thumbs(folder, base, log):
     os.makedirs(cdir, exist_ok=True)
     for p in thumbs:
         shutil.copy(p, os.path.join(cdir, "외부_" + os.path.basename(p)))
-    for name in ("source.txt", "meta.json", "hashtags.txt"):
+    for name in ("source.txt", "meta.json", "hashtags.txt", "선택_기록.json"):
         src = os.path.join(folder, name)
         if os.path.exists(src):
             shutil.copy(src, os.path.join(cdir, "외부_" + name))
     log(f"  🖼 소재탐색 썸네일 {len(thumbs)}장을 후보 폴더에 추가: {os.path.basename(cdir)}\\외부_thumb_*.jpg (출처: 외부_source.txt)")
+    if choice.startswith("외부"):
+        final = os.path.join(folder, "썸네일_최종.jpg")
+        why = "소재탐색 단계에서 자동 선택된 것"
+        if not os.path.exists(final):
+            try:
+                sys.path.insert(0, os.path.join(HERE, "소재탐색"))
+                import thumb_pick
+                final, why = thumb_pick.pick(folder, "자동")
+            except Exception as e:
+                log(f"  🖼 외부 썸네일 자동 선택 실패(프로그램 썸네일 유지): {str(e)[:80]}")
+                return
+        if final and os.path.exists(final):
+            dest = base + "_썸네일_유튜브.jpg"
+            if os.path.exists(dest):
+                shutil.copy(dest, base + "_썸네일_유튜브_프로그램.jpg")
+            shutil.copy(final, dest)
+            log(f"  🖼 유튜브 썸네일을 소재탐색 후보로 교체: {os.path.basename(dest)} ({why}) · 프로그램 것은 _썸네일_유튜브_프로그램.jpg")
+    else:
+        log("     최종 썸네일은 프로그램이 고른 것 그대로 (바꾸려면 장문_설정.json '썸네일_선택': '외부 자동' 또는 썸네일_고르기.bat)")
 
 
 def _job_procs():

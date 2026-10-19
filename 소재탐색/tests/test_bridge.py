@@ -64,9 +64,15 @@ base = os.path.join(tmp, "영상제목")
 logs = []
 ml.add_external_thumbs(brief_dir, base, logs.append)
 check("외부 썸네일 복사", os.path.exists(os.path.join(base + "_썸네일_후보", "외부_thumb_A.jpg")), True)
+n_before = len(logs)
 ml.add_external_thumbs("", base, logs.append)
 ml.add_external_thumbs(os.path.join(tmp, "없음"), base, logs.append)
-check("폴더 없으면 조용히 통과", len(logs), 1)
+check("폴더 없으면 조용히 통과", len(logs) - n_before, 0)
+# '외부 자동': 외부 후보 중 하나를 유튜브 썸네일로, 프로그램 것은 _프로그램.jpg 로 보관
+open(base + "_썸네일_유튜브.jpg", "wb").write(b"prog")
+ml.add_external_thumbs(brief_dir, base, logs.append, "외부 자동")
+check("외부 자동 → 유튜브 썸네일 교체 + 프로그램 것 보관",
+      (os.path.exists(base + "_썸네일_유튜브_프로그램.jpg"), open(base + "_썸네일_유튜브.jpg", "rb").read() != b"prog"), (True, True))
 
 # ---- 실화_소재탐색: 규칙 제목·기획메모 본문 (네트워크 없음)
 spec2 = importlib.util.spec_from_file_location("br", os.path.join(ROOT, "실화_소재탐색.py"))
