@@ -71,7 +71,7 @@
   "outro_sec": 2.5,
   "outro_text": "구독하면 다음 이야기가 이어집니다",
   "safe_guide": "off",
-  "format": "쇼츠 세로(1080×1920)",
+  "format": "롱폼 가로(1920×1080)",
   "layout": "자막형(큰 제목+사진+자막)",
   "head_style": "글자 탭 제목색",
   "head_size": 96,
