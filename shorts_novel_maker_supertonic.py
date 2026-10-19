@@ -11306,6 +11306,56 @@ class ItemTree(ttk.Frame):
 
 
 # ---------------- 화면(GUI) ----------------
+# ---------------- 소재 탐색 (저널·뉴스에서 실화 소재 찾기 → 실화\주제목록.txt → 실화 연속 제작) ----------------
+SEED_FILE = os.path.join(BASE, "실화", "주제목록.txt")
+TOPIC_SEARCH_DIR = os.path.join(BASE, "output", "장문", "_소재탐색")
+TOPIC_SEARCH_MODES = {   # 라벨: (실화_소재탐색.py 추가 인자, 기본 기간(일), 설명)
+    "🧩 풀린 수수께끼 찾기": ([], 180,
+                        "주요 과학저널(네이처·사이언스 등)과 과학 뉴스에서 '오래 풀리지 않던 수수께끼'에 답이 나온 연구를 찾음\n"
+                        "→ 소재 '[실화] 과학이 밝혀낸 미스터리'. 풀렸는지·가설인지·미해결인지 나눠서 기획메모에 적음"),
+    "🆕 최근 밝혀진 발견 찾기": (["--discovery"], 90,
+                         "수수께끼가 아니어도 최근 새로 밝혀진 사실(첫 증거·가장 오래된 기록·상식을 뒤집은 결과)을 찾음. 최신일수록 우대\n"
+                         "→ 소재 '[실화] 최근 밝혀진 과학 발견'. 제목·오프닝에 발표 시점을 넣고 검증 단계를 밝힘"),
+}
+
+
+def topic_search_args(mode, count=5, days=None, list_only=False, youtube=True, thumbs=True, commons=False, rule_titles=False):
+    """소재 탐색 창의 선택 → 실화_소재탐색.py 명령줄 인자. 영문 옵션만 써서 새 명령 창(cmd)으로 넘겨도 글자가 깨지지 않게"""
+    extra, default_days, _ = TOPIC_SEARCH_MODES[mode]
+    args = list(extra) + ["--count", str(max(1, int(count))), "--days", str(max(1, int(days or default_days)))]
+    if list_only:
+        args.append("--list-only")       # 저널에서 찾기만: 리포트·기획메모·썸네일만 만들고 주제 목록은 안 바꿈
+    if not youtube:
+        args.append("--no-youtube")
+    if not thumbs:
+        args.append("--no-thumbs")
+    if commons:
+        args.append("--bg-commons")
+    if rule_titles:
+        args.append("--rule-titles")
+    return args
+
+
+def seed_pending_count(path=None):
+    """실화\\주제목록.txt 에서 아직 만들 주제 수 ('#' 줄·빈 줄 제외)"""
+    try:
+        return sum(1 for ln in open(path or SEED_FILE, encoding="utf-8") if ln.strip() and not ln.strip().startswith("#"))
+    except OSError:
+        return 0
+
+
+def launch_console(bat, py_script, args=()):
+    """프로그램 폴더의 .bat 를 새 명령 창으로 띄움 (끝나도 창이 남아 기록을 볼 수 있음). 윈도우가 아니면 .py 를 바로 실행.
+    반환: 작업 기록에 보여줄 명령 한 줄"""
+    args = [str(a) for a in args]
+    if os.name == "nt" and os.path.exists(os.path.join(BASE, bat)):
+        subprocess.Popen('start "" "' + os.path.join(BASE, bat) + '"' + "".join(" " + a for a in args), shell=True, cwd=BASE)
+        return bat + "".join(" " + a for a in args)
+    subprocess.Popen([sys.executable, "-X", "utf8", os.path.join(BASE, py_script)] + args, cwd=BASE,
+                     creationflags=getattr(subprocess, "CREATE_NEW_CONSOLE", 0))
+    return py_script + "".join(" " + a for a in args)
+
+
 class App(tk.Tk):
     def __init__(self):
         super().__init__()
@@ -11603,6 +11653,7 @@ class App(tk.Tk):
                 self.write_log("🔎 이미지: 사실 주제는 웹 근거 사진, 이야기는 설정대로")
         self.img_src_var.trace_add("write", on_src)
         ttk.Button(r1, text="참고자료 붙여넣기", command=self.edit_reference).pack(side="left", padx=4)
+        ttk.Button(r1, text="🔎 소재 탐색", command=self.topic_search).pack(side="left")
         self.ref_label = ttk.Label(r1, text="", foreground="gray")
         self.ref_label.pack(side="left")
         ttk.Button(r1, text="✍ AI로 대본 쓰기", command=self.ai_write).pack(side="right", padx=4)
@@ -15853,6 +15904,104 @@ class App(tk.Tk):
         p = os.path.join(out_dir, safe_name(self.title_var.get()) + "_썸네일.png")
         self.renderer.thumbnail().save(p)
         self.write_log("썸네일 저장: " + p)
+
+    def topic_search(self):
+        """🔎 소재 탐색: 저널·뉴스에서 실화 소재를 찾아 실화\\주제목록.txt 에 넣고(또는 찾기만), 이어서 실화 연속 제작까지.
+        탐색은 실화_소재탐색.bat 을 새 명령 창으로 띄워 진행 (몇 분 걸리고, 이 창은 그동안 자유롭게 쓸 수 있음)"""
+        dlg = tk.Toplevel(self)
+        dlg.title("🔎 소재 탐색 - 저널·뉴스에서 실화 소재 찾기")
+        dlg.transient(self)
+        f = ttk.Frame(dlg, padding=12)
+        f.pack(fill="both", expand=True)
+        ttk.Label(f, text="무료로 주요 과학저널·과학 뉴스를 훑어 10분 다큐 소재를 고르고, 소재마다 기획메모·썸네일 3안·해시태그를 만듭니다.",
+                  wraplength=640).pack(anchor="w")
+        mode_var = tk.StringVar(value=list(TOPIC_SEARCH_MODES)[0])
+        days_var = tk.StringVar(value=str(TOPIC_SEARCH_MODES[mode_var.get()][1]))
+        desc = ttk.Label(f, text="", foreground="gray", wraplength=640, justify="left")
+        mf = ttk.LabelFrame(f, text="무엇을 찾을까요", padding=8)
+        mf.pack(fill="x", pady=(8, 4))
+
+        def on_mode(*_):
+            extra, d_days, text = TOPIC_SEARCH_MODES[mode_var.get()]
+            desc.config(text=text)
+            if days_var.get().strip() in {str(v[1]) for v in TOPIC_SEARCH_MODES.values()}:   # 기간을 직접 고치지 않았으면 종류별 기본값
+                days_var.set(str(d_days))
+        for name in TOPIC_SEARCH_MODES:
+            ttk.Radiobutton(mf, text=name, variable=mode_var, value=name, command=on_mode).pack(anchor="w")
+        desc.pack(anchor="w", padx=4)
+        on_mode()
+        of = ttk.LabelFrame(f, text="옵션", padding=8)
+        of.pack(fill="x", pady=4)
+        ttk.Label(of, text="고를 편수").grid(row=0, column=0, sticky="e")
+        count_var = tk.StringVar(value="5")
+        ttk.Spinbox(of, from_=1, to=20, textvariable=count_var, width=5).grid(row=0, column=1, sticky="w", padx=(4, 16))
+        ttk.Label(of, text="검색 기간(일)").grid(row=0, column=2, sticky="e")
+        ttk.Spinbox(of, from_=7, to=3650, increment=30, textvariable=days_var, width=6).grid(row=0, column=3, sticky="w", padx=4)
+        list_only = tk.BooleanVar(value=False)
+        yt = tk.BooleanVar(value=True)
+        th = tk.BooleanVar(value=True)
+        commons = tk.BooleanVar(value=False)
+        claude = tk.BooleanVar(value=bool(find_claude()))
+        ttk.Checkbutton(of, text="📄 저널에서 찾기만 - 리포트·기획메모·썸네일만 만들고 주제 목록에는 넣지 않음", variable=list_only).grid(row=1, column=0, columnspan=4, sticky="w", pady=(6, 0))
+        ttk.Checkbutton(of, text="유튜브 수요·경쟁 확인 (끄면 빠름)", variable=yt).grid(row=2, column=0, columnspan=4, sticky="w")
+        ttk.Checkbutton(of, text="썸네일 3안·해시태그 만들기", variable=th).grid(row=3, column=0, columnspan=4, sticky="w")
+        ttk.Checkbutton(of, text="썸네일 배경에 위키미디어 공용 사진 (출처 자동 기록)", variable=commons).grid(row=4, column=0, columnspan=4, sticky="w")
+        ttk.Checkbutton(of, text="Claude Code 로 한국어 주제 다듬기 (끄면 규칙 기반 제목)", variable=claude,
+                        state="normal" if find_claude() else "disabled").grid(row=5, column=0, columnspan=4, sticky="w")
+        pend = seed_pending_count()
+        info = ttk.Label(f, text=f"지금 주제 목록(실화\\주제목록.txt)에 만들 주제 {pend}편 대기 · 결과는 output\\장문\\_소재탐색\\날짜\\ 에",
+                         foreground="gray", wraplength=640)
+        info.pack(anchor="w", pady=(2, 6))
+
+        def start():
+            try:
+                args = topic_search_args(mode_var.get(), int(float(count_var.get())), int(float(days_var.get())), list_only.get(),
+                                         yt.get(), th.get(), commons.get(), not claude.get())
+            except ValueError:
+                messagebox.showinfo("소재 탐색", "편수와 기간은 숫자로 적어 주세요.", parent=dlg)
+                return
+            if not os.path.exists(os.path.join(BASE, "실화_소재탐색.py")):
+                messagebox.showinfo("소재 탐색", "실화_소재탐색.py 가 없습니다 (깃허브_최신받기.bat 으로 받으세요).", parent=dlg)
+                return
+            cmd = launch_console("실화_소재탐색.bat", "실화_소재탐색.py", args)
+            self.write_log(f"🔎 소재 탐색 시작 (새 창): {cmd}")
+            self.write_log("   · 몇 분 걸립니다. 끝나면 " + ("리포트·기획메모만 만듭니다 (주제 목록은 그대로)" if list_only.get()
+                                                     else "실화\\주제목록.txt 에 주제가 추가되고, ▶ 실화 연속 제작으로 영상을 만들 수 있습니다"))
+            dlg.destroy()
+
+        def open_seed():
+            if not os.path.exists(SEED_FILE):
+                os.makedirs(os.path.dirname(SEED_FILE), exist_ok=True)
+                with open(SEED_FILE, "w", encoding="utf-8") as fh:
+                    fh.write("# 실화 연속 제작에 쓸 '정해진 주제' 목록. 한 줄 = 한 편. 형식: 소재 | 주제 | (기획메모 폴더)\n")
+            self.open_path(SEED_FILE)
+
+        def batch():
+            n = seed_pending_count()
+            if n == 0 and not messagebox.askyesno("실화 연속 제작", "주제 목록이 비어 있어 AI가 주제를 고릅니다. 시작할까요?", parent=dlg):
+                return
+            if n and not messagebox.askyesno("실화 연속 제작", f"주제 목록의 {n}편을 순서대로 만듭니다 (한 편 30~60분).\n새 창에서 편수를 확인한 뒤 시작합니다. 열까요?", parent=dlg):
+                return
+            cmd = launch_console("실화_연속제작.bat", "make_longdoc.py", [] if os.name == "nt" else ["--실화"])
+            self.write_log(f"▶ 실화 연속 제작 창 열림: {cmd}")
+            dlg.destroy()
+        bf = ttk.Frame(f)
+        bf.pack(fill="x", pady=(4, 0))
+        ttk.Button(bf, text="🔎 탐색 시작 (새 창)", command=start).pack(side="left")
+        ttk.Button(bf, text="📑 주제 목록 열기", command=open_seed).pack(side="left", padx=4)
+        ttk.Button(bf, text="📂 탐색 결과 폴더", command=lambda: (os.makedirs(TOPIC_SEARCH_DIR, exist_ok=True), self.open_path(TOPIC_SEARCH_DIR))).pack(side="left")
+        ttk.Button(bf, text="▶ 실화 연속 제작", command=batch).pack(side="right")
+        ttk.Button(bf, text="닫기", command=dlg.destroy).pack(side="right", padx=4)
+
+    def open_path(self, path):
+        """파일은 기본 프로그램(메모장 등)으로, 폴더는 탐색기로 열기"""
+        try:
+            if os.name == "nt":
+                os.startfile(path)
+            else:
+                subprocess.Popen(["open" if os.uname().sysname == "Darwin" else "xdg-open", path])
+        except Exception as e:
+            self.write_log("열기 실패: " + str(e).splitlines()[0][:100])
 
     def pick_thumb(self):
         """🖼 썸네일 고르기: 이 제목의 _썸네일_후보 폴더(프로그램 후보 + 소재탐색/MP4 외부 후보)를 격자 창으로 띄워

@@ -17,7 +17,11 @@ import time
 HERE = os.path.dirname(os.path.abspath(__file__))
 CFG = os.path.join(HERE, "장문_설정.json")
 PAUSE = os.path.join(HERE, "장문_일시정지중.flag")
-SEED = os.path.join(HERE, "실화_주제목록.txt")   # --실화 때 AI 기획 대신 쓸 '정해진 주제' 목록 (있으면 순서대로)
+SEED = os.path.join(HERE, "실화", "주제목록.txt")   # --실화 때 AI 기획 대신 쓸 '정해진 주제' 목록 (있으면 순서대로)
+_OLD_SEED = os.path.join(HERE, "실화_주제목록.txt")
+if os.path.exists(_OLD_SEED) and not os.path.exists(SEED):   # 예전 위치(프로그램 폴더 바로 아래)에 있으면 실화\ 폴더로 옮김
+    os.makedirs(os.path.dirname(SEED), exist_ok=True)
+    os.replace(_OLD_SEED, SEED)
 DEFAULT = {
     "주제": "수심 1만 미터, 마리아나 해구 바닥에는 무엇이 살고 있을까?",
     "소재": "심해의 세계",
@@ -142,7 +146,7 @@ def plan_lineup(m, app, genres, n, minutes, seen, log, out_root):
 
 
 def load_seed_lineup(m):
-    """실화_주제목록.txt 를 읽어 [{genre, topic, memo, folder}] 라인업으로. 한 줄 = 한 편.
+    """실화\\주제목록.txt 를 읽어 [{genre, topic, memo, folder}] 라인업으로. 한 줄 = 한 편.
     형식: '소재 | 주제 | 기획메모' (소재 생략 시 '[실화] 과학이 밝혀낸 미스터리'). '#' 줄·빈 줄 무시.
     3번째 칸(선택): 실화_소재탐색.py 가 만든 기획메모 폴더(안의 기획메모.md 를 읽음) 또는 .md/.txt 파일 또는 그냥 메모 글
     → 대본 AI 의 '최우선 참고자료'로 들어가고, 폴더면 그 안의 thumb_*.jpg 가 영상 완성 뒤 썸네일 후보에 추가됨."""
@@ -381,7 +385,7 @@ def main():
         if seed:
             plan = seed[:len(kn_slots)]
             save_state()
-            log(f"📑 정해둔 주제 {len(plan)}개를 순서대로 만듭니다 (실화_주제목록.txt). 편수가 더 많으면 나머지는 AI가 채웁니다.")
+            log(f"📑 정해둔 주제 {len(plan)}개를 순서대로 만듭니다 (실화\\주제목록.txt). 편수가 더 많으면 나머지는 AI가 채웁니다.")
     med_presets = [p_ for p_ in (c.get("명상_프리셋") or []) if p_ in m.MUSIC_PRESETS] or MEDITATION_PRESETS
     fun_genres = [g_ for g_ in (c.get("재미_소재") or []) if g_ in m.cat_info(m.DOC_CATEGORY)[1]] or FUN_GENRES
     log(f"🔁 연속 제작 시작: {n}편 · 구성 {'/'.join(comp)} · 지식 {kinds.count('지식')}편(10분 다큐) · 명상 {kinds.count('명상')}편({c.get('명상_분', 20)}분 음악) · 재미 {kinds.count('재미')}편  (끝난 편 {len(done_list)}개)")
@@ -427,7 +431,7 @@ def main():
                 log(f"🎯 {k + 1}/{n}편 (기획 라인업): {topic} ({genre})")
                 memo = "\n".join(f"- {lab}: {plan[pi][key_]}" for lab, key_ in (("왜 지금 반응이 좋을지", "why"), ("첫 문장 훅(참고)", "hook"), ("검토자 주의사항(반드시 반영)", "review")) if plan[pi].get(key_))
                 cur_memo = "[기획자·검토자 메모]\n" + memo if memo else ""
-                if plan[pi].get("memo"):      # 실화_주제목록.txt 3번째 칸(소재탐색 기획메모) → 대본 AI 최우선 참고자료
+                if plan[pi].get("memo"):      # 실화\\주제목록.txt 3번째 칸(소재탐색 기획메모) → 대본 AI 최우선 참고자료
                     cur_memo = (str(plan[pi]["memo"]) + ("\n\n" + cur_memo if cur_memo else "")).strip()
                     log("   📎 소재탐색 기획메모를 대본 참고자료로 넘김" + (f" ({plan[pi].get('folder', '')})" if plan[pi].get("folder") else ""))
                 cur_folder = str(plan[pi].get("folder") or "")
