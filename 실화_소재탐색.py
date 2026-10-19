@@ -1,10 +1,11 @@
 r"""실화 소재 탐색 → 주제 목록·기획메모·썸네일을 장문 제작(make_longdoc.py --실화)의 시작 단계로 넘김 (무료)
 
-  py -3.11 -X utf8 실화_소재탐색.py                       # 최근 180일 저널·뉴스에서 5편 고르고 실화_주제목록.txt 에 추가
+  py -3.11 -X utf8 실화_소재탐색.py                       # 최근 180일 저널·뉴스에서 5편 고르고 실화\주제목록.txt 에 추가
+  (프로그램 창의 🔎 소재 탐색 버튼이 같은 일을 함. 영문 옵션: --count --discovery --list-only --rule-titles --genre)
   py -3.11 -X utf8 실화_소재탐색.py --편수 3 --days 365     # 1년치에서 3편
   py -3.11 -X utf8 실화_소재탐색.py --발견                 # 최신 발견 모드: 최근 90일, 수수께끼가 아니어도 새로 밝혀진 사실 (실화_최신발견탐색.bat)
   py -3.11 -X utf8 실화_소재탐색.py --bg-commons           # 썸네일 배경에 위키미디어 공용 자유 이용 사진 사용 (켤 때만, 출처 자동 기록)
-  py -3.11 -X utf8 실화_소재탐색.py --목록만               # 실화_주제목록.txt 는 건드리지 않고 기획메모·리포트만 만듦
+  py -3.11 -X utf8 실화_소재탐색.py --목록만               # 실화\주제목록.txt 는 건드리지 않고 기획메모·리포트만 만듦
   py -3.11 -X utf8 실화_소재탐색.py --규칙제목             # Claude Code 로 한국어 주제 다듬기 생략 (규칙 기반 제목)
 
 흐름
@@ -12,7 +13,7 @@ r"""실화 소재 탐색 → 주제 목록·기획메모·썸네일을 장문 �
      해결 상태(해결 근거/가설 제안/미해결)를 나누고, 내 채널 중복을 빼고, 유튜브 수요·경쟁을 보고 순위를 매김
   2) 상위 N편의 한국어 주제(35자 이내, 질문·반전형)를 정함 — Claude Code 가 있으면 다듬고, 없으면 규칙 기반
   3) 소재별 폴더 output\장문\_소재탐색\<날짜>\NN_이름\ 에 기획메모.md(근거 링크·해결 상태·⚠주의·훅·해시태그·구성)·썸네일 3안·해시태그 저장
-  4) 실화_주제목록.txt 끝에 '소재 | 주제 | 기획메모 폴더' 줄을 추가 → 실화_연속제작.bat 이 순서대로 만들 때
+  4) 실화\주제목록.txt 끝에 '소재 | 주제 | 기획메모 폴더' 줄을 추가 → 실화_연속제작.bat 이 순서대로 만들 때
      기획메모가 대본 AI의 최우선 참고자료로 들어가고, 영상 완성 뒤 썸네일 3안이 _썸네일_후보 폴더에 외부 후보로 들어감
 
 비용: 무료 (OpenAlex·RSS·유튜브 공개 페이지·무료 번역·위키미디어 공용). 한국어 주제 다듬기만 이 PC의 Claude Code 를 씀(선택).
@@ -30,7 +31,11 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 os.chdir(HERE)
 TF_DIR = os.path.join(HERE, "소재탐색")
 sys.path.insert(0, TF_DIR)
-SEED = os.path.join(HERE, "실화_주제목록.txt")
+SEED = os.path.join(HERE, "실화", "주제목록.txt")
+_OLD_SEED = os.path.join(HERE, "실화_주제목록.txt")
+if os.path.exists(_OLD_SEED) and not os.path.exists(SEED):   # 예전 위치에 있으면 실화\ 폴더로 옮김
+    os.makedirs(os.path.dirname(SEED), exist_ok=True)
+    os.replace(_OLD_SEED, SEED)
 GENRE = "[실화] 과학이 밝혀낸 미스터리"
 DISCOVERY_GENRE = "[실화] 최근 밝혀진 과학 발견"   # --발견: 수수께끼가 아니어도 최근 새로 밝혀진 사실
 HISTORY = os.path.join(HERE, "output", "장문", "_소재탐색", "넘긴_소재_기록.json")
@@ -180,16 +185,16 @@ def load_main_module():
 
 def main():
     ap = argparse.ArgumentParser(description="실화 소재 탐색 → 주제 목록·기획메모·썸네일")
-    ap.add_argument("--편수", type=int, default=5, help="실화_주제목록.txt 에 넘길 편수 (기본 5)")
+    ap.add_argument("--편수", "--count", type=int, default=5, help="실화\\주제목록.txt 에 넘길 편수 (기본 5)")
     ap.add_argument("--days", type=int, default=None, help="검색 기간(일), 기본 180 (--발견 이면 90)")
-    ap.add_argument("--발견", action="store_true",
+    ap.add_argument("--발견", "--discovery", action="store_true",
                     help=f"수수께끼가 아니어도 최근 새로 밝혀진 사실을 찾음(최신일수록 우대). 소재 기본값은 '{DISCOVERY_GENRE}'")
     ap.add_argument("--bg-commons", action="store_true", help="썸네일 배경에 위키미디어 공용 자유 이용 사진 사용 (켤 때만)")
     ap.add_argument("--no-youtube", action="store_true", help="유튜브 수요·경쟁 확인 생략 (빠름)")
     ap.add_argument("--no-thumbs", action="store_true", help="썸네일·해시태그 생략")
-    ap.add_argument("--목록만", action="store_true", help="실화_주제목록.txt 는 건드리지 않음")
-    ap.add_argument("--규칙제목", action="store_true", help="Claude Code 로 한국어 주제 다듬기 생략")
-    ap.add_argument("--소재", default=None, help=f"주제 목록에 적을 소재 (기본: {GENRE}, --발견 이면 {DISCOVERY_GENRE})")
+    ap.add_argument("--목록만", "--list-only", action="store_true", help="실화\\주제목록.txt 는 건드리지 않음")
+    ap.add_argument("--규칙제목", "--rule-titles", action="store_true", help="Claude Code 로 한국어 주제 다듬기 생략")
+    ap.add_argument("--소재", "--genre", default=None, help=f"주제 목록에 적을 소재 (기본: {GENRE}, --발견 이면 {DISCOVERY_GENRE})")
     ap.add_argument("--썸네일선택", default="자동", choices=["자동", "없음"],
                     help="소재별 썸네일 3안 중 최종 1장 자동 선택(기본). 직접 고르려면 '없음' 뒤 썸네일_고르기.bat 로 소재 폴더를 열기")
     a = ap.parse_args()
@@ -281,9 +286,9 @@ def main():
         header = f"\n# ── 소재탐색 자동 추가 {time.strftime('%Y-%m-%d %H:%M')} (3번째 칸 = 기획메모 폴더 → 대본 AI 참고자료 + 썸네일 후보) ──\n"
         with open(SEED, "a", encoding="utf-8") as f:
             f.write(header + "\n".join(lines) + "\n")
-        log(f"📑 실화_주제목록.txt 에 {len(lines)}줄 추가 → 실화_연속제작.bat 을 실행하면 이 순서대로 만듭니다 (연속_편수 확인)")
+        log(f"📑 실화\\주제목록.txt 에 {len(lines)}줄 추가 → 실화_연속제작.bat 을 실행하면 이 순서대로 만듭니다 (연속_편수 확인)")
     else:
-        log("📑 --목록만: 실화_주제목록.txt 는 바꾸지 않았습니다. 아래 줄을 직접 붙여 넣으세요:\n" + "\n".join(lines))
+        log("📑 --목록만: 실화\\주제목록.txt 는 바꾸지 않았습니다. 아래 줄을 직접 붙여 넣으세요:\n" + "\n".join(lines))
     hist["items"] += records
     save_history(hist)
     # ---- 전체 구성안(모음)도 남김
