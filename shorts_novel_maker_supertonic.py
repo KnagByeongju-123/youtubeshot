@@ -11915,6 +11915,7 @@ class App(tk.Tk):
         ttk.Checkbutton(pr, text="소리", variable=self.sound_var).pack(side="left", padx=(4, 0))
         ttk.Button(pr, text="썸네일 PNG 저장", command=self.save_thumb).pack(side="left", padx=4)
         ttk.Button(pr, text="🎯 AI 썸네일", command=self.ai_thumb).pack(side="left")
+        ttk.Button(pr, text="🖼 썸네일 고르기", command=self.pick_thumb).pack(side="left", padx=4)
         vol = ttk.LabelFrame(right, text="🔊 소리 크기 (바로 적용)", padding=(6, 2))
         vol.pack(fill="x", pady=(4, 0))
         self.vol_scales = {}
@@ -16012,6 +16013,35 @@ class App(tk.Tk):
         p = os.path.join(out_dir, safe_name(self.title_var.get()) + "_썸네일.png")
         self.renderer.thumbnail().save(p)
         self.write_log("썸네일 저장: " + p)
+
+    def pick_thumb(self):
+        """🖼 썸네일 고르기: 이 제목의 _썸네일_후보 폴더(프로그램 후보 + 소재탐색/MP4 외부 후보)를 격자 창으로 띄워
+        클릭 한 번으로 <제목>_썸네일_유튜브.jpg 를 정함 (기존 것은 _썸네일_유튜브_프로그램.jpg 로 보관).
+        후보 폴더가 없으면 폴더를 직접 고르게 함. 선택 창은 별도 프로세스(소재탐색\\thumb_pick.py)로 띄움."""
+        import subprocess
+        from tkinter import filedialog
+        s = self.get_settings()
+        title = safe_name(self.title_var.get().strip())
+        cands = [os.path.join(s["out_dir"], "장문", title + "_썸네일_후보"), os.path.join(s["out_dir"], title + "_썸네일_후보")]
+        cdir = next((c for c in cands if title and os.path.isdir(c)), "")
+        if not cdir:
+            cdir = filedialog.askdirectory(title="썸네일 후보가 있는 폴더 (…_썸네일_후보, …_썸네일_mp4, 소재탐색 소재 폴더)",
+                                           initialdir=os.path.join(s["out_dir"], "장문") if os.path.isdir(os.path.join(s["out_dir"], "장문")) else s["out_dir"])
+            if not cdir:
+                return
+        base = cdir[:-len("_썸네일_후보")] if cdir.endswith("_썸네일_후보") else os.path.join(os.path.dirname(cdir), title or "썸네일")
+        dest = base + "_썸네일_유튜브.jpg"
+        if os.path.exists(dest) and not os.path.exists(base + "_썸네일_유튜브_프로그램.jpg"):
+            try:
+                shutil.copy(dest, base + "_썸네일_유튜브_프로그램.jpg")
+            except OSError:
+                pass
+        tool = os.path.join(BASE, "소재탐색", "thumb_pick.py")
+        if not os.path.exists(tool):
+            messagebox.showinfo("썸네일 고르기", "소재탐색\\thumb_pick.py 가 없습니다 (깃허브_최신받기.bat 으로 받으세요).")
+            return
+        self.write_log(f"🖼 썸네일 고르기 창: {cdir} → 고르면 {os.path.basename(dest)} 로 저장")
+        subprocess.Popen([sys.executable, "-X", "utf8", tool, cdir, "--수동", "--최종", dest], cwd=BASE)
 
     # ---- 내보내기 ----
     def progress_cb(self, prefix=""):

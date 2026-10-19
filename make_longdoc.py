@@ -42,8 +42,9 @@ DEFAULT = {
     "재미_소재": [],        # 비우면 아래 FUN_GENRES 를 돌아가며
     "그림_스타일": "자동(돌아가며)",   # 이야기 편 그림 스타일: 자동 또는 프로그램의 그림 스타일 이름(웹툰, 지브리풍 손그림 애니, 70~80년대 순정만화 …) 또는 직접 쓴 영어 지시
     "이미지": "근거 사진(웹)",   # 사실 주제 이미지: 근거 사진(웹) / 그림: 애니(웹툰) / 그림: 애니+수채화 / 그림: 애니 모델 그대로 (그림은 이 PC에서 그림)
-    "썸네일_선택": "프로그램",   # 유튜브 썸네일 최종본: 프로그램(AI가 고른 것 그대로) / 외부 자동(소재탐색 썸네일 중 점수로 고른 것을 최종으로, 프로그램 것은 _프로그램.jpg 로 보관)
-                               # 직접 고르려면: 영상이 끝난 뒤 썸네일_고르기.bat 에 <제목>_썸네일_후보 폴더를 끌어다 놓기 (프로그램 후보 + 외부 후보를 한 화면에서)
+    "썸네일_선택": "프로그램",   # 유튜브 썸네일 최종본: 프로그램(AI가 고른 것 그대로) / 외부 자동(소재탐색 썸네일 중 점수로 고른 것) /
+                               # 수동(창): 영상이 끝나면 프로그램 후보 + 소재탐색 후보를 한 화면에 띄워 클릭으로 고름 (연속 제작 중엔 창을 띄우지 않고 '외부 자동'처럼)
+                               # 나중에 고르려면: 썸네일_고르기.bat 에 <제목>_썸네일_후보 폴더를 끌어다 놓기
 }
 MEDITATION_PRESETS = ["명상 · 싱잉볼", "싱잉볼 · 깊은 수면", "오르골 · 캐논", "싱잉볼 · 432Hz", "오르골 자장가 · 브람스", "싱잉볼 · 7 차크라",
                       "오르골 · 꿈속의 고향", "싱잉볼 · 528Hz", "오르골 · 어메이징 그레이스", "싱잉볼 · 노래하는 볼(문지르기)"]
@@ -706,6 +707,13 @@ def add_external_thumbs(folder, base, log, choice="프로그램"):
         if os.path.exists(src):
             shutil.copy(src, os.path.join(cdir, "외부_" + name))
     log(f"  🖼 소재탐색 썸네일 {len(thumbs)}장을 후보 폴더에 추가: {os.path.basename(cdir)}\\외부_thumb_*.jpg (출처: 외부_source.txt)")
+    if choice.startswith("수동"):
+        if BATCH:   # 무인 연속 제작 중에는 창을 띄우지 않음 → 외부 자동처럼 처리하고 안내
+            log("  🖼 '수동(창)'은 연속 제작 중엔 창을 띄우지 않습니다 → 자동으로 고르고, 나중에 썸네일_고르기.bat 로 바꾸세요")
+            choice = "외부 자동"
+        else:
+            pick_thumb_window(cdir, base, log)
+            return
     if choice.startswith("외부"):
         final = os.path.join(folder, "썸네일_최종.jpg")
         why = "소재탐색 단계에서 자동 선택된 것"
@@ -724,7 +732,28 @@ def add_external_thumbs(folder, base, log, choice="프로그램"):
             shutil.copy(final, dest)
             log(f"  🖼 유튜브 썸네일을 소재탐색 후보로 교체: {os.path.basename(dest)} ({why}) · 프로그램 것은 _썸네일_유튜브_프로그램.jpg")
     else:
-        log("     최종 썸네일은 프로그램이 고른 것 그대로 (바꾸려면 장문_설정.json '썸네일_선택': '외부 자동' 또는 썸네일_고르기.bat)")
+        log("     최종 썸네일은 프로그램이 고른 것 그대로 (바꾸려면 장문_설정.json '썸네일_선택': '외부 자동'/'수동(창)' 또는 썸네일_고르기.bat)")
+
+
+def pick_thumb_window(cdir, base, log):
+    """프로그램 후보(01.jpg …) + 외부 후보(외부_thumb_*.jpg)를 한 화면에 띄워 클릭으로 고름 → <제목>_썸네일_유튜브.jpg
+    (프로그램이 고른 것은 _썸네일_유튜브_프로그램.jpg 로 보관). 창을 닫으면 그대로 둠."""
+    try:
+        sys.path.insert(0, os.path.join(HERE, "소재탐색"))
+        import thumb_pick
+        import shutil
+        log("  🖼 썸네일 고르기 창을 띄웁니다 (클릭 한 번, 창을 닫으면 프로그램이 고른 것 유지)")
+        final, msg = thumb_pick.pick(cdir, "수동", title=os.path.basename(base))
+        if final:
+            dest = base + "_썸네일_유튜브.jpg"
+            if os.path.exists(dest):
+                shutil.copy(dest, base + "_썸네일_유튜브_프로그램.jpg")
+            shutil.copy(final, dest)
+            log(f"  🖼 유튜브 썸네일 = {msg} → {os.path.basename(dest)}")
+        else:
+            log("  🖼 " + msg)
+    except Exception as e:
+        log(f"  🖼 썸네일 고르기 창 실패(프로그램 썸네일 유지): {str(e)[:80]}")
 
 
 def _job_procs():
