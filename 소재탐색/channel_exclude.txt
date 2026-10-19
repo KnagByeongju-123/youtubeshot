@@ -1,0 +1,11 @@
+# 내 채널에서 이미 다룬 주제 (영어 키워드, 한 줄에 하나)
+# 쉼표로 묶으면 모든 단어가 들어간 소재만 제외 (AND)
+# 새 영상을 올리면 여기에 키워드를 추가하세요.
+
+indus, script          # 100년간 아무도 못 읽은 인더스 문자
+indus valley, decipher
+kushan                 # 1,700년 잠든 쿠샨 문자
+bactrian, script
+hadal                  # 수심 9,533m 바닥의 '마을'
+kuril-kamchatka
+trench, chemosynthe

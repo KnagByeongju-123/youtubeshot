@@ -139,8 +139,10 @@ def plan_lineup(m, app, genres, n, minutes, seen, log, out_root):
 
 
 def load_seed_lineup(m):
-    """실화_주제목록.txt 를 읽어 [{genre, topic}] 라인업으로. 한 줄 = 한 편.
-    형식: '소재 | 주제' (소재 생략 시 '[실화] 과학이 밝혀낸 미스터리'). '#' 줄·빈 줄 무시."""
+    """실화_주제목록.txt 를 읽어 [{genre, topic, memo, folder}] 라인업으로. 한 줄 = 한 편.
+    형식: '소재 | 주제 | 기획메모' (소재 생략 시 '[실화] 과학이 밝혀낸 미스터리'). '#' 줄·빈 줄 무시.
+    3번째 칸(선택): 실화_소재탐색.py 가 만든 기획메모 폴더(안의 기획메모.md 를 읽음) 또는 .md/.txt 파일 또는 그냥 메모 글
+    → 대본 AI 의 '최우선 참고자료'로 들어가고, 폴더면 그 안의 thumb_*.jpg 가 영상 완성 뒤 썸네일 후보에 추가됨."""
     if not os.path.exists(SEED):
         return []
     topics_map = m.cat_info(m.DOC_CATEGORY)[1]
@@ -153,18 +155,38 @@ def load_seed_lineup(m):
             line = raw.strip()
             if not line or line.startswith("#"):
                 continue
-            if "|" in line:
-                g, t = (x.strip() for x in line.split("|", 1))
+            parts = [x.strip() for x in line.split("|", 2)]
+            if len(parts) == 1:
+                g, t, memo_src = default_genre, parts[0], ""
             else:
-                g, t = default_genre, line
+                g, t = parts[0], parts[1]
+                memo_src = parts[2] if len(parts) > 2 else ""
             if not t:
                 continue
             if g not in topics_map:
                 g = default_genre
-            out.append({"genre": g, "topic": t})
+            memo, folder = seed_memo(memo_src)
+            out.append({"genre": g, "topic": t, "memo": memo, "folder": folder})
     except OSError:
         return []
     return out
+
+
+def seed_memo(src):
+    """주제 목록 3번째 칸 → (메모 글, 폴더). 폴더면 기획메모.md, 파일이면 내용, 아니면 글 그대로."""
+    src = (src or "").strip()
+    if not src:
+        return "", ""
+    try:
+        if os.path.isdir(src):
+            p = os.path.join(src, "기획메모.md")
+            txt = open(p, encoding="utf-8").read() if os.path.exists(p) else ""
+            return ("[소재탐색 기획메모 - 출처 링크는 대본 전에 웹에서 확인]\n" + txt) if txt else "", src
+        if os.path.isfile(src) and src.lower().endswith((".md", ".txt")):
+            return "[기획메모]\n" + open(src, encoding="utf-8").read(), os.path.dirname(src)
+    except OSError:
+        pass
+    return "[기획메모]\n" + src, ""
 
 
 def made_topics(m, out_root):
@@ -382,7 +404,7 @@ def main():
             log(f"✅ {k}/{n}편 완료")
             continue
         if cur and cur.get("주제"):
-            ci = dict(c, 주제=cur["주제"], 소재=cur.get("소재") or c["소재"], 기획메모=cur.get("메모", ""))
+            ci = dict(c, 주제=cur["주제"], 소재=cur.get("소재") or c["소재"], 기획메모=cur.get("메모", ""), 소재탐색_폴더=cur.get("소재탐색_폴더", ""))
             log(f"▶ {k + 1}/{n}편 이어서: {ci['주제']} ({ci['소재']})")
         elif kind == "재미":
             fi = sum(1 for i in range(k) if kinds[i] == "재미")
@@ -400,15 +422,19 @@ def main():
                 log(f"🎯 {k + 1}/{n}편 (기획 라인업): {topic} ({genre})")
                 memo = "\n".join(f"- {lab}: {plan[pi][key_]}" for lab, key_ in (("왜 지금 반응이 좋을지", "why"), ("첫 문장 훅(참고)", "hook"), ("검토자 주의사항(반드시 반영)", "review")) if plan[pi].get(key_))
                 cur_memo = "[기획자·검토자 메모]\n" + memo if memo else ""
+                if plan[pi].get("memo"):      # 실화_주제목록.txt 3번째 칸(소재탐색 기획메모) → 대본 AI 최우선 참고자료
+                    cur_memo = (str(plan[pi]["memo"]) + ("\n\n" + cur_memo if cur_memo else "")).strip()
+                    log("   📎 소재탐색 기획메모를 대본 참고자료로 넘김" + (f" ({plan[pi].get('folder', '')})" if plan[pi].get("folder") else ""))
+                cur_folder = str(plan[pi].get("folder") or "")
             else:
-                cur_memo = ""
+                cur_memo, cur_folder = "", ""
                 genre = genres[(k + int(st.get("offset") or 0)) % len(genres)]
                 log(f"🔎 {k + 1}/{n}편 주제 고르는 중... 소재: {genre}")
                 seen = made_topics(m, out_root) + [d_.get("주제", "") for d_ in done_list]
                 topic = pick_topic(m, app, genre, seen, log)
-            cur = {"주제": topic, "소재": genre, "시작": time.strftime("%Y-%m-%d %H:%M"), "메모": cur_memo}
+            cur = {"주제": topic, "소재": genre, "시작": time.strftime("%Y-%m-%d %H:%M"), "메모": cur_memo, "소재탐색_폴더": cur_folder}
             save_state()
-            ci = dict(c, 주제=topic, 소재=genre, 기획메모=cur.get("메모", ""))
+            ci = dict(c, 주제=topic, 소재=genre, 기획메모=cur.get("메모", ""), 소재탐색_폴더=cur_folder)
         ci["배경음"] = m.SOUND_BY_TOPIC.get(ci["소재"], c.get("배경음") or "잔잔한 패드")
         res = run_doc(m, app, ci, gate)
         done_list.append({"종류": kind, "주제": ci["주제"], "소재": ci["소재"], "제목": res.get("title", ""), "완료": time.strftime("%Y-%m-%d %H:%M")})
@@ -653,8 +679,30 @@ def run_doc(m, app, c, gate):
     # 4) 업로드 문구 + 설명란 완성본 + 유튜브 썸네일
     log("📝 업로드 문구·설명란·유튜브 썸네일 만드는 중...")
     m.publish_kit(model, base, title, story, m.DOC_CATEGORY, c["소재"], s, ch, res.get("sources") or [], res.get("notes", ""), log)
+    add_external_thumbs(c.get("소재탐색_폴더", ""), base, log)
     log("✅ 전부 완료 → " + out_root)
     return res
+
+
+def add_external_thumbs(folder, base, log):
+    """소재탐색(실화_소재탐색.py)이 미리 만든 썸네일 3안을 _썸네일_후보 폴더에 '외부_' 이름으로 추가 (고른 썸네일은 바꾸지 않음).
+    출처·라이선스 메모(source.txt)도 함께 복사해 공용 사진 표기를 잊지 않게."""
+    if not folder or not os.path.isdir(folder):
+        return
+    import glob
+    import shutil
+    thumbs = sorted(glob.glob(os.path.join(folder, "thumb_*.jpg")))
+    if not thumbs:
+        return
+    cdir = base + "_썸네일_후보"
+    os.makedirs(cdir, exist_ok=True)
+    for p in thumbs:
+        shutil.copy(p, os.path.join(cdir, "외부_" + os.path.basename(p)))
+    for name in ("source.txt", "meta.json", "hashtags.txt"):
+        src = os.path.join(folder, name)
+        if os.path.exists(src):
+            shutil.copy(src, os.path.join(cdir, "외부_" + name))
+    log(f"  🖼 소재탐색 썸네일 {len(thumbs)}장을 후보 폴더에 추가: {os.path.basename(cdir)}\\외부_thumb_*.jpg (출처: 외부_source.txt)")
 
 
 def _job_procs():

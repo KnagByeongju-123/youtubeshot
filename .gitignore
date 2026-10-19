@@ -33,3 +33,6 @@ nature_sounds/*
 _ai공유/받은그림/
 
 .claude/settings.local.json
+
+# 소재탐색(실화_소재탐색.py)의 번역 캐시·시험 출력 (결과물은 output/장문/_소재탐색/ 에)
+소재탐색/output/
