@@ -145,7 +145,7 @@ def find_font(bold=False):
     return ""
 
 
-DEFAULT_VOICE = "Supertonic M2 (남성, 무료 로컬) [supertonic:M2]"   # 성우를 따로 정하지 않으면 이 목소리
+DEFAULT_VOICE = "Supertonic M2 (남성, 무료 로컬) [supertonic:M2]"   # 성우를 따로 정하지 않으면 이 목소리 (기본 = 남자 성우 2)
 TTS_VOICES = {   # 마이크로소프트 온라인(Edge) 음성은 쓰지 않음. 옛 설정에 적힌 Edge 이름은 voice_code 가 DEFAULT_VOICE 로 바꿈
     "윈도우 내장 음성": "sapi",
 }
@@ -263,7 +263,8 @@ UI_TABS = [
 
 THUMB_STYLES = ["자동(분위기에 맞춰)", "기본(사진 꽉 + 큰 글자)", "반분할(글 패널 + 사진)", "노랑 패널(고대비)", "시네마 띠",
                 "뉴스 속보", "미스터리 다크", "빨간 강조(원 + 화살표)",
-                "파스텔 하단 띠(감성)", "상단 큰 질문", "좌측 세로 띠", "하단 그라데이션(깔끔)", "메모지(손글씨 느낌)"]   # 요즘 유튜브에서 많이 쓰는 썸네일 스타일
+                "파스텔 하단 띠(감성)", "상단 큰 질문", "좌측 세로 띠", "하단 그라데이션(깔끔)", "메모지(손글씨 느낌)",
+                "오려 붙이기(누끼 + 큰 글자)", "콜라주 3장(사선 분할)", "원형 컷 2장", "폴라로이드 콜라주"]   # 요즘 유튜브에서 많이 쓰는 썸네일 스타일 (뒤 4개 = 썸네일_합성.py: 관련 사진을 오리고 잘라 붙임)
 
 # 허구 이야기 그림 스타일 (이름 → 그림 AI에 주는 영어 지시). 실제 작품·작가 이름은 쓰지 않고 특징으로 묘사
 IMAGE_STYLES = {
@@ -511,6 +512,8 @@ FIELDS = [
     ("자막형", "img_frame", "사진 테두리(상자 모드)", "choice:없음,만화 테두리(검정),흰 테두리", "없음"),
     ("자막형", "sub_max_chars", "자막 한 번에 글자 수", "int", 28),
     ("자막형", "img_motion", "사진 움직임", "choice:영상처럼(확대·이동·전환),천천히 확대만,없음", "영상처럼(확대·이동·전환)"),
+    ("자막형", "img_label", "사진 제목 표시(오른쪽 위)", "choice:on,off", "on"),
+    ("자막형", "img_motion_amt", "사진 움직임 세기", "choice:은은하게,크게(예전)", "은은하게"),
     ("자막형", "motion_count", "모션: 숫자 카운트업(통계 수치가 올라감)", "choice:on,off", "off"),
     ("자막형", "motion_chart", "모션: 그래프 성장(% 수치 막대·게이지)", "choice:on,off", "off"),
     ("자막형", "motion_icon", "모션: 강조 아이콘(체크·경고 등장)", "choice:on,off", "off"),
@@ -551,6 +554,7 @@ FIELDS = [
     ("나레이션", "narr_replace", "읽기 바꾸기(성우만, 쉼표로: LOT=로트, PIN=핀)", "str",
      "LOT=로트, PIN=핀, 별도앱=별도의 앱, 별도 앱=별도의 앱, 전자결재 4단계=전자결재 네 단계, 27대=스물일곱 대"),
     ("나레이션", "narr_spoken", "숫자 발음 AI 사전(자막은 맞춤법대로, 성우는 읽는 그대로)", "choice:on,off", "on"),
+    ("나레이션", "narr_check", "나레이션 검증(문단마다 듣고 대본과 비교, 틀리면 다시 녹음)", "choice:on,기본만,off", "on"),
     ("나레이션", "narr_style", "연기 지시(ChatGPT·Gemini 음성)", "str", "차분하고 또렷한 다큐멘터리 내레이터처럼. 반전 부분은 긴장감 있게."),
     ("나레이션", "openai_tts_model", "ChatGPT 음성 모델", "str", "gpt-4o-mini-tts"),
     ("나레이션", "gemini_tts_model", "Gemini 음성 모델", "str", "gemini-2.5-flash-preview-tts"),
@@ -888,6 +892,8 @@ MULTI_SYSTEM = f"""너는 한국 유튜브 쇼츠 '썰/단편소설' 전문 작�
 반드시 JSON만 출력: {{"drafts": [{{"title": "제목", "story": "본문"}}, {{"title": "제목", "story": "본문"}}, {{"title": "제목", "story": "본문"}}]}}"""
 
 PHOTO_RULES = """[사진 규칙]
+- [최우선: 문맥 관련성] 사진은 붙는 문단의 내용과 직접 관련된 것만 쓴다. 그 문단에 나오는 바로 그 대상·장소·인물·장치·자료를 보여주지 않으면 쓰지 않는다.
+  사진 수를 채우려고 일반 분위기 사진(진료실·의사·알약·체중계·실험실·우주 배경·도시 풍경·회사 건물 같은 스톡 사진)을 넣지 않는다. 맞는 사진이 없으면 그 자리는 비워 둔다
 - 우선순위: Wikimedia Commons(퍼블릭 도메인·CC 라이선스), NASA·NOAA·USGS·ESA 등 공공기관 공개 이미지
 - url 은 이미지 파일 주소(.jpg/.jpeg/.png). 예: https://upload.wikimedia.org/... 또는 https://commons.wikimedia.org/wiki/File:파일이름.jpg
 - 저작권이 불분명한 뉴스·블로그 사진, AI 생성 이미지, 워터마크 있는 사진은 쓰지 않는다
@@ -1174,18 +1180,47 @@ def doc_date_note(pkg, fiction=False):
     return pkg
 
 
+MED_WORDS = r"(비만|체중 감소|임상시험|신약|치료제|의약품|부작용|진단|환자|질환|암세포|암 환자|항암|암 치료|당뇨|혈압|백신|복용|주사제|처방)"   # '트레이시 암 피오르' 같은 지명에 걸리지 않게 '암' 단독은 뺌
+MED_NOTE = "※ 이 영상은 연구 소식을 전하는 정보 제공용이며, 의학적 진단이나 치료 조언이 아닙니다. 건강·치료에 관한 결정은 반드시 의사와 상의하세요."
+
+
+def med_note(pkg, story="", notes=""):
+    """규칙: 의학·건강 영상의 설명란에는 항상 '의학적 조언 아님' 문구 + (메모에 있으면) 연구비 출처를 넣음"""
+    if not isinstance(pkg, dict):
+        return pkg
+    text = f"{story}\n{notes}"
+    if len(re.findall(MED_WORDS, text)) < 3 or len(set(re.findall(MED_WORDS, text))) < 2:   # 의학 낱말이 3번 이상 + 서로 다른 낱말 2개 이상일 때만
+        return pkg
+    d = str(pkg.get("description", "")).rstrip()
+    add = []
+    for sent in re.split(r"(?<=[.다요])\s+", str(notes or "")):
+        if re.search(r"(연구비|자금|후원)", sent) and re.search(r"(회사|제약|협회|업계|릴리|노보|화이자)", sent) and sent.strip()[:20] not in d:
+            add.append("※ " + re.sub(r"^\W+", "", sent.strip()).rstrip(".") + ".")
+            break
+    if "의학적 진단이나 치료 조언이 아닙니다" not in d:
+        add.append(MED_NOTE)
+    if add:
+        key = "※ 이 영상은 " + time.strftime("%Y년")
+        i_ = d.find(key)
+        pkg["description"] = (d[:i_].rstrip() + "\n\n" + "\n\n".join(add) + "\n\n" + d[i_:]).strip() if i_ >= 0 else (d + "\n\n" + "\n\n".join(add)).strip()
+    return pkg
+
+
 def doc_is_fiction(genre):
     return str(genre or "") in DOC_FICTION_TOPICS or str(genre or "").startswith("[이야기]")
 
 
-DOC_PHOTO_SEC = 15   # 장문 사진 간격(초): 나레이션 이 정도마다 사진 한 장 (지식 다큐 채널 수준)
+DOC_PHOTO_SEC = 8    # 장문 사진 간격(초): 나레이션 이 정도마다 사진 한 장. 규칙: 관련 사진을 최대한 많이 (역동적으로, 예전 15초)
+DOC_PHOTO_AGENTS = 3  # 사진 담당 AI를 동시에 몇 명 돌릴지 (오프닝·챕터를 나눠 맡음. 메모리 8GB PC 기준 3명)
+DOC_PHOTO_ROUNDS = 3  # 모자라면 보충 AI가 다른 사진 창고에서 다시 찾는 횟수
+DOC_PHOTO_SPARE = 3   # 글과 안 맞아 빠지거나 내려받기 실패할 몫까지 이만큼 더 찾음
 
 
 def doc_photo_target(text, sec=None):
-    """장문 한 덩어리(챕터·오프닝)에 넣을 사진 수: 나레이션 sec 초마다 한 장 (3~10장)"""
+    """장문 한 덩어리(챕터·오프닝)에 넣을 사진 수: 나레이션 sec 초마다 한 장 (3~16장)"""
     chars = len(story_text_only(text or ""))
     per = DOC_CHARS_PER_MIN * (sec or DOC_PHOTO_SEC) / 60
-    return max(3, min(10, round(chars / max(1, per))))
+    return max(3, min(16, round(chars / max(1, per))))
 
 
 DOC_STYLE = """[장문 다큐 나레이션 문체 - 반드시 지킬 것]
@@ -1205,7 +1240,7 @@ DOC_OUTLINE_SYSTEM = """너는 구독자 100만 유튜브 지식 다큐 채널�
   챕터들은 쉬운 질문 → 점점 깊은 질문 → 가장 충격적인 질문 순서로, 서로 겹치지 않게. 마지막 챕터는 전체를 정리하는 결론 챕터.
   [최우선: 최신 정보] 조사 자료의 recent(최근 소식)를 이 영상의 중심으로 삼는다. 오프닝의 첫 훅은 가장 최근의 놀라운 발견으로, 챕터의 절반 이상은 최신 연구·발견을 중심으로 구성하고, 옛 이야기는 '예전에는 이렇게 알았지만'처럼 최신 내용을 돋보이게 하는 배경으로 쓴다. 마지막 챕터에는 '지금 이 순간 과학이 어디까지 왔고 무엇이 아직 미확정인지'를 넣는다.
   title 에도 최신성이 드러나면 좋다(예: '2026년 새로 밝혀진', '최근 발견된').
-- closing: 마무리 나레이션 3~6문단(약 {close_chars}자). 핵심을 한 문장으로 되짚고, 시청자에게 생각할 질문 하나, 댓글·구독 유도는 마지막 한 문장으로 짧게.
+- closing: 마무리 나레이션 3~6문단(약 {close_chars}자). 핵심을 한 문장으로 되짚고, 시청자에게 생각할 질문 하나, 채널 이야기는 꼭 필요할 때만 가볍게 한마디('구독과 좋아요 부탁드립니다' 같은 정해진 문장 금지).
 
 """ + DOC_STYLE + """
 
@@ -1281,10 +1316,15 @@ Read 도구로 사진 파일을 하나씩 실제로 열어 본다(열지 않고 
 반드시 JSON만 출력: {"photos": [{"k": 1, "score": 8, "best": 3, "best_score": 9, "what": "...", "fact": "일치", "fact_note": "...", "caption": ""}]}"""
 
 
-def check_photo_fit(model, text, log=None, min_score=5, fiction=False):
+PHOTO_FIT_MIN = 6     # 규칙: 문맥과 관련 있는 사진만 - 사실 콘텐츠는 10점 중 6점 미만이면 뺌 (창작 이야기 분위기 사진은 5점)
+
+
+def check_photo_fit(model, text, log=None, min_score=None, fiction=False):
     """사진과 글이 밀접한지 Claude가 사진을 직접 열어 보고 검사 → 안 맞는 사진은 빼고, 더 맞는 문단이 있으면 옮김.
     text: 사진 줄([사진: ...])이 섞인 본문. 반환: (고친 본문, 뺀 수, 옮긴 수). Claude가 아니거나 실패하면 그대로"""
     log = log or (lambda x: None)
+    if min_score is None:
+        min_score = 5 if fiction else PHOTO_FIT_MIN
     paras = split_paras(text)
     items, ph = [], []          # items: 글 문단 (번호 매김) / ph: (사진 줄 인덱스, 경로, 설명, 붙은 글 문단 번호)
     for i, p in enumerate(paras):
@@ -1358,7 +1398,55 @@ def check_photo_fit(model, text, log=None, min_score=5, fiction=False):
     return "\n\n".join(out), len(drop), len(moves)
 
 
-def doc_add_photos(model, title, story, media_dir, log, cancel=None, sec=None, fiction=False):
+PAPER_FIG_MAX = 2     # 규칙: 출처 논문이 자유 이용 허락(오픈액세스)이면 논문 그림을 이만큼까지 넣음 (신뢰성)
+PAPER_FIG_SYSTEM = """너는 유튜브 과학 다큐의 자료조사원이다. 아래 [출처 논문] 가운데 자유 이용 허락이 분명한 논문에서, 대본 내용을 직접 보여주는 핵심 그림(Figure)을 찾는다.
+- 라이선스 확인이 최우선: 논문 페이지(WebFetch)에서 라이선스를 직접 확인한다. CC BY / CC BY-SA / CC0 / 퍼블릭 도메인(미국 항공우주국 등 미국 정부 기관 작성)만 쓴다.
+  CC BY-NC·CC BY-ND, 라이선스 표시가 없는 논문, 유료 학술지 그림(네이처·사이언스·NEJM 등 기본 저작권), arXiv 기본 라이선스(non-exclusive) 논문 그림은 쓰지 않는다.
+  같은 연구의 보도자료 이미지라도 이용 허락이 분명할 때만 쓴다(예: 유럽 남방 천문대·미국 항공우주국 보도 이미지).
+- 그림은 대본의 특정 문단이 말하는 결과·장치·데이터를 직접 보여줘야 한다(문맥 관련성). 문단과 상관없는 그림, 글자만 빽빽한 표, 수식만 있는 그림은 고르지 않는다.
+- url: 그림 이미지 파일 주소(.jpg/.png/.webp, 논문 사이트의 그림 원본 링크). page: 논문 페이지 URL.
+- caption: '논문 그림: 무엇을 보여주는지'(15자 이내 한국어). credit: '제1저자 et al., 학술지 (연도) / 라이선스' 예: 'Wild et al., Space Weather (2026) / CC BY 4.0'.
+- after: 그 그림이 보여주는 문단의 앞부분(원문 그대로 10~20자). 그림은 그 문단 바로 앞에 들어간다.
+- 쓸 수 있는 그림이 없으면 빈 목록을 낸다. 지어내지 않는다.
+반드시 JSON만 출력: {"photos": [{"after": "...", "url": "...", "caption": "...", "credit": "...", "page": "...", "license": "CC BY 4.0"}], "checked": ["논문 - 라이선스 확인 결과 한 줄"]}"""
+
+
+def doc_add_paper_figures(model, title, story, sources, media_dir, log, max_n=None):
+    """규칙: 출처 논문이 오픈액세스(CC BY 등)이면 논문 그림을 1~2장 넣어 신뢰성을 높임. 이용 허락이 분명하지 않으면 넣지 않음.
+    반환: (새 대본, 넣은 수)"""
+    max_n = PAPER_FIG_MAX if max_n is None else max_n
+    srcs = [str(x) for x in (sources or []) if re.search(r"(doi|arxiv|journal|nature|science|plos|cell|lancet|nejm|physrev|aps\.org|oup\.com|wiley|springer|frontiersin|mdpi|elife|biorxiv|eurekalert|eso\.org|nasa)", str(x), re.I)]
+    if not srcs or max_n <= 0:
+        return story, 0
+    have = sum(1 for p in split_paras(story) if (md := parse_media(p)) and re.search(r"et al\.?|논문 그림", f"{md[1]} {md[2]}"))
+    if have >= max_n:
+        return story, 0
+    log(f"  📄 출처 논문 그림 찾는 중 (자유 이용 허락이 분명한 것만, 최대 {max_n - have}장)...")
+    body = "\n\n".join(p for p in split_paras(story) if not parse_media(p))
+    try:
+        d = ask_json(model, PAPER_FIG_SYSTEM, f"[제목] {title}\n\n[출처 논문]\n- " + "\n- ".join(srcs[:6]) + f"\n\n[대본]\n{body[:6000]}\n\n논문 그림 최대 {max_n - have}장.",
+                     tools=WEB_TOOLS)
+    except Exception as e:
+        log("  논문 그림 찾기 실패(건너뜀): " + (str(e).splitlines() or [""])[0][:80])
+        return story, 0
+    for c_ in (d.get("checked") or [])[:4]:
+        log(f"    · {str(c_)[:110]}")
+    ok = [x for x in (d.get("photos") or []) if isinstance(x, dict) and re.search(r"(CC[ -]?BY(?![ -]?N[CD])|CC0|public domain|퍼블릭 도메인|공공)", f"{x.get('license', '')} {x.get('credit', '')}", re.I)
+          and not re.search(r"N[CD]", str(x.get("license", "")))]
+    for x in ok:
+        x.pop("q", None)                    # 논문 그림은 커먼즈 대체 검색을 하지 않음 (다른 그림으로 바뀌지 않게)
+    ph = fetch_photos(ok, media_dir, log, limit=max_n - have)
+    if not ph:
+        log("  📄 쓸 수 있는 논문 그림 없음 (이용 허락이 분명한 그림이 없거나 받기 실패) → 넣지 않음")
+        return story, 0
+    story = place_photos(story, ph)
+    story, n_drop, _ = check_photo_fit(model, story, log)
+    n = len(ph) - n_drop
+    log(f"  📄 논문 그림 {n}장 넣음")
+    return story, max(0, n)
+
+
+def doc_add_photos(model, title, story, media_dir, log, cancel=None, sec=None, fiction=False, sources=None):
     """이미 만든 장문 대본에 사진을 더 넣음: 오프닝·챕터마다 (나레이션 sec 초에 한 장) 목표보다 모자란 만큼만,
     사진이 없는 긴 구간에 배치. 이미 쓴 사진(출처 페이지)은 다시 고르지 않음. 반환: (새 대본, 더한 사진 수)"""
     paras = split_paras(story)
@@ -1375,41 +1463,82 @@ def doc_add_photos(model, title, story, media_dir, log, cancel=None, sec=None, f
         md = parse_media(p)
         if md:
             used.update(x for x in (md[0], md[3]) if x)
-    added = 0
-    out_blocks = []
-    for bi, blk in enumerate(blocks):
-        if cancel is not None and cancel.is_set():
-            raise RuntimeError("취소됨")
+    import threading as _th
+    from concurrent.futures import ThreadPoolExecutor
+    lock = _th.Lock()
+    pcat = "허구 단편소설" if fiction else DOC_CATEGORY
+
+    def one_block(blk):
+        """오프닝·챕터 하나: 사진 담당 AI가 찾고(필요 수 + 여유분) → 글과 맞는지 검사 → 모자라면 보충 AI가 다른 사진 창고에서 한 번 더"""
         text = "\n\n".join(blk)
-        have = sum(1 for p in blk if parse_media(p))
-        need = doc_photo_target(text, sec) - have
         name = blk[0][3:] if blk[0].startswith("## ") else "오프닝"
-        if need <= 0:
-            out_blocks.append(text)
-            continue
-        view = []   # AI가 볼 본문: 사진 자리는 '(이미 사진: 설명)'으로
-        for p in blk:
-            md = parse_media(p)
-            view.append(f"(이미 사진: {md[1] or '사진'})" if md else p)
-        log(f"  🔎 '{name}' 사진 {need}장 더 찾는 중... (지금 {have}장)")
-        try:
-            pcat = "허구 단편소설" if fiction else DOC_CATEGORY
-            d = ask_json(model, PHOTO_SYSTEM,
-                         f"콘텐츠 종류: {pcat}\n[제목] {title} - {name}\n\n[본문]\n" + "\n\n".join(view)
-                         + photo_note(need, pcat)
-                         + f"\n\n[추가 사진 요청] 이미 사진이 있는 자리 근처는 피하고, '(이미 사진…)' 표시 사이가 가장 긴 구간의 문단에 after 를 맞춘다. "
-                           f"새 사진 {need}장. 아래 이미 쓴 사진·페이지는 다시 고르지 않는다.\n" + "\n".join(sorted(used))[:3000],
-                         tools=WEB_TOOLS)
-            ph = [x for x in fetch_photos(d.get("photos"), media_dir, log, limit=need) if x.get("page") not in used]
-            if ph:
+        got = 0
+        for rnd in range(1 + DOC_PHOTO_ROUNDS):
+            if cancel is not None and cancel.is_set():
+                raise RuntimeError("취소됨")
+            cur = split_paras(text)
+            have = sum(1 for p in cur if parse_media(p))
+            need = doc_photo_target(text, sec) - have
+            if need <= 0:
+                break
+            view = [f"(이미 사진: {md[1] or '사진'})" if (md := parse_media(p)) else p for p in cur]   # 사진 자리는 '(이미 사진: 설명)'
+            ask_n = need + DOC_PHOTO_SPARE                         # 글과 안 맞아 빠지거나 내려받기 실패할 몫까지 넉넉히
+            log(f"  🔎 '{name}' 사진 {need}장 더 찾는 중... (지금 {have}장" + (f", 보충 {rnd}회차" if rnd else "") + ")")
+            with lock:
+                avoid = "\n".join(sorted(used))[:3000]
+            extra = ("" if rnd == 0 else "\n\n[보충 검색] 앞에서 찾은 사진이 모자라거나 글과 안 맞아 빠졌다. 이번에는 다른 곳에서 찾는다: "
+                     "위키미디어 공용의 관련 분류(Category), 미국 항공우주국·유럽 우주국·유럽 남방 천문대 이미지 갤러리, 대학·연구소 보도자료 사진, "
+                     "미국 국립보건원·질병관리청 같은 공공기관 자료 사진. 자유 이용 허락(퍼블릭 도메인·CC)이 분명한 것만. "
+                     "단, 수를 채우려고 문맥과 상관없는 사진을 고르지 않는다: 붙일 문단에 나오는 대상을 직접 보여주는 사진만, 없으면 적게 골라도 된다.")
+            try:
+                d = ask_json(model, PHOTO_SYSTEM,
+                             f"콘텐츠 종류: {pcat}\n[제목] {title} - {name}\n\n[본문]\n" + "\n\n".join(view)
+                             + photo_note(ask_n, pcat)
+                             + f"\n\n[추가 사진 요청] 이미 사진이 있는 자리 근처는 피하고, '(이미 사진…)' 표시 사이가 가장 긴 구간의 문단에 after 를 맞춘다. "
+                               f"새 사진 후보 {ask_n}장(그중 {need}장을 씀). 아래 이미 쓴 사진·페이지는 다시 고르지 않는다.\n" + avoid + extra,
+                             tools=WEB_TOOLS)
+                with lock:
+                    ph = [x for x in fetch_photos(d.get("photos"), media_dir, log, limit=need) if x.get("page") not in used]
+                    used.update(x.get("page") for x in ph if x.get("page"))
+                if not ph:
+                    continue
                 text = place_photos(text, ph)
-                used.update(x.get("page") for x in ph if x.get("page"))
                 text, n_drop, _ = check_photo_fit(model, text, log, fiction=fiction)
-                added += len(ph) - n_drop
-        except Exception as e:
-            log(f"  '{name}' 사진 찾기 실패(그대로 둠): " + str(e).splitlines()[0][:80])
-        out_blocks.append(text)
-    return "\n\n".join(out_blocks), added
+                got += len(ph) - n_drop
+            except RuntimeError:
+                raise
+            except Exception as e:
+                log(f"  '{name}' 사진 찾기 실패(그대로 둠): " + (str(e).splitlines() or [""])[0][:80])
+        return text, got
+
+    todo = [bi for bi, blk in enumerate(blocks) if doc_photo_target("\n\n".join(blk), sec) > sum(1 for p in blk if parse_media(p))]
+    results = {bi: ("\n\n".join(blk), 0) for bi, blk in enumerate(blocks)}
+    if todo:
+        log(f"  🔎 사진 담당 AI {min(DOC_PHOTO_AGENTS, len(todo))}명이 {len(todo)}개 구간을 나눠 찾습니다 (모자라면 보충 검색 {DOC_PHOTO_ROUNDS}회)")
+        with ThreadPoolExecutor(max_workers=max(1, min(DOC_PHOTO_AGENTS, len(todo)))) as ex:
+            futs = {bi: ex.submit(one_block, blocks[bi]) for bi in todo}
+            for bi, f_ in futs.items():
+                results[bi] = f_.result()
+    out, seen, added = [], set(), 0
+    for bi in range(len(blocks)):                     # 여러 AI가 같은 사진을 고른 경우 처음 것만 남김
+        text, got = results[bi]
+        keep = []
+        for p in split_paras(text):
+            md = parse_media(p)
+            if md:
+                k_ = md[3] or md[0]
+                if k_ in seen:
+                    got -= 1
+                    continue
+                seen.add(k_)
+            keep.append(p)
+        out.append("\n\n".join(keep))
+        added += max(0, got)
+    story = "\n\n".join(out)
+    if sources and not fiction:              # 규칙: 출처 논문이 오픈액세스면 논문 그림도 1~2장 (신뢰성)
+        story, n_fig = doc_add_paper_figures(model, title, story, sources, media_dir, log)
+        added += n_fig
+    return story, added
 
 
 def _artist_recent(artwork):
@@ -2000,6 +2129,12 @@ def photo_note(n, category=""):
 def ask_script_json(model, system, user):
     """대본 작성·심사용: 'AI 엔진' 탭의 '대본 작성 AI' 설정을 따름 (웹 검색은 항상 Claude)"""
     s_ = SCRIPT_ENGINE.get("s")
+    if "나레이션" in system or "대본" in system or "문체" in system:     # 대본을 쓰거나 고치는 요청에는 존댓말·30초 후크 규칙을 항상 붙임
+        system = system + POLITE_RULE
+        if "오프닝" in system or "opening" in system:
+            system = system + HOOK_RULE
+        if "나레이션" in system and ("다큐" in system or "본문" in system):     # 규칙: 사람이 쓴 것처럼 (AI 틀 티 내지 않기)
+            system = system + _YP.HUMAN_RULE
     if s_ and s_.get("script_engine") and s_.get("script_engine") != "Claude":
         return ask_engine_json(s_, model, system, user, "script_engine")
     return ask_json(model, system, user)
@@ -2984,10 +3119,16 @@ def make_ai_images(model, category, title, story, n, s, media_dir, log, cancel=N
     preset = str(s.get("image_style_preset", "") or "")
     log(f"🎨 그림 {n}장 기획 중... (스타일: {preset if preset in IMAGE_STYLES else '직접 입력'})")
     cast = cast_text()
-    plan = ask_script_json(model, fit_ratio(IMAGE_PLAN_SYSTEM), f"화면: {ratio_ko()}\n콘텐츠 종류: {category}\n그림 수: {n}장\n그림 스타일(모든 그림 공통): {style or '사실적인 영화 장면'}"
+    fact_img = cat_info(category)[0] and not doc_is_fiction(str(category))   # 규칙: 사실 콘텐츠의 AI 그림은 개념도·상상도로만 (유튜브_정책.py)
+    plan = ask_script_json(model, fit_ratio(IMAGE_PLAN_SYSTEM + (_YP.FACT_IMAGE_RULE if fact_img else "")), f"화면: {ratio_ko()}\n콘텐츠 종류: {category}\n그림 수: {n}장\n그림 스타일(모든 그림 공통): {style or '사실적인 영화 장면'}"
                            + (f"\n\n[등장인물 외모 - 모든 그림에서 그대로 유지, prompt 에 그대로 복사]\n{cast}" if cast else "")
                            + f"\n[제목] {title}\n\n[본문]\n{story_text_only(story)}")
     items = [x for x in (plan.get("images") or []) if isinstance(x, dict) and x.get("prompt")][:n]
+    if fact_img:     # 사진처럼 보이지 않게 + 화면 설명에 'AI 상상도' (유튜브 합성 콘텐츠 표시)
+        for it in items:
+            it["prompt"] = str(it["prompt"]) + _YP.FACT_PROMPT_TAIL
+            cap_ = str(it.get("caption", "")).strip()
+            it["caption"] = cap_ if cap_.startswith(_YP.AI_CAPTION) else (f"{_YP.AI_CAPTION} · {cap_}" if cap_ else _YP.AI_CAPTION)
     if plan.get("cast"):     # 기획이 새로 정한 인물 외모를 등록(이미 있는 인물은 그대로) → 이후 모든 그림·회차에 같은 얼굴·머리·수염·체형
         have = {c.get("name") for c in IMAGE_CAST.get("chars") or []}
         new = [{"name": str(x.get("name", "")), "look": str(x.get("look", "")), "look_ko": str(x.get("look_ko", ""))}
@@ -3388,11 +3529,15 @@ THUMB_SYSTEM = """너는 구독자 100만 유튜브 채널의 썸네일 디자�
   극적인 조명·강한 색 대비, 배경은 단순하게, 세로 9:16, 아래쪽 35%는 어둡고 단순하게 비워 둠(글자 자리). 글자·워터마크 금지(no text).
   실존 인물 얼굴 재현·유명 캐릭터·상표 금지. 명화 이야기면 그 그림을 베끼지 말고 그 시대 분위기의 장면으로.
 - photo: [사진 목록]에서 이 문구와 가장 어울리는 사진 번호(1부터). 얼굴·상징물이 크게 나오고 글자를 올려도 알아볼 사진. 없으면 0.
+- photos: 콜라주·원형 컷에 함께 쓸 관련 사진 번호 2~3개 (photo 와 다른 것, 서로 다른 장면). 없으면 빈 목록.
 - style: 아래 스타일 중 이 시안에 가장 맞는 것 하나 (이름 그대로):
   "기본(사진 꽉 + 큰 글자)" 범용 / "반분할(글 패널 + 사진)" 정보·설명형 / "노랑 패널(고대비)" 숫자·사실 강조 / "시네마 띠" 다큐·감동 /
-  "뉴스 속보" 실화·사건 / "미스터리 다크" 미스터리·소름 / "빨간 강조(원 + 화살표)" 충격·반전(사진 속 한 지점을 가리킬 때)
+  "뉴스 속보" 실화·사건 / "미스터리 다크" 미스터리·소름 / "빨간 강조(원 + 화살표)" 충격·반전(사진 속 한 지점을 가리킬 때) /
+  "파스텔 하단 띠(감성)" 감동·따뜻한 이야기 / "상단 큰 질문" 질문형 문구 / "좌측 세로 띠" 정보·시리즈 / "하단 그라데이션(깔끔)" 사진이 좋을 때 / "메모지(손글씨 느낌)" 친근한 설명 /
+  "오려 붙이기(누끼 + 큰 글자)" 사람·동물·물건 하나가 또렷한 사진 / "콜라주 3장(사선 분할)" 여러 장면을 한눈에 / "원형 컷 2장" 두 증거를 나란히 / "폴라로이드 콜라주" 기록·추적형 이야기
+  (어떤 스타일을 고르든 프로그램이 나머지 스타일로도 후보를 모두 만들어 사람이 고를 수 있게 함)
 세 시안은 서로 다른 각도(궁금증형 / 숫자·사실형 / 감정형)로, 사진과 스타일도 가능하면 서로 다르게.
-반드시 JSON만 출력: {"variants": [{"big": "...", "big2": "...", "emph": "...", "small": "...", "mood": "...", "photo": 1, "style": "...", "prompt": "..."}]}"""
+반드시 JSON만 출력: {"variants": [{"big": "...", "big2": "...", "emph": "...", "small": "...", "mood": "...", "photo": 1, "photos": [2, 5], "style": "...", "prompt": "..."}]}"""
 
 THUMB_PICK_SYSTEM = """너는 유튜브 썸네일 A/B 테스트 전문가다. 후보 썸네일 이미지들을 Read 로 직접 열어 보고, 영상 내용에 맞으면서 가장 클릭을 부를 것을 하나 고른다.
 기준: (1) 작은 화면(휴대폰 피드)에서도 글자가 한눈에 읽히는가 (2) 사진이 내용과 맞고 핵심 피사체(특히 사람 얼굴)가 글자에 가려지지 않았는가 - 얼굴을 글자가 덮으면 크게 감점 (3) 궁금증·감정이 바로 전해지는가
@@ -3414,30 +3559,39 @@ def save_auto_thumb(r, base):
     r.thumbnail().save(base + "_썸네일.png")
 
 
+DESC_MAX = 5000      # (참고) 유튜브 설명란 한도 5,000바이트 - 실제 맞추기는 유튜브_정책.fit_description
+
+
 def description_text(pkg, story, portrait=False, max_sources=8):
     """유튜브 설명란에 그대로 붙여넣는 완성본: 설명 + 챕터 + 주요 출처 + 사진 출처 + 해시태그"""
-    lines = [str(pkg.get("description", "")).strip()]
-    if "AI 생성 이미지" in (story or "") and "AI" not in lines[0]:
-        lines.append("※ 일부 이미지는 AI로 생성되었습니다.")
-    if pkg.get("chapters"):
-        lines += ["", "00:00 오프닝"] + [f"{hms(t)} {n}" for t, n in pkg["chapters"]]
+    head = [str(pkg.get("description", "")).strip()]
+    if "AI 생성 이미지" in (story or "") and _YP.AI_DESC_LINE not in head[0]:
+        head.append(_YP.AI_DESC_LINE)          # 규칙: AI 그림이 있으면 '실제 사진 아님' (유튜브 합성 콘텐츠 정책)
+    chap = (["", "00:00 오프닝"] + [f"{hms(t)} {n}" for t, n in pkg["chapters"]]) if pkg.get("chapters") else []
     src, seen = [], set()
     for x in pkg.get("sources") or []:
         k = re.sub(r"\W+", "", str(x).split(" - ")[0].lower())[:40]
         if k and k not in seen:
             seen.add(k)
             src.append(str(x))
-    if src:
-        lines += ["", "📚 출처"] + [f"- {x}" for x in src[:max_sources]]
+    src = src[:max_sources]
     credits = [c for c in photo_credits(story) if "AI 생성 이미지" not in c]
-    if credits:
-        lines += ["", "🖼 사진 출처"] + credits
     tags = str(pkg.get("hashtags", "")).strip()
     if portrait and "#shorts" not in tags.lower():
         tags = (tags + " #shorts").strip()
-    if tags:
-        lines += ["", tags]
-    return "\n".join(lines).strip() + "\n"
+
+    def build(src_, cred_, more_):
+        ls = list(head) + chap
+        if src_:
+            ls += ["", "📚 출처"] + [f"- {x}" for x in src_]
+        if cred_:
+            ls += ["", "🖼 사진 출처"] + cred_ + ([f"외 {more_}장 (출처는 영상 속 사진 아래 표기)"] if more_ else [])
+        if tags:
+            ls += ["", tags]
+        return "\n".join(ls).strip() + "\n"
+    # 규칙: 유튜브 설명란 한도는 5,000 '바이트'(한글 1자 = 3바이트, 한글만이면 약 1,660자).
+    # 넘치면 사진 출처 주소 → 출처 목록 → 사진 출처 줄 → 본문 끝 순으로 줄임 (유튜브_정책.fit_description)
+    return _YP.fit_description(build(src, credits, 0))
 
 
 def best_photo(story):
@@ -3476,15 +3630,32 @@ def publish_kit(model, base, title, story, category, genre, s, chapters=None, so
                          "\n- 메모에서 가설·추정·검증 중·논쟁·미해결로 적힌 내용은 제목·설명·고정댓글에서 사실로 단정하지 않는다"
                          "('밝혀졌다' 대신 '유력한 가설', '검증 중' 등). 숫자는 추정치면 '약'·'추정'을 붙인다."
                          '\n- JSON에 "caveat" 도 추가: 시청자용 1~2문장, 무엇이 아직 가설·검증 중·추정인지 쉬운 말로 (메모의 작가용 지시는 빼고)')
-            pkg = ask_script_json(model, DOC_FICTION_PACKAGE_SYSTEM if fic else DOC_PACKAGE_SYSTEM, user)
+            pkg = ask_script_json(model, DOC_FICTION_PACKAGE_SYSTEM if fic else DOC_PACKAGE_SYSTEM, user + _YP.desc_rule(title))   # 규칙: 설명란 방식은 영상마다 다르게
             cav = str(pkg.get("caveat") or "").strip() if isinstance(pkg, dict) else ""
             if cav and cav not in str(pkg.get("description", "")):
                 pkg["description"] = (str(pkg.get("description", "")).rstrip() + "\n\n※ " + cav.lstrip("※ ")).strip()
             doc_date_note(pkg, fic)
         else:
-            pkg = ask_script_json(model, PACKAGE_SYSTEM, f"콘텐츠 종류: {category}\n소재: {genre}\n[지금 제목] {title}\n\n[본문]\n{body[:6000]}")
+            user_ = f"콘텐츠 종류: {category}\n소재: {genre}\n[지금 제목] {title}\n\n[본문]\n{body[:6000]}"
+            if notes and CATEGORIES.get(category, (False,))[0]:   # 규칙: 쇼츠도 사실 확인 메모(가설·검증 중)를 설명란에 빠뜨리지 않음
+                user_ += ("\n\n[사실 확인 메모 - 반드시 지킬 것]\n" + str(notes) +
+                          "\n- 메모에서 가설·추정·검증 중으로 적힌 내용은 제목·설명에서 사실로 단정하지 않는다."
+                          '\n- JSON에 "caveat" 도 추가: 시청자용 1문장, 무엇이 아직 가설·검증 중·추정인지 쉬운 말로 (작가용 지시는 빼고)')
+            pkg = ask_script_json(model, PACKAGE_SYSTEM, user_ + _YP.desc_rule(title))   # 규칙: 설명란 방식은 영상마다 다르게
+            cav = str(pkg.get("caveat") or "").strip() if isinstance(pkg, dict) else ""
+            if cav and cav not in str(pkg.get("description", "")):
+                pkg["description"] = (str(pkg.get("description", "")).rstrip() + "\n\n※ " + cav.lstrip("※ ")).strip()
         pkg.update(sources=list(sources or []), chapters=list(chapters or []), notes=notes or "")
+        med_note(pkg, story, notes)          # 규칙: 의학·건강 영상이면 '의학적 조언 아님' + 연구비 출처
         write_package(base, title, story, pkg)
+        try:     # 규칙: 업로드 전 정책 체크리스트 (AI 그림 표시·건강 주제 경고·형식 반복 주의)
+            atomic_write_text(base + "_업로드_체크.txt", _YP.checklist(title, story, notes, portrait))
+            if _YP.ai_images_in(story):
+                log("  ⚠ AI 그림이 들어 있어요 → 업로드 때 '변경되거나 합성된 콘텐츠' 확인 (" + os.path.basename(base) + "_업로드_체크.txt)")
+            if _YP.is_health(story, notes):
+                log("  ⚠ 건강·의료 주제 + AI 목소리 → 본인 목소리 도입부 권장 (" + os.path.basename(base) + "_업로드_체크.txt)")
+        except Exception:
+            pass
         atomic_write_text(base + "_설명란.txt", description_text(pkg, story, portrait))
         log("  📝 업로드 문구·설명란 저장: " + os.path.basename(base) + "_설명란.txt (유튜브 설명란에 그대로 붙여넣기)")
     except Exception as e:
@@ -3502,9 +3673,11 @@ def _save_jpg_2mb(im, out):
             break
 
 
-def make_thumbnails(model, base, title, story, category, s, log=None):
-    """썸네일 기획: AI가 문구 3안과 각각 어울리는 사진·스타일을 정함 → 후보 5~6장 그림 → 후보 모음표 저장 →
-    AI가 후보를 직접 보고(Read) 가장 좋은 것을 _썸네일_유튜브.jpg 로. 나머지는 _썸네일_후보\ 폴더에 남겨 바꿔 쓸 수 있게"""
+def make_thumbnails(model, base, title, story, category, s, log=None, keep_final=False):
+    """썸네일 기획: AI가 문구 3안과 각각 어울리는 사진·스타일을 정함 → 디자인 16가지가 모두 한 번씩 나오게 후보를 그림 →
+    MP4 장면으로 만든 실사 편집 후보(소재탐색\mp4_thumbs.py)도 같은 폴더에 → 후보 모음표 저장 →
+    AI가 후보를 직접 보고(Read) 가장 좋은 것을 _썸네일_유튜브.jpg 로. 나머지는 _썸네일_후보\ 폴더에 남겨 바꿔 쓸 수 있게
+    keep_final=True: 이미 있는 _썸네일_유튜브.jpg(사람이 고른 것)는 덮어쓰지 않고 AI 추천 번호만 알려 줌"""
     log = log or (lambda x: None)
     body = story_text_only(story)
     portrait = H > W
@@ -3530,6 +3703,34 @@ def make_thumbnails(model, base, title, story, category, s, log=None):
         except Exception:
             pass
         return fallback
+    loaded = {}
+
+    def photo_k(k):
+        if k not in loaded:
+            try:
+                p = photos[k - 1][0]
+                loaded[k] = Image.open(p if os.path.isabs(p) else os.path.join(BASE, p)).convert("RGB")
+            except Exception:
+                loaded[k] = None
+        return loaded[k]
+    for v in vs[:3]:     # 콜라주·원형 컷용 관련 사진: AI가 고른 번호 → 없으면 영상 앞·중간·뒤에서 고르게
+        try:
+            main_k = int(v.get("photo") or 0)
+        except (TypeError, ValueError):
+            main_k = 0
+        ks = []
+        for k in (v.get("photos") or []):
+            try:
+                k = int(k)
+            except (TypeError, ValueError):
+                continue
+            if 1 <= k <= len(photos) and k != main_k and k not in ks:
+                ks.append(k)
+        if len(ks) < 2 and len(photos) >= 3:
+            for k in (len(photos) // 4 + 1, len(photos) // 2 + 1, len(photos) * 3 // 4 + 1):
+                if k != main_k and k not in ks and len(ks) < 3:
+                    ks.append(k)
+        v["_photos"] = [photo_of(v)] + [im for im in (photo_k(k) for k in ks[:3]) if im is not None]
     user_style = str(s.get("thumb_style") or THUMB_STYLES[0])
     cands = []   # (설명, PIL)
     for i, v in enumerate(vs[:3]):
@@ -3539,25 +3740,35 @@ def make_thumbnails(model, base, title, story, category, s, log=None):
     def face_area(v):
         fs = thumb_faces(photo_of(v))
         return fs[0][2] * fs[0][3] if fs else 0.0
-    j = max(range(len(vs[:3])), key=lambda i: face_area(vs[i]))
-    vj = vs[j]
+    n_v = len(vs[:3])
+    j = max(range(n_v), key=lambda i: face_area(vs[i]))
     used = {c[0].split(" · ")[-1] for c in cands}
-    for st_ in ("빨간 강조(원 + 화살표)", "시네마 띠", "노랑 패널(고대비)", "뉴스 속보", "미스터리 다크"):
-        if len(cands) >= 5:
-            break
-        if st_ not in used:
-            used.add(st_)
-            cands.append((f"{j + 1}안 '{vj.get('big', '')} {vj.get('big2', '')}' · {st_}", render_thumb(vj, s, photo_of(vj), size=size, style=st_)))
+    # 나머지 디자인도 모두 한 장씩 (16가지 전부 고를 수 있게). 문구는 얼굴이 큰 시안부터 번갈아
+    for n_, st_ in enumerate(x for x in THUMB_STYLES if not x.startswith("자동") and x not in used):
+        k_ = (j + n_) % n_v
+        vk = vs[k_]
+        try:
+            cands.append((f"{k_ + 1}안 '{vk.get('big', '')} {vk.get('big2', '')}' · {st_}", render_thumb(vk, s, photo_of(vk), size=size, style=st_)))
+        except Exception as e:
+            log(f"  썸네일 '{st_}' 만들기 실패(건너뜀): " + ((str(e).splitlines() or [type(e).__name__])[0][:60]))
     cdir = base + "_썸네일_후보"
     os.makedirs(cdir, exist_ok=True)
+    old = sorted(os.path.join(cdir, f_) for f_ in os.listdir(cdir) if re.fullmatch(r"\d\d\.jpg", f_))
+    if old:                       # 예전 후보는 지우지 않고 '이전_시각' 폴더로 옮겨 둠
+        keep = os.path.join(cdir, "이전_" + time.strftime("%Y%m%d_%H%M%S"))
+        os.makedirs(keep, exist_ok=True)
+        for p_ in old:
+            shutil.move(p_, os.path.join(keep, os.path.basename(p_)))
     paths = []
     for i, (desc, im) in enumerate(cands):
         p = os.path.join(cdir, f"{i + 1:02d}.jpg")
         _save_jpg_2mb(im.convert("RGB"), p)
         paths.append(p)
+    atomic_write_text(os.path.join(cdir, "후보목록.json"),      # 썸네일 고르기 창에 디자인 이름을 보여 주려고
+                      json.dumps({os.path.basename(p): desc for p, (desc, _) in zip(paths, cands)}, ensure_ascii=False, indent=1))
     # 후보 모음표 (사람이 한눈에 보고 바꿔 고를 수 있게)
     tw, th = (240, 427) if portrait else (426, 240)
-    cols = len(cands) if portrait else 3
+    cols = min(len(cands), 6) if portrait else (4 if len(cands) > 6 else 3)
     rows = (len(cands) + cols - 1) // cols
     sheet = Image.new("RGB", (tw * cols + 8 * (cols + 1), (th + 30) * rows + 8), "#202020")
     dr = ImageDraw.Draw(sheet)
@@ -3583,10 +3794,34 @@ def make_thumbnails(model, base, title, story, category, s, log=None):
     except Exception as e:
         log("  썸네일 고르기(AI 보기) 실패 → 1안 사용: " + str(e).splitlines()[0][:80])
     out = base + "_썸네일_유튜브.jpg"
-    shutil.copyfile(paths[best - 1], out)
-    log(f"  🖼 유튜브 썸네일: 후보 {len(cands)}장 중 {best}번 선택 ({cands[best - 1][0]})" + (f" - {reason[:90]}" if reason else ""))
-    log(f"     다른 후보는 {os.path.basename(cdir)}\\ 와 {os.path.basename(base)}_썸네일_후보.jpg 에서 볼 수 있어요")
+    if keep_final and os.path.exists(out):
+        log(f"  🖼 썸네일 후보 {len(cands)}장 완성 · AI 추천 {best}번 ({cands[best - 1][0]})" + (f" - {reason[:90]}" if reason else "")
+            + " · 지금 유튜브 썸네일은 그대로 둠")
+    else:
+        shutil.copyfile(paths[best - 1], out)
+        log(f"  🖼 유튜브 썸네일: 후보 {len(cands)}장 중 {best}번 선택 ({cands[best - 1][0]})" + (f" - {reason[:90]}" if reason else ""))
+    mp4_scene_thumbs(base, title, vs[best - 1 if best - 1 < n_v else 0], log)
+    log(f"     다른 후보는 {os.path.basename(cdir)}\\ 와 {os.path.basename(base)}_썸네일_후보.jpg 에서 볼 수 있어요 (🖼 썸네일 고르기 / 썸네일_고르기.bat)")
     return out
+
+
+def mp4_scene_thumbs(base, title, v, log=None):
+    """완성된 MP4 장면으로 실사 편집 썸네일(A 피사체 중심 · B 좌우 비교 · C 증거 확대)도 만들어 _썸네일_후보\\외부_mp4_*.jpg 로 (소재탐색\\mp4_thumbs.py)"""
+    log = log or (lambda x: None)
+    tool = os.path.join(BASE, "소재탐색", "mp4_thumbs.py")
+    if not (os.path.exists(base + ".mp4") and os.path.exists(tool)):
+        return
+    words = "\\n".join(x for x in (str(v.get("big", "")).strip(), str(v.get("big2", "")).strip()) if x)
+    cmd = [sys.executable, "-X", "utf8", tool, base + ".mp4", "--제목", title, "--후보폴더", "--썸네일선택", "없음", "--ffmpeg", get_ffmpeg()]
+    if words:
+        cmd += ["--문구", words]
+    try:
+        p = subprocess.run(cmd, cwd=os.path.dirname(tool), stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, errors="replace",
+                           timeout=1800, creationflags=(subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0))
+        n = len([f_ for f_ in os.listdir(base + "_썸네일_후보") if f_.startswith("외부_mp4_")]) if os.path.isdir(base + "_썸네일_후보") else 0
+        log(f"  🎞 영상 장면 썸네일 후보 {n}장 추가" if p.returncode == 0 else "  🎞 영상 장면 썸네일 실패: " + (p.stdout or "")[-120:].strip())
+    except Exception as e:
+        log("  🎞 영상 장면 썸네일 실패(건너뜀): " + (str(e).splitlines() or [type(e).__name__])[0][:80])
 
 
 def story_photos(story):
@@ -3674,6 +3909,21 @@ def _thumb_basic(v, s, photo_im=None, size=None, font_path=None):
 THUMB_AUTO = {"충격": "빨간 강조(원 + 화살표)", "미스터리": "미스터리 다크", "감동": "시네마 띠", "정보": "반분할(글 패널 + 사진)"}
 
 
+def _thumb_compose(style, v, s, photo_im, size, fp):
+    """썸네일_합성.py 의 오려 붙이기·콜라주 디자인. v["_photos"] = 관련 사진 목록 (make_thumbnails 가 넣음). 실패하면 기본 디자인"""
+    from types import SimpleNamespace
+    try:
+        mod = _load_korean_reading("썸네일_합성")
+        H = SimpleNamespace(vparts=_vparts, fit_font=_thumb_fit_font, lines=_thumb_lines, tag=_thumb_tag, hex_rgb=hex_rgb, moods=THUMB_MOODS)
+        photos = [p for p in (v.get("_photos") or []) if p is not None] or [photo_im]
+        if photo_im is not None and photos[0] is not photo_im:
+            photos = [photo_im] + [p for p in photos if p is not photo_im]
+        return mod.render(style, v, s, photos, size, fp, H)
+    except Exception as e:
+        print("썸네일 합성 실패 → 기본 디자인:", (str(e).splitlines() or [type(e).__name__])[0][:100])
+        return _thumb_basic(v, s, photo_im, size, fp)
+
+
 def render_thumb(v, s, photo_im=None, size=None, font_path=None, style=None):
     """썸네일 시안 v → PIL 이미지. style: THUMB_STYLES 중 하나 ('자동'이면 분위기에 맞춰 고름)"""
     style = str(style or s.get("thumb_style") or THUMB_STYLES[0])
@@ -3687,6 +3937,8 @@ def render_thumb(v, s, photo_im=None, size=None, font_path=None, style=None):
           "파스텔": lambda: _thumb_pastel(v, s, photo_im, size, fp), "상단": lambda: _thumb_topq(v, s, photo_im, size, fp),
           "좌측": lambda: _thumb_sidebar(v, s, photo_im, size, fp), "하단 그라": lambda: _thumb_gradient(v, s, photo_im, size, fp),
           "메모지": lambda: _thumb_memo(v, s, photo_im, size, fp)}
+    if style.startswith(("오려", "콜라주", "원형 컷", "폴라로이드")):     # 사진 오려 붙이기·콜라주 (썸네일_합성.py)
+        return _thumb_compose(style, v, s, photo_im, size, fp)
     for k_, f_ in fn.items():
         if style.startswith(k_):
             return f_()
@@ -5200,6 +5452,28 @@ class SubtitleRenderer:
         (1.06, 1.30, -0.6, 0.5, -0.5, 0.4),    # 대각선으로 다가가기
         (1.30, 1.08, 0.6, -0.3, 0.5, -0.2),    # 대각선으로 물러나기
     ]
+    # 규칙: 사진은 조금만 움직임 (기본). 확대 4~10%, 좌우로만 살짝, 위아래로 훑지 않음
+    MOTIONS_GENTLE = [
+        (1.03, 1.09, 0.0, 0.0, 0.0, 0.0),      # 아주 천천히 다가가기
+        (1.09, 1.03, 0.0, 0.0, 0.0, 0.0),      # 아주 천천히 물러나기
+        (1.07, 1.07, 0.25, -0.25, 0.0, 0.0),   # 오른쪽 → 왼쪽 살짝
+        (1.07, 1.07, -0.25, 0.25, 0.0, 0.0),   # 왼쪽 → 오른쪽 살짝
+        (1.04, 1.10, -0.15, 0.1, 0.0, 0.0),    # 살짝 비스듬히 다가가기
+    ]
+    # 사람 얼굴이 있는 사진: 얼굴을 위아래·좌우로 훑지 않고 제자리에서 아주 조금만 다가가거나 물러남
+    MOTIONS_FACE = [(1.02, 1.06, 0.0, 0.0, 0.0, 0.0), (1.06, 1.02, 0.0, 0.0, 0.0, 0.0)]
+
+    def _motion_set(self, img_idx):
+        """이 사진에 쓸 움직임 목록: 설정 '사진 움직임 세기'가 '크게(예전)'면 예전 그대로, 아니면 은은하게 (+ 얼굴 사진은 더 조용히)"""
+        if str(self.s.get("img_motion_amt", "은은하게")).startswith("크게"):
+            return self.MOTIONS
+        fc = self.__dict__.setdefault("_face_cache", {})
+        if img_idx not in fc:
+            try:
+                fc[img_idx] = bool(thumb_faces(self.images[img_idx][0]))
+            except Exception:
+                fc[img_idx] = False
+        return self.MOTIONS_FACE if fc[img_idx] else self.MOTIONS_GENTLE
 
     def _make_shots(self):
         """문단·사진에 맞춰 장면 목록 만들기. 영상처럼 모드: 문단마다(긴 문단은 나눠서) 다른 움직임으로 컷"""
@@ -5223,11 +5497,12 @@ class SubtitleRenderer:
                     if shots and shots[-1]["img"] == sg["img"] and shots[-1]["t1"] - shots[-1]["t0"] < 1.2:
                         shots[-1]["t1"] = b          # 너무 짧은 장면은 앞 장면에 붙임
                         continue
-                    m = int(rng.integers(len(self.MOTIONS)))
-                    if m == last:
-                        m = (m + 1 + int(rng.integers(len(self.MOTIONS) - 1))) % len(self.MOTIONS)
+                    ms = self._motion_set(sg["img"])
+                    m = int(rng.integers(len(ms)))
+                    if m == last and len(ms) > 1:
+                        m = (m + 1 + int(rng.integers(len(ms) - 1))) % len(ms)
                     last = m
-                    shots.append({"img": sg["img"], "t0": a, "t1": b, "m": self.MOTIONS[m]})
+                    shots.append({"img": sg["img"], "t0": a, "t1": b, "m": ms[m]})
         else:   # 사진이 바뀔 때만 장면 전환
             for k, sg in enumerate(self.segs):
                 if sg["img"] < 0:
@@ -5320,7 +5595,8 @@ class SubtitleRenderer:
         p = 0.5 - 0.5 * np.cos(np.pi * p)             # 부드럽게 시작·끝
         z = z0 + (z1 - z0) * p
         if self.s.get("punch_in", "on") == "on" and str(self.s.get("img_motion", "영상")).startswith("영상"):
-            z *= 1 + 0.05 * (1 - smoothstep((t - sh["t0"]) / 0.3))     # 장면 시작에 살짝 펀치 줌
+            punch = 0.05 if str(self.s.get("img_motion_amt", "은은하게")).startswith("크게") else 0.015
+            z *= 1 + punch * (1 - smoothstep((t - sh["t0"]) / 0.3))     # 장면 시작에 살짝 펀치 줌 (은은하게: 1.5%)
         base = 1.32
         cw, ch = bw * base / z, bh * base / z         # big 안에서 잘라낼 크기
         cw, ch = min(cw, big.width), min(ch, big.height)
@@ -5637,6 +5913,48 @@ class SubtitleRenderer:
                 return sg
         return self.segs[-1] if self.segs else None
 
+    def _img_label(self, idx, t):
+        """사진 제목 꼬리표 (오른쪽 위, 반투명 어두운 상자 + 흰 글자). 사진이 바뀔 때 0.4초 동안 서서히 나타남.
+        반환: (RGBA 이미지, (x, y)) 또는 None"""
+        if not (0 <= idx < len(self.images)):
+            return None
+        cache = self.__dict__.setdefault("_lab_cache", {})
+        if idx not in cache:
+            cap = str(self.images[idx][1] or "")
+            cap = re.sub(r"zoom=[\d.,]+", "", cap).split("|")[0].strip(" ·-")
+            if not cap:
+                cache[idx] = None
+            else:
+                port = H > W
+                fs = max(18, int((W if port else H) * (0.032 if port else 0.03)))
+                f_ = load_font(self.s.get("sub_font_path") or self.s.get("font_path"), fs)
+                maxw = int(W * (0.62 if port else 0.38))
+                while f_.getlength(cap) > maxw - fs and len(cap) > 4:
+                    cap = cap[:-2] + "…"
+                pad_x, pad_y = int(fs * 0.7), int(fs * 0.38)
+                bw, bh = int(f_.getlength(cap)) + pad_x * 2, int(fs * 1.28) + pad_y * 2 - int(fs * 0.25)
+                im = Image.new("RGBA", (bw, bh), (0, 0, 0, 0))
+                d = ImageDraw.Draw(im)
+                d.rounded_rectangle([0, 0, bw - 1, bh - 1], radius=int(fs * 0.45), fill=(10, 12, 18, 165))
+                d.rectangle([0, int(bh * 0.18), max(3, fs // 7), int(bh * 0.82)], fill=tuple(int(v) for v in self.accent) + (235,))
+                d.text((pad_x, pad_y - int(fs * 0.12)), cap, font=f_, fill=(255, 255, 255, 240))
+                mx, my = int(W * (0.035 if port else 0.025)), int(H * (0.16 if port else 0.045))
+                if port and str(self.s.get("head_show", "보임")).startswith("안"):
+                    my = int(H * 0.05)
+                cache[idx] = (im, (W - bw - mx, my))
+        lab = cache[idx]
+        if lab is None:
+            return None
+        starts = self.__dict__.setdefault("_lab_start", {})
+        if idx not in starts:                    # 이 사진이 처음 나오는 시각
+            starts[idx] = min((sg_["t0"] for sg_ in self.segs if sg_.get("img") == idx), default=0.0)
+        k = smoothstep((t - starts[idx]) / 0.4)
+        if k >= 0.999:
+            return lab
+        im = lab[0].copy()
+        im.putalpha(im.getchannel("A").point(lambda a: int(a * k)))
+        return im, lab[1]
+
     def _compose_pil(self, t):
         sg0 = self.seg_at(t)
         if (t >= self.intro and (self.full or self.s.get("img_bg", "on") == "on") and self.shots
@@ -5658,6 +5976,10 @@ class SubtitleRenderer:
         if sg is not None:
             if sg["img"] >= 0 and self.images:
                 canvas = self._paint_images(canvas, t)
+                if str(self.s.get("img_label", "on")) == "on":      # 규칙: 사진이 나올 때 오른쪽 위에 사진 제목
+                    lab = self._img_label(sg["img"], t)
+                    if lab is not None:
+                        canvas.alpha_composite(lab[0], lab[1])
             if getattr(self, "overlay", None) is not None:      # 시네마 띠·뉴스 띠·가운데 자막용 어둡게
                 canvas.alpha_composite(self.overlay)
             if not str(self.s.get("head_show", "보임")).startswith("안"):
@@ -6632,88 +6954,22 @@ def build_audio(r, s, style):
 # ---------------- 나레이션 (TTS) ----------------
 
 
-_KO_DIG = "영일이삼사오육칠팔구"
-_KO_NATIVE = {1: "한", 2: "두", 3: "세", 4: "네", 5: "다섯", 6: "여섯", 7: "일곱", 8: "여덟", 9: "아홉"}
-_KO_NATIVE_TENS = {1: "열", 2: "스물", 3: "서른", 4: "마흔", 5: "쉰", 6: "예순", 7: "일흔", 8: "여든", 9: "아흔"}
-# 고유어로 읽는 단위 (1~99): 세 명, 두 마리, 다섯 살, 세 시
-_KO_NATIVE_UNITS = ("마리", "사람", "시간", "살", "시", "번", "권", "잔", "그루", "송이", "척", "달", "가지", "군데", "걸음",
-                    "켤레", "곳", "쌍", "방울", "바퀴", "명", "개", "채", "벌", "줄", "알", "배",
-                    "자리", "장", "통", "차례", "겹", "갈래", "마디", "모금", "포기", "자루", "그릇", "봉지", "덩이", "곡")
-_KO_UNIT_WORDS = [("km²", "제곱킬로미터"), ("m²", "제곱미터"), ("km/h", "킬로미터"), ("km", "킬로미터"), ("cm", "센티미터"),
-                  ("mm", "밀리미터"), ("kg", "킬로그램"), ("mg", "밀리그램"), ("ml", "밀리리터"), ("mL", "밀리리터"), ("°C", "도"),
-                  ("℃", "도"), ("°", "도"), ("%", " 퍼센트"), ("hPa", "헥토파스칼"), ("bar", "바"), ("atm", "기압"), ("m", "미터"), ("g", "그램"), ("L", "리터")]
+# 한국어 읽기 규칙(숫자·건·전화번호·낱말 사전)은 한국어_읽기.py 에 모음. 낱말 규칙은 읽기사전.txt 에 적으면 바로 적용
+def _load_korean_reading(name="한국어_읽기"):
+    if name in sys.modules:
+        return sys.modules[name]
+    spec = importlib.util.spec_from_file_location(name, os.path.join(BASE, name + ".py"))
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules[name] = mod
+    spec.loader.exec_module(mod)
+    return mod
 
 
-def ko_sino(n):
-    """정수 → 한자어 수사 (1960 → 천구백육십, 10000 → 만, 13800000000 → 백삼십팔억)"""
-    if n == 0:
-        return "영"
-    out = []
-    for i, big in enumerate(["", "만", "억", "조", "경"]):
-        k = n % 10000
-        n //= 10000
-        if k:
-            s = ""
-            for d, small in ((k // 1000, "천"), (k // 100 % 10, "백"), (k // 10 % 10, "십"), (k % 10, "")):
-                if d:
-                    s += ("" if d == 1 and small else _KO_DIG[d]) + small
-            if big == "만" and k == 1:
-                s = ""          # '일만' 대신 '만'
-            out.append(s + big)
-        if not n:
-            break
-    return "".join(reversed(out))
-
-
-def ko_native(n):
-    """1~99 → 고유어 관형형 (3 → 세, 20 → 스무, 21 → 스물한)"""
-    if n == 20:
-        return "스무"
-    return _KO_NATIVE_TENS.get(n // 10, "") + _KO_NATIVE.get(n % 10, "")
-
-
-def ko_numbers(text):
-    """나레이션용: 아라비아 숫자·기호를 한글 읽기로 (자막은 숫자 그대로 두고 성우에게 넘기는 글만 바꿈).
-    TTS(특히 Supertonic)가 숫자를 잘못 읽거나 오류를 내는 것을 막음"""
-    t = text
-    t = re.sub(r"(?<=\d),(?=\d{3}(?!\d))", "", t)                         # 12,000 → 12000
-    t = re.sub(r"(\d)\s*[~～∼]\s*(?=\d)", r"\1에서 ", t)                  # 10~20 → 10에서 20
-    t = re.sub(r"(?<![\w.])-(?=\d)", "마이너스 ", t)
-    for a, b in _KO_UNIT_WORDS:                                         # 10km → 10킬로미터 (숫자 바로 뒤의 단위만)
-        t = re.sub(r"(\d)\s*" + re.escape(a) + r"(?![A-Za-z])", r"\1" + b, t)
-
-    def one(m_):
-        num, frac, after = m_.group(1), m_.group(2), m_.string[m_.end():m_.end() + 3]
-        try:
-            n = int(num)
-        except ValueError:
-            return m_.group(0)
-        if frac:                                                        # 3.14 → 삼 점 일사
-            return ko_sino(n) + " 점 " + "".join(_KO_DIG[int(c)] for c in frac[1:])
-        if n == 1 and after.startswith("만"):                             # 1만 → 만 (일만 X)
-            return ""
-        if after.startswith("월") and 1 <= n <= 12:                     # 6월 → 유월, 10월 → 시월
-            return {6: "유", 10: "시"}.get(n, ko_sino(n))
-        before = m_.string[max(0, m_.start() - 1):m_.start()]
-        if 1 <= n <= 99 and before != "제" and after.startswith(_KO_NATIVE_UNITS) and not (after.startswith("시간") and n >= 20) and not after.startswith(
-                ("시대", "시즌", "개월", "번째", "가지고", "달러", "개국", "배터", "배우", "시청", "장관", "장면", "장소", "장군", "통계", "곡선")):
-            return ko_native(n)
-        if n == 4 and after.startswith("번") and not after.startswith(("번째", "번이나", "번만", "번씩", "번도", "번을", "번 더")):
-            return "네"          # '사 번'은 '사번(사원번호)'처럼 들림 → 네 번
-        if (n % 10 == 4 and after.startswith("일") and not after.startswith(("일본", "일반", "일단", "일정", "일상", "일종", "일으", "일어", "일자", "일하"))
-                and not (after.startswith("일부") and not after.startswith("일부터"))):
-            return ko_sino(n) + " "   # 4일 → '사 일' (붙여 쓰면 성우가 '싸일'로 읽음)
-        if n >= 1 and after.startswith("번째"):
-            return "첫" if n == 1 else ko_native(n) if n <= 99 else ko_sino(n)
-        if len(num) > 16:                                               # 너무 긴 숫자(전화번호 등)는 한 자리씩
-            return " ".join(_KO_DIG[int(c)] for c in num)
-        if len(num) > 1 and num.startswith("0"):                       # 007 같은 번호
-            return " ".join(_KO_DIG[int(c)] for c in num)
-        return ko_sino(n)
-    t = re.sub(r"(\d+)(\.\d+)?", one, t)
-    t = t.replace("&", " 앤 ").replace("+", " 플러스 ").replace("×", " 곱하기 ").replace("=", " 는 ")
-    t = re.sub(r"[·ㆍ/]", " ", t)
-    return t
+_KR = _load_korean_reading()
+_NV = _load_korean_reading("나레이션_검증")     # 문단마다 나레이션 검증 (기본 검사 + Whisper 듣기 검사)
+_YP = _load_korean_reading("유튜브_정책")       # 유튜브 정책 지키기 (AI 이미지 표시·형식 다양화·건강 주제 경고·설명란 5000자)
+ko_sino, ko_native, ko_numbers, geon_kkeon = _KR.ko_sino, _KR.ko_native, _KR.ko_numbers, _KR.geon_kkeon
+builtin_read, read_korean, _apply_read, _josa = _KR.builtin_read, _KR.read_korean, _KR.apply_read, _KR.josa
 
 
 # ---- 발음 사전: 자막은 맞춤법대로(2026년, 42%), 성우는 읽는 그대로(이천이십육 년, 사십이 퍼센트) ----
@@ -6724,12 +6980,12 @@ SPOKEN_SYSTEM = """너는 한국어 성우 대본 감수자다. 각 문장을 �
 - 숫자·단위·기호(%, ~, km, kg, ℃ 등)만 한글 발음으로 바꾸고, 나머지 글자·띄어쓰기·문장부호는 절대 바꾸지 않는다.
 - 세는 말(개, 명, 마리, 자리, 장, 살, 시, 시간, 가지, 번, 곳, 잔, 권, 대(자동차 수) 등)은 고유어: 한, 두, 세, 네, 다섯, 스무, 서른.
 - 그 밖(년, 월, 일, 분, 초, 원, 퍼센트, 미터, 층, 호, 회, 세기, 차(회차), 대(나이대), 번(번호)·제N장 등)은 한자어: 일, 이, 삼, 사.
-- 고유어는 1~99에만 쓴다. 100 이상은 세는 말 앞이라도 한자어: 226개 → 이백이십육 개, 150명 → 백오십 명.
+- 고유어는 1~99에만 쓴다. 100 이상은 세는 말 앞이면 앞자리는 한자어·끝자리만 고유어: 341곳 → 삼백사십한 곳, 226개 → 이백이십여섯 개, 끝자리가 0이면 150명 → 백오십 명. (시간·번·배 앞의 100 이상은 모두 한자어)
 - 듣는 사람이 헷갈리지 않게: 숫자 4를 '사'로 읽어 다른 낱말처럼 들리면 바꿔 읽는다. 특히 목록·문제·보기 번호 '4번'은 '사번(사원번호)'과 똑같이 들리므로 '네 번째'로 읽는다(4번 O → 네 번째, 오 / 1번 7일 → 첫 번째, 칠 일 처럼 같은 문장의 다른 번호도 맞춘다). 횟수 '4번'(네 번 했다)은 '네 번'.
 - 낱말 '사번'(사원번호의 줄임말)은 숫자 4번과 헷갈리지 않게 '사원번호'로 풀어 읽는다.
 - 날짜의 4일·14일·24일은 '사 일', '십사 일', '이십사 일'처럼 숫자와 '일' 사이를 띄운다(붙이면 '싸일'로 들림).
 - 6월=유월, 10월=시월. 연도: 이천이십육 년. 큰 수는 만 단위로: 1,200만 원 → 천이백만 원, 13,800 → 만 삼천팔백. 소수: 3.5 → 삼 점 오.
-- 범위 10~20 → 십에서 이십. 전화번호·제품 번호는 한 자리씩. 영어 약어(AI, CEO)는 그대로 둔다.
+- 범위 10~20 → 십에서 이십. 전화번호·제품 번호는 한 자리씩. 영어 약어(CEO 등)는 그대로 둔다(단, AI는 에이아이).
 - 세는 말 '건'(件)은 소리 나는 대로 '껀'으로 쓴다. 1~99건은 고유어: 1건 → 한 껀, 29건 → 스물아홉 껀, 94건 → 아흔네 껀, 네 건 → 네 껀.
   100건 이상은 앞자리는 한자어·끝자리는 고유어: 447건 → 사백사십일곱 껀, 307건 → 삼백일곱 껀, 끝자리가 0이면 150건 → 백오십 껀.
   '이 건(이 일)', 건물, 건강, 건너다, 건의 같은 낱말의 '건'은 그대로 둔다.
@@ -6737,6 +6993,129 @@ SPOKEN_SYSTEM = """너는 한국어 성우 대본 감수자다. 각 문장을 �
 - 전화번호는 한 자리씩: 국번 없이 118 → 일일팔, 1833-6972 → 일팔삼삼 육구칠이, 02-123-4567 → 영이 일이삼 사오육칠.
 - 결과에 아라비아 숫자를 남기지 않는다.
 반드시 JSON만 출력: {"items": [{"i": 번호, "say": "성우가 읽을 문장"}]}"""
+
+
+# ---- 30초 후크 규칙: 모든 대본의 앞 30초(첫 2~4문장, 약 150자)는 반드시 후크 ----
+HOOK_RULE = ("\n[공통 규칙 - 30초 후크, 반드시 지킬 것] 대본의 첫 30초(첫 2~4문장, 약 150자)는 시청자를 붙잡는 후크여야 한다: "
+             "(1) 첫 문장부터 가장 강한 충격적 사실·의외의 질문·반전 예고로 바로 시작한다. 인사말('안녕하세요'), '오늘은 ~에 대해 알아보겠습니다', 용어 정의, 역사 배경 같은 예열형 도입은 금지. "
+             "(2) 첫 세 문장 안에 구체적인 숫자나 미스터리(질문) 하나를 넣는다. "
+             "(3) 오프닝 안에 '끝까지 보시면 …'처럼 영상이 줄 보상을 한 문장으로 예고한다.\n")
+HOOK_FIX_SYSTEM = """너는 유튜브 다큐 채널의 오프닝 전문 작가다. 아래 오프닝(영상 첫 30초)을 '30초 후크' 규칙에 맞게 고쳐 쓴다.
+- 첫 문장부터 가장 강한 충격적 사실·의외의 질문·반전 예고로 바로 시작. 인사말, '오늘은 ~알아보겠습니다', 용어 정의, 배경 설명으로 시작 금지.
+- 첫 세 문장 안에 본문에 실제로 있는 구체적인 숫자나 미스터리(질문)를 하나 넣는다. 본문에 없는 숫자·사실을 지어내지 않는다.
+- 오프닝 끝에 '끝까지 보시면, …' 한 문장으로 영상이 줄 보상을 예고한다.
+- 존댓말('~습니다', '~죠', '~일까요?'). 짧은 문단 3~5개, 문단 사이 빈 줄, 전체 150~400자. 사진 줄([사진: …])은 그대로 둔다.
+반드시 JSON만 출력: {"opening": "고친 오프닝 전체"}"""
+
+
+def hook_check(story):
+    """오프닝(첫 챕터 제목 앞)이 30초 후크 규칙에 맞는지 → 문제 목록 (빈 목록 = 통과)"""
+    head = story.split("\n## ", 1)[0]
+    text = "\n".join(ln for ln in head.split("\n") if ln.strip() and not ln.lstrip().startswith(("[", "#", "♪")))
+    flat = re.sub(r"\s+", " ", text).strip()
+    if not flat:
+        return ["오프닝이 없음"]
+    issues = []
+    first = re.split(r"(?<=[.!?…])\s+", flat, 1)[0]
+    if re.search(r"^(안녕|여러분[,\s]*안녕|반갑)|오늘은 .{0,30}(알아보|이야기|소개|살펴)|에 대해 (알아보|말씀|이야기)하", first):
+        issues.append("첫 문장이 인사말·예열형 도입")
+    first3 = " ".join(re.split(r"(?<=[.!?…])\s+", flat)[:3])
+    if not (re.search(r"\d", first3) or "?" in first3
+            or re.search(r"(?<![가-힣])(한|두|세|네|다섯|여섯|일곱|여덟|아홉|열|스무|수십|수백|수천|백|천|만|억)\s?(종|개|마리|명|년|배|번|가지|곳|미터|킬로미터|시간|일|달|퍼센트)", first3)   # '네 종', '수천 년'처럼 한글로 쓴 숫자
+            or re.search(r"(사실은|그런데|놀랍게도|아무도|비밀|정체|미스터리|수수께끼|처음으로|최초|뜻밖|이상한|왜 |어떻게 )", first3)):
+        issues.append("첫 세 문장에 숫자·질문·반전이 없음")
+    if "\n## " in "\n" + story and not re.search(r"끝까지 (보|들)", flat):     # 쇼츠(챕터 없음)는 짧아서 보상 예고 문장은 안 따짐
+        issues.append("'끝까지 보시면 …' 보상 예고가 없음")
+    return issues
+
+
+def hook_fix(model, story, log=None, cancel=None):
+    """30초 후크 검사 → 걸리면 오프닝만 AI가 고쳐 씀 (본문·챕터는 그대로). 반환: (새 대본, 고쳤는지)"""
+    log = log or (lambda x: None)
+    issues = hook_check(story)
+    if not issues:
+        log("🎣 30초 후크 확인: 통과")
+        return story, False
+    log("🎣 30초 후크 검사에 걸림: " + " / ".join(issues) + " → 오프닝을 고치는 중...")
+    parts = story.split("\n## ", 1)
+    head = parts[0]
+    body_hint = re.sub(r"\[사진:[^\]]*\]\n*", "", parts[1] if len(parts) > 1 else "")[:1500]
+    try:
+        d = ask_script_json(model, HOOK_FIX_SYSTEM, f"[지금 오프닝]\n{head}\n\n[본문 앞부분 - 숫자·사실은 여기 있는 것만]\n{body_hint}")
+        new = str(d.get("opening") or "").strip()
+    except Exception as e:
+        log("  오프닝 고치기 실패(그대로 진행): " + (str(e).splitlines() or [""])[0][:80])
+        return story, False
+    photos = [ln for ln in head.split("\n") if ln.lstrip().startswith("[사진:")]
+    if photos and "[사진:" not in new:                     # 사진 줄이 빠졌으면 앞뒤에 되돌려 둠
+        new = "\n\n".join(photos[:1] + [new] + photos[1:])
+    left = hook_check(new + "\n## x")
+    if left or len(re.sub(r"\[사진:[^\]]*\]|\s", "", new)) < 80:
+        log("  고친 오프닝도 규칙에 안 맞아 원래대로 둠: " + " / ".join(left))
+        return story, False
+    log("  🎣 오프닝을 30초 후크에 맞게 고쳤어요 (대본을 한 번 확인하세요)")
+    return new + ("\n## " + parts[1] if len(parts) > 1 else ""), True
+
+
+# ---- 나레이션 존댓말 규칙: 모든 나레이션은 존댓말(~습니다/~요). 따옴표 속 인물 대사는 예외 ----
+POLITE_RULE = ("\n[공통 규칙 - 반드시 지킬 것] 나레이션(본문)은 처음부터 끝까지 모두 존댓말로 쓴다: '~습니다', '~입니다', '~죠', '~요', '~일까요?'. "
+               "'~다.', '~했다.', '~일까?', '~하자.' 같은 반말 끝맺음은 쓰지 않는다. 따옴표 안의 등장인물 대사만 예외.\n")
+POLITE_SYSTEM = """너는 한국어 유튜브 나레이션 감수자다. 각 문단의 문장 끝맺음만 존댓말로 바꾼다.
+- '~다.'(했다·이다·있다·한다) → '~습니다/~입니다/~했습니다/~합니다', '~까?' → '~까요?', '~자.' → '~봅시다/~볼까요', '~는가?' → '~ㄹ까요?'
+- 다큐 나레이터처럼 '~습니다'를 기본으로 하고 '~죠', '~요'를 가끔 섞어 자연스럽게.
+- 내용·낱말·숫자·문장 순서·문장부호·띄어쓰기는 바꾸지 않는다. 따옴표 안의 인물 대사는 그대로 둔다.
+반드시 JSON만 출력: {"items": [{"i": 번호, "text": "바꾼 문단"}]}"""
+
+
+def _plain_sentences(t):
+    """반말 끝맺음 문장 목록 (따옴표 속 대사는 뺌)"""
+    t = re.sub(r"[\"“”'‘’「」『』][^\"“”'‘’「」『』]{0,200}[\"“”'‘’「」『』]", " ", t)
+    out = []
+    for sent in re.split(r"(?<=[.!?…])\s+|\n", t):
+        x = re.sub(r"[\s.!?…,~)\]」』]+$", "", sent.strip())
+        if len(x) < 4 or not re.search(r"[가-힣]$", x):
+            continue
+        if (x.endswith("다") and not x.endswith("니다")) or (x.endswith("까") and not x.endswith("니까")) \
+                or x.endswith(("자", "냐", "는가", "ㄴ가", "던가", "을까", "일까", "했나", "었나")):
+            out.append(sent.strip())
+    return out
+
+
+def polite_fix(model, story, log=None, cancel=None):
+    """모든 나레이션을 존댓말로: 반말로 끝나는 문단만 골라 AI가 끝맺음만 존댓말로 바꿈 (자막과 성우 모두).
+    반환: (새 대본, 바꾼 문단 수). AI가 이상하게 바꾸면 그 문단은 그대로 두고 기록만 남김"""
+    log = log or (lambda x: None)
+    lines = story.split("\n")
+    idx = [k for k, ln in enumerate(lines) if ln.strip() and not ln.lstrip().startswith(("## ", "[", "#", "♪"))
+           and _plain_sentences(ln)]
+    if not idx:
+        return story, 0
+    log(f"🙇 반말로 끝나는 문단 {len(idx)}개를 존댓말로 바꾸는 중...")
+    changed = 0
+    for a in range(0, len(idx), 12):
+        if cancel is not None and cancel.is_set():
+            raise RuntimeError("취소됨")
+        part = idx[a:a + 12]
+        try:
+            d = ask_script_json(model, POLITE_SYSTEM, "\n\n".join(f"[{n}] {lines[k]}" for n, k in enumerate(part)))
+        except Exception as e:
+            log("  존댓말 바꾸기 실패(그대로 진행): " + (str(e).splitlines() or [""])[0][:80])
+            continue
+        for it in d.get("items") or []:
+            try:
+                n, new = int(it.get("i")), str(it.get("text") or "").strip()
+            except (TypeError, ValueError):
+                continue
+            if not (0 <= n < len(part)) or not new:
+                continue
+            old = lines[part[n]]
+            same_num = re.findall(r"\d+", old) == re.findall(r"\d+", new)
+            if same_num and 0.85 < len(new) / max(1, len(old)) < 1.5 and len(_plain_sentences(new)) < len(_plain_sentences(old)):
+                lines[part[n]] = new
+                changed += 1
+    left = sum(1 for ln in lines if ln.strip() and not ln.lstrip().startswith(("## ", "[", "#", "♪")) and _plain_sentences(ln))
+    log(f"  🙇 존댓말로 {changed}문단 바꿈" + (f" · 아직 반말이 남은 문단 {left}개 (대본을 직접 확인하세요)" if left else ""))
+    return "\n".join(lines), changed
 
 
 def spoken_load(cache_dir):
@@ -6824,29 +7203,14 @@ def no_vietnamese(t, orig=""):
     return " ".join(w for w in t.split() if not VI_RE.search(w))
 
 
-_GEON_FOLLOW = r"(?!물|강|설|축|조|배|전|국|립|너|넌|넜|드|져|장|실|방|투|빵|반|평|재|망|들|달|성|초|기|의하|의했|의서|의사|의를)"   # 세는 말 '건' 뒤 (건물·건강·건너 등은 제외)
-_GEON_WORD = r"(?:[일이삼사오육칠팔구십백천만억]{2,}|[십백천만]|한|두|세|네|다섯|여섯|일곱|여덟|아홉|열|스무|몇|수십|수백|수천|수만)"
-
-
-def geon_kkeon(t):
-    """세는 말 '건'(件)은 숫자 뒤에서 [껀]으로 읽음: 1건 → 한 껀, 29건 → 스물아홉 껀, 447건 → 사백사십일곱 껀, 네 건 → 네 껀 ('이 건(이것)'·건물·건강은 그대로)"""
-    t = re.sub(r"(?<![\d.,])([1-9]\d?)\s?건" + _GEON_FOLLOW, lambda m_: ko_native(int(m_.group(1))) + " 껀", t)   # 1~99건 → 한 껀 … 스물아홉 껀 … 아흔아홉 껀
-    def big_(m_):
-        n = int(m_.group(1).replace(",", ""))
-        return (ko_sino(n - n % 10) + ko_native(n % 10) if n % 10 else ko_sino(n)) + " 껀"
-    t = re.sub(r"(?<![\d.])(\d{1,3}(?:,\d{3})+|[1-9]\d{2,})\s?건" + _GEON_FOLLOW, big_, t)   # 447건 → 사백사십일곱 껀
-    t = re.sub(r"(\d)\s?건" + _GEON_FOLLOW, r"\1 껀", t)
-    return re.sub(r"(?<![가-힣])(" + _GEON_WORD + r")\s?건" + _GEON_FOLLOW, r"\1 껀", t)
-
-
 def tts_clean(text):
     """읽기 좋게 정리: ♪, 따옴표, 챕터 표시 제거 + 한국어 문장의 숫자는 한글 읽기로"""
     t = text.strip()
     r_ = spoken_src(t)                   # 읽기 바꾸기 (LOT → 로트 …)
     t0_ = t
     if r_ in SPOKEN:                     # 발음 사전(자막 글 → 읽는 글)
-        t = SPOKEN[r_]
-    elif t in SPOKEN:
+        t = builtin_read(SPOKEN[r_])     # 사전 결과에 AI 같은 영어가 남아 있어도
+    elif t in SPOKEN and r_ == t:        # 읽기 사전으로 글이 바뀐 문장은 예전 발음 기록을 쓰지 않음 (g-2 → 지 마이너스 투)
         t = spoken_src(SPOKEN[t])
     else:
         t = r_
@@ -6856,15 +7220,7 @@ def tts_clean(text):
     t = t.lstrip("♪").strip()
     t = re.sub(r"[\"“”'‘’]", "", t)
     if re.search(r"[가-힣]", t):
-        t = geon_kkeon(t)                # 447건 → 447 껀 (숫자로 읽기 전에), 사백사십칠 건 → 사백사십칠 껀
-        t = re.sub(r"(?<![\d])(\d{2,4})-(\d{3,4})(?:-(\d{4}))?(?!\d)",          # 전화번호 → 한 자리씩 (1833-6972 → 일팔삼삼 육구칠이)
-                   lambda m_: " ".join("".join(_KO_DIG[int(c)] for c in g) for g in m_.groups() if g), t)
-        t = re.sub(r"(국번\s*없이|전화|번호는?|신고센터|콜센터)(\s*)(\d{3,4})(?=번|\s|[,.)]|$)",     # 국번 없이 118 → 일일팔
-                   lambda m_: m_.group(1) + m_.group(2) + "".join(_KO_DIG[int(c)] for c in m_.group(3)), t)
-        t = re.sub(r"(?<![0-9가-힣])사번(은|이|을|과)?(?=[\s,.!?·:]|[도만의에처보까부]|$)",              # 낱말 '사번' ↔ 숫자 '4번' 구분
-                   lambda m_: "사원번호" + {"은": "는", "이": "가", "을": "를", "과": "와"}.get(m_.group(1) or "", ""), t)
-        if re.search(r"\d", t):
-            t = ko_numbers(t)
+        t = read_korean(t)               # 건→껀, 전화번호, 사번, 숫자 → 한글 읽기 (한국어_읽기.py)
     t = re.sub(r"\s+", " ", t)
     return t
 
@@ -6905,7 +7261,7 @@ def voice_code(voice_name):
         return m.group(1)
     if re.fullmatch(r"supertonic:[MF][1-5]", (voice_name or "").strip()):
         return voice_name.strip()
-    return "supertonic:M2"     # 성우 미지정·옛 마이크로소프트 온라인 성우 이름 → 남자 성우 2
+    return "supertonic:M2"     # 성우 미지정·옛 마이크로소프트 온라인 성우 이름 → 남자 성우 2 (기본)
 
 
 def list_voices(refresh=False):
@@ -7073,8 +7429,9 @@ def supertonic_mood(text, idx=0, total=1, settings=None):
 
 def supertonic_prompt(text, mood):
     """표현 태그가 유효하지 않을 수도 있으므로 재생 결과를 반드시 시청/청취 확인."""
-    tags = {"차분": "", "공포·긴장": "<breath> ", "슬픔·감동": "<sad> ",
-            "놀람·반전": "<surprise> ", "분노·갈등": "<angry> ", "밝음·유머": "<laugh> "}
+    # 규칙: 말 시작에 '휴' 같은 한숨·숨소리·웃음소리가 나오면 안 됨 → 소리를 내는 태그(<breath>·<sad>·<laugh>)는 쓰지 않고 말 빠르기로만 분위기를 냄
+    tags = {"차분": "", "공포·긴장": "", "슬픔·감동": "",
+            "놀람·반전": "<surprise> ", "분노·갈등": "<angry> ", "밝음·유머": ""}
     mul = {"차분": 1.0, "공포·긴장": .89, "슬픔·감동": .92, "놀람·반전": 1.05,
            "분노·갈등": 1.02, "밝음·유머": 1.04}
     return tags.get(mood, "") + tts_clean(text), mul.get(mood, 1.0)
@@ -7225,23 +7582,7 @@ def parse_replace(text):
 
 def spoken_src(t):
     """성우가 읽기 전 '읽기 바꾸기' 적용 (자막은 그대로). 영어 단어는 단어째로만 (PIN ≠ PINK)"""
-    for a, b in TTS_CFG.get("replace") or []:
-        pre = r"(?<![A-Za-z0-9])" if re.match(r"[A-Za-z0-9]", a) else ""
-        post = r"(?![A-Za-z])" if re.search(r"[A-Za-z]$", a) else ""
-        t = re.sub(pre + re.escape(a) + post + r"(?:(은|는|이|가|을|를|과|와)(?=[\s,.!?·)]|$))?",
-                   lambda _m, b=b: b + _josa(b, _m.group(1)), t)
-    return t
-
-
-def _josa(word, j):
-    """바꾼 말 받침에 맞춰 조사 고치기 (로트+과 → 로트와)"""
-    if not j:
-        return ""
-    ch = word[-1] if word else ""
-    batchim = "가" <= ch <= "힣" and (ord(ch) - 0xAC00) % 28 != 0
-    pair = {"은": ("은", "는"), "는": ("은", "는"), "이": ("이", "가"), "가": ("이", "가"),
-            "을": ("을", "를"), "를": ("을", "를"), "과": ("과", "와"), "와": ("과", "와")}[j]
-    return pair[0] if batchim else pair[1]
+    return builtin_read(_apply_read(t, TTS_CFG.get("replace") or []))
 
 
 def set_tts_cfg(s):
@@ -7289,7 +7630,7 @@ def voice_post_params(voice_name, code=""):
         tone = 0.0
     tone = max(-6.0, min(6.0, tone))
     bright = bool(fem and TTS_CFG.get("bright_f", "off") == "on")
-    trim = TTS_CFG.get("breath_cut", "off") == "on"
+    trim = True     # 규칙: 말 시작 숨소리·한숨('휴', '쓰읍')은 설정과 상관없이 항상 지움
     return tone, bright, trim
 
 
@@ -7638,12 +7979,35 @@ def load_para_audio(path):
     return a, len(a) / SR
 
 
+def check_para(k, text, vname, s, cache_dir, mood, a, d, mode, log=None):
+    """나레이션 검증(나레이션_검증.py): 문제가 있으면 한 번 다시 녹음(Supertonic 은 다듬기 단계를 바꿔서) → 더 나은 쪽.
+    그래도 남은 문제는 _NV.REPORT 에 기록 (영상 만들기는 멈추지 않음)"""
+    spoken, rate = tts_clean(text), float(s["narr_rate"])
+    r = _NV.check(spoken, a, d, SR, cache_dir, rate, mode == "on", text)
+    sound_bad = any(not x.startswith("한글로 못 바꾼") for x in r["issues"])   # 글자 문제는 다시 녹음해도 그대로
+    if sound_bad and voice_code(vname).startswith("supertonic:"):
+        a2, d2 = tts_clip(text, vname, rate, cache_dir, float(s.get("narr_pitch", 0)), mood, int(s.get("st_steps", 5)) + 3)
+        r2 = _NV.check(spoken, a2, d2, SR, cache_dir, rate, mode == "on", text)
+        if (r2["ok"], -len(r2["issues"]), r2["score"] or 0) > (r["ok"], -len(r["issues"]), r["score"] or 0):
+            a, d, r = a2, d2, r2
+        if log:
+            log(f"  🔁 {k + 1}번째 문단 다시 녹음 → " + ("통과" if r["ok"] else "아직 문제: " + r["issues"][0][:80]))
+    elif not r["ok"] and log:
+        log(f"  ⚠ {k + 1}번째 문단: " + r["issues"][0][:90])
+    _NV.REPORT.append((k, text.strip(), r))
+    return a, d
+
+
 def build_narration(story, s, cache_dir, log=None, cancel=None, para_audio=None):
     """본문 전체 나레이션 → [(문단 인덱스, 소리, 길이)]. para_audio={문단번호: 음성파일} 가 있으면 그 문단은 파일을 씀"""
     items = narration_paras(story)
     res = []
     pa = para_audio or {}
     spoken_load(cache_dir)
+    ck_mode = _NV.mode_of(s)
+    _NV.REPORT.clear()
+    if ck_mode == "on" and _NV.whisper() is None and log:
+        log("  ⚠ 듣기 검사(Whisper)를 못 써서 기본 검사만 합니다: " + _NV._W["error"][:80])
     for k, (i, text) in enumerate(items):
         if cancel and cancel.is_set():
             raise RuntimeError("취소됨")
@@ -7659,6 +8023,8 @@ def build_narration(story, s, cache_dir, log=None, cancel=None, para_audio=None)
             mood = supertonic_mood(text, k, len(items), s) if is_st else "차분"
             a, d = tts_clip(text, vname, float(s["narr_rate"]), cache_dir,
                             float(s.get("narr_pitch", 0)), mood, int(s.get("st_steps", 5)))
+            if ck_mode != "off":
+                a, d = check_para(k, text, vname, s, cache_dir, mood, a, d, ck_mode, log)
         res.append((i, a, d))
         if log and (k % 5 == 0 or k == len(items) - 1):
             log(f"  🎙 나레이션 {k + 1}/{len(items)}")
@@ -8175,7 +8541,7 @@ def write_package(path_base, title, story, pkg):
                   "- 영상의 멜로디는 원곡 음원이 아니라 프로그램이 직접 연주(합성)한 것입니다." if pkg.get("melody_used") else "- 영상에 원곡 멜로디·음원은 사용하지 않았습니다."]
     credits = photo_credits(story)
     if credits:
-        lines += ["", "[사진 출처 (CC 라이선스는 설명란 표기 필수)]"] + credits
+        lines += ["", "[사진 출처 전체 (설명란 5,000바이트에 다 못 들어간 주소·사진은 고정 댓글에 붙여넣기)]"] + credits
     if pkg.get("notes"):
         lines += ["", "[확인 필요]", str(pkg["notes"])]
     lines += ["", "[본문]", title, "", story_text_only(story).strip()]
@@ -13805,7 +14171,7 @@ class App(tk.Tk):
         total = int(minutes * DOC_CHARS_PER_MIN)
         open_c, close_c = max(350, int(total * 0.05)), max(300, int(total * 0.035))
         body_c = total - open_c - close_c
-        n_ch = max(3, min(12, round(minutes / 5)))
+        n_ch = _YP.chapter_count(max(3, min(12, round(minutes / 5))), topic or genre)   # 규칙: 챕터 수도 주제마다 ±1 (형식 다양화)
         media_dir = media_dir or os.path.join(DEFAULTS["out_dir"], "media")
         topics = cat_info(DOC_CATEGORY)[1]
         formula = topics.get(genre, ("(사용자가 직접 정한 소재)", ""))[0]
@@ -13824,7 +14190,8 @@ class App(tk.Tk):
         else:
             base = (f"콘텐츠 종류: 장문 지식 다큐 (사실 기반 - 지어내지 말 것)\n주제: {topic.strip() or '자유 (소재 안에서 긴 다큐로 반응 좋을 큰 질문)'}\n"
                     f"소재: {genre}\n소재 공식: {formula}\n영상 길이: 약 {minutes:.0f}분 (나레이션 전체 약 {total}자)\n"
-                    f"오늘 날짜: {time.strftime('%Y년 %m월 %d일')} (최신 정보는 이 날짜 기준)")
+                    f"오늘 날짜: {time.strftime('%Y년 %m월 %d일')} (최신 정보는 이 날짜 기준)\n"
+                    f"[이번 편 오프닝 방식 - 영상마다 다르게] {_YP.opening_style(topic or genre)}")   # 규칙: 형식 다양화 (유튜브 정책)
         if reference.strip():
             base += "\n\n[사용자가 붙여넣은 참고자료 - 이 내용을 가장 우선해서 사용]\n" + reference.strip()[:20000]
         sources, notes, facts = [], [], ""
@@ -13981,6 +14348,13 @@ class App(tk.Tk):
         parts += [f"## {i + 1}. {t}\n\n{b}" for i, (t, b) in enumerate(bodies)]
         parts.append(doc_clean(o.get("closing", "")))
         story = strip_placeholders("\n\n".join(p for p in parts if p.strip()))
+        if autophoto and not fiction and sources and media_dir:     # 규칙: 출처 논문이 오픈액세스면 논문 그림 1~2장 (신뢰성)
+            try:
+                story, _ = doc_add_paper_figures(model, title, story, sources, media_dir, log)
+            except RuntimeError:
+                raise
+            except Exception as e:
+                log("  논문 그림 단계 건너뜀: " + (str(e).splitlines() or [""])[0][:80])
         n_chars = len(story_text_only(story))
         note = f"장문{' 이야기' if fiction else ''} {len(bodies)}{unit} · {n_chars:,}자 · 예상 약 {n_chars / DOC_CHARS_PER_MIN:.0f}분"
         if fiction:
@@ -15026,13 +15400,13 @@ class App(tk.Tk):
         seen = list(hist.get(key, []))
         if self.topic_var.get().strip():
             seen.append(self.topic_var.get().strip())
-        if doc:   # 이미 만든 장문 (output\장문\_작업_주제)
+        if doc:   # 이미 만든 장문 (output\장문\_작업_주제, 정리된 뒤에는 output\장문\0001_제목\_작업_주제)
             d_ = os.path.join(self.get_settings()["out_dir"], "장문")
             if os.path.isdir(d_):
-                seen += [n[len("_작업_"):] for n in os.listdir(d_) if n.startswith("_작업_")]
+                seen += _load_korean_reading("콘텐츠_정리").all_work_names(d_)
         seen = list(dict.fromkeys(x for x in seen if x))[-60:]
         if seen:
-            user += ("\n\n[이미 추천했거나 만든 주제 - 같은 것은 물론 비슷한 것(같은 대상·같은 질문)도 피하고, 새로운 대상·각도로]\n- "
+            user += ("\n\n[이미 추천했거나 만든 주제 - 똑같은 주제(같은 대상의 같은 발견·사건)만 피한다. 같은 분야·비슷한 대상이라도 다른 연구·다른 각도면 괜찮다]\n- "
                      + "\n- ".join(seen))
         model = self.model_var.get().strip()
         web = self.research_var.get() or (doc and not doc_is_fiction(g))   # 다큐 장문은 최신 정보를 위해 항상 웹 검색

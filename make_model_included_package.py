@@ -12,6 +12,17 @@ import sys
 BASE = Path(__file__).resolve().parent
 FILES = [
     'shorts_novel_maker_supertonic.py',
+    '한국어_읽기.py',
+    '읽기사전.txt',
+    '읽기_미리보기.bat',
+    '나레이션_검증.py',
+    '썸네일_후보_만들기.py',
+    '썸네일_후보_만들기.bat',
+    '썸네일_합성.py',
+    '쇼츠_자동.py',
+    '콘텐츠_정리.py',
+    '콘텐츠_정리.bat',
+    '유튜브_정책.py',
     'supertonic_local_worker.py',
     'supertonic_voice_test.py',
     'setup_supertonic_windows.bat',

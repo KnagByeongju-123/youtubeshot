@@ -142,23 +142,45 @@ def _tk_pick(cands, title=""):
     from PIL import Image, ImageTk
     root = tk.Tk()
     root.title(f"썸네일 고르기 — {title or os.path.basename(os.path.dirname(cands[0]))}")
-    cols = 3 if len(cands) > 4 else 2
-    tw, th = (400, 225) if cols == 3 else (520, 292)
+    cols = 4 if len(cands) > 6 else (3 if len(cands) > 4 else 2)
+    tw, th = {4: (320, 180), 3: (400, 225), 2: (520, 292)}[cols]
     chosen = {"p": ""}
     photos = []
-    tk.Label(root, text="마음에 드는 썸네일을 클릭하세요 (창을 닫으면 취소)", font=("Malgun Gothic", 12)).grid(row=0, column=0, columnspan=cols, pady=(8, 4))
+    try:   # 프로그램이 만든 후보의 디자인 이름 (01.jpg → "2안 '…' · 시네마 띠")
+        names = json.load(open(os.path.join(os.path.dirname(cands[0]), "후보목록.json"), encoding="utf-8"))
+    except Exception:
+        names = {}
+    tk.Label(root, text=f"마음에 드는 썸네일을 클릭하세요 (후보 {len(cands)}장 · 마우스 휠로 내려 보기 · 창을 닫으면 취소)",
+             font=("Malgun Gothic", 12)).pack(pady=(8, 4))
+    outer = tk.Frame(root)
+    outer.pack(fill="both", expand=True)
+    cv = tk.Canvas(outer, highlightthickness=0)
+    sb = tk.Scrollbar(outer, orient="vertical", command=cv.yview)
+    cv.configure(yscrollcommand=sb.set)
+    sb.pack(side="right", fill="y")
+    cv.pack(side="left", fill="both", expand=True)
+    grid = tk.Frame(cv)
+    cv.create_window((0, 0), window=grid, anchor="nw")
+    grid.bind("<Configure>", lambda e: cv.configure(scrollregion=cv.bbox("all")))
+    cv.bind_all("<MouseWheel>", lambda e: cv.yview_scroll(int(-e.delta / 120), "units"))
     for i, p in enumerate(cands):
         with Image.open(p) as im:
-            ph = ImageTk.PhotoImage(im.convert("RGB").resize((tw, th), Image.LANCZOS))
+            im = im.convert("RGB")
+            im.thumbnail((tw, th), Image.LANCZOS)       # 세로 썸네일도 찌그러지지 않게
+            ph = ImageTk.PhotoImage(im)
         photos.append(ph)
-        f = tk.Frame(root, bd=2, relief="groove", padx=4, pady=4)
-        f.grid(row=1 + i // cols * 2, column=i % cols, padx=6, pady=6)
+        f = tk.Frame(grid, bd=2, relief="groove", padx=4, pady=4)
+        f.grid(row=i // cols, column=i % cols, padx=6, pady=6)
         b = tk.Button(f, image=ph, command=lambda q=p: (chosen.__setitem__("p", q), root.destroy()))
         b.pack()
-        tk.Label(f, text=f"{i + 1}. {os.path.basename(p)}", font=("Malgun Gothic", 10)).pack()
+        lab = names.get(os.path.basename(p)) or os.path.basename(p)
+        lab = f"{i + 1}. {lab}"
+        tk.Label(f, text=lab if len(lab) <= 40 else lab[:39] + "…", font=("Malgun Gothic", 9), wraplength=tw).pack()
     root.update_idletasks()
     sw, sh = root.winfo_screenwidth(), root.winfo_screenheight()
-    root.geometry(f"+{max(0, (sw - root.winfo_width()) // 2)}+{max(0, (sh - root.winfo_height()) // 2)}")
+    w_ = min(sw - 40, grid.winfo_reqwidth() + 30)
+    h_ = min(sh - 120, grid.winfo_reqheight() + 60)
+    root.geometry(f"{w_}x{h_}+{max(0, (sw - w_) // 2)}+{max(0, (sh - h_) // 2 - 30)}")
     root.mainloop()
     return chosen["p"]
 

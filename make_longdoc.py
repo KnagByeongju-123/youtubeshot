@@ -86,7 +86,7 @@ WebSearch 로 최근 화제와 유튜브에서 비슷한 긴 영상의 반응을
 반드시 JSON만 출력: {"lineup": [{"genre": "소재(주어진 목록 중 하나 그대로)", "topic": "주제", "why": "왜 지금 반응이 좋을지 한 줄", "hook": "첫 문장 훅 한 줄"}], "note": "라인업 전체 의도 두 줄"}"""
 
 REVIEWER_SYSTEM = """너는 유튜브 지식 다큐 채널의 까다로운 편성 검토자다. 기획자가 낸 라인업을 편마다 평가하고, 문제가 있으면 같은 소재 안에서 더 나은 주제로 바꾼다.
-검토 항목: (a) 겹침 - 다른 편이나 이미 만든 주제와 대상·질문이 비슷한가 (b) 반응 - 제목만 보고 누를 만큼 궁금한가, 너무 교과서적이진 않은가
+검토 항목: (a) 겹침 - 다른 편이나 이미 만든 주제와 똑같은 주제(같은 대상의 같은 발견·사건)인가 (같은 분야·비슷한 대상이라도 다른 연구·다른 각도면 괜찮음) (b) 반응 - 제목만 보고 누를 만큼 궁금한가, 너무 교과서적이진 않은가
 (c) 사실 확인 가능성 - 10분을 채울 만큼 공개된 자료(기사·논문·백과)가 충분한가, 루머·음모론에 기대지 않는가 (d) 사진 - 무료 사진을 구할 수 있는 대상인가
 (e) 안전 - 비하·선정·저작권 문제가 없는가. WebSearch 로 의심스러운 편은 실제로 자료가 있는지 확인한다.
 각 편에 keep(그대로) 또는 replace(바꿈)를 정하고, replace 면 새 topic·why·hook 을 쓴다. 바꾸는 편은 전체의 절반을 넘기지 않는다.
@@ -101,7 +101,7 @@ def plan_lineup(m, app, genres, n, minutes, seen, log, out_root):
     model = app.model_var.get().strip()
     topics = m.cat_info(m.DOC_CATEGORY)[1]
     glist = "\n".join(f"- {g_}: {topics.get(g_, ('', ''))[0][:120]}" for g_ in genres)
-    seen_txt = ("\n\n[이미 만든 주제 - 같은 것은 물론 비슷한 것도 피한다]\n- " + "\n- ".join(seen[-60:])) if seen else ""
+    seen_txt = ("\n\n[이미 만든 주제 - 똑같은 주제만 피한다. 같은 분야·비슷한 대상이라도 다른 연구·다른 사건·다른 각도면 괜찮다]\n- " + "\n- ".join(seen[-60:])) if seen else ""
     base = (f"채널: {CHANNEL_NOTE}\n영상: 각 {minutes}분 사실 기반 나레이션 다큐, 총 {n}편\n오늘: {time.strftime('%Y년 %m월 %d일')}\n"
             "라인업은 이 채널의 방향(여러 주제를 번갈아, 구독자가 '다음 편도 보고 싶게')에 맞춘다.\n"
             f"쓸 수 있는 소재 목록(각 편의 genre 는 이 중 하나, 가능하면 서로 다른 소재로):\n{glist}" + seen_txt)
@@ -200,7 +200,7 @@ def made_topics(m, out_root):
     """이미 만든(만들기 시작한) 장문 주제들 - 연속 제작 때 같은 주제를 피하려고"""
     if not os.path.isdir(out_root):
         return []
-    return [n[len("_작업_"):] for n in os.listdir(out_root) if n.startswith("_작업_")]
+    return m._load_korean_reading("콘텐츠_정리").all_work_names(out_root)   # 바깥 + 콘텐츠 폴더 안
 
 
 def pick_topic(m, app, genre, seen, log):
@@ -212,7 +212,7 @@ def pick_topic(m, app, genre, seen, log):
                 "이 장르로 10분 낭독용 이야기 5개를 만들어줘. 각 주제는 '장르 표시 + 주인공의 상황과 갈등 한 줄'(35자 이내, 결말 금지, "
                 "예: '[코믹] 엄마가 ChatGPT를 배우고 집안이 뒤집혔다'). 요즘 유튜브 장편 낭독에서 반응 좋은 설정으로, 실존 인물·기존 작품 금지.")
         if seen:
-            user += "\n\n[이미 만든 주제 - 비슷한 설정도 피한다]\n- " + "\n- ".join(seen[-60:])
+            user += "\n\n[이미 만든 주제 - 똑같은 이야기만 피한다. 비슷한 장르·설정이라도 인물·사건이 다르면 괜찮다]\n- " + "\n- ".join(seen[-60:])
         user += '\n출력: {"ideas": ["..."], "why": ["..."]} (반응이 좋을 순서대로)'
         d = m.ask_json_alive(app.model_var.get().strip(), m.IDEA_SYSTEM, user, log=log, label="이야기 주제 고르기")
         ideas = [str(x).strip() for x in (d.get("ideas") or []) if str(x).strip()]
@@ -229,7 +229,7 @@ def pick_topic(m, app, genre, seen, log):
             + "[웹 검색 모드] WebSearch 로 최근 화제가 된 사건·발견·현상을 찾아 그중에서 고른다. 실제로 존재하는 것만. "
             "유튜브에서 비슷한 주제의 긴 영상이 반응이 좋았는지, 아직 덜 다뤄진 틈새인지도 살핀다.")
     if seen:
-        user += "\n\n[이미 만든 주제 - 같은 것은 물론 비슷한 것(같은 대상·같은 질문)도 피하고 새로운 대상·각도로]\n- " + "\n- ".join(seen[-60:])
+        user += "\n\n[이미 만든 주제 - 똑같은 주제(같은 대상의 같은 발견·사건)만 피한다. 같은 분야·비슷한 대상이라도 다른 연구·다른 각도면 괜찮다]\n- " + "\n- ".join(seen[-60:])
     user += '\n출력: {"ideas": ["..."], "why": ["..."]} (반응이 좋을 순서대로)'
     d = m.ask_json_alive(app.model_var.get().strip(), m.IDEA_SYSTEM, user, tools=m.WEB_TOOLS, log=log, label="인기 주제 고르기")
     ideas = [str(x).strip() for x in (d.get("ideas") or []) if str(x).strip()]
@@ -348,7 +348,7 @@ def main():
         print("  터미널에서 'claude' 를 한 번 실행해 로그인한 뒤 다시 시도하세요.")
         return
     global SEG_SEC
-    m.DOC_PHOTO_SEC = max(10, float(c.get("사진_간격_초", 15)))
+    m.DOC_PHOTO_SEC = max(6, float(c.get("사진_간격_초", 8)))   # 규칙: 관련 사진 최대한 많이 (8초마다 한 장)
     SEG_SEC = int(max(1, float(c.get("영상_구간_분", 2))) * 60)
 
     app = m.App()
@@ -587,7 +587,7 @@ def run_doc(m, app, c, gate):
     app.vars["bgm_volume"].set(str(c["배경음_크기"]))
     s = app.get_settings()
     out_root = os.path.join(s["out_dir"], "장문")
-    work = os.path.join(out_root, "_작업_" + m.safe_name(c["주제"])[:40])
+    work = m._load_korean_reading("콘텐츠_정리").find_work(out_root, m.safe_name(c["주제"])[:40])   # 정리된 콘텐츠면 그 폴더 안의 작업 폴더
     os.makedirs(work, exist_ok=True)
     m.SCRIPT_ENGINE["s"] = s
     m.PHOTO_PLAN.update(sub=True, n=0)
@@ -625,7 +625,7 @@ def run_doc(m, app, c, gate):
         before = len(m.photo_credits(story))
         log(f"📷 사진 보강 시작: 지금 {before}장 → 나레이션 {m.DOC_PHOTO_SEC}초에 한 장 목표")
         story, n_add = m.doc_add_photos(model, title, story, os.path.join(out_root, "media"), log, gate,
-                                        fiction=m.doc_is_fiction(c["소재"]))
+                                        fiction=m.doc_is_fiction(c["소재"]), sources=res.get("sources") or [])
         res["story"] = story
         m.atomic_write_text(script_json, json.dumps(res, ensure_ascii=False, indent=1))
         m.atomic_write_text(done_flag, f"{before} -> {before + n_add}")
@@ -647,6 +647,8 @@ def run_doc(m, app, c, gate):
     if dropped:
         story = "\n".join(keep)
         log(f"깨진 사진 {dropped}장을 빼고 진행합니다")
+    story, _ = m.hook_fix(app.model_var.get().strip(), story, log, gate)   # 규칙: 30초 후크는 반드시 (걸리면 오프닝만 고침)
+    story, _ = m.polite_fix(app.model_var.get().strip(), story, log, gate)   # 규칙: 모든 나레이션은 존댓말 (자막·성우 함께)
     base = os.path.join(out_root, m.safe_name(title))
     app.title_var.set(title)
     app.set_story(story)
@@ -654,6 +656,9 @@ def run_doc(m, app, c, gate):
     app.vars["target_sec"].set("0")
     m.atomic_write_text(base + "_프로젝트.json", json.dumps(app.project_dict(), ensure_ascii=False, indent=1))
     s = app.get_settings()
+    ch_ = m._YP.vary_settings(s, title, log)     # 규칙: 영상마다 강조색·자막 효과·배경음을 다르게 (유튜브 '대량 생산 콘텐츠' 정책)
+    if not str(c.get("배경음") or "").strip() or str(c.get("배경음")).startswith("자동"):
+        c["배경음"] = ch_["bgm_style"]
 
     # 2) 나레이션 (문단마다 저장 → 이어서)
     log("🎙 나레이션 만드는 중... (이미 만든 문단은 건너뜀)")
@@ -690,6 +695,15 @@ def run_doc(m, app, c, gate):
     m.publish_kit(model, base, title, story, m.DOC_CATEGORY, c["소재"], s, ch, res.get("sources") or [], res.get("notes", ""), log)
     add_external_thumbs(c.get("소재탐색_폴더", ""), base, log, str(c.get("썸네일_선택") or "프로그램"))
     log("✅ 전부 완료 → " + out_root)
+    if "--쇼츠없음" not in sys.argv:     # 규칙: 롱폼이 완성되면 같은 대본에서 40~50초 세로 쇼츠까지 자동으로 (쇼츠_자동.py)
+        try:
+            m._load_korean_reading("쇼츠_자동").make_shorts(m, model, base + "_프로젝트.json", log)
+        except Exception as e:
+            log("⚠ 쇼츠 자동 만들기 실패(롱폼은 완성됨): " + (str(e).splitlines() or [type(e).__name__])[0][:120])
+    try:                                    # 규칙: 다 만들면 롱폼 + 쇼츠를 output\장문\<제목>\ 폴더 하나로 정리 (콘텐츠_정리.py)
+        m._load_korean_reading("콘텐츠_정리").organize(base + "_프로젝트.json", log, os.path.abspath(out_root))
+    except Exception as e:
+        log("⚠ 콘텐츠 폴더 정리 실패(파일은 그대로): " + (str(e).splitlines() or [type(e).__name__])[0][:120])
     return res
 
 

@@ -237,6 +237,10 @@ def main():
     doc_root = os.path.join(HERE, "output", "장문")
     if os.path.isdir(doc_root):
         made = [n[len("_작업_"):] for n in os.listdir(doc_root) if n.startswith("_작업_")]
+        for d_ in os.listdir(doc_root):      # 정리된 콘텐츠 폴더(0001_제목\) 안의 작업 폴더도
+            q_ = os.path.join(doc_root, d_)
+            if not d_.startswith("_") and os.path.isdir(q_):
+                made += [n[len("_작업_"):] for n in os.listdir(q_) if n.startswith("_작업_")]
     order = {"해결 근거": 0, "가설 제안": 1, "미해결": 2, "확인 필요": 3}
     cands = [it for it in picks if title_key(it["title"]) not in seen_keys]
     cands.sort(key=lambda it: (order.get(it["status"], 9), -it.get("score", it.get("base_score", 0))))
