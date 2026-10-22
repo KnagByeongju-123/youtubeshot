@@ -6,7 +6,7 @@ AI: PC에 설치된 Claude Code(claude -p)를 Max 구독으로 사용 (API 키 �
 기능: AI 대본(3안 심사·웹 조사), 근거 사진(복붙·AI 검색), 자체 합성 배경음, 연속 제작
 실행: python shorts_novel_maker.py
 """
-import os, re, io, sys, json, time, queue, shutil, difflib, tempfile, threading, subprocess, math, hashlib
+import os, re, io, sys, json, time, queue, shutil, difflib, tempfile, threading, subprocess, math, hashlib, types
 import importlib
 import importlib.util
 import atexit
@@ -3666,7 +3666,9 @@ def publish_kit(model, base, title, story, category, genre, s, chapters=None, so
             root = os.path.dirname(base)
             if re.match(r"^\d{4}_", os.path.basename(root)):       # 콘텐츠 폴더 안에서 다시 만들 때도 재생목록 기록은 output\장문 에 하나로
                 root = os.path.dirname(root)
-            _YP.engagement_kit(sys.modules[__name__], model, base, title, story, root, log)
+            me = sys.modules.get(__name__) or types.SimpleNamespace(      # render_project 처럼 이름 없이 불러온 경우에도 되게
+                _load_korean_reading=_load_korean_reading, safe_name=safe_name, ask_json=ask_json, atomic_write_text=atomic_write_text)
+            _YP.engagement_kit(me, model, base, title, story, root, log)
         except Exception as e:
             log("  🔗 재생목록·고정 댓글 추천 실패(영상에는 영향 없음): " + (str(e).splitlines() or [""])[0][:100])
     try:   # 2) 유튜브 썸네일: 문구 3안 × 어울리는 사진·스타일 → 후보 여러 장 → AI가 직접 보고 하나 고름
