@@ -25,12 +25,14 @@ if os.path.exists(_OLD_SEED) and not os.path.exists(SEED):   # 예전 위치(프
 DEFAULT = {
     "주제": "수심 1만 미터, 마리아나 해구 바닥에는 무엇이 살고 있을까?",
     "소재": "심해의 세계",
-    "길이_분": 10,
+    "길이_분": 12,               # 규칙: 긴 영상은 10~15분
     "배경음": "심해",
     "배경음_크기": 0.03,      # 0~2 (0.03 = 거의 안 들림, 목소리가 또렷하게)
+    "성우_프리셋": "",         # 🎤 성우 선택 창에서 ⭐ 새 성우로 저장한 이름 (비우면 기본: 남자 성우 2)
     "웹조사": True,
+    "쇼츠_만들기": False,      # 규칙: 쇼츠는 기본적으로 안 만듦. true 로 하거나 명령에 --쇼츠 를 붙이면 롱폼마다 세로 쇼츠도 만듦
     "챕터별_사진": True,
-    "사진_간격_초": 15,
+    "사진_간격_초": 8,           # 규칙: 관련 사진 최대한 많이 (8초마다 한 장)
     "영상_구간_분": 2,
     "연속_편수": 5,
     "연속_소재": [],
@@ -62,8 +64,9 @@ BATCH_GENRES = ["세계의 축제", "신기한 풍속과 전통", "역사를 바
 TRUE_STORY_GENRES = ["[실화] 과학이 밝혀낸 미스터리", "[실화] 최근 밝혀진 과학 발견", "[실화] 극한 생존기", "[실화] 미제 사건의 기록", "[실화] 사라진 사람과 배·비행기",
                      "[실화] 믿기 힘든 우연", "[실화] 희대의 사기와 범죄", "[실화] 평범한 사람의 위대한 순간", "[실화] 재난에서 살아남은 날",
                      "[실화] 불가능에 도전한 사람들"]
-BATCH = "--batch" in sys.argv or "--실화" in sys.argv or "--true-story" in sys.argv
-TRUE_STORY = "--실화" in sys.argv or "--true-story" in sys.argv
+ONE = "--한편" in sys.argv or "--one" in sys.argv     # 버튼 하나로: AI가 새 인기 주제를 골라 긴 영상 '한 편'만 끝까지 (묻지 않음, 쇼츠 없음)
+BATCH = ONE or "--batch" in sys.argv or "--실화" in sys.argv or "--true-story" in sys.argv
+TRUE_STORY = ONE or "--실화" in sys.argv or "--true-story" in sys.argv
 MORE_PHOTOS = "--more-photos" in sys.argv
 SEG_SEC = 120
 
@@ -328,7 +331,10 @@ def main():
         c["연속_소재"] = list(TRUE_STORY_GENRES)
         c["연속_구성"] = ["지식"]
         print("📖 실화 연속 제작 모드: 실화 소재만 돌아가며 10분 다큐를 만듭니다 (명상·재미 편 없음)")
-    if BATCH and not ask_batch_plan(c):
+    if ONE:
+        c["끝나면"] = "그대로"
+        print("▶ 한 편 만들기: AI가 아직 안 다룬 새 주제를 골라 긴 영상 한 편을 끝까지 만듭니다 (쇼츠 없음, 약 2~3시간).")
+    elif BATCH and not ask_batch_plan(c):
         print("취소했습니다. (아무것도 만들지 않음)")
         return
     spec = importlib.util.spec_from_file_location("snm", os.path.join(HERE, "shorts_novel_maker_supertonic.py"))
@@ -374,6 +380,8 @@ def main():
     done_list = list(st.get("done") or [])
     cur = st.get("current")      # 꺼졌다 켜면 만들던 편부터 이어서
     plan = list(st.get("plan") or [])
+    if ONE:          # 한 편 모드: 만들다 멈춘 편이 있으면 그걸 끝내고, 없으면 새로 한 편만
+        n = len(done_list) + 1
 
     def save_state():
         m.atomic_write_text(state_p, json.dumps({"done": done_list, "current": cur, "plan": plan, "offset": st.get("offset", 0)}, ensure_ascii=False, indent=1))
@@ -585,6 +593,12 @@ def run_doc(m, app, c, gate):
         app.vars["head_pos"].set(str(c["제목_표시"]).strip())
     app.vars["bgm_mode"].set("자동생성")
     app.vars["bgm_volume"].set(str(c["배경음_크기"]))
+    if str(c.get("성우_프리셋") or "").strip():      # 저장한 성우(🎤 성우 선택 창의 ⭐ 새 성우로 저장). 비우면 기본 성우
+        tmp = {}
+        if m.apply_voice_preset(tmp, c["성우_프리셋"], log):
+            for k_, v_ in tmp.items():
+                if k_ in app.vars:
+                    app.vars[k_].set(str(v_))
     s = app.get_settings()
     out_root = os.path.join(s["out_dir"], "장문")
     work = m._load_korean_reading("콘텐츠_정리").find_work(out_root, m.safe_name(c["주제"])[:40])   # 정리된 콘텐츠면 그 폴더 안의 작업 폴더
@@ -647,7 +661,8 @@ def run_doc(m, app, c, gate):
     if dropped:
         story = "\n".join(keep)
         log(f"깨진 사진 {dropped}장을 빼고 진행합니다")
-    story, _ = m.hook_fix(app.model_var.get().strip(), story, log, gate)   # 규칙: 30초 후크는 반드시 (걸리면 오프닝만 고침)
+    story, _ = m.hook_fix(app.model_var.get().strip(), story, log, gate, title=title)   # 규칙: 30초 후크 + 첫 5초 = 제목·썸네일 약속
+    story, _ = m.retention_fix(app.model_var.get().strip(), story, title, log, gate)    # 규칙: 챕터 끝 예고 + 시리즈 한 줄 (1위 영상 분석)
     story, _ = m.polite_fix(app.model_var.get().strip(), story, log, gate)   # 규칙: 모든 나레이션은 존댓말 (자막·성우 함께)
     base = os.path.join(out_root, m.safe_name(title))
     app.title_var.set(title)
@@ -695,7 +710,8 @@ def run_doc(m, app, c, gate):
     m.publish_kit(model, base, title, story, m.DOC_CATEGORY, c["소재"], s, ch, res.get("sources") or [], res.get("notes", ""), log)
     add_external_thumbs(c.get("소재탐색_폴더", ""), base, log, str(c.get("썸네일_선택") or "프로그램"))
     log("✅ 전부 완료 → " + out_root)
-    if "--쇼츠없음" not in sys.argv:     # 규칙: 롱폼이 완성되면 같은 대본에서 40~50초 세로 쇼츠까지 자동으로 (쇼츠_자동.py)
+    make_sh = ("--쇼츠" in sys.argv or bool(c.get("쇼츠_만들기"))) and "--쇼츠없음" not in sys.argv
+    if make_sh:     # 규칙: 쇼츠는 기본적으로 안 만듦. --쇼츠 옵션(또는 장문_설정.json 쇼츠_만들기=true)일 때만 (쇼츠_자동.py)
         try:
             m._load_korean_reading("쇼츠_자동").make_shorts(m, model, base + "_프로젝트.json", log)
         except Exception as e:

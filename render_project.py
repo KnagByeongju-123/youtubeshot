@@ -7,7 +7,10 @@
                   넣은 뒤 프로젝트 파일에 저장 → 다시 실행하면 사진은 건너뜀
   - --suffix 이름 : 결과 파일 이름 끝에 _이름 (같은 제목으로 덧붙일 부분을 따로 만들 때. 화면 제목은 그대로)
   - --썸네일만 : 영상은 만들지 않고 썸네일 후보만 새로 (디자인 16가지 + 영상 장면 실사 편집). 지금 유튜브 썸네일은 그대로
-  - --쇼츠없음 : 롱폼 완성 뒤 자동으로 만드는 40~50초 세로 쇼츠를 건너뜀 (기본은 쇼츠까지 만듦, 쇼츠_자동.py)
+  - --길이고정 : 롱폼 길이 규칙(10~15분, 짧으면 내용을 더해 늘림)을 건너뜀
+  - --영어 : 영상 완성 뒤 영어 제목·설명란·자막(SRT)도 만듦 (유튜브 '번역'으로 덧붙이는 용도, 영어_번역.py)
+  - --쇼츠 : 롱폼 완성 뒤 40~50초 세로 쇼츠도 함께 만듦 (기본은 쇼츠를 안 만듦, 쇼츠_자동.py)
+  - --성우프리셋 "이름" : 🎤 성우 선택 창에서 '⭐ 새 성우로 저장'한 목소리(성우·속도·톤·감정·쉼)로 (장문_설정.json "성우_프리셋" 도 같음)
   - --성우 M1 : 프로젝트 파일은 그대로 두고 이번만 이 Supertonic 성우로 (보통 --suffix 성우1 과 같이)
   - --vi : 한글 자막 위에 베트남어 자막을 함께 (자막 조각마다 번역해 프로젝트 파일에 저장, 다시 만들 때는 저장된 번역을 씀)
            결과 파일 이름 끝에 _베트남어자막
@@ -79,6 +82,14 @@ def main(a):
         bgm_vol /= 100
     app.vars["bgm_volume"].set(str(max(0.0, min(2.0, bgm_vol))))
     app.vars["target_sec"].set("0")
+    # 저장한 성우(⭐ 새 성우로 저장): --성우프리셋 "이름" 또는 장문_설정.json 의 "성우_프리셋" (비우면 기본 성우 그대로)
+    vp = a[a.index("--성우프리셋") + 1].strip() if "--성우프리셋" in a and a.index("--성우프리셋") + 1 < len(a) else str(cfg.get("성우_프리셋") or "").strip()
+    if vp:
+        tmp = {}
+        if m.apply_voice_preset(tmp, vp, log):
+            for k_, v_ in tmp.items():
+                if k_ in app.vars:
+                    app.vars[k_].set(str(v_))
     if "--성우" in a and a.index("--성우") + 1 < len(a):    # 프로젝트 파일은 그대로 두고 이번만 다른 성우로 (예: --성우 M1)
         code = a[a.index("--성우") + 1].strip()
         app.vars["narr_voice"].set(f"Supertonic {code} (남성, 무료 로컬) [supertonic:{code}]" if code[:1] == "M"
@@ -100,6 +111,15 @@ def main(a):
     m.set_tts_cfg(s)
     gate = m.PauseGate(os.path.join(HERE, "장문_일시정지중.flag"), app.cancel, log)
     app.cancel = gate
+    is_long = (c.get("category") or m.DOC_CATEGORY) == m.DOC_CATEGORY and not suf and "세로" not in str(s.get("format", ""))
+    if is_long and "--길이고정" not in a:    # 규칙: 롱폼은 10~15분. 짧으면 사진을 찾기 전에 내용을 더해 늘리고 프로젝트에 저장
+        story, longer = m.length_fix(app.model_var.get().strip(), story, c.get("notes", ""), c.get("sources") or [], log, gate)
+        if longer:
+            app.set_story(story)
+            d_ = app.project_dict()
+            d_["settings"] = {k: v for k, v in d_["settings"].items() if k not in m.SECRET_KEYS}
+            m.atomic_write_text(proj_path, json.dumps(d_, ensure_ascii=False, indent=1))
+            log("⏱ 늘린 대본을 프로젝트에 저장 (다시 실행하면 이 대본으로)")
     if "--사진" in a:          # 대본에 사진이 적으면 웹에서 근거 사진을 자동으로 찾아 넣음
         os.makedirs(os.path.join(out_root, "media"), exist_ok=True)
         try:
@@ -117,9 +137,12 @@ def main(a):
         d_["settings"] = {k: v for k, v in d_["settings"].items() if k not in m.SECRET_KEYS}   # 저장소에 올라가는 파일이라 API 키는 빼고 저장
         m.atomic_write_text(proj_path, json.dumps(d_, ensure_ascii=False, indent=1))
         log(f"📷 사진 {n_add}장 추가 (총 {len(m.photo_credits(story))}장) → 프로젝트에 저장")
-    story, _ = m.hook_fix(app.model_var.get().strip(), story, log, gate)   # 규칙: 30초 후크는 반드시 (걸리면 오프닝만 고침)
+    story, hooked = m.hook_fix(app.model_var.get().strip(), story, log, gate, title=title if is_long else "")   # 규칙: 30초 후크 + 첫 5초 = 제목·썸네일 약속
+    n_ret = 0
+    if is_long and "--형식고정" not in a:     # 규칙(1위 영상 분석): 챕터 끝 예고 + 마무리 시리즈 한 줄
+        story, n_ret = m.retention_fix(app.model_var.get().strip(), story, title, log, gate)
     story, n_pol = m.polite_fix(app.model_var.get().strip(), story, log, gate)   # 규칙: 모든 나레이션은 존댓말 (자막·성우 함께)
-    if n_pol:
+    if hooked or n_ret or n_pol:
         app.set_story(story)
     log(f"▶ 프로젝트로 영상 만들기: {title} ({genre}) · 사진 {len(m.photo_credits(story))}장 · 배경음 {bgm}")
     proj_dir = os.path.dirname(proj_path)        # 콘텐츠 폴더(output\장문\<제목>\) 안의 프로젝트면 결과도 그 폴더에
@@ -191,12 +214,18 @@ def main(a):
         m.publish_kit(app.model_var.get().strip(), base, title, story, c.get("category") or m.DOC_CATEGORY, genre, s, ch,
                       c.get("sources") or [], c.get("notes", ""), log)
     log("✅ 전부 완료 → " + base + ".mp4")
-    # 규칙: 롱폼(장문)이 완성되면 같은 대본에서 가장 놀라운 장면으로 40~50초 세로 쇼츠까지 자동으로 (쇼츠_자동.py). --쇼츠없음 이면 건너뜀
-    if (c.get("category") or m.DOC_CATEGORY) == m.DOC_CATEGORY and "--쇼츠없음" not in a and suf != "_쇼츠":
+    # 규칙: 쇼츠는 기본적으로 만들지 않음. --쇼츠 를 붙일 때만 롱폼 완성 뒤 40~50초 세로 쇼츠를 만듦 (쇼츠_자동.py). (예전 --쇼츠없음 은 그대로 둬도 됨)
+    if (c.get("category") or m.DOC_CATEGORY) == m.DOC_CATEGORY and "--쇼츠" in a and "--쇼츠없음" not in a and suf != "_쇼츠":
         try:
             m._load_korean_reading("쇼츠_자동").make_shorts(m, app.model_var.get().strip(), base + "_프로젝트.json", log)
         except Exception as e:
             log("⚠ 쇼츠 자동 만들기 실패(롱폼은 완성됨): " + (str(e).splitlines() or [type(e).__name__])[0][:120])
+    # 규칙: --영어 면 유튜브 '번역' 기능에 붙일 영어 제목·설명란·자막(SRT)도 (영어_번역.py). 영상·국내 조회수는 그대로
+    if "--영어" in a and suf != "_쇼츠":
+        try:
+            m._load_korean_reading("영어_번역").make_english(base + "_프로젝트.json", log)
+        except BaseException as e:
+            log("⚠ 영어 번역 키트 실패(영상은 완성됨): " + (str(e).splitlines() or [type(e).__name__])[0][:120])
     try:
         os.remove(base + ".만드는중")
     except OSError:

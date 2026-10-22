@@ -10,6 +10,8 @@ r"""유튜브 정책 지키기 - 규칙 4가지 (2026-10 기준, 최종 확인�
   결과: <영상>_업로드_체크.txt (publish_kit 이 만듦)
 """
 import hashlib
+import json
+import os
 import re
 
 AI_MARK = "AI 생성 이미지"
@@ -124,6 +126,128 @@ HUMAN_RULE = """
   마무리는 시청자에게 진짜 궁금한 질문 하나 + (원하면) 채널 이야기는 가볍게 한마디.
 - 챕터 제목은 대화하듯(예: '그런데 숫자가 이상했습니다'). 챕터마다 길이를 똑같이 맞추지 않는다.
 """
+
+
+# ---- 시청 유지 규칙 (1위 영상 분석, 2026-10-22): 첫 30초에 3분의 1이 나가고, 챕터 경계마다 조금씩 빠지고, 다른 영상으로 1.5%만 넘어감 ----
+RETENTION_RULE = """
+[공통 규칙 - 시청 유지 (인기 영상 분석에서 나온 규칙)]
+- 첫 5초: 첫 문장은 제목·썸네일이 약속한 바로 그 대상·숫자·장면을 곧장 말한다(제목의 핵심 낱말이 첫 문장에 나오게). 배경 설명은 그 뒤에.
+- 챕터 끝 예고: 마지막 챕터를 뺀 모든 챕터는 '진짜 예고' 한 문장으로 끝낸다. '잠시 뒤', '곧', '다음 장에서', '이어서' 같은 앞을 가리키는 말 + 다음 챕터의 가장 놀라운 것(뒤집히는 해석·의외의 숫자·반론)을 무엇인지는 숨기고 존재만 알림
+  (예: '그런데 잠시 뒤 보실 숫자 하나가 이 설명을 통째로 흔들어 놓습니다.'). 그냥 다리 놓는 문장('이제 하나씩 살펴볼게요')은 예고가 아님. 다음 챕터에 실제로 있는 내용만, 과장 없이, 매번 다른 말로.
+- 시리즈 한 줄: 마무리 부분에 이 채널이 어떤 이야기를 따라가는지 자연스러운 한 문장(예: '이 채널은 아직 풀리지 않은 수수께끼를 최신 연구로 따라가고 있습니다'). '구독과 좋아요 부탁드립니다' 같은 말은 여전히 쓰지 않는다.
+"""
+SERIES_LINES = [     # 마무리에 넣는 채널 정체성 한 줄 (영상마다 다른 말로 - 같은 문장 반복은 '틀' 티가 남)
+    "이 채널은 아직 풀리지 않은 수수께끼를, 최신 연구가 나올 때마다 따라가 보고 있습니다.",
+    "저는 이렇게 아직 답이 다 나오지 않은 이야기들을, 새 연구가 나올 때마다 하나씩 따라가 보고 있어요.",
+    "이 채널에서는 오래된 수수께끼에 새 연구가 어떤 답을 내놓는지, 계속 이어서 살펴보고 있습니다.",
+    "풀린 줄 알았던 것, 아직 안 풀린 것, 이런 이야기들을 최신 연구로 계속 따라가 보려고 합니다.",
+    "아직 결론이 나지 않은 수수께끼를 연구가 한 걸음씩 풀어 가는 과정, 이 채널은 그걸 계속 따라갑니다.",
+]
+SERIES_PAT = r"(이 채널(은|에서는|에서)|따라가(고|보고|보려고|봅니다)|계속 (따라|살펴|이어))"
+# 진짜 예고 = 앞으로 나올 것을 분명히 가리키는 말이 들어 있음 (그냥 질문·다리 놓는 문장은 예고로 안 침 - 사용자 확인 2026-10-22)
+TEASER_PAT = r"(잠시 뒤|잠시 후|곧 |다음 장|다음 이야기|다음 챕터|이어서|바로 다음|뒤에서|조금 뒤|이따가)"
+
+
+def series_line(title):
+    return _pick(SERIES_LINES, title, "series")
+
+
+def _narr_lines(block):
+    return [ln for ln in block.split("\n") if ln.strip() and not ln.lstrip().startswith(("[사진:", "## ", "♪"))]
+
+
+def chapters_of(story):
+    """대본 → [오프닝, 챕터1, 챕터2 …] 블록 (챕터 블록은 '## ' 줄로 시작)"""
+    parts = re.split(r"\n(?=## )", "\n" + story.strip())
+    return [p.strip("\n") for p in parts if p.strip()]
+
+
+def teaser_missing(story):
+    """마지막 챕터를 뺀 챕터 중 끝 문장에 다음 챕터 예고가 없는 챕터 번호(1부터) 목록"""
+    blocks = [b for b in chapters_of(story) if b.startswith("## ")]
+    out = []
+    for i, b in enumerate(blocks[:-1]):
+        ln = _narr_lines(b)
+        last = re.split(r"(?<=[.!?…])\s+", ln[-1].strip())[-1] if ln else ""
+        if not re.search(TEASER_PAT, last):
+            out.append(i + 1)
+    return out
+
+
+def has_series_line(story):
+    blocks = chapters_of(story)
+    tail = "\n".join(_narr_lines(blocks[-1])) if blocks else ""
+    return bool(re.search(SERIES_PAT, tail))
+
+
+def add_series_line(story, title):
+    """시리즈 한 줄이 없으면 마지막 문단(시청자 질문) 바로 앞에 한 문단으로 넣음"""
+    if has_series_line(story) or "\n## " not in "\n" + story:
+        return story, False
+    paras = story.rstrip().split("\n\n")
+    idx = max(i for i, p in enumerate(paras) if _narr_lines(p))
+    paras.insert(idx, series_line(title))
+    return "\n\n".join(paras), True
+
+
+# ---- 업로드 키트: 재생목록·고정 댓글·최종 화면 추천 (1위 영상에서 '다음 동영상'으로 넘어간 비율이 1.5%뿐) ----
+PLAYLIST_FILE = "_재생목록.json"
+CHANNEL_LIST = "_채널영상.txt"     # output\장문\_채널영상.txt : 채널에 실제로 올린 영상 제목 한 줄에 하나 (잘된 영상을 위에)
+ENGAGE_SYSTEM = """너는 한국 유튜브 다큐 채널의 운영 담당이다. 새 영상 하나를 채널의 다른 영상과 이어 주는 방법을 정한다.
+- playlist: 이 영상이 들어갈 재생목록 이름 하나. [지금 있는 재생목록] 중 맞는 게 있으면 그 이름을 그대로 쓰고, 없을 때만 새 이름(짧고 시청자가 이해하기 쉬운 주제명, 예: '고대 문자 해독', '고대 미스터리 최신 연구').
+- related: [채널의 다른 영상] 중 이 영상을 본 사람이 이어서 볼 만한 영상 제목 1~3개 (목록에 있는 제목 그대로, 가장 관련 깊은 순). 없으면 빈 목록.
+- pinned: 고정 댓글. 존댓말 2~4줄. 영상 내용에 대한 진짜 궁금한 질문 하나로 시작하고, related 첫 영상을 '이어서 보면 좋은 영상: 「제목」'처럼 한 줄로 소개. '구독과 좋아요 부탁' 금지, 낚시 금지, 이모지는 많아야 1개.
+반드시 JSON만 출력: {"playlist": "...", "related": ["..."], "pinned": "..."}"""
+
+
+def engagement_kit(m, model, base, title, story, out_root, log=None):
+    """<base>_재생목록_고정댓글.txt: 재생목록 이름(채널 전체에서 같은 이름 유지 → _재생목록.json) + 고정 댓글 + 최종 화면 추천"""
+    log = log or (lambda x: None)
+    cz = m._load_korean_reading("콘텐츠_정리")
+    others = []
+    try:
+        for d in sorted(os.listdir(out_root)):
+            if re.match(r"^\d{4}_", d) and os.path.isdir(os.path.join(out_root, d)):
+                others.append(d[5:])
+        cv = os.path.join(out_root, CHANNEL_LIST)           # 채널에 올라간 실제 제목 (사람이 적어 둔 것, 인기 영상 우선)
+        if os.path.exists(cv):
+            others = [ln.strip() for ln in open(cv, encoding="utf-8") if ln.strip() and not ln.startswith("#")] + others
+        mf = os.path.join(out_root, getattr(cz, "MADE_FILE", "_만든주제.txt"))
+        if os.path.exists(mf):      # 업로드 후 지운 영상 제목 (주제 설명 문장은 빼고 제목만: 40자 이내)
+            others += [ln.strip() for ln in open(mf, encoding="utf-8") if 0 < len(ln.strip()) <= 40 and not ln.startswith("#")]
+    except OSError:
+        pass
+    me = m.safe_name(title)
+    others = [o for o in dict.fromkeys(others) if o and m.safe_name(o) != me and not o.endswith("_쇼츠")][-80:]
+    pf = os.path.join(out_root, PLAYLIST_FILE)
+    try:
+        pls = json.load(open(pf, encoding="utf-8"))
+    except Exception:
+        pls = {}
+    body = re.sub(r"\[사진:[^\]]*\]\n*", "", story)[:2500]
+    d = m.ask_json(model, ENGAGE_SYSTEM, f"[이 영상 제목] {title}\n\n[대본 앞부분]\n{body}\n\n[지금 있는 재생목록]\n" +
+                   ("\n".join(f"- {k}" for k in pls) or "(없음)") + "\n\n[채널의 다른 영상]\n" + ("\n".join(f"- {o}" for o in others) or "(없음)"))
+    pl = str(d.get("playlist") or "").strip()[:60] or "고대 미스터리 최신 연구"
+    rel = [str(x).strip() for x in (d.get("related") or []) if str(x).strip() in others][:3]
+    pin = str(d.get("pinned") or "").strip()
+    pls.setdefault(pl, [])
+    if title not in pls[pl]:
+        pls[pl].append(title)
+    m.atomic_write_text(pf, json.dumps(pls, ensure_ascii=False, indent=1))
+    same = [t for t in pls[pl] if t != title]
+    end = rel[:1] or same[-1:]
+    txt = (f"[재생목록]\n{pl}\n"
+           f"  → 유튜브 스튜디오 → 콘텐츠 → 이 영상 → 세부정보 → '재생목록'에서 고르기 (없으면 '새 재생목록'으로 이 이름 그대로 만들기)\n"
+           + (f"  같은 재생목록에 넣은 영상: " + ", ".join(f"「{t}」" for t in same) + "\n" if same else "") +
+           f"\n[고정 댓글]  (영상 아래 댓글로 달고 ⋮ → '고정')\n{pin}\n"
+           f"\n[최종 화면]  (편집기 → 최종 화면 → 끝 20초)\n"
+           f"  - 동영상 1: " + (f"특정 동영상 「{end[0]}」" if end else "'시청자 맞춤' (아직 이어 줄 영상이 없음)") + "\n"
+           f"  - 동영상 2: '시청자 맞춤' (유튜브가 그 사람에게 맞는 영상을 골라 줌)\n"
+           f"  - 구독 버튼 요소 1개\n"
+           + ("\n[이어서 보면 좋은 영상 (관련 순)]\n" + "\n".join(f"- {t}" for t in rel) + "\n" if rel else ""))
+    m.atomic_write_text(base + "_재생목록_고정댓글.txt", txt)
+    log(f"  🔗 재생목록 '{pl}' · 고정 댓글 · 최종 화면 추천 저장 ({os.path.basename(base)}_재생목록_고정댓글.txt)")
+    return txt
 
 
 def _pick(seq, key, salt):

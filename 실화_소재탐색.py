@@ -241,6 +241,9 @@ def main():
             q_ = os.path.join(doc_root, d_)
             if not d_.startswith("_") and os.path.isdir(q_):
                 made += [n[len("_작업_"):] for n in os.listdir(q_) if n.startswith("_작업_")]
+        mf_ = os.path.join(doc_root, "_만든주제.txt")     # 업로드 후 지운 콘텐츠의 제목·주제 기록 (같은 주제 반복 방지)
+        if os.path.exists(mf_):
+            made += [x for x in open(mf_, encoding="utf-8").read().splitlines() if x.strip()]
     order = {"해결 근거": 0, "가설 제안": 1, "미해결": 2, "확인 필요": 3}
     cands = [it for it in picks if title_key(it["title"]) not in seen_keys]
     cands.sort(key=lambda it: (order.get(it["status"], 9), -it.get("score", it.get("base_score", 0))))

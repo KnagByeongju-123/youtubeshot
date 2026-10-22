@@ -1211,7 +1211,8 @@ def doc_is_fiction(genre):
 
 
 DOC_PHOTO_SEC = 8    # 장문 사진 간격(초): 나레이션 이 정도마다 사진 한 장. 규칙: 관련 사진을 최대한 많이 (역동적으로, 예전 15초)
-DOC_PHOTO_AGENTS = 3  # 사진 담당 AI를 동시에 몇 명 돌릴지 (오프닝·챕터를 나눠 맡음. 메모리 8GB PC 기준 3명)
+DOC_PHOTO_AGENTS = 2  # 사진 담당 AI를 동시에 몇 명 돌릴지 (오프닝·챕터를 나눠 맡음). 사용량을 아끼려고 3→2명 (사용자 결정, 2026-10-22)
+LIGHT_MODEL = "sonnet"  # 반복 점검 작업(사진이 글과 맞는지 보기·썸네일 후보 고르기)은 가벼운 모델로 - 사용량 절약. 대본 쓰기는 그대로
 DOC_PHOTO_ROUNDS = 3  # 모자라면 보충 AI가 다른 사진 창고에서 다시 찾는 횟수
 DOC_PHOTO_SPARE = 3   # 글과 안 맞아 빠지거나 내려받기 실패할 몫까지 이만큼 더 찾음
 
@@ -1349,7 +1350,7 @@ def check_photo_fit(model, text, log=None, min_score=None, fiction=False):
                       for k, x in enumerate(ph))
     tlist = "\n".join(f"[{n + 1}] {story_text_only(paras[i])[:220]}" for n, i in enumerate(items))
     try:
-        d = ask_json(model, PHOTO_CHECK_SYSTEM, ("[창작 이야기 - 분위기 사진]\n" if fiction else "") +
+        d = ask_json(LIGHT_MODEL or model, PHOTO_CHECK_SYSTEM, ("[창작 이야기 - 분위기 사진]\n" if fiction else "") +
                      f"[글 문단]\n{tlist}\n\n[사진 - Read 로 열어 볼 것]\n{plist}", tools=["Read"])
     except Exception as e:
         log("  사진 검사 건너뜀: " + str(e).splitlines()[0][:80])
@@ -2134,7 +2135,7 @@ def ask_script_json(model, system, user):
         if "오프닝" in system or "opening" in system:
             system = system + HOOK_RULE
         if "나레이션" in system and ("다큐" in system or "본문" in system):     # 규칙: 사람이 쓴 것처럼 (AI 틀 티 내지 않기)
-            system = system + _YP.HUMAN_RULE
+            system = system + _YP.HUMAN_RULE + _YP.RETENTION_RULE     # + 시청 유지: 첫 5초 약속·챕터 끝 예고·시리즈 한 줄
     if s_ and s_.get("script_engine") and s_.get("script_engine") != "Claude":
         return ask_engine_json(s_, model, system, user, "script_engine")
     return ask_json(model, system, user)
@@ -3660,6 +3661,14 @@ def publish_kit(model, base, title, story, category, genre, s, chapters=None, so
         log("  📝 업로드 문구·설명란 저장: " + os.path.basename(base) + "_설명란.txt (유튜브 설명란에 그대로 붙여넣기)")
     except Exception as e:
         log("  📝 업로드 문구 자동 생성 실패(📝 버튼으로 다시 만들 수 있어요): " + str(e).splitlines()[0][:100])
+    if doc and not portrait:   # 규칙(1위 영상 분석): 재생목록·고정 댓글·최종 화면 추천 → 다른 영상으로 이어지게
+        try:
+            root = os.path.dirname(base)
+            if re.match(r"^\d{4}_", os.path.basename(root)):       # 콘텐츠 폴더 안에서 다시 만들 때도 재생목록 기록은 output\장문 에 하나로
+                root = os.path.dirname(root)
+            _YP.engagement_kit(sys.modules[__name__], model, base, title, story, root, log)
+        except Exception as e:
+            log("  🔗 재생목록·고정 댓글 추천 실패(영상에는 영향 없음): " + (str(e).splitlines() or [""])[0][:100])
     try:   # 2) 유튜브 썸네일: 문구 3안 × 어울리는 사진·스타일 → 후보 여러 장 → AI가 직접 보고 하나 고름
         make_thumbnails(model, base, title, story, category, s, log)
     except Exception as e:
@@ -3687,7 +3696,10 @@ def make_thumbnails(model, base, title, story, category, s, log=None, keep_final
         pass
     photos = story_photos(story)
     plist = "\n".join(f"{i + 1}. {cap}" for i, (_, cap) in enumerate(photos)) or "(사진 없음)"
-    d = ask_script_json(model, fit_ratio(THUMB_SYSTEM), f"화면: {ratio_ko()}\n콘텐츠 종류: {category}\n[제목] {title}\n\n[본문]\n{body[:3000]}\n\n[사진 목록]\n{plist}")
+    first = re.split(r"(?<=[.!?…])\s+", re.sub(r"\s+", " ", body.split("\n## ", 1)[0]).strip(), 1)[0][:120]
+    promise = (f"\n\n[영상 첫 5초 - 썸네일이 이 장면과 맞아야 함] {first}\n(썸네일 문구·사진은 영상이 첫 5초에 바로 보여 주는 이 대상·숫자와 같은 약속이어야 한다. "
+               "썸네일과 첫 장면이 다르면 시청자가 바로 나간다. 사진은 되도록 1번(영상 첫 사진).)") if first else ""
+    d = ask_script_json(model, fit_ratio(THUMB_SYSTEM), f"화면: {ratio_ko()}\n콘텐츠 종류: {category}\n[제목] {title}\n\n[본문]\n{body[:3000]}\n\n[사진 목록]\n{plist}{promise}")
     vs = [x for x in (d.get("variants") or []) if isinstance(x, dict) and x.get("big")]
     if not vs:
         raise RuntimeError("썸네일 문구를 만들지 못했습니다")
@@ -3731,6 +3743,7 @@ def make_thumbnails(model, base, title, story, category, s, log=None, keep_final
                 if k != main_k and k not in ks and len(ks) < 3:
                     ks.append(k)
         v["_photos"] = [photo_of(v)] + [im for im in (photo_k(k) for k in ks[:3]) if im is not None]
+        v["_main_k"], v["_ks"] = main_k, ks[:3]       # 새 썸네일 엔진 후보·편집기용 (사진 번호)
     user_style = str(s.get("thumb_style") or THUMB_STYLES[0])
     cands = []   # (설명, PIL)
     for i, v in enumerate(vs[:3]):
@@ -3751,6 +3764,25 @@ def make_thumbnails(model, base, title, story, category, s, log=None, keep_final
             cands.append((f"{k_ + 1}안 '{vk.get('big', '')} {vk.get('big2', '')}' · {st_}", render_thumb(vk, s, photo_of(vk), size=size, style=st_)))
         except Exception as e:
             log(f"  썸네일 '{st_}' 만들기 실패(건너뜀): " + ((str(e).splitlines() or [type(e).__name__])[0][:60]))
+    # 규칙: 새 썸네일 엔진(썸네일_엔진.py)의 디자인 프리셋 6종도 후보로 - 외곽선·네온·박스 강조 제목, [강조색], 오버레이, 스티커, AI 누끼 레이어.
+    # '미스터리 다큐' 후보는 영상 첫 장면 사진을 배경으로 (첫 5초 = 썸네일의 약속). 후보마다 편집 상태도 저장 → 썸네일_편집기에서 그대로 열어 다듬기
+    states, TE = {}, None
+    absp = lambda p: p if os.path.isabs(p) else os.path.join(BASE, p)
+    opening = absp(photos[0][0]) if photos else ""
+    try:
+        TE = _load_korean_reading("썸네일_엔진")
+        try:
+            TE.CUTOUT = _load_korean_reading("썸네일_합성").cutout
+        except Exception:
+            pass
+        kp = lambda k: absp(photos[k - 1][0]) if 1 <= k <= len(photos) else ""
+        items = [dict(v, main=kp(v.get("_main_k") or 0) or opening, related=[kp(k) for k in v.get("_ks") or [] if kp(k)]) for v in vs[:3]]
+        for desc, im, st_ in TE.auto_candidates(items, size, opening):
+            states[len(cands)] = st_
+            cands.append((desc, im))
+        log(f"  🖼 새 디자인 후보 {len(states)}장 추가 (썸네일_엔진: 미스터리 다큐·클래식·속보 뉴스·네온 SF·시네마틱·미니멀)")
+    except Exception as e:
+        log("  🖼 새 디자인 후보 만들기 실패(기존 후보만 씀): " + ((str(e).splitlines() or [type(e).__name__])[0][:80]))
     cdir = base + "_썸네일_후보"
     os.makedirs(cdir, exist_ok=True)
     old = sorted(os.path.join(cdir, f_) for f_ in os.listdir(cdir) if re.fullmatch(r"\d\d\.jpg", f_))
@@ -3786,7 +3818,7 @@ def make_thumbnails(model, base, title, story, category, s, log=None, keep_final
     try:
         clist = "\n".join(f"{i + 1}. {desc}  → {p if os.path.isabs(p) else os.path.join(os.getcwd(), p)}"
                           for i, (desc, _), p in zip(range(len(cands)), cands, paths))   # AI는 다른 폴더에서 열므로 절대 경로로
-        pk = ask_json(model, THUMB_PICK_SYSTEM, f"[영상 제목] {title}\n[내용 요약] {body[:800]}\n\n[후보 썸네일 - Read 로 하나씩 열어 볼 것]\n{clist}", tools=["Read"])
+        pk = ask_json(LIGHT_MODEL or model, THUMB_PICK_SYSTEM, f"[영상 제목] {title}\n[내용 요약] {body[:800]}\n\n[후보 썸네일 - Read 로 하나씩 열어 볼 것]\n{clist}", tools=["Read"])
         b = int(pk.get("best") or 1)
         if 1 <= b <= len(cands):
             best = b
@@ -3800,6 +3832,23 @@ def make_thumbnails(model, base, title, story, category, s, log=None, keep_final
     else:
         shutil.copyfile(paths[best - 1], out)
         log(f"  🖼 유튜브 썸네일: 후보 {len(cands)}장 중 {best}번 선택 ({cands[best - 1][0]})" + (f" - {reason[:90]}" if reason else ""))
+    if TE is not None and states:     # 썸네일 편집기용: 후보별 편집 상태 + 고른 썸네일(또는 같은 문구의 새 디자인)의 편집 상태
+        try:
+            meta = dict(base=os.path.abspath(base), video=os.path.abspath(base + ".mp4"), out=os.path.abspath(out),
+                        opening=opening, title=title)
+            sdir = os.path.join(cdir, "편집상태")
+            os.makedirs(sdir, exist_ok=True)
+            for i_, st_ in states.items():
+                atomic_write_text(os.path.join(sdir, f"{i_ + 1:02d}.json"), json.dumps(dict(st_, **meta), ensure_ascii=False, indent=1))
+            pick = states.get(best - 1)
+            if pick is None:                       # 고른 게 기존 디자인이면 같은 문구 시안의 새 디자인(미스터리 다큐 우선)
+                mk = re.match(r"(\d+)안", cands[best - 1][0])
+                same = [st_ for st_ in states.values() if mk and st_.get("variant") == int(mk.group(1))]
+                pick = (same or list(states.values()))[0]
+            atomic_write_text(base + "_썸네일_편집.json", json.dumps(dict(pick, **meta), ensure_ascii=False, indent=1))
+            log(f"  ✏ 다듬고 싶으면: 썸네일_편집기.bat 에 이 폴더(또는 {os.path.basename(base)}_썸네일_편집.json)를 끌어다 놓기")
+        except Exception as e:
+            log("  ✏ 편집 상태 저장 실패(썸네일에는 영향 없음): " + ((str(e).splitlines() or [type(e).__name__])[0][:80]))
     mp4_scene_thumbs(base, title, vs[best - 1 if best - 1 < n_v else 0], log)
     log(f"     다른 후보는 {os.path.basename(cdir)}\\ 와 {os.path.basename(base)}_썸네일_후보.jpg 에서 볼 수 있어요 (🖼 썸네일 고르기 / 썸네일_고르기.bat)")
     return out
@@ -5463,17 +5512,46 @@ class SubtitleRenderer:
     # 사람 얼굴이 있는 사진: 얼굴을 위아래·좌우로 훑지 않고 제자리에서 아주 조금만 다가가거나 물러남
     MOTIONS_FACE = [(1.02, 1.06, 0.0, 0.0, 0.0, 0.0), (1.06, 1.02, 0.0, 0.0, 0.0, 0.0)]
 
-    def _motion_set(self, img_idx):
-        """이 사진에 쓸 움직임 목록: 설정 '사진 움직임 세기'가 '크게(예전)'면 예전 그대로, 아니면 은은하게 (+ 얼굴 사진은 더 조용히)"""
-        if str(self.s.get("img_motion_amt", "은은하게")).startswith("크게"):
-            return self.MOTIONS
+    def _is_face(self, img_idx):
         fc = self.__dict__.setdefault("_face_cache", {})
         if img_idx not in fc:
             try:
                 fc[img_idx] = bool(thumb_faces(self.images[img_idx][0]))
             except Exception:
                 fc[img_idx] = False
-        return self.MOTIONS_FACE if fc[img_idx] else self.MOTIONS_GENTLE
+        return fc[img_idx]
+
+    def _motion_set(self, img_idx):
+        """이 사진에 쓸 움직임 목록: 설정 '사진 움직임 세기'가 '크게(예전)'면 예전 그대로, 아니면 은은하게 (+ 얼굴 사진은 더 조용히)"""
+        if str(self.s.get("img_motion_amt", "은은하게")).startswith("크게"):
+            return self.MOTIONS
+        return self.MOTIONS_FACE if self._is_face(img_idx) else self.MOTIONS_GENTLE
+
+    def _gentle_bounds(self, img_idx):
+        """은은한 움직임의 범위: (확대 최소, 확대 최대, 좌우/상하 최대 이동). 얼굴 사진은 제자리에서 확대만."""
+        if self._is_face(img_idx):
+            return 1.02, 1.055, 0.0
+        return 1.025, 1.085, 0.16
+
+    def _gentle_chain(self, img_idx, first, up, rng):
+        """규칙: 한 사진이 여러 장면에 걸쳐 보일 때, 확대·이동이 끊기지 않고 이어지도록(서서히 확대 → 서서히 축소·이동).
+        코사인 가감속이라 장면이 바뀌는 순간 속도가 0이 되어 부드럽게 방향만 바뀜. 반환: (움직임 튜플, 끝 상태, 다음 방향)"""
+        zlo, zhi, pan = self._gentle_bounds(img_idx)
+        st = self.__dict__.setdefault("_chain_end", {})
+        if first or img_idx not in st:                 # 사진이 처음 나오는 장면: 가운데 근처에서 아주 천천히 다가가기 시작
+            x0 = float(rng.uniform(-pan, pan)) * 0.35
+            z0, z1 = zlo, zhi
+            x1 = max(-pan, min(pan, x0 + float(rng.uniform(-pan, pan)) * 0.6))
+            y0, y1 = 0.0, float(rng.uniform(-pan, pan)) * 0.3
+            up = False
+        else:                                          # 이어지는 장면: 앞 장면이 끝난 그 자리/배율에서 이어서, 이번엔 반대 방향으로 천천히
+            z0, x0, y0 = st[img_idx]
+            z1 = zhi if up else zlo
+            x1 = max(-pan, min(pan, x0 + float(rng.uniform(-pan, pan)) * 0.5))
+            y1 = max(-pan * 0.5, min(pan * 0.5, y0 + float(rng.uniform(-pan, pan)) * 0.25))
+            up = not up
+        st[img_idx] = (z1, x1, y1)
+        return (z0, z1, x0, x1, y0, y1), up
 
     def _make_shots(self):
         """문단·사진에 맞춰 장면 목록 만들기. 영상처럼 모드: 문단마다(긴 문단은 나눠서) 다른 움직임으로 컷"""
@@ -5484,8 +5562,13 @@ class SubtitleRenderer:
         shots = []
         if mode.startswith("영상"):
             mx = max(2.0, float(self.s.get("shot_sec", 4.5) or 4.5))
+            # 은은하게(기본)면 한 사진은 너무 자주 끊지 않고 좀 더 길게 보여줘 확대가 천천히 (최소 5.5초)
+            big_motion = str(self.s.get("img_motion_amt", "은은하게")).startswith("크게")
+            if not big_motion:
+                mx = max(mx, 5.5)
             rng = np.random.default_rng(len(self.images) * 131 + len(self.segs))
             last = -1
+            up = False
             for k, sg in enumerate(self.segs):
                 if sg["img"] < 0:
                     continue
@@ -5494,15 +5577,20 @@ class SubtitleRenderer:
                 n = max(1, int(np.ceil((t1 - t0) / mx)))
                 for j in range(n):
                     a, b = t0 + (t1 - t0) * j / n, t0 + (t1 - t0) * (j + 1) / n
-                    if shots and shots[-1]["img"] == sg["img"] and shots[-1]["t1"] - shots[-1]["t0"] < 1.2:
+                    same = bool(shots) and shots[-1]["img"] == sg["img"]
+                    if same and shots[-1]["t1"] - shots[-1]["t0"] < 1.2:
                         shots[-1]["t1"] = b          # 너무 짧은 장면은 앞 장면에 붙임
                         continue
-                    ms = self._motion_set(sg["img"])
-                    m = int(rng.integers(len(ms)))
-                    if m == last and len(ms) > 1:
-                        m = (m + 1 + int(rng.integers(len(ms) - 1))) % len(ms)
-                    last = m
-                    shots.append({"img": sg["img"], "t0": a, "t1": b, "m": ms[m]})
+                    if big_motion:                   # '크게(예전)': 장면마다 다른 움직임을 무작위로
+                        ms = self._motion_set(sg["img"])
+                        m = int(rng.integers(len(ms)))
+                        if m == last and len(ms) > 1:
+                            m = (m + 1 + int(rng.integers(len(ms) - 1))) % len(ms)
+                        last = m
+                        mt = ms[m]
+                    else:                            # 기본(은은하게): 같은 사진이면 앞 장면에서 이어서 서서히 확대 → 서서히 축소·이동
+                        mt, up = self._gentle_chain(sg["img"], first=not same, up=up, rng=rng)
+                    shots.append({"img": sg["img"], "t0": a, "t1": b, "m": mt, "first": not same})
         else:   # 사진이 바뀔 때만 장면 전환
             for k, sg in enumerate(self.segs):
                 if sg["img"] < 0:
@@ -5594,9 +5682,11 @@ class SubtitleRenderer:
         p = min(1.0, max(0.0, (t - sh["t0"]) / max(0.1, sh["t1"] - sh["t0"])))
         p = 0.5 - 0.5 * np.cos(np.pi * p)             # 부드럽게 시작·끝
         z = z0 + (z1 - z0) * p
-        if self.s.get("punch_in", "on") == "on" and str(self.s.get("img_motion", "영상")).startswith("영상"):
-            punch = 0.05 if str(self.s.get("img_motion_amt", "은은하게")).startswith("크게") else 0.015
-            z *= 1 + punch * (1 - smoothstep((t - sh["t0"]) / 0.3))     # 장면 시작에 살짝 펀치 줌 (은은하게: 1.5%)
+        big_motion = str(self.s.get("img_motion_amt", "은은하게")).startswith("크게")
+        # 펀치 줌: '크게(예전)'면 장면마다, 은은하게면 사진이 '바뀌는 순간'에만 아주 살짝 (이어지는 같은 사진은 끊김 없이 부드럽게)
+        if self.s.get("punch_in", "on") == "on" and str(self.s.get("img_motion", "영상")).startswith("영상") and (big_motion or sh.get("first", True)):
+            punch = 0.05 if big_motion else 0.01
+            z *= 1 + punch * (1 - smoothstep((t - sh["t0"]) / 0.3))     # 장면 시작에 살짝 펀치 줌 (은은하게: 1%, 사진 바뀔 때만)
         base = 1.32
         cw, ch = bw * base / z, bh * base / z         # big 안에서 잘라낼 크기
         cw, ch = min(cw, big.width), min(ch, big.height)
@@ -7008,8 +7098,35 @@ HOOK_FIX_SYSTEM = """너는 유튜브 다큐 채널의 오프닝 전문 작가�
 반드시 JSON만 출력: {"opening": "고친 오프닝 전체"}"""
 
 
-def hook_check(story):
-    """오프닝(첫 챕터 제목 앞)이 30초 후크 규칙에 맞는지 → 문제 목록 (빈 목록 = 통과)"""
+_TITLE_STOP = {"정말", "과연", "이유", "비밀", "정체", "진실", "무엇", "누구", "어떻게", "어디", "있을까", "없을까", "것일까", "일까",
+               "읽을", "만든", "말한", "남긴", "알려준", "새로", "밝혀진", "아무도", "아무", "아직", "그는", "그들은", "사람들은", "까지",
+               "왔을까", "갔을까", "채운다면", "어디까지"}
+_TITLE_SAME = {"문자": "글자", "글자": "문자", "인공지능": "에이아이", "두루마리": "파피루스"}    # 같은 약속으로 보는 낱말
+
+
+def title_keys(title):
+    """제목의 핵심 낱말 (첫 5초 약속 확인용): 2글자 이상 한글·숫자 낱말에서 조사를 떼고, 흔한 말은 뺌"""
+    out = []
+    for w in re.findall(r"[가-힣0-9,]+", str(title or "")):
+        w = re.sub(r"(은|는|이|가|을|를|의|에|에서|으로|로|와|과|도|만|이란|라는|이라는)$", "", w.replace(",", ""))
+        if len(w) >= 2 and w not in _TITLE_STOP and not w.endswith(("을까", "일까", "할까", "었을까", "았을까")):
+            out.append(w)
+    return out
+
+
+def title_promise_ok(story, title):
+    """규칙: 첫 5초(첫 두 문장)에 제목·썸네일이 약속한 핵심 낱말이 하나는 나와야 함"""
+    keys = title_keys(title)
+    if not keys:
+        return True
+    head = story.split("\n## ", 1)[0]
+    flat = re.sub(r"\s+", " ", " ".join(ln for ln in head.split("\n") if ln.strip() and not ln.lstrip().startswith(("[", "#", "♪"))))
+    first2 = " ".join(re.split(r"(?<=[.!?…])\s+", flat)[:2]).replace(",", "")
+    return any(k[:2] in first2 or (k in _TITLE_SAME and _TITLE_SAME[k] in first2) for k in keys)
+
+
+def hook_check(story, title=""):
+    """오프닝(첫 챕터 제목 앞)이 30초 후크 규칙에 맞는지 → 문제 목록 (빈 목록 = 통과). title 을 주면 첫 5초 약속도 확인"""
     head = story.split("\n## ", 1)[0]
     text = "\n".join(ln for ln in head.split("\n") if ln.strip() and not ln.lstrip().startswith(("[", "#", "♪")))
     flat = re.sub(r"\s+", " ", text).strip()
@@ -7026,22 +7143,29 @@ def hook_check(story):
         issues.append("첫 세 문장에 숫자·질문·반전이 없음")
     if "\n## " in "\n" + story and not re.search(r"끝까지 (보|들)", flat):     # 쇼츠(챕터 없음)는 짧아서 보상 예고 문장은 안 따짐
         issues.append("'끝까지 보시면 …' 보상 예고가 없음")
+    if title and "\n## " in "\n" + story and not title_promise_ok(story, title):   # 규칙: 첫 5초 = 썸네일·제목의 약속 (1위 영상 분석)
+        issues.append("첫 두 문장에 제목·썸네일이 약속한 대상이 없음")
     return issues
 
 
-def hook_fix(model, story, log=None, cancel=None):
-    """30초 후크 검사 → 걸리면 오프닝만 AI가 고쳐 씀 (본문·챕터는 그대로). 반환: (새 대본, 고쳤는지)"""
+def hook_fix(model, story, log=None, cancel=None, title=""):
+    """30초 후크 검사 → 걸리면 오프닝만 AI가 고쳐 씀 (본문·챕터는 그대로). title 을 주면 첫 5초 = 제목·썸네일 약속도. 반환: (새 대본, 고쳤는지)"""
     log = log or (lambda x: None)
-    issues = hook_check(story)
+    issues = hook_check(story, title)
     if not issues:
-        log("🎣 30초 후크 확인: 통과")
+        log("🎣 30초 후크 확인: 통과" + (" (첫 5초에 제목의 약속 있음)" if title else ""))
+        return story, False
+    if story.lstrip().startswith("## "):          # 오프닝 없이 1장부터 시작하는 대본: 1장을 통째로 줄여 쓰면 내용이 사라지므로 고치지 않고 알림만
+        log("🎣 30초 후크 검사에 걸림: " + " / ".join(issues) + " → 오프닝 없이 1장부터 시작하는 대본이라 자동으로 고치지 않음 (대본 첫 문장을 확인하세요)")
         return story, False
     log("🎣 30초 후크 검사에 걸림: " + " / ".join(issues) + " → 오프닝을 고치는 중...")
     parts = story.split("\n## ", 1)
     head = parts[0]
     body_hint = re.sub(r"\[사진:[^\]]*\]\n*", "", parts[1] if len(parts) > 1 else "")[:1500]
+    promise = (f"\n\n[영상 제목 = 썸네일의 약속] {title}\n- 첫 문장(첫 5초)은 이 제목이 약속한 바로 그 대상·숫자·장면을 곧장 말한다. 제목의 핵심 낱말("
+               + ", ".join(title_keys(title)[:4]) + ") 중 하나가 첫 두 문장에 나오게.") if title else ""
     try:
-        d = ask_script_json(model, HOOK_FIX_SYSTEM, f"[지금 오프닝]\n{head}\n\n[본문 앞부분 - 숫자·사실은 여기 있는 것만]\n{body_hint}")
+        d = ask_script_json(model, HOOK_FIX_SYSTEM, f"[지금 오프닝]\n{head}\n\n[본문 앞부분 - 숫자·사실은 여기 있는 것만]\n{body_hint}{promise}")
         new = str(d.get("opening") or "").strip()
     except Exception as e:
         log("  오프닝 고치기 실패(그대로 진행): " + (str(e).splitlines() or [""])[0][:80])
@@ -7049,12 +7173,69 @@ def hook_fix(model, story, log=None, cancel=None):
     photos = [ln for ln in head.split("\n") if ln.lstrip().startswith("[사진:")]
     if photos and "[사진:" not in new:                     # 사진 줄이 빠졌으면 앞뒤에 되돌려 둠
         new = "\n\n".join(photos[:1] + [new] + photos[1:])
-    left = hook_check(new + "\n## x")
+    left = hook_check(new + "\n## x", title)
     if left or len(re.sub(r"\[사진:[^\]]*\]|\s", "", new)) < 80:
         log("  고친 오프닝도 규칙에 안 맞아 원래대로 둠: " + " / ".join(left))
         return story, False
     log("  🎣 오프닝을 30초 후크에 맞게 고쳤어요 (대본을 한 번 확인하세요)")
     return new + ("\n## " + parts[1] if len(parts) > 1 else ""), True
+
+
+TEASER_SYSTEM = """너는 유튜브 다큐 대본 작가다. 각 챕터 끝에 붙일 '다음 챕터 예고' 한 문장씩을 쓴다. 목적: 시청자가 '어? 그게 뭔데?' 하고 다음 장까지 계속 보게 만드는 것.
+- 진짜 예고여야 한다: 앞으로 나올 것을 분명히 가리키는 말('잠시 뒤', '곧', '다음 장에서', '이어서', '바로 다음 이야기에서' 중 하나)을 반드시 넣고,
+  다음 챕터에 나오는 가장 놀라운 것(뒤집히는 해석, 의외의 숫자, 뜻밖의 단서, 반론)을 '무엇인지는 숨기고' 존재만 알린다.
+  좋은 예: '그런데 잠시 뒤 보실 숫자 하나가, 이 설명을 통째로 흔들어 놓습니다.' / '이 해석에 정면으로 반대한 학자가 있었는데, 그 근거는 다음 장에서 보여 드릴게요.'
+  나쁜 예(그냥 다리 놓기·요약): '그 실마리는 돌 하나에서 시작됩니다.' / '이제 하나씩 살펴볼게요.' / '이 한계를 넘으려는 시도도 있었습니다.'
+- 다음 챕터에 실제로 있는 내용만. 결론·정답을 미리 말하지 않는다. 과장·낚시·지어낸 사실 금지.
+- 존댓말 한 문장(20~60자). 챕터마다 다른 말투로(같은 표현 반복 금지). '구독' 같은 말 금지.
+반드시 JSON만 출력: {"items": [{"ch": 챕터번호, "teaser": "한 문장"}]}"""
+TEASER_FORWARD = r"(잠시 뒤|잠시 후|곧 |다음 장|다음 이야기|다음 챕터|이어서|바로 다음|뒤에서|조금 뒤|이따가)"
+
+
+def retention_fix(model, story, title, log=None, cancel=None):
+    """규칙(1위 영상 분석): 챕터 끝 예고 + 마무리의 시리즈 한 줄. 롱폼(챕터 있는 대본)에만. 반환: (새 대본, 바꾼 곳 수)"""
+    log = log or (lambda x: None)
+    if "\n## " not in "\n" + story:
+        return story, 0
+    n = 0
+    miss = _YP.teaser_missing(story)
+    if miss:
+        log(f"🔗 챕터 끝 예고가 없는 챕터 {len(miss)}개 → 다음 챕터를 살짝 예고하는 한 문장을 넣는 중...")
+        blocks = _YP.chapters_of(story)
+        chs = [b for b in blocks if b.startswith("## ")]
+        user = []
+        for i in miss:
+            cur = "\n".join(_YP._narr_lines(chs[i - 1]))[-500:]
+            nxt = "\n".join(_YP._narr_lines(chs[i]))[:700]
+            user.append(f"[챕터 {i} 끝부분]\n{cur}\n[다음 챕터 {i + 1}: {chs[i].splitlines()[0][3:]} - 앞부분]\n{nxt}")
+        try:
+            d = ask_script_json(model, TEASER_SYSTEM, "\n\n".join(user))
+            got = {int(x.get("ch", 0)): str(x.get("teaser") or "").strip() for x in (d.get("items") or []) if isinstance(x, dict)}
+        except Exception as e:
+            log("  예고 문장 만들기 실패(그대로 진행): " + (str(e).splitlines() or [""])[0][:80])
+            got = {}
+        out = []
+        ci = 0
+        for b in blocks:
+            if b.startswith("## "):
+                ci += 1
+                t = got.get(ci, "")
+                if t and not _plain_sentences(t) and 10 <= len(t) <= 90 and re.search(TEASER_FORWARD, t):   # 앞으로 나올 것을 가리키는 진짜 예고만
+                    lines = b.split("\n")
+                    k = max(j for j, ln in enumerate(lines) if ln.strip() and not ln.lstrip().startswith(("[사진:", "## ", "♪")))
+                    lines[k] = lines[k].rstrip() + " " + t
+                    b = "\n".join(lines)
+                    n += 1
+            out.append(b)
+        story = "\n\n".join(out)
+        log(f"  🔗 챕터 끝 예고 {n}곳 넣음")
+    story, added = _YP.add_series_line(story, title)
+    if added:
+        n += 1
+        log("🔗 마무리에 시리즈 한 줄 넣음: " + _YP.series_line(title))
+    if not miss and not added:
+        log("🔗 챕터 끝 예고·시리즈 한 줄 확인: 통과")
+    return story, n
 
 
 # ---- 나레이션 존댓말 규칙: 모든 나레이션은 존댓말(~습니다/~요). 따옴표 속 인물 대사는 예외 ----
@@ -7079,6 +7260,65 @@ def _plain_sentences(t):
                 or x.endswith(("자", "냐", "는가", "ㄴ가", "던가", "을까", "일까", "했나", "었나")):
             out.append(sent.strip())
     return out
+
+
+# ---- 긴 영상 길이 규칙: 롱폼(장문)은 10~15분 (중간 광고는 8분 이상부터 · 시청 시간 확보). 내용을 더해 늘리고, 같은 말 반복으로 채우지 않음 ----
+LONG_MIN_MIN, LONG_MAX_MIN = 10, 15
+LONG_CHARS_PER_MIN = 440          # 실측: 대본 본문 2,675자(공백 포함, 사진·챕터 제목 줄 뺌) → 6분 4초
+LONG_TARGET_CHARS = (int(10.5 * LONG_CHARS_PER_MIN), int(13.5 * LONG_CHARS_PER_MIN))   # 대본을 새로 늘릴 때 목표 (약 4,600~5,900자)
+LENGTH_RULE = (f"\n[공통 규칙 - 긴 영상 길이, 반드시 지킬 것] 롱폼 다큐 나레이션은 {LONG_MIN_MIN}~{LONG_MAX_MIN}분 분량이다: "
+               f"본문(공백 포함, 챕터 제목 줄 빼고) 약 {LONG_TARGET_CHARS[0]:,}~{LONG_TARGET_CHARS[1]:,}자, 챕터 5~7개. "
+               "길이는 같은 말 되풀이·빈 감탄으로 채우지 말고 내용을 더해 채운다: 배경 이야기, 발견·연구 과정의 구체적 장면, 반대 주장과 그 근거, 아직 남은 수수께끼. "
+               "확인된 사실만 쓰고, 모르는 것은 모른다고 쓴다.\n")
+LENGTHEN_SYSTEM = """너는 유튜브 다큐 채널의 작가다. 아래 대본이 너무 짧다(영상이 10분에 못 미침). 같은 이야기를 10~15분짜리로 늘려 '대본 전체'를 다시 쓴다.
+- 목표: 본문 공백 포함 {lo:,}~{hi:,}자 (챕터 제목 줄 빼고). 챕터 5~7개, 머리말은 '## 1. 제목' 형식 그대로.
+- 늘리는 방법: 챕터 1~3개를 새로 넣거나 기존 챕터를 깊게. 배경 역사, 발견·연구 과정의 구체적 장면, 다른 학자들의 반대 의견과 근거, 아직 풀리지 않은 질문, 비슷한 다른 사례.
+- 같은 말 반복·뜻 없는 감탄·'자세히 알아보겠습니다' 같은 빈 문장으로 채우지 않는다.
+- 새로 넣는 사실은 [사실 확인 메모]·[출처]에 있는 것이나 널리 확인된 배경 지식만. 숫자·날짜·이름·인용을 지어내지 않는다. 불확실하면 '~로 알려져 있습니다', '아직 모릅니다'.
+- 원래 대본의 오프닝(첫 30초 후크와 '끝까지 보시면' 문장)과 마지막 질문·되돌아보기는 살린다. 원래 문장은 되도록 그대로 두고 사이에 더한다.
+- 대본에 [사진: ...] 줄이 있으면 지우지 말고 그 자리에 그대로 둔다.
+반드시 JSON만 출력: {{"story": "늘린 대본 전체"}}"""
+
+
+def narration_chars(story):
+    """나레이션 본문 글자 수 (공백 포함, 사진 줄·챕터 제목 줄 뺌)"""
+    return len("\n".join(ln for ln in str(story or "").split("\n") if not ln.lstrip().startswith(("[사진:", "## "))).strip())
+
+
+def length_fix(model, story, notes="", sources=None, log=None, cancel=None):
+    """규칙: 롱폼은 10~15분. 본문이 10분에 못 미치면 AI가 내용을 더해 늘려 씀 (실패하면 원래대로). 반환: (새 대본, 늘렸는지)"""
+    log = log or (lambda x: None)
+    n, lo = narration_chars(story), LONG_MIN_MIN * LONG_CHARS_PER_MIN
+    if n >= lo:
+        log(f"⏱ 긴 영상 길이 확인: 통과 (본문 {n:,}자 ≈ {n / LONG_CHARS_PER_MIN:.1f}분)")
+        return story, False
+    log(f"⏱ 긴 영상 길이 규칙({LONG_MIN_MIN}~{LONG_MAX_MIN}분)에 모자람: 본문 {n:,}자 ≈ {n / LONG_CHARS_PER_MIN:.1f}분 → 내용을 더해 늘리는 중...")
+    best = None
+    for attempt in range(2):
+        if cancel is not None and cancel.is_set():
+            break
+        user = (f"[지금 대본]\n{story}\n\n[사실 확인 메모]\n{notes or '(없음)'}\n\n[출처]\n" + "\n".join(map(str, sources or [])) +
+                ("" if attempt == 0 else f"\n\n[다시] 아직 짧습니다. 본문을 꼭 {LONG_TARGET_CHARS[0]:,}자 이상으로."))
+        try:
+            d = ask_script_json(model, LENGTHEN_SYSTEM.format(lo=LONG_TARGET_CHARS[0], hi=LONG_TARGET_CHARS[1]), user)
+            new = re.sub(r"\n{3,}", "\n\n", str(d.get("story") or "").strip().replace("\r\n", "\n"))
+        except Exception as e:
+            log("  늘리기 실패: " + (str(e).splitlines() or [""])[0][:80])
+            continue
+        m_ = narration_chars(new)
+        ok = m_ > n and new.count("\n## ") >= story.count("\n## ") and not hook_check(new) \
+            and story.count("[사진:") <= new.count("[사진:")
+        log(f"  ⏱ 늘린 대본: 본문 {m_:,}자 ≈ {m_ / LONG_CHARS_PER_MIN:.1f}분 · 챕터 {new.count(chr(10) + '## ') + new.startswith('## ')}개" + ("" if ok else " → 규칙에 안 맞아 버림"))
+        if ok and (best is None or m_ > narration_chars(best)):
+            best = new
+        if best and narration_chars(best) >= lo:
+            break
+    if not best:
+        log("  ⚠ 늘리지 못해 원래 길이로 진행 (대본을 직접 늘려 주세요)")
+        return story, False
+    if narration_chars(best) < lo:
+        log(f"  ⚠ 늘렸지만 아직 {LONG_MIN_MIN}분이 안 됨 - 이 길이로 진행")
+    return best, True
 
 
 def polite_fix(model, story, log=None, cancel=None):
@@ -7620,6 +7860,41 @@ def is_female_voice(name, code=""):
         return True
     v = str(code or voice_code(name)).split(":")[-1].lower()
     return v in {x.lower() for x, d in OPENAI_VOICES + GEMINI_VOICES if d.startswith("여성")}
+
+
+# ---- 성우 프리셋: 성우 + 말 속도 + 톤(반음) + 감정 + 문단 사이 쉼을 이름 하나로 저장 (🎤 성우 선택 창의 '⭐ 새 성우로 저장') ----
+VOICE_PRESET_FILE = os.path.join(BASE, "성우_프리셋.json")
+ST_EMOTION_CHOICES = ["자동(문단별)", "차분", "공포·긴장", "슬픔·감동", "놀람·반전", "분노·갈등", "밝음·유머"]
+
+
+def load_voice_presets():
+    try:
+        d = json.load(open(VOICE_PRESET_FILE, encoding="utf-8"))
+        return d if isinstance(d, dict) else {}
+    except Exception:
+        return {}
+
+
+def save_voice_presets(d):
+    atomic_write_text(VOICE_PRESET_FILE, json.dumps(d, ensure_ascii=False, indent=1))
+
+
+def apply_voice_preset(s, name, log=None):
+    """settings dict s 에 프리셋을 적용 (성우·속도·톤·감정·쉼). 없으면 False"""
+    p = load_voice_presets().get(str(name or "").strip())
+    if not p:
+        if name and log:
+            log(f"⚠ 성우 프리셋 '{name}' 이(가) 없어요 (성우_프리셋.json) → 기본 성우로 진행")
+        return False
+    s["narr_voice"] = p.get("voice") or s.get("narr_voice")
+    s["narr_rate"] = str(p.get("rate", s.get("narr_rate", 5)))
+    s["narr_tone_f" if is_female_voice(s["narr_voice"]) else "narr_tone_m"] = float(p.get("tone", 0) or 0)
+    s["st_emotion"] = p.get("emotion") or s.get("st_emotion", "자동(문단별)")
+    s["narr_gap"] = str(p.get("gap", s.get("narr_gap", 0.5)))
+    if log:
+        log(f"🎤 성우 프리셋 '{name}': {s['narr_voice'].split(' (')[0]} · 속도 {float(p.get('rate', 0)):+.0f}% · 톤 {float(p.get('tone', 0)):+.1f}반음 · "
+            f"감정 {s['st_emotion']} · 쉼 {float(p.get('gap', 0.5)):.1f}초")
+    return True
 
 
 def voice_post_params(voice_name, code=""):
@@ -13277,7 +13552,7 @@ class App(tk.Tk):
         dlg = tk.Toplevel(self)
         dlg.title("성우 선택")
         dlg.transient(self)
-        dlg.geometry("760x560")
+        dlg.geometry("800x700")
         f = ttk.Frame(dlg, padding=10)
         f.pack(fill="both", expand=True)
         top = ttk.Frame(f)
@@ -13295,32 +13570,83 @@ class App(tk.Tk):
         lst.config(yscrollcommand=sb.set)
         lst.pack(side="left", fill="both", expand=True)
         sb.pack(side="left", fill="y")
-        ctl = ttk.LabelFrame(f, text="미리듣기 설정", padding=8)
+        # 저장한 성우(프리셋): 성우 + 속도 + 톤 + 감정 + 쉼을 이름 하나로 (⭐ 새 성우로 저장)
+        prow = ttk.Frame(f)
+        prow.pack(fill="x", pady=(0, 4))
+        ttk.Label(prow, text="⭐ 저장한 성우").pack(side="left")
+        preset_var = tk.StringVar(value="")
+        preset_cb = ttk.Combobox(prow, textvariable=preset_var, values=list(load_voice_presets()), width=24, state="readonly")
+        preset_cb.pack(side="left", padx=4)
+        ctl = ttk.LabelFrame(f, text="미리듣기 설정 (바꾸고 ▶ 들어보기)", padding=8)
         ctl.pack(fill="x")
+        cur_voice = self.vars["narr_voice"].get()
         rate_var = tk.DoubleVar(value=float(self.vars["narr_rate"].get() or 0))
-        pitch_var = tk.DoubleVar(value=float(self.vars["narr_pitch"].get() or 0))
+        tone_var = tk.DoubleVar(value=float(self.vars["narr_tone_f" if is_female_voice(cur_voice) else "narr_tone_m"].get() or 0))
+        emo_var = tk.StringVar(value=self.vars["st_emotion"].get() or "자동(문단별)")
+        gap_var = tk.DoubleVar(value=float(self.vars["narr_gap"].get() or 0.5))
         ttk.Label(ctl, text="말 속도(%)").grid(row=0, column=0, sticky="e")
         ttk.Scale(ctl, from_=-30, to=40, variable=rate_var, length=200).grid(row=0, column=1, padx=4)
-        rl = ttk.Label(ctl, width=5)
+        rl = ttk.Label(ctl, width=6)
         rl.grid(row=0, column=2)
-        ttk.Label(ctl, text="음 높낮이(Hz)").grid(row=0, column=3, sticky="e", padx=(16, 0))
-        ttk.Scale(ctl, from_=-40, to=40, variable=pitch_var, length=200).grid(row=0, column=4, padx=4)
-        pl = ttk.Label(ctl, width=5)
-        pl.grid(row=0, column=5)
+        ttk.Label(ctl, text="톤(반음)").grid(row=0, column=3, sticky="e", padx=(16, 0))
+        ttk.Scale(ctl, from_=-6, to=6, variable=tone_var, length=200).grid(row=0, column=4, padx=4)
+        tl = ttk.Label(ctl, width=6)
+        tl.grid(row=0, column=5)
+        ttk.Label(ctl, text="감정·분위기").grid(row=1, column=0, sticky="e", pady=(6, 0))
+        ttk.Combobox(ctl, textvariable=emo_var, values=ST_EMOTION_CHOICES, width=14, state="readonly").grid(row=1, column=1, sticky="w", padx=4, pady=(6, 0))
+        ttk.Label(ctl, text="문단 사이 쉼(초)").grid(row=1, column=3, sticky="e", padx=(16, 0), pady=(6, 0))
+        ttk.Scale(ctl, from_=0, to=2, variable=gap_var, length=200).grid(row=1, column=4, padx=4, pady=(6, 0))
+        gl = ttk.Label(ctl, width=6)
+        gl.grid(row=1, column=5, pady=(6, 0))
+        r2 = lambda v, k: round(float(v) / k) * k        # 톤 0.5반음, 쉼 0.1초 단위
 
         def upd(*_):
-            rl.config(text=f"{rate_var.get():+.0f}%")
-            pl.config(text=f"{pitch_var.get():+.0f}")
-        rate_var.trace_add("write", upd)
-        pitch_var.trace_add("write", upd)
+            try:
+                rl.config(text=f"{rate_var.get():+.0f}%")
+                tl.config(text=f"{r2(tone_var.get(), 0.5):+.1f}")
+                gl.config(text=f"{r2(gap_var.get(), 0.1):.1f}초")
+            except (tk.TclError, ValueError):
+                pass
+        for v_ in (rate_var, tone_var, gap_var):
+            v_.trace_add("write", upd)
         upd()
-        ttk.Label(ctl, text="연기 지시").grid(row=2, column=0, sticky="e", pady=(6, 0))
+        ttk.Label(ctl, text="샘플 문장").grid(row=2, column=0, sticky="e", pady=(6, 0))
+        sample_var = tk.StringVar(value="1,700년 동안 아무도 이 글자를 읽지 못했습니다. 그런데 올해, 연구팀이 첫 단서를 찾아냈어요. 끝까지 보시면 그 답이 나옵니다.")
+        ttk.Entry(ctl, textvariable=sample_var, width=70).grid(row=2, column=1, columnspan=5, sticky="w", pady=(6, 0))
+        ttk.Label(ctl, text="연기 지시").grid(row=3, column=0, sticky="e", pady=(6, 0))
         style_var = tk.StringVar(value=self.vars["narr_style"].get())
-        ttk.Entry(ctl, textvariable=style_var, width=70).grid(row=2, column=1, columnspan=5, sticky="w", pady=(6, 0))
-        ttk.Label(ctl, text="(자유문장 연기 지시는 ChatGPT·Gemini용. Supertonic은 나레이션 탭의 ‘로컬 성우 감정’을 사용)", foreground="gray").grid(row=3, column=1, columnspan=5, sticky="w")
-        ttk.Label(ctl, text="샘플 문장").grid(row=1, column=0, sticky="e", pady=(6, 0))
-        sample_var = tk.StringVar(value="안녕하세요. 오늘은 아무도 몰랐던 이야기를 들려드릴게요. 끝까지 보시면 소름이 돋을 겁니다.")
-        ttk.Entry(ctl, textvariable=sample_var, width=70).grid(row=1, column=1, columnspan=5, sticky="w", pady=(6, 0))
+        ttk.Entry(ctl, textvariable=style_var, width=70).grid(row=3, column=1, columnspan=5, sticky="w", pady=(6, 0))
+        ttk.Label(ctl, text="(연기 지시는 ChatGPT·Gemini 성우용 · Supertonic은 위 '감정·분위기' 사용 · 샘플은 문장마다 '쉼'을 넣어 들려줌)",
+                  foreground="gray").grid(row=4, column=1, columnspan=5, sticky="w")
+
+        def load_preset(*_):
+            p = load_voice_presets().get(preset_var.get())
+            if not p:
+                return
+            rate_var.set(float(p.get("rate", 0)))
+            tone_var.set(float(p.get("tone", 0)))
+            emo_var.set(p.get("emotion") or "자동(문단별)")
+            gap_var.set(float(p.get("gap", 0.5)))
+            if p.get("sample"):
+                sample_var.set(p["sample"])
+            for i_ in range(lst.size()):          # 목록에서 그 성우를 골라 둠
+                if lst.get(i_) == p.get("voice") or voice_code(lst.get(i_)) == voice_code(p.get("voice", "")):
+                    lst.selection_clear(0, "end")
+                    lst.selection_set(i_)
+                    lst.see(i_)
+                    break
+            status.config(text=f"⭐ '{preset_var.get()}' 불러옴 → ▶ 들어보기")
+        preset_cb.bind("<<ComboboxSelected>>", load_preset)
+
+        def del_preset():
+            n_ = preset_var.get()
+            d_ = load_voice_presets()
+            if n_ in d_ and messagebox.askyesno("저장한 성우 지우기", f"'{n_}' 을(를) 지울까요?", parent=dlg):
+                d_.pop(n_)
+                save_voice_presets(d_)
+                preset_cb.config(values=list(d_))
+                preset_var.set("")
+        ttk.Button(prow, text="지우기", command=del_preset).pack(side="left")
         voices = []
 
         def load(refresh=False):
@@ -13366,10 +13692,13 @@ class App(tk.Tk):
             if not name:
                 messagebox.showinfo("성우", "목록에서 성우를 고르세요.", parent=dlg)
                 return
-            text, rate, pitch = sample_var.get().strip(), rate_var.get(), pitch_var.get()
+            text, rate, pitch = sample_var.get().strip(), rate_var.get(), 0
             status.config(text="샘플 만드는 중...")
             s_now = self.get_settings()
             s_now["narr_style"] = style_var.get()
+            s_now["st_emotion"] = emo_var.get()
+            s_now["narr_tone_f" if is_female_voice(name) else "narr_tone_m"] = r2(tone_var.get(), 0.5)
+            gap = r2(gap_var.get(), 0.1)
             set_tts_cfg(s_now)
             code = voice_code(name)
             if code.startswith("openai:") and not TTS_CFG["openai_key"]:
@@ -13382,8 +13711,14 @@ class App(tk.Tk):
 
             def worker():
                 try:
-                    mood = supertonic_mood(text, 0, 1, s_now)
-                    a, d = tts_clip(text, name, rate, cache, pitch, mood, int(s_now.get("st_steps", 5)))
+                    parts = [x for x in re.split(r"(?<=[.!?…])\s+", text) if x.strip()] or [text]   # 문장마다 따로 → 사이에 '쉼'
+                    chunks = []
+                    for i_, t_ in enumerate(parts):
+                        mood = supertonic_mood(t_, i_, len(parts), s_now)
+                        a_, _ = tts_clip(t_, name, rate, cache, pitch, mood, int(s_now.get("st_steps", 5)))
+                        chunks += ([np.zeros(int(gap * SR), np.float32)] if chunks else []) + [np.asarray(a_, np.float32)]
+                    a = np.concatenate(chunks)
+                    d = len(a) / SR
                     p = os.path.join(tempfile.gettempdir(), "shorts_voice_sample.wav")
                     write_wav(p, np.stack([a, a], 1))
                     real = LAST_TTS["voice"]
@@ -13403,19 +13738,46 @@ class App(tk.Tk):
                 return
             self.vars["narr_voice"].set(name)
             self.vars["narr_rate"].set(f"{rate_var.get():.0f}")
-            self.vars["narr_pitch"].set(f"{pitch_var.get():.0f}")
+            self.vars["narr_tone_f" if is_female_voice(name) else "narr_tone_m"].set(f"{r2(tone_var.get(), 0.5):g}")
+            self.vars["st_emotion"].set(emo_var.get())
+            self.vars["narr_gap"].set(f"{r2(gap_var.get(), 0.1):g}")
             self.vars["narr_style"].set(style_var.get())
             self.vars["narration"].set("on")
             self.bgm_made = None
-            self.write_log(f"🎤 성우 선택: {name} (속도 {rate_var.get():+.0f}%, 높낮이 {pitch_var.get():+.0f}Hz) → 나레이션을 다시 만들면 적용됩니다")
+            self.write_log(f"🎤 성우 선택: {name} (속도 {rate_var.get():+.0f}% · 톤 {r2(tone_var.get(), 0.5):+.1f}반음 · 감정 {emo_var.get()} · "
+                           f"쉼 {r2(gap_var.get(), 0.1):.1f}초) → 나레이션을 다시 만들면 적용됩니다")
             self.save_cfg()
             stop_wav()
             dlg.destroy()
             self.refresh_preview()
+
+        def save_preset():
+            name = chosen_name()
+            if not name:
+                messagebox.showinfo("새 성우로 저장", "목록에서 바탕이 될 성우를 먼저 고르세요.", parent=dlg)
+                return
+            from tkinter import simpledialog
+            n_ = simpledialog.askstring("⭐ 새 성우로 저장", "이 목소리 설정의 이름 (예: 차분한 다큐 남자)", parent=dlg,
+                                        initialvalue=preset_var.get() or "")
+            n_ = (n_ or "").strip()
+            if not n_:
+                return
+            d_ = load_voice_presets()
+            if n_ in d_ and not messagebox.askyesno("같은 이름", f"'{n_}' 이(가) 이미 있어요. 덮어쓸까요?", parent=dlg):
+                return
+            d_[n_] = {"voice": name, "rate": round(rate_var.get()), "tone": r2(tone_var.get(), 0.5), "emotion": emo_var.get(),
+                      "gap": r2(gap_var.get(), 0.1), "sample": sample_var.get().strip(), "saved": time.strftime("%Y-%m-%d %H:%M")}
+            save_voice_presets(d_)
+            preset_cb.config(values=list(d_))
+            preset_var.set(n_)
+            status.config(text=f"⭐ '{n_}' 저장됨 (성우_프리셋.json)")
+            self.write_log(f"⭐ 새 성우 저장: '{n_}' = {name.split(' (')[0]} · 속도 {rate_var.get():+.0f}% · 톤 {r2(tone_var.get(), 0.5):+.1f}반음 · "
+                           f"감정 {emo_var.get()} · 쉼 {r2(gap_var.get(), 0.1):.1f}초  (영상에 쓰기: '이 성우로 선택', 또는 render_project --성우프리셋 \"{n_}\")")
         bf = ttk.Frame(f)
         bf.pack(fill="x", pady=(8, 0))
         ttk.Button(bf, text="▶ 들어보기", command=preview).pack(side="left")
         ttk.Button(bf, text="■ 정지", command=stop_wav).pack(side="left", padx=4)
+        ttk.Button(bf, text="⭐ 새 성우로 저장", command=save_preset).pack(side="left", padx=(12, 0))
         ttk.Button(bf, text="닫기", command=lambda: (stop_wav(), dlg.destroy())).pack(side="right")
         ttk.Button(bf, text="이 성우로 선택", command=choose).pack(side="right", padx=6)
         lst.bind("<Double-Button-1>", lambda _: preview())
@@ -14167,7 +14529,7 @@ class App(tk.Tk):
             if state_path:
                 os.makedirs(os.path.dirname(os.path.abspath(state_path)), exist_ok=True)
                 atomic_write_text(state_path, json.dumps(st8, ensure_ascii=False))   # 전원이 꺼져도 반쯤 쓴 파일이 안 남게
-        minutes = max(5.0, min(90.0, float(minutes)))
+        minutes = max(float(LONG_MIN_MIN), min(float(LONG_MAX_MIN), float(minutes)))   # 규칙: 롱폼은 10~15분
         total = int(minutes * DOC_CHARS_PER_MIN)
         open_c, close_c = max(350, int(total * 0.05)), max(300, int(total * 0.035))
         body_c = total - open_c - close_c
