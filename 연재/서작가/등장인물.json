@@ -1,0 +1,54 @@
+{
+  "_설명": "《엄마의 텃밭》 등장인물. look = 그림 모델에 넣는 영어 묘사(모든 컷에 그대로), look_ko = 한국어 설명, face = 확정한 캐릭터 시트(이 폴더 기준 경로)",
+  "style": "파스텔 감성 일러스트",
+  "chars": [
+    {
+      "name": "나",
+      "look": "petite slender Korean woman in her early fifties, small delicate frame, calm quiet gentle face, soft thoughtful eyes, shoulder-length straight black hair with a few gray strands tucked behind her ears, no makeup, beige knit cardigan over a white blouse, long dark brown skirt, simple flat shoes",
+      "look_ko": "50대 초반 주인공(화자). 작고 마른 몸, 차분하고 조용한 얼굴, 귀 뒤로 넘긴 어깨 길이 검은 머리(흰머리 몇 가닥), 베이지 카디건·흰 블라우스, 긴 짙은 갈색 치마",
+      "face": ""
+    },
+    {
+      "name": "엄마",
+      "look": "elderly Korean grandmother in her late seventies, short small slightly stooped body, white hair pulled back in a low bun, deeply wrinkled warm smiling face, rough working hands, loose floral patterned baggy farm pants, faded pink cardigan, cotton apron, rubber slip-on shoes",
+      "look_ko": "70대 후반 엄마(돌아가시기 전 모습). 작고 조금 굽은 몸, 쪽진 흰머리, 주름진 따뜻한 웃음, 꽃무늬 몸뻬, 바랜 분홍 카디건, 앞치마, 고무신",
+      "face": ""
+    },
+    {
+      "name": "젊은 엄마",
+      "look": "Korean woman in her late thirties in the 1980s countryside, sturdy hardworking, black hair wrapped in a white cotton towel headscarf, warm smiling sun-tanned face, plain gray blouse with rolled-up sleeves, baggy patterned farm pants, rubber shoes",
+      "look_ko": "회상 속 30대 후반 엄마(1980년대 시골). 흰 수건을 두른 머리, 햇볕에 그을린 웃는 얼굴, 소매 걷은 회색 블라우스, 몸뻬, 고무신",
+      "face": ""
+    },
+    {
+      "name": "오빠",
+      "look": "big tall broad-shouldered Korean farmer man in his early sixties, sun-tanned weathered face, short gray buzz-cut hair, kind quiet eyes, straw hat, faded navy work jacket over a gray shirt, khaki work pants, black rubber boots",
+      "look_ko": "60대 초반 오빠(맏이, 고향에서 농사). 크고 어깨 넓은 몸, 그을린 얼굴, 짧은 회색 머리, 밀짚모자, 바랜 남색 작업복, 장화",
+      "face": ""
+    },
+    {
+      "name": "언니",
+      "look": "plump cheerful Korean woman in her late fifties, short curly permed black hair, round bright laughing face, red quilted vest over a patterned blouse, black slacks",
+      "look_ko": "50대 후반 언니. 통통하고 쾌활한 이야기꾼, 짧은 뽀글 파마머리, 둥근 웃는 얼굴, 빨간 누빔 조끼, 무늬 블라우스",
+      "face": ""
+    },
+    {
+      "name": "어린 나",
+      "look": "small thin shy 7-year-old Korean girl in the 1980s countryside, black hair in a short bob with straight bangs, quiet big eyes, faded yellow sweater, red corduroy skirt, white knee socks, rubber shoes",
+      "look_ko": "회상 속 7살 '나'. 작고 마른 수줍은 아이, 일자 앞머리 단발, 노란 스웨터, 빨간 골덴 치마, 흰 무릎 양말",
+      "face": ""
+    },
+    {
+      "name": "어린 오빠",
+      "look": "13-year-old Korean boy in the 1980s countryside, tall for his age, very short buzz-cut hair, mischievous grin, black school uniform jacket with brass buttons, gray pants, worn sneakers",
+      "look_ko": "회상 속 13살 오빠. 또래보다 큰 키, 까까머리, 장난스런 웃음, 금단추 검은 교복 윗옷",
+      "face": ""
+    },
+    {
+      "name": "어린 언니",
+      "look": "chubby lively 10-year-old Korean girl in the 1980s countryside, black hair in two braided pigtails, round rosy face, pink knit sweater, dark blue skirt",
+      "look_ko": "회상 속 10살 언니. 통통하고 활발함, 양 갈래 땋은 머리, 둥근 볼, 분홍 스웨터, 남색 치마",
+      "face": ""
+    }
+  ]
+}
