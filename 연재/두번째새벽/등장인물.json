@@ -9,6 +9,12 @@
       "face": "캐릭터시트/레아.jpg"
     },
     {
+      "name": "세린",
+      "look": "beautiful 21-year-old human woman, healer priestess, long wavy silver-blonde hair in a loose side braid, gentle gray-blue eyes, graceful oval face, calm warm expression, white and pale gold priestess robe with a small red sun emblem on the chest, light brown traveling mantle, thin silver circlet on her forehead, small leather satchel of healing herbs at her hip",
+      "look_ko": "21살 인간 여성, 정화교 견습 사제·치유사(미녀). 옆으로 느슨하게 땋은 긴 은금발 웨이브 머리, 순한 회청색 눈, 갸름한 얼굴, 흰색·연금색 사제복(가슴에 작은 붉은 태양 문장), 연갈색 여행 망토, 이마의 가는 은빛 머리띠, 허리의 약초 가죽 주머니",
+      "face": "캐릭터시트/세린.jpg"
+    },
+    {
       "name": "카룬",
       "look": "young evolved chimpanzee warrior who walks upright, intelligent amber eyes, white tribal face paint stripes, armor of woven tree bark and leather straps, necklace of old circuit-board charms, carrying a tall wooden staff decorated with copper wire and small circuit chips",
       "look_ko": "하누족 젊은 침팬지 전사(두 발로 걷는 진화한 원숭이). 호박색 눈, 흰 얼굴 무늬, 나무껍질을 엮은 갑옷, 회로기판 부적 목걸이, 구리선을 감은 긴 지팡이",
