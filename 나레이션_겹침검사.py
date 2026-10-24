@@ -8,7 +8,8 @@ python 나레이션_겹침검사.py <영상.mp4> <회차.py 또는 대본.txt> [
     3) 받아 적은 조각과 가장 비슷한 대본 문장을 찾아, 그 문장에 원래 같은 길이의 반복(무럭무럭·불쑥불쑥·타닥타닥)이 있으면 흉내말로 보고 넘김
     4) 대본 문장과 한 글자씩 맞춰 봐서 반복 자리에 글자가 '더 들어갔을' 때만 겹침 ('것만→것만만'). 글자 수가 같으면 발음 차이로 봄
        ('하늘나라→하늘라라', '닿을→다을')
-  - --고치기 <프로젝트.json> : 겹친 문장(과 그 문단)의 녹음 캐시를 output/tts_cache 에서 지움 → render_project 를 다시 돌리면 그 문장만 새로 녹음
+  - 갑자기 빨라진 곳도 찾음: 쉼과 쉼 사이 한 마디씩 1초당 글자 수를 재서 영상 전체 마디의 중간값보다 25% 넘게 빠른 마디 (대사는 인물마다 빠르기가 달라 뺌)
+  - --고치기 <프로젝트.json> : 겹친·빨라진 문장(과 그 문단)의 녹음 캐시를 output/tts_cache 에서 지움 → render_project 를 다시 돌리면 그 문장만 새로 녹음
     (Supertonic 은 매번 조금씩 다르게 읽어서 보통 한 번에 고쳐짐. 다시 만든 영상도 검사해서 '겹침 없음'이 나올 때까지, 최대 3번)
   - 결과: '분:초 [겹친 글자] 대본: <문장> | 들림: <받아 적은 글>'
 (내부용) python 나레이션_겹침검사.py --지우기 <목록.json> <프로젝트.json>  ← .supertonic_venv 로 실행, 캐시 이름 계산·삭제"""
@@ -104,6 +105,36 @@ def best_sentence(h, sents):
     return best if score >= 0.55 else None
 
 
+def fast_spots(sylls, sents, ratio=1.25, gap=0.3, min_syl=8):
+    """갑자기 빨라진 곳: 쉼(0.3초 넘는 틈) 사이 한 마디씩 1초당 글자 수를 재서, 영상 전체 마디의 중간값보다 25% 넘게 빠른 마디.
+    (1화에서 '잠시 뒤, 그 이야기를 들려 드릴게요'가 43% 빨랐음 — 짧은 문장을 서둘러 읽는 일이 있음) 대사(따옴표)는 인물마다 빠르기가 달라 뺌"""
+    import numpy as np
+    phrases, cur = [], [sylls[0]] if sylls else []
+    for a_, b_ in zip(sylls, sylls[1:]):
+        if b_[1] - a_[1] > gap:
+            phrases.append(cur)
+            cur = [b_]
+        else:
+            cur.append(b_)
+    if cur:
+        phrases.append(cur)
+    rated = [(ph, (len(ph) - 1) / (ph[-1][1] - ph[0][1])) for ph in phrases if len(ph) >= min_syl and ph[-1][1] > ph[0][1]]
+    if len(rated) < 10:
+        return []
+    med = float(np.median([r for _, r in rated]))
+    out = []
+    for ph, r in rated:
+        if r <= med * ratio:
+            continue
+        h = "".join(c for c, _ in ph)
+        ps = best_sentence(h, sents)
+        if ps is None or ps[1].lstrip().startswith(('"', '“')):
+            continue
+        out.append({"t": ph[0][1], "dd": f"빠름 {r:.1f}자/초(보통 {med:.1f}, +{(r / med - 1) * 100:.0f}%)",
+                    "sentence": ps[1], "paragraph": ps[0], "heard": h})
+    return out
+
+
 def detect(video, script):
     import numpy as np
     import torch
@@ -116,12 +147,24 @@ def detect(video, script):
     torch.set_num_threads(max(1, os.cpu_count() or 4))
     p = AutoProcessor.from_pretrained(MODEL)
     m = AutoModelForCTC.from_pretrained(MODEL).eval()
-    found = []
+    found, sylls = [], []          # sylls: (글자, 시각초) - 말 빠르기 재기용
+    blank = p.tokenizer.pad_token_id
     for t0, t1 in chunks(a):
-        x = a[int(max(0, t0 - 0.15) * SR):int((t1 + 0.15) * SR)]
+        off = max(0, t0 - 0.15)
+        x = a[int(off * SR):int((t1 + 0.15) * SR)]
         with torch.no_grad():
-            text = p.batch_decode(m(**p(x, sampling_rate=SR, return_tensors="pt")).logits.argmax(-1))[0]
+            ids = m(**p(x, sampling_rate=SR, return_tensors="pt")).logits.argmax(-1)
+        text = p.batch_decode(ids)[0]
         h = hangul(text)
+        seq = ids[0].tolist()
+        step = len(x) / SR / max(1, len(seq))       # 한 칸(약 0.02초)
+        prev = None
+        for k, tid in enumerate(seq):               # 글자가 처음 나온 칸 = 그 글자를 말한 시각
+            if tid != prev and tid != blank:
+                ch = p.tokenizer.convert_ids_to_tokens(tid)
+                if re.fullmatch(r"[가-힣]", ch or ""):
+                    sylls.append((ch, off + k * step))
+            prev = tid
         for n in (1, 2, 3):
             for dd in sorted(doubles(h, n)):
                 i = h.find(dd)
@@ -135,6 +178,11 @@ def detect(video, script):
                 if not extra_syllables(sh, ctx, ctx.find(dd), len(dd)):   # 규칙 4: 대본보다 글자가 늘어난 자리여야 겹침
                     continue
                 found.append({"t": t0, "dd": dd, "sentence": ps[1], "paragraph": ps[0], "heard": text})
+    try:
+        json.dump(sylls, open(os.path.join(tempfile.gettempdir(), "겹침_글자시각.json"), "w", encoding="utf-8"), ensure_ascii=False)
+    except OSError:
+        pass
+    found += fast_spots(sylls, sents)
     uniq, seen = [], set()
     for f in found:
         if f["sentence"] not in seen:
