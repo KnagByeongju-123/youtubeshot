@@ -63,6 +63,13 @@ if [ ! -f models/FLUX2_klein_4B/transformer/diffusion_pytorch_model.safetensors 
     sleep $((i * 30))
   done
 fi
+# Hugging Face 에서 못 받았으면 구글 드라이브 사본에서 (폴더가 '링크가 있는 모든 사용자' 공유일 때만 됨)
+KLEIN_GDRIVE_FOLDER="${KLEIN_GDRIVE_FOLDER:-1gbBT9DOVF0sVoyaUpNPBwP0FQaA9d_EE}"    # 내 드라이브/AI모델/FLUX2_klein_4B
+if [ ! -f models/FLUX2_klein_4B/transformer/diffusion_pytorch_model.safetensors ] && [ -n "$KLEIN_GDRIVE_FOLDER" ]; then
+  "$SDV/bin/python" -m pip install -q --disable-pip-version-check gdown || true
+  "$SDV/bin/python" -m gdown "https://drive.google.com/drive/folders/$KLEIN_GDRIVE_FOLDER" -O models/FLUX2_klein_4B \
+    || echo "구글 드라이브에서도 못 받음 (폴더 공유 설정 확인)" >&2
+fi
 rm -rf /root/.cache/pip /root/.cache/huggingface/hub 2>/dev/null || true     # 받은 뒤 남는 임시 파일(수 GB)은 지움
 
 # 5) 이 세션에서 python = 위 실행 환경
