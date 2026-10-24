@@ -3685,7 +3685,7 @@ def _save_jpg_2mb(im, out):
 
 
 def make_thumbnails(model, base, title, story, category, s, log=None, keep_final=False):
-    """썸네일 기획: AI가 문구 3안과 각각 어울리는 사진·스타일을 정함 → 디자인 16가지가 모두 한 번씩 나오게 후보를 그림 →
+    r"""썸네일 기획: AI가 문구 3안과 각각 어울리는 사진·스타일을 정함 → 디자인 16가지가 모두 한 번씩 나오게 후보를 그림 →
     MP4 장면으로 만든 실사 편집 후보(소재탐색\mp4_thumbs.py)도 같은 폴더에 → 후보 모음표 저장 →
     AI가 후보를 직접 보고(Read) 가장 좋은 것을 _썸네일_유튜브.jpg 로. 나머지는 _썸네일_후보\ 폴더에 남겨 바꿔 쓸 수 있게
     keep_final=True: 이미 있는 _썸네일_유튜브.jpg(사람이 고른 것)는 덮어쓰지 않고 AI 추천 번호만 알려 줌"""
