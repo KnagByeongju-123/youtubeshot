@@ -301,7 +301,7 @@ def main():
     if cmd == "job":
         items = []
         for cid, who, desc, _ in CUTS:
-            looks = "; ".join(f"{nm} (the character from reference image {k + 1}): {chars[nm]['look']}" for k, nm in enumerate(who))
+            looks = "; ".join(f"person {k + 1} (the character from reference image {k + 1}): {chars[nm]['look']}" for k, nm in enumerate(who))   # 한글 이름은 그림에 글자로 나올 수 있어 번호로
             items.append({"id": cid, "width": 1024, "height": 576, "seed": 100 + int(cid[1:]),
                           "refs": [os.path.join(HERE, chars[nm]["face"]) for nm in who],
                           "prompt": f"{style}, Korean countryside family essay illustration. "
