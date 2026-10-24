@@ -269,7 +269,7 @@ def main(a):
     video, script = a[0], a[1]
     items = detect(video, script)
     lines = [f"{int(f['t'] // 60)}:{int(f['t'] % 60):02d} [{f['dd']}] 대본: {f['sentence']} | 들림: {f['heard']}" for f in items]
-    msg = "\n".join(lines) if lines else "겹침 없음"
+    msg = "\n".join(lines) if lines else "겹침·빨라진 곳 없음"
     print(msg)
     if "--결과" in a:
         open(a[a.index("--결과") + 1], "w", encoding="utf-8").write(msg + "\n")
