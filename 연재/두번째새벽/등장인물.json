@@ -1,0 +1,88 @@
+{
+  "_설명": "《두 번째 새벽》 등장인물. look = 그림 모델에 넣는 영어 묘사(모든 컷에 그대로), look_ko = 한국어 설명, face = 확정한 캐릭터 시트(이 폴더 기준 경로)",
+  "style": "옛날 만화책(세피아 펜화)",
+  "chars": [
+    {
+      "name": "한별",
+      "look": "17-year-old human girl mechanic apprentice, short messy auburn hair, freckles, determined green eyes, brown leather apron over a faded linen tunic, patched hooded traveling cloak, old scavenged brass goggles resting on her head, small bronze gear pendant necklace, fingerless leather gloves, worn leather boots",
+      "look_ko": "17살 인간 소녀, 방주선 정비공 견습. 헝클어진 짧은 적갈색 머리, 주근깨, 초록 눈, 가죽 앞치마, 기운 후드 망토, 머리 위 황동 고글, 청동 톱니 목걸이, 손가락 없는 가죽 장갑",
+      "face": "캐릭터시트/한별.jpg",
+      "voice": {
+        "code": "F2",
+        "rate": 6,
+        "semis": 1,
+        "fx": "",
+        "why": "작은 체격·17살 견습(낮은 지위): 가장 높은 여자 목소리, 톤 올림, 조금 빠르게"
+      }
+    },
+    {
+      "name": "서린",
+      "look": "beautiful 21-year-old human woman, healer priestess, long wavy silver-blonde hair in a loose side braid, gentle gray-blue eyes, graceful oval face, calm warm expression, white and pale gold priestess robe with a small red sun emblem on the chest, light brown traveling mantle, thin silver circlet on her forehead, small leather satchel of healing herbs at her hip",
+      "look_ko": "21살 인간 여성, 정화교 견습 사제·치유사(미녀). 옆으로 느슨하게 땋은 긴 은금발 웨이브 머리, 순한 회청색 눈, 갸름한 얼굴, 흰색·연금색 사제복(가슴에 작은 붉은 태양 문장), 연갈색 여행 망토, 이마의 가는 은빛 머리띠, 허리의 약초 가죽 주머니",
+      "face": "캐릭터시트/서린.jpg",
+      "voice": {
+        "code": "F5",
+        "rate": -6,
+        "semis": 0,
+        "fx": "",
+        "why": "가녀린 체격·견습 사제(중간 지위): 가장 낮고 차분한 여자 목소리, 조금 느리게"
+      }
+    },
+    {
+      "name": "카룬",
+      "look": "young evolved chimpanzee warrior who walks upright, intelligent amber eyes, white tribal face paint stripes, armor of woven tree bark and leather straps, necklace of old circuit-board charms, carrying a tall wooden staff decorated with copper wire and small circuit chips",
+      "look_ko": "하누족 젊은 침팬지 전사(두 발로 걷는 진화한 원숭이). 호박색 눈, 흰 얼굴 무늬, 나무껍질을 엮은 갑옷, 회로기판 부적 목걸이, 구리선을 감은 긴 지팡이",
+      "face": "캐릭터시트/카룬.jpg",
+      "voice": {
+        "code": "M4",
+        "rate": -4,
+        "semis": -3,
+        "fx": "",
+        "why": "다부진 전사·족장의 아들: 거친 남자 목소리, 톤 크게 내림"
+      }
+    },
+    {
+      "name": "아홉",
+      "look": "old humanoid maintenance robot, tall and thin, half-rusted iron body covered with patches of green moss and small vines, dented dome head with a menacing skull-like metal face and exposed teeth-like grille, one round glowing blue eye, the other eye socket broken and dark, the faded painted number 9 on its chest plate, long thin mechanical fingers, exposed cables at the neck",
+      "look_ko": "낡은 인간형 정비 로봇. 키 크고 마름, 반쯤 녹슨 철 몸에 이끼·덩굴, 찌그러진 둥근 머리에 해골 같은 무서운 철 얼굴(이빨 같은 창살), 파란 외눈(다른 눈구멍은 깨져 어두움), 가슴판에 바랜 숫자 9, 목에 드러난 전선",
+      "face": "캐릭터시트/아홉.jpg",
+      "voice": {
+        "code": "M1",
+        "rate": -8,
+        "semis": -2,
+        "fx": "robot",
+        "why": "키 크고 마른 로봇: 가벼운 남자 목소리 + 톤 내림 + 기계음"
+      }
+    },
+    {
+      "name": "강무진 경",
+      "look": "human knight commander in his forties, stern scarred face, short gray-streaked black hair and short beard, a long scar across his left cheek, dented steel plate armor with a white tabard showing a red sun-and-flame emblem, long dark red cape, longsword at his hip",
+      "look_ko": "40대 방주선 기사단장(정화교). 엄한 얼굴, 왼뺨의 긴 흉터, 희끗한 검은 짧은 머리와 수염, 찌그러진 강철 갑옷, 붉은 태양·불꽃 문장의 흰 겉옷, 검붉은 망토, 장검",
+      "face": "캐릭터시트/강무진.jpg",
+      "voice": {
+        "code": "M5",
+        "rate": -10,
+        "semis": -2,
+        "fx": "",
+        "why": "큰 체격·기사단장(높은 지위): 가장 굵은 남자 목소리, 톤 내림, 느리게"
+      }
+    },
+    {
+      "name": "선장",
+      "look": "very old captain-king of the ark ship, long white beard, tired deep-set eyes, worn crown made of old metal parts, heavy faded royal robe",
+      "look_ko": "방주선의 늙은 선장(왕). 긴 흰 수염, 지친 눈, 낡은 쇠붙이 왕관, 빛바랜 무거운 왕의 옷",
+      "face": "",
+      "voice": {
+        "code": "M3",
+        "rate": -18,
+        "semis": -1,
+        "fx": "",
+        "why": "늙은 몸·왕(가장 높은 지위): 낮은 남자 목소리, 톤 내림, 아주 느리게"
+      }
+    }
+  ],
+  "narrator_voice": {
+    "code": "M2",
+    "why": "나레이션"
+  }
+}

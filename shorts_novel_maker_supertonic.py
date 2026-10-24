@@ -280,6 +280,9 @@ IMAGE_STYLES = {
     "레트로 로봇 애니": "1970s Korean retro giant robot animation style, bold mechanical designs, dramatic heroic poses, cel shaded, vintage poster colors, action scene",
     "동화책 수채화": "children's picture book illustration, soft watercolor texture, warm gentle colors, rounded friendly shapes",
     "애니 수채화풍": "children's picture book illustration, soft watercolor texture, warm gentle colors, rounded friendly shapes",
+    "파스텔 감성 일러스트": "soft pastel Korean emotional illustration, delicate thin warm-brown pencil line art, light transparent watercolor and colored-pencil coloring, low saturation pastel palette (peach, mint, cream), hazy warm sunlight glow, airy dreamy atmosphere, gentle rosy cheeks, simple cute faces, nostalgic summer mood, paper texture",
+    "애니 일러스트(요즘)": "modern Japanese anime illustration, high-quality light novel cover art, large detailed glossy eyes with layered highlights, soft blush on cheeks, very fine detailed flowing hair strands with soft shading, clean thin line art, soft cel shading with gentle gradients, dreamy shallow depth of field with bokeh light particles, soft diffused lighting, delicate pastel color grading",
+    "옛날 만화책(세피아 펜화)": "vintage 1970s-80s printed comic book illustration, bold black ink pen line art with fine cross-hatching, muted sepia and earth-tone coloring, visible halftone dot texture, aged yellowed paper, slightly faded old print look",
     "크라프트지 손그림(귀여운 낙서)": "naive childlike hand-drawn illustration on recycled brown kraft paper, flat opaque gouache shapes, black marker outlines, simple dot eyes, rosy pink cheeks, tiny smile, striped and dotted clothes, crayon texture, whimsical folk art doodle, muted pink, blue, yellow, white and black palette, paper texture visible",
     "실루엣(노을 그림자)": "silhouette art, figures and objects as solid pure black silhouettes with crisp clean edges, no facial details, against a glowing gradient sunset sky in orange, pink and purple, layered paper-cut landscape, minimalist, high contrast, cinematic",
     "색칠공부 밑그림(선만)": "coloring book page, clean bold black outlines only on pure white background, no color, no shading, no gray, simple closed shapes easy to color in, cute friendly characters, line art, printable coloring sheet",
@@ -2760,35 +2763,66 @@ def sd_style_lora(preset):
 
 
 # 그림 스타일 → 어울리는 모델 (애니·만화 모델이 없으면 dreamshaper 로)
-SD_STYLE_MODEL = {"웹툰": "anime", "지브리풍 손그림 애니": "anime", "70~80년대 순정만화": "anime", "70~80년대 레트로 SF 애니": "anime",
+SD_STYLE_MODEL = {"웹툰": "anime", "애니 일러스트(요즘)": "anime", "지브리풍 손그림 애니": "anime", "70~80년대 순정만화": "anime", "70~80년대 레트로 SF 애니": "anime",
                   "짱구풍 코믹 애니": "anime", "레트로 로봇 애니": "anime", "풀컬러 만화(코믹스)": "anime",
                   "애니 수채화풍": "anime", "동화책 수채화": "anime",   # 수채화도 애니 모델(동화책 수채화는 + 수채화 보조). 일러스트 모델은 쓰지 않음
                   "유화(붓터치)": "anime", "유화(화사한 색)": "anime", "우키요에 목판화": "anime", "펜화 판화": "anime", "크레용 그림": "anime",
                   "모네 인상주의": "anime", "잉크 스케치": "anime", "인상주의 유화": "anime"}
 
 
+KLEIN_DIR = os.path.join(BASE, "models", "FLUX2_klein_4B")   # FLUX.2 klein 4B (Apache 2.0): 캐릭터 시트 기준 그리기·부분 수정 (있으면 이것을 먼저 씀)
+
+
+def klein_ready():
+    return (os.path.exists(os.path.join(KLEIN_DIR, "transformer", "diffusion_pytorch_model.safetensors")) and os.path.exists(SD_PYTHON)
+            and os.path.exists(os.path.join(BASE, "klein_worker.py")))
+
+
 def sd_ready():
-    return os.path.exists(os.path.join(SD_MODEL_DIR, "model_index.json")) and os.path.exists(SD_PYTHON) and os.path.exists(os.path.join(BASE, "sd_worker.py"))
+    return klein_ready() or (os.path.exists(os.path.join(SD_MODEL_DIR, "model_index.json")) and os.path.exists(SD_PYTHON)
+                             and os.path.exists(os.path.join(BASE, "sd_worker.py")))
 
 
 def sd_anime_ready():
-    return sd_ready() and os.path.exists(os.path.join(SD_ANIME_DIR, "model_index.json"))
+    return klein_ready() or (sd_ready() and os.path.exists(os.path.join(SD_ANIME_DIR, "model_index.json")))
 
 
-def sd_generate(items, out_dir, log=None, cancel=None, steps=None, guidance=None, model="dreamshaper", lora=None):
-    """로컬 그림 생성: items [{id, prompt, negative?, width?, height?, seed?}] → {id: png 경로}. 모델은 한 번만 올려 여러 장.
-    model: 'dreamshaper'(일러스트·사실·드로잉) 또는 'anime'(애니·만화, 없으면 dreamshaper)"""
+def klein_prompt(p):
+    """SD1.5 용 프롬프트를 klein 용으로: 품질 주문 말·(단어:1.3) 가중치 표기를 빼고 끝에 글자 금지"""
+    p = re.sub(r"^\s*masterpiece,\s*best quality,\s*", "", str(p))
+    p = re.sub(r"\(([^()]*?):\s*[\d.]+\)", r"\1", p)
+    return p.rstrip(" .,") + ". Full-bleed image, no border, no frame, no paper edges. No text, no letters."
+
+
+def klein_size(w, h):
+    """SD1.5 크기(768×432 등)를 klein 크기로 (긴 쪽 1024, 16의 배수)"""
+    s = 1024 / max(w, h)
+    return int(w * s) // 16 * 16, int(h * s) // 16 * 16
+
+
+def sd_generate(items, out_dir, log=None, cancel=None, steps=None, guidance=None, model="dreamshaper", lora=None, fixes=None):
+    """로컬 그림 생성: items [{id, prompt, negative?, width?, height?, seed?, refs?}] → {id: png 경로}. 모델은 한 번만 올려 여러 장.
+    model: 'dreamshaper'(일러스트·사실·드로잉) 또는 'anime'(애니·만화, 없으면 dreamshaper). klein 이 있으면 model·lora 와 상관없이 klein.
+    klein 만: refs = 캐릭터 시트 경로들(그 인물 그대로), fixes = [{id, image, out, box, prompt, refs?, seed?}] 부분 수정(box 칸만 다시 그림)"""
     log = log or (lambda x: None)
-    if not sd_ready() or not items:
+    fixes = fixes or []
+    if not sd_ready() or not (items or fixes):
         return {}
-    if model == "anime" and not sd_anime_ready():
-        model = "dreamshaper"
-    mdir, st_, gd_ = SD_MODELS.get(model, SD_MODELS["dreamshaper"])
-    steps, guidance = (steps or st_), (guidance if guidance is not None else gd_)
     os.makedirs(out_dir, exist_ok=True)
     job = os.path.join(out_dir, f"_job_{int(time.time())}.json")
-    atomic_write_text(job, json.dumps({"items": items, "steps": steps, "guidance": guidance, **({"lora": lora} if lora else {})}, ensure_ascii=False))
-    cmd = [SD_PYTHON, "-X", "utf8", "-u", os.path.join(BASE, "sd_worker.py"), mdir, job, out_dir]
+    if klein_ready():
+        kitems = [dict(it, prompt=klein_prompt(it.get("prompt", "")), width=klein_size(int(it.get("width") or 768), int(it.get("height") or 432))[0],
+                       height=klein_size(int(it.get("width") or 768), int(it.get("height") or 432))[1]) for it in items]
+        atomic_write_text(job, json.dumps({"items": kitems, "fixes": fixes}, ensure_ascii=False))
+        cmd = [SD_PYTHON, "-X", "utf8", "-u", os.path.join(BASE, "klein_worker.py"), KLEIN_DIR, job, out_dir]
+        items = items + fixes       # 진행 표시용 개수
+    else:
+        if model == "anime" and not sd_anime_ready():
+            model = "dreamshaper"
+        mdir, st_, gd_ = SD_MODELS.get(model, SD_MODELS["dreamshaper"])
+        steps, guidance = (steps or st_), (guidance if guidance is not None else gd_)
+        atomic_write_text(job, json.dumps({"items": items, "steps": steps, "guidance": guidance, **({"lora": lora} if lora else {})}, ensure_ascii=False))
+        cmd = [SD_PYTHON, "-X", "utf8", "-u", os.path.join(BASE, "sd_worker.py"), mdir, job, out_dir]
     got = {}
     try:
         p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, encoding="utf-8", errors="replace",
@@ -2836,6 +2870,9 @@ def cast_text(chars=None):
 IMAGE_CHECK_SYSTEM = """너는 만화·일러스트 검수자다. 그림 파일을 Read 로 하나씩 직접 열어 보고, 영상에 그대로 써도 되는지 엄격하게 판정한다.
 탈락 기준(하나라도 있으면 ok=false):
 - 손: 화면에 손이 보이면 손가락을 하나씩 센다. 6개 이상·4개 이하(가려진 경우 제외)·붙음·비틀림·뭉개져서 셀 수 없음, 한 사람에게 손이 3개 이상, 팔·다리가 3개 이상(소매·배경에서 튀어나온 손도 셈)
+- 팔·다리: 인물마다 팔과 다리를 하나씩 센다. 한 사람에게 팔 3개 이상·다리 3개 이상(넘어지거나 앉은 자세에서 특히 확인, 옷자락·장화가 다리처럼 하나 더 붙은 것도),
+  팔다리가 엉켜 몇 개인지 셀 수 없음 → 탈락 (fix 에 "exactly two arms and two legs, simple clear pose" 처럼)
+- 같은 인물이 한 그림에 두 번 나옴(복제)
 - 얼굴·눈이 심하게 일그러짐, 인물이 두 겹으로 겹침, 몸이 기형(목·어깨·허리가 꺾임)
 - 주요 소품 모양이 망가짐: 기타·악기(몸통이 찌그러짐, 목이 휘거나 두 개, 줄·사운드홀이 엉망), 우산·의자·책상·자전거·카세트·전화기 등이 녹아내리거나
   부서지거나 공중에 떠 있음, 사람이 들고 있어야 할 물건이 손 없이 떠 있음
@@ -2888,23 +2925,44 @@ def trim_bands(im, tol=12):
     return im.crop((l, t, r, b))
 
 
-def check_image_defects(model, paths, log=None, want_fix=False):
+IMAGE_CHECK_SHEETS = """
+- [등장인물 기준 그림](캐릭터 시트)이 주어지면 그것도 Read 로 열어, 그림 속 인물의 얼굴·머리 모양·수염·안경·옷 색과 모양이 기준 그림과 다르면 탈락
+  (fix 에 "redraw the face to match the reference character: ..." 처럼 맞출 점을 영어로)"""
+IMAGE_CHECK_BOX = """
+탈락이면 box 에 고칠 곳의 네모 칸 [x0, y0, x1, y1] 을 그 그림의 픽셀 좌표로 쓴다(손·얼굴·소품 등 문제 부분을 넉넉히 감싸게, 그림 크기는 목록에 있음).
+그 칸만 다시 그리고 나머지는 그대로 둔다. 문제가 그림 전체(구도·테두리·인물 겹침 등)라 새로 그려야 하면 box 를 [] 로.
+fix 는 그 칸에 무엇을 어떻게 그릴지 영어로(예: "the old man's right hand holding the seashell with five well-formed fingers").
+예: {"k": 2, "ok": false, "problem": "오른손 손가락 6개", "fix": "...", "box": [300, 220, 420, 330]}"""
+
+
+def check_image_defects(model, paths, log=None, want_fix=False, want_box=False, sheets=None):
     """생성 그림의 손·얼굴·소품 결함을 Claude가 직접 보고 검사 → 다시 그릴 번호 목록 (0부터).
-    want_fix 면 [(번호, 덧붙일 영어 지시)] 로. 검사를 못 하면 빈 목록"""
+    want_fix 면 [(번호, 덧붙일 영어 지시)] 로, want_box 면 [(번호, 지시, 고칠 칸 [x0,y0,x1,y1] 또는 [])] 로.
+    sheets = {인물 이름: 캐릭터 시트 경로} 를 주면 얼굴·옷이 시트와 다른 것도 탈락. 검사를 못 하면 빈 목록"""
     log = log or (lambda x: None)
     if not paths:
         return []
     eng = str((SCRIPT_ENGINE.get("s") or {}).get("script_engine", "Claude"))
     if not (eng.startswith("Claude") or eng.startswith("자동")):
         return []
+    sheets = {k: v for k, v in (sheets or {}).items() if v and os.path.exists(v)}
+    system = IMAGE_CHECK_SYSTEM + (IMAGE_CHECK_SHEETS if sheets else "") + (IMAGE_CHECK_BOX if want_box else "")
+    ref_txt = ("\n\n[등장인물 기준 그림 - Read 로 열어 비교]\n" + "\n".join(f"{nm}: {os.path.abspath(p)}" for nm, p in sheets.items())) if sheets else ""
+
+    def size_of(p):
+        try:
+            with Image.open(p) as im_:
+                return f" ({im_.width}×{im_.height})"
+        except Exception:
+            return ""
     bad, step = [], 4     # 한 번에 많이 보면 대충 보고 넘김 → 4장씩
     for g0 in range(0, len(paths), step):
         grp = paths[g0:g0 + step]
-        plist = "\n".join(f"그림{k + 1}: {os.path.abspath(p)}" for k, p in enumerate(grp))
+        plist = "\n".join(f"그림{k + 1}: {os.path.abspath(p)}" + (size_of(p) if want_box else "") for k, p in enumerate(grp))
         d = None
         for _try in range(2):
             try:
-                d = ask_json(model, IMAGE_CHECK_SYSTEM, f"[그림 {len(grp)}장 - Read 로 하나씩 열어 손가락·소품·테두리를 확인할 것]\n" + plist, tools=["Read"])
+                d = ask_json(model, system, f"[그림 {len(grp)}장 - Read 로 하나씩 열어 손가락·소품·테두리를 확인할 것]\n" + plist + ref_txt, tools=["Read"])
                 break
             except Exception as e:
                 err = str(e).splitlines()[0][:80] if str(e).strip() else type(e).__name__
@@ -2920,7 +2978,13 @@ def check_image_defects(model, paths, log=None, want_fix=False):
             if 0 <= k < len(grp):
                 seen.add(k)
             if 0 <= k < len(grp) and r.get("ok") is False:
-                bad.append((g0 + k, str(r.get("fix") or "")[:200]) if want_fix else g0 + k)
+                box = r.get("box") if isinstance(r.get("box"), list) and len(r.get("box")) == 4 else []
+                try:
+                    box = [int(v) for v in box]
+                except (TypeError, ValueError):
+                    box = []
+                bad.append((g0 + k, str(r.get("fix") or "")[:200], box) if want_box else
+                           (g0 + k, str(r.get("fix") or "")[:200]) if want_fix else g0 + k)
                 log(f"  ✂ 그림 {g0 + k + 1} 다시 그림: {str(r.get('problem', ''))[:60]}")
         if len(seen) < len(grp):
             log(f"  ⚠ 그림 {len(grp) - len(seen)}장은 검증 답이 없어 통과로 둠")
@@ -2930,6 +2994,9 @@ def check_image_defects(model, paths, log=None, want_fix=False):
 # 대본 쓸 때 넣을 이미지: 웹 근거 사진 또는 (사실 주제여도) 이 PC에서 그린 그림
 IMG_SOURCE_WEB = "근거 사진(웹)"
 IMG_SOURCE_PRESET = {"그림: 애니(웹툰)": "웹툰", "그림: 애니+수채화": "동화책 수채화", "그림: 애니 모델 그대로": "애니 수채화풍",   # 애니 모델 + 수채화 지시(보조 없음)
+                     "그림: 파스텔 감성": "파스텔 감성 일러스트",
+                     "그림: 애니 일러스트": "애니 일러스트(요즘)",
+                     "그림: 옛날 만화책": "옛날 만화책(세피아 펜화)",
                      "그림: 크라프트지 낙서": "크라프트지 손그림(귀여운 낙서)", "그림: 실루엣": "실루엣(노을 그림자)",
                      "그림: 색칠공부 밑그림": "색칠공부 밑그림(선만)", "그림: 동화 난쟁이 마을": "동화 난쟁이 마을",
                      "그림: 연필 윤곽 스케치": "연필 윤곽 스케치", "그림: 필터 색연필": "필터: 색연필", "그림: 필터 목탄": "필터: 목탄 스케치",
@@ -2946,6 +3013,49 @@ def draw_settings():
     if not p or not sd_ready():
         return None
     return dict(SCRIPT_ENGINE.get("s") or {}, fiction_image="로컬 그림 생성(무료 · 이 PC · 느림)", image_style_preset=p)
+
+
+CAST_PRESET_FILE = os.path.join(BASE, "등장인물", "등장인물.json")   # 미리 정해 둔 인물 (face = 확정한 캐릭터 시트 그림)
+
+
+def make_cast_sheets(names, style, media_dir, log=None, cancel=None):
+    """그림에 나오는 인물마다 캐릭터 시트(앞·옆·뒤 전신, 흰 배경)를 klein 으로 그려 {이름: 경로}.
+    이미 있는 시트(IMAGE_CAST 의 sheet, 등장인물.json 의 face)는 그대로 씀 → 모든 컷·회차가 같은 얼굴·옷"""
+    log = log or (lambda x: None)
+    try:
+        preset = {c.get("name"): c for c in json.load(open(CAST_PRESET_FILE, encoding="utf-8")).get("chars") or []}
+    except Exception:
+        preset = {}
+    out, jobs = {}, []
+    for c in IMAGE_CAST.get("chars") or []:
+        nm = c.get("name")
+        if not nm or nm not in names or not c.get("look"):
+            continue
+        face = str((preset.get(nm) or {}).get("face") or "")
+        face = face if os.path.isabs(face) else os.path.join(BASE, face) if face else ""
+        if c.get("sheet") and os.path.exists(c["sheet"]):
+            out[nm] = c["sheet"]
+        elif face and os.path.exists(face):
+            out[nm] = c["sheet"] = face
+        else:
+            jobs.append({"id": f"sheet{len(jobs)}", "name": nm, "width": 1024, "height": 576, "seed": 7,
+                         "prompt": f"Character design sheet, {style or 'illustration'}. The same character shown three times side by side on a plain white "
+                                   f"background: front view, side view, back view, full body, standing. Character: {c['look']}. "
+                                   "Consistent design in every view, no close-ups, no other people"})
+    if jobs:
+        log(f"  👤 캐릭터 시트 {len(jobs)}명 그리는 중 (모든 컷에서 같은 얼굴·옷으로 그리는 기준): " + ", ".join(j["name"] for j in jobs))
+        got = sd_generate(jobs, os.path.join(media_dir, "_sd"), log, cancel)
+        os.makedirs(os.path.join(media_dir, "_cast"), exist_ok=True)
+        for j in jobs:
+            if got.get(j["id"]):
+                dst = os.path.join(media_dir, "_cast", safe_name(j["name"])[:40] + ".png")
+                shutil.move(got[j["id"]], dst)
+                out[j["name"]] = dst
+                for c in IMAGE_CAST.get("chars") or []:
+                    if c.get("name") == j["name"]:
+                        c["sheet"] = dst
+        log("  👤 캐릭터 시트 저장: " + os.path.join(media_dir, "_cast"))
+    return out
 
 
 def inject_cast_looks(items, cap_key="caption"):
@@ -3162,13 +3272,22 @@ def make_ai_images(model, category, title, story, n, s, media_dir, log, cancel=N
                 neg = SD_NEGATIVE + ", " + IMAGE_STYLE_NEG["사실 묘사"]
             jobs = [{"id": f"i{k}", "prompt": it["prompt"] + (f" Style: {style}." if style and not has_style(it["prompt"]) else "") + ", highly detailed",
                      "negative": neg, "width": w_, "height": h_, "seed": 1000 + k} for k, it in enumerate(items)]
-        lora_, lead_ = sd_style_lora(preset)
+        klein = klein_ready()
+        lora_, lead_ = (None, "") if klein else sd_style_lora(preset)
         if lora_:
             for j in jobs:
                 j["prompt"] = lead_ + j["prompt"]
-        log(f"  🖌 그림 모델: {'애니·만화(Counterfeit)' if model_ == 'anime' else '일러스트(Dreamshaper)'}" + (" + 수채화 보조" if lora_ else ""))
+        sheets = {}
+        if klein:   # 인물마다 캐릭터 시트를 먼저 그려 두고, 장면마다 나오는 인물의 시트를 기준 그림으로 → 모든 컷에서 같은 얼굴·옷
+            sheets = make_cast_sheets([nm for it in items for nm in (it.get("cast_used") or [])], style, media_dir, log, cancel)
+            for j, it in zip(jobs, items):
+                j["refs"] = [sheets[nm] for nm in dict.fromkeys(it.get("cast_used") or []) if nm in sheets][:4]
+            log("  🖌 그림 모델: FLUX.2 klein (캐릭터 시트 기준 · 인물 장면 한 장 약 2분, 풍경 약 40초)")
+        else:
+            log(f"  🖌 그림 모델: {'애니·만화(Counterfeit)' if model_ == 'anime' else '일러스트(Dreamshaper)'}" + (" + 수채화 보조" if lora_ else ""))
         paths = sd_generate(jobs, os.path.join(media_dir, "_sd"), log, cancel, model=model_, lora=lora_)
-        # 다 그린 뒤 검증: Claude 가 직접 보고 손·얼굴·소품 결함을 찾음 → 고칠 지시를 붙여 다른 시드로 다시 그림 → 다시 그린 것도 또 검사 (최대 3번)
+        # 다 그린 뒤 검증: Claude 가 직접 보고 손·얼굴·소품 결함(klein 이면 캐릭터 시트와 다른 얼굴·옷도)을 찾음 →
+        # klein 이면 문제 칸만 다시 그림(부분 수정), 아니면 고칠 지시를 붙여 다른 시드로 전체를 다시 그림 → 다시 그린 것도 또 검사 (최대 3번)
         todo = [k for k in range(len(items)) if paths.get(f"i{k}")]
         fixes = {}
         base_ = {k: (jobs[k]["prompt"], int(jobs[k].get("seed", 0))) for k in range(len(jobs))}   # 고칠 지시는 원래 프롬프트에 한 번만 붙임
@@ -3176,17 +3295,22 @@ def make_ai_images(model, category, title, story, n, s, media_dir, log, cancel=N
             if not todo:
                 break
             log("  🔍 그림 검증 중" + (f" ({rnd + 1}번째, 다시 그린 {len(todo)}장)" if rnd else f" ({len(todo)}장 · 손·얼굴·소품을 직접 보고)") + "...")
-            res_ = check_image_defects(model, [paths[f"i{k}"] for k in todo], log, want_fix=True)
-            redo = [(todo[j], fx) for j, fx in res_ if j < len(todo)]
+            res_ = check_image_defects(model, [paths[f"i{k}"] for k in todo], log, want_fix=True, want_box=klein, sheets=sheets)
+            redo = [(todo[r_[0]], r_[1], (r_[2] if len(r_) > 2 else [])) for r_ in res_ if r_[0] < len(todo)]
             if not redo:
                 log("  ✅ 그림 검증 통과" + (f" (다시 그린 것 포함)" if rnd else ""))
                 break
             if rnd == 2:
                 log(f"  ⚠ {len(redo)}장은 3번 다시 그려도 검증을 통과하지 못해 마지막 그림을 씀 (장면 편집에서 바꿀 수 있음)")
                 break
-            log(f"  🖌 {len(redo)}장 다시 그리는 중 (고칠 점 반영·다른 시드)...")
-            jobs2 = []
-            for k, fx in redo:
+            jobs2, fix2 = [], []
+            for k, fx, box in redo:
+                if klein and box:     # 그 칸만 다시 그림 (나머지는 그대로)
+                    fix2.append({"id": f"r{rnd}_{k}", "image": paths[f"i{k}"], "out": os.path.join(media_dir, "_sd", f"r{rnd}_{k}.png"), "box": box,
+                                 "prompt": "Edit the first reference image: keep the exact same picture, composition, colors and art style. Only redraw this part: "
+                                           + (fx or "fix the hands so each hand has five well-formed fingers") + ". No text.",
+                                 "refs": jobs[k].get("refs") or [], "seed": base_[k][1] + 777 * (rnd + 1)})
+                    continue
                 fixes[k] = (fixes.get(k, "") + ", " + fx).strip(", ") if fx else fixes.get(k, "")
                 j = dict(jobs[k])
                 hint = fixes[k] or "hands hidden, hands in pockets or behind back, focus on face and expression"
@@ -3194,18 +3318,21 @@ def make_ai_images(model, category, title, story, n, s, media_dir, log, cancel=N
                 j["seed"] = base_[k][1] + 777 * (rnd + 1)
                 j["id"] = f"r{rnd}_{k}"
                 jobs2.append(j)
-            paths2 = sd_generate(jobs2, os.path.join(media_dir, "_sd"), log, cancel, model=model_, lora=lora_)
+            log(f"  🖌 다시 그리는 중: " + ", ".join(x for x in (f"{len(fix2)}장은 문제 칸만" if fix2 else "", f"{len(jobs2)}장은 전체(고칠 점 반영·다른 시드)" if jobs2 else "") if x) + "...")
+            paths2 = sd_generate(jobs2, os.path.join(media_dir, "_sd"), log, cancel, model=model_, lora=lora_, fixes=fix2)
             todo = []
-            for j in jobs2:
+            for j in jobs2 + fix2:
                 k = int(j["id"].split("_")[1])
                 p2 = paths2.get(j["id"])
                 if p2:
-                    try:
-                        os.remove(paths.get(f"i{k}") or "")
-                    except OSError:
-                        pass
+                    if os.path.abspath(p2) != os.path.abspath(paths.get(f"i{k}") or ""):
+                        try:
+                            os.remove(paths.get(f"i{k}") or "")
+                        except OSError:
+                            pass
                     paths[f"i{k}"] = p2
-                    jobs[k] = dict(jobs[k], prompt=j["prompt"], seed=j["seed"])
+                    if "image" not in j:
+                        jobs[k] = dict(jobs[k], prompt=j["prompt"], seed=j["seed"])
                     todo.append(k)
         for k, it in enumerate(items):
             p_ = paths.get(f"i{k}")
@@ -3214,9 +3341,10 @@ def make_ai_images(model, category, title, story, n, s, media_dir, log, cancel=N
             try:
                 im = Image.open(p_).convert("RGB")
                 im = trim_bands(im)                                            # 위아래·옆 테두리 띠 제거 (뒤에서 화면 크기로 늘림)
-                im = ImageOps.autocontrast(im, cutoff=1)                       # LCM 결과는 뿌옇게 나와 대비·채도를 살림
-                im = ImageEnhance.Color(im).enhance(1.25)
-                im = ImageEnhance.Contrast(im).enhance(1.08)
+                if not klein:
+                    im = ImageOps.autocontrast(im, cutoff=1)                   # LCM 결과는 뿌옇게 나와 대비·채도를 살림 (klein 은 그대로)
+                    im = ImageEnhance.Color(im).enhance(1.25)
+                    im = ImageEnhance.Contrast(im).enhance(1.08)
                 up = (1080, 1920) if port else (1920, 1080)      # 영상 크기로 키움 (부드럽게)
                 im = im.resize(up, Image.LANCZOS).filter(ImageFilter.UnsharpMask(radius=1.2, percent=60, threshold=2))
             except Exception:
@@ -8276,6 +8404,83 @@ def check_para(k, text, vname, s, cache_dir, mood, a, d, mode, log=None):
     return a, d
 
 
+DIALOG_VOICES = {}   # 대사(따옴표 안 글) → {"voice": 성우 이름, "rate": 속도%, "semis": 톤(반음), "fx": "robot"|""} (set_dialog_voices)
+DIALOG_RE = re.compile(r'("[^"]+"|“[^”]+”|\'[^\']+\'|‘[^’]+’)')
+DIALOG_GAP = 0.18    # 나레이션 ↔ 대사 사이 쉼(초)
+
+
+def _dlg_key(t):
+    return re.sub(r"[\s\"'“”‘’.,!?…~]", "", str(t))
+
+
+def set_dialog_voices(dialogue, cast):
+    """프로젝트의 dialogue [{"text": 대사, "who": 이름}] + cast [{"name", "voice": {"code": "M5", "rate": -10, "semis": -2, "fx": ""}}]
+    → DIALOG_VOICES. 이후 나레이션을 만들 때 그 대사만 그 인물 목소리로 읽음 (나머지는 나레이션 성우)"""
+    DIALOG_VOICES.clear()
+    vo = {c.get("name"): c.get("voice") for c in (cast or []) if isinstance(c, dict) and isinstance(c.get("voice"), dict)}
+    for d in dialogue or []:
+        v = vo.get(d.get("who")) if isinstance(d, dict) else None
+        if v and v.get("code") and _dlg_key(d.get("text")):
+            code = str(v["code"])
+            DIALOG_VOICES[_dlg_key(d["text"])] = {
+                "voice": f"Supertonic {code} ({'여성' if code.startswith('F') else '남성'}, 무료 로컬) [supertonic:{code}]",
+                "rate": float(v.get("rate", 0) or 0), "semis": float(v.get("semis", 0) or 0), "fx": str(v.get("fx") or ""), "who": d.get("who")}
+    return len(DIALOG_VOICES)
+
+
+def voice_fx_extra(a, fx):
+    """인물 목소리 효과. robot = 금속성 울림(짧은 메아리 두 겹 + 플랜저) + 둔한 저음 줄임"""
+    if fx != "robot" or len(a) < 10:
+        return a
+    p = subprocess.run([get_ffmpeg(), "-v", "error", "-f", "f32le", "-ar", str(SR), "-ac", "1", "-i", "-",
+                        "-af", "aecho=0.8:0.7:6|11:0.35|0.25,flanger=delay=1:depth=2:speed=0.3,highpass=f=140",
+                        "-f", "f32le", "-ar", str(SR), "-ac", "1", "-"], input=np.asarray(a, np.float32).tobytes(),
+                       stdout=subprocess.PIPE, stderr=subprocess.PIPE, creationflags=(subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0))
+    if p.returncode != 0 or not p.stdout:
+        return a
+    out = np.frombuffer(p.stdout, np.float32).copy()
+    pk = float(np.abs(out).max()) if len(out) else 0
+    return out * (0.98 / pk) if pk > 0.98 else out
+
+
+def tts_mixed(text, s, cache_dir, mood):
+    """문단 안의 대사는 그 인물 목소리, 나머지는 나레이션 성우로 따로 읽어 이어 붙임 (대사 목소리가 정해진 문단만) → (소리, 길이) 또는 None"""
+    parts = [p for p in DIALOG_RE.split(text) if p.strip()]
+    if not any(_dlg_key(p) in DIALOG_VOICES for p in parts):
+        return None
+    rate0, steps = float(s["narr_rate"]), int(s.get("st_steps", 5))
+    clips, narr_rms = [], []
+    for p in parts:
+        v = DIALOG_VOICES.get(_dlg_key(p))
+        if v:
+            a, _ = tts_clip(p, v["voice"], rate0 + v["rate"], cache_dir, 0, mood, steps)
+            if v["semis"]:
+                a = ffmpeg_voice_fx(a, v["semis"])
+            a = voice_fx_extra(a, v["fx"])
+        else:
+            a, _ = tts_clip(p, s["narr_voice"], rate0, cache_dir, float(s.get("narr_pitch", 0)), mood, steps)
+        a = np.asarray(a, np.float32)
+        if len(a) > 10:
+            clips.append((a, bool(v)))
+            if not v:
+                narr_rms.append(float(np.sqrt(np.mean(a.astype(np.float64) ** 2))))
+    if not clips:
+        return None
+    tgt = float(np.median(narr_rms)) if narr_rms else float(np.median([np.sqrt(np.mean(c.astype(np.float64) ** 2)) for c, _ in clips]))
+    gap = np.zeros(int(DIALOG_GAP * SR), np.float32)
+    pieces = []
+    for c, _ in clips:     # 대사 목소리 크기를 나레이션에 맞춤
+        r = float(np.sqrt(np.mean(c.astype(np.float64) ** 2)))
+        if tgt > 0 and r > 1e-4:
+            c = (c * max(0.5, min(2.2, tgt / r))).astype(np.float32)
+        pieces += ([gap] if pieces else []) + [c]
+    a = np.concatenate(pieces)
+    pk = float(np.abs(a).max())
+    if pk > 0.98:
+        a = (a * (0.98 / pk)).astype(np.float32)
+    return a, len(a) / SR
+
+
 def build_narration(story, s, cache_dir, log=None, cancel=None, para_audio=None):
     """본문 전체 나레이션 → [(문단 인덱스, 소리, 길이)]. para_audio={문단번호: 음성파일} 가 있으면 그 문단은 파일을 씀"""
     items = narration_paras(story)
@@ -8299,10 +8504,14 @@ def build_narration(story, s, cache_dir, log=None, cancel=None, para_audio=None)
             vname = PARA_VOICE.get(text.strip(), s["narr_voice"])     # 2인 진행이면 문단마다 성우가 다름
             is_st = voice_code(vname).startswith("supertonic:")
             mood = supertonic_mood(text, k, len(items), s) if is_st else "차분"
-            a, d = tts_clip(text, vname, float(s["narr_rate"]), cache_dir,
-                            float(s.get("narr_pitch", 0)), mood, int(s.get("st_steps", 5)))
-            if ck_mode != "off":
-                a, d = check_para(k, text, vname, s, cache_dir, mood, a, d, ck_mode, log)
+            mixed = tts_mixed(text, s, cache_dir, mood) if DIALOG_VOICES and is_st else None   # 인물 대사가 있는 문단: 대사만 그 인물 목소리
+            if mixed:
+                a, d = mixed
+            else:
+                a, d = tts_clip(text, vname, float(s["narr_rate"]), cache_dir,
+                                float(s.get("narr_pitch", 0)), mood, int(s.get("st_steps", 5)))
+                if ck_mode != "off":
+                    a, d = check_para(k, text, vname, s, cache_dir, mood, a, d, ck_mode, log)
         res.append((i, a, d))
         if log and (k % 5 == 0 or k == len(items) - 1):
             log(f"  🎙 나레이션 {k + 1}/{len(items)}")

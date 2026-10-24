@@ -9,6 +9,7 @@
   - --썸네일만 : 영상은 만들지 않고 썸네일 후보만 새로 (디자인 16가지 + 영상 장면 실사 편집). 지금 유튜브 썸네일은 그대로
   - --길이고정 : 롱폼 길이 규칙(10~15분, 짧으면 내용을 더해 늘림)을 건너뜀
   - --영어 : 영상 완성 뒤 영어 제목·설명란·자막(SRT)도 만듦 (유튜브 '번역'으로 덧붙이는 용도, 영어_번역.py)
+  - --자막언어 영어,일본어,한국어 : 고른 언어마다 자막(SRT)과 제목·설명란 번역 (--영어 는 '영어'만과 같음)
   - --쇼츠 : 롱폼 완성 뒤 40~50초 세로 쇼츠도 함께 만듦 (기본은 쇼츠를 안 만듦, 쇼츠_자동.py)
   - --성우프리셋 "이름" : 🎤 성우 선택 창에서 '⭐ 새 성우로 저장'한 목소리(성우·속도·톤·감정·쉼)로 (장문_설정.json "성우_프리셋" 도 같음)
   - --성우 M1 : 프로젝트 파일은 그대로 두고 이번만 이 Supertonic 성우로 (보통 --suffix 성우1 과 같이)
@@ -57,6 +58,9 @@ def main(a):
             st[k] = cur.get(k, m.DEFAULTS.get(k, ""))
     c["settings"] = st
     app.apply_cfg(c)
+    n_dlg = m.set_dialog_voices(c.get("dialogue") or [], c.get("cast") or [])   # 인물 대사는 그 인물 목소리로 (프로젝트 dialogue + cast 의 voice)
+    if n_dlg:
+        log(f"🎭 인물별 대사 목소리 {n_dlg}줄: " + ", ".join(sorted({v['who'] for v in m.DIALOG_VOICES.values()})))
     try:
         cfg = json.load(open(os.path.join(HERE, "장문_설정.json"), encoding="utf-8"))
     except Exception:
@@ -220,12 +224,16 @@ def main(a):
             m._load_korean_reading("쇼츠_자동").make_shorts(m, app.model_var.get().strip(), base + "_프로젝트.json", log)
         except Exception as e:
             log("⚠ 쇼츠 자동 만들기 실패(롱폼은 완성됨): " + (str(e).splitlines() or [type(e).__name__])[0][:120])
-    # 규칙: --영어 면 유튜브 '번역' 기능에 붙일 영어 제목·설명란·자막(SRT)도 (영어_번역.py). 영상·국내 조회수는 그대로
-    if "--영어" in a and suf != "_쇼츠":
+    # 규칙: --영어 / --자막언어 영어,일본어 면 유튜브 '번역' 기능에 붙일 언어별 자막(SRT)·제목·설명란도 (영어_번역.py). 영상·국내 조회수는 그대로
+    langs = a[a.index("--자막언어") + 1].split(",") if "--자막언어" in a and a.index("--자막언어") + 1 < len(a) else []
+    if "--영어" in a and "영어" not in langs:
+        langs.append("영어")
+    if langs and suf != "_쇼츠":
         try:
-            m._load_korean_reading("영어_번역").make_english(base + "_프로젝트.json", log)
+            tr = m._load_korean_reading("영어_번역")
+            tr.make_translations(base + "_프로젝트.json", [tr.LANG_KO[x.strip()] for x in langs if x.strip() in tr.LANG_KO], log)
         except BaseException as e:
-            log("⚠ 영어 번역 키트 실패(영상은 완성됨): " + (str(e).splitlines() or [type(e).__name__])[0][:120])
+            log("⚠ 자막·번역 키트 실패(영상은 완성됨): " + (str(e).splitlines() or [type(e).__name__])[0][:120])
     try:
         os.remove(base + ".만드는중")
     except OSError:
