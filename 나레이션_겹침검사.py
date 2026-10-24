@@ -6,7 +6,8 @@ python 나레이션_겹침검사.py <영상.mp4> <회차.py 또는 대본.txt> [
     1) 소리를 쉼에서 15초 안쪽 조각으로 나눠 받아 적음
     2) 같은 글자 1~3자가 연달아 두 번 나오면(띄어쓰기 무시: '것만 만', '국국') 후보
     3) 받아 적은 조각과 가장 비슷한 대본 문장을 찾아, 그 문장에 원래 같은 길이의 반복(무럭무럭·불쑥불쑥·타닥타닥)이 있으면 흉내말로 보고 넘김
-    4) 그 밖의 반복은 겹침으로 확정 (받아 적기는 발음대로라 '닿을→다을' 같은 차이는 보지 않음)
+    4) 대본 문장과 한 글자씩 맞춰 봐서 반복 자리에 글자가 '더 들어갔을' 때만 겹침 ('것만→것만만'). 글자 수가 같으면 발음 차이로 봄
+       ('하늘나라→하늘라라', '닿을→다을')
   - --고치기 <프로젝트.json> : 겹친 문장(과 그 문단)의 녹음 캐시를 output/tts_cache 에서 지움 → render_project 를 다시 돌리면 그 문장만 새로 녹음
     (Supertonic 은 매번 조금씩 다르게 읽어서 보통 한 번에 고쳐짐. 다시 만든 영상도 검사해서 '겹침 없음'이 나올 때까지, 최대 3번)
   - 결과: '분:초 [겹친 글자] 대본: <문장> | 들림: <받아 적은 글>'
@@ -78,12 +79,23 @@ def chunks(a):
     return out
 
 
+def extra_syllables(ref, heard, i, n):
+    """heard[i:i+n](반복 자리)에서 대본보다 글자가 더 들어갔나 — '것만→것만만'은 예, '나라→라라'(발음)·'역국→욕욕'은 아니오"""
+    sm = difflib.SequenceMatcher(None, ref, heard, autojunk=False)
+    for op, i1, i2, j1, j2 in sm.get_opcodes():
+        if j2 <= i or j1 >= i + n:
+            continue
+        if op == "insert" or (op == "replace" and (j2 - j1) > (i2 - i1)):
+            return True
+    return False
+
+
 def best_sentence(h, sents):
     """받아 적은 조각(한글만)이 들어 있는 대본 문장 — 반복 글자 자리에 가장 잘 맞는 문장 하나"""
     best, score = None, 0.0
     for par, s in sents:
         sh = hangul(s)
-        if len(sh) < 2:
+        if len(sh) < 5:          # '엄마...' 같은 아주 짧은 문장은 어디에나 맞아 버림
             continue
         sm = difflib.SequenceMatcher(None, sh, h, autojunk=False)
         hit = sum(b.size for b in sm.get_matching_blocks()) / len(sh)      # 문장 글자가 조각에 얼마나 들어 있나
@@ -119,6 +131,8 @@ def detect(video, script):
                     continue
                 sh = hangul(ps[1])
                 if doubles(sh, n) or dd in sh:        # 규칙 3: 대본 문장에 원래 같은 길이의 반복(흉내말)이 있음
+                    continue
+                if not extra_syllables(sh, ctx, ctx.find(dd), len(dd)):   # 규칙 4: 대본보다 글자가 늘어난 자리여야 겹침
                     continue
                 found.append({"t": t0, "dd": dd, "sentence": ps[1], "paragraph": ps[0], "heard": text})
     uniq, seen = [], set()
