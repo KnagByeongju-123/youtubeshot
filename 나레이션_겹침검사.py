@@ -9,7 +9,8 @@ python 나레이션_겹침검사.py <영상.mp4> <회차.py 또는 대본.txt> [
     4) 대본 문장과 한 글자씩 맞춰 봐서 반복 자리에 글자가 '더 들어갔을' 때만 겹침 ('것만→것만만'). 글자 수가 같으면 발음 차이로 봄
        ('하늘나라→하늘라라', '닿을→다을')
   - 갑자기 빨라진 곳도 찾음: 쉼과 쉼 사이 한 마디씩 1초당 글자 수를 재서 영상 전체 마디의 중간값보다 25% 넘게 빠른 마디 (대사는 인물마다 빠르기가 달라 뺌)
-  - --고치기 <프로젝트.json> : 겹친·빨라진 문장(과 그 문단)의 녹음 캐시를 output/tts_cache 에서 지움 → render_project 를 다시 돌리면 그 문장만 새로 녹음
+  - --고치기 <프로젝트.json> : 겹친 문장(과 그 문단)의 녹음 캐시를 output/tts_cache 에서 지움 → render_project 를 다시 돌리면 그 문장만 새로 녹음.
+    빨라진 문장은 다시 녹음해도 또 빨라서(짧은 문장) 그 녹음을 보통 빠르기로 늘림(목소리 높이 그대로)
     (Supertonic 은 매번 조금씩 다르게 읽어서 보통 한 번에 고쳐짐. 다시 만든 영상도 검사해서 '겹침 없음'이 나올 때까지, 최대 3번)
   - 결과: '분:초 [겹친 글자] 대본: <문장> | 들림: <받아 적은 글>'
 (내부용) python 나레이션_겹침검사.py --지우기 <목록.json> <프로젝트.json>  ← .supertonic_venv 로 실행, 캐시 이름 계산·삭제"""
@@ -130,7 +131,7 @@ def fast_spots(sylls, sents, ratio=1.25, gap=0.3, min_syl=8):
         ps = best_sentence(h, sents)
         if ps is None or ps[1].lstrip().startswith(('"', '“')):
             continue
-        out.append({"t": ph[0][1], "dd": f"빠름 {r:.1f}자/초(보통 {med:.1f}, +{(r / med - 1) * 100:.0f}%)",
+        out.append({"t": ph[0][1], "speed": r / med, "dd": f"빠름 {r:.1f}자/초(보통 {med:.1f}, +{(r / med - 1) * 100:.0f}%)",
                     "sentence": ps[1], "paragraph": ps[0], "heard": h})
     return out
 
@@ -173,7 +174,9 @@ def detect(video, script):
                 if ps is None:
                     continue
                 sh = hangul(ps[1])
-                if doubles(sh, n) or dd in sh:        # 규칙 3: 대본 문장에 원래 같은 길이의 반복(흉내말)이 있음
+                k_ = sents.index(ps)
+                near = hangul(" ".join(x[1] for x in sents[max(0, k_ - 1):k_ + 2]))   # 앞뒤 문장까지 (조각이 문장 경계에 걸침)
+                if doubles(sh, n) or dd in near:      # 규칙 3: 대본에 원래 같은 반복(흉내말 '줄줄이·무럭무럭')이 있음
                     continue
                 if not extra_syllables(sh, ctx, ctx.find(dd), len(dd)):   # 규칙 4: 대본보다 글자가 늘어난 자리여야 겹침
                     continue
@@ -206,6 +209,10 @@ def delete_caches(items, project):
             voices.add(("supertonic:" + v["code"], float(v.get("rate", 0) or 0)))
     pitch, steps = float(st.get("narr_pitch", 0) or 0), int(st.get("st_steps", 5) or 5)
     cache = os.path.join(HERE, "output", "tts_cache")
+    fast = [it for it in items if it.get("speed")]
+    items = [it for it in items if not it.get("speed")]
+    if fast:
+        slow_down(m, fast, st, cache, pitch, steps)
     texts = set()
     for it in items:
         for t in (it["sentence"], it["paragraph"]):
@@ -220,6 +227,36 @@ def delete_caches(items, project):
                     os.remove(f)
                     gone += 1
     print(f"지운 녹음 캐시 {gone}개")
+
+
+def slow_down(m, fast, st, cache, pitch, steps):
+    """빨라진 문장: 다시 녹음해도 짧은 문장은 또 빨라서 → 그 문장 녹음을 보통 빠르기로 늘림 (ffmpeg atempo, 목소리 높이는 그대로).
+    문단 녹음은 지워서 늘린 문장으로 다시 이어 붙게 함"""
+    import numpy as np
+    vname = st.get("narr_voice", "")
+    vc, rate = m.voice_code(vname), float(st.get("narr_rate", 5) or 0)
+    moods = ["차분"] if str(st.get("st_emotion", "")) == "차분" else MOODS
+    key = lambda t, mood: os.path.join(cache, m.tts_key(vc, rate, pitch, m.supertonic_cache_text(t, mood, steps)) + ".npy")
+    for it in fast:
+        sent = m.tts_clean(m.spoken_src(it["sentence"]))
+        f = next((key(sent, md) for md in moods if os.path.exists(key(sent, md))), None)
+        if f is None:                                     # 캐시가 없으면 먼저 녹음
+            m._tts_clip(sent, vname, rate, cache, pitch, moods[0], steps)
+            f = next((key(sent, md) for md in moods if os.path.exists(key(sent, md))), None)
+        if f is None:
+            print("  늘릴 녹음을 못 찾음:", it["sentence"])
+            continue
+        tempo = max(0.7, min(1.0, 1.05 / float(it["speed"])))     # 보통보다 5% 빠른 정도까지
+        a = np.load(f).astype(np.float32)
+        r = subprocess.run(["ffmpeg", "-v", "error", "-f", "f32le", "-ar", str(m.SR), "-ac", "1", "-i", "-", "-af", f"atempo={tempo:.4f}",
+                            "-f", "f32le", "-ar", str(m.SR), "-ac", "1", "-"], input=a.tobytes(), capture_output=True, check=True)
+        np.save(f, np.frombuffer(r.stdout, np.float32))
+        print(f"  늦춤 x{tempo:.2f}: {it['sentence']}")
+        par = m.tts_clean(m.spoken_src(it["paragraph"]))
+        if par != sent:
+            for md in moods:
+                if os.path.exists(key(par, md)):
+                    os.remove(key(par, md))
 
 
 def main(a):
