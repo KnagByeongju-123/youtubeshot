@@ -322,7 +322,9 @@ def main():
                 "cast": [{"name": nm, "look": c["look"], "look_ko": c["look_ko"], "voice": c.get("voice"),
                           **({"sheet": os.path.join(HERE, c["face"])} if c.get("face") else {})} for nm, c in chars.items()],
                 "dialogue": [{"text": t, "who": w} for t, w in DIALOGUE],
-                "settings": {"format": "롱폼 가로(1920×1080)", "narration": "on",   # 새 PC·서버의 기본값은 나레이션 꺼짐
+                "settings": {"format": "롱폼 가로(1920×1080)", "narration": "on",   # 새 PC·서버 기본값(나레이션 꺼짐·스크롤형) 대신 장문 설정 그대로
+                             "layout": "자막형(큰 제목+사진+자막)", "img_fill": "전체 화면(글자가 사진 위에)",
+                             "img_motion": "영상처럼(확대·이동·전환)", "fps": "24", "reveal_hit": "off", "reveal_fx": "off",
                              "narr_voice": f"Supertonic {narr.get('code', 'F5')} (여성, 무료 로컬) [supertonic:{narr.get('code', 'F5')}]",
                              "narr_rate": str(narr.get("rate", 0)), "narr_tone_f": float(narr.get("semis", 0)),
                              "st_emotion": "차분"}}   # 샘플로 고른 빠르기 그대로 (감정별 빠르기 조절 없이)
