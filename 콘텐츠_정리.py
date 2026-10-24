@@ -58,6 +58,8 @@ LAST_FILE = "_마지막번호.txt"   # 지금까지 쓴 가장 큰 번호 (업�
 
 
 def _all_nums(out_dir):
+    if not os.path.isdir(out_dir):      # 새 PC·새 서버처럼 결과 폴더가 아직 없으면 번호 없음
+        return []
     nums = [int(m_.group(1)) for d in os.listdir(out_dir) if (m_ := NUM_RE.match(d)) and os.path.isdir(os.path.join(out_dir, d))]
     try:
         nums.append(int(open(os.path.join(out_dir, LAST_FILE), encoding="utf-8").read().strip() or 0))
