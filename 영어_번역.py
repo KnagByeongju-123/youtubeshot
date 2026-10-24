@@ -94,7 +94,11 @@ def transcribe_chunks(mp4, log=print):
         wav = os.path.join(td, "a.wav")
         subprocess.run([ff, "-y", "-loglevel", "error", "-i", mp4, "-ac", "1", "-ar", "16000", wav], check=True)
         log("  🎧 영상 소리를 받아 적는 중 (자막 시간 맞추기, 10분 영상이면 5~10분)...")
-        segs, _ = w.transcribe(wav, language="ko", word_timestamps=True, vad_filter=True, beam_size=1)
+        import wave
+        import numpy as np
+        with wave.open(wav, "rb") as wf:      # 소리를 직접 읽어 넘김 (파일 경로를 주면 faster-whisper 가 PyAV 로 읽는데, 새 PyAV 와 안 맞아 실패함)
+            audio = np.frombuffer(wf.readframes(wf.getnframes()), np.int16).astype(np.float32) / 32768.0
+        segs, _ = w.transcribe(audio, language="ko", word_timestamps=True, vad_filter=True, beam_size=1)
         words = [(x.start, x.end, x.word) for sg in segs for x in (sg.words or [])]
     chunks, cur = [], []
     for wd in words:
