@@ -7,6 +7,7 @@
                   넣은 뒤 프로젝트 파일에 저장 → 다시 실행하면 사진은 건너뜀
   - --suffix 이름 : 결과 파일 이름 끝에 _이름 (같은 제목으로 덧붙일 부분을 따로 만들 때. 화면 제목은 그대로)
   - --썸네일만 : 영상은 만들지 않고 썸네일 후보만 새로 (디자인 16가지 + 영상 장면 실사 편집). 지금 유튜브 썸네일은 그대로
+  - --대본그대로 : 손으로 쓴 대본의 오프닝(30초 후크·'끝까지 보시면')과 챕터 끝 예고를 AI 가 고쳐 쓰지 않음 (에세이처럼 원문 분위기를 지킬 때. 존댓말 고치기는 그대로)
   - --길이고정 : 롱폼 길이 규칙(10~15분, 짧으면 내용을 더해 늘림)을 건너뜀
   - --영어 : 영상 완성 뒤 영어 제목·설명란·자막(SRT)도 만듦 (유튜브 '번역'으로 덧붙이는 용도, 영어_번역.py)
   - --자막언어 영어,일본어,한국어 : 고른 언어마다 자막(SRT)과 제목·설명란 번역 (--영어 는 '영어'만과 같음)
@@ -141,9 +142,11 @@ def main(a):
         d_["settings"] = {k: v for k, v in d_["settings"].items() if k not in m.SECRET_KEYS}   # 저장소에 올라가는 파일이라 API 키는 빼고 저장
         m.atomic_write_text(proj_path, json.dumps(d_, ensure_ascii=False, indent=1))
         log(f"📷 사진 {n_add}장 추가 (총 {len(m.photo_credits(story))}장) → 프로젝트에 저장")
-    story, hooked = m.hook_fix(app.model_var.get().strip(), story, log, gate, title=title if is_long else "")   # 규칙: 30초 후크 + 첫 5초 = 제목·썸네일 약속
+    hooked = False
+    if "--대본그대로" not in a:      # 규칙: 30초 후크 + 첫 5초 = 제목·썸네일 약속 (--대본그대로 면 손으로 쓴 오프닝 그대로)
+        story, hooked = m.hook_fix(app.model_var.get().strip(), story, log, gate, title=title if is_long else "")
     n_ret = 0
-    if is_long and "--형식고정" not in a:     # 규칙(1위 영상 분석): 챕터 끝 예고 + 마무리 시리즈 한 줄
+    if is_long and "--형식고정" not in a and "--대본그대로" not in a:     # 규칙(1위 영상 분석): 챕터 끝 예고 + 마무리 시리즈 한 줄
         story, n_ret = m.retention_fix(app.model_var.get().strip(), story, title, log, gate)
     story, n_pol = m.polite_fix(app.model_var.get().strip(), story, log, gate)   # 규칙: 모든 나레이션은 존댓말 (자막·성우 함께)
     if hooked or n_ret or n_pol:
