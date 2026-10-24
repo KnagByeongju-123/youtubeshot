@@ -323,7 +323,9 @@ def main():
                           **({"sheet": os.path.join(HERE, c["face"])} if c.get("face") else {})} for nm, c in chars.items()],
                 "dialogue": [{"text": t, "who": w} for t, w in DIALOGUE],
                 "settings": {"format": "롱폼 가로(1920×1080)",
-                             "narr_voice": f"Supertonic {narr.get('code', 'F5')} (여성, 무료 로컬) [supertonic:{narr.get('code', 'F5')}]"}}
+                             "narr_voice": f"Supertonic {narr.get('code', 'F5')} (여성, 무료 로컬) [supertonic:{narr.get('code', 'F5')}]",
+                             "narr_rate": str(narr.get("rate", 0)), "narr_tone_f": float(narr.get("semis", 0)),
+                             "st_emotion": "차분"}}   # 샘플로 고른 빠르기 그대로 (감정별 빠르기 조절 없이)
         out = os.path.join(HERE, "1화_엄마없는첫생신.json")
         json.dump(proj, open(out, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
         print(out, len(story), "chars")
