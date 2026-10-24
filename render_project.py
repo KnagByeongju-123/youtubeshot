@@ -58,6 +58,9 @@ def main(a):
             st[k] = cur.get(k, m.DEFAULTS.get(k, ""))
     c["settings"] = st
     app.apply_cfg(c)
+    n_dlg = m.set_dialog_voices(c.get("dialogue") or [], c.get("cast") or [])   # 인물 대사는 그 인물 목소리로 (프로젝트 dialogue + cast 의 voice)
+    if n_dlg:
+        log(f"🎭 인물별 대사 목소리 {n_dlg}줄: " + ", ".join(sorted({v['who'] for v in m.DIALOG_VOICES.values()})))
     try:
         cfg = json.load(open(os.path.join(HERE, "장문_설정.json"), encoding="utf-8"))
     except Exception:

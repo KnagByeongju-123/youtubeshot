@@ -8404,6 +8404,83 @@ def check_para(k, text, vname, s, cache_dir, mood, a, d, mode, log=None):
     return a, d
 
 
+DIALOG_VOICES = {}   # 대사(따옴표 안 글) → {"voice": 성우 이름, "rate": 속도%, "semis": 톤(반음), "fx": "robot"|""} (set_dialog_voices)
+DIALOG_RE = re.compile(r'("[^"]+"|“[^”]+”|\'[^\']+\'|‘[^’]+’)')
+DIALOG_GAP = 0.18    # 나레이션 ↔ 대사 사이 쉼(초)
+
+
+def _dlg_key(t):
+    return re.sub(r"[\s\"'“”‘’.,!?…~]", "", str(t))
+
+
+def set_dialog_voices(dialogue, cast):
+    """프로젝트의 dialogue [{"text": 대사, "who": 이름}] + cast [{"name", "voice": {"code": "M5", "rate": -10, "semis": -2, "fx": ""}}]
+    → DIALOG_VOICES. 이후 나레이션을 만들 때 그 대사만 그 인물 목소리로 읽음 (나머지는 나레이션 성우)"""
+    DIALOG_VOICES.clear()
+    vo = {c.get("name"): c.get("voice") for c in (cast or []) if isinstance(c, dict) and isinstance(c.get("voice"), dict)}
+    for d in dialogue or []:
+        v = vo.get(d.get("who")) if isinstance(d, dict) else None
+        if v and v.get("code") and _dlg_key(d.get("text")):
+            code = str(v["code"])
+            DIALOG_VOICES[_dlg_key(d["text"])] = {
+                "voice": f"Supertonic {code} ({'여성' if code.startswith('F') else '남성'}, 무료 로컬) [supertonic:{code}]",
+                "rate": float(v.get("rate", 0) or 0), "semis": float(v.get("semis", 0) or 0), "fx": str(v.get("fx") or ""), "who": d.get("who")}
+    return len(DIALOG_VOICES)
+
+
+def voice_fx_extra(a, fx):
+    """인물 목소리 효과. robot = 금속성 울림(짧은 메아리 두 겹 + 플랜저) + 둔한 저음 줄임"""
+    if fx != "robot" or len(a) < 10:
+        return a
+    p = subprocess.run([get_ffmpeg(), "-v", "error", "-f", "f32le", "-ar", str(SR), "-ac", "1", "-i", "-",
+                        "-af", "aecho=0.8:0.7:6|11:0.35|0.25,flanger=delay=1:depth=2:speed=0.3,highpass=f=140",
+                        "-f", "f32le", "-ar", str(SR), "-ac", "1", "-"], input=np.asarray(a, np.float32).tobytes(),
+                       stdout=subprocess.PIPE, stderr=subprocess.PIPE, creationflags=(subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0))
+    if p.returncode != 0 or not p.stdout:
+        return a
+    out = np.frombuffer(p.stdout, np.float32).copy()
+    pk = float(np.abs(out).max()) if len(out) else 0
+    return out * (0.98 / pk) if pk > 0.98 else out
+
+
+def tts_mixed(text, s, cache_dir, mood):
+    """문단 안의 대사는 그 인물 목소리, 나머지는 나레이션 성우로 따로 읽어 이어 붙임 (대사 목소리가 정해진 문단만) → (소리, 길이) 또는 None"""
+    parts = [p for p in DIALOG_RE.split(text) if p.strip()]
+    if not any(_dlg_key(p) in DIALOG_VOICES for p in parts):
+        return None
+    rate0, steps = float(s["narr_rate"]), int(s.get("st_steps", 5))
+    clips, narr_rms = [], []
+    for p in parts:
+        v = DIALOG_VOICES.get(_dlg_key(p))
+        if v:
+            a, _ = tts_clip(p, v["voice"], rate0 + v["rate"], cache_dir, 0, mood, steps)
+            if v["semis"]:
+                a = ffmpeg_voice_fx(a, v["semis"])
+            a = voice_fx_extra(a, v["fx"])
+        else:
+            a, _ = tts_clip(p, s["narr_voice"], rate0, cache_dir, float(s.get("narr_pitch", 0)), mood, steps)
+        a = np.asarray(a, np.float32)
+        if len(a) > 10:
+            clips.append((a, bool(v)))
+            if not v:
+                narr_rms.append(float(np.sqrt(np.mean(a.astype(np.float64) ** 2))))
+    if not clips:
+        return None
+    tgt = float(np.median(narr_rms)) if narr_rms else float(np.median([np.sqrt(np.mean(c.astype(np.float64) ** 2)) for c, _ in clips]))
+    gap = np.zeros(int(DIALOG_GAP * SR), np.float32)
+    pieces = []
+    for c, _ in clips:     # 대사 목소리 크기를 나레이션에 맞춤
+        r = float(np.sqrt(np.mean(c.astype(np.float64) ** 2)))
+        if tgt > 0 and r > 1e-4:
+            c = (c * max(0.5, min(2.2, tgt / r))).astype(np.float32)
+        pieces += ([gap] if pieces else []) + [c]
+    a = np.concatenate(pieces)
+    pk = float(np.abs(a).max())
+    if pk > 0.98:
+        a = (a * (0.98 / pk)).astype(np.float32)
+    return a, len(a) / SR
+
+
 def build_narration(story, s, cache_dir, log=None, cancel=None, para_audio=None):
     """본문 전체 나레이션 → [(문단 인덱스, 소리, 길이)]. para_audio={문단번호: 음성파일} 가 있으면 그 문단은 파일을 씀"""
     items = narration_paras(story)
@@ -8427,10 +8504,14 @@ def build_narration(story, s, cache_dir, log=None, cancel=None, para_audio=None)
             vname = PARA_VOICE.get(text.strip(), s["narr_voice"])     # 2인 진행이면 문단마다 성우가 다름
             is_st = voice_code(vname).startswith("supertonic:")
             mood = supertonic_mood(text, k, len(items), s) if is_st else "차분"
-            a, d = tts_clip(text, vname, float(s["narr_rate"]), cache_dir,
-                            float(s.get("narr_pitch", 0)), mood, int(s.get("st_steps", 5)))
-            if ck_mode != "off":
-                a, d = check_para(k, text, vname, s, cache_dir, mood, a, d, ck_mode, log)
+            mixed = tts_mixed(text, s, cache_dir, mood) if DIALOG_VOICES and is_st else None   # 인물 대사가 있는 문단: 대사만 그 인물 목소리
+            if mixed:
+                a, d = mixed
+            else:
+                a, d = tts_clip(text, vname, float(s["narr_rate"]), cache_dir,
+                                float(s.get("narr_pitch", 0)), mood, int(s.get("st_steps", 5)))
+                if ck_mode != "off":
+                    a, d = check_para(k, text, vname, s, cache_dir, mood, a, d, ck_mode, log)
         res.append((i, a, d))
         if log and (k % 5 == 0 or k == len(items) - 1):
             log(f"  🎙 나레이션 {k + 1}/{len(items)}")

@@ -10,6 +10,19 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 TITLE = "두 번째 새벽 1화 - 귀환"
 
+# 대사 → 말하는 인물 (그 인물 목소리로 읽음, 목소리는 등장인물.json 의 voice)
+DIALOGUE = [
+    ("언젠가 저기에 가 볼 거야.", "한별"),
+    ("우리는 지구로 돌아간다.", "선장"),
+    ("지구는 원래 우리 땅입니다. 무엇이 기다리든, 되찾으면 됩니다.", "강무진 경"),
+    ("아버지, 지구에 누가 살고 있으면요?", "서린"),
+    ("그럼 그들이 비켜야겠지.", "강무진 경"),
+    ("딱 한 번만. 진짜 땅을 밟아 보기만 하면 돼.", "한별"),
+    ("오늘부터 이 땅은 다시 인간의 것이다.", "강무진 경"),
+    ("멈춰라. 뭔가 있다.", "강무진 경"),
+    ("쇠가... 깨어났다.", "강무진 경"),
+]
+
 # (컷번호, 나오는 인물, 그림 설명(영어), 화면 설명(한국어))
 CUTS = [
     ("c01", [], "a burning Earth seen from orbit, nuclear mushroom clouds on the continents, a huge ark starship escaping into dark space", "핵전쟁으로 불타는 지구를 떠나는 방주선"),
@@ -280,7 +293,9 @@ def main():
             story = story.replace("{" + cid + "}", f"[사진: {os.path.join(folder, cid + '.png')} | {cap} | AI 생성 그림 (FLUX.2 klein) | ]")
         proj = {"ver": 7, "category": "장문", "genre": "[이야기] SF·디스토피아", "topic": "두 번째 새벽", "title": TITLE,
                 "story": story, "sources": [], "notes": "창작 연재 《두 번째 새벽》 1화", "autophoto": False, "img_source": "그림: 옛날 만화책",
-                "cast": [{"name": nm, "look": c["look"], "look_ko": c["look_ko"], "sheet": os.path.join(HERE, c["face"])} for nm, c in chars.items()],
+                "cast": [{"name": nm, "look": c["look"], "look_ko": c["look_ko"], "voice": c.get("voice"),
+                          **({"sheet": os.path.join(HERE, c["face"])} if c.get("face") else {})} for nm, c in chars.items()],
+                "dialogue": [{"text": t, "who": w} for t, w in DIALOGUE],
                 "settings": {"format": "롱폼 가로(1920×1080)", "narr_voice": "Supertonic M2 (남성, 무료 로컬) [supertonic:M2]"}}
         out = os.path.join(HERE, "1화_귀환.json")
         json.dump(proj, open(out, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
