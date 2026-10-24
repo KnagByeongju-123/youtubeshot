@@ -2728,7 +2728,8 @@ def openai_image(prompt, key, model="gpt-image-2", quality="medium", size=None):
 
 SD_MODEL_DIR = os.path.join(BASE, "models", "LCM_Dreamshaper_v7")      # 로컬 그림 모델 (MIT) · 다운로드: 로컬그림_모델받기.bat
 SD_ANIME_DIR = os.path.join(BASE, "models", "Counterfeit_V3_lcm")       # 애니·만화 전용 (Counterfeit-V3.0 + LCM-LoRA, OpenRAIL-M)
-SD_PYTHON = os.path.join(BASE, ".sd_venv", "Scripts", "python.exe")
+SD_PYTHON = (os.path.join(BASE, ".sd_venv", "Scripts", "python.exe") if os.name == "nt"
+             else os.path.join(BASE, ".sd_venv", "bin", "python"))      # 리눅스(폰에서 쓰는 클라우드)는 bin/python
 SD_NEGATIVE = ("text, letters, watermark, signature, logo, blurry, (deformed hands:1.3), (extra fingers:1.4), fused fingers, missing fingers, "
                "extra limbs, lowres, bad anatomy, nsfw")
 SD_ANIME_NEGATIVE = ("(worst quality, low quality:1.4), lowres, (bad anatomy:1.2), (bad hands:1.4), (mutated hands:1.3), (extra fingers:1.4), "
