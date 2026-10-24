@@ -11,7 +11,7 @@ fonts/
 fonts_cache.json
 
 .supertonic_venv/
-supertonic_assets/
+supertonic_assets
 voice_samples/
 *.log
 *.bak*
