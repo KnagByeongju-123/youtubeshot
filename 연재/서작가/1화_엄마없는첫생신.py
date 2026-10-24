@@ -52,7 +52,7 @@ CUTS = [
     ("c20", ["어린 오빠", "어린 언니", "어린 나"], "three Korean children in 1980s clothes running happily along a narrow path between green rice paddies with school bags", "논둑길을 뛰어가는 어린 삼 남매"),
     ("c21", [], "a small vegetable garden behind an old Korean house in autumn, rows of tall elongated Korean napa cabbages (baechu) and Korean white radishes growing in the soil with only their green leafy tops and the upper white part showing, soft sunlight", "무럭무럭 자란 텃밭의 배추와 무"),
     ("c22", ["나"], "the woman crouching in the vegetable garden, touching a big napa cabbage leaf gently with her hand, thoughtful", "배추 잎을 만져 보는 나"),
-    ("c23", ["젊은 엄마"], "the mother in a white towel headscarf bending over in a vegetable garden, tying napa cabbages with straw, soil on her hands", "배추를 묶던 엄마"),
+    ("c23", ["젊은 엄마"], "the mother in a white towel headscarf squatting low in a vegetable garden with both feet flat on the ground, tying a tall napa cabbage with straw rope, soil on her hands, exactly two legs and two feet, side view", "배추를 묶던 엄마"),
     ("c24", [], "kimchi-making day in a 1980s Korean yard, huge piles of salted cabbages in big rubber basins, women working together, red pepper paste", "온 동네가 모이던 김장날"),
     ("c25", [], "a small hillside orchard field in autumn with no people: persimmon trees heavy with orange persimmons, apple trees with red apples, a pomegranate tree with cracked-open fruit showing red seeds hanging on its branches, the tiled roof of a traditional Korean house far in the background", "뒷밭의 단감·사과·석류"),
     ("c26", [], "botanical close-up of ripe pomegranates hanging on a branch, one split open showing glistening red seeds, autumn sunlight, realistic fruit", "탐스럽게 입을 벌린 석류"),
