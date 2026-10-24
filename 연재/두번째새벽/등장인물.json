@@ -3,16 +3,16 @@
   "style": "옛날 만화책(세피아 펜화)",
   "chars": [
     {
-      "name": "레아",
+      "name": "한별",
       "look": "17-year-old human girl mechanic apprentice, short messy auburn hair, freckles, determined green eyes, brown leather apron over a faded linen tunic, patched hooded traveling cloak, old scavenged brass goggles resting on her head, small bronze gear pendant necklace, fingerless leather gloves, worn leather boots",
       "look_ko": "17살 인간 소녀, 방주선 정비공 견습. 헝클어진 짧은 적갈색 머리, 주근깨, 초록 눈, 가죽 앞치마, 기운 후드 망토, 머리 위 황동 고글, 청동 톱니 목걸이, 손가락 없는 가죽 장갑",
-      "face": "캐릭터시트/레아.jpg"
+      "face": "캐릭터시트/한별.jpg"
     },
     {
-      "name": "세린",
+      "name": "서린",
       "look": "beautiful 21-year-old human woman, healer priestess, long wavy silver-blonde hair in a loose side braid, gentle gray-blue eyes, graceful oval face, calm warm expression, white and pale gold priestess robe with a small red sun emblem on the chest, light brown traveling mantle, thin silver circlet on her forehead, small leather satchel of healing herbs at her hip",
       "look_ko": "21살 인간 여성, 정화교 견습 사제·치유사(미녀). 옆으로 느슨하게 땋은 긴 은금발 웨이브 머리, 순한 회청색 눈, 갸름한 얼굴, 흰색·연금색 사제복(가슴에 작은 붉은 태양 문장), 연갈색 여행 망토, 이마의 가는 은빛 머리띠, 허리의 약초 가죽 주머니",
-      "face": "캐릭터시트/세린.jpg"
+      "face": "캐릭터시트/서린.jpg"
     },
     {
       "name": "카룬",
@@ -27,10 +27,10 @@
       "face": "캐릭터시트/아홉.jpg"
     },
     {
-      "name": "발데르 경",
+      "name": "강무진 경",
       "look": "human knight commander in his forties, stern scarred face, short gray-streaked black hair and short beard, a long scar across his left cheek, dented steel plate armor with a white tabard showing a red sun-and-flame emblem, long dark red cape, longsword at his hip",
       "look_ko": "40대 방주선 기사단장(정화교). 엄한 얼굴, 왼뺨의 긴 흉터, 희끗한 검은 짧은 머리와 수염, 찌그러진 강철 갑옷, 붉은 태양·불꽃 문장의 흰 겉옷, 검붉은 망토, 장검",
-      "face": "캐릭터시트/발데르.jpg"
+      "face": "캐릭터시트/강무진.jpg"
     }
   ]
 }
