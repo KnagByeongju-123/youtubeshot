@@ -1,0 +1,22 @@
+{
+  "_설명": "《두 번째 새벽》 등장인물. look = 그림 모델에 넣는 영어 묘사(모든 컷에 그대로), look_ko = 한국어 설명, face = 확정한 캐릭터 시트(이 폴더 기준 경로)",
+  "style": "옛날 만화책(세피아 펜화)",
+  "chars": [
+    {"name": "레아",
+     "look": "17-year-old human girl blacksmith apprentice, short messy auburn hair, freckles, determined green eyes, brown leather apron over a faded linen tunic, patched hooded traveling cloak, old scavenged brass goggles resting on her head, small bronze gear pendant necklace, fingerless leather gloves, worn leather boots",
+     "look_ko": "17살 인간 소녀, 대장장이 견습. 헝클어진 짧은 적갈색 머리, 주근깨, 초록 눈, 가죽 앞치마, 기운 후드 망토, 머리 위 황동 고글, 청동 톱니 목걸이, 손가락 없는 가죽 장갑",
+     "face": "캐릭터시트/레아.jpg"},
+    {"name": "카룬",
+     "look": "young evolved chimpanzee warrior who walks upright, intelligent amber eyes, white tribal face paint stripes, armor of woven tree bark and leather straps, necklace of old circuit-board charms, carrying a tall wooden staff decorated with copper wire and small circuit chips",
+     "look_ko": "하누족 젊은 침팬지 전사(두 발로 걷는 진화한 원숭이). 호박색 눈, 흰 얼굴 무늬, 나무껍질을 엮은 갑옷, 회로기판 부적 목걸이, 구리선을 감은 긴 지팡이",
+     "face": "캐릭터시트/카룬.jpg"},
+    {"name": "아홉",
+     "look": "old humanoid maintenance robot, tall and thin, half-rusted iron body covered with patches of green moss and small vines, one round glowing blue eye in a dented dome head, the other eye socket broken and empty, the faded painted number 9 on its chest plate, long mechanical fingers, gentle posture",
+     "look_ko": "낡은 인간형 정비 로봇. 키 크고 마름, 반쯤 녹슨 철 몸에 이끼·덩굴, 찌그러진 둥근 머리에 파란 외눈(다른 눈은 깨짐), 가슴판에 바랜 숫자 9",
+     "face": "캐릭터시트/아홉.jpg"},
+    {"name": "발데르 경",
+     "look": "human knight commander in his forties, stern scarred face, short gray-streaked black hair and short beard, a long scar across his left cheek, dented steel plate armor with a white tabard showing a red sun-and-flame emblem, long dark red cape, longsword at his hip",
+     "look_ko": "40대 정화교 기사단장. 엄한 얼굴, 왼뺨의 긴 흉터, 희끗한 검은 짧은 머리와 수염, 찌그러진 강철 갑옷, 붉은 태양·불꽃 문장의 흰 겉옷, 검붉은 망토, 장검",
+     "face": "캐릭터시트/발데르.jpg"}
+  ]
+}
