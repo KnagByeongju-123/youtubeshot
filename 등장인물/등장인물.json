@@ -1,0 +1,13 @@
+{
+  "_설명": "그림에 나올 인물 외모를 미리 정해 두는 곳. look = 그림 모델에 넣는 영어 묘사(모든 컷에 그대로), look_ko = 한국어 설명, face = 얼굴 기준 그림(있으면 얼굴 검수·수정에 씀)",
+  "chars": [
+    {"name": "바다 할아버지",
+     "look": "old Korean fisherman in his 70s, short white hair, short white beard, wrinkled kind face, tanned skin, navy blue knit cap, faded yellow raincoat, brown rubber boots",
+     "look_ko": "70대 어부, 짧은 흰머리·흰 수염, 주름진 인자한 얼굴, 그을린 피부, 남색 털모자, 빛바랜 노란 우비, 갈색 장화",
+     "face": ""},
+    {"name": "하나",
+     "look": "8-year-old Korean girl, black hair in two short pigtails with red ribbons, round face, rosy cheeks, light blue dress, white cardigan",
+     "look_ko": "8살 손녀, 빨간 리본 단 짧은 양갈래 검은 머리, 동그란 얼굴, 발그레한 볼, 하늘색 원피스, 흰 카디건",
+     "face": ""}
+  ]
+}
