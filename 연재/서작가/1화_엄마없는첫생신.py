@@ -46,7 +46,7 @@ CUTS = [
     ("c14", ["어린 언니", "어린 나"], "an old 1980s rural Korean kitchen (bueok) with an earthen floor, a clay stove with a black iron cauldron, firewood, no modern appliances, two little sisters cooking seaweed soup at dawn, steam and a little smoke, the younger one holding a ladle nervously", "엄마 생신날 미역국을 끓이는 어린 자매"),
     ("c15", ["젊은 엄마"], "the mother in a white towel headscarf sitting at a small low table eating a bowl of soup with a big happy smile, morning light in an old Korean room", "탄 미역국을 맛있게 먹는 젊은 엄마"),
     ("c16", [], "an old open photo album with faded family photographs, pages slowly turning, soft warm light, nostalgic", "책장처럼 넘어가는 옛 사진첩"),
-    ("c17", ["젊은 엄마", "어린 나"], "seen from behind: the mother in a white towel headscarf walking away along a country dirt road at sunset, carrying her small daughter piggyback on her back, the girl's arms around her mother's neck and her legs held by the mother's hands, a cloth bundle on the mother's head, golden rice fields", "엄마 등에 업혀 가던 저녁 길"),
+    ("c17", ["젊은 엄마", "어린 나"], "side view: the mother in a white towel headscarf bent slightly forward walking along a country dirt road at sunset, giving her small daughter a piggyback ride, the little girl riding on the mother's back with her arms around the mother's neck and her feet off the ground, the mother's hands holding the girl's legs behind her, golden rice fields", "엄마 등에 업혀 가던 저녁 길"),
     ("c18", ["젊은 엄마"], "a rainy afternoon in the 1980s, the mother in a white towel headscarf standing in front of a small country school gate holding a big umbrella and a second folded umbrella, her clothes wet", "비 오는 날 학교 앞에서 기다리던 엄마"),
     ("c19", ["젊은 엄마"], "the mother rolling kimbap on a wooden board at dawn by a dim lamp in an old Korean kitchen, lunch boxes lined up", "새벽에 소풍 김밥을 싸는 엄마"),
     ("c20", ["어린 오빠", "어린 언니", "어린 나"], "three Korean children in 1980s clothes running happily along a narrow path between green rice paddies with school bags", "논둑길을 뛰어가는 어린 삼 남매"),
@@ -54,22 +54,22 @@ CUTS = [
     ("c22", ["나"], "the woman crouching in the vegetable garden, touching a big napa cabbage leaf gently with her hand, thoughtful", "배추 잎을 만져 보는 나"),
     ("c23", ["젊은 엄마"], "the mother in a white towel headscarf bending over in a vegetable garden, tying napa cabbages with straw, soil on her hands", "배추를 묶던 엄마"),
     ("c24", [], "kimchi-making day in a 1980s Korean yard, huge piles of salted cabbages in big rubber basins, women working together, red pepper paste", "온 동네가 모이던 김장날"),
-    ("c25", [], "an orchard field behind a country house in autumn, persimmon trees with orange persimmons, apple trees with red apples, a pomegranate tree with cracked open fruit showing red seeds", "뒷밭의 단감·사과·석류"),
-    ("c26", [], "close-up of ripe pomegranates on a branch, split open showing glistening red seeds, autumn sunlight", "탐스럽게 입을 벌린 석류"),
+    ("c25", [], "a small hillside orchard field in autumn with no people: persimmon trees heavy with orange persimmons, apple trees with red apples, a pomegranate tree with cracked-open fruit showing red seeds hanging on its branches, the tiled roof of a traditional Korean house far in the background", "뒷밭의 단감·사과·석류"),
+    ("c26", [], "botanical close-up of ripe pomegranates hanging on a branch, one split open showing glistening red seeds, autumn sunlight, realistic fruit", "탐스럽게 입을 벌린 석류"),
     ("c27", ["오빠"], "the big tall man in a straw hat standing under a persimmon tree, holding a basket full of orange persimmons, proud quiet smile", "단감 바구니를 든 오빠"),
     ("c28", ["어린 오빠"], "a mischievous Korean boy in a black school uniform climbing high up a persimmon tree, reaching for an orange persimmon at the top", "감나무 꼭대기에 올라간 어린 오빠"),
-    ("c29", ["젊은 엄마"], "the mother in a white towel headscarf standing under a tall persimmon tree, looking up and shouting with worried angry face, hands on her hips", "놀라 소리치는 젊은 엄마"),
+    ("c29", ["젊은 엄마"], "one single woman alone: the mother in a white towel headscarf standing under a tall persimmon tree, looking up and shouting with a worried angry face, one hand on her hip and the other hand raised, only one person in the image", "놀라 소리치는 젊은 엄마"),
     ("c30", [], "the outside kitchen of a lower annex room of an old Korean house: a traditional Korean agungi (a low arched fire opening at the bottom of a whitewashed clay-and-stone kitchen wall, with a big black iron cauldron set into the clay stove above it), the cauldron steaming, firewood stacked nearby, autumn evening", "아랫방 아궁이와 가마솥"),
-    ("c31", [], "dried radish greens (siraegi) boiling in a big black iron cauldron, thick white steam rising, warm firelight from below", "시래기를 삶는 가마솥"),
-    ("c32", [], "bundles of radish greens hanging to dry under the eaves of an old Korean house, late autumn sunlight", "처마 밑에 걸어 말리던 시래기"),
+    ("c31", [], "close-up of dark green-brown dried radish greens (siraegi) boiling in a big black iron cauldron set into a clay stove, thick white steam rising, warm firelight from below, realistic food", "시래기를 삶는 가마솥"),
+    ("c32", [], "outside view: many bundles of green radish leaves (only the leaves and stems, no radish roots) tied with straw rope and hanging in a row to dry from a pole under the tiled eaves of an old Korean house, late autumn sunlight, realistic", "처마 밑에 걸어 말리던 시래기"),
     ("c33", ["엄마"], "the elderly grandmother sitting on a low stool on an earthen kitchen floor in front of a traditional Korean agungi (a low arched fire opening at the bottom of a whitewashed clay-and-stone kitchen wall, with a big black iron cauldron set into the clay stove above it), feeding a log into the fire, gentle smile, warm firelight", "아궁이 불을 보던 엄마"),
     ("c34", ["어린 나", "젊은 엄마"], "winter night, the small girl and her mother sitting close together on low stools in front of a traditional Korean agungi (a low arched fire opening at the bottom of a whitewashed clay-and-stone kitchen wall, with a big black iron cauldron set into the clay stove above it), the mother handing her a roasted sweet potato, warm glow", "아궁이 앞에서 군고구마를 건네주던 엄마"),
-    ("c35", [], "close-up of glowing embers and small flames, a few sparks flying up into the dark, crackling", "타닥타닥 튀는 불티"),
+    ("c35", [], "close-up of the arched fire opening of a traditional Korean agungi (a low arched fire opening at the bottom of a whitewashed clay-and-stone kitchen wall, with a big black iron cauldron set into the clay stove above it): glowing embers and burning firewood, a few sparks flying up, dark warm night surroundings", "타닥타닥 튀는 불티"),
     ("c36", ["나"], "medium close-up of the woman alone sitting in front of a traditional Korean agungi (a low arched fire opening at the bottom of a whitewashed clay-and-stone kitchen wall, with a big black iron cauldron set into the clay stove above it) at night, a single tear running down her cheek, orange firelight on her face", "끝내 흐르는 눈물"),
-    ("c37", ["언니", "나"], "the plump woman gently putting her arm around the small quiet woman's shoulders by the fire, both teary but smiling", "어깨를 감싸 주는 언니"),
-    ("c38", ["오빠", "언니", "나"], "three middle-aged siblings sitting together on a wooden porch (maru) at night, looking at the sky, warm light from the house behind them", "마루에 나란히 앉은 삼 남매"),
-    ("c39", [], "a starry night sky over a quiet Korean countryside house, soft white smoke rising from the house chimney", "별이 뜬 고향집의 밤"),
-    ("c40", [], "the empty vegetable garden and persimmon tree at dawn, soft pink and gold morning light, a gentle peaceful mood", "엄마의 손길이 머물던 텃밭의 새벽"),
+    ("c37", ["언니", "나"], "the plump woman gently putting her arm around the small quiet woman's shoulders as they sit side by side on low stools in front of a traditional Korean agungi (a low arched fire opening at the bottom of a whitewashed clay-and-stone kitchen wall, with a big black iron cauldron set into the clay stove above it) at night, both with teary eyes and gentle sad smiles, not laughing", "어깨를 감싸 주는 언니"),
+    ("c38", ["오빠", "언니", "나"], "night scene: the big man (no hat), the plump woman and the small woman sitting side by side on the wooden porch (maru) of a traditional Korean house, looking up quietly at the starry night sky, warm lamp light from the room behind them, calm and moved expressions", "마루에 나란히 앉은 삼 남매"),
+    ("c39", [], "a starry night sky over a quiet traditional Korean hanok house with a curved tiled roof in the countryside, soft white smoke rising from the low chimney, no people, realistic building", "별이 뜬 고향집의 밤"),
+    ("c40", [], "an empty vegetable garden with rows of napa cabbages and a persimmon tree at dawn, no people at all, soft pink and gold morning light, a gentle peaceful mood", "엄마의 손길이 머물던 텃밭의 새벽"),
 ]
 
 STORY = """{c01}
@@ -302,11 +302,13 @@ def main():
         items = []
         for cid, who, desc, _ in CUTS:
             looks = "; ".join(f"person {k + 1} (the character from reference image {k + 1}): {chars[nm]['look']}" for k, nm in enumerate(who))   # 한글 이름은 그림에 글자로 나올 수 있어 번호로
+            st = style if who else style.replace("gentle rosy cheeks, simple cute faces, ", "")
             items.append({"id": cid, "width": 1024, "height": 576, "seed": 100 + int(cid[1:]),
                           "refs": [os.path.join(HERE, chars[nm]["face"]) for nm in who],
-                          "prompt": f"{style}, Korean countryside family essay illustration. "
+                          "prompt": f"{st}, Korean countryside family essay illustration. "
                                     + (f"Characters: {looks}. Each person appears only once, exactly two arms and two legs. " if looks else "")
-                                    + f"Scene: {desc}. Cinematic composition, full-bleed image, no border, no frame, no paper edges. No speech bubbles, no text, no letters."})
+                                    + ("" if who else "No people. ")
+                                    + f"Scene: {desc}. Objects, food, fruit, steam and buildings have no faces. Cinematic composition, full-bleed image, no border, no frame, no paper edges. No speech bubbles, no text, no letters."})
         os.makedirs(folder, exist_ok=True)
         json.dump({"items": items}, open(os.path.join(folder, "job.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
         print(len(items), "cuts")
