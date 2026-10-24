@@ -291,7 +291,7 @@ def main():
                           "refs": [os.path.join(HERE, chars[nm]["face"]) for nm in who],
                           "prompt": f"{style}, medieval post-apocalyptic science fantasy comic panel. "
                                     + (f"Characters: {looks}. " if looks else "")
-                                    + f"Scene: {desc}. Cinematic composition, full-bleed image. No speech bubbles, no text, no letters."})
+                                    + f"Scene: {desc}. Cinematic composition, full-bleed image, no border, no frame, no paper edges. No speech bubbles, no text, no letters."})
         os.makedirs(folder, exist_ok=True)
         json.dump({"items": items}, open(os.path.join(folder, "job.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
         print(len(items), "cuts")

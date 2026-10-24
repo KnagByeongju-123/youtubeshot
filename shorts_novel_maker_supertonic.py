@@ -2791,7 +2791,7 @@ def klein_prompt(p):
     """SD1.5 용 프롬프트를 klein 용으로: 품질 주문 말·(단어:1.3) 가중치 표기를 빼고 끝에 글자 금지"""
     p = re.sub(r"^\s*masterpiece,\s*best quality,\s*", "", str(p))
     p = re.sub(r"\(([^()]*?):\s*[\d.]+\)", r"\1", p)
-    return p.rstrip(" .,") + ". No text, no letters."
+    return p.rstrip(" .,") + ". Full-bleed image, no border, no frame, no paper edges. No text, no letters."
 
 
 def klein_size(w, h):

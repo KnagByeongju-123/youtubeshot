@@ -3,11 +3,12 @@
 작업.json:
   {"items": [{"id": "c01", "prompt": "...", "refs": ["캐릭터시트.png", ...], "width": 1024, "height": 576, "seed": 1, "steps": 4}],
    "fixes": [{"id": "c01_손", "image": "c01.png", "box": [x0, y0, x1, y1], "prompt": "...", "refs": ["캐릭터시트.png"], "seed": 1}],
-   "ref_max_area": 115000}
+   "ref_max_area": 115000, "crop_border": true}
   - items : 새 그림. refs 에 캐릭터 시트(또는 앞모습)를 넣으면 그 인물 그대로 그림 (최대 5명 권장)
   - fixes : 부분 수정. 그림의 box 칸 둘레를 조금 넓혀 잘라 그 조각을 기준 그림으로 다시 그린 뒤 box 만 부드럽게 붙임
             (손가락·얼굴·옷 고치기). refs 에 캐릭터 시트를 더 넣으면 얼굴을 등록한 모습으로 맞춤. 결과는 image 를 덮어씀
   - ref_max_area : 기준 그림을 이 넓이(픽셀)까지 줄여서 넣음. 기준 그림이 크면 계산이 몇 배로 느려짐 (기본 약 256×448)
+  - crop_border : 새 그림(items)의 종이 여백·검은 만화 테두리를 찾아 잘라내고 원래 크기로 (기본 켬. 영상에서 그림이 줄어들 때 테두리가 안 보이게)
 메모리를 아끼려고 글 해석기로 모든 글을 먼저 읽고 지운 뒤 그림 모델을 올림 (RAM 16GB 에서도 됨)
 출력: 'OK id 경로 초', 실패는 'ERR id 이유', 진행은 'PROG k/n'"""
 import gc
@@ -23,6 +24,52 @@ def shrink(im, max_area):
         s = (max_area / (w * h)) ** 0.5
         im = im.resize((max(16, int(w * s)), max(16, int(h * s))))
     return im
+
+
+def border_box(im):
+    """옛날 만화책 그림의 바깥 종이 여백·검은 테두리선을 찾아 그 안쪽 상자 (x0, y0, x1, y1). 테두리가 없으면 그림 전체"""
+    import numpy as np
+    g = np.asarray(im.convert("L"), np.float32)
+    h, w = g.shape
+
+    def edge(lines, n):           # lines: 가장자리부터 안쪽으로 가는 줄들의 밝기 평균
+        start_lim, line_max = int(n * 0.07), max(3, int(n * 0.025))
+        i = 0
+        while i < start_lim and lines[i] > 150:      # 바깥 종이 여백(밝음)
+            i += 1
+        if i >= start_lim:
+            return 0
+        if lines[i] < 110:                           # 검은 테두리선: 얇게(최대 2.5%)만
+            k = i
+            while k < i + line_max and k < n and lines[k] < 130:
+                k += 1
+            return k + 3
+        return i + 2 if i else 0                     # 선 없이 여백만
+    rows, cols = slice(int(h * .2), int(h * .8)), slice(int(w * .2), int(w * .8))
+    l_, r_ = edge(g[rows, :].mean(0), w), edge(g[rows, ::-1].mean(0), w)
+    t_, b_ = edge(g[:, cols].mean(1), h), edge(g[::-1, cols].mean(1), h)
+    return l_, t_, w - r_, h - b_
+
+
+def crop_border(im):
+    """테두리를 잘라내고(남은 얇은 선까지 1.5% 더) 원래 비율·크기로. 테두리가 없으면 그대로"""
+    from PIL import Image
+    w, h = im.size
+    x0, y0, x1, y1 = border_box(im)
+    if (x0, y0, x1, y1) == (0, 0, w, h):
+        return im
+    mx, my = int(w * 0.015), int(h * 0.015)
+    x0, y0, x1, y1 = x0 + mx, y0 + my, x1 - mx, y1 - my
+    cw, ch = x1 - x0, y1 - y0
+    if cw / ch > w / h:           # 남은 상자 가운데를 원래 비율로
+        nw = int(ch * w / h)
+        x0 += (cw - nw) // 2
+        x1 = x0 + nw
+    else:
+        nh = int(cw * h / w)
+        y0 += (ch - nh) // 2
+        y1 = y0 + nh
+    return im.crop((x0, y0, x1, y1)).resize((w, h), Image.LANCZOS)
 
 
 def main():
@@ -63,6 +110,8 @@ def main():
         try:
             t1 = time.time()
             im = draw(k, it, refs_of(it), int(it.get("width") or 1024), int(it.get("height") or 576))
+            if job.get("crop_border", True) and it.get("crop_border", True):
+                im = crop_border(im)
             path = os.path.join(out_dir, f"{iid}.png")
             im.save(path)
             print(f"OK {iid} {path} {time.time() - t1:.1f}s", flush=True)
