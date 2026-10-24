@@ -4,8 +4,8 @@
   "chars": [
     {
       "name": "레아",
-      "look": "17-year-old human girl blacksmith apprentice, short messy auburn hair, freckles, determined green eyes, brown leather apron over a faded linen tunic, patched hooded traveling cloak, old scavenged brass goggles resting on her head, small bronze gear pendant necklace, fingerless leather gloves, worn leather boots",
-      "look_ko": "17살 인간 소녀, 대장장이 견습. 헝클어진 짧은 적갈색 머리, 주근깨, 초록 눈, 가죽 앞치마, 기운 후드 망토, 머리 위 황동 고글, 청동 톱니 목걸이, 손가락 없는 가죽 장갑",
+      "look": "17-year-old human girl mechanic apprentice, short messy auburn hair, freckles, determined green eyes, brown leather apron over a faded linen tunic, patched hooded traveling cloak, old scavenged brass goggles resting on her head, small bronze gear pendant necklace, fingerless leather gloves, worn leather boots",
+      "look_ko": "17살 인간 소녀, 방주선 정비공 견습. 헝클어진 짧은 적갈색 머리, 주근깨, 초록 눈, 가죽 앞치마, 기운 후드 망토, 머리 위 황동 고글, 청동 톱니 목걸이, 손가락 없는 가죽 장갑",
       "face": "캐릭터시트/레아.jpg"
     },
     {
@@ -29,7 +29,7 @@
     {
       "name": "발데르 경",
       "look": "human knight commander in his forties, stern scarred face, short gray-streaked black hair and short beard, a long scar across his left cheek, dented steel plate armor with a white tabard showing a red sun-and-flame emblem, long dark red cape, longsword at his hip",
-      "look_ko": "40대 정화교 기사단장. 엄한 얼굴, 왼뺨의 긴 흉터, 희끗한 검은 짧은 머리와 수염, 찌그러진 강철 갑옷, 붉은 태양·불꽃 문장의 흰 겉옷, 검붉은 망토, 장검",
+      "look_ko": "40대 방주선 기사단장(정화교). 엄한 얼굴, 왼뺨의 긴 흉터, 희끗한 검은 짧은 머리와 수염, 찌그러진 강철 갑옷, 붉은 태양·불꽃 문장의 흰 겉옷, 검붉은 망토, 장검",
       "face": "캐릭터시트/발데르.jpg"
     }
   ]
