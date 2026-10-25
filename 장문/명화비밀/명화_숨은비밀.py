@@ -285,7 +285,7 @@ def main():
                 "settings": {"format": "롱폼 가로(1920×1080)", "narration": "on",
                              "layout": "자막형(큰 제목+사진+자막)", "img_fill": "전체 화면(글자가 사진 위에)",
                              "img_motion": "영상처럼(확대·이동·전환)",
-                             "head_show": "안 보임(제목 카드만)", "sub_split": "한 줄씩(문장·쉼표로 나눠 차례로)", "img_label": "off",
+                             "head_show": "안 보임(제목 카드만)", "sub_split": "한 줄씩(문장·쉼표로 나눠 차례로)", "img_label": "on",
                              "narr_voice": "Supertonic M2 (남성, 무료 로컬) [supertonic:M2]"}}
         out = os.path.join(HERE, "명화_숨은비밀.json")
         json.dump(proj, open(out, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
