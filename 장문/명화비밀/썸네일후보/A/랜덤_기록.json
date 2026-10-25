@@ -1,0 +1,52 @@
+{
+ "seed": 657910864,
+ "src": ".wt_longform/장문/명화비밀/사진/c02.jpg",
+ "title": "벽 속에서 나온\n[숨은 명화]",
+ "candidates": [
+  {
+   "file": "랜덤_1.jpg",
+   "font": "/usr/share/fonts/truetype/nanum/NanumSquareEB.ttf",
+   "theme": "시안",
+   "title_style": "박스 강조",
+   "overlay": "전체 어둡게",
+   "darkness": 49,
+   "align": "left",
+   "text_y": 17,
+   "font_size": 79,
+   "frame": "없음",
+   "tag_position": "좌측 상단",
+   "bg_saturation": 121,
+   "brightness": 94
+  },
+  {
+   "file": "랜덤_2.jpg",
+   "font": "/usr/share/fonts/truetype/nanum/NanumSquareEB.ttf",
+   "theme": "퍼플",
+   "title_style": "외곽선",
+   "overlay": "비네팅",
+   "darkness": 77,
+   "align": "right",
+   "text_y": 79,
+   "font_size": 81,
+   "frame": "없음",
+   "tag_position": "제목 위",
+   "bg_saturation": 116,
+   "brightness": 99
+  },
+  {
+   "file": "랜덤_3.jpg",
+   "font": "/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc",
+   "theme": "시안",
+   "title_style": "그림자",
+   "overlay": "좌측 그라데이션",
+   "darkness": 42,
+   "align": "left",
+   "text_y": 66,
+   "font_size": 103,
+   "frame": "코너 장식",
+   "tag_position": "우측 상단",
+   "bg_saturation": 115,
+   "brightness": 83
+  }
+ ]
+}
