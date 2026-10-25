@@ -5,7 +5,13 @@ from 사진_찾기 import UA, api, strip
 out = sys.argv[1]; meta_p = os.path.join(out, "후보.json"); meta = json.load(open(meta_p, encoding="utf-8"))
 for arg in sys.argv[2:]:
     k, _, title = arg.partition("=")
-    d = api({"action": "query", "titles": title, "prop": "imageinfo", "iiprop": "url|size|extmetadata|mime", "iiurlwidth": 1280})
+    for k_ in range(6):                     # 위키미디어가 막으면(429) 1분씩 쉬며 다시
+        d = api({"action": "query", "titles": title, "prop": "imageinfo", "iiprop": "url|size|extmetadata|mime", "iiurlwidth": 1280})
+        if d.get("query"):
+            break
+        print("  막힘, 1분 쉼:", k); time.sleep(60)
+    else:
+        print("  못 받음:", k, title); continue
     p = next(iter(d["query"]["pages"].values())); ii = p["imageinfo"][0]; em = ii.get("extmetadata") or {}
     open(os.path.join(out, k + ".jpg"), "wb").write(urllib.request.urlopen(urllib.request.Request(ii["thumburl"], headers=UA), timeout=60).read())
     meta[k] = {"title": title, "artist": strip((em.get("Artist") or {}).get("value"))[:80], "license": strip((em.get("LicenseShortName") or {}).get("value")),
