@@ -6280,6 +6280,9 @@ class SubtitleRenderer:
                     cred = re.sub(r"No machine-readable author provided\.?\s*", "", cred).strip(" /")
                 fs2 = max(14, int(fs * 0.62))
                 f2 = load_font(self.s.get("sub_font_path") or self.s.get("font_path"), fs2)
+                cjk = "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc"
+                if re.search(r"[぀-ヿ㐀-鿿]", cred) and os.path.exists(cjk):   # 한자·일본어 작가 이름(榊 등)은 한글 글꼴에 없어 □로 나옴
+                    f2 = ImageFont.truetype(cjk, fs2)
                 while cred and f2.getlength(cred) > maxw - fs and len(cred) > 4:
                     cred = cred[:-2] + "…"
                 w1 = int(f_.getlength(cap))
