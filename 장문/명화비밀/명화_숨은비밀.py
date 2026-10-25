@@ -53,7 +53,7 @@ CUTS = [
     ("c33", "a young art student in 1996 comparing two printed images of portraits side by side at a library table, one in old black-and-white, eyes wide with discovery", "두 그림을 겹쳐 본 미술 학도"),
     ("c34", "a ghostly second portrait of a young woman in a hat faintly emerging beneath a painted portrait of a woman, like two layers, mysterious. No people, no hands, no arms anywhere.", "그림 밑의 또 다른 여인"),
     ("c35", "a scientist in a modern lab with an AI separating an X-ray image of a painting into several glowing translucent layers floating in the air, no text", "층을 나눠 보는 AI"),
-    ("c36", "a quiet museum hall at closing time, a single spotlight on an old painting, a visitor's silhouette looking at it, mysterious atmosphere", "아직 잠든 비밀"),
+    ("c36", "a quiet museum hall at closing time, a single spotlight on an old painting, a visitor's silhouette looking at it, mysterious atmosphere", "마우리츠하위스 전시실 — 아직 잠든 비밀"),
 ]
 
 STORY = """{c01}
@@ -245,7 +245,7 @@ REF_NOTE = ("Any painting or building shown must look exactly like the reference
 
 # 컷 → 고른 위키미디어 사진 후보 이름 (사진후보/후보.json 의 열쇠). 사진을 받은 뒤 채움
 PHOTOS = {"c02": "c02_1", "c05": "c05_1", "c06": "c06_2", "c08": "c08_c", "c11": "c11_1", "c16": "c16_2", "c20": "c20_2",
-          "c22": "c22_8", "c23": "c23_1", "c25": "c25_8", "c26": "c26_c", "c27": "c27_4", "c10": "c10_8", "c14": "c14_c", "c04": "c23_2", "c07": "c07_c", "c12": "c12_2", "c03": "c13_2", "c13": "c03_4", "c21": "c21_4", "c24": "c24_1"}
+          "c22": "c22_8", "c23": "c23_1", "c25": "c25_8", "c26": "c26_c", "c27": "c27_4", "c10": "c10_8", "c14": "c14_c", "c04": "c23_2", "c07": "c07_c", "c12": "c12_2", "c03": "c13_2", "c13": "c03_4", "c21": "c21_4", "c24": "c24_1", "c36": "c36_4"}
 
 
 def main():

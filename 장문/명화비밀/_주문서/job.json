@@ -11,54 +11,12 @@
    "prompt": "realistic historical watercolor painting, fine ink outlines, transparent layered watercolor washes, soft natural colors, visible paper texture, documentary illustration, realistic anatomy and proportions, historical documentary illustration, realistic proportions, museum-quality painting. Scene: a gardener in work clothes pulling ivy off an old museum's outer stone wall and opening a small rusty metal hatch, a dark cavity with a plastic bag inside. Any painting or building shown must look exactly like the reference photo of the real artwork or place (same composition, colors and figures), painted in the same oil style. Every person has exactly two arms, two hands with five fingers each and two legs, hands simple and relaxed (partly hidden is fine). Cinematic composition, full-bleed image, no border, no frame, no paper edges. No text, no letters, no captions."
   },
   {
-   "id": "c03",
-   "width": 1024,
-   "height": 576,
-   "seed": 303,
-   "refs": [
-    "/home/user/youtubeshot/.wt_longform/장문/명화비밀/사진후보/c02_1.jpg"
-   ],
-   "prompt": "realistic historical watercolor painting, fine ink outlines, transparent layered watercolor washes, soft natural colors, visible paper texture, documentary illustration, realistic anatomy and proportions, historical documentary illustration, realistic proportions, museum-quality painting. Scene: a conservator in a dark laboratory looking at a glowing X-ray image of a painting on a light box, a hidden second face faintly visible. Any painting or building shown must look exactly like the reference photo of the real artwork or place (same composition, colors and figures), painted in the same oil style. Every person has exactly two arms, two hands with five fingers each and two legs, hands simple and relaxed (partly hidden is fine). Cinematic composition, full-bleed image, no border, no frame, no paper edges. No text, no letters, no captions."
-  },
-  {
-   "id": "c04",
-   "width": 1024,
-   "height": 576,
-   "seed": 304,
-   "refs": [],
-   "prompt": "realistic historical watercolor painting, fine ink outlines, transparent layered watercolor washes, soft natural colors, visible paper texture, documentary illustration, realistic anatomy and proportions, historical documentary illustration, realistic proportions, museum-quality painting. Scene: a grand old European art museum gallery at night, famous paintings on the walls lit by soft spotlights, empty and mysterious. No people, no hands, no arms anywhere.. Cinematic composition, full-bleed image, no border, no frame, no paper edges. No text, no letters, no captions."
-  },
-  {
-   "id": "c07",
-   "width": 1024,
-   "height": 576,
-   "seed": 307,
-   "refs": [],
-   "prompt": "realistic historical watercolor painting, fine ink outlines, transparent layered watercolor washes, soft natural colors, visible paper texture, documentary illustration, realistic anatomy and proportions, historical documentary illustration, realistic proportions, museum-quality painting. Scene: a computer scientist in a modern lab watching large screens that show a Renaissance Madonna painting divided into square patches with colored heat-map overlays, no text. Every person has exactly two arms, two hands with five fingers each and two legs, hands simple and relaxed (partly hidden is fine). Cinematic composition, full-bleed image, no border, no frame, no paper edges. No text, no letters, no captions."
-  },
-  {
    "id": "c09",
    "width": 1024,
    "height": 576,
    "seed": 309,
    "refs": [],
    "prompt": "realistic historical watercolor painting, fine ink outlines, transparent layered watercolor washes, soft natural colors, visible paper texture, documentary illustration, realistic anatomy and proportions, historical documentary illustration, realistic proportions, museum-quality painting. Scene: a Renaissance painter's workshop in Rome, a master and several young apprentices painting on one large panel together, candlelight. Every person has exactly two arms, two hands with five fingers each and two legs, hands simple and relaxed (partly hidden is fine). Cinematic composition, full-bleed image, no border, no frame, no paper edges. No text, no letters, no captions."
-  },
-  {
-   "id": "c12",
-   "width": 1024,
-   "height": 576,
-   "seed": 312,
-   "refs": [],
-   "prompt": "realistic historical watercolor painting, fine ink outlines, transparent layered watercolor washes, soft natural colors, visible paper texture, documentary illustration, realistic anatomy and proportions, historical documentary illustration, realistic proportions, museum-quality painting. Scene: a 17th century anatomy theatre in Amsterdam, wooden tiers full of men in black clothes and white collars watching a dissection, candles, no gore visible. Every person has exactly two arms, two hands with five fingers each and two legs, hands simple and relaxed (partly hidden is fine). Cinematic composition, full-bleed image, no border, no frame, no paper edges. No text, no letters, no captions."
-  },
-  {
-   "id": "c13",
-   "width": 1024,
-   "height": 576,
-   "seed": 313,
-   "refs": [],
-   "prompt": "realistic historical watercolor painting, fine ink outlines, transparent layered watercolor washes, soft natural colors, visible paper texture, documentary illustration, realistic anatomy and proportions, historical documentary illustration, realistic proportions, museum-quality painting. Scene: a technician placing a large old painting under an X-ray scanner in a museum conservation studio, glowing screens. Every person has exactly two arms, two hands with five fingers each and two legs, hands simple and relaxed (partly hidden is fine). Cinematic composition, full-bleed image, no border, no frame, no paper edges. No text, no letters, no captions."
   },
   {
    "id": "c15",
@@ -91,24 +49,6 @@
    "seed": 319,
    "refs": [],
    "prompt": "realistic historical watercolor painting, fine ink outlines, transparent layered watercolor washes, soft natural colors, visible paper texture, documentary illustration, realistic anatomy and proportions, historical documentary illustration, realistic proportions, museum-quality painting. Scene: a magazine editor at a desk covered with old art magazines and black-and-white photographs, comparing a photo with a museum catalogue, lamp light. Every person has exactly two arms, two hands with five fingers each and two legs, hands simple and relaxed (partly hidden is fine). Cinematic composition, full-bleed image, no border, no frame, no paper edges. No text, no letters, no captions."
-  },
-  {
-   "id": "c21",
-   "width": 1024,
-   "height": 576,
-   "seed": 321,
-   "refs": [],
-   "prompt": "realistic historical watercolor painting, fine ink outlines, transparent layered watercolor washes, soft natural colors, visible paper texture, documentary illustration, realistic anatomy and proportions, historical documentary illustration, realistic proportions, museum-quality painting. Scene: an art detective in a dark coat standing in front of a small Flemish painting in a museum, studying it closely with a flashlight. Every person has exactly two arms, two hands with five fingers each and two legs, hands simple and relaxed (partly hidden is fine). Cinematic composition, full-bleed image, no border, no frame, no paper edges. No text, no letters, no captions."
-  },
-  {
-   "id": "c24",
-   "width": 1024,
-   "height": 576,
-   "seed": 324,
-   "refs": [
-    "/home/user/youtubeshot/.wt_longform/장문/명화비밀/사진후보/c22_8.jpg"
-   ],
-   "prompt": "realistic historical watercolor painting, fine ink outlines, transparent layered watercolor washes, soft natural colors, visible paper texture, documentary illustration, realistic anatomy and proportions, historical documentary illustration, realistic proportions, museum-quality painting. Scene: a conservator in a white coat bending over an old Dutch painting with a surgical scalpel and a microscope, removing a tiny piece of grey overpaint from the wall area. Any painting or building shown must look exactly like the reference photo of the real artwork or place (same composition, colors and figures), painted in the same oil style. Every person has exactly two arms, two hands with five fingers each and two legs, hands simple and relaxed (partly hidden is fine). Cinematic composition, full-bleed image, no border, no frame, no paper edges. No text, no letters, no captions."
   },
   {
    "id": "c28",
@@ -179,14 +119,6 @@
    "seed": 335,
    "refs": [],
    "prompt": "realistic historical watercolor painting, fine ink outlines, transparent layered watercolor washes, soft natural colors, visible paper texture, documentary illustration, realistic anatomy and proportions, historical documentary illustration, realistic proportions, museum-quality painting. Scene: a scientist in a modern lab with an AI separating an X-ray image of a painting into several glowing translucent layers floating in the air, no text. Every person has exactly two arms, two hands with five fingers each and two legs, hands simple and relaxed (partly hidden is fine). Cinematic composition, full-bleed image, no border, no frame, no paper edges. No text, no letters, no captions."
-  },
-  {
-   "id": "c36",
-   "width": 1024,
-   "height": 576,
-   "seed": 336,
-   "refs": [],
-   "prompt": "realistic historical watercolor painting, fine ink outlines, transparent layered watercolor washes, soft natural colors, visible paper texture, documentary illustration, realistic anatomy and proportions, historical documentary illustration, realistic proportions, museum-quality painting. Scene: a quiet museum hall at closing time, a single spotlight on an old painting, a visitor's silhouette looking at it, mysterious atmosphere. Every person has exactly two arms, two hands with five fingers each and two legs, hands simple and relaxed (partly hidden is fine). Cinematic composition, full-bleed image, no border, no frame, no paper edges. No text, no letters, no captions."
   }
  ],
  "skip_done": true
