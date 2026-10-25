@@ -239,12 +239,13 @@ STORY = """{c01}
 여러분은 다섯 가지 비밀 가운데 무엇이 가장 놀라우셨나요? 댓글로 들려주세요. 보고 나면 가벼운 지식이 남는 이야기, 이 채널에서 계속 이어집니다."""
 
 # 실제 사진을 보고 그리는 컷 (실제 그림·장소가 나오는 AI 장면) → 사진후보 이름들 (사진을 받은 뒤 채움)
-REFS = {}
+REFS = {"c01": ["c27_4"], "c03": ["c02_1"], "c24": ["c22_8"], "c32": ["c02_1"], "c33": ["c02_1"], "c34": ["c02_1"]}
 REF_NOTE = ("Any painting or building shown must look exactly like the reference photo of the real artwork or place "
             "(same composition, colors and figures), painted in the same oil style. ")
 
 # 컷 → 고른 위키미디어 사진 후보 이름 (사진후보/후보.json 의 열쇠). 사진을 받은 뒤 채움
-PHOTOS = {}
+PHOTOS = {"c02": "c02_1", "c05": "c05_1", "c06": "c06_2", "c08": "c08_c", "c11": "c11_1", "c16": "c16_2", "c20": "c20_2",
+          "c22": "c22_8", "c23": "c23_1", "c25": "c25_8", "c26": "c26_c", "c27": "c27_4"}   # c10(렘브란트)은 받는 대로 추가
 
 
 def main():
