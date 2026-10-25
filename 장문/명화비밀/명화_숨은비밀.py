@@ -21,15 +21,15 @@ CUTS = [
     ("c01", "a gardener in work clothes pulling ivy off an old museum's outer stone wall and opening a small rusty metal hatch, a dark cavity with a plastic bag inside", "담쟁이 뒤 철문을 연 정원사"),
     ("c02", "Gustav Klimt's portrait of a woman painting (real painting)", "클림트 '여인의 초상'"),
     ("c03", "a conservator in a dark laboratory looking at a glowing X-ray image of a painting on a light box, a hidden second face faintly visible", "엑스선 속 숨은 얼굴"),
-    ("c04", "a grand old European art museum gallery at night, famous paintings on the walls lit by soft spotlights, empty and mysterious. No people, no hands, no arms anywhere.", "밤의 미술관"),
+    ("c04", "a grand old European art museum gallery at night, famous paintings on the walls lit by soft spotlights, empty and mysterious. No people, no hands, no arms anywhere.", "드레스덴 옛 거장 회화관"),
     ("c05", "Raphael's Madonna della Rosa painting (real painting)", "라파엘로 '장미의 성모'"),
     ("c06", "the Prado Museum building in Madrid (real photo)", "프라도 미술관"),
-    ("c07", "a computer scientist in a modern lab watching large screens that show a Renaissance Madonna painting divided into square patches with colored heat-map overlays, no text", "AI가 붓질을 나눠 보는 장면"),
+    ("c07", "a computer scientist in a modern lab watching large screens that show a Renaissance Madonna painting divided into square patches with colored heat-map overlays, no text", "AI가 라파엘로의 붓질로 판정한 성모"),
     ("c08", "close-up of the bearded face of Saint Joseph in a Renaissance painting, a magnifying glass over it, dramatic light", "요셉의 얼굴"),
     ("c09", "a Renaissance painter's workshop in Rome, a master and several young apprentices painting on one large panel together, candlelight", "스승과 제자들의 공방"),
     ("c10", "Rembrandt's The Anatomy Lesson of Dr Nicolaes Tulp painting (real painting)", "렘브란트 '튈프 박사의 해부학 강의'"),
     ("c11", "the Mauritshuis museum building in The Hague by the pond (real photo)", "마우리츠하위스 미술관"),
-    ("c12", "a 17th century anatomy theatre in Amsterdam, wooden tiers full of men in black clothes and white collars watching a dissection, candles, no gore visible", "1632년 해부학 강의실"),
+    ("c12", "a 17th century anatomy theatre in Amsterdam, wooden tiers full of men in black clothes and white collars watching a dissection, candles, no gore visible", "17세기 해부학 강의 (레이던, 판화)"),
     ("c13", "a technician placing a large old painting under an X-ray scanner in a museum conservation studio, glowing screens", "그림을 찍는 엑스선 장비"),
     ("c14", "a grey X-ray image of a painted arm on a light box showing a different shape underneath the paint, mysterious and clinical, no text", "엑스선에 드러난 팔"),
     ("c15", "Pieter Brueghel the Younger style Flemish genre painting of a peasant woman carrying burning embers in one hand and a water bucket in the other (real painting)", "브뤼헐 '불씨를 나르는 여인'"),
@@ -245,7 +245,7 @@ REF_NOTE = ("Any painting or building shown must look exactly like the reference
 
 # 컷 → 고른 위키미디어 사진 후보 이름 (사진후보/후보.json 의 열쇠). 사진을 받은 뒤 채움
 PHOTOS = {"c02": "c02_1", "c05": "c05_1", "c06": "c06_2", "c08": "c08_c", "c11": "c11_1", "c16": "c16_2", "c20": "c20_2",
-          "c22": "c22_8", "c23": "c23_1", "c25": "c25_8", "c26": "c26_c", "c27": "c27_4", "c10": "c10_8", "c14": "c14_c"}
+          "c22": "c22_8", "c23": "c23_1", "c25": "c25_8", "c26": "c26_c", "c27": "c27_4", "c10": "c10_8", "c14": "c14_c", "c04": "c23_2", "c07": "c07_c", "c12": "c12_2"}
 
 
 def main():
