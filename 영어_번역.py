@@ -172,14 +172,21 @@ def make_translations(target, langs=("en",), log=print):
     log(f"🌐 자막·번역 키트 ({', '.join(LANGS[x][0] for x in langs)}): {title}")
     desc_ko = _read(base + "_설명란.txt")
     chunks = transcribe_chunks(mp4, log)
+    fixes = c.get("trans_fix") or {}      # 프로젝트에 정한 고정 번역(연재 이름 등): {"ja": {"第二の夜明け": "二度目の夜明け"}} — 번역마다 이름이 달라지는 것 막기
+
+    def fix(t, lang):
+        for a, b in (fixes.get(lang) or {}).items():
+            t = t.replace(a, b)
+        return t
     for lang in langs:
         name = LANGS[lang][0]
         if lang != "ko":
             t_, d_ = make_meta(m, title, desc_ko, c.get("notes", ""), log, lang)
+            t_, d_ = fix(t_, lang), fix(d_, lang)
             m.atomic_write_text(base + f"_{name}_제목설명.txt",
                                 f"[{name} 제목]\n{t_}\n\n[{name} 설명란]  ({len(d_.encode('utf-8')):,}바이트 / 5,000)\n{d_}\n")
             log(f"  🌐 {name} 제목: {t_}")
-        lines = translate_subs(m, chunks, str(c.get("story") or ""), log, lang)
+        lines = [fix(x, lang) for x in translate_subs(m, chunks, str(c.get("story") or ""), log, lang)]
         srt = "\n".join(f"{i + 1}\n{_srt_time(a)} --> {_srt_time(b)}\n{e}\n" for i, ((a, b, _), e) in enumerate(zip(chunks, lines)))
         m.atomic_write_text(base + f"_{name}자막.srt", srt)
         log(f"✅ {name} 자막 완성: {os.path.basename(base)}_{name}자막.srt (자막 {len(lines)}줄)")

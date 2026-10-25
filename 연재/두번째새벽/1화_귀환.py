@@ -321,6 +321,8 @@ def main():
             story = story.replace("{" + cid + "}", f"[사진: {img} | {cap} | AI 생성 그림 (FLUX.2 klein) | ]")
         proj = {"ver": 7, "category": "장문", "genre": "[이야기] SF·디스토피아", "topic": "두 번째 새벽", "title": TITLE,
                 "story": story, "sources": [], "notes": "창작 연재 《두 번째 새벽》 1화", "autophoto": False, "img_source": "그림: 애니 일러스트" if anime else "그림: 옛날 만화책",
+                "trans_fix": {"ja": {"第二の夜明け": "二度目の夜明け", "二番目の夜明け": "二度目の夜明け", "2番目の夜明け": "二度目の夜明け"},
+                              "en": {"The Second Daybreak": "The Second Dawn"}},   # 연재 이름은 기획.md 에 정한 대로 고정
                 "cast": [{"name": nm, "look": c["look"], "look_ko": c["look_ko"], "voice": c.get("voice"),
                           **({"sheet": os.path.join(HERE, c[face])} if c.get(face) else {})} for nm, c in chars.items()],
                 "dialogue": [{"text": t, "who": w} for t, w in DIALOGUE],
