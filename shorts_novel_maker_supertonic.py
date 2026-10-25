@@ -17784,7 +17784,7 @@ class App(tk.Tk):
     # ---- 장면별로 나눠 만들기 (자막형): 고친 장면만 다시, 오류 나도 끝난 장면은 남음 ----
     SCENE_FP_SKIP = {"out_dir", "bgm_mode", "bgm_style", "bgm_volume", "bgm_seed", "bgm_path", "audio_out", "openai_key", "gemini_key",
                      "openai_model", "gemini_model", "image_model", "image_quality", "image_style", "image_style_preset", "script_engine", "trans_engine", "auto_langs",
-                     "fiction_image", "hit_sound", "hit_volume", "reveal_hit", "narr_duck", "scene_parts", "photo_count", "narr_spoken"}
+                     "fiction_image", "hit_sound", "hit_volume", "reveal_hit", "narr_duck", "scene_parts", "photo_count", "narr_spoken", "scene_trans"}   # 전환은 합칠 때만 쓰므로 바뀌어도 장면은 다시 안 만듦
 
     def _make_mp4_scenes(self, story, title, s, style, base, out, kit, prog, publish=True):
         """본문을 장면(사진+문단)마다 따로 그려 조각으로 저장하고, 배경음은 전체에 한 번에 깔아 이어 붙임"""
