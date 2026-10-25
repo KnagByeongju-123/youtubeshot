@@ -5770,6 +5770,62 @@ class SubtitleRenderer:
             self._img_cache[idx] = (big, mask, blur)
         return self._img_cache[idx]
 
+    def _layer_spec(self, idx):
+        """그림 옆에 <그림이름>.layers.json 이 있으면 레이어 움직임 설정을 읽음 (레이어_움직임.py 와 같은 움직임 이름)
+        {"bg": "c01_bg.png", "layers": [{"png": "c01_ship.png", "move": "날아감:0.24,-0.2,0.5"}]}  — 경로는 json 기준"""
+        cache = self.__dict__.setdefault("_layer_cache", {})
+        if idx in cache:
+            return cache[idx]
+        spec = None
+        paths = getattr(self, "img_paths", [])
+        if idx < len(paths) and not getattr(self, "slide", False):
+            jp = os.path.splitext(paths[idx])[0] + ".layers.json"
+            if os.path.exists(jp):
+                try:
+                    import importlib.util as _iu
+                    _sp = _iu.spec_from_file_location("layer_motion", os.path.join(os.path.dirname(os.path.abspath(__file__)), "레이어_움직임.py"))
+                    LM = _iu.module_from_spec(_sp)
+                    _sp.loader.exec_module(LM)
+                    d = json.load(open(jp, encoding="utf-8"))
+                    base = os.path.dirname(jp)
+                    bg = Image.open(os.path.join(base, d["bg"])).convert("RGB")
+                    lays = []
+                    for L in d.get("layers") or []:
+                        im = Image.open(os.path.join(base, L["png"])).convert("RGBA").resize(bg.size, Image.LANCZOS)
+                        bb = im.getbbox() or (0, 0, bg.width, bg.height)
+                        lays.append((im.crop(bb), ((bb[0] + bb[2]) / 2, (bb[1] + bb[3]) / 2), LM.parse(L.get("move", "확대"))))
+                    spans = [(s_["t0"], s_["t1"]) for s_ in getattr(self, "shots", []) if s_.get("img") == idx]
+                    g0, g1 = (min(a for a, _ in spans), max(b for _, b in spans)) if spans else (0.0, 1.0)
+                    spec = {"bg": bg, "layers": lays, "g0": g0, "g1": g1, "ease": LM.ease}
+                except Exception as e:
+                    print("레이어 움직임 설정을 못 읽음:", jp, e)
+        cache[idx] = spec
+        return spec
+
+    def _layered_big(self, idx, big, t, spec):
+        """레이어 움직임 한 장: 배경(빈자리 채운 그림)을 big 크기로 + 누끼 레이어를 시간에 맞춰 이동·확대·회전해 얹음"""
+        key = ("layer_bg", idx)
+        if key not in self._img_cache:
+            self._img_cache[key] = spec["bg"].resize(big.size, Image.LANCZOS).convert("RGBA")
+        frame = self._img_cache[key].copy()
+        sc = big.width / spec["bg"].width
+        q = min(1.0, max(0.0, (t - spec["g0"]) / max(0.1, spec["g1"] - spec["g0"])))
+        e = spec["ease"](q)
+        for obj, (ox, oy), (dx, dy, k, rot, shake) in spec["layers"]:
+            s_ = (1 + (k - 1) * e) * sc
+            x = (ox + dx * spec["bg"].width * e) * sc
+            y = (oy + dy * spec["bg"].height * e) * sc
+            if shake == 1:
+                x += np.sin(t * 40) * 6 * sc * (1 - q)
+                y += np.cos(t * 55) * 5 * sc * (1 - q)
+            elif shake == 2:
+                y += np.sin(q * np.pi * 2) * 10 * sc
+            o = obj.resize((max(1, int(obj.width * s_)), max(1, int(obj.height * s_))), Image.BICUBIC)
+            if rot:
+                o = o.rotate(rot * e, resample=Image.BICUBIC, expand=True)
+            frame.alpha_composite(o, (int(x - o.width / 2), int(y - o.height / 2)))
+        return frame.convert("RGB")
+
     def _shot_crop(self, sh, t):
         """장면 sh 의 t 시점 사진 (움직임 적용)"""
         x0, y0, x1, y1 = self.img_box
@@ -5809,6 +5865,9 @@ class SubtitleRenderer:
                     self._img_cache.pop(next(iter(self._img_cache)))
                 self._img_cache[key] = z
             return self._img_cache[key], mask
+        lay = self._layer_spec(sh["img"])
+        if lay:                                       # 레이어 움직임(애니메이션 연재 전용): 배경 + 누끼 레이어를 이 시점 모습으로 합침
+            big = self._layered_big(sh["img"], big, t, lay)
         z0, z1, ax, bx, ay, by = sh["m"]
         p = min(1.0, max(0.0, (t - sh["t0"]) / max(0.1, sh["t1"] - sh["t0"])))
         p = 0.5 - 0.5 * np.cos(np.pi * p)             # 부드럽게 시작·끝
@@ -5825,7 +5884,7 @@ class SubtitleRenderer:
         cx = big.width / 2 + (ax + (bx - ax) * p) * sx
         cy = big.height / 2 + (ay + (by - ay) * p) * sy
         l, tp = cx - cw / 2, cy - ch / 2
-        dbig = self._depth_for(sh["img"], big.size) if (getattr(self, "depth_on", False) and z < 1.22) else None   # 확대(줌)된 장면은 2.5D 안 함 (가장자리 겹침이 더 잘 보임)
+        dbig = self._depth_for(sh["img"], big.size) if (getattr(self, "depth_on", False) and z < 1.22 and not lay) else None   # 확대(줌)된 장면은 2.5D 안 함 (가장자리 겹침이 더 잘 보임)
         if dbig is None:
             return extent_resize(big, (bw, bh), (l, tp, l + cw, tp + ch)), mask
         # 2.5D 카메라 무빙: 장면이 진행되는 동안 한쪽으로 천천히 돌아가며(드리프트) + 7초 주기로 살짝 흔들림. 가까운 것은 많이, 먼 것은 조금 밀림
