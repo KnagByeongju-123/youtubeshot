@@ -4,6 +4,9 @@
   한글 글꼴(나눔·노토), 파이썬 3.12 화면 부품(tkinter), 가상 모니터(xvfb),
   실행 환경 `.supertonic_venv`, 목소리 모델 `supertonic_assets` (Supertonic 3),
   그림 모델 FLUX.2 klein 4B `.sd_venv` + `models/FLUX2_klein_4B` (Apache 2.0, 그래픽카드 없이)
+- 서버 속도 확인(그림 그리기 전 필수): `grep -c amx_bf16 /proc/cpuinfo` 가 0 이면 이 서버엔 AI 계산 기능(AMX)이 없어
+  klein 그림이 한 장 2분 → 25분으로 느려짐. 그림을 많이 그릴 일이면 사용자에게 알리고 새 세션(다른 서버)을 권함.
+  새 서버가 켜진 직후 첫 모델 불러오기는 10분 넘게 걸릴 수 있음(그 뒤는 빠름)
 - `python` = `.supertonic_venv/bin/python` (파이썬 3.12. 기본 python3.13 에는 tkinter 가 없음)
 - 프로그램은 tkinter 창을 띄우므로 화면 없이 `xvfb-run -a python -X utf8 ...` 로 실행
 - 나레이션 성우는 남자 성우 2 (Supertonic M2)
