@@ -1,0 +1,45 @@
+{
+ "items": [
+  {
+   "id": "c03",
+   "width": 1024,
+   "height": 576,
+   "seed": 1303,
+   "refs": [],
+   "prompt": "oil painting with thick visible brush strokes, impasto texture, rich colors, painterly, historical documentary illustration, realistic proportions, museum-quality painting. Scene: an ancient Greek bronze astronomical device with dials and gears glowing softly on a dark table, imagined reconstruction. Any people have exactly two arms and two legs. Absolutely no letters, no writing, no numbers, no signs with text anywhere. Cinematic composition, full-bleed image, no border, no frame, no paper edges. No text, no letters, no captions."
+  },
+  {
+   "id": "c21",
+   "width": 1024,
+   "height": 576,
+   "seed": 1321,
+   "refs": [],
+   "prompt": "oil painting with thick visible brush strokes, impasto texture, rich colors, painterly, historical documentary illustration, realistic proportions, museum-quality painting. Scene: a small sphere half silver half black rotating inside a bronze dial to show the phases of the moon, close-up. Any people have exactly two arms and two legs. Absolutely no letters, no writing, no numbers, no signs with text anywhere. Cinematic composition, full-bleed image, no border, no frame, no paper edges. No text, no letters, no captions."
+  },
+  {
+   "id": "c22",
+   "width": 1024,
+   "height": 576,
+   "seed": 1322,
+   "refs": [],
+   "prompt": "oil painting with thick visible brush strokes, impasto texture, rich colors, painterly, historical documentary illustration, realistic proportions, museum-quality painting. Scene: two interlocking bronze gears connected by a small pin sliding in a slot, mechanical detail, warm light. Any people have exactly two arms and two legs. Absolutely no letters, no writing, no numbers, no signs with text anywhere. Cinematic composition, full-bleed image, no border, no frame, no paper edges. No text, no letters, no captions."
+  },
+  {
+   "id": "c25",
+   "width": 1024,
+   "height": 576,
+   "seed": 1325,
+   "refs": [],
+   "prompt": "oil painting with thick visible brush strokes, impasto texture, rich colors, painterly, historical documentary illustration, realistic proportions, museum-quality painting. Scene: five small colored beads (planets) moving on concentric rings around a golden sun on a bronze dial, cosmos model. Any people have exactly two arms and two legs. Absolutely no letters, no writing, no numbers, no signs with text anywhere. Cinematic composition, full-bleed image, no border, no frame, no paper edges. No text, no letters, no captions."
+  },
+  {
+   "id": "c33",
+   "width": 1024,
+   "height": 576,
+   "seed": 1333,
+   "refs": [],
+   "prompt": "oil painting with thick visible brush strokes, impasto texture, rich colors, painterly, historical documentary illustration, realistic proportions, museum-quality painting. Scene: a statistical diagram of a broken circular ring with evenly spaced holes, a scientist pointing at it on a screen, 2024. Any people have exactly two arms and two legs. Absolutely no letters, no writing, no numbers, no signs with text anywhere. Cinematic composition, full-bleed image, no border, no frame, no paper edges. No text, no letters, no captions."
+  }
+ ],
+ "skip_done": true
+}
