@@ -1,5 +1,5 @@
 """《두 번째 새벽》 1화 '귀환' — 대본 + 컷별 그림 계획
-python 연재/두번째새벽/1화_귀환.py job <저장폴더>   → 그림 주문서(klein_worker 용) job.json
+python 연재/두번째새벽/1화_귀환.py job <저장폴더> [애니]   → 그림 주문서(klein_worker 용) job.json (애니 = 애니 일러스트 화풍 + 캐릭터시트_애니)
 python 연재/두번째새벽/1화_귀환.py project <그림폴더> → 프로젝트 파일(render_project 용) 연재/두번째새벽/1화_귀환.json
 대본의 {컷번호} 자리에 그 컷 그림이 들어감. chars = 그 컷에 나오는 인물(캐릭터 시트를 기준 그림으로 넣음)"""
 import json
@@ -280,17 +280,20 @@ STORY = """{c01}
 
 def main():
     cmd, folder = sys.argv[1], sys.argv[2]
+    anime = len(sys.argv) > 3 and sys.argv[3] == "애니"
     chars = {c["name"]: c for c in json.load(open(os.path.join(HERE, "등장인물.json"), encoding="utf-8"))["chars"]}
     src = open(os.path.join(HERE, "..", "..", "shorts_novel_maker_supertonic.py"), encoding="utf-8").read()
-    style = re.search(r'"옛날 만화책\(세피아 펜화\)": "([^"]+)"', src).group(1)
+    style_name = "애니 일러스트\\(요즘\\)" if anime else "옛날 만화책\\(세피아 펜화\\)"
+    style = re.search(f'"{style_name}": "([^"]+)"', src).group(1)
+    face, kind = ("face_anime", "anime illustration") if anime else ("face", "comic panel")
     if cmd == "job":
         items = []
         for cid, who, desc, _ in CUTS:
             looks = "; ".join(f"{nm} (the character from reference image {k + 1}): {chars[nm]['look']}" for k, nm in enumerate(who))
             items.append({"id": cid, "width": 1024, "height": 576, "seed": 100 + int(cid[1:]),
-                          "refs": [os.path.join(HERE, chars[nm]["face"]) for nm in who],
-                          "prompt": f"{style}, medieval post-apocalyptic science fantasy comic panel. "
-                                    + (f"Characters: {looks}. " if looks else "")
+                          "refs": [os.path.join(HERE, chars[nm][face]) for nm in who],
+                          "prompt": f"{style}, medieval post-apocalyptic science fantasy {kind}. "
+                                    + (f"Characters: {looks}. Each person has exactly two arms and two legs. " if looks else "")
                                     + f"Scene: {desc}. Cinematic composition, full-bleed image, no border, no frame, no paper edges. No speech bubbles, no text, no letters."})
         os.makedirs(folder, exist_ok=True)
         json.dump({"items": items}, open(os.path.join(folder, "job.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
