@@ -69,6 +69,11 @@ def is_done(t):
 
 def add(task):
     q = [t for t in load() if t["name"] != task["name"]]
+    if task.get("kind") == "klein":       # 같은 저장 폴더를 그리던 예전 그림 줄은 끝냄 — 그림을 치우면 예전 주문서로 다시 그려 버림(c34 사고)
+        for t in q:
+            if t.get("kind") == "klein" and os.path.abspath(t.get("out", "")) == task["out"] and not t.get("done"):
+                t["done"] = True
+                print("  예전 줄 끝냄:", t["name"])
     q.append(task)
     save(q)
     print("줄에 넣음:", task["name"])
