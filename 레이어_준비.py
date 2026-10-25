@@ -1,10 +1,12 @@
 """레이어 움직임 준비 — 고른 컷마다 누끼(인물·사물) + 빈자리 채운 배경 + <컷>.layers.json 을 한 번에 (애니메이션 연재 전용)
 
-  python 레이어_준비.py <그림폴더> c01=날아감:0.24,-0.2,0.5 c33=솟아오름 c34=다가옴 ...
+  python 레이어_준비.py <그림폴더> "c01=날아감:0.24,-0.2,0.5@<배경 영어 설명>" "c33=솟아오름@<배경 설명>" ...
+  python 레이어_준비.py <그림폴더> --배경만 "c03@<배경 설명>" ...   (누끼는 그대로, 배경만 다시 그림)
   python 레이어_준비.py <그림폴더> --마무리      (그림 AI 배경 채우기가 끝난 뒤 layers.json 쓰기)
 
 1) 누끼: rembg(isnet) — 반투명이면 알파를 단단히, 가장 큰 덩어리만 → <그림폴더>/레이어/<컷>_obj.png
-2) 빈자리: 누끼 둘레를 넓혀 cv2.inpaint 로 대충 채움 → klein fixes(refs 없이, '물체 없음' 설명)로 그 칸을 다시 그림
+2) 빈자리: 원래 그림에서 그 칸을 klein fixes 로 '인물 지우고 <배경 설명>' 으로 다시 그림 (배경 설명을 꼭 구체적으로:
+   '깨끗한 빈 배경' 처럼 막연하면 뿌연 안개만 그려짐 — 2화 첫 시험에서 10장 모두 실패)
    (작업_이어하기 줄에 넣어 그림 → 서버가 바뀌어도 이어 그림) → <그림폴더>/레이어/<컷>_bg.png
 3) --마무리: 배경이 다 그려진 컷마다 <그림폴더>/<컷>.layers.json 을 씀 → 영상 만들기(render_project)가 그 장면을 레이어 움직임으로 그림
 - 움직임 이름은 레이어_움직임.py 와 같음 (날아감·다가옴·떨어짐·솟아오름·확대·흔들림·둥실, '이름:dx,dy,크기')
@@ -46,6 +48,24 @@ def cut_one(src, out_obj, out_hole, out_rough):
     return cover, [int(xs.min()), int(ys.min()), int(xs.max()) + 1, int(ys.max()) + 1]
 
 
+def bg_fix(folder, lay, c, desc):
+    """원래 그림의 누끼 칸을 '인물 지우고 이 배경' 으로 다시 그리는 klein fixes 한 줄"""
+    import numpy as np
+    from PIL import Image
+    hole = np.asarray(Image.open(os.path.join(lay, f"{c}_hole.png")))
+    ys, xs = np.nonzero(hole)
+    src = next(os.path.join(folder, c + e) for e in (".png", ".jpg") if os.path.exists(os.path.join(folder, c + e)))
+    orig = os.path.join(lay, f"{c}_orig.png")
+    Image.open(src).convert("RGB").save(orig)
+    desc = (desc or "the same scene background").strip().rstrip(".")
+    return {"id": f"{c}_bg", "image": orig, "out": os.path.join(lay, f"{c}_bg.png"),
+            "box": [int(xs.min()), int(ys.min()), int(xs.max()) + 1, int(ys.max()) + 1],
+            "prompt": "modern Japanese anime illustration background art, same art style, colors and lighting as the reference. "
+                      f"Remove every character completely. Show only the background: {desc}. Sharp detailed scenery, "
+                      "no people, no robots, no animals, no fog filling the frame, no blur.",
+            "refs": [], "seed": 23}
+
+
 def main():
     a = sys.argv[1:]
     if not a:
@@ -68,7 +88,16 @@ def main():
         print(f"layers.json {n}개 씀")
         return
     fixes = []
+    if "--배경만" in a:
+        for arg in a[1:]:
+            if arg == "--배경만":
+                continue
+            c, _, desc = arg.partition("@")
+            if c in plan and os.path.exists(os.path.join(lay, f"{c}_hole.png")):
+                fixes.append(bg_fix(folder, lay, c, desc))
+        a = [a[0]]
     for arg in a[1:]:
+        arg, _, desc = arg.partition("@")
         c, _, mv = arg.partition("=")
         src = next((os.path.join(folder, c + e) for e in (".png", ".jpg") if os.path.exists(os.path.join(folder, c + e))), None)
         if not src:
@@ -83,10 +112,7 @@ def main():
         if cover > 0.6:
             print(f"    ⚠ {c}: 누끼가 그림의 60%를 넘음 (배경까지 잡힌 듯) — 빼는 것을 권함")
         plan[c] = mv or "확대"
-        fixes.append({"id": f"{c}_bg", "image": os.path.join(lay, f"{c}_rough.png"), "out": os.path.join(lay, f"{c}_bg.png"), "box": box,
-                      "prompt": "the same scene background continuing naturally, same art style and lighting, clean empty background "
-                                "with absolutely no people, no characters, no robots, no ship, no objects in this area",
-                      "refs": [], "seed": 11})
+        fixes.append(bg_fix(folder, lay, c, desc))
     json.dump(plan, open(plan_p, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     if fixes:
         jp = os.path.join(lay, "배경채우기.json")
