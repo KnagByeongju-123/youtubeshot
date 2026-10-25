@@ -25,7 +25,7 @@ CUTS = [
     ("c04", "a misty prehistoric Asian mountain landscape at dawn with silhouettes of a small group of ancient humans walking along a ridge, far away", "사라진 인류"),
     ("c05", "the Altai Mountains landscape in Siberia (real photo)", "알타이산맥"),
     ("c06", "inside a deep limestone cave in Siberia with archaeologists' lamps lighting excavation layers and small square digging pits, no people visible. No people, no hands, no arms anywhere.", "동굴 속 발굴 층"),
-    ("c07", "Svante Paabo, Swedish geneticist (real photo)", "스반테 페보 (2022 노벨상)"),
+    ("c07", "Svante Paabo, Swedish geneticist (real photo)", "스반테 페보 강연 (2022 노벨상)"),
     ("c08", "an ancient-DNA clean laboratory with white suits hanging and sterile benches, UV light, no text. No people, no hands, no arms anywhere.", "고대 DNA 청정 실험실"),
     ("c09", "Neanderthal skull (real photo)", "네안데르탈인 두개골"),
     ("c10", "a simple watercolor family-tree diagram of three branches splitting from one trunk, painted as tree branches with no labels, no text, no letters", "세 갈래로 갈라진 인류"),
@@ -39,7 +39,7 @@ CUTS = [
     ("c18", "a fishing boat with a trawling net on the Penghu Channel between Taiwan and China at dusk, waves, nets full of mud and shells", "대만 해협의 어선"),
     ("c19", "Penghu 1 mandible fossil (real photo)", "펑후 1호 턱뼈"),
     ("c20", "a scientist extracting ancient proteins from a fossil jaw with a fine drill in a lab, mass spectrometer in background, no text", "뼈 속 단백질을 읽다"),
-    ("c21", "Harbin skull Homo longi Dragon Man (real photo)", "하얼빈 '드래건맨' 두개골"),
+    ("c21", "Harbin skull Homo longi Dragon Man (real photo)", "하얼빈 '드래건맨' 두개골 (옆모습 그림)"),
     ("c22", "a bridge construction site over a frozen river in Harbin China in the 1930s, workers in winter coats, old sepia mood", "1933년 하얼빈 다리 공사"),
     ("c23", "a man in the 1930s secretly hiding a wrapped skull at the bottom of an old village well at night, lantern light, tense", "우물 속에 숨긴 두개골"),
     ("c24", "dental calculus scraped from an ancient tooth under a microscope, magnified mineral crust, scientific illustration. No people, no hands, no arms anywhere.", "이빨 치석에서 나온 DNA"),
@@ -51,9 +51,9 @@ CUTS = [
     ("c30", "a dark starry night over the Altai mountains with a faint shadowy group of ancient humans fading into mist, mysterious, no faces visible", "유령 조상"),
     ("c31", "a scientist looking at a huge wall of DNA data visualized as colored bands with two unknown dark gaps highlighted, dark room, no text", "DNA 속 빈칸 두 개"),
     ("c32", "a branching tree of human lineages painted as a river delta with many streams merging and splitting, aerial watercolor view, no text", "갈라지고 다시 만난 강줄기"),
-    ("c33", "Homo sapiens skull and Neanderthal skull comparison (real photo)", "사피엔스와 네안데르탈인"),
+    ("c33", "Homo sapiens skull and Neanderthal skull comparison (real photo)", "사피엔스와 네안데르탈인 두개골 비교"),
     ("c34", "a modern crowded Asian city street seen from above at dusk, many people walking, warm lights, wide view, no readable signs", "오늘을 사는 우리"),
-    ("c35", "Denisova Cave interior excavation (real photo)", "지금도 계속되는 발굴"),
+    ("c35", "Denisova Cave interior excavation (real photo)", "데니소바 동굴 입구 — 지금도 계속되는 발굴"),
     ("c36", "a single small finger bone fragment glowing on a dark velvet cloth, surrounded by darkness, mysterious closing image. No people, no hands, no arms anywhere.", "아직 끝나지 않은 이야기"),
 ]
 
@@ -232,12 +232,12 @@ STORY = """{c01}
 새끼손가락뼈 한 조각에서 시작된 이 이야기는, 아직 끝나지 않았습니다. 여러분은 다음에 어디서 데니소바인의 흔적이 나올 것 같나요? 댓글로 여러분의 생각을 들려주세요. 보고 나면 가벼운 지식이 남는 이야기, 이 채널에서 계속 이어집니다."""
 
 # 실제 사진을 보고 그리는 컷 → 사진후보 이름들 (사진을 받은 뒤 채움)
-REFS = {}
+REFS = {"c25": ["c21_1"], "c13": ["c01_1"], "c36": ["c01_1"]}
 REF_NOTE = ("Any real fossil, cave or place shown must look exactly like the reference photo (same shape and colors), "
             "painted in the same watercolor style. ")
 
 # 컷 → 고른 위키미디어 사진 후보 이름 (사진후보/후보.json 의 열쇠). 사진을 받은 뒤 채움
-PHOTOS = {"c01": "c01_1", "c09": "c09_4", "c14": "c14_2", "c16": "c16_1", "c19": "c19_1", "c26": "c26_1", "c28": "c28_3"}
+PHOTOS = {"c01": "c01_1", "c09": "c09_4", "c14": "c14_2", "c16": "c16_1", "c19": "c19_1", "c26": "c26_1", "c28": "c28_3", "c02": "c02_4", "c35": "c02_2", "c05": "c05_2", "c07": "c07_1", "c21": "c21_1", "c33": "c33_2"}
 
 
 def main():
