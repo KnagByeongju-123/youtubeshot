@@ -238,6 +238,13 @@ STORY = """{c01}
 여러분이라면 이 기계를 누가 만들었다고 생각하시나요? 댓글로 여러분의 추리를 들려주세요. 보고 나면 가벼운 지식이 남는 이야기, 이 채널에서 계속 이어집니다."""
 
 
+# 실제 사진을 보고 그리는 컷 (사용자 결정: 실제로 있는 물건·유물은 실제 사진을 기준 그림으로 넣어 그림) → 사진후보 이름들
+REFS = {"c03": ["c20_1"], "c21": ["c20_1"], "c25": ["c20_1"], "c35": ["c20_1", "c23_8"],
+        "c10": ["c01_8"], "c17": ["c18_3"], "c19": ["c01_9"], "c22": ["c11_1"], "c14": ["c13_1"]}
+REF_NOTE = ("The ancient device must look exactly like the reference photo of the real Antikythera mechanism "
+            "(a wooden box with a large bronze dial and interlocking bronze gears, corroded green bronze where it is a fragment), "
+            "not a clock, not an astrolabe. ")
+
 # 컷 → 고른 위키미디어 사진 후보 이름 (사진후보/후보.json 의 열쇠). 장면에 맞는 자유 이용 사진이 없는 컷만 AI 그림
 PHOTOS = {"c01": "c01_8", "c04": "c04_1", "c05": "c05_1", "c06": "c06_1", "c08": "c06_4", "c09": "c09_3", "c11": "c01_9",
           "c13": "c13_1", "c15": "c13_3", "c18": "c18_4", "c20": "c20_1", "c23": "c23_8", "c24": "c24_2", "c26": "c26_3",
@@ -254,9 +261,10 @@ def main():
         for cid, desc, _ in CUTS:
             if only and cid not in only:
                 continue
-            items.append({"id": cid, "width": 1024, "height": 576, "seed": 300 + int(cid[1:]), "refs": [],
+            refs = [os.path.join(HERE, "사진후보", k + ".jpg") for k in REFS.get(cid, [])]
+            items.append({"id": cid, "width": 1024, "height": 576, "seed": 300 + int(cid[1:]), "refs": refs,
                           "prompt": f"{style}, historical documentary illustration, realistic proportions, museum-quality painting. "
-                                    f"Scene: {desc}. Any people have exactly two arms and two legs. "
+                                    f"Scene: {desc}. {REF_NOTE if refs else ''}Any people have exactly two arms and two legs. "
                                     "Cinematic composition, full-bleed image, no border, no frame, no paper edges. No text, no letters, no captions."})
         os.makedirs(folder, exist_ok=True)
         json.dump({"items": items, "skip_done": True}, open(os.path.join(folder, "job.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)

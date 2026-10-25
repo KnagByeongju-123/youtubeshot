@@ -1,0 +1,52 @@
+{
+ "seed": 380852194,
+ "src": ".wt_longform/장문/안티키테라/사진/c01.jpg",
+ "title": "2천 년 전\n[바닷속 컴퓨터]",
+ "candidates": [
+  {
+   "file": "랜덤_1.jpg",
+   "font": "/home/user/youtubeshot/fonts/BlackHanSans-Regular.ttf",
+   "theme": "블루",
+   "title_style": "네온 글로우",
+   "overlay": "좌측 그라데이션",
+   "darkness": 74,
+   "align": "left",
+   "text_y": 77,
+   "font_size": 106,
+   "frame": "테두리",
+   "tag_position": "우측 상단",
+   "bg_saturation": 107,
+   "brightness": 100
+  },
+  {
+   "file": "랜덤_2.jpg",
+   "font": "/home/user/youtubeshot/fonts/BlackHanSans-Regular.ttf",
+   "theme": "화이트",
+   "title_style": "그림자",
+   "overlay": "비네팅",
+   "darkness": 46,
+   "align": "left",
+   "text_y": 70,
+   "font_size": 86,
+   "frame": "테두리",
+   "tag_position": "제목 위",
+   "bg_saturation": 86,
+   "brightness": 103
+  },
+  {
+   "file": "랜덤_3.jpg",
+   "font": "/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc",
+   "theme": "퍼플",
+   "title_style": "박스 강조",
+   "overlay": "전체 어둡게",
+   "darkness": 65,
+   "align": "left",
+   "text_y": 22,
+   "font_size": 91,
+   "frame": "없음",
+   "tag_position": "제목 위",
+   "bg_saturation": 85,
+   "brightness": 84
+  }
+ ]
+}

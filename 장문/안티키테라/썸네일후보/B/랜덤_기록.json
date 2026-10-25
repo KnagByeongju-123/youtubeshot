@@ -1,0 +1,52 @@
+{
+ "seed": 68230008,
+ "src": ".wt_longform/장문/안티키테라/그림/c30.jpg",
+ "title": "누가 만들었나\n[2천 년 전 컴퓨터]",
+ "candidates": [
+  {
+   "file": "랜덤_1.jpg",
+   "font": "/usr/share/fonts/truetype/nanum/NanumGothicExtraBold.ttf",
+   "theme": "핑크",
+   "title_style": "그림자",
+   "overlay": "우측 그라데이션",
+   "darkness": 52,
+   "align": "left",
+   "text_y": 76,
+   "font_size": 96,
+   "frame": "코너 장식",
+   "tag_position": "좌측 상단",
+   "bg_saturation": 124,
+   "brightness": 82
+  },
+  {
+   "file": "랜덤_2.jpg",
+   "font": "/usr/share/fonts/truetype/nanum/NanumBarunGothicBold.ttf",
+   "theme": "퍼플",
+   "title_style": "네온 글로우",
+   "overlay": "전체 어둡게",
+   "darkness": 54,
+   "align": "left",
+   "text_y": 30,
+   "font_size": 86,
+   "frame": "없음",
+   "tag_position": "우측 상단",
+   "bg_saturation": 95,
+   "brightness": 85
+  },
+  {
+   "file": "랜덤_3.jpg",
+   "font": "/usr/share/fonts/truetype/nanum/NanumGothicExtraBold.ttf",
+   "theme": "퍼플",
+   "title_style": "그림자",
+   "overlay": "좌측 그라데이션",
+   "darkness": 58,
+   "align": "left",
+   "text_y": 78,
+   "font_size": 76,
+   "frame": "코너 장식",
+   "tag_position": "제목 위",
+   "bg_saturation": 97,
+   "brightness": 103
+  }
+ ]
+}
