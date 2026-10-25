@@ -294,6 +294,10 @@ def main():
                               "rich saturated colors, strong contrast, dramatic cinematic lighting that matches the mood of the scene")
     no_face = ("Anime background art, environment and scenery illustration. No main character, no close-up face, no portrait, no girl in the foreground; "
                "any people are small figures in the scene. ")
+    # 같은 인물이 한 그림에 두 번 나오는 일(배경 복제·시트처럼 여러 모습)이 잦아서 사람 수를 못 박음
+    SOLO = "Solo: exactly one person in the whole image, no other people, nobody in the background, no reflections, not a character sheet, single view only. "
+    GROUP = "Exactly {} people in the image, each appears only once, no duplicates, no extra copies in the background, not a character sheet. "
+    NUM = {2: "two", 3: "three", 4: "four", 5: "five"}
     if cmd == "job":
         items = []
         for cid, who, desc, _ in CUTS:
@@ -303,7 +307,7 @@ def main():
             items.append({"id": cid, "width": 1024, "height": 576, "seed": 100 + int(cid[1:]),
                           "refs": [os.path.join(HERE, chars[nm][face]) for nm in who],
                           "prompt": f"{style if (who or not anime) else scenery}, medieval post-apocalyptic science fantasy {kind}. "
-                                    + (f"Characters: {looks}. Each person has exactly two arms and two legs. Only these characters, no other copies of them. " if looks
+                                    + (f"Characters: {looks}. Each person has exactly two arms and two legs. " + (SOLO if len(who) == 1 else GROUP.format(NUM[len(who)])) if looks
                                        else no_face if anime else "")
                                     + f"Scene: {desc}. Cinematic composition, full-bleed image, no border, no frame, no paper edges. No speech bubbles, no text, no letters."})
         os.makedirs(folder, exist_ok=True)
