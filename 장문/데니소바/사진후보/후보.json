@@ -298,5 +298,19 @@
   "artist": "Wikimedia Commons 사진 5장 모음",
   "license": "CC BY-SA 3.0·4.0",
   "page": ""
+ },
+ "c25_1": {
+  "title": "File:Homo longi - forensic facial approximation.jpg",
+  "artist": "Cicero Moraes",
+  "license": "CC BY 4.0",
+  "page": "https://commons.wikimedia.org/wiki/File:Homo_longi_-_forensic_facial_approximation.jpg",
+  "file": "c25_1.jpg"
+ },
+ "c25_2": {
+  "title": "File:Homo longi - forensic facial approximation 2.jpg",
+  "artist": "Cicero Moraes",
+  "license": "CC BY 4.0",
+  "page": "https://commons.wikimedia.org/wiki/File:Homo_longi_-_forensic_facial_approximation_2.jpg",
+  "file": "c25_2.jpg"
  }
 }

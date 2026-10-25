@@ -43,7 +43,7 @@ CUTS = [
     ("c22", "a bridge construction site over a frozen river in Harbin China in the 1930s, workers in winter coats, old sepia mood", "1933년 하얼빈 다리 공사"),
     ("c23", "a man in the 1930s secretly hiding a wrapped skull at the bottom of an old village well at night, lantern light, tense", "우물 속에 숨긴 두개골"),
     ("c24", "dental calculus scraped from an ancient tooth under a microscope, magnified mineral crust, scientific illustration. No people, no hands, no arms anywhere.", "이빨 치석에서 나온 DNA"),
-    ("c25", "a tightly cropped head-and-shoulders watercolor portrait reconstruction of an archaic Denisovan man, not a modern human: very wide flat face, massive protruding brow ridge, low sloping forehead, very wide nose, huge jaw with no chin, large teeth, short dark hair and beard, rough animal-hide collar, dark eyes, serious expression, plain muted background, hands not visible", "처음 그려 본 데니소바인의 얼굴"),
+    ("c25", "a tightly cropped head-and-shoulders watercolor portrait reconstruction of an archaic Denisovan man, not a modern human: very wide flat face, massive protruding brow ridge, low sloping forehead, very wide nose, huge jaw with no chin, large teeth, short dark hair and beard, rough animal-hide collar, dark eyes, serious expression, plain muted background, hands not visible", "하얼빈 두개골로 복원한 데니소바인의 얼굴"),
     ("c26", "Cobra Cave Laos or limestone karst landscape in Laos (real photo)", "라오스 석회암 동굴 지대"),
     ("c27", "a map-like watercolor showing only the continent of Asia (no Africa, no Europe, no Americas), five soft glowing dots in Siberia, Tibet, China, Laos and Taiwan, no text, no letters, no labels. No people, no hands, no arms anywhere.", "아시아 곳곳에 남은 흔적"),
     ("c28", "people of Papua New Guinea highlands in traditional dress (real photo)", "파푸아뉴기니 사람들"),
@@ -283,7 +283,7 @@ REF_NOTE = ("Any real fossil, cave or place shown must look exactly like the ref
             "painted in the same watercolor style. ")
 
 # 컷 → 고른 위키미디어 사진 후보 이름 (사진후보/후보.json 의 열쇠). 사진을 받은 뒤 채움
-PHOTOS = {"c01": "c01_1", "c09": "c09_4", "c14": "c14_2", "c16": "c16_1", "c19": "c19_1", "c26": "c26_1", "c28": "c28_3", "c02": "c02_4", "c35": "c02_2", "c05": "c05_2", "c07": "c07_1", "c21": "c21_1", "c33": "c33_2", "c37": "c02_3", "c38": "c02_1", "c39": "c01_3", "c40": "c14_4", "c41": "c14_1", "c42": "c28_4", "c27": "c27_모음"}
+PHOTOS = {"c01": "c01_1", "c09": "c09_4", "c14": "c14_2", "c16": "c16_1", "c19": "c19_1", "c26": "c26_1", "c28": "c28_3", "c02": "c02_4", "c35": "c02_2", "c05": "c05_2", "c07": "c07_1", "c21": "c21_1", "c33": "c33_2", "c37": "c02_3", "c38": "c02_1", "c39": "c01_3", "c40": "c14_4", "c41": "c14_1", "c42": "c28_4", "c27": "c27_모음", "c25": "c25_1"}
 
 
 def main():
