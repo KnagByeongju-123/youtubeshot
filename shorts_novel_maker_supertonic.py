@@ -5773,7 +5773,7 @@ class SubtitleRenderer:
     def _face_box(self, idx):
         """사진 속 얼굴들을 감싸는 상자 (0~1 비율) 또는 None. 확대·이동할 때 얼굴이 화면 밖으로 나가지 않게 씀
         (사용자 지적 2026-10-25: 인물 사진을 훑을 때 몸만 나오고 얼굴이 잘림). 얼굴 찾기 = OpenCV YuNet (models/face_detection_yunet_2023mar.onnx)"""
-        cache = self.__dict__.setdefault("_face_cache", {})
+        cache = self.__dict__.setdefault("_face_box_cache", {})
         if idx in cache:
             return cache[idx]
         box = None
