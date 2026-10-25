@@ -1,0 +1,52 @@
+{
+ "seed": 799474469,
+ "src": ".wt_longform/장문/데니소바/사진/c19.jpg",
+ "title": "손가락뼈 하나로\n[발견된 인류]",
+ "candidates": [
+  {
+   "file": "랜덤_1.jpg",
+   "font": "/usr/share/fonts/truetype/nanum/NanumMyeongjoExtraBold.ttf",
+   "theme": "화이트",
+   "title_style": "외곽선",
+   "overlay": "비네팅",
+   "darkness": 78,
+   "align": "left",
+   "text_y": 24,
+   "font_size": 100,
+   "frame": "없음",
+   "tag_position": "좌측 상단",
+   "bg_saturation": 101,
+   "brightness": 92
+  },
+  {
+   "file": "랜덤_2.jpg",
+   "font": "/usr/share/fonts/truetype/nanum/NanumGothicExtraBold.ttf",
+   "theme": "화이트",
+   "title_style": "외곽선",
+   "overlay": "전체 어둡게",
+   "darkness": 59,
+   "align": "left",
+   "text_y": 25,
+   "font_size": 87,
+   "frame": "코너 장식",
+   "tag_position": "좌측 상단",
+   "bg_saturation": 107,
+   "brightness": 91
+  },
+  {
+   "file": "랜덤_3.jpg",
+   "font": "/usr/share/fonts/truetype/nanum/NanumBarunGothicBold.ttf",
+   "theme": "블루",
+   "title_style": "그림자",
+   "overlay": "하단 그라데이션",
+   "darkness": 75,
+   "align": "right",
+   "text_y": 71,
+   "font_size": 91,
+   "frame": "없음",
+   "tag_position": "좌측 상단",
+   "bg_saturation": 113,
+   "brightness": 105
+  }
+ ]
+}
