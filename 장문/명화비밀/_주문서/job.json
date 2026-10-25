@@ -26,7 +26,7 @@
    "height": 576,
    "seed": 304,
    "refs": [],
-   "prompt": "realistic historical watercolor painting, fine ink outlines, transparent layered watercolor washes, soft natural colors, visible paper texture, documentary illustration, realistic anatomy and proportions, historical documentary illustration, realistic proportions, museum-quality painting. Scene: a grand old European art museum gallery at night, famous paintings on the walls lit by soft spotlights, empty and mysterious. Every person has exactly two arms, two hands with five fingers each and two legs, hands simple and relaxed (partly hidden is fine). Cinematic composition, full-bleed image, no border, no frame, no paper edges. No text, no letters, no captions."
+   "prompt": "realistic historical watercolor painting, fine ink outlines, transparent layered watercolor washes, soft natural colors, visible paper texture, documentary illustration, realistic anatomy and proportions, historical documentary illustration, realistic proportions, museum-quality painting. Scene: a grand old European art museum gallery at night, famous paintings on the walls lit by soft spotlights, empty and mysterious. No people, no hands, no arms anywhere.. Cinematic composition, full-bleed image, no border, no frame, no paper edges. No text, no letters, no captions."
   },
   {
    "id": "c07",
@@ -82,7 +82,7 @@
    "height": 576,
    "seed": 318,
    "refs": [],
-   "prompt": "realistic historical watercolor painting, fine ink outlines, transparent layered watercolor washes, soft natural colors, visible paper texture, documentary illustration, realistic anatomy and proportions, historical documentary illustration, realistic proportions, museum-quality painting. Scene: close-up of an old gilded frame lying on the floor with a glossy magazine page cut out and glued inside instead of a real painting. Every person has exactly two arms, two hands with five fingers each and two legs, hands simple and relaxed (partly hidden is fine). Cinematic composition, full-bleed image, no border, no frame, no paper edges. No text, no letters, no captions."
+   "prompt": "realistic historical watercolor painting, fine ink outlines, transparent layered watercolor washes, soft natural colors, visible paper texture, documentary illustration, realistic anatomy and proportions, historical documentary illustration, realistic proportions, museum-quality painting. Scene: close-up of an old gilded frame lying on the floor with a glossy magazine page cut out and glued inside instead of a real painting. No people, no hands, no arms anywhere.. Cinematic composition, full-bleed image, no border, no frame, no paper edges. No text, no letters, no captions."
   },
   {
    "id": "c19",
@@ -170,7 +170,7 @@
    "refs": [
     "/home/user/youtubeshot/.wt_longform/장문/명화비밀/사진후보/c02_1.jpg"
    ],
-   "prompt": "realistic historical watercolor painting, fine ink outlines, transparent layered watercolor washes, soft natural colors, visible paper texture, documentary illustration, realistic anatomy and proportions, historical documentary illustration, realistic proportions, museum-quality painting. Scene: a ghostly second portrait of a young woman in a hat faintly emerging beneath a painted portrait of a woman, like two layers, mysterious. Any painting or building shown must look exactly like the reference photo of the real artwork or place (same composition, colors and figures), painted in the same oil style. Every person has exactly two arms, two hands with five fingers each and two legs, hands simple and relaxed (partly hidden is fine). Cinematic composition, full-bleed image, no border, no frame, no paper edges. No text, no letters, no captions."
+   "prompt": "realistic historical watercolor painting, fine ink outlines, transparent layered watercolor washes, soft natural colors, visible paper texture, documentary illustration, realistic anatomy and proportions, historical documentary illustration, realistic proportions, museum-quality painting. Scene: a ghostly second portrait of a young woman in a hat faintly emerging beneath a painted portrait of a woman, like two layers, mysterious. No people, no hands, no arms anywhere.. Any painting or building shown must look exactly like the reference photo of the real artwork or place (same composition, colors and figures), painted in the same oil style. Cinematic composition, full-bleed image, no border, no frame, no paper edges. No text, no letters, no captions."
   },
   {
    "id": "c35",

@@ -21,7 +21,7 @@ CUTS = [
     ("c01", "a gardener in work clothes pulling ivy off an old museum's outer stone wall and opening a small rusty metal hatch, a dark cavity with a plastic bag inside", "담쟁이 뒤 철문을 연 정원사"),
     ("c02", "Gustav Klimt's portrait of a woman painting (real painting)", "클림트 '여인의 초상'"),
     ("c03", "a conservator in a dark laboratory looking at a glowing X-ray image of a painting on a light box, a hidden second face faintly visible", "엑스선 속 숨은 얼굴"),
-    ("c04", "a grand old European art museum gallery at night, famous paintings on the walls lit by soft spotlights, empty and mysterious", "밤의 미술관"),
+    ("c04", "a grand old European art museum gallery at night, famous paintings on the walls lit by soft spotlights, empty and mysterious. No people, no hands, no arms anywhere.", "밤의 미술관"),
     ("c05", "Raphael's Madonna della Rosa painting (real painting)", "라파엘로 '장미의 성모'"),
     ("c06", "the Prado Museum building in Madrid (real photo)", "프라도 미술관"),
     ("c07", "a computer scientist in a modern lab watching large screens that show a Renaissance Madonna painting divided into square patches with colored heat-map overlays, no text", "AI가 붓질을 나눠 보는 장면"),
@@ -35,7 +35,7 @@ CUTS = [
     ("c15", "Pieter Brueghel the Younger style Flemish genre painting of a peasant woman carrying burning embers in one hand and a water bucket in the other (real painting)", "브뤼헐 '불씨를 나르는 여인'"),
     ("c16", "the National Museum in Gdansk building, old Gothic brick monastery (real photo)", "그단스크 국립박물관"),
     ("c17", "a cleaning woman in a 1970s museum accidentally knocking a small framed painting off the wall, the frame falling, shocked face, dim gallery", "1974년, 떨어진 액자"),
-    ("c18", "close-up of an old gilded frame lying on the floor with a glossy magazine page cut out and glued inside instead of a real painting", "액자 속 잡지 사진"),
+    ("c18", "close-up of an old gilded frame lying on the floor with a glossy magazine page cut out and glued inside instead of a real painting. No people, no hands, no arms anywhere.", "액자 속 잡지 사진"),
     ("c19", "a magazine editor at a desk covered with old art magazines and black-and-white photographs, comparing a photo with a museum catalogue, lamp light", "옛 사진을 대조하는 잡지 편집자"),
     ("c20", "a small Dutch town museum with brick gables and a canal in Gouda (real photo)", "네덜란드 하우다 박물관"),
     ("c21", "an art detective in a dark coat standing in front of a small Flemish painting in a museum, studying it closely with a flashlight", "그림을 확인하는 미술 탐정"),
@@ -51,7 +51,7 @@ CUTS = [
     ("c31", "close-up of a black plastic bag being pulled out of a cavity in an old stone wall covered with ivy, a corner of a painted canvas visible", "벽 속에서 나온 가방"),
     ("c32", "art experts in white gloves examining a portrait painting under ultraviolet light in a laboratory, purple glow, careful", "진짜인지 확인하는 전문가들"),
     ("c33", "a young art student in 1996 comparing two printed images of portraits side by side at a library table, one in old black-and-white, eyes wide with discovery", "두 그림을 겹쳐 본 미술 학도"),
-    ("c34", "a ghostly second portrait of a young woman in a hat faintly emerging beneath a painted portrait of a woman, like two layers, mysterious", "그림 밑의 또 다른 여인"),
+    ("c34", "a ghostly second portrait of a young woman in a hat faintly emerging beneath a painted portrait of a woman, like two layers, mysterious. No people, no hands, no arms anywhere.", "그림 밑의 또 다른 여인"),
     ("c35", "a scientist in a modern lab with an AI separating an X-ray image of a painting into several glowing translucent layers floating in the air, no text", "층을 나눠 보는 AI"),
     ("c36", "a quiet museum hall at closing time, a single spotlight on an old painting, a visitor's silhouette looking at it, mysterious atmosphere", "아직 잠든 비밀"),
 ]
@@ -262,7 +262,7 @@ def main():
             refs = [os.path.join(HERE, "사진후보", k + ".jpg") for k in REFS.get(cid, [])]
             items.append({"id": cid, "width": 1024, "height": 576, "seed": 300 + int(cid[1:]), "refs": refs,
                           "prompt": f"{style}, historical documentary illustration, realistic proportions, museum-quality painting. "
-                                    f"Scene: {desc}. {REF_NOTE if refs else ''}{'' if 'no people' in desc else 'Every person has exactly two arms, two hands with five fingers each and two legs, hands simple and relaxed (partly hidden is fine). '}"
+                                    f"Scene: {desc}. {REF_NOTE if refs else ''}{'' if 'no people' in desc.lower() else 'Every person has exactly two arms, two hands with five fingers each and two legs, hands simple and relaxed (partly hidden is fine). '}"
                                     "Cinematic composition, full-bleed image, no border, no frame, no paper edges. No text, no letters, no captions."})
         os.makedirs(folder, exist_ok=True)
         json.dump({"items": items, "skip_done": True}, open(os.path.join(folder, "job.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
