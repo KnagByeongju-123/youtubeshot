@@ -250,5 +250,33 @@
   "license": "Public domain",
   "page": "https://commons.wikimedia.org/wiki/File:Rembrandt_-_The_Anatomy_Lesson_of_Dr_Nicolaes_Tulp.jpg",
   "file": "c14_c.jpg"
+ },
+ "c12_1": {
+  "title": "File:Anatomical theatre Leiden.jpg",
+  "artist": "Willem Isaacsz Swanenburg / Jan Cornelisz. van 't Woudt",
+  "license": "Public domain",
+  "page": "https://commons.wikimedia.org/wiki/File:Anatomical_theatre_Leiden.jpg",
+  "file": "c12_1.jpg"
+ },
+ "c12_2": {
+  "title": "File:The anatomy theatre at Leiden during a dissection. Wellcome L0000530.jpg",
+  "artist": "",
+  "license": "CC BY 4.0",
+  "page": "https://commons.wikimedia.org/wiki/File:The_anatomy_theatre_at_Leiden_during_a_dissection._Wellcome_L0000530.jpg",
+  "file": "c12_2.jpg"
+ },
+ "c12_3": {
+  "title": "File:Engraving of an anatomical dissection at Leiden, c, 1614. Wellcome M0010171.jpg",
+  "artist": "",
+  "license": "CC BY 4.0",
+  "page": "https://commons.wikimedia.org/wiki/File:Engraving_of_an_anatomical_dissection_at_Leiden,_c,_1614._Wellcome_M0010171.jpg",
+  "file": "c12_3.jpg"
+ },
+ "c12_4": {
+  "title": "File:Leiden, the Netherlands; the anatomy theatre, interior of a Wellcome V0012832.jpg",
+  "artist": "",
+  "license": "CC BY 4.0",
+  "page": "https://commons.wikimedia.org/wiki/File:Leiden,_the_Netherlands;_the_anatomy_theatre,_interior_of_a_Wellcome_V0012832.jpg",
+  "file": "c12_4.jpg"
  }
 }
