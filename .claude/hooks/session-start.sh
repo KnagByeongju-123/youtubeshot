@@ -86,6 +86,12 @@ if [ ! -f models/hand_landmarker.task ]; then
 fi
 [ -f /usr/lib/x86_64-linux-gnu/libEGL.so.1 ] || (apt-get install -y -q libegl1 libgles2 >/dev/null 2>&1 || (apt-get update -q >/dev/null 2>&1 && apt-get install -y -q libegl1 libgles2 >/dev/null 2>&1)) || true
 [ -x .sd_venv/bin/python ] && (.sd_venv/bin/python -c "import mediapipe" 2>/dev/null || .sd_venv/bin/pip install -q mediapipe >/dev/null 2>&1) || true
+# 손·발 확대 검수(손_확대검수.py): DWPose(rtmlib) + YOLO 손(hand_yolov8n). ultralytics 가 맞지 않는 torchvision 을 깔면 CPU 판으로 다시 맞춤
+[ -f models/hand_yolov8n.pt ] || curl -sSL --retry 3 -o models/hand_yolov8n.pt https://huggingface.co/Bingsu/adetailer/resolve/main/hand_yolov8n.pt || true
+if [ -x .sd_venv/bin/python ] && ! .sd_venv/bin/python -c "import rtmlib, ultralytics" 2>/dev/null; then
+  .sd_venv/bin/pip install -q rtmlib ultralytics onnxruntime >/dev/null 2>&1 \
+    && .sd_venv/bin/pip install -q --no-deps --force-reinstall torchvision --index-url https://download.pytorch.org/whl/cpu >/dev/null 2>&1 || true
+fi
 # 얼굴 찾기 모델(OpenCV YuNet, 230KB): 사진을 확대·이동할 때 얼굴이 잘리지 않게
 if [ ! -f models/face_detection_yunet_2023mar.onnx ]; then
   curl -sSL --retry 3 -o models/face_detection_yunet_2023mar.onnx.part \
