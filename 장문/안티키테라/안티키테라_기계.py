@@ -12,7 +12,7 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(HERE, "..", ".."))
 TITLE = "2천 년 전 바닷속 컴퓨터, 안티키테라 기계의 수수께끼"
-STYLE_NAME = "유화(붓터치)"
+STYLE_NAME = "다큐 수채화"   # 사용자 결정 2026-10-25: 장문은 수채화 (유화는 손가락·팔이 자주 틀림)
 DIALOGUE = []     # 다큐라 인물 대사 없음 (나레이션만)
 
 # (컷번호, 그림 설명(영어), 화면 설명(한국어))
@@ -253,7 +253,8 @@ PHOTOS = {"c01": "c01_8", "c04": "c04_1", "c05": "c05_1", "c06": "c06_1", "c08":
 
 def main():
     cmd, folder = sys.argv[1], sys.argv[2]
-    src = open(os.path.join(ROOT, "shorts_novel_maker_supertonic.py"), encoding="utf-8").read()
+    main_src = os.path.join(ROOT, "..", "shorts_novel_maker_supertonic.py")      # 작업 가지(메인 저장소)의 최신 화풍 목록이 우선
+    src = open(main_src if os.path.exists(main_src) else os.path.join(ROOT, "shorts_novel_maker_supertonic.py"), encoding="utf-8").read()
     style = re.search('"' + re.escape(STYLE_NAME) + '": "([^"]+)"', src).group(1)
     only = sys.argv[3].split(",") if len(sys.argv) > 3 else None
     if cmd == "job":
@@ -264,7 +265,7 @@ def main():
             refs = [os.path.join(HERE, "사진후보", k + ".jpg") for k in REFS.get(cid, [])]
             items.append({"id": cid, "width": 1024, "height": 576, "seed": 300 + int(cid[1:]), "refs": refs,
                           "prompt": f"{style}, historical documentary illustration, realistic proportions, museum-quality painting. "
-                                    f"Scene: {desc}. {REF_NOTE if refs else ''}Any people have exactly two arms and two legs. "
+                                    f"Scene: {desc}. {REF_NOTE if refs else ''}Every person has exactly two arms, two hands with five fingers each and two legs, hands simple and relaxed (partly hidden is fine). "
                                     "Cinematic composition, full-bleed image, no border, no frame, no paper edges. No text, no letters, no captions."})
         os.makedirs(folder, exist_ok=True)
         json.dump({"items": items, "skip_done": True}, open(os.path.join(folder, "job.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
@@ -280,7 +281,7 @@ def main():
                 story = story.replace("{" + cid + "}", f"[사진: {img} | {cap} | {credit} | {m['page']}]")
                 continue
             img = next((os.path.join(folder, cid + e) for e in (".png", ".jpg") if os.path.exists(os.path.join(folder, cid + e))), os.path.join(folder, cid + ".png"))
-            story = story.replace("{" + cid + "}", f"[사진: {img} | {cap} | AI 복원 그림 (FLUX.2 klein) | ]")
+            story = story.replace("{" + cid + "}", f"[사진: {img} | {cap} | AI 복원 그림 (FLUX.2 klein, 수채화) | ]")
         proj = {"ver": 7, "category": "장문", "genre": "[다큐] 역사·미스터리", "topic": "안티키테라 기계", "title": TITLE,
                 "story": story, "sources": ["https://en.wikipedia.org/wiki/Antikythera_mechanism"],
                 "notes": "역사 미스터리 장문 다큐 (실제 사진 위주 + 사진이 없는 장면은 AI 복원 그림)", "autophoto": False, "img_source": "그림: 유화",

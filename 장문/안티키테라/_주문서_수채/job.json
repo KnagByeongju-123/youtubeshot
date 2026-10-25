@@ -1,0 +1,176 @@
+{
+ "items": [
+  {
+   "id": "c02",
+   "width": 1024,
+   "height": 576,
+   "seed": 302,
+   "refs": [],
+   "prompt": "realistic historical watercolor painting, fine ink outlines, transparent layered watercolor washes, soft natural colors, visible paper texture, documentary illustration, realistic anatomy and proportions, historical documentary illustration, realistic proportions, museum-quality painting. Scene: a stormy Aegean sea in 1900, a small Greek sponge-diving sailing boat struggling in huge waves near a rocky island. Every person has exactly two arms, two hands with five fingers each and two legs, hands simple and relaxed (partly hidden is fine). Cinematic composition, full-bleed image, no border, no frame, no paper edges. No text, no letters, no captions."
+  },
+  {
+   "id": "c03",
+   "width": 1024,
+   "height": 576,
+   "seed": 303,
+   "refs": [
+    "/home/user/youtubeshot/.wt_longform/장문/안티키테라/사진후보/c20_1.jpg"
+   ],
+   "prompt": "realistic historical watercolor painting, fine ink outlines, transparent layered watercolor washes, soft natural colors, visible paper texture, documentary illustration, realistic anatomy and proportions, historical documentary illustration, realistic proportions, museum-quality painting. Scene: an ancient Greek bronze astronomical device with dials and gears glowing softly on a dark table, imagined reconstruction. The ancient device must look exactly like the reference photo of the real Antikythera mechanism (a wooden box with a large bronze dial and interlocking bronze gears, corroded green bronze where it is a fragment), not a clock, not an astrolabe. Every person has exactly two arms, two hands with five fingers each and two legs, hands simple and relaxed (partly hidden is fine). Cinematic composition, full-bleed image, no border, no frame, no paper edges. No text, no letters, no captions."
+  },
+  {
+   "id": "c07",
+   "width": 1024,
+   "height": 576,
+   "seed": 307,
+   "refs": [],
+   "prompt": "realistic historical watercolor painting, fine ink outlines, transparent layered watercolor washes, soft natural colors, visible paper texture, documentary illustration, realistic anatomy and proportions, historical documentary illustration, realistic proportions, museum-quality painting. Scene: a frightened diver climbing back onto a boat, pulling off his copper helmet, his face pale, other sailors staring at him. Every person has exactly two arms, two hands with five fingers each and two legs, hands simple and relaxed (partly hidden is fine). Cinematic composition, full-bleed image, no border, no frame, no paper edges. No text, no letters, no captions."
+  },
+  {
+   "id": "c10",
+   "width": 1024,
+   "height": 576,
+   "seed": 310,
+   "refs": [
+    "/home/user/youtubeshot/.wt_longform/장문/안티키테라/사진후보/c01_8.jpg"
+   ],
+   "prompt": "realistic historical watercolor painting, fine ink outlines, transparent layered watercolor washes, soft natural colors, visible paper texture, documentary illustration, realistic anatomy and proportions, historical documentary illustration, realistic proportions, museum-quality painting. Scene: an archaeologist in 1902 with a mustache and a magnifying glass bending over a cracked bronze lump, noticing a small gear wheel inside, lamplight. The ancient device must look exactly like the reference photo of the real Antikythera mechanism (a wooden box with a large bronze dial and interlocking bronze gears, corroded green bronze where it is a fragment), not a clock, not an astrolabe. Every person has exactly two arms, two hands with five fingers each and two legs, hands simple and relaxed (partly hidden is fine). Cinematic composition, full-bleed image, no border, no frame, no paper edges. No text, no letters, no captions."
+  },
+  {
+   "id": "c12",
+   "width": 1024,
+   "height": 576,
+   "seed": 312,
+   "refs": [],
+   "prompt": "realistic historical watercolor painting, fine ink outlines, transparent layered watercolor washes, soft natural colors, visible paper texture, documentary illustration, realistic anatomy and proportions, historical documentary illustration, realistic proportions, museum-quality painting. Scene: scholars in early 20th century suits arguing around a table in a museum office, one shaking his head in disbelief. Every person has exactly two arms, two hands with five fingers each and two legs, hands simple and relaxed (partly hidden is fine). Cinematic composition, full-bleed image, no border, no frame, no paper edges. No text, no letters, no captions."
+  },
+  {
+   "id": "c14",
+   "width": 1024,
+   "height": 576,
+   "seed": 314,
+   "refs": [
+    "/home/user/youtubeshot/.wt_longform/장문/안티키테라/사진후보/c13_1.jpg"
+   ],
+   "prompt": "realistic historical watercolor painting, fine ink outlines, transparent layered watercolor washes, soft natural colors, visible paper texture, documentary illustration, realistic anatomy and proportions, historical documentary illustration, realistic proportions, museum-quality painting. Scene: hand-drawn technical diagram sketches of interlocking gear trains spread on a desk with a pencil and compass, 1970s. The ancient device must look exactly like the reference photo of the real Antikythera mechanism (a wooden box with a large bronze dial and interlocking bronze gears, corroded green bronze where it is a fragment), not a clock, not an astrolabe. Every person has exactly two arms, two hands with five fingers each and two legs, hands simple and relaxed (partly hidden is fine). Cinematic composition, full-bleed image, no border, no frame, no paper edges. No text, no letters, no captions."
+  },
+  {
+   "id": "c16",
+   "width": 1024,
+   "height": 576,
+   "seed": 316,
+   "refs": [],
+   "prompt": "realistic historical watercolor painting, fine ink outlines, transparent layered watercolor washes, soft natural colors, visible paper texture, documentary illustration, realistic anatomy and proportions, historical documentary illustration, realistic proportions, museum-quality painting. Scene: a huge industrial X-ray CT scanner machine being wheeled into an old museum hall at night, scientists in lab coats, 2005. Every person has exactly two arms, two hands with five fingers each and two legs, hands simple and relaxed (partly hidden is fine). Cinematic composition, full-bleed image, no border, no frame, no paper edges. No text, no letters, no captions."
+  },
+  {
+   "id": "c17",
+   "width": 1024,
+   "height": 576,
+   "seed": 317,
+   "refs": [
+    "/home/user/youtubeshot/.wt_longform/장문/안티키테라/사진후보/c18_3.jpg"
+   ],
+   "prompt": "realistic historical watercolor painting, fine ink outlines, transparent layered watercolor washes, soft natural colors, visible paper texture, documentary illustration, realistic anatomy and proportions, historical documentary illustration, realistic proportions, museum-quality painting. Scene: glowing blue X-ray cross-section images of hidden gears inside a corroded bronze fragment on computer screens in a dark room. The ancient device must look exactly like the reference photo of the real Antikythera mechanism (a wooden box with a large bronze dial and interlocking bronze gears, corroded green bronze where it is a fragment), not a clock, not an astrolabe. Every person has exactly two arms, two hands with five fingers each and two legs, hands simple and relaxed (partly hidden is fine). Cinematic composition, full-bleed image, no border, no frame, no paper edges. No text, no letters, no captions."
+  },
+  {
+   "id": "c19",
+   "width": 1024,
+   "height": 576,
+   "seed": 319,
+   "refs": [
+    "/home/user/youtubeshot/.wt_longform/장문/안티키테라/사진후보/c01_9.jpg"
+   ],
+   "prompt": "realistic historical watercolor painting, fine ink outlines, transparent layered watercolor washes, soft natural colors, visible paper texture, documentary illustration, realistic anatomy and proportions, historical documentary illustration, realistic proportions, museum-quality painting. Scene: a large bronze gear with many teeth turning, behind it a dark sky with a solar eclipse, symbolic composition. The ancient device must look exactly like the reference photo of the real Antikythera mechanism (a wooden box with a large bronze dial and interlocking bronze gears, corroded green bronze where it is a fragment), not a clock, not an astrolabe. Every person has exactly two arms, two hands with five fingers each and two legs, hands simple and relaxed (partly hidden is fine). Cinematic composition, full-bleed image, no border, no frame, no paper edges. No text, no letters, no captions."
+  },
+  {
+   "id": "c21",
+   "width": 1024,
+   "height": 576,
+   "seed": 321,
+   "refs": [
+    "/home/user/youtubeshot/.wt_longform/장문/안티키테라/사진후보/c20_1.jpg"
+   ],
+   "prompt": "realistic historical watercolor painting, fine ink outlines, transparent layered watercolor washes, soft natural colors, visible paper texture, documentary illustration, realistic anatomy and proportions, historical documentary illustration, realistic proportions, museum-quality painting. Scene: a small sphere half silver half black rotating inside a bronze dial to show the phases of the moon, close-up. The ancient device must look exactly like the reference photo of the real Antikythera mechanism (a wooden box with a large bronze dial and interlocking bronze gears, corroded green bronze where it is a fragment), not a clock, not an astrolabe. Every person has exactly two arms, two hands with five fingers each and two legs, hands simple and relaxed (partly hidden is fine). Cinematic composition, full-bleed image, no border, no frame, no paper edges. No text, no letters, no captions."
+  },
+  {
+   "id": "c22",
+   "width": 1024,
+   "height": 576,
+   "seed": 322,
+   "refs": [
+    "/home/user/youtubeshot/.wt_longform/장문/안티키테라/사진후보/c11_1.jpg"
+   ],
+   "prompt": "realistic historical watercolor painting, fine ink outlines, transparent layered watercolor washes, soft natural colors, visible paper texture, documentary illustration, realistic anatomy and proportions, historical documentary illustration, realistic proportions, museum-quality painting. Scene: two interlocking bronze gears connected by a small pin sliding in a slot, mechanical detail, warm light. The ancient device must look exactly like the reference photo of the real Antikythera mechanism (a wooden box with a large bronze dial and interlocking bronze gears, corroded green bronze where it is a fragment), not a clock, not an astrolabe. Every person has exactly two arms, two hands with five fingers each and two legs, hands simple and relaxed (partly hidden is fine). Cinematic composition, full-bleed image, no border, no frame, no paper edges. No text, no letters, no captions."
+  },
+  {
+   "id": "c25",
+   "width": 1024,
+   "height": 576,
+   "seed": 325,
+   "refs": [
+    "/home/user/youtubeshot/.wt_longform/장문/안티키테라/사진후보/c20_1.jpg"
+   ],
+   "prompt": "realistic historical watercolor painting, fine ink outlines, transparent layered watercolor washes, soft natural colors, visible paper texture, documentary illustration, realistic anatomy and proportions, historical documentary illustration, realistic proportions, museum-quality painting. Scene: five small colored beads (planets) moving on concentric rings around a golden sun on a bronze dial, cosmos model. The ancient device must look exactly like the reference photo of the real Antikythera mechanism (a wooden box with a large bronze dial and interlocking bronze gears, corroded green bronze where it is a fragment), not a clock, not an astrolabe. Every person has exactly two arms, two hands with five fingers each and two legs, hands simple and relaxed (partly hidden is fine). Cinematic composition, full-bleed image, no border, no frame, no paper edges. No text, no letters, no captions."
+  },
+  {
+   "id": "c27",
+   "width": 1024,
+   "height": 576,
+   "seed": 327,
+   "refs": [],
+   "prompt": "realistic historical watercolor painting, fine ink outlines, transparent layered watercolor washes, soft natural colors, visible paper texture, documentary illustration, realistic anatomy and proportions, historical documentary illustration, realistic proportions, museum-quality painting. Scene: Roman soldiers carrying a bronze celestial sphere through the streets of Rome as war loot, 212 BC. Every person has exactly two arms, two hands with five fingers each and two legs, hands simple and relaxed (partly hidden is fine). Cinematic composition, full-bleed image, no border, no frame, no paper edges. No text, no letters, no captions."
+  },
+  {
+   "id": "c29",
+   "width": 1024,
+   "height": 576,
+   "seed": 329,
+   "refs": [],
+   "prompt": "realistic historical watercolor painting, fine ink outlines, transparent layered watercolor washes, soft natural colors, visible paper texture, documentary illustration, realistic anatomy and proportions, historical documentary illustration, realistic proportions, museum-quality painting. Scene: an ancient Greek bronze workshop, a craftsman filing small gear teeth by hand with a file, oil lamp, apprentices. Every person has exactly two arms, two hands with five fingers each and two legs, hands simple and relaxed (partly hidden is fine). Cinematic composition, full-bleed image, no border, no frame, no paper edges. No text, no letters, no captions."
+  },
+  {
+   "id": "c30",
+   "width": 1024,
+   "height": 576,
+   "seed": 330,
+   "refs": [],
+   "prompt": "realistic historical watercolor painting, fine ink outlines, transparent layered watercolor washes, soft natural colors, visible paper texture, documentary illustration, realistic anatomy and proportions, historical documentary illustration, realistic proportions, museum-quality painting. Scene: a Roman merchant ship loaded with statues and amphorae sinking in a storm off a rocky island, around 60 BC. Every person has exactly two arms, two hands with five fingers each and two legs, hands simple and relaxed (partly hidden is fine). Cinematic composition, full-bleed image, no border, no frame, no paper edges. No text, no letters, no captions."
+  },
+  {
+   "id": "c31",
+   "width": 1024,
+   "height": 576,
+   "seed": 331,
+   "refs": [],
+   "prompt": "realistic historical watercolor painting, fine ink outlines, transparent layered watercolor washes, soft natural colors, visible paper texture, documentary illustration, realistic anatomy and proportions, historical documentary illustration, realistic proportions, museum-quality painting. Scene: bronze objects being melted down in a medieval furnace, molten metal pouring, sparks. Every person has exactly two arms, two hands with five fingers each and two legs, hands simple and relaxed (partly hidden is fine). Cinematic composition, full-bleed image, no border, no frame, no paper edges. No text, no letters, no captions."
+  },
+  {
+   "id": "c33",
+   "width": 1024,
+   "height": 576,
+   "seed": 333,
+   "refs": [],
+   "prompt": "realistic historical watercolor painting, fine ink outlines, transparent layered watercolor washes, soft natural colors, visible paper texture, documentary illustration, realistic anatomy and proportions, historical documentary illustration, realistic proportions, museum-quality painting. Scene: a statistical diagram of a broken circular ring with evenly spaced holes, a scientist pointing at it on a screen, 2024. Every person has exactly two arms, two hands with five fingers each and two legs, hands simple and relaxed (partly hidden is fine). Cinematic composition, full-bleed image, no border, no frame, no paper edges. No text, no letters, no captions."
+  },
+  {
+   "id": "c34",
+   "width": 1024,
+   "height": 576,
+   "seed": 334,
+   "refs": [],
+   "prompt": "realistic historical watercolor painting, fine ink outlines, transparent layered watercolor washes, soft natural colors, visible paper texture, documentary illustration, realistic anatomy and proportions, historical documentary illustration, realistic proportions, museum-quality painting. Scene: modern divers with lights exploring the Antikythera shipwreck site underwater, finding small bronze fragments in the sand. Every person has exactly two arms, two hands with five fingers each and two legs, hands simple and relaxed (partly hidden is fine). Cinematic composition, full-bleed image, no border, no frame, no paper edges. No text, no letters, no captions."
+  },
+  {
+   "id": "c35",
+   "width": 1024,
+   "height": 576,
+   "seed": 335,
+   "refs": [
+    "/home/user/youtubeshot/.wt_longform/장문/안티키테라/사진후보/c20_1.jpg",
+    "/home/user/youtubeshot/.wt_longform/장문/안티키테라/사진후보/c23_8.jpg"
+   ],
+   "prompt": "realistic historical watercolor painting, fine ink outlines, transparent layered watercolor washes, soft natural colors, visible paper texture, documentary illustration, realistic anatomy and proportions, historical documentary illustration, realistic proportions, museum-quality painting. Scene: a complete imagined reconstruction of the ancient bronze mechanism with all dials, standing in a beam of light like a treasure. The ancient device must look exactly like the reference photo of the real Antikythera mechanism (a wooden box with a large bronze dial and interlocking bronze gears, corroded green bronze where it is a fragment), not a clock, not an astrolabe. Every person has exactly two arms, two hands with five fingers each and two legs, hands simple and relaxed (partly hidden is fine). Cinematic composition, full-bleed image, no border, no frame, no paper edges. No text, no letters, no captions."
+  }
+ ],
+ "skip_done": true
+}
