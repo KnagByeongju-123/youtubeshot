@@ -9080,10 +9080,10 @@ def _seq_audio(seq, ff, fps, flags=0):
     (데니소바 10분 영상: 8분 넘어서 그림과 나레이션이 어긋났음)"""
     out = []
     for f in seq:
-        q = subprocess.run([ff, "-v", "info", "-i", f, "-map", "0:v:0", "-c", "copy", "-f", "null", "-"],
+        q = subprocess.run([ff, "-nostdin", "-v", "error", "-i", f, "-map", "0:v:0", "-c", "copy", "-f", "framemd5", "-"],
                            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, errors="replace", creationflags=flags)
-        fr = re.findall(r"frame=\s*(\d+)", q.stderr or "")
-        n = int(round(int(fr[-1]) / fps * SR)) if fr else 0
+        fr = sum(1 for ln in (q.stdout or "").splitlines() if ln.startswith("0,"))   # 그림 장 수 (-f null 은 새 ffmpeg 에서 frame= 을 안 찍음)
+        n = int(round(fr / fps * SR)) if fr else 0
         p = subprocess.run([ff, "-v", "error", "-i", f, "-f", "f32le", "-ac", "2", "-ar", str(SR), "-"],
                            stdout=subprocess.PIPE, stderr=subprocess.PIPE, creationflags=flags)
         a = np.frombuffer(p.stdout, np.float32).reshape(-1, 2) if p.returncode == 0 and p.stdout else np.zeros((0, 2), np.float32)
