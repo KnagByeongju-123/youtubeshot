@@ -17789,8 +17789,11 @@ class App(tk.Tk):
                     p_ = resolve_media(med[0]) if med else None
                     if p_:
                         imgs.append((os.path.basename(p_), int(os.path.getmtime(p_)), os.path.getsize(p_)))
+                lj = [os.path.splitext(resolve_media(parse_media(ln)[0]) or "")[0] + ".layers.json" for ln in text_k.split("\n") if parse_media(ln)]
+                lays = [(os.path.basename(x), int(os.path.getmtime(x))) for x in lj if os.path.exists(x)]   # 레이어 움직임 설정이 바뀌어도 그 장면만 다시
+                narr_a = self.narration_for(text_k, sk, log, self.cancel)      # 나레이션을 다시 녹음했으면(겹침 고치기) 그 장면만 다시
                 key = hashlib.md5((text_k + "|" + (title if k == 0 else "") + f"|{k == 0}|{k == N - 1}|{W}x{H}|" + fp_txt
-                                   + json.dumps(imgs)).encode("utf-8")).hexdigest()
+                                   + json.dumps(imgs) + json.dumps(lays) + "|" + ",".join(f"{d_:.3f}" for _, _, d_ in narr_a)).encode("utf-8")).hexdigest()
                 part = os.path.join(parts_dir, f"scene_{k + 1:03d}.mp4")
                 info = {}
                 try:
@@ -17804,7 +17807,6 @@ class App(tk.Tk):
                     log(f"🎬 장면 {k + 1}/{N} 만드는 중: {first}")
                     if str(sk.get("img_depth", "off")) == "on":
                         ensure_depth_maps(story_photo_paths(text_k), log, self.cancel)
-                    narr_a = self.narration_for(text_k, sk, log, self.cancel)
                     r = make_renderer(title, text_k, sk, narr_a)
                     if k == 0:
                         save_auto_thumb(r, base)
@@ -17836,7 +17838,7 @@ class App(tk.Tk):
             write_mp3(mp3, mixed)
         del mixed
         prog(N * 1000, N * 1000)
-        if publish and chapters:
+        if chapters:
             with open(base + "_타임스탬프.txt", "w", encoding="utf-8") as f_:
                 f_.write("\n".join(f"{hms(t_)} {n_}" for t_, n_ in [(0, "오프닝")] + chapters))
         size_mb = os.path.getsize(out) / 1e6

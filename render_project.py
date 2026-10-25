@@ -5,6 +5,7 @@
   - --소재프로필 : 손으로 쓴 대본을 그 소재의 기본 스타일(다큐 자막·제목 위치·근거 사진·웹 조사)로 맞춤
   - --사진 [초] : 대본에 사진이 적으면 웹에서 근거 사진을 자동으로 찾아 넣음 (나레이션 '초'마다 한 장, 기본 8초 - 관련 사진을 최대한 많이).
                   넣은 뒤 프로젝트 파일에 저장 → 다시 실행하면 사진은 건너뜀
+  - --장면별 : 장면(그림+문단)마다 나레이션까지 넣은 mp4 조각을 만들고 마지막에 합침 (고친 장면만 다시 · 조각은 output/_장면/<제목>/scene_NNN.mp4)
   - --suffix 이름 : 결과 파일 이름 끝에 _이름 (같은 제목으로 덧붙일 부분을 따로 만들 때. 화면 제목은 그대로)
   - --썸네일만 : 영상은 만들지 않고 썸네일 후보만 새로 (디자인 16가지 + 영상 장면 실사 편집). 지금 유튜브 썸네일은 그대로
   - --대본그대로 : 손으로 쓴 대본의 오프닝(30초 후크·'끝까지 보시면')과 챕터 끝 예고를 AI 가 고쳐 쓰지 않음 (에세이처럼 원문 분위기를 지킬 때. 존댓말 고치기는 그대로)
@@ -167,6 +168,35 @@ def main(a):
         except Exception:
             pass
         return 0
+    if "--장면별" in a:      # 장면(그림+문단)마다 나레이션까지 넣은 mp4 조각 → 고친 장면만 다시 → 마지막에 전환 효과·배경음과 함께 합침
+        last = [0]
+
+        def prog(i, n):
+            p = int(i * 100 / max(1, n))
+            if p >= last[0] + 5:
+                last[0] = p
+                log(f"  MP4 {p}%")
+        if hasattr(m, "ensure_depth_maps") and str(s.get("img_depth", "off")) == "on":
+            m.ensure_depth_maps(m.story_photo_paths(story), log)
+        kit = dict(model=app.model_var.get().strip(), category=c.get("category") or m.DOC_CATEGORY, genre=genre,
+                   sources=c.get("sources") or [], notes=c.get("notes", ""))
+        s["scene_parts"] = "on"
+        app._make_mp4_scenes(story, title, s, bgm, base, base + ".mp4", kit, prog, publish=False)
+        if getattr(m, "_NV", None) is not None and m._NV.REPORT:
+            m.atomic_write_text(base + "_나레이션검증.txt", m._NV.report_text(title))
+        log("MP4 완성(장면별): " + base + ".mp4  · 장면 조각: " + os.path.join(s["out_dir"], "_장면", m.safe_name(title)))
+    else:
+        base = _render_whole(m, app, a, c, s, title, story, base, work, bgm, gate, proj_path)
+    _after_video(m, app, a, c, s, title, story, base, genre, suf, out_root)
+    try:
+        app.destroy()
+    except Exception:
+        pass
+    return 0
+
+
+def _render_whole(m, app, a, c, s, title, story, base, work, bgm, gate, proj_path):
+    """영상 한 편을 통째로 (2분 구간마다 이어서 만들 수 있게)"""
     log("🎙 나레이션 만드는 중... (이미 만든 문단은 건너뜀)")
     if hasattr(m, "ensure_depth_maps") and str(s.get("img_depth", "off")) == "on":
         m.ensure_depth_maps(m.story_photo_paths(story), log)
@@ -216,6 +246,19 @@ def main(a):
     with open(base + "_타임스탬프.txt", "w", encoding="utf-8") as f:
         f.write("\n".join(f"{m.hms(t)} {n}" for t, n in [(0, "오프닝")] + ch))
     log("MP4 완성: " + base + ".mp4")
+    return base
+
+
+def _after_video(m, app, a, c, s, title, story, base, genre, suf, out_root):
+    """영상이 나온 뒤: 업로드 키트·쇼츠·자막 번역·콘텐츠 정리"""
+    ch = []
+    try:
+        for ln in open(base + "_타임스탬프.txt", encoding="utf-8").read().splitlines()[1:]:
+            t_, _, n_ = ln.partition(" ")
+            parts = [float(x) for x in t_.split(":")]
+            ch.append((sum(v * 60 ** (len(parts) - 1 - i) for i, v in enumerate(parts)), n_))
+    except Exception:
+        pass
     if "--kit" in a:
         log("📝 업로드 문구·설명란·유튜브 썸네일 만드는 중...")
         m.publish_kit(app.model_var.get().strip(), base, title, story, c.get("category") or m.DOC_CATEGORY, genre, s, ch,
@@ -247,11 +290,6 @@ def main(a):
             m._load_korean_reading("콘텐츠_정리").organize(base + "_프로젝트.json", log, os.path.abspath(out_root))
         except Exception as e:
             log("⚠ 콘텐츠 폴더 정리 실패(파일은 그대로): " + (str(e).splitlines() or [type(e).__name__])[0][:120])
-    try:
-        app.destroy()
-    except Exception:
-        pass
-    return 0
 
 
 if __name__ == "__main__":
