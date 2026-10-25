@@ -6,6 +6,7 @@ python 나레이션_겹침검사.py <영상.mp4> <회차.py 또는 대본.txt> [
     1) 소리를 쉼에서 15초 안쪽 조각으로 나눠 받아 적음
     2) 같은 글자 1~3자가 연달아 두 번 나오면(띄어쓰기 무시: '것만 만', '국국') 후보
     3) 받아 적은 조각과 가장 비슷한 대본 문장을 찾아, 그 문장에 원래 같은 길이의 반복(무럭무럭·불쑥불쑥·타닥타닥)이 있으면 흉내말로 보고 넘김
+       반복된 글자가 대본 어딘가에 그대로 있으면('단단히'·'쓸쓸해') 문장을 잘못 맞춘 오탐으로 보고 넘김
     4) 대본 문장과 한 글자씩 맞춰 봐서 반복 자리에 글자가 '더 들어갔을' 때만 겹침 ('것만→것만만'). 글자 수가 같으면 발음 차이로 봄
        ('하늘나라→하늘라라', '닿을→다을')
   - 갑자기 빨라진 곳도 찾음: 쉼과 쉼 사이 한 마디씩 1초당 글자 수를 재서 영상 전체 마디의 중간값보다 25% 넘게 빠른 마디 (대사는 인물마다 빠르기가 달라 뺌)
@@ -150,6 +151,7 @@ def detect(video, script):
     m = AutoModelForCTC.from_pretrained(MODEL).eval()
     found, sylls = [], []          # sylls: (글자, 시각초) - 말 빠르기 재기용
     blank = p.tokenizer.pad_token_id
+    all_text = hangul(" ".join(x[1] for x in sents))
     for t0, t1 in chunks(a):
         off = max(0, t0 - 0.15)
         x = a[int(off * SR):int((t1 + 0.15) * SR)]
@@ -177,6 +179,8 @@ def detect(video, script):
                 k_ = sents.index(ps)
                 near = hangul(" ".join(x[1] for x in sents[max(0, k_ - 1):k_ + 2]))   # 앞뒤 문장까지 (조각이 문장 경계에 걸침)
                 if doubles(sh, n) or dd in near:      # 규칙 3: 대본에 원래 같은 반복(흉내말 '줄줄이·무럭무럭')이 있음
+                    continue
+                if dd in all_text:                    # 규칙 3-2: 대본 어딘가에 그대로 있는 낱말('단단히·쓸쓸해') — 문장을 잘못 맞춘 오탐
                     continue
                 if not extra_syllables(sh, ctx, ctx.find(dd), len(dd)):   # 규칙 4: 대본보다 글자가 늘어난 자리여야 겹침
                     continue
