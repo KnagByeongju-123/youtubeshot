@@ -30,7 +30,7 @@ CUTS = [
     ("c11", "close-up of a tiny triangular-toothed bronze gear wheel embedded in green corroded stone", "돌 속의 톱니바퀴"),
     ("c12", "scholars in early 20th century suits arguing around a table in a museum office, one shaking his head in disbelief", "믿지 않은 학자들"),
     ("c13", "a historian of science in the 1950s with glasses studying black-and-white photographs and X-ray films of gear fragments on a light box", "사진과 엑스선 필름을 연구하는 학자"),
-    ("c14", "hand-drawn technical diagram sketches of interlocking gear trains spread on a desk with a pencil and compass, 1970s", "톱니바퀴 설계도 스케치"),
+    ("c14", "hand-drawn technical diagram sketches of interlocking gear trains spread on a desk with a pencil and compass, 1970s. No people, no hands, no arms anywhere, only the drawings, pencils and tools on the desk.", "톱니바퀴 설계도 스케치"),
     ("c15", "a museum engineer in a workshop carefully assembling a brass reconstruction of an ancient gear mechanism with tiny tools", "청동 복원 모형을 만드는 기술자"),
     ("c16", "a huge industrial X-ray CT scanner machine being wheeled into an old museum hall at night, scientists in lab coats, 2005", "박물관에 들어온 8톤 스캐너"),
     ("c17", "glowing blue X-ray cross-section images of hidden gears inside a corroded bronze fragment on computer screens in a dark room", "엑스선 단층 사진 속 숨은 톱니"),
