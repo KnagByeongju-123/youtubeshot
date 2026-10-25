@@ -1,7 +1,8 @@
 """장문 미스터리 다큐 '2천 년 전 바닷속 컴퓨터, 안티키테라 기계' — 대본 + 컷별 그림 계획
 python 장문/안티키테라/안티키테라_기계.py job <저장폴더> [c01,c02,...]  → 그림 주문서(klein_worker 용, 유화 복원도) job.json
 python 장문/안티키테라/안티키테라_기계.py project <그림폴더>          → 프로젝트 파일(render_project 용) 장문/안티키테라/안티키테라_기계.json
-대본의 {컷번호} 자리에 그 컷 그림이 들어감. 그림은 모두 AI 복원 그림(유화풍) — 실제 유물 사진이 아님을 화면 설명에 밝힘
+대본의 {컷번호} 자리에 그 컷 그림이 들어감. 장문은 실제 사진 위주(사용자 결정): PHOTOS 의 컷은 위키미디어 공용 사진(사진/<컷>.jpg, 출처·라이선스 표시),
+나머지는 AI 복원 그림(유화풍) — 실제 유물 사진이 아님을 화면 설명에 밝힘. 사진 후보 받기: 사진_찾기.py
 사실 확인: 위키백과(영어) Antikythera mechanism, Nature(2006·2008), Scientific Reports(2021, UCL), Horological Journal(2024, 글래스고대)"""
 import json
 import os
@@ -237,6 +238,12 @@ STORY = """{c01}
 여러분이라면 이 기계를 누가 만들었다고 생각하시나요? 댓글로 여러분의 추리를 들려주세요. 보고 나면 가벼운 지식이 남는 이야기, 이 채널에서 계속 이어집니다."""
 
 
+# 컷 → 고른 위키미디어 사진 후보 이름 (사진후보/후보.json 의 열쇠). 장면에 맞는 자유 이용 사진이 없는 컷만 AI 그림
+PHOTOS = {"c01": "c01_8", "c04": "c04_1", "c05": "c05_1", "c06": "c06_1", "c08": "c06_4", "c09": "c09_3", "c11": "c01_9",
+          "c13": "c13_1", "c15": "c13_3", "c18": "c18_4", "c20": "c20_1", "c23": "c23_8", "c24": "c24_2", "c26": "c26_3",
+          "c28": "c28_1", "c32": "c32_1", "c36": "c36_2"}
+
+
 def main():
     cmd, folder = sys.argv[1], sys.argv[2]
     src = open(os.path.join(ROOT, "shorts_novel_maker_supertonic.py"), encoding="utf-8").read()
@@ -256,12 +263,19 @@ def main():
         print(len(items), "cuts")
     elif cmd == "project":
         story = STORY
+        meta = json.load(open(os.path.join(HERE, "사진후보", "후보.json"), encoding="utf-8"))
         for cid, _, cap in CUTS:
+            if cid in PHOTOS:
+                m = meta[PHOTOS[cid]]
+                img = os.path.join(HERE, "사진", cid + ".jpg")
+                credit = f"{m['artist'] or 'Wikimedia Commons'} / {m['license']} / Wikimedia Commons"
+                story = story.replace("{" + cid + "}", f"[사진: {img} | {cap} | {credit} | {m['page']}]")
+                continue
             img = next((os.path.join(folder, cid + e) for e in (".png", ".jpg") if os.path.exists(os.path.join(folder, cid + e))), os.path.join(folder, cid + ".png"))
             story = story.replace("{" + cid + "}", f"[사진: {img} | {cap} | AI 복원 그림 (FLUX.2 klein) | ]")
         proj = {"ver": 7, "category": "장문", "genre": "[다큐] 역사·미스터리", "topic": "안티키테라 기계", "title": TITLE,
                 "story": story, "sources": ["https://en.wikipedia.org/wiki/Antikythera_mechanism"],
-                "notes": "역사 미스터리 장문 다큐 (그림은 모두 AI 복원 그림)", "autophoto": False, "img_source": "그림: 유화",
+                "notes": "역사 미스터리 장문 다큐 (실제 사진 위주 + 사진이 없는 장면은 AI 복원 그림)", "autophoto": False, "img_source": "그림: 유화",
                 "settings": {"format": "롱폼 가로(1920×1080)", "narration": "on",
                              "layout": "자막형(큰 제목+사진+자막)", "img_fill": "전체 화면(글자가 사진 위에)",
                              "img_motion": "영상처럼(확대·이동·전환)",
