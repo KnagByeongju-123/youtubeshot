@@ -8,6 +8,7 @@ F.Q = {
     "c14": "Tibetan Plateau", "c16": "Xiahe mandible", "c19": "Penghu 1", "c21": "Harbin skull",
     "c26": "Laos limestone karst", "c28": "Papua New Guinea people", "c33": "Neanderthal modern human skull",
     "c35": "Denisova excavation", "c11": "Denisovan tooth", "c01": "Denisovan finger",
+    "c27": "Denisovan", "c34": "Myeongdong",
 }
 if __name__ == "__main__":
     F.main()
