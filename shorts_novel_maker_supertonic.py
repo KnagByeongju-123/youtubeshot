@@ -5147,6 +5147,7 @@ class SubtitleRenderer:
                 im = imcache[med[0]]
                 if im is not None:
                     self.images.append((im, med[1]))
+                    self.img_credits = getattr(self, "img_credits", []) + [med[2]]     # 사진 출처(오른쪽 위 꼬리표 둘째 줄)
                     self.img_paths = getattr(self, "img_paths", []) + [resolve_media(med[0]) or med[0]]
                     cur_img = len(self.images) - 1
                 continue
@@ -6265,12 +6266,27 @@ class SubtitleRenderer:
                 while f_.getlength(cap) > maxw - fs and len(cap) > 4:
                     cap = cap[:-2] + "…"
                 pad_x, pad_y = int(fs * 0.7), int(fs * 0.38)
-                bw, bh = int(f_.getlength(cap)) + pad_x * 2, int(fs * 1.28) + pad_y * 2 - int(fs * 0.25)
+                # 둘째 줄: 사진·그림 출처 (규칙: 장문 다큐는 오른쪽 위에 사진 정보 — 작가·라이선스 / AI 그림 표시)
+                cred = ""
+                crs = getattr(self, "img_credits", [])
+                if idx < len(crs) and str(self.s.get("img_label_credit", "on")) == "on":
+                    cred = re.sub(r"\s+", " ", str(crs[idx] or "")).strip()
+                    cred = re.sub(r"No machine-readable author provided\.?\s*", "", cred).strip(" /")
+                fs2 = max(14, int(fs * 0.62))
+                f2 = load_font(self.s.get("sub_font_path") or self.s.get("font_path"), fs2)
+                while cred and f2.getlength(cred) > maxw - fs and len(cred) > 4:
+                    cred = cred[:-2] + "…"
+                w1 = int(f_.getlength(cap))
+                w2 = int(f2.getlength(cred)) if cred else 0
+                h1 = int(fs * 1.28) + pad_y * 2 - int(fs * 0.25)
+                bw, bh = max(w1, w2) + pad_x * 2, h1 + (int(fs2 * 1.35) if cred else 0)
                 im = Image.new("RGBA", (bw, bh), (0, 0, 0, 0))
                 d = ImageDraw.Draw(im)
                 d.rounded_rectangle([0, 0, bw - 1, bh - 1], radius=int(fs * 0.45), fill=(10, 12, 18, 165))
                 d.rectangle([0, int(bh * 0.18), max(3, fs // 7), int(bh * 0.82)], fill=tuple(int(v) for v in self.accent) + (235,))
                 d.text((pad_x, pad_y - int(fs * 0.12)), cap, font=f_, fill=(255, 255, 255, 240))
+                if cred:
+                    d.text((pad_x, h1 - int(fs2 * 0.35)), cred, font=f2, fill=(215, 220, 230, 220))
                 mx, my = int(W * (0.035 if port else 0.025)), int(H * (0.16 if port else 0.045))
                 if port and str(self.s.get("head_show", "보임")).startswith("안"):
                     my = int(H * 0.05)
