@@ -5770,6 +5770,36 @@ class SubtitleRenderer:
             self._img_cache[idx] = (big, mask, blur)
         return self._img_cache[idx]
 
+    def _face_box(self, idx):
+        """사진 속 얼굴들을 감싸는 상자 (0~1 비율) 또는 None. 확대·이동할 때 얼굴이 화면 밖으로 나가지 않게 씀
+        (사용자 지적 2026-10-25: 인물 사진을 훑을 때 몸만 나오고 얼굴이 잘림). 얼굴 찾기 = OpenCV YuNet (models/face_detection_yunet_2023mar.onnx)"""
+        cache = self.__dict__.setdefault("_face_cache", {})
+        if idx in cache:
+            return cache[idx]
+        box = None
+        mp = os.path.join(BASE, "models", "face_detection_yunet_2023mar.onnx")
+        try:
+            import cv2
+            if os.path.exists(mp):
+                im = np.asarray(self.images[idx][0].convert("RGB"))[:, :, ::-1]
+                h, w = im.shape[:2]
+                k = 640 / max(h, w)
+                sm = cv2.resize(im, (max(1, int(w * k)), max(1, int(h * k))))
+                det = cv2.FaceDetectorYN.create(mp, "", (sm.shape[1], sm.shape[0]), 0.6)
+                _, f = det.detect(sm)
+                if f is not None and len(f):
+                    f = [r for r in f if r[2] * r[3] >= 0.0015 * sm.shape[0] * sm.shape[1]]     # 아주 작은 얼굴(군중)은 빼고
+                    if f:
+                        big_a = max(r[2] * r[3] for r in f)
+                        f = [r for r in f if r[2] * r[3] >= 0.3 * big_a]                         # 주인공 얼굴(가장 큰 것과 비슷한 것)만
+                        x0 = min(r[0] for r in f); y0 = min(r[1] for r in f)
+                        x1 = max(r[0] + r[2] for r in f); y1 = max(r[1] + r[3] for r in f)
+                        box = (x0 / sm.shape[1], y0 / sm.shape[0], x1 / sm.shape[1], y1 / sm.shape[0])
+        except Exception as e:
+            print("얼굴 찾기 건너뜀:", e)
+        cache[idx] = box
+        return box
+
     def _layer_spec(self, idx):
         """그림 옆에 <그림이름>.layers.json 이 있으면 레이어 움직임 설정을 읽음 (레이어_움직임.py 와 같은 움직임 이름)
         {"bg": "c01_bg.png", "layers": [{"png": "c01_ship.png", "move": "날아감:0.24,-0.2,0.5"}]}  — 경로는 json 기준"""
@@ -5886,6 +5916,16 @@ class SubtitleRenderer:
         sx, sy = (big.width - cw) / 2, (big.height - ch) / 2
         cx = big.width / 2 + (ax + (bx - ax) * p) * sx
         cy = big.height / 2 + (ay + (by - ay) * p) * sy
+        fb = self._face_box(sh["img"]) if not lay else None
+        if fb:                                        # 얼굴이 잘리지 않게: 얼굴 상자가 잘라낼 칸 안에 들어오도록 카메라 위치를 당김
+            fx0, fy0, fx1, fy1 = fb[0] * big.width, fb[1] * big.height, fb[2] * big.width, fb[3] * big.height
+            mx, my = cw * 0.06, ch * 0.08
+            lo, hi = fx1 + mx - cw / 2, fx0 - mx + cw / 2
+            cx = min(max(cx, lo), hi) if lo <= hi else (fx0 + fx1) / 2
+            lo, hi = fy1 + my - ch / 2, fy0 - my + ch / 2
+            cy = min(max(cy, lo), hi) if lo <= hi else (fy0 + fy1) / 2
+            cx = min(max(cx, cw / 2), big.width - cw / 2)
+            cy = min(max(cy, ch / 2), big.height - ch / 2)
         l, tp = cx - cw / 2, cy - ch / 2
         dbig = self._depth_for(sh["img"], big.size) if (getattr(self, "depth_on", False) and z < 1.22 and not lay) else None   # 확대(줌)된 장면은 2.5D 안 함 (가장자리 겹침이 더 잘 보임)
         if dbig is None:

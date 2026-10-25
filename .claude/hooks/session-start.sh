@@ -78,6 +78,12 @@ if [ -n "${CLAUDE_ENV_FILE:-}" ]; then
 fi
 
 # 6) 입체 움직임 모델 (영상에서 사진이 앞뒤로 움직이게, 약 50MB)
+# 얼굴 찾기 모델(OpenCV YuNet, 230KB): 사진을 확대·이동할 때 얼굴이 잘리지 않게
+if [ ! -f models/face_detection_yunet_2023mar.onnx ]; then
+  curl -sSL --retry 3 -o models/face_detection_yunet_2023mar.onnx.part \
+    "https://media.githubusercontent.com/media/opencv/opencv_zoo/main/models/face_detection_yunet/face_detection_yunet_2023mar.onnx" \
+    && mv models/face_detection_yunet_2023mar.onnx.part models/face_detection_yunet_2023mar.onnx || true
+fi
 if [ ! -f models/depth_anything_v2_small_fp16.onnx ]; then
   curl -sSL --retry 3 -o models/depth_anything_v2_small_fp16.onnx.part \
     https://huggingface.co/onnx-community/depth-anything-v2-small/resolve/main/onnx/model_fp16.onnx \
