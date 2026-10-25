@@ -538,7 +538,7 @@ FIELDS = [
     ("영상", "fps", "FPS(60=부드러움, 30=빠른 제작)", "int", 30),
     ("영상", "quality", "화질(crf 18=최고·23=권장·28=작게)", "int", 23),
     ("영상", "scene_parts", "자막형: 장면별로 나눠 만들기(고친 장면만 다시·끝난 장면 유지)", "choice:on,off", "on"),
-    ("영상", "scene_trans", "장면 사이 전환 효과(장면별 제작 때)", "choice:페이드,밀어내기,덮기,닦아내기,확대,시대전환(느린 디졸브),섞어서,없음", "페이드"),
+    ("영상", "scene_trans", "장면 사이 전환 효과(장면별 제작 때)", "choice:자동(장면에 맞게),페이드,디졸브,검정,원형,빠른페이드,밀어내기,덮기,닦아내기,확대,시대전환(느린 디졸브),섞어서,없음", "자동(장면에 맞게)"),
     ("영상", "audio_out", "소리 저장 방식", "choice:MP4에 포함,MP4에 포함+MP3 따로,MP3만 따로(무음 MP4)", "MP4에 포함+MP3 따로"),
     ("영상", "thumb_style", "유튜브 썸네일 스타일(자동 저장용)", "choice:" + ",".join(THUMB_STYLES), THUMB_STYLES[0]),
     ("영상", "genre_auto", "장문: 소재 고르면 자막·그림 설정 자동", "choice:on,off", "on"),
@@ -5970,7 +5970,15 @@ class SubtitleRenderer:
                 return extent_resize(img, (w, h), ((w - cw) / 2, (h - ch) / 2, (w + cw) / 2, (h + ch) / 2))
             z = 1 + 0.06 * e                        # 앞·뒤 사진을 같은 비율로 살짝 확대 → 피사체 위치가 유지된 채 배경만 바뀌는 듯
             return Image.blend(zc(a, z), zc(b, z), float(smoothstep(e)))
-        return Image.blend(a, b, e)                 # 페이드
+        if kind.startswith("검정"):                 # 검정: 앞 장이 어둠 속으로 사라졌다가 새 장이 떠오름 (챕터가 바뀔 때)
+            blk = Image.new("RGB", (w, h), (0, 0, 0))
+            return Image.blend(a, blk, min(1.0, e * 2)) if e < 0.5 else Image.blend(blk, b, (e - 0.5) * 2)
+        if kind.startswith("원형"):                 # 원형 열기: 가운데에서 동그랗게 새 장이 열림 (신비한 장면)
+            yy, xx = np.ogrid[:h, :w]
+            r = np.hypot(xx - w / 2, yy - h / 2) / np.hypot(w / 2, h / 2)
+            mk = np.clip((e * 1.15 - r) / 0.15, 0, 1)
+            return Image.composite(b, a, Image.fromarray((mk * 255).astype(np.uint8), "L"))
+        return Image.blend(a, b, e)                 # 페이드·디졸브·빠른 페이드 (길이만 다름)
 
     def _zoom_rect(self, idx, whole=False):
         """확대 장면이면 원본 그림에서 잘라 올 영역(사진 상자 비율에 맞춤), 아니면 None. whole=True: 그림 전체"""
@@ -8970,9 +8978,33 @@ def duck_env_from_audio(a, n, duration, duck):
 
 
 TRANS_ROT = ["밀어내기", "덮기", "닦아내기", "확대"]
+TRANS_SEC = {"페이드": 0.4, "시대": 1.8, "검정": 0.9, "디졸브": 1.0, "빠른": 0.25, "원형": 0.8}
+_TR_TIME = ("그날 밤", "다음 날", "이듬해", "며칠 뒤", "수백 년", "한편", "같은 시각", "그 시각", "새벽", "무렵", "그 뒤", "얼마 후")
+_TR_TENSE = ("그 순간", "갑자기", "비명", "끼익", "쿵", "탁,", "그때였", "번쩍")
+_TR_MYST = ("빛", "눈을 떴", "어둠", "파란", "비밀", "수수께끼", "꿈")
 
 
-def merge_parts_with_fx(parts, out, s, kind, log=None, cancel=None, work_dir=None, bgm_style=None, want_audio=True, need_mix=False):
+def auto_transitions(scenes):
+    """규칙(사용자 결정 2026-10-25): 장면 사이 전환을 내용에 맞게 자동으로 — 챕터가 바뀌면 검정, 시간이 흐르면 디졸브,
+    긴장되는 장면은 빠른 페이드, 신비한 장면은 원형 열기, 나머지는 밀기·덮기·닦기·확대·디졸브를 돌려 씀. 돌려줌: 장면마다 들어올 때의 전환"""
+    out, rot = [None], ["밀어내기", "덮기", "닦아내기", "확대", "디졸브"]
+    for k in range(1, len(scenes)):
+        sc = scenes[k]
+        first = " ".join(sc.get("lines") or [])[:60]
+        if sc.get("chapter"):
+            out.append("검정")
+        elif any(w in first for w in _TR_TIME):
+            out.append("디졸브")
+        elif any(w in first for w in _TR_TENSE):
+            out.append("빠른페이드")
+        elif any(w in first for w in _TR_MYST):
+            out.append("원형")
+        else:
+            out.append(rot[k % len(rot)])
+    return out
+
+
+def merge_parts_with_fx(parts, out, s, kind, log=None, cancel=None, work_dir=None, bgm_style=None, want_audio=True, need_mix=False, plan=None):
     """나레이션이 든 조각 MP4 들을 '전환 효과'를 끼워 이어 붙이고, 배경음은 마지막에 전체에 한 번에 깔기.
     kind: 밀어내기·덮기·닦아내기·확대·페이드·섞어서·없음.  돌려줌: 섞은 소리(스테레오) 또는 None"""
     log = log or (lambda x: None)
@@ -8984,11 +9016,13 @@ def merge_parts_with_fx(parts, out, s, kind, log=None, cancel=None, work_dir=Non
     seq = []
     for k, p in enumerate(parts):
         if k > 0 and kind != "없음":
-            if kind.startswith("섞어"):
+            if kind.startswith("자동") and plan and k < len(plan) and plan[k]:
+                kk = plan[k]                                           # 자동: 장면 내용에 맞춘 전환 (auto_transitions)
+            elif kind.startswith("섞어") or kind.startswith("자동"):
                 kk = "시대전환" if k % 5 == 0 else TRANS_ROT[k % 4]   # 섞어서: 가끔(5번째 전환마다) 시대 전환
             else:
                 kk = kind
-            sec = 0.4 if kk.startswith("페이드") else (1.8 if kk.startswith("시대") else 0.6)
+            sec = next((v for k_, v in TRANS_SEC.items() if kk.startswith(k_)), 0.6)
             key = (f"{int(os.path.getmtime(parts[k - 1]))}|{os.path.getsize(parts[k - 1])}|{int(os.path.getmtime(p))}|{os.path.getsize(p)}|"
                    f"{kk}|{sec}|{W}x{H}|{s['fps']}|{s['quality']}")
             tp = os.path.join(work_dir, f"trans_{k:03d}.mp4")
@@ -17831,7 +17865,7 @@ class App(tk.Tk):
         self.q.put(lambda: self.status.config(text="전환 효과 넣고 합치는 중..."))
         in_video = "MP4에 포함" in s["audio_out"]
         mixed = merge_parts_with_fx(parts, out, s, s.get("scene_trans", "페이드"), log, self.cancel, os.path.join(parts_dir, "_합치기"),
-                                    bgm_style=style, want_audio=in_video, need_mix=("MP3" in s["audio_out"]))
+                                    bgm_style=style, want_audio=in_video, need_mix=("MP3" in s["audio_out"]), plan=auto_transitions(scenes))
         mp3 = ""
         if "MP3" in s["audio_out"] and mixed is not None:
             mp3 = base + "_배경음.mp3"
