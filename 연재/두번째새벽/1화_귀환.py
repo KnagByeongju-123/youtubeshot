@@ -298,6 +298,7 @@ def main():
     SOLO = "Solo: exactly one person in the whole image, no other people, nobody in the background, no reflections, not a character sheet, single view only. "
     GROUP = "Exactly {} people in the image, each appears only once, no duplicates, no extra copies in the background, not a character sheet. "
     NUM = {2: "two", 3: "three", 4: "four", 5: "five"}
+    BG = "Detailed background environment that matches the scene, NOT a white or plain background (ignore the white background of the reference sheets). "
     if cmd == "job":
         items = []
         for cid, who, desc, _ in CUTS:
@@ -309,7 +310,7 @@ def main():
                           "prompt": f"{style if (who or not anime) else scenery}, medieval post-apocalyptic science fantasy {kind}. "
                                     + (f"Characters: {looks}. Each person has exactly two arms and two legs. " + (SOLO if len(who) == 1 else GROUP.format(NUM[len(who)])) if looks
                                        else no_face if anime else "")
-                                    + f"Scene: {desc}. Cinematic composition, full-bleed image, no border, no frame, no paper edges. No speech bubbles, no text, no letters."})
+                                    + f"Scene: {desc}. " + (BG if who else "") + "Cinematic composition, full-bleed image, no border, no frame, no paper edges. No speech bubbles, no text, no letters."})
         os.makedirs(folder, exist_ok=True)
         json.dump({"items": items}, open(os.path.join(folder, "job.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
         print(len(items), "cuts")

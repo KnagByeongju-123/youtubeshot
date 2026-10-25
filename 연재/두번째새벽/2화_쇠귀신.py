@@ -28,37 +28,37 @@ DIALOGUE = [
 
 # (컷번호, 나오는 인물, 그림 설명(영어), 화면 설명(한국어))
 CUTS = [
-    ("c01", ["한별", "아홉"], "in a dark underground hall full of broken robots, the tall skull-faced robot with one glowing blue eye bending over the frightened girl lying on the floor, a dropped hand lamp beside her", "한별에게 손을 뻗은 쇠귀신"),
+    ("c01", ["한별", "아홉"], "in a dark underground maintenance hall where broken boxy robots with square heads (no skull faces, no numbers) slump against the walls, the tall skull-faced robot with one glowing blue eye bending over the frightened girl lying on the floor, a dropped hand lamp beside her", "한별에게 손을 뻗은 쇠귀신"),
     ("c02", [], "a column of blue light rising from the ruins of an overgrown city at dusk, seen from far away across a dark forest", "폐허에서 솟은 파란 빛기둥"),
-    ("c03", ["카룬"], "the chimpanzee warrior standing on a broken highway bridge at dusk, seen from behind, holding his staff, watching a distant blue light over the ruins", "빛을 바라보는 숲의 전사"),
+    ("c03", ["카룬"], "the young chimpanzee warrior (ape face, dark fur, white face paint) standing on a broken highway bridge at dusk, seen from the side, holding his staff, watching a distant blue light over the ruins", "빛을 바라보는 숲의 전사"),
     ("c04", ["한별", "아홉"], "the tall robot kneeling and gently touching the girl's ankle with its long thin metal fingers, the girl flinching with her eyes squeezed shut, lamp light on the floor", "한별의 발목에 닿은 쇠 손가락"),
-    ("c05", ["한별"], "close-up of the girl lying on a dusty floor slowly opening one eye, tears on her cheeks, confused and scared, soft blue light on her face", "살며시 눈을 뜬 한별"),
+    ("c05", ["한별"], "in a dark underground maintenance hall where broken boxy robots with square heads (no skull faces, no numbers) slump against the walls, close-up of the girl lying on a dusty floor slowly opening one of her green eyes (both eyes green), tears on her cheeks, confused and scared, soft blue light on her face", "살며시 눈을 뜬 한별"),
     ("c06", ["아홉"], "the robot kneeling in the dark, its single blue eye casting a soft scanning beam of light downward, moss on its shoulders", "파란 눈으로 살피는 로봇"),
-    ("c07", ["한별"], "the girl sitting on the floor holding her swollen left ankle with both hands, wincing in pain, her goggles fallen beside her", "발목을 다친 한별"),
-    ("c08", ["아홉"], "close-up of the robot's forearm opening like a rusty toolbox, tiny old tools unfolding from its long fingers, sparks of dust", "팔 속에서 나온 작은 공구들"),
-    ("c09", ["한별", "아홉"], "the robot carefully splinting the girl's ankle with thin metal strips and strips of cloth, the girl sitting and watching in amazement", "다리를 정비해 주는 로봇"),
-    ("c10", ["한별"], "the girl leaning close with her lamp, tracing faded old engraved symbols on a rusted metal chest plate with her finger, fascinated", "로봇 가슴판의 옛 글자"),
-    ("c11", ["아홉"], "close-up of the robot's skull-like face tilted to one side, its blue eye flickering, the other eye socket broken and dark, curious", "고개를 갸웃하는 로봇"),
+    ("c07", ["한별"], "in a dark underground maintenance hall where broken boxy robots with square heads (no skull faces, no numbers) slump against the walls, the girl sitting on the floor holding her swollen left ankle with both hands, wincing in pain, her goggles fallen beside her", "발목을 다친 한별"),
+    ("c08", ["아홉"], "in a dark underground maintenance hall where broken boxy robots with square heads (no skull faces, no numbers) slump against the walls, close-up of the robot's forearm opening like a rusty toolbox, tiny old tools unfolding from its long fingers, sparks of dust", "팔 속에서 나온 작은 공구들"),
+    ("c09", ["한별", "아홉"], "in a dark underground maintenance hall where broken boxy robots with square heads (no skull faces, no numbers) slump against the walls, the robot carefully splinting the girl's ankle with thin metal strips and strips of cloth, the girl sitting and watching in amazement", "다리를 정비해 주는 로봇"),
+    ("c10", ["한별"], "in a dark underground maintenance hall where broken boxy robots with square heads (no skull faces, no numbers) slump against the walls, the girl leaning close with her lamp, tracing faded scratched engraved marks (no readable letters) on the robot's rusted chest plate with her finger, fascinated", "로봇 가슴판의 옛 글자"),
+    ("c11", ["아홉"], "in a dark underground maintenance hall where broken boxy robots with square heads (no skull faces, no numbers) slump against the walls, close-up of the robot's skull-like face tilted to one side, its blue eye flickering, the other eye socket broken and dark, curious", "고개를 갸웃하는 로봇"),
     ("c12", ["한별", "아홉"], "the girl holding out her own small wrench to the robot with a shy smile, the robot looking down at it, warm lamp light between them", "공구를 건네는 한별"),
     ("c13", [], "a night camp around a landed shuttle in a forest clearing among ruins, a wooden palisade, campfires and torches, knights on guard", "착륙선 둘레의 밤 야영지"),
     ("c14", ["서린"], "the priestess kneeling beside an opened empty wooden crate in a shuttle cargo hold at night, holding a small oily rag, surprised", "빈 상자를 찾은 서린"),
     ("c15", ["서린", "강무진 경"], "the priestess speaking urgently to the knight commander beside a campfire at night, he frowns with his arms crossed", "아버지에게 알리는 서린"),
     ("c16", ["강무진 경"], "the knight commander pointing at an old paper map on a wooden table in a tent, candlelight, his face hard", "지도를 짚는 강무진"),
-    ("c17", ["한별", "아홉"], "the tall robot carrying the girl on its back, climbing up dark broken stairs toward moonlight at the top", "한별을 업고 계단을 오르는 로봇"),
+    ("c17", ["한별", "아홉"], "the girl riding piggyback on the tall robot's back with her arms around its neck, the robot climbing up dark broken stairs toward moonlight at the top", "한별을 업고 계단을 오르는 로봇"),
     ("c18", [], "an overgrown ruined city at night under a huge full moon, vines on collapsed towers, fireflies drifting over the street", "달빛 아래 폐허 도시"),
-    ("c19", ["한별", "아홉"], "the girl sitting on the tall robot's shoulder as it walks through moonlit ruins, she points at the stars with a small smile", "로봇의 어깨에 탄 한별"),
-    ("c20", ["아홉"], "the robot stopping in a moonlit street and gently touching the head of an old fallen robot half-buried in grass", "쓰러진 로봇 앞에 멈춘 아홉"),
+    ("c19", ["한별", "아홉"], "the girl with her normal human anime face sitting on the tall skull-faced robot's shoulder as it walks through moonlit ruins, she points at the stars with a small smile, two clearly separate characters", "로봇의 어깨에 탄 한별"),
+    ("c20", ["아홉"], "the robot stopping in a moonlit street and gently touching the square head of an old fallen boxy robot half-buried in grass (the fallen robot has no skull face and no number)", "쓰러진 로봇 앞에 멈춘 아홉"),
     ("c21", [], "a faded cracked old painted mural on a ruined wall showing a friendly robot holding hands with a small child, vines over it, moonlight", "벽에 남은 옛 그림"),
     ("c22", ["카룬"], "the chimpanzee warrior crouching on a high tree branch in moonlight, holding his staff, amber eyes narrowed, watching something below", "나무 위에서 지켜보는 카룬"),
     ("c23", [], "warning totems at a dark forest edge, broken robot heads and rusty metal parts hanging from ropes on wooden poles, moonlight and mist", "숲 가장자리의 경고 표식"),
-    ("c24", ["한별", "아홉"], "the tall robot suddenly stepping in front of the girl and shielding her with one long arm, looking up at the dark trees, the girl behind it", "한별을 막아서는 아홉"),
-    ("c25", ["아홉"], "close-up of the robot's shoulder plate covered with old dents and scratches, a broken stone spear tip stuck in the rusted metal", "어깨에 박힌 오래된 창끝"),
+    ("c24", ["한별", "아홉"], "in a dark forest at night, the tall robot with its single eye glowing blue suddenly stepping in front of the girl and shielding her with one long outstretched arm, looking up at the dark trees, the only girl stands behind it", "한별을 막아서는 아홉"),
+    ("c25", ["아홉"], "in a dark forest at night, close-up of the robot's shoulder plate covered with old dents and scratches, a broken stone spear tip stuck in the rusted metal", "어깨에 박힌 오래된 창끝"),
     ("c26", ["강무진 경"], "the knight commander leading knights with torches down broken stairs into a dark underground hall, swords drawn", "지하로 내려가는 기사들"),
     ("c27", [], "knights in armor smashing old broken robots with war hammers in a dark underground hall, sparks flying in torchlight", "로봇을 부수는 기사들"),
     ("c28", ["서린"], "the priestess in a dark underground hall picking up a small dropped hand lamp from the floor, worried, torchlight behind her", "한별의 등불을 주운 서린"),
     ("c29", ["서린"], "the priestess kneeling and touching the mossy hand of a broken robot, hesitant, doubt on her gentle face", "로봇의 손을 만지는 서린"),
     ("c30", ["한별", "아홉"], "inside an abandoned old workshop at night, the girl repairing the robot's broken face with small tools by lamplight, the robot sitting still", "아홉을 고쳐 주는 한별"),
-    ("c31", ["아홉"], "a faint blue hologram projected from the robot's single eye in a dark workshop, showing a gigantic ruined tower with a dark sphere at its top", "아홉의 눈이 비춘 옛 탑"),
+    ("c31", ["아홉"], "only one robot in the image: a faint blue hologram projected from the robot's single eye in a dark workshop, showing a gigantic ruined tower with a dark sphere at its top", "아홉의 눈이 비춘 옛 탑"),
     ("c32", ["한별"], "the girl's face lit by soft blue hologram light in the dark, eyes wide with awe", "푸른 빛을 바라보는 한별"),
     ("c33", ["한별", "아홉"], "dawn light through a broken window, the girl asleep under her cloak on a workbench, the tall robot sitting on guard by the doorway", "잠든 한별을 지키는 아홉"),
     ("c34", ["카룬"], "the chimpanzee warrior stepping out of morning mist among ruins, pointing his staff forward, fierce amber eyes", "안개 속에서 나타난 카룬"),
@@ -290,6 +290,7 @@ def main():
     SOLO = "Solo: exactly one person in the whole image, no other people, nobody in the background, no reflections, not a character sheet, single view only. "
     GROUP = "Exactly {} people in the image, each appears only once, no duplicates, no extra copies in the background, not a character sheet. "
     NUM = {2: "two", 3: "three", 4: "four", 5: "five"}
+    BG = "Detailed background environment that matches the scene, NOT a white or plain background (ignore the white background of the reference sheets). "
     if cmd == "job":
         items = []
         for cid, who, desc, _ in CUTS:
@@ -301,7 +302,7 @@ def main():
                           "prompt": f"{style if (who or not anime) else scenery}, medieval post-apocalyptic science fantasy {kind}. "
                                     + (f"Characters: {looks}. Each person has exactly two arms and two legs. " + (SOLO if len(who) == 1 else GROUP.format(NUM[len(who)])) if looks
                                        else no_face if anime else "")
-                                    + f"Scene: {desc}. Cinematic composition, full-bleed image, no border, no frame, no paper edges. No speech bubbles, no text, no letters."})
+                                    + f"Scene: {desc}. " + (BG if who else "") + "Cinematic composition, full-bleed image, no border, no frame, no paper edges. No speech bubbles, no text, no letters."})
         os.makedirs(folder, exist_ok=True)
         json.dump({"items": items}, open(os.path.join(folder, "job.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
         print(len(items), "cuts")
