@@ -87,6 +87,15 @@ def main():
     job["skip_done"] = True
     json.dump(job, open(jp, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
 
+    # 같은 그림폴더를 그리던 예전 줄은 끝난 것으로 표시 — 불합격 그림을 옮기면 예전 줄이 '덜 그림'으로 보여 옛 주문서로 다시 그려 버림
+    qp = os.path.join(HERE, ".이어하기.json")
+    if os.path.exists(qp):
+        q = json.load(open(qp, encoding="utf-8"))
+        for t in (q if isinstance(q, list) else q.get("tasks") or []):
+            if t.get("kind") == "klein" and os.path.abspath(t.get("out", "")) == out and not t.get("done"):
+                t["done"] = True
+                print("  예전 줄 끝냄:", t["name"])
+        json.dump(q, open(qp, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     name = f"다시그리기_{os.path.splitext(os.path.basename(script))[0]}_{n}_{len(reasons)}장"
     subprocess.run([PY, os.path.join(HERE, "작업_이어하기.py"), "klein", name, jp, out], check=True)
     subprocess.Popen([PY, os.path.join(HERE, "작업_이어하기.py"), "run"], cwd=HERE,
