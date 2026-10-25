@@ -1,0 +1,172 @@
+{
+ "fixes": [
+  {
+   "id": "c04_bg",
+   "image": "/home/user/youtubeshot/연재/두번째새벽/1화_애니그림/레이어/c04_orig.png",
+   "out": "/home/user/youtubeshot/연재/두번째새벽/1화_애니그림/레이어/c04_bg.png",
+   "box": [
+    88,
+    0,
+    964,
+    576
+   ],
+   "prompt": "modern Japanese anime illustration background art, same art style, colors and lighting as the reference. Remove every character completely. Show only the background: a round porthole window of a spaceship corridor, outside the window a small blue-green planet Earth far away in dark space, metal wall. Sharp detailed scenery, no people, no robots, no animals, no fog filling the frame, no blur.",
+   "refs": [],
+   "seed": 23
+  },
+  {
+   "id": "c07_bg",
+   "image": "/home/user/youtubeshot/연재/두번째새벽/1화_애니그림/레이어/c07_orig.png",
+   "out": "/home/user/youtubeshot/연재/두번째새벽/1화_애니그림/레이어/c07_bg.png",
+   "box": [
+    223,
+    0,
+    806,
+    576
+   ],
+   "prompt": "modern Japanese anime illustration background art, same art style, colors and lighting as the reference. Remove every character completely. Show only the background: a grand starship throne hall like a medieval throne room, an old metal throne, rows of armored knights in the background, banners. Sharp detailed scenery, no people, no robots, no animals, no fog filling the frame, no blur.",
+   "refs": [],
+   "seed": 23
+  },
+  {
+   "id": "c12_bg",
+   "image": "/home/user/youtubeshot/연재/두번째새벽/1화_애니그림/레이어/c12_orig.png",
+   "out": "/home/user/youtubeshot/연재/두번째새벽/1화_애니그림/레이어/c12_bg.png",
+   "box": [
+    326,
+    0,
+    720,
+    576
+   ],
+   "prompt": "modern Japanese anime illustration background art, same art style, colors and lighting as the reference. Remove every character completely. Show only the background: a shuttle cargo hold full of stacked wooden crates and metal boxes, dim light, metal walls. Sharp detailed scenery, no people, no robots, no animals, no fog filling the frame, no blur.",
+   "refs": [],
+   "seed": 23
+  },
+  {
+   "id": "c14_bg",
+   "image": "/home/user/youtubeshot/연재/두번째새벽/1화_애니그림/레이어/c14_orig.png",
+   "out": "/home/user/youtubeshot/연재/두번째새벽/1화_애니그림/레이어/c14_bg.png",
+   "box": [
+    352,
+    79,
+    656,
+    282
+   ],
+   "prompt": "modern Japanese anime illustration background art, same art style, colors and lighting as the reference. Remove every character completely. Show only the background: a vast green and gray land seen from high above through clouds, ruined skyscrapers covered with forest, blue sky. Sharp detailed scenery, no people, no robots, no animals, no fog filling the frame, no blur.",
+   "refs": [],
+   "seed": 23
+  },
+  {
+   "id": "c15_bg",
+   "image": "/home/user/youtubeshot/연재/두번째새벽/1화_애니그림/레이어/c15_orig.png",
+   "out": "/home/user/youtubeshot/연재/두번째새벽/1화_애니그림/레이어/c15_bg.png",
+   "box": [
+    248,
+    226,
+    754,
+    402
+   ],
+   "prompt": "modern Japanese anime illustration background art, same art style, colors and lighting as the reference. Remove every character completely. Show only the background: a forest clearing among ruins overgrown with giant trees, dust in the air, grass, stone ruins. Sharp detailed scenery, no people, no robots, no animals, no fog filling the frame, no blur.",
+   "refs": [],
+   "seed": 23
+  },
+  {
+   "id": "c16_bg",
+   "image": "/home/user/youtubeshot/연재/두번째새벽/1화_애니그림/레이어/c16_orig.png",
+   "out": "/home/user/youtubeshot/연재/두번째새벽/1화_애니그림/레이어/c16_bg.png",
+   "box": [
+    275,
+    4,
+    924,
+    576
+   ],
+   "prompt": "modern Japanese anime illustration background art, same art style, colors and lighting as the reference. Remove every character completely. Show only the background: a dusty ruined plain with kneeling knights in armor in the background, blurry ruined buildings. Sharp detailed scenery, no people, no robots, no animals, no fog filling the frame, no blur.",
+   "refs": [],
+   "seed": 23
+  },
+  {
+   "id": "c18_bg",
+   "image": "/home/user/youtubeshot/연재/두번째새벽/1화_애니그림/레이어/c18_orig.png",
+   "out": "/home/user/youtubeshot/연재/두번째새벽/1화_애니그림/레이어/c18_bg.png",
+   "box": [
+    370,
+    2,
+    789,
+    576
+   ],
+   "prompt": "modern Japanese anime illustration background art, same art style, colors and lighting as the reference. Remove every character completely. Show only the background: an enormous blue sky with soft white clouds and flying birds, bright sunlight. Sharp detailed scenery, no people, no robots, no animals, no fog filling the frame, no blur.",
+   "refs": [],
+   "seed": 23
+  },
+  {
+   "id": "c20_bg",
+   "image": "/home/user/youtubeshot/연재/두번째새벽/1화_애니그림/레이어/c20_orig.png",
+   "out": "/home/user/youtubeshot/연재/두번째새벽/1화_애니그림/레이어/c20_bg.png",
+   "box": [
+    378,
+    11,
+    630,
+    576
+   ],
+   "prompt": "modern Japanese anime illustration background art, same art style, colors and lighting as the reference. Remove every character completely. Show only the background: a ruined city street with faded blank signboards, a rusted traffic light, broken pavement, soft hazy light. Sharp detailed scenery, no people, no robots, no animals, no fog filling the frame, no blur.",
+   "refs": [],
+   "seed": 23
+  },
+  {
+   "id": "c28_bg",
+   "image": "/home/user/youtubeshot/연재/두번째새벽/1화_애니그림/레이어/c28_orig.png",
+   "out": "/home/user/youtubeshot/연재/두번째새벽/1화_애니그림/레이어/c28_bg.png",
+   "box": [
+    341,
+    0,
+    676,
+    576
+   ],
+   "prompt": "modern Japanese anime illustration background art, same art style, colors and lighting as the reference. Remove every character completely. Show only the background: dark stone stairs going down into darkness, cobwebs, dripping water, a faint glow. Sharp detailed scenery, no people, no robots, no animals, no fog filling the frame, no blur.",
+   "refs": [],
+   "seed": 23
+  },
+  {
+   "id": "c31_bg",
+   "image": "/home/user/youtubeshot/연재/두번째새벽/1화_애니그림/레이어/c31_orig.png",
+   "out": "/home/user/youtubeshot/연재/두번째새벽/1화_애니그림/레이어/c31_bg.png",
+   "box": [
+    429,
+    4,
+    937,
+    576
+   ],
+   "prompt": "modern Japanese anime illustration background art, same art style, colors and lighting as the reference. Remove every character completely. Show only the background: a dark underground hall, concrete wall with moss, broken boxy robots in deep shadow. Sharp detailed scenery, no people, no robots, no animals, no fog filling the frame, no blur.",
+   "refs": [],
+   "seed": 23
+  },
+  {
+   "id": "c33_bg",
+   "image": "/home/user/youtubeshot/연재/두번째새벽/1화_애니그림/레이어/c33_orig.png",
+   "out": "/home/user/youtubeshot/연재/두번째새벽/1화_애니그림/레이어/c33_bg.png",
+   "box": [
+    378,
+    0,
+    703,
+    576
+   ],
+   "prompt": "modern Japanese anime illustration background art, same art style, colors and lighting as the reference. Remove every character completely. Show only the background: a dark underground hall with broken boxy robots slumped along the walls, a blue light above. Sharp detailed scenery, no people, no robots, no animals, no fog filling the frame, no blur.",
+   "refs": [],
+   "seed": 23
+  },
+  {
+   "id": "c35_bg",
+   "image": "/home/user/youtubeshot/연재/두번째새벽/1화_애니그림/레이어/c35_orig.png",
+   "out": "/home/user/youtubeshot/연재/두번째새벽/1화_애니그림/레이어/c35_bg.png",
+   "box": [
+    50,
+    0,
+    499,
+    576
+   ],
+   "prompt": "modern Japanese anime illustration background art, same art style, colors and lighting as the reference. Remove every character completely. Show only the background: a forest of tall trees with stone ruins, a column of bright blue light rising in the distance. Sharp detailed scenery, no people, no robots, no animals, no fog filling the frame, no blur.",
+   "refs": [],
+   "seed": 23
+  }
+ ]
+}
