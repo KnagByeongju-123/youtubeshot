@@ -7868,8 +7868,8 @@ def supertonic_mood(text, idx=0, total=1, settings=None):
 def supertonic_prompt(text, mood):
     """표현 태그가 유효하지 않을 수도 있으므로 재생 결과를 반드시 시청/청취 확인."""
     # 규칙: 말 시작에 '휴' 같은 한숨·숨소리·웃음소리가 나오면 안 됨 → 소리를 내는 태그(<breath>·<sad>·<laugh>)는 쓰지 않고 말 빠르기로만 분위기를 냄
-    tags = {"차분": "", "공포·긴장": "", "슬픔·감동": "",
-            "놀람·반전": "<surprise> ", "분노·갈등": "<angry> ", "밝음·유머": ""}
+    # <surprise>·<angry> 도 소리를 냄: 2화에서 '놀람' 문단의 문장마다 앞에 '플라이스'·'라' 같은 소리가 붙었음 (사용자가 들음) → 태그 안 씀
+    tags = {}
     mul = {"차분": 1.0, "공포·긴장": .89, "슬픔·감동": .92, "놀람·반전": 1.05,
            "분노·갈등": 1.02, "밝음·유머": 1.04}
     return tags.get(mood, "") + tts_clean(text), mul.get(mood, 1.0)
