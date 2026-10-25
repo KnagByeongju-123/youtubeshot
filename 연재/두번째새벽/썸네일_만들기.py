@@ -1,4 +1,5 @@
-# 썸네일 글씨 얹기: python make_thumb.py <그림> <결과.jpg> <큰 글씨 1줄> <큰 글씨 2줄|""> <강조할 낱말> <위치 top|bottom> [회차 띠 글]
+# 썸네일 글씨 얹기: python make_thumb.py <그림> <결과.jpg> <큰 글씨 1줄> <큰 글씨 2줄|""> <강조할 낱말> <위치 top|bottom> [회차 띠 글] [글씨 크기]
+# (글씨 크기: 얼굴이 크게 나온 그림에서 글씨가 얼굴을 가리면 줄임. 안 쓰면 글자 수로 150/120)
 import sys
 from PIL import Image, ImageDraw, ImageFont, ImageEnhance, ImageFilter
 
@@ -17,10 +18,10 @@ for y in range(H):
 im = Image.composite(Image.new("RGB", (W, H), (0, 0, 0)), im, grad.resize((W, H)))
 d = ImageDraw.Draw(im)
 lines = [x for x in (l1, l2) if x]
-size = 150 if max(len(x) for x in lines) <= 7 else 120
+size = int(sys.argv[8]) if len(sys.argv) > 8 else (150 if max(len(x) for x in lines) <= 7 else 120)
 f = ImageFont.truetype(F, size)
 lh = int(size * 1.12)
-y0 = (H - 40 - lh * len(lines)) if pos == "bottom" else 95
+y0 = (H - 30 - lh * len(lines)) if pos == "bottom" else 95
 for k, ln in enumerate(lines):
     y = y0 + k * lh
     x = 50

@@ -10,7 +10,7 @@ python 나레이션_겹침검사.py <영상.mp4> <회차.py 또는 대본.txt> [
        ('하늘나라→하늘라라', '닿을→다을')
   - 갑자기 빨라진 곳도 찾음: 쉼과 쉼 사이 한 마디씩 1초당 글자 수를 재서 영상 전체 마디의 중간값보다 25% 넘게 빠른 마디 (대사는 인물마다 빠르기가 달라 뺌)
   - --고치기 <프로젝트.json> : 겹친 문장(과 그 문단)의 녹음 캐시를 output/tts_cache 에서 지움 → render_project 를 다시 돌리면 그 문장만 새로 녹음.
-    빨라진 문장은 다시 녹음해도 또 빨라서(짧은 문장) 그 녹음을 보통 빠르기로 늘림(목소리 높이 그대로)
+    빨라진 문장은 알리기만 하고 고치지 않음(사용자 결정: 늘린 녹음이 너무 느려 어색함). --빠름고치기 를 붙이면 보통 빠르기로 늘림
     (Supertonic 은 매번 조금씩 다르게 읽어서 보통 한 번에 고쳐짐. 다시 만든 영상도 검사해서 '겹침 없음'이 나올 때까지, 최대 3번)
   - 결과: '분:초 [겹친 글자] 대본: <문장> | 들림: <받아 적은 글>'
 (내부용) python 나레이션_겹침검사.py --지우기 <목록.json> <프로젝트.json>  ← .supertonic_venv 로 실행, 캐시 이름 계산·삭제"""
@@ -273,13 +273,15 @@ def main(a):
     print(msg)
     if "--결과" in a:
         open(a[a.index("--결과") + 1], "w", encoding="utf-8").write(msg + "\n")
-    if items and "--고치기" in a:
+    # 규칙(사용자 결정 2026-10-25): 빨라진 곳은 알리기만 하고 고치지 않음 (늘린 녹음이 너무 느려 어색했음). --빠름고치기 면 예전처럼 늘림
+    fix = items if "--빠름고치기" in a else [it for it in items if not it.get("speed")]
+    if fix and "--고치기" in a:
         tmp = os.path.join(tempfile.gettempdir(), "겹침목록.json")
-        json.dump(items, open(tmp, "w", encoding="utf-8"), ensure_ascii=False)
+        json.dump(fix, open(tmp, "w", encoding="utf-8"), ensure_ascii=False)
         py = os.path.join(HERE, ".supertonic_venv", "Scripts" if os.name == "nt" else "bin", "python.exe" if os.name == "nt" else "python")
         subprocess.run([py, "-X", "utf8", os.path.abspath(__file__), "--지우기", tmp, a[a.index("--고치기") + 1]], check=True)
         print("→ render_project.py 를 다시 돌리면 이 문장들만 새로 녹음됩니다")
-    return 1 if items else 0
+    return 1 if fix else 0
 
 
 if __name__ == "__main__":
