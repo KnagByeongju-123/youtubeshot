@@ -1,0 +1,144 @@
+{
+ "fixes": [
+  {
+   "id": "c03_bg",
+   "image": "/home/user/youtubeshot/연재/두번째새벽/2화_애니그림/레이어/c03_rough.png",
+   "out": "/home/user/youtubeshot/연재/두번째새벽/2화_애니그림/레이어/c03_bg.png",
+   "box": [
+    543,
+    0,
+    896,
+    576
+   ],
+   "prompt": "the same scene background continuing naturally, same art style and lighting, clean empty background with absolutely no people, no characters, no robots, no ship, no objects in this area",
+   "refs": [],
+   "seed": 11
+  },
+  {
+   "id": "c06_bg",
+   "image": "/home/user/youtubeshot/연재/두번째새벽/2화_애니그림/레이어/c06_rough.png",
+   "out": "/home/user/youtubeshot/연재/두번째새벽/2화_애니그림/레이어/c06_bg.png",
+   "box": [
+    244,
+    0,
+    776,
+    576
+   ],
+   "prompt": "the same scene background continuing naturally, same art style and lighting, clean empty background with absolutely no people, no characters, no robots, no ship, no objects in this area",
+   "refs": [],
+   "seed": 11
+  },
+  {
+   "id": "c17_bg",
+   "image": "/home/user/youtubeshot/연재/두번째새벽/2화_애니그림/레이어/c17_rough.png",
+   "out": "/home/user/youtubeshot/연재/두번째새벽/2화_애니그림/레이어/c17_bg.png",
+   "box": [
+    226,
+    4,
+    801,
+    576
+   ],
+   "prompt": "the same scene background continuing naturally, same art style and lighting, clean empty background with absolutely no people, no characters, no robots, no ship, no objects in this area",
+   "refs": [],
+   "seed": 11
+  },
+  {
+   "id": "c19_bg",
+   "image": "/home/user/youtubeshot/연재/두번째새벽/2화_애니그림/레이어/c19_rough.png",
+   "out": "/home/user/youtubeshot/연재/두번째새벽/2화_애니그림/레이어/c19_bg.png",
+   "box": [
+    248,
+    0,
+    915,
+    576
+   ],
+   "prompt": "the same scene background continuing naturally, same art style and lighting, clean empty background with absolutely no people, no characters, no robots, no ship, no objects in this area",
+   "refs": [],
+   "seed": 11
+  },
+  {
+   "id": "c20_bg",
+   "image": "/home/user/youtubeshot/연재/두번째새벽/2화_애니그림/레이어/c20_rough.png",
+   "out": "/home/user/youtubeshot/연재/두번째새벽/2화_애니그림/레이어/c20_bg.png",
+   "box": [
+    90,
+    0,
+    1024,
+    576
+   ],
+   "prompt": "the same scene background continuing naturally, same art style and lighting, clean empty background with absolutely no people, no characters, no robots, no ship, no objects in this area",
+   "refs": [],
+   "seed": 11
+  },
+  {
+   "id": "c22_bg",
+   "image": "/home/user/youtubeshot/연재/두번째새벽/2화_애니그림/레이어/c22_rough.png",
+   "out": "/home/user/youtubeshot/연재/두번째새벽/2화_애니그림/레이어/c22_bg.png",
+   "box": [
+    96,
+    0,
+    712,
+    576
+   ],
+   "prompt": "the same scene background continuing naturally, same art style and lighting, clean empty background with absolutely no people, no characters, no robots, no ship, no objects in this area",
+   "refs": [],
+   "seed": 11
+  },
+  {
+   "id": "c26_bg",
+   "image": "/home/user/youtubeshot/연재/두번째새벽/2화_애니그림/레이어/c26_rough.png",
+   "out": "/home/user/youtubeshot/연재/두번째새벽/2화_애니그림/레이어/c26_bg.png",
+   "box": [
+    358,
+    0,
+    737,
+    576
+   ],
+   "prompt": "the same scene background continuing naturally, same art style and lighting, clean empty background with absolutely no people, no characters, no robots, no ship, no objects in this area",
+   "refs": [],
+   "seed": 11
+  },
+  {
+   "id": "c32_bg",
+   "image": "/home/user/youtubeshot/연재/두번째새벽/2화_애니그림/레이어/c32_rough.png",
+   "out": "/home/user/youtubeshot/연재/두번째새벽/2화_애니그림/레이어/c32_bg.png",
+   "box": [
+    347,
+    0,
+    687,
+    576
+   ],
+   "prompt": "the same scene background continuing naturally, same art style and lighting, clean empty background with absolutely no people, no characters, no robots, no ship, no objects in this area",
+   "refs": [],
+   "seed": 11
+  },
+  {
+   "id": "c34_bg",
+   "image": "/home/user/youtubeshot/연재/두번째새벽/2화_애니그림/레이어/c34_rough.png",
+   "out": "/home/user/youtubeshot/연재/두번째새벽/2화_애니그림/레이어/c34_bg.png",
+   "box": [
+    335,
+    0,
+    739,
+    576
+   ],
+   "prompt": "the same scene background continuing naturally, same art style and lighting, clean empty background with absolutely no people, no characters, no robots, no ship, no objects in this area",
+   "refs": [],
+   "seed": 11
+  },
+  {
+   "id": "c35_bg",
+   "image": "/home/user/youtubeshot/연재/두번째새벽/2화_애니그림/레이어/c35_rough.png",
+   "out": "/home/user/youtubeshot/연재/두번째새벽/2화_애니그림/레이어/c35_bg.png",
+   "box": [
+    394,
+    7,
+    764,
+    576
+   ],
+   "prompt": "the same scene background continuing naturally, same art style and lighting, clean empty background with absolutely no people, no characters, no robots, no ship, no objects in this area",
+   "refs": [],
+   "seed": 11
+  }
+ ]
+}
