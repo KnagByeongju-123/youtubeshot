@@ -9132,7 +9132,20 @@ def merge_parts_with_fx(parts, out, s, kind, log=None, cancel=None, work_dir=Non
         seq.append(p)
     log(f"🔗 조각 {len(parts)}개" + (f" + 전환 효과 {len(seq) - len(parts)}개({kind})" if len(seq) > len(parts) else "") + " 합치는 중...")
     joined = os.path.join(work_dir, "joined.mp4")
-    concat_mp4_files(seq, joined)
+    vseq = []      # 그림만 남긴 조각으로 이음: 소리가 섞인 조각은 '소리 길이'만큼 자리를 잡아 그림이 조금씩 밀림
+    for f in seq:
+        vf = os.path.join(work_dir, "v_" + os.path.basename(os.path.dirname(f))[-8:].replace(os.sep, "_") + "_" + os.path.basename(f))
+        vkey = f"{int(os.path.getmtime(f))}|{os.path.getsize(f)}"
+        try:
+            ok = os.path.exists(vf) and open(vf + ".key", encoding="utf-8").read() == vkey
+        except OSError:
+            ok = False
+        if not ok:
+            subprocess.run([ff, "-y", "-v", "error", "-i", f, "-map", "0:v:0", "-c", "copy", "-an", vf],
+                           stdout=subprocess.PIPE, stderr=subprocess.PIPE, creationflags=flags)
+            atomic_write_text(vf + ".key", vkey)
+        vseq.append(vf)
+    concat_mp4_files(vseq, joined)
     bgm_on = str(s.get("bgm_mode", "없음")) != "없음"
     mixed = None
     if True:      # 소리는 늘 조각마다 그림 길이에 딱 맞춰 다시 이어 붙임 (아래 _seq_audio)
