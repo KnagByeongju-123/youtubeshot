@@ -9074,6 +9074,27 @@ def auto_transitions(scenes):
     return out
 
 
+def _seq_audio(seq, ff, fps, flags=0):
+    """조각 MP4 들의 소리를 조각마다 '그림 길이'에 딱 맞게 자르거나 채워 이어 붙임 (스테레오 float32).
+    -c copy 로 이으면 AAC 조각마다 앞에 0.02~0.05초 빈 소리가 끼어 조각 100개면 소리가 3초 늦어짐
+    (데니소바 10분 영상: 8분 넘어서 그림과 나레이션이 어긋났음)"""
+    out = []
+    for f in seq:
+        q = subprocess.run([ff, "-v", "info", "-i", f, "-map", "0:v:0", "-c", "copy", "-f", "null", "-"],
+                           stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, errors="replace", creationflags=flags)
+        fr = re.findall(r"frame=\s*(\d+)", q.stderr or "")
+        n = int(round(int(fr[-1]) / fps * SR)) if fr else 0
+        p = subprocess.run([ff, "-v", "error", "-i", f, "-f", "f32le", "-ac", "2", "-ar", str(SR), "-"],
+                           stdout=subprocess.PIPE, stderr=subprocess.PIPE, creationflags=flags)
+        a = np.frombuffer(p.stdout, np.float32).reshape(-1, 2) if p.returncode == 0 and p.stdout else np.zeros((0, 2), np.float32)
+        if not n:
+            n = len(a)
+        b = np.zeros((n, 2), np.float32)
+        b[:min(n, len(a))] = a[:n]
+        out.append(b)
+    return np.concatenate(out) if out else np.zeros((0, 2), np.float32)
+
+
 def merge_parts_with_fx(parts, out, s, kind, log=None, cancel=None, work_dir=None, bgm_style=None, want_audio=True, need_mix=False, plan=None):
     """나레이션이 든 조각 MP4 들을 '전환 효과'를 끼워 이어 붙이고, 배경음은 마지막에 전체에 한 번에 깔기.
     kind: 밀어내기·덮기·닦아내기·확대·페이드·섞어서·없음.  돌려줌: 섞은 소리(스테레오) 또는 None"""
@@ -9114,10 +9135,8 @@ def merge_parts_with_fx(parts, out, s, kind, log=None, cancel=None, work_dir=Non
     concat_mp4_files(seq, joined)
     bgm_on = str(s.get("bgm_mode", "없음")) != "없음"
     mixed = None
-    if bgm_on or not want_audio or need_mix:
-        p_ = subprocess.run([ff, "-v", "error", "-i", joined, "-f", "f32le", "-ac", "2", "-ar", str(SR), "-"],
-                            stdout=subprocess.PIPE, stderr=subprocess.PIPE, creationflags=flags)
-        narr = np.frombuffer(p_.stdout, np.float32).reshape(-1, 2).copy() if p_.returncode == 0 and p_.stdout else np.zeros((0, 2), np.float32)
+    if True:      # 소리는 늘 조각마다 그림 길이에 딱 맞춰 다시 이어 붙임 (아래 _seq_audio)
+        narr = _seq_audio(seq, ff, float(s["fps"]), flags)
         n = len(narr)
         if n == 0:
             q_ = subprocess.run([ff, "-i", joined], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, errors="replace", creationflags=flags)
@@ -9143,7 +9162,7 @@ def merge_parts_with_fx(parts, out, s, kind, log=None, cancel=None, work_dir=Non
         peak = float(np.abs(mixed).max()) if n else 0.0
         if peak > 0.95:
             mixed *= 0.95 / peak
-    if want_audio and mixed is not None and bgm_on:
+    if want_audio and mixed is not None:
         wav = os.path.join(work_dir, "audio_mix.wav")
         write_wav(wav, mixed)
         cmd = [ff, "-y", "-v", "error", "-i", joined, "-i", wav, "-map", "0:v", "-map", "1:a", "-c:v", "copy", "-c:a", "aac", "-b:a", "192k",
