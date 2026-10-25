@@ -1,7 +1,7 @@
 """《두 번째 새벽》 1화 '귀환' — 대본 + 컷별 그림 계획
 python 연재/두번째새벽/1화_귀환.py job <저장폴더> [애니] [c01,c06,...]   → 그림 주문서(klein_worker 용) job.json
   (애니 = 애니 일러스트 화풍 + 캐릭터시트_애니, 컷번호를 적으면 그 컷만)
-python 연재/두번째새벽/1화_귀환.py project <그림폴더> → 프로젝트 파일(render_project 용) 연재/두번째새벽/1화_귀환.json
+python 연재/두번째새벽/1화_귀환.py project <그림폴더> [애니] → 프로젝트 파일(render_project 용) 연재/두번째새벽/1화_귀환.json
 대본의 {컷번호} 자리에 그 컷 그림이 들어감. chars = 그 컷에 나오는 인물(캐릭터 시트를 기준 그림으로 넣음)"""
 import json
 import os
@@ -312,13 +312,18 @@ def main():
     elif cmd == "project":
         story = STORY
         for cid, _, _, cap in CUTS:
-            story = story.replace("{" + cid + "}", f"[사진: {os.path.join(folder, cid + '.png')} | {cap} | AI 생성 그림 (FLUX.2 klein) | ]")
+            img = next((os.path.join(folder, cid + e) for e in (".png", ".jpg") if os.path.exists(os.path.join(folder, cid + e))), os.path.join(folder, cid + ".png"))
+            story = story.replace("{" + cid + "}", f"[사진: {img} | {cap} | AI 생성 그림 (FLUX.2 klein) | ]")
         proj = {"ver": 7, "category": "장문", "genre": "[이야기] SF·디스토피아", "topic": "두 번째 새벽", "title": TITLE,
-                "story": story, "sources": [], "notes": "창작 연재 《두 번째 새벽》 1화", "autophoto": False, "img_source": "그림: 옛날 만화책",
+                "story": story, "sources": [], "notes": "창작 연재 《두 번째 새벽》 1화", "autophoto": False, "img_source": "그림: 애니 일러스트" if anime else "그림: 옛날 만화책",
                 "cast": [{"name": nm, "look": c["look"], "look_ko": c["look_ko"], "voice": c.get("voice"),
-                          **({"sheet": os.path.join(HERE, c["face"])} if c.get("face") else {})} for nm, c in chars.items()],
+                          **({"sheet": os.path.join(HERE, c[face])} if c.get(face) else {})} for nm, c in chars.items()],
                 "dialogue": [{"text": t, "who": w} for t, w in DIALOGUE],
-                "settings": {"format": "롱폼 가로(1920×1080)", "narr_voice": "Supertonic M2 (남성, 무료 로컬) [supertonic:M2]"}}
+                "settings": {"format": "롱폼 가로(1920×1080)", "narration": "on",   # 새 서버 기본값(나레이션 꺼짐·스크롤형) 대신
+                             "layout": "자막형(큰 제목+사진+자막)", "img_fill": "전체 화면(글자가 사진 위에)",
+                             "img_motion": "영상처럼(확대·이동·전환)",
+                             "head_show": "안 보임(제목 카드만)", "sub_split": "한 줄씩(문장·쉼표로 나눠 차례로)", "img_label": "off",   # 연재 화면 규칙
+                             "narr_voice": "Supertonic M2 (남성, 무료 로컬) [supertonic:M2]"}}
         out = os.path.join(HERE, "1화_귀환.json")
         json.dump(proj, open(out, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
         print(out, len(story), "chars")
