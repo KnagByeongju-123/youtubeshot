@@ -265,7 +265,7 @@ def main():
             refs = [os.path.join(HERE, "사진후보", k + ".jpg") for k in REFS.get(cid, [])]
             items.append({"id": cid, "width": 1024, "height": 576, "seed": 300 + int(cid[1:]), "refs": refs,
                           "prompt": f"{style}, historical documentary illustration, realistic proportions, museum-quality painting. "
-                                    f"Scene: {desc}. {REF_NOTE if refs else ''}Every person has exactly two arms, two hands with five fingers each and two legs, hands simple and relaxed (partly hidden is fine). "
+                                    f"Scene: {desc}. {REF_NOTE if refs else ''}{'' if 'no people' in desc else 'Every person has exactly two arms, two hands with five fingers each and two legs, hands simple and relaxed (partly hidden is fine). '}"
                                     "Cinematic composition, full-bleed image, no border, no frame, no paper edges. No text, no letters, no captions."})
         os.makedirs(folder, exist_ok=True)
         json.dump({"items": items, "skip_done": True}, open(os.path.join(folder, "job.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
