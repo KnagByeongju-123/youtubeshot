@@ -84,5 +84,12 @@ if [ ! -f models/depth_anything_v2_small_fp16.onnx ]; then
     && mv models/depth_anything_v2_small_fp16.onnx.part models/depth_anything_v2_small_fp16.onnx || true
 fi
 
+# 6-2) 썸네일 글씨 글꼴 Black Han Sans (OFL, 연재 썸네일_만들기.py 가 씀. github 는 막혀 있어 jsDelivr 사본에서)
+if [ ! -s fonts/BlackHanSans-Regular.ttf ]; then
+  mkdir -p fonts
+  curl -sSL --retry 3 -o fonts/BlackHanSans-Regular.ttf \
+    "https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/blackhansans/BlackHanSans-Regular.ttf" || true
+fi
+
 # 7) 서버가 바뀌어 꺼진 그림·영상 일을 남은 것부터 다시 (작업_이어하기.py 의 줄, 없으면 바로 끝남)
 nohup "$VENV/bin/python" 작업_이어하기.py run >/dev/null 2>&1 &
