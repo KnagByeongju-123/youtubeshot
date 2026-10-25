@@ -237,7 +237,7 @@ REF_NOTE = ("Any real fossil, cave or place shown must look exactly like the ref
             "painted in the same watercolor style. ")
 
 # 컷 → 고른 위키미디어 사진 후보 이름 (사진후보/후보.json 의 열쇠). 사진을 받은 뒤 채움
-PHOTOS = {}
+PHOTOS = {"c01": "c01_1", "c09": "c09_4", "c14": "c14_2", "c16": "c16_1", "c19": "c19_1", "c26": "c26_1", "c28": "c28_3"}
 
 
 def main():
