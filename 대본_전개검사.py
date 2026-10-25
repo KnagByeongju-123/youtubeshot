@@ -66,7 +66,8 @@ def main():
     # 절벽 엔딩: 마지막 챕터 끝에 질문 + 다음 화 예고 + 연재 한 줄
     last = " ".join(sentences(chs[-1][1])[-4:])
     check("?" in last, "마지막에 궁금증 질문(절벽 엔딩)", "")
-    check(re.search(r"다음 이야기|다음 화|\d+화", last) is not None, "다음 화 예고", "")
+    if "--다큐" not in a:
+        check(re.search(r"다음 이야기|다음 화|\d+화", last) is not None, "다음 화 예고", "")
     check(re.search(r"이 채널에서.*이어집니다", story) is not None, "연재 한 줄('이 채널에서 … 이어집니다')", "")
 
     # 템포: 긴 문장·긴 문단·챕터 길이 균형
@@ -85,7 +86,8 @@ def main():
     # 대사 비중·입버릇
     dl = sum(len(plain(d)) for d in dialogue)
     ratio = dl / max(1, len(plain(story)))
-    check(ratio >= 0.05, "대사 비중 5% 이상(인물이 말하게)", f"{ratio * 100:.1f}%")
+    if "--다큐" not in a:
+        check(ratio >= 0.05, "대사 비중 5% 이상(인물이 말하게)", f"{ratio * 100:.1f}%")
     missing = [d for d in dialogue if d not in story]
     check(not missing, "DIALOGUE 대사가 대본에 그대로 있음", ", ".join(missing))
     if habit:
