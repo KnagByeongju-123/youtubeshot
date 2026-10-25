@@ -5793,7 +5793,10 @@ class SubtitleRenderer:
                     for L in d.get("layers") or []:
                         im = Image.open(os.path.join(base, L["png"])).convert("RGBA").resize(bg.size, Image.LANCZOS)
                         bb = im.getbbox() or (0, 0, bg.width, bg.height)
-                        lays.append((im.crop(bb), ((bb[0] + bb[2]) / 2, (bb[1] + bb[3]) / 2), LM.parse(L.get("move", "확대"))))
+                        mv, cut = LM.edge_safe(bb, bg.size, LM.parse(L.get("move", "확대")))   # 잘린 누끼가 단면을 드러내면 확대로
+                        if cut:
+                            print(f"레이어 움직임: {os.path.basename(jp)} 누끼가 {cut} 가장자리에서 잘려 있어 확대로 바꿈")
+                        lays.append((im.crop(bb), ((bb[0] + bb[2]) / 2, (bb[1] + bb[3]) / 2), mv))
                     spans = [(s_["t0"], s_["t1"]) for s_ in getattr(self, "shots", []) if s_.get("img") == idx]
                     g0, g1 = (min(a for a, _ in spans), max(b for _, b in spans)) if spans else (0.0, 1.0)
                     spec = {"bg": bg, "layers": lays, "g0": g0, "g1": g1, "ease": LM.ease}

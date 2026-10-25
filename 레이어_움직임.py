@@ -39,6 +39,39 @@ def parse(spec):
     return dx, dy, sc, rot, shake
 
 
+def edge_safe(bb, size, mv, tol=3):
+    """누끼가 그림 가장자리에서 잘린 채(가장자리에 닿음) 움직이다가 잘린 단면이 화면 안으로 들어오면 → 확대로 바꿈
+    (사용자 규칙 2026-10-25: 아랫부분이 잘린 누끼를 위로 올리면 잘린 곳이 보임 — 빼거나 확대)
+    움직이는 동안(이동·크기·회전·흔들림)의 가장자리 위치를 계산해, 닿아 있던 쪽 가장자리가 2px 넘게 안쪽으로 들어오는지 봄
+    bb: 누끼 테두리 상자 (x0,y0,x1,y1), size: 그림 (폭,높이), mv: parse() 결과 → (mv, 바꿨으면 드러나는 쪽 이름 / 아니면 "")"""
+    W, H = size
+    dx, dy, sc, rot, shake = mv
+    ow, oh = bb[2] - bb[0], bb[3] - bb[1]
+    ox, oy = (bb[0] + bb[2]) / 2, (bb[1] + bb[3]) / 2
+    jx, jy = {1: (6, 5), 2: (0, 10)}.get(shake, (0, 0))      # 흔들림 최대 폭(px)
+    touch = {"아래": bb[3] >= H - tol, "위": bb[1] <= tol, "왼쪽": bb[0] <= tol, "오른쪽": bb[2] >= W - tol}
+    bad = set()
+    for i in range(21):
+        e = i / 20
+        k = 1 + (sc - 1) * e
+        a = math.radians(rot * e)
+        w, h = ow * k, oh * k
+        cx, cy = ox + dx * W * e, oy + dy * H * e
+        ry = h / 2 * math.cos(a) - w / 2 * abs(math.sin(a))      # 회전하면 모서리가 들려 단면이 드러남
+        rx = w / 2 * math.cos(a) - h / 2 * abs(math.sin(a))
+        if touch["아래"] and cy + ry - jy < bb[3] - 2:
+            bad.add("아래")
+        if touch["위"] and cy - ry + jy > bb[1] + 2:
+            bad.add("위")
+        if touch["왼쪽"] and cx - rx + jx > bb[0] + 2:
+            bad.add("왼쪽")
+        if touch["오른쪽"] and cx + rx - jx < bb[2] - 2:
+            bad.add("오른쪽")
+    if bad:
+        return PRESET["확대"], "·".join(sorted(bad))
+    return mv, ""
+
+
 def main():
     a = sys.argv[1:]
     if len(a) < 3:
@@ -56,7 +89,10 @@ def main():
         im = Image.open(p).convert("RGBA").resize((W, H), Image.LANCZOS)
         bb = im.getbbox() or (0, 0, W, H)
         obj = im.crop(bb)
-        lay.append((obj, ((bb[0] + bb[2]) / 2, (bb[1] + bb[3]) / 2), parse(mv)))
+        m_, cut = edge_safe(bb, (W, H), parse(mv))
+        if cut:
+            print(f"  {p}: {cut} 가장자리에서 잘린 누끼라 '{mv}' 대신 확대로 움직임")
+        lay.append((obj, ((bb[0] + bb[2]) / 2, (bb[1] + bb[3]) / 2), m_))
     n = int(secs * FPS)
     ff = subprocess.Popen(["ffmpeg", "-y", "-v", "error", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{W}x{H}", "-r", str(FPS),
                            "-i", "-", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-crf", "18", "-preset", "medium", out], stdin=subprocess.PIPE)

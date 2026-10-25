@@ -10,6 +10,7 @@
    (작업_이어하기 줄에 넣어 그림 → 서버가 바뀌어도 이어 그림) → <그림폴더>/레이어/<컷>_bg.png
 3) --마무리: 배경이 다 그려진 컷마다 <그림폴더>/<컷>.layers.json 을 씀 → 영상 만들기(render_project)가 그 장면을 레이어 움직임으로 그림
 - 움직임 이름은 레이어_움직임.py 와 같음 (날아감·다가옴·떨어짐·솟아오름·확대·흔들림·둥실, '이름:dx,dy,크기')
+- 규칙: 누끼가 그림 가장자리에서 잘려 있으면(아랫부분이 잘린 인물 등) 위로 올리거나 줄이거나 돌리면 잘린 곳이 보임 → --마무리 가 확대로 바꿈
 - 규칙: 한 회차에서 장면의 30~50%만, 움직임이 대본 내용과 맞는 컷만 고름. 누끼가 이상하면(배경 조각이 붙음·반쪽만) 그 컷은 빼고 다시"""
 import json
 import os
@@ -77,9 +78,19 @@ def main():
     plan = json.load(open(plan_p, encoding="utf-8")) if os.path.exists(plan_p) else {}
     if "--마무리" in a:
         n = 0
+        import importlib.util
+        from PIL import Image
+        _sp = importlib.util.spec_from_file_location("lm", os.path.join(HERE, "레이어_움직임.py"))
+        LM = importlib.util.module_from_spec(_sp)
+        _sp.loader.exec_module(LM)
         for c, mv in plan.items():
             bg = os.path.join(lay, f"{c}_bg.png")
             if os.path.exists(bg):
+                obj = Image.open(os.path.join(lay, f"{c}_obj.png")).convert("RGBA")
+                _, cut = LM.edge_safe(obj.getbbox(), obj.size, LM.parse(mv))     # 규칙: 잘린 누끼의 단면이 보이는 움직임은 확대로
+                if cut:
+                    print(f"  {c}: 누끼가 {cut} 가장자리에서 잘려 '{mv}' 이면 잘린 곳이 보임 → 확대")
+                    mv = "확대"
                 json.dump({"bg": f"레이어/{c}_bg.png", "layers": [{"png": f"레이어/{c}_obj.png", "move": mv}]},
                           open(os.path.join(folder, f"{c}.layers.json"), "w", encoding="utf-8"), ensure_ascii=False)
                 n += 1
