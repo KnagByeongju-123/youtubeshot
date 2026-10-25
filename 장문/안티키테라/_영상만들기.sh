@@ -7,10 +7,10 @@ cd /home/user/youtubeshot
 import os,sys
 from PIL import Image
 W=sys.argv[1]
-for f in os.listdir(W+'/그림_새로'):
+for f in [x for d_ in ('그림_수채5',) for x in os.listdir(W+'/'+d_) if os.path.isdir(W+'/'+d_)]:
     c=f[:-4]
     if f.endswith('.png') and not os.path.exists(f'{W}/그림/{c}.jpg') and not os.path.exists(f'{W}/사진/{c}.jpg'):
-        Image.open(f'{W}/그림_새로/{f}').convert('RGB').save(f'{W}/그림/{c}.jpg',quality=92); print('그림 추가',c)
+        Image.open(next(f'{W}/{d_}/{f}' for d_ in ('그림_수채5',) if os.path.exists(f'{W}/{d_}/{f}'))).convert('RGB').save(f'{W}/그림/{c}.jpg',quality=92); print('그림 추가',c)
 " $W
 .supertonic_venv/bin/python $W/안티키테라_기계.py project $W/그림 || exit 1
 nice -n 5 xvfb-run -a .supertonic_venv/bin/python -X utf8 render_project.py $W/안티키테라_기계.json --대본그대로 --길이고정 --자막언어 영어,일본어 || exit 1

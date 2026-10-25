@@ -4,6 +4,9 @@ import os, sys
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "안티키테라"))
 import 사진_찾기 as F
 F.Q = {
+    "c03": "X-ray radiograph of painting", "c09": "Giulio Romano self-portrait", "c12": "anatomical theatre Leiden",
+    "c13": "painting conservation X-ray museum", "c21": "Arthur Brand art detective", "c24": "painting restorer at work",
+    "c30": "Galleria Ricci Oddi interno", "c36": "Mauritshuis interior gallery",
     "c02": "Klimt Portrait of a Lady Piacenza", "c05": "Raphael Madonna della Rosa", "c06": "Museo del Prado building",
     "c10": "Anatomy Lesson of Dr. Nicolaes Tulp", "c11": "Mauritshuis", "c15": "Brueghel woman embers",
     "c16": "Muzeum Narodowe Gdansk", "c20": "Museum Gouda", "c22": "Vermeer Brieflezend meisje",

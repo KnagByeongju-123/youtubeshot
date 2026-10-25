@@ -62,7 +62,7 @@ def main():
                 continue
             meta[f"{c}_{n}"] = {"title": p["title"], "artist": strip((em.get("Artist") or {}).get("value"))[:80], "license": lic,
                                 "page": ii.get("descriptionurl"), "file": os.path.basename(f)}
-            time.sleep(4)
+            time.sleep(8)
             if n >= 4:
                 break
         print(c, Q[c], "→", n, "장")
