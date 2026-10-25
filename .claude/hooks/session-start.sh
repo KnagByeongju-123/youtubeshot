@@ -78,6 +78,14 @@ if [ -n "${CLAUDE_ENV_FILE:-}" ]; then
 fi
 
 # 6) 입체 움직임 모델 (영상에서 사진이 앞뒤로 움직이게, 약 50MB)
+# 손 찾기(손가락 검수용 확대): MediaPipe + 모델 + EGL 라이브러리
+if [ ! -f models/hand_landmarker.task ]; then
+  curl -sSL --retry 3 -o models/hand_landmarker.task.part \
+    https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/latest/hand_landmarker.task \
+    && mv models/hand_landmarker.task.part models/hand_landmarker.task || true
+fi
+[ -f /usr/lib/x86_64-linux-gnu/libEGL.so.1 ] || (apt-get install -y -q libegl1 libgles2 >/dev/null 2>&1 || (apt-get update -q >/dev/null 2>&1 && apt-get install -y -q libegl1 libgles2 >/dev/null 2>&1)) || true
+[ -x .sd_venv/bin/python ] && (.sd_venv/bin/python -c "import mediapipe" 2>/dev/null || .sd_venv/bin/pip install -q mediapipe >/dev/null 2>&1) || true
 # 얼굴 찾기 모델(OpenCV YuNet, 230KB): 사진을 확대·이동할 때 얼굴이 잘리지 않게
 if [ ! -f models/face_detection_yunet_2023mar.onnx ]; then
   curl -sSL --retry 3 -o models/face_detection_yunet_2023mar.onnx.part \
