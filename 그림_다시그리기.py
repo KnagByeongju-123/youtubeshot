@@ -5,7 +5,7 @@
 
   예) python 그림_다시그리기.py 연재/두번째새벽/2화_쇠귀신.py <scratch>/ep2/out c01=복제,흰배경 c05=눈 "c17=장면:the girl riding piggyback on the robot's back"
 
-- 이유(여러 개는 쉼표): 흰배경 복제 팔다리 머리 눈 글자 섞임 외눈 / 장면:<영어 설명 덧붙임>
+- 이유(여러 개는 쉼표): 흰배경 복제 팔다리 머리 눈 글자 섞임 외눈 / 장면:<영어 설명 덧붙임> (장면: 은 맨 뒤에, 쉼표 써도 됨)
 - 불합격 그림은 <그림폴더>/../불합격/<컷>_<n>.png 로 옮김 (다시 그리는 컷이 비어야 이어하기가 그 컷을 그림)
 - 같은 컷을 다시 그릴 때마다 seed 를 바꿈 (기록: <그림폴더>/다시그리기_기록.json)
 - 화풍은 애니 일러스트 (회차.py job ... 애니). 세피아면 --세피아"""
@@ -51,11 +51,12 @@ def main():
     for arg in a[2:]:
         cut, _, why = arg.partition("=")
         extra = []
+        why, _, scene = why.partition("장면:")             # '장면:' 뒤는 쉼표가 있어도 통째로 한 설명
+        if scene.strip():
+            extra.append(scene.strip().rstrip(".") + ".")
         for w in why.split(",") if why else []:
             w = w.strip()
-            if w.startswith("장면:"):
-                extra.append(w[3:].strip().rstrip(".") + ".")
-            elif w in FIX:
+            if w in FIX:
                 extra.append(FIX[w])
             elif w:
                 sys.exit(f"모르는 이유: {w} (쓸 수 있는 것: {' '.join(FIX)} 장면:...)")
