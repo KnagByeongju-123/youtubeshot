@@ -158,7 +158,10 @@ def main(a):
     proj_dir = os.path.dirname(proj_path)        # 콘텐츠 폴더(output\장문\<제목>\) 안의 프로젝트면 결과도 그 폴더에
     in_folder = os.path.normcase(os.path.dirname(proj_dir)) == os.path.normcase(os.path.abspath(out_root))
     base = os.path.join(proj_dir if in_folder else out_root, m.safe_name(title) + suf)
-    m.atomic_write_text(base + "_프로젝트.json", json.dumps(app.project_dict(), ensure_ascii=False, indent=1))
+    pd = app.project_dict()
+    if c.get("trans_fix"):              # 연재 이름 고정 번역은 프로그램 화면에 없는 값 → 그대로 옮겨야 번역이 씀
+        pd["trans_fix"] = c["trans_fix"]
+    m.atomic_write_text(base + "_프로젝트.json", json.dumps(pd, ensure_ascii=False, indent=1))
     open(base + ".만드는중", "w").close()      # 콘텐츠 정리가 만드는 중인 것을 건드리지 않게 (끝나면 지움)
 
     if "--썸네일만" in a:       # 영상은 그대로 두고 썸네일 후보만 새로 (디자인 16가지 + 영상 장면). 지금 유튜브 썸네일은 그대로
