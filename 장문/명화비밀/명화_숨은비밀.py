@@ -20,7 +20,7 @@ DIALOGUE = []     # 다큐라 인물 대사 없음 (나레이션만)
 CUTS = [
     ("c01", "a gardener in work clothes pulling ivy off an old museum's outer stone wall and opening a small rusty metal hatch, a dark cavity with a plastic bag inside", "담쟁이 뒤 철문을 연 정원사"),
     ("c02", "Gustav Klimt's portrait of a woman painting (real painting)", "클림트 '여인의 초상'"),
-    ("c03", "a conservator in a dark laboratory looking at a glowing X-ray image of a painting on a light box, a hidden second face faintly visible", "엑스선 속 숨은 얼굴"),
+    ("c03", "a conservator in a dark laboratory looking at a glowing X-ray image of a painting on a light box, a hidden second face faintly visible", "엑스선 속 숨은 얼굴 (반 고흐 그림 밑의 자화상)"),
     ("c04", "a grand old European art museum gallery at night, famous paintings on the walls lit by soft spotlights, empty and mysterious. No people, no hands, no arms anywhere.", "드레스덴 옛 거장 회화관"),
     ("c05", "Raphael's Madonna della Rosa painting (real painting)", "라파엘로 '장미의 성모'"),
     ("c06", "the Prado Museum building in Madrid (real photo)", "프라도 미술관"),
@@ -30,7 +30,7 @@ CUTS = [
     ("c10", "Rembrandt's The Anatomy Lesson of Dr Nicolaes Tulp painting (real painting)", "렘브란트 '튈프 박사의 해부학 강의'"),
     ("c11", "the Mauritshuis museum building in The Hague by the pond (real photo)", "마우리츠하위스 미술관"),
     ("c12", "a 17th century anatomy theatre in Amsterdam, wooden tiers full of men in black clothes and white collars watching a dissection, candles, no gore visible", "17세기 해부학 강의 (레이던, 판화)"),
-    ("c13", "a technician placing a large old painting under an X-ray scanner in a museum conservation studio, glowing screens", "그림을 찍는 엑스선 장비"),
+    ("c13", "a technician placing a large old painting under an X-ray scanner in a museum conservation studio, glowing screens", "엑스선으로 본 그림 속 손 (브론치노 초상화)"),
     ("c14", "a grey X-ray image of a painted arm on a light box showing a different shape underneath the paint, mysterious and clinical, no text", "엑스선에 드러난 팔"),
     ("c15", "Pieter Brueghel the Younger style Flemish genre painting of a peasant woman carrying burning embers in one hand and a water bucket in the other (real painting)", "브뤼헐 '불씨를 나르는 여인'"),
     ("c16", "the National Museum in Gdansk building, old Gothic brick monastery (real photo)", "그단스크 국립박물관"),
@@ -38,10 +38,10 @@ CUTS = [
     ("c18", "close-up of an old gilded frame lying on the floor with a glossy magazine page cut out and glued inside instead of a real painting. No people, no hands, no arms anywhere.", "액자 속 잡지 사진"),
     ("c19", "a magazine editor at a desk covered with old art magazines and black-and-white photographs, comparing a photo with a museum catalogue, lamp light", "옛 사진을 대조하는 잡지 편집자"),
     ("c20", "a small Dutch town museum with brick gables and a canal in Gouda (real photo)", "네덜란드 하우다 박물관"),
-    ("c21", "an art detective in a dark coat standing in front of a small Flemish painting in a museum, studying it closely with a flashlight", "그림을 확인하는 미술 탐정"),
+    ("c21", "an art detective in a dark coat standing in front of a small Flemish painting in a museum, studying it closely with a flashlight", "미술 탐정 아르튀르 브란트 (오른쪽)"),
     ("c22", "Johannes Vermeer's Girl Reading a Letter at an Open Window painting before restoration, plain wall (real painting)", "베르메르 '창가에서 편지를 읽는 여인' (복원 전)"),
     ("c23", "the Zwinger palace in Dresden with the Old Masters Picture Gallery (real photo)", "드레스덴 츠빙거 궁전·회화관"),
-    ("c24", "a conservator in a white coat bending over an old Dutch painting with a surgical scalpel and a microscope, removing a tiny piece of grey overpaint from the wall area", "덧칠을 벗기는 복원가"),
+    ("c24", "a conservator in a white coat bending over an old Dutch painting with a surgical scalpel and a microscope, removing a tiny piece of grey overpaint from the wall area", "그림 복원가 (W. V. 버니, 19세기 그림)"),
     ("c25", "Vermeer's Girl Reading a Letter at an Open Window after restoration with the large Cupid painting on the wall behind her (real painting)", "복원 뒤 드러난 큐피드"),
     ("c26", "close-up of a painted Cupid figure with bow, standing on masks, in a 17th century Dutch painting-within-a-painting, soft light", "벽 속 그림의 큐피드"),
     ("c27", "the Ricci Oddi Gallery of Modern Art building in Piacenza, Italy (real photo)", "피아첸차 리치 오디 미술관"),
@@ -245,7 +245,7 @@ REF_NOTE = ("Any painting or building shown must look exactly like the reference
 
 # 컷 → 고른 위키미디어 사진 후보 이름 (사진후보/후보.json 의 열쇠). 사진을 받은 뒤 채움
 PHOTOS = {"c02": "c02_1", "c05": "c05_1", "c06": "c06_2", "c08": "c08_c", "c11": "c11_1", "c16": "c16_2", "c20": "c20_2",
-          "c22": "c22_8", "c23": "c23_1", "c25": "c25_8", "c26": "c26_c", "c27": "c27_4", "c10": "c10_8", "c14": "c14_c", "c04": "c23_2", "c07": "c07_c", "c12": "c12_2"}
+          "c22": "c22_8", "c23": "c23_1", "c25": "c25_8", "c26": "c26_c", "c27": "c27_4", "c10": "c10_8", "c14": "c14_c", "c04": "c23_2", "c07": "c07_c", "c12": "c12_2", "c03": "c13_2", "c13": "c03_4", "c21": "c21_4", "c24": "c24_1"}
 
 
 def main():
