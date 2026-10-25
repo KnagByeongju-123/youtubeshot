@@ -3,11 +3,12 @@
 작업.json:
   {"items": [{"id": "c01", "prompt": "...", "refs": ["캐릭터시트.png", ...], "width": 1024, "height": 576, "seed": 1, "steps": 4}],
    "fixes": [{"id": "c01_손", "image": "c01.png", "box": [x0, y0, x1, y1], "prompt": "...", "refs": ["캐릭터시트.png"], "seed": 1}],
-   "ref_max_area": 115000, "crop_border": true}
+   "ref_max_area": 115000, "crop_border": true, "skip_done": false}
   - items : 새 그림. refs 에 캐릭터 시트(또는 앞모습)를 넣으면 그 인물 그대로 그림 (최대 5명 권장)
   - fixes : 부분 수정. 그림의 box 칸 둘레를 조금 넓혀 잘라 그 조각을 기준 그림으로 다시 그린 뒤 box 만 부드럽게 붙임
             (손가락·얼굴·옷 고치기). refs 에 캐릭터 시트를 더 넣으면 얼굴을 등록한 모습으로 맞춤. 결과는 image 를 덮어씀
   - ref_max_area : 기준 그림을 이 넓이(픽셀)까지 줄여서 넣음. 기준 그림이 크면 계산이 몇 배로 느려짐 (기본 약 256×448)
+  - skip_done : true 면 저장폴더에 이미 있는 컷(id.png)은 건너뜀 (서버가 바뀌어 다시 돌릴 때, 작업_이어하기.py)
   - crop_border : 새 그림(items)의 종이 여백·검은 만화 테두리를 찾아 잘라내고 원래 크기로 (기본 켬. 영상에서 그림이 줄어들 때 테두리가 안 보이게)
 메모리를 아끼려고 글 해석기로 모든 글을 먼저 읽고 지운 뒤 그림 모델을 올림 (RAM 16GB 에서도 됨)
 출력: 'OK id 경로 초', 실패는 'ERR id 이유', 진행은 'PROG k/n'"""
@@ -78,6 +79,13 @@ def main():
     items, fixes = job.get("items") or [], job.get("fixes") or []
     max_area = int(job.get("ref_max_area") or 115000)
     os.makedirs(out_dir, exist_ok=True)
+    if job.get("skip_done"):      # 서버가 바뀌어 다시 돌릴 때: 이미 그린 컷은 건너뜀 (부분 수정은 결과 파일로 알 수 없어 그대로)
+        done = [it.get("id") for it in items if os.path.exists(os.path.join(out_dir, f"{it.get('id')}.png"))]
+        items = [it for it in items if it.get("id") not in done]
+        if done:
+            print(f"SKIP {len(done)} done", flush=True)
+    if not items and not fixes:
+        return
     import torch
     from PIL import Image, ImageDraw, ImageFilter
     from diffusers import Flux2KleinPipeline

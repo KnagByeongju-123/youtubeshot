@@ -76,3 +76,13 @@ rm -rf /root/.cache/pip /root/.cache/huggingface/hub 2>/dev/null || true     # �
 if [ -n "${CLAUDE_ENV_FILE:-}" ]; then
   echo "export PATH=\"$CLAUDE_PROJECT_DIR/$VENV/bin:\$PATH\"" >> "$CLAUDE_ENV_FILE"
 fi
+
+# 6) 입체 움직임 모델 (영상에서 사진이 앞뒤로 움직이게, 약 50MB)
+if [ ! -f models/depth_anything_v2_small_fp16.onnx ]; then
+  curl -sSL --retry 3 -o models/depth_anything_v2_small_fp16.onnx.part \
+    https://huggingface.co/onnx-community/depth-anything-v2-small/resolve/main/onnx/model_fp16.onnx \
+    && mv models/depth_anything_v2_small_fp16.onnx.part models/depth_anything_v2_small_fp16.onnx || true
+fi
+
+# 7) 서버가 바뀌어 꺼진 그림·영상 일을 남은 것부터 다시 (작업_이어하기.py 의 줄, 없으면 바로 끝남)
+nohup "$VENV/bin/python" 작업_이어하기.py run >/dev/null 2>&1 &
