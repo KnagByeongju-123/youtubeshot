@@ -28,6 +28,7 @@ import hashlib
 import importlib.util
 import json
 import os
+import re
 import sys
 import time
 
@@ -154,6 +155,20 @@ def main(a):
     story, n_pol = m.polite_fix(app.model_var.get().strip(), story, log, gate)   # 규칙: 모든 나레이션은 존댓말 (자막·성우 함께)
     if hooked or n_ret or n_pol:
         app.set_story(story)
+    from PIL import Image
+    bad = []                                     # 규칙: 빈(0바이트)·깨진 사진은 영상에서 검은 화면이 됨 (조디악 c08) → 만들기 전에 멈춤
+    for ln in story.split("\n"):
+        med = m.parse_media(ln.strip())
+        if med and med[0] and not re.match(r"https?://", med[0]):
+            p = m.resolve_media(med[0]) or med[0]
+            try:
+                with Image.open(p) as im_:
+                    im_.verify()
+            except Exception:
+                bad.append(p)
+    if bad:
+        log("❌ 비었거나 깨진 사진: " + ", ".join(bad) + " → 다시 받은 뒤 만들기")
+        sys.exit(1)
     log(f"▶ 프로젝트로 영상 만들기: {title} ({genre}) · 사진 {len(m.photo_credits(story))}장 · 배경음 {bgm}")
     proj_dir = os.path.dirname(proj_path)        # 콘텐츠 폴더(output\장문\<제목>\) 안의 프로젝트면 결과도 그 폴더에
     in_folder = os.path.normcase(os.path.dirname(proj_dir)) == os.path.normcase(os.path.abspath(out_root))
