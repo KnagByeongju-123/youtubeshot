@@ -150,7 +150,7 @@ def render(style, v, s, photos, size, fp, H):
         return out.convert("RGB")
 
     if style.startswith("콜라주"):
-        ps = (photos * 3)[:3] if photos else [None] * 3
+        ps = photos[:3] if len(photos) >= 3 else ((photos * 3)[:3] if photos else [None] * 3)   # 사진이 모자랄 때만 되풀이
         out = Image.new("RGBA", (w, h), (255, 255, 255, 255))
         n = len(ps)
         gap = max(6, w // 140)
@@ -183,7 +183,7 @@ def render(style, v, s, photos, size, fp, H):
                else Image.new("RGB", (w, h), "#1A1A2E")).convert("RGBA")
         dark = Image.new("RGBA", (w, h), (8, 10, 20, 150))
         out.alpha_composite(dark)
-        circ = (photos[1:3] if len(photos) >= 3 else (photos * 2)[:2]) or [None, None]
+        circ = photos[1:3] if len(photos) >= 2 else ([None, None])      # 배경(첫 장)과 원 안 사진은 모두 다른 사진 (사용자 결정 2026-10-26)
         spots = ([(0.5, 0.25, 0.25), (0.78, 0.5, 0.15)] if port else [(0.68, 0.46, 0.33), (0.9, 0.78, 0.18)])
         for (fx, fy, fr), p in zip(spots, circ):
             r = int(min(w, h) * fr) if port else int(h * fr)
@@ -208,7 +208,7 @@ def render(style, v, s, photos, size, fp, H):
     out = (_cover(main, w, h).filter(ImageFilter.GaussianBlur(max(10, w // 60))) if main is not None
            else Image.new("RGB", (w, h), "#2B2B2B")).convert("RGBA")
     out.alpha_composite(Image.new("RGBA", (w, h), (20, 16, 12, 165)))
-    ps = (photos * 3)[:3] if photos else [None] * 3
+    ps = photos[1:4] if len(photos) >= 2 else ([None] * 3)            # 배경(첫 장)과 카드 3장은 모두 다른 사진 (사용자 결정 2026-10-26)
     pw = int(w * (0.56 if port else 0.3))
     ph_ = int(pw * 0.82)
     spots = ([(0.08, 0.06, -7), (0.38, 0.2, 6), (0.12, 0.38, -2)] if port else [(0.04, 0.08, -8), (0.36, 0.04, 5), (0.66, 0.1, -4)])

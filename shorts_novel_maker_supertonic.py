@@ -263,7 +263,7 @@ UI_TABS = [
 
 THUMB_STYLES = ["자동(분위기에 맞춰)", "기본(사진 꽉 + 큰 글자)", "반분할(글 패널 + 사진)", "노랑 패널(고대비)", "시네마 띠",
                 "뉴스 속보", "미스터리 다크",
-                "파스텔 하단 띠(감성)", "상단 큰 질문", "좌측 세로 띠", "하단 그라데이션(깔끔)", "메모지(손글씨 느낌)",
+                "상단 큰 질문", "좌측 세로 띠", "하단 그라데이션(깔끔)", "메모지(손글씨 느낌)",
                 "오려 붙이기(누끼 + 큰 글자)", "콜라주 3장(사선 분할)", "원형 컷 2장", "폴라로이드 콜라주"]   # 요즘 유튜브에서 많이 쓰는 썸네일 스타일 (뒤 4개 = 썸네일_합성.py: 관련 사진을 오리고 잘라 붙임)
 
 # 허구 이야기 그림 스타일 (이름 → 그림 AI에 주는 영어 지시). 실제 작품·작가 이름은 쓰지 않고 특징으로 묘사
@@ -3885,7 +3885,7 @@ def make_thumbnails(model, base, title, story, category, s, log=None, keep_final
             for k in (len(photos) // 4 + 1, len(photos) // 2 + 1, len(photos) * 3 // 4 + 1):
                 if k != main_k and k not in ks and len(ks) < 3:
                     ks.append(k)
-        v["_photos"] = [photo_of(v)] + [im for im in (photo_k(k) for k in ks[:3]) if im is not None]
+        v["_photos"] = distinct_photos([photo_of(v)] + [photo_k(k) for k in ks[:3]] + [photo_k(k) for k in spread_order(len(photos), main_k)], 4)   # 규칙: 여러 장 쓰는 디자인은 사진이 모두 달라야 함
         v["_main_k"], v["_ks"] = main_k, ks[:3]       # 새 썸네일 엔진 후보·편집기용 (사진 번호)
     user_style = str(s.get("thumb_style") or THUMB_STYLES[0])
     cands = []   # (설명, PIL)
@@ -4014,6 +4014,38 @@ def mp4_scene_thumbs(base, title, v, log=None):
         log(f"  🎞 영상 장면 썸네일 후보 {n}장 추가" if p.returncode == 0 else "  🎞 영상 장면 썸네일 실패: " + (p.stdout or "")[-120:].strip())
     except Exception as e:
         log("  🎞 영상 장면 썸네일 실패(건너뜀): " + (str(e).splitlines() or [type(e).__name__])[0][:80])
+
+
+def _dhash(im, n=8):
+    g = im.convert("L").resize((n + 1, n), Image.LANCZOS)
+    a = np.asarray(g, dtype=np.int16)
+    return (a[:, 1:] > a[:, :-1]).flatten()
+
+
+def distinct_photos(ims, k=4, min_dist=12):
+    """사진 목록에서 서로 다르게 보이는 것만 앞에서부터 k 장 (같은 사진·거의 같은 그림은 뺌 — 썸네일 콜라주·원형 컷·폴라로이드용)"""
+    out, hs = [], []
+    for im in ims:
+        if im is None:
+            continue
+        h_ = _dhash(im)
+        if all(int((h_ != h0).sum()) >= min_dist for h0 in hs):
+            out.append(im)
+            hs.append(h_)
+        if len(out) >= k:
+            break
+    return out
+
+
+def spread_order(n, main_k=0):
+    """사진 번호 1..n 을 영상 전체에 고르게 퍼지는 순서로 (대표 사진 번호는 뺌)"""
+    order, seen = [], {main_k}
+    for frac in (0.5, 0.25, 0.75, 0.12, 0.38, 0.62, 0.88, 0.05, 0.95):
+        k = min(n, max(1, int(round(frac * n)) or 1))
+        if k not in seen:
+            seen.add(k)
+            order.append(k)
+    return order
 
 
 def title_thumb_words(title):
