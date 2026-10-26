@@ -93,6 +93,34 @@ def extra_syllables(ref, heard, i, n):
     return False
 
 
+def cho(c):
+    """한글 글자의 첫소리(초성) 번호"""
+    return (ord(c) - 0xAC00) // 588 if "가" <= c <= "힣" else -1
+
+
+def word_start_stutters(h, sents, k_):
+    """단어 첫머리 더듬 (사용자 지적 2026-10-26 '단어 시작 때 더듬음'): 같은 글자 반복('게다다가')이 아니라
+    첫소리만 내다 다시 시작해 '브바닷속'·'그게다가'처럼 들리는 곳 — 대본에 없는 글자 하나가 낱말 바로 앞에 끼었고
+    그 글자의 첫소리가 다음 글자(낱말 첫 글자)의 첫소리와 같으면 더듬으로 봄. 반환: [(끼어든 글자+낱말 첫 글자, 문장)]"""
+    ctx = sents[max(0, k_ - 1):k_ + 2]
+    ref, starts = "", set()
+    for _, s in ctx:
+        for w in s.split():
+            hw = hangul(w)
+            if hw:
+                starts.add(len(ref))
+                ref += hw
+    out = []
+    sm = difflib.SequenceMatcher(None, ref, h, autojunk=False)
+    for op, i1, i2, j1, j2 in sm.get_opcodes():
+        if op == "insert" and j2 - j1 == 1 and i1 in starts and i1 < len(ref) and j2 < len(h):
+            c, nxt = h[j1], h[j2]
+            if c != nxt and cho(c) == cho(nxt) and nxt == ref[i1]:
+                s_ = next((s for p, s in ctx if hangul(ref[i1:i1 + 4]) in hangul(s)), sents[k_][1])
+                out.append((c + nxt, s_))
+    return out
+
+
 def best_sentence(h, sents):
     """받아 적은 조각(한글만)이 들어 있는 대본 문장 — 반복 글자 자리에 가장 잘 맞는 문장 하나"""
     best, score = None, 0.0
@@ -185,6 +213,12 @@ def detect(video, script):
                 if not extra_syllables(sh, ctx, ctx.find(dd), len(dd)):   # 규칙 4: 대본보다 글자가 늘어난 자리여야 겹침
                     continue
                 found.append({"t": t0, "dd": dd, "sentence": ps[1], "paragraph": ps[0], "heard": text})
+        ps = best_sentence(h, sents)                 # 규칙 5: 단어 첫머리 더듬 ('브바닷속')
+        if ps is not None:
+            k_ = sents.index(ps)
+            for dd, s_ in word_start_stutters(h, sents, k_):
+                par = next((p for p, s in sents if s == s_), ps[0])
+                found.append({"t": t0, "dd": "첫머리 더듬 " + dd, "sentence": s_, "paragraph": par, "heard": text})
     try:
         json.dump(sylls, open(os.path.join(tempfile.gettempdir(), "겹침_글자시각.json"), "w", encoding="utf-8"), ensure_ascii=False)
     except OSError:
