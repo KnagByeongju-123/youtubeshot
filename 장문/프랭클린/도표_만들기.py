@@ -52,8 +52,8 @@ meta["c10_도표"] = {"title": "도표: c10", "artist": ("빅토리 포인트 �
 # c17 납 수치 막대
 im = Image.new("RGB", (W, H), (24, 22, 20)); d = ImageDraw.Draw(im)
 d.text((150, 110), "뼈 속 납의 양 (1981년 조사)", font=F(64), fill=GOLD)
-base, top = 900, 300
-scale = (base - top) / 240
+base, top = 760, 330
+scale = (base - top) / 226
 bars = [("원정대 선원의 뼈", 226, RED, "226 ppm"), ("같은 지역 이누이트의 뼈", 36, BLUE, "26~36 ppm")]
 for i, (lab, v, col, txt) in enumerate(bars):
     x = 300 + i * 650
@@ -61,7 +61,7 @@ for i, (lab, v, col, txt) in enumerate(bars):
     d.text((x, base - v * scale - 80), txt, font=F(56), fill=WHITE)
     d.text((x - 20, base + 25), lab, font=F(42, FR), fill=WHITE)
 d.line((220, base, 1700, base), fill=(200, 200, 200), width=3)
-d.text((1100, 330), "약 10배", font=F(80), fill=RED)
+d.text((1100, 380), "약 10배", font=F(80), fill=RED)
 d.text((150, 210), "출처: Beattie 연구팀(1981) — Wikipedia 'Franklin's lost expedition'", font=F(28, FR), fill=GREY)
 save(im, "c17")
 meta["c17_도표"] = {"title": "도표: c17", "artist": "설명 도표 (Beattie 1981 수치)", "license": "—", "page": "https://en.wikipedia.org/wiki/Franklin%27s_lost_expedition", "source": "설명 도표", "file": "c17.jpg"}

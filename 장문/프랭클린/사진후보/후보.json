@@ -203,11 +203,12 @@
   "file": "c12_3.jpg"
  },
  "c14_1": {
-  "title": "File:Red fox catches a vole - Tolyatti, Russia.jpg",
-  "artist": "Andrey Gulivanov",
-  "license": "CC BY 2.0",
-  "page": "https://commons.wikimedia.org/wiki/File:Red_fox_catches_a_vole_-_Tolyatti,_Russia.jpg",
-  "file": "c14_1.jpg"
+  "title": "File:The yacht 'Fox' RMG BHC3351.jpg",
+  "artist": "작자 미상 (Royal Museums Greenwich)",
+  "license": "Public domain",
+  "page": "https://commons.wikimedia.org/wiki/File:The_yacht_%27Fox%27_RMG_BHC3351.jpg",
+  "file": "c14_1.jpg",
+  "source": "Wikimedia Commons"
  },
  "c14_2": {
   "title": "File:Red Fox drinking from a lake in Gennevilliers, France.jpg",
@@ -618,7 +619,7 @@
  },
  "c13_1": {
   "title": "File:Jane Franklin.jpg",
-  "artist": "",
+  "artist": "작자 미상",
   "license": "Public domain",
   "page": "https://commons.wikimedia.org/wiki/File:Jane_Franklin.jpg",
   "file": "c13_1.jpg",
