@@ -234,13 +234,11 @@ def make_candidates(scenes, copies, font_path, status, out_dir, title):
     cands, metas = [], []
     c = copies + copies  # 부족하면 돌려 씀
     plan = [("01_A_피사체", lambda o: layouts.layout_subject(scenes[0]["cut"], c[0], font_path, status, o, side="right", frac=0.55), [0]),
-            ("02_C_확대", lambda o: layouts.layout_zoom(scenes[0]["cut"], c[1], font_path, status, o), [0])]
+            ]   # C 증거 확대형(원 안 확대 + 지시선)은 뺌 — 사용자 결정 2026-10-26
     if len(scenes) >= 2:
         plan.append(("03_B_비교", lambda o: layouts.layout_compare(scenes[0]["cut"], scenes[1]["cut"], c[2], font_path, status, o,
                                                                  labels=("장면 1", "장면 2")), [0, 1]))
         plan.append(("04_A_피사체_장면2", lambda o: layouts.layout_subject(scenes[1]["cut"], c[2], font_path, status, o, side="left", frac=0.45), [1]))
-    if len(scenes) >= 3:
-        plan.append(("05_C_확대_장면3", lambda o: layouts.layout_zoom(scenes[2]["cut"], c[0], font_path, status, o), [2]))
     for name, fn, used in plan:
         out = os.path.join(out_dir, name + ".jpg")
         try:

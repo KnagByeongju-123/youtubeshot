@@ -262,7 +262,7 @@ UI_TABS = [
 ]
 
 THUMB_STYLES = ["자동(분위기에 맞춰)", "기본(사진 꽉 + 큰 글자)", "반분할(글 패널 + 사진)", "노랑 패널(고대비)", "시네마 띠",
-                "뉴스 속보", "미스터리 다크", "빨간 강조(원 + 화살표)",
+                "뉴스 속보", "미스터리 다크",
                 "파스텔 하단 띠(감성)", "상단 큰 질문", "좌측 세로 띠", "하단 그라데이션(깔끔)", "메모지(손글씨 느낌)",
                 "오려 붙이기(누끼 + 큰 글자)", "콜라주 3장(사선 분할)", "원형 컷 2장", "폴라로이드 콜라주"]   # 요즘 유튜브에서 많이 쓰는 썸네일 스타일 (뒤 4개 = 썸네일_합성.py: 관련 사진을 오리고 잘라 붙임)
 
@@ -3842,6 +3842,10 @@ def make_thumbnails(model, base, title, story, category, s, log=None, keep_final
     vs = [x for x in (d.get("variants") or []) if isinstance(x, dict) and x.get("big")]
     if not vs:
         raise RuntimeError("썸네일 문구를 만들지 못했습니다")
+    if str(s.get("thumb_title_lock", "on")) == "on":      # 규칙(제목 통일): 썸네일 글씨 = 영상 제목 낱말 (작은 띠 + 큰 글씨 두 줄을 이어 읽으면 제목)
+        tl = title_thumb_words(title)
+        for v in vs:
+            v.update(tl)
     size = (1080, 1920) if portrait else (1280, 720)
     fallback = best_photo(story)
 
@@ -4012,6 +4016,27 @@ def mp4_scene_thumbs(base, title, v, log=None):
         log("  🎞 영상 장면 썸네일 실패(건너뜀): " + (str(e).splitlines() or [type(e).__name__])[0][:80])
 
 
+def title_thumb_words(title):
+    """제목 → 썸네일 글씨 {small, big, big2, emph}. 쉼표가 있으면 앞 = 작은 띠, 뒤 = 큰 글씨.
+    없으면 끝에서부터 8자 넘게 될 때까지를 큰 글씨로, 나머지를 작은 띠로. 큰 글씨는 길이가 비슷하게 두 줄로 나눔"""
+    t = re.sub(r"\s+", " ", str(title or "")).strip()
+    if "," in t:
+        small, rest = [x.strip() for x in t.split(",", 1)]
+    else:
+        ws = t.split(" ")
+        k = len(ws) - 1
+        while k > 0 and len("".join(ws[k:])) < 8:
+            k -= 1
+        small, rest = " ".join(ws[:k]), " ".join(ws[k:])
+    rw = rest.split(" ")
+    if len(rw) >= 2:
+        i = min(range(1, len(rw)), key=lambda j: abs(len("".join(rw[:j])) - len("".join(rw[j:]))))
+        big, big2 = " ".join(rw[:i]), " ".join(rw[i:])
+    else:
+        big, big2 = rest, ""
+    return {"small": small, "big": big, "big2": big2, "emph": big2 or big}
+
+
 def story_photos(story):
     """본문의 사진 줄 → [(경로, 설명)]"""
     out = []
@@ -4094,7 +4119,7 @@ def _thumb_basic(v, s, photo_im=None, size=None, font_path=None):
             y += lh
     return out.convert("RGB")
 
-THUMB_AUTO = {"충격": "빨간 강조(원 + 화살표)", "미스터리": "미스터리 다크", "감동": "시네마 띠", "정보": "반분할(글 패널 + 사진)"}
+THUMB_AUTO = {"충격": "노랑 패널(고대비)", "미스터리": "미스터리 다크", "감동": "시네마 띠", "정보": "반분할(글 패널 + 사진)"}
 
 
 def _thumb_compose(style, v, s, photo_im, size, fp):
