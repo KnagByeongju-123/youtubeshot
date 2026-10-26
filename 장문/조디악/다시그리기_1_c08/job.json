@@ -1,0 +1,13 @@
+{
+ "items": [
+  {
+   "id": "c08",
+   "width": 1024,
+   "height": 576,
+   "seed": 1308,
+   "refs": [],
+   "prompt": "realistic historical watercolor painting, fine ink outlines, transparent layered watercolor washes, soft natural colors, visible paper texture, documentary illustration, realistic anatomy and proportions, historical documentary illustration, realistic proportions, museum-quality painting. Scene: three 1969 American newspapers stacked on a wooden table, front pages with large blurry headline blocks and rows of strange symbols, no readable words. No people, no hands, no arms anywhere.. the newspapers have no headlines at all, only blurred gray columns and rows of cipher symbols. Absolutely no letters, no writing, no numbers, no signs with text anywhere. Cinematic composition, full-bleed image, no border, no frame, no paper edges. No text, no letters, no captions."
+  }
+ ],
+ "skip_done": true
+}

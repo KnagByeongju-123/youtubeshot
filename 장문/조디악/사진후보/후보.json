@@ -280,5 +280,11 @@
   "artist": "340 암호 원본(Zodiac Killer, 1969) 위에 그린 설명 도표",
   "license": "Public domain",
   "page": "https://commons.wikimedia.org/wiki/File:4abc_-_San_Francisco_Chronicle_Dripping_Pen_Card_November_8_1969_340_Cipher_COLOR.jpg"
+ },
+ "c18_도표": {
+  "title": "도표: 세 사람",
+  "artist": "설명 도표",
+  "license": "직접 만든 도표",
+  "page": ""
  }
 }
