@@ -1,0 +1,21 @@
+{
+ "items": [
+  {
+   "id": "c15",
+   "width": 1024,
+   "height": 576,
+   "seed": 1315,
+   "refs": [],
+   "prompt": "realistic historical watercolor painting, fine ink outlines, transparent layered watercolor washes, soft natural colors, visible paper texture, documentary illustration, realistic anatomy and proportions, historical documentary illustration, realistic proportions, museum-quality painting. Scene: a human eye in close-up reflecting a starry night sky, soft watercolor, glowing light entering the pupil. no hands, no arms anywhere.. Every person has exactly two arms, two hands with five fingers each and two legs, hands simple and relaxed (partly hidden is fine). No signature, no artist mark. the painting fills the entire frame edge to edge, full-bleed, absolutely no white paper margins or unpainted edges. Detailed background environment that matches the scene with dark or natural colors, NOT a white, blank or plain background. Cinematic composition, full-bleed image, no border, no frame, no paper edges. No text, no letters, no captions."
+  },
+  {
+   "id": "c17",
+   "width": 1024,
+   "height": 576,
+   "seed": 1317,
+   "refs": [],
+   "prompt": "realistic historical watercolor painting, fine ink outlines, transparent layered watercolor washes, soft natural colors, visible paper texture, documentary illustration, realistic anatomy and proportions, historical documentary illustration, realistic proportions, museum-quality painting. Scene: a tennis player in mid-swing hitting a fast tennis ball on an outdoor court, motion blur on the ball, dynamic. Every person has exactly two arms, two hands with five fingers each and two legs, hands simple and relaxed (partly hidden is fine). No signature, no artist mark. the painting fills the entire frame edge to edge, full-bleed, absolutely no white paper margins or unpainted edges, plain white shirt without any logo. Detailed background environment that matches the scene with dark or natural colors, NOT a white, blank or plain background. Absolutely no letters, no writing, no numbers, no signs with text anywhere. Cinematic composition, full-bleed image, no border, no frame, no paper edges. No text, no letters, no captions."
+  }
+ ],
+ "skip_done": true
+}
