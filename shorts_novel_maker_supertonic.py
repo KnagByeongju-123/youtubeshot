@@ -4271,6 +4271,35 @@ def _thumb_fit_font(fp, lines, maxw, start, min_size=28):
     return load_font(fp, size_)
 
 
+def _outline_text(d, xy, text, font, fill, sw, stroke_fill):
+    """테두리 글자: 글자 모양을 sw 만큼 두껍게 부풀린 판으로 테두리를 그림.
+    (PIL 의 stroke_width 는 검은고딕 같은 글꼴에서 'ㅇ' 안쪽 구멍 테두리가 빠지는 일이 있음 — 사용자 지적 2026-10-26)"""
+    if not sw:
+        d.text(xy, text, font=font, fill=fill)
+        return
+    img = getattr(d, "_image", None)
+    if img is None:
+        d.text(xy, text, font=font, fill=fill, stroke_width=sw, stroke_fill=stroke_fill)
+        return
+    x0, y0, x1, y1 = d.textbbox(xy, text, font=font)
+    pad = sw + 2
+    bx, by = int(x0) - pad, int(y0) - pad
+    m = Image.new("L", (int(x1 - x0) + pad * 2, int(y1 - y0) + pad * 2), 0)
+    ImageDraw.Draw(m).text((xy[0] - bx, xy[1] - by), text, font=font, fill=255)
+    big = m
+    r = 0
+    while r < sw:                              # 3칸 최대값 거르기를 되풀이 = 글자를 sw 만큼 둥글게 부풀림
+        step = 2 if sw - r >= 2 else 1
+        big = big.filter(ImageFilter.MaxFilter(step * 2 + 1))
+        r += step
+    col = stroke_fill if not isinstance(stroke_fill, str) else hex_rgb(stroke_fill)
+    a_ = col[3] if len(col) > 3 else 255
+    layer = Image.new("RGBA", m.size, tuple(col[:3]) + (255,))
+    mask = big.point(lambda v: v * a_ // 255)
+    img.paste(layer if img.mode == "RGBA" else layer.convert(img.mode), (bx, by), mask)
+    d.text(xy, text, font=font, fill=fill)
+
+
 def _thumb_lines(d, lines, emph, f_, x0, y, avail, c_big, c_emph, align="center", stroke=True, shadow=True, stroke_col="#000000"):
     """큰 글자 여러 줄 (강조 단어만 다른 색). 마지막 y 돌려줌"""
     lh = int(f_.size * 1.12)
@@ -4287,8 +4316,8 @@ def _thumb_lines(d, lines, emph, f_, x0, y, avail, c_big, c_emph, align="center"
             if not seg:
                 continue
             if shadow and sw:
-                d.text((cx + sw * 0.6, y + sw * 0.8), seg, font=f_, fill=(0, 0, 0, 170), stroke_width=sw, stroke_fill=(0, 0, 0, 170))
-            d.text((cx, y), seg, font=f_, fill=col, stroke_width=sw, stroke_fill=stroke_col)
+                _outline_text(d, (cx + sw * 0.6, y + sw * 0.8), seg, f_, (0, 0, 0, 170), sw, (0, 0, 0, 170))
+            _outline_text(d, (cx, y), seg, f_, col, sw, stroke_col)
             cx += f_.getlength(seg)
         y += lh
     return y
