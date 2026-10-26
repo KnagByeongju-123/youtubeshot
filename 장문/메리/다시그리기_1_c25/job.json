@@ -1,0 +1,13 @@
+{
+ "items": [
+  {
+   "id": "c25",
+   "width": 1024,
+   "height": 576,
+   "seed": 1325,
+   "refs": [],
+   "prompt": "realistic historical watercolor painting, fine ink outlines, transparent layered watercolor washes, soft natural colors, visible paper texture, documentary illustration, realistic anatomy and proportions, historical documentary illustration, realistic proportions, museum-quality painting. Scene: an Elizabethan clerk of the 1580s seen from behind wearing a dark doublet and a white ruff collar, writing with a feather quill pen at a wooden desk by candlelight, copying a letter, wax seals, no modern objects. Every person has exactly two arms, two hands with five fingers each and two legs, hands simple and relaxed (partly hidden is fine). wearing an Elizabethan doublet and ruff, holding a feather quill, no modern pen. Cinematic composition, full-bleed image, no border, no frame, no paper edges. No text, no letters, no captions."
+  }
+ ],
+ "skip_done": true
+}

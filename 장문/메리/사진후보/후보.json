@@ -432,5 +432,11 @@
   "license": "Public domain",
   "page": "https://commons.wikimedia.org/wiki/File:Mary-cipher-code.jpg",
   "file": "c24_1.jpg"
+ },
+ "c15_도표": {
+  "title": "도표: 세 사람",
+  "artist": "설명 도표",
+  "license": "직접 만든 도표",
+  "page": ""
  }
 }

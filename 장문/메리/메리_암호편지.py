@@ -40,7 +40,7 @@ CUTS = [
     ("c22", "Chartley Castle or Chartley Hall (real photo)", "차틀리 — 마지막으로 갇힌 곳"),
     ("c23", "a wooden beer barrel in a sixteenth century cellar with a small hidden leather pouch tucked into its stopper, candle light, secret." + NP, "맥주 통 마개 속 편지"),
     ("c24", "a sixteenth century secret letter in cipher symbols with a short added postscript at the bottom in different ink, lying on a desk beside a broken wax seal, candle light, no readable words." + NP, "배빙턴 음모의 암호 편지"),
-    ("c25", "a sixteenth century clerk seen from behind at a desk copying a letter by candlelight, forging handwriting, quill, wax seals", "가짜 추신"),
+    ("c25", "an Elizabethan clerk of the 1580s seen from behind wearing a dark doublet and a white ruff collar, writing with a feather quill pen at a wooden desk by candlelight, copying a letter, wax seals, no modern objects", "가짜 추신"),
     ("c26", "Fotheringhay Castle site (real photo)", "포더링헤이 성터"),
     ("c27", "execution of Mary Queen of Scots historical illustration (real image)", "1587년 2월 8일 (옛 그림)"),
     ("c28", "Mary Queen of Scots engraving (real image)", "메리 스튜어트 (옛 판화)"),
@@ -201,7 +201,7 @@ REF_NOTE = ("Any real place or object shown must look exactly like the reference
             "painted in the same watercolor style. ")
 
 # 컷 → 사진 후보 이름 (사진후보/후보.json 의 열쇠). 사진을 받은 뒤 채움
-PHOTOS = {'c02': 'c02_2', 'c04': 'c04_1', 'c05': 'c05_1', 'c06': 'c02_3', 'c07': 'c07_1', 'c08': 'c08_2', 'c09': 'c09_3', 'c10': 'c10_1', 'c11': 'c11_3', 'c13': 'c13_4', 'c17': 'c17_1', 'c18': 'c18_1', 'c20': 'c20_1', 'c21': 'c21_2', 'c22': 'c22_2', 'c26': 'c26_1', 'c27': 'c27_1', 'c28': 'c02_4'}
+PHOTOS = {'c02': 'c02_2', 'c04': 'c04_1', 'c05': 'c05_1', 'c06': 'c02_3', 'c07': 'c07_1', 'c08': 'c08_2', 'c09': 'c09_3', 'c10': 'c10_1', 'c11': 'c11_3', 'c13': 'c13_4', 'c17': 'c17_1', 'c18': 'c18_1', 'c20': 'c20_1', 'c21': 'c21_2', 'c22': 'c22_2', 'c26': 'c26_1', 'c27': 'c27_1', 'c28': 'c02_4', 'c15': 'c15_도표'}
 
 
 def main():
