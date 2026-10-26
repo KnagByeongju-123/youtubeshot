@@ -28,28 +28,28 @@ CUTS = [
     ("c02", "real photo", "괴베클리 테페"),
     ("c03", "real photo", "괴베클리 테페의 T자 기둥"),
     ("c04", "real photo", "괴베클리 테페 기둥의 동물 조각"),
-    ("c05", "real photo", "튀르키예 샨르우르파 일대"),
-    ("c06", "real photo", "카라한 테페 발굴 현장"),
-    ("c07", "Neolithic hunter-gatherers carving a T-shaped stone pillar out of limestone bedrock with flint tools on a hill in southeastern Anatolia, around 11,000 years ago, warm evening light, animal skins clothing, realistic", "1만 1천 년 전, 바위를 깎는 사람들 (상상 복원)"),
+    ("c05", "real photo", "괴베클리 테페 일대 — 샨르우르파"),
+    ("c06", "real photo", "카라한 테페 전경"),
+    ("c07", "real photo", "카라한 테페 — 돌기둥이 선 방"),
     ("c08", "real photo", "남근 모양 기둥들과 벽에서 튀어나온 사람 머리"),
-    ("c09", "real photo", "기둥들이 서 있는 방"),
-    ("c10", "real photo", "카라한 테페의 뱀 조각"),
-    ("c11", "real photo", "앉은 남자 석상 (2023년 발견)"),
+    ("c09", "real photo", "T자 기둥들이 선 방 (카라한 테페)"),
+    ("c10", "real photo", "카라한 테페 기둥의 여우 조각"),
+    ("c11", "real photo", "앉은 남자 석상 (2023년 발견, 카라한 테페)"),
     ("c12", "real photo", "우르파 사람 — 1993년에 발견된 석상"),
-    ("c13", "real photo", "샨르우르파 고고학 박물관"),
-    ("c14", "real photo", "멧돼지 조각 (괴베클리 테페)"),
-    ("c15", "real photo", "독수리 조각 (괴베클리 테페 '독수리 돌')"),
-    ("c16", "real photo", "여우 조각"),
-    ("c17", "three tiny carved stone animal figurines, a wild boar, a vulture and a fox, about four centimetres tall, each with its head placed through a small stone ring, sitting inside a small stone bowl nested inside a larger stone vessel, archaeological find on dusty soil, soft museum light, close-up." + NP, "멧돼지·독수리·여우 — 돌 고리에 머리를 넣은 작은 조각 (설명 그림)"),
-    ("c18", "a group of Neolithic people sitting on stone benches around a fire inside a round stone building at night, an elder telling a story with raised hands, T-shaped pillars carved with animals glowing in firelight, children listening, mysterious and warm", "이야기를 나누던 사람들 (상상 복원)"),
-    ("c19", "real photo", "T자 기둥에 새긴 얼굴 (2025년 발견)"),
-    ("c20", "real photo", "사람을 닮은 T자 기둥 — 팔과 손이 새겨진 기둥"),
-    ("c21", "real photo", "바위를 파서 만든 집터"),
+    ("c13", "real photo", "괴베클리 테페의 멧돼지 석상 (샨르우르파 박물관)"),
+    ("c14", "real photo", "카라한 테페의 유물 (샨르우르파 박물관)"),
+    ("c15", "real photo", "카라한 테페의 독수리 석상"),
+    ("c16", "real photo", "괴베클리 테페의 동물 부조"),
+    ("c17", "diagram", "멧돼지·독수리·여우 — 돌 고리에 머리를 넣은 작은 조각 (배치 도표)"),
+    ("c18", "Stone Age hunter-gatherers 11,000 years ago wearing only animal hide and fur clothing and leather wraps (no modern clothes, no shirts, no trousers, no fabric), sitting on low stone benches around a small fire inside a round enclosure whose wall is rough piled fieldstones with tall T-shaped limestone pillars carved with animals standing in the wall like in the reference photo, an elder with long hair telling a story, firelight at night, mysterious and warm", "이야기를 나누던 사람들 (상상 복원)"),
+    ("c19", "real photo", "사람 머리가 새겨진 기둥 조각 (카라한 테페)"),
+    ("c20", "real photo", "팔과 여우가 새겨진 기둥 (괴베클리 테페)"),
+    ("c21", "real photo", "카라한 테페 발굴 현장"),
     ("c22", "real photo", "가젤 — 이들의 주된 사냥감"),
-    ("c23", "real photo", "사막연"),
+    ("c23", "real photo", "샨르우르파의 들판"),
     ("c24", "real photo", "야생 밀"),
-    ("c25", "real photo", "괴베클리 테페를 덮은 지붕"),
-    ("c26", "real photo", "타시 테펠레르 — 돌 언덕들"),
+    ("c25", "real photo", "지붕으로 덮인 괴베클리 테페"),
+    ("c26", "real photo", "돌 언덕들이 흩어진 고원"),
     ("c27", "real photo", "괴베클리 테페 전경"),
     ("c28", "an ancient T-shaped stone pillar carved with a fox, a boar and a vulture standing on a quiet hill under a starry night sky, distant fading campfire glow, timeless and contemplative." + NP, "돌에 남은 이야기"),
 ]
@@ -74,7 +74,7 @@ STORY = """{c01}
 
 {c05}
 
-괴베클리 테페는 2018년 유네스코 세계유산이 되었습니다. 그런데 이 일대에는 비슷한 유적이 열 곳 넘게 흩어져 있습니다. 튀르키예는 이곳들을 묶어 타시 테펠레르, 우리말로 돌 언덕들이라고 부르며 대규모 발굴을 시작했습니다.
+괴베클리 테페는 2018년 유네스코 세계유산이 되었습니다. 지금은 해마다 백만 명 가까운 사람들이 이곳을 찾아옵니다. 그런데 이 일대에는 비슷한 유적이 열 곳 넘게 흩어져 있습니다. 튀르키예는 이곳들을 묶어 타시 테펠레르, 우리말로 돌 언덕들이라고 부르며 대규모 발굴을 시작했습니다.
 
 ## 2. 자매 유적, 카라한 테페
 
@@ -181,13 +181,13 @@ STORY = """{c01}
 셋째, 1만 1천 년 전 사람들도 우리와 똑같이 이야기를 사랑했습니다. 글자는 없었지만, 그들은 돌에 이야기를 새겼습니다. 멧돼지와 독수리와 여우가 들려주던 그 이야기는 무엇이었을까요? 여러분은 어떤 이야기였을 것 같나요? 댓글로 들려주세요."""
 
 
-REFS = {}
-SEED = {}
+REFS = {"c17": ["c14_1", "c06_4"], "c18": ["c04_1"], "c28": ["c04_1"]}
+SEED = {"c17": 517, "c18": 618}
 REF_NOTE = ("Any real place or object shown must look exactly like the reference photo (same shape and colors), "
             "painted in the same watercolor style. ")
 
 # 컷 → 사진 후보 이름 (사진후보/후보.json 의 열쇠). 사진을 받은 뒤 채움
-PHOTOS = {}
+PHOTOS = {'c17': 'c17_도표', 'c01': 'c01_4', 'c02': 'c02_1', 'c03': 'c04_1', 'c04': 'c04_3', 'c05': 'c05_2', 'c06': 'c01_1', 'c07': 'c09_4', 'c08': 'c08_2', 'c09': 'c09_1', 'c10': 'c09_2', 'c11': 'c01_2', 'c12': 'c12_1', 'c13': 'c14_1', 'c14': 'c06_3', 'c15': 'c06_4', 'c16': 'c16_3', 'c19': 'c08_1', 'c20': 'c16_1', 'c21': 'c01_3', 'c22': 'c22_1', 'c23': 'c05_1', 'c24': 'c24_1', 'c25': 'c25_3', 'c26': 'c27_2', 'c27': 'c27_4'}
 
 
 def main():

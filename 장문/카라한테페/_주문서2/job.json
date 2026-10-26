@@ -1,0 +1,26 @@
+{
+ "items": [
+  {
+   "id": "c17",
+   "width": 1024,
+   "height": 576,
+   "seed": 517,
+   "refs": [
+    "/home/user/youtubeshot/.wt_longform/장문/카라한테페/사진후보/c14_1.jpg",
+    "/home/user/youtubeshot/.wt_longform/장문/카라한테페/사진후보/c06_4.jpg"
+   ],
+   "prompt": "realistic historical watercolor painting, fine ink outlines, transparent layered watercolor washes, soft natural colors, visible paper texture, documentary illustration, realistic anatomy and proportions, historical documentary illustration, realistic proportions, museum-quality painting. Scene: close-up photograph-like painting of three tiny prehistoric carved grey limestone figurines (NOT living animals, simple stylized stone carvings with rough chisel marks, like the stone statues in the reference photos): a stone wild boar, a stone vulture and a stone fox, each about four centimetres tall, each figurine's head pushed through a small carved stone ring, standing inside a small round stone bowl, filling the whole frame on dusty brown excavation soil, soft light, edge-to-edge painting with no white paper around it. No people, no hands, no arms anywhere.. Any real place or object shown must look exactly like the reference photo (same shape and colors), painted in the same watercolor style. No signature, no artist mark. Cinematic composition, full-bleed image, no border, no frame, no paper edges. No text, no letters, no captions."
+  },
+  {
+   "id": "c18",
+   "width": 1024,
+   "height": 576,
+   "seed": 618,
+   "refs": [
+    "/home/user/youtubeshot/.wt_longform/장문/카라한테페/사진후보/c04_1.jpg"
+   ],
+   "prompt": "realistic historical watercolor painting, fine ink outlines, transparent layered watercolor washes, soft natural colors, visible paper texture, documentary illustration, realistic anatomy and proportions, historical documentary illustration, realistic proportions, museum-quality painting. Scene: Stone Age hunter-gatherers 11,000 years ago wearing only animal hide and fur clothing and leather wraps (no modern clothes, no shirts, no trousers, no fabric), sitting on low stone benches around a small fire inside a round enclosure whose wall is rough piled fieldstones with tall T-shaped limestone pillars carved with animals standing in the wall like in the reference photo, an elder with long hair telling a story, firelight at night, mysterious and warm. Any real place or object shown must look exactly like the reference photo (same shape and colors), painted in the same watercolor style. Every person has exactly two arms, two hands with five fingers each and two legs, hands simple and relaxed (partly hidden is fine). No signature, no artist mark. Cinematic composition, full-bleed image, no border, no frame, no paper edges. No text, no letters, no captions."
+  }
+ ],
+ "skip_done": true
+}

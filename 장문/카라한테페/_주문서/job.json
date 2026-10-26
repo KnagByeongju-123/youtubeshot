@@ -1,0 +1,33 @@
+{
+ "items": [
+  {
+   "id": "c17",
+   "width": 1024,
+   "height": 576,
+   "seed": 317,
+   "refs": [],
+   "prompt": "realistic historical watercolor painting, fine ink outlines, transparent layered watercolor washes, soft natural colors, visible paper texture, documentary illustration, realistic anatomy and proportions, historical documentary illustration, realistic proportions, museum-quality painting. Scene: three tiny carved stone animal figurines, a wild boar, a vulture and a fox, about four centimetres tall, each with its head placed through a small stone ring, sitting inside a small stone bowl nested inside a larger stone vessel, archaeological find on dusty soil, soft museum light, close-up. No people, no hands, no arms anywhere.. No signature, no artist mark. Cinematic composition, full-bleed image, no border, no frame, no paper edges. No text, no letters, no captions."
+  },
+  {
+   "id": "c18",
+   "width": 1024,
+   "height": 576,
+   "seed": 318,
+   "refs": [
+    "/home/user/youtubeshot/.wt_longform/장문/카라한테페/사진후보/c04_1.jpg"
+   ],
+   "prompt": "realistic historical watercolor painting, fine ink outlines, transparent layered watercolor washes, soft natural colors, visible paper texture, documentary illustration, realistic anatomy and proportions, historical documentary illustration, realistic proportions, museum-quality painting. Scene: a group of Neolithic people sitting on stone benches around a fire inside a round stone building at night, an elder telling a story with raised hands, T-shaped pillars carved with animals glowing in firelight, children listening, mysterious and warm. Any real place or object shown must look exactly like the reference photo (same shape and colors), painted in the same watercolor style. Every person has exactly two arms, two hands with five fingers each and two legs, hands simple and relaxed (partly hidden is fine). No signature, no artist mark. Cinematic composition, full-bleed image, no border, no frame, no paper edges. No text, no letters, no captions."
+  },
+  {
+   "id": "c28",
+   "width": 1024,
+   "height": 576,
+   "seed": 328,
+   "refs": [
+    "/home/user/youtubeshot/.wt_longform/장문/카라한테페/사진후보/c04_1.jpg"
+   ],
+   "prompt": "realistic historical watercolor painting, fine ink outlines, transparent layered watercolor washes, soft natural colors, visible paper texture, documentary illustration, realistic anatomy and proportions, historical documentary illustration, realistic proportions, museum-quality painting. Scene: an ancient T-shaped stone pillar carved with a fox, a boar and a vulture standing on a quiet hill under a starry night sky, distant fading campfire glow, timeless and contemplative. No people, no hands, no arms anywhere.. Any real place or object shown must look exactly like the reference photo (same shape and colors), painted in the same watercolor style. No signature, no artist mark. Cinematic composition, full-bleed image, no border, no frame, no paper edges. No text, no letters, no captions."
+  }
+ ],
+ "skip_done": true
+}
