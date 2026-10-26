@@ -286,5 +286,18 @@
   "artist": "설명 도표",
   "license": "직접 만든 도표",
   "page": ""
+ },
+ "c08_1": {
+  "title": "File:Zodiac Killer cipher, Vallejo Times-Herald, July 31st 1969.jpg",
+  "artist": "Zodiac Killer",
+  "license": "Public domain",
+  "page": "https://commons.wikimedia.org/wiki/File:Zodiac_Killer_cipher,_Vallejo_Times-Herald,_July_31st_1969.jpg"
+ },
+ "c11_확대": {
+  "title": "File:Zodiac Chronicle Cipher July 1969.jpg",
+  "artist": "Zodiac Killer",
+  "license": "Public domain",
+  "page": "https://commons.wikimedia.org/wiki/File:Zodiac_Chronicle_Cipher_July_1969.jpg",
+  "file": "c09_2.jpg"
  }
 }

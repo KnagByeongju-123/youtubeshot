@@ -25,10 +25,10 @@ CUTS = [
     ("c05", "San Francisco Bay Area foggy night road near Vallejo, empty two-lane country road with a single street lamp, 1960s mood, eerie." + NP, "베이 에어리어의 밤길"),
     ("c06", "Zodiac killer police composite sketch 1969 (real image)", "경찰이 공개한 몽타주 (1969)"),
     ("c07", "Zodiac letter with crossed circle symbol (real image)", "조디악의 편지와 십자 원 표시"),
-    ("c08", "three 1969 American newspapers stacked on a wooden table, front pages with large blurry headline blocks and rows of strange symbols, no readable words." + NP, "세 신문사에 나뉘어 온 첫 암호"),
+    ("c08", "three 1969 American newspapers stacked on a wooden table, front pages with large blurry headline blocks and rows of strange symbols, no readable words." + NP, "세 신문사에 나뉘어 온 첫 암호 (발레이오 타임스-헤럴드 조각)"),
     ("c09", "Zodiac 408 cipher (real image)", "408 암호 (1969년 7월)"),
     ("c10", "a middle-aged schoolteacher and his wife sitting at a 1960s kitchen table at night, working together on sheets of paper covered with symbols, pencils, coffee cups, warm lamp light", "부엌 식탁에서 암호를 푼 부부"),
-    ("c11", "Zodiac 408 cipher part (real image)", "408 암호의 한 조각 (발레이오 타임스-헤럴드, 1969)"),
+    ("c11", "Zodiac 408 cipher part (real image)", "408 암호 (크로니클 조각, 확대)"),
     ("c12", "San Francisco Chronicle building (real photo)", "샌프란시스코 크로니클 건물 장식"),
     ("c13", "Zodiac 340 cipher full (real image)", "340 암호 — 20줄 17칸"),
     ("c14", "a 1970s government codebreaking office with large early computers, tape reels and printouts of symbol grids pinned on a wall, empty room." + NP, "정부 암호 전문가들의 시도"),
@@ -247,7 +247,7 @@ REF_NOTE = ("Any real place or object shown must look exactly like the reference
             "painted in the same watercolor style. ")
 
 # 컷 → 사진 후보 이름 (사진후보/후보.json 의 열쇠). 사진·도표를 만든 뒤 채움
-PHOTOS = {'c01': 'c13_1', 'c13': 'c13_1', 'c03': 'c03_1', 'c06': 'c06_1', 'c07': 'c07_1', 'c09': 'c09_2', 'c11': 'c08_1', 'c12': 'c12_4', 'c17': 'c01_1', 'c25': 'c25_1', 'c26': 'c26_1', 'c27': 'c27_2', 'c29': 'c29_2', 'c30': 'c30_1', 'c32': 'c32_2', 'c35': 'c35_2', 'c04': 'c04_도표', 'c15': 'c15_도표', 'c19': 'c19_도표', 'c21': 'c21_도표', 'c24': 'c24_도표', 'c18': 'c18_도표'}
+PHOTOS = {'c01': 'c13_1', 'c13': 'c13_1', 'c03': 'c03_1', 'c06': 'c06_1', 'c07': 'c07_1', 'c09': 'c09_2', 'c11': 'c11_확대', 'c08': 'c08_1', 'c12': 'c12_4', 'c17': 'c01_1', 'c25': 'c25_1', 'c26': 'c26_1', 'c27': 'c27_2', 'c29': 'c29_2', 'c30': 'c30_1', 'c32': 'c32_2', 'c35': 'c35_2', 'c04': 'c04_도표', 'c15': 'c15_도표', 'c19': 'c19_도표', 'c21': 'c21_도표', 'c24': 'c24_도표', 'c18': 'c18_도표'}
 
 
 def main():
