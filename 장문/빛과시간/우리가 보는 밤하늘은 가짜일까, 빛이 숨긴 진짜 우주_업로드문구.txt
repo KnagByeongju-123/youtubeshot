@@ -1,0 +1,48 @@
+==============================
+[제목]  (추천)
+==============================
+우리가 보는 밤하늘은 가짜일까, 빛이 숨긴 진짜 우주
+(영상 안 제목·영어·일본어 제목과 같은 제목 — 규칙: 제목 통일)
+
+(다른 후보 — 참고용)
+- 지금 보는 별은 이미 없을 수도 있다, 빛이 알려 주지 않는 진짜 우주
+- 138억 년인데 465억 광년? 늦게 도착한 빛으로 본 우주의 진실
+- 빛을 본다는 건 과거를 보는 것, AI가 내린 우주의 결론
+
+
+==============================
+[설명]  ↓ 아래 줄부터 끝까지 그대로 복사
+==============================
+오늘 밤 올려다본 별 가운데, 이미 사라진 별이 있을지도 모릅니다.
+우리가 보는 달은 1.3초 전, 태양은 8분 20초 전, 안드로메다은하는 250만 년 전의 모습입니다.
+
+멀리 볼수록 과거를 보는 우주. 게다가 공간은 늘어나고, 빛은 중력에 휘어지고, 우리 눈과 뇌도 세상을 조금 늦게 봅니다.
+그렇다면 '진짜 우주'는 어떻게 봐야 할까요? 우주에 모두가 함께 쓰는 '지금'은 있을까요?
+뢰머의 빛 속도 측정, 허블의 우주 팽창, 다시 나타난 초신성 레프스달, GPS 위성 시계, 그리고 휘어진 빛을 바로 펴는 인공지능까지.
+여러 논문을 바탕으로 AI가 내린 결론을 들어 보세요.
+
+⏱ 타임스탬프
+(영상 완성 뒤 채움)
+
+📌 참고 자료
+- NASA·ESA, "Webb finds most distant known galaxy" (JADES-GS-z14-0, 2024년 5월)
+- Hezaveh, Perreault Levasseur, Marshall, "Fast automated analysis of strong gravitational lenses with convolutional neural networks", Nature 548 (2017)
+- He 외, "Learning to predict the cosmological structure formation", PNAS 116 (2019)
+- Kelly 외, "Déjà vu all over again: The reappearance of supernova Refsdal" (2016)
+- Medeiros 외, "The image of the M87 black hole reconstructed with PRIMO", ApJL (2023)
+- Euclid Collaboration, "Euclid Quick Data Release (Q1): The Strong Lensing Discovery Engine A" (2025)
+- Nijhawan, "Motion extrapolation in catching", Nature 370 (1994) / 아닐 세스, 《Being You》(2021)
+
+📷 사진: NASA, ESA, Wikimedia Commons, Flickr(Openverse) (사진마다 작가·라이선스는 영상 화면에 표시)
+📊 시간·거리 설명은 도표, 실제 사진이 없는 장면은 AI로 그린 그림입니다
+🤖 'AI의 결론'은 여러 연구를 바탕으로 AI가 정리한 해석입니다
+
+여러분은 빛을 본다는 것이 진짜를 보는 것이라고 생각하시나요? 댓글로 들려주세요.
+
+#우주 #빛의속도 #상대성이론
+
+
+==============================
+[태그]  (유튜브 스튜디오 '태그' 칸에 붙여 넣기)
+==============================
+우주, 빛의 속도, 상대성 이론, 관측 가능한 우주, 제임스 웹 망원경, 허블 망원경, 중력렌즈, 아인슈타인, 적색편이, 우주 팽창, 블랙홀, 인공지능 천문학, 과학 다큐, 우주 다큐, 시간이란 무엇인가, observable universe, speed of light, gravitational lens
