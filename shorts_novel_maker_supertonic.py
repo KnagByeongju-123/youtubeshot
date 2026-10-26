@@ -3735,7 +3735,7 @@ def description_text(pkg, story, portrait=False, max_sources=8):
 def best_photo(story):
     """대본 속 사진 중 가장 큰(해상도 높은) 사진 → PIL 이미지 또는 None"""
     best, area = None, 0
-    for p, _ in story_photos(story):
+    for p, _ in story_photos(story, no_diagram=True):
         p = p if os.path.isabs(p) else os.path.join(BASE, p)
         try:
             with Image.open(p) as im:
@@ -3833,7 +3833,7 @@ def make_thumbnails(model, base, title, story, category, s, log=None, keep_final
         download_free_font("ofl/blackhansans/BlackHanSans-Regular.ttf")
     except Exception:
         pass
-    photos = story_photos(story)
+    photos = story_photos(story, no_diagram=True) or story_photos(story)
     plist = "\n".join(f"{i + 1}. {cap}" for i, (_, cap) in enumerate(photos)) or "(사진 없음)"
     first = re.split(r"(?<=[.!?…])\s+", re.sub(r"\s+", " ", body.split("\n## ", 1)[0]).strip(), 1)[0][:120]
     promise = (f"\n\n[영상 첫 5초 - 썸네일이 이 장면과 맞아야 함] {first}\n(썸네일 문구·사진은 영상이 첫 5초에 바로 보여 주는 이 대상·숫자와 같은 약속이어야 한다. "
@@ -4069,12 +4069,12 @@ def title_thumb_words(title):
     return {"small": small, "big": big, "big2": big2, "emph": big2 or big}
 
 
-def story_photos(story):
-    """본문의 사진 줄 → [(경로, 설명)]"""
+def story_photos(story, no_diagram=False):
+    """본문의 사진 줄 → [(경로, 설명)]. no_diagram: 글자 많은 설명 도표(출처 칸에 '도표')는 뺌 — 썸네일 배경용 (코피알레: 도표가 배경으로 뽑혔음)"""
     out = []
     for ln in (story or "").split("\n"):
         m = parse_media(ln)
-        if m:
+        if m and not (no_diagram and "도표" in " ".join(str(x or "") for x in m[1:3])):
             out.append((m[0], m[1] or os.path.basename(m[0])))
     return out
 
