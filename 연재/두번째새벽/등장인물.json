@@ -84,6 +84,22 @@
         "fx": "",
         "why": "늙은 몸·왕(가장 높은 지위): 낮은 남자 목소리, 톤 내림, 아주 느리게"
       }
+    },
+    {
+      "name": "잎새 할머니",
+      "look": "very old evolved female orangutan elder of a forest village who walks upright, long shaggy gray-orange hair, wise tired dark eyes with deep wrinkles, wide cheek pads, a cloak made of overlapping green and brown dried leaves, wooden bead necklaces, leaning on a tall carved wooden cane topped with a carved leaf",
+      "look_ko": "하누족 숲 마을 잎새골의 촌장(늙은 오랑우탄 할머니, 두 발로 걸음). 길고 덥수룩한 잿빛 주황 털, 주름진 지혜로운 눈, 넓은 볼, 마른 나뭇잎을 겹쳐 엮은 망토, 나무 구슬 목걸이, 나뭇잎을 새긴 긴 나무 지팡이",
+      "face": "",
+      "face_anime": "캐릭터시트_애니/잎새할머니.jpg",
+      "voice": null
+    },
+    {
+      "name": "도토리",
+      "look": "small young evolved chimpanzee child of about seven who walks upright, big round curious amber eyes, fluffy dark fur, a small white face-paint dot on the forehead, simple tunic of woven bark cloth, a little acorn-cap shaped straw hat, barefoot",
+      "look_ko": "카룬의 어린 동생(하누족 침팬지 아이, 일곱 살쯤). 크고 동그란 호박색 눈, 보송한 검은 털, 이마의 작은 흰 점 무늬, 나무껍질 천 옷, 도토리 깍지 모양 밀짚모자, 맨발",
+      "face": "",
+      "face_anime": "캐릭터시트_애니/도토리.jpg",
+      "voice": null
     }
   ],
   "narrator_voice": {
