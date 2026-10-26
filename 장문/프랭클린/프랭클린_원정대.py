@@ -22,32 +22,32 @@ SHIP = ("two 1840s British Royal Navy bomb vessels, three-masted wooden sailing 
         "bows reinforced with iron plating")
 CUTS = [
     ("c01", f"{SHIP}, locked in endless pack ice under a pale twilight Arctic sky, snow on the rigging, vast frozen silence." + NP, "얼음에 갇힌 두 척의 배"),
-    ("c02", "HMS Erebus and Terror painting (real image)", "에레버스호와 테러호 (옛 그림)"),
+    ("c02", "HMS Erebus and Terror painting (real image)", "1845년 출발한 에레버스호와 테러호 (당시 신문 그림)"),
     ("c03", "Sir John Franklin portrait (real image)", "존 프랭클린 경 (1786~1847)"),
-    ("c04", "Northwest Passage map (real image)", "북서 항로"),
-    ("c05", "Franklin expedition tin cans relics (real photo)", "원정대가 남긴 통조림 (유물)"),
+    ("c04", "Northwest Passage map (real image)", "북서 항로 (지도)"),
+    ("c05", "rows of 1840s hand-soldered tin food cans with plain paper labels stacked on wooden shelves in the dim storeroom of a wooden sailing ship, lantern light, no readable text." + NP, "배에 실은 수천 개의 통조림"),
     ("c06", f"seen from far away across calm grey Arctic water with drifting icebergs, {SHIP}, tiny on the horizon under a midnight sun." + NP, "배핀만, 마지막으로 목격된 모습"),
     ("c07", "Beechey Island graves (real photo)", "비치섬의 세 무덤"),
     ("c08", "Beechey Island landscape (real photo)", "비치섬"),
-    ("c09", "HMS Terror trapped in ice painting (real image)", "얼음에 갇힌 배 (옛 그림)"),
-    ("c10", "Victory Point note (real image)", "빅토리 포인트 쪽지 (1847·1848)"),
+    ("c09", "HMS Terror trapped in ice painting (real image)", "얼음에 밀려 올라간 테러호 (1837년 다른 탐험 때, 옛 그림)"),
+    ("c10", "Victory Point note (real image)", "빅토리 포인트 쪽지의 내용"),
     ("c11", "Francis Crozier portrait (real image)", "테러호 선장 프랜시스 크로지어"),
     ("c12", "John Rae portrait (real image)", "탐험가 존 레이"),
-    ("c13", "Lady Jane Franklin portrait (real image)", "제인 프랭클린"),
+    ("c13", "Lady Jane Franklin portrait (real image)", "제인 프랭클린 (옛 판화)"),
     ("c14", "McClintock Fox ship (real image)", "매클린톡의 수색선 폭스호"),
-    ("c15", "They forced the last link painting (real image)", "마지막 길 (1895년 그림)"),
+    ("c15", "They forced the last link painting (real image)", "얼음을 깨며 나아가는 테러호 선원들 (1837년, 옛 그림)"),
     ("c16", "a lonely Arctic gravel beach with three weathered wooden grave markers under a low grey sky, snow patches, cold wind, 1980s research tents in the far distance." + NP, "1984년, 비치섬 조사"),
-    ("c17", "Franklin expedition relics (real photo)", "원정대 유물"),
+    ("c17", "Franklin expedition relics (real photo)", "뼈 속 납의 양 (1981년 조사)"),
     ("c18", "a scientist's laboratory bench with a microscope, small labelled sample vials and a printed graph, soft lab light, modern research." + NP, "손톱 속 기록을 읽다"),
     ("c19", "an inuksuk stone landmark on a rocky Arctic shore of King William Island, low tundra, distant sea ice, soft golden light." + NP, "이누이트의 기억"),
-    ("c20", "HMS Erebus wreck (real image)", "바닷속 에레버스호"),
-    ("c21", f"underwater view of a sunken 1840s three-masted wooden ship sitting upright on the sea floor in clear cold green water, masts broken, hull intact, rays of light from above." + NP, "테러베이 바닷속의 테러호"),
+    ("c20", "HMS Erebus wreck (real image)", "에레버스호 난파선 위의 캐나다 조사선"),
+    ("c21", f"fully underwater scene deep below the sea surface: one single sunken 1840s wooden sailing ship hull resting upright on the muddy sea floor, its masts broken off into short stumps, covered with a little seaweed, small fish, dim cold blue-green water all around, faint light rays from far above. Only one ship." + NP, "테러베이 바닷속의 테러호"),
     ("c22", "a modern ancient-DNA laboratory, a scientist in a white lab coat, face mask, hair net and blue gloves carefully holds a small old molar tooth with tweezers over a clean bench, pipettes and sample tubes, bright clean light", "뼈에서 DNA를 꺼내다"),
     ("c23", "James Fitzjames daguerreotype (real image)", "에레버스호 선장 제임스 피츠제임스 (1845년 사진)"),
-    ("c24", "King William Island (real photo)", "킹윌리엄섬"),
-    ("c25", "Erebus Bay King William Island (real photo)", "얼음 위의 마지막 길"),
-    ("c26", "Franklin memorial (real photo)", "프랭클린 원정대 기념비"),
-    ("c28", "Franklin expedition officers daguerreotypes (real image)", "1845년 출발 직전에 찍은 장교들의 사진"),
+    ("c24", "King William Island (real photo)", "원정대 장교 (1845년 출발 직전 사진)"),
+    ("c25", "a bleak flat gravel shore of King William Island in the Arctic, scattered pale stones and a broken wooden sledge runner half buried in snow, grey sea ice beyond, low overcast sky." + NP, "얼음 위의 마지막 길"),
+    ("c26", "Franklin memorial (real photo)", "원정대 장교 (1845년 출발 직전 사진)"),
+    ("c28", "Franklin expedition officers daguerreotypes (real image)", "출발 직전 사진 속 존 프랭클린 (1845년)"),
     ("c27", f"{SHIP}, frozen in ice at dawn, the first warm light touching the ice, a single lantern glowing on deck, hopeful and sad closing image." + NP, "아직 돌아오지 못한 사람들"),
 ]
 
@@ -183,13 +183,13 @@ STORY = """{c01}
 
 얼음 속에 사라진 129명. 여러분은 그들의 마지막 길이 어땠을 거라고 생각하시나요? 댓글로 여러분의 생각을 들려주세요. 보고 나면 가벼운 지식이 남는 이야기, 이 채널에서 계속 이어집니다."""
 
-REFS = {}
-SEED = {}
-REF_NOTE = ("Any real place or object shown must look exactly like the reference photo (same shape and colors), "
+REFS = {"c01": ["c02_3"], "c06": ["c02_3"], "c27": ["c02_3"]}
+SEED = {"c21": 1521}   # 다시 그림: 배 두 척·바닷속 아님·종이 테두리
+REF_NOTE = ("The two ships must look exactly like HMS Erebus and HMS Terror in the reference painting (same hull shape, colors and three masts), "
             "painted in the same watercolor style. ")
 
 # 컷 → 사진 후보 이름 (사진후보/후보.json 의 열쇠). 사진을 받은 뒤 채움
-PHOTOS = {'c28': '?', 'c02': '?', 'c03': '?', 'c04': '?', 'c05': '?', 'c07': '?', 'c08': '?', 'c09': '?', 'c10': '?', 'c11': '?', 'c12': '?', 'c13': '?', 'c14': '?', 'c15': '?', 'c17': '?', 'c20': '?', 'c23': '?', 'c24': '?', 'c25': '?', 'c26': '?'}
+PHOTOS = {'c02': 'c02_4', 'c03': 'c03_3', 'c04': 'c04_2', 'c07': 'c07_2', 'c08': 'c08_4', 'c09': 'c09_2', 'c10': 'c10_도표', 'c11': 'c11_2', 'c12': 'c12_2', 'c13': 'c13_1', 'c14': 'c14_1', 'c15': 'c09_1', 'c17': 'c17_도표', 'c20': 'c20_1', 'c23': 'c23_1', 'c24': 'c28_3', 'c26': 'c28_4', 'c28': 'c28_1'}
 
 
 def main():

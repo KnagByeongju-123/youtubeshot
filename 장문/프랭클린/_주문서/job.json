@@ -1,0 +1,13 @@
+{
+ "items": [
+  {
+   "id": "c21",
+   "width": 1024,
+   "height": 576,
+   "seed": 1521,
+   "refs": [],
+   "prompt": "realistic historical watercolor painting, fine ink outlines, transparent layered watercolor washes, soft natural colors, visible paper texture, documentary illustration, realistic anatomy and proportions, historical documentary illustration, realistic proportions, museum-quality painting. Scene: fully underwater scene deep below the sea surface: one single sunken 1840s wooden sailing ship hull resting upright on the muddy sea floor, its masts broken off into short stumps, covered with a little seaweed, small fish, dim cold blue-green water all around, faint light rays from far above. Only one ship. No people, no hands, no arms anywhere.. No signature, no artist mark. Cinematic composition, full-bleed image, no border, no frame, no paper edges. No text, no letters, no captions."
+  }
+ ],
+ "skip_done": true
+}
