@@ -542,7 +542,7 @@ FIELDS = [
     ("영상", "fps", "FPS(60=부드러움, 30=빠른 제작)", "int", 30),
     ("영상", "quality", "화질(crf 18=최고·23=권장·28=작게)", "int", 23),
     ("영상", "scene_parts", "자막형: 장면별로 나눠 만들기(고친 장면만 다시·끝난 장면 유지)", "choice:on,off", "on"),
-    ("영상", "scene_trans", "장면 사이 전환 효과(장면별 제작 때)", "choice:자동(장면에 맞게),페이드,디졸브,검정,원형,빠른페이드,밀어내기,덮기,닦아내기,확대,시대전환(느린 디졸브),섞어서,없음", "자동(장면에 맞게)"),
+    ("영상", "scene_trans", "장면 사이 전환 효과(장면별 제작 때)", "choice:자동(장면에 맞게),전진(확대하며 다음 장면),페이드,디졸브,검정,원형,빠른페이드,밀어내기,덮기,닦아내기,확대,시대전환(느린 디졸브),섞어서,없음", "자동(장면에 맞게)"),
     ("영상", "audio_out", "소리 저장 방식", "choice:MP4에 포함,MP4에 포함+MP3 따로,MP3만 따로(무음 MP4)", "MP4에 포함+MP3 따로"),
     ("영상", "thumb_style", "유튜브 썸네일 스타일(자동 저장용)", "choice:" + ",".join(THUMB_STYLES), THUMB_STYLES[0]),
     ("영상", "genre_auto", "장문: 소재 고르면 자막·그림 설정 자동", "choice:on,off", "on"),
@@ -6098,6 +6098,12 @@ class SubtitleRenderer:
             row = np.clip((e * (w + fe) - xs) / fe, 0, 1)
             mk = Image.fromarray((np.repeat(row[None, :], h, 0) * 255).astype(np.uint8), "L")
             return Image.composite(b, a, mk)
+        if kind.startswith("전진"):                 # 전진(사용자 요청 2026-10-26): 앞 배경이 크게 확대되며(카메라가 앞으로 날아 들어감) 그 안에서 다음 배경이 서서히 드러남 → 계속 앞으로 나아가는 느낌
+            def zf(img, z):
+                cw, ch = w / z, h / z
+                return extent_resize(img, (w, h), ((w - cw) / 2, (h - ch) / 2, (w + cw) / 2, (h + ch) / 2))
+            q = float(smoothstep(e))
+            return Image.blend(zf(a, 1 + 0.9 * e * e), zf(b, 1.06 - 0.06 * q), q)
         if kind.startswith("확대"):                 # 확대: 앞 장은 다가오며 사라지고, 새 장은 살짝 멀리서 다가옴
             def zm(img, z):
                 cw, ch = w / z, h / z
@@ -9135,7 +9141,7 @@ def duck_env_from_audio(a, n, duration, duck):
 
 
 TRANS_ROT = ["밀어내기", "덮기", "닦아내기", "확대"]
-TRANS_SEC = {"페이드": 0.4, "시대": 1.8, "검정": 0.9, "디졸브": 1.0, "빠른": 0.25, "원형": 0.8}
+TRANS_SEC = {"전진": 1.3, "페이드": 0.4, "시대": 1.8, "검정": 0.9, "디졸브": 1.0, "빠른": 0.25, "원형": 0.8}
 _TR_TIME = ("그날 밤", "다음 날", "이듬해", "며칠 뒤", "수백 년", "한편", "같은 시각", "그 시각", "새벽", "무렵", "그 뒤", "얼마 후")
 _TR_TENSE = ("그 순간", "갑자기", "비명", "끼익", "쿵", "탁,", "그때였", "번쩍")
 _TR_MYST = ("빛", "눈을 떴", "어둠", "파란", "비밀", "수수께끼", "꿈")
