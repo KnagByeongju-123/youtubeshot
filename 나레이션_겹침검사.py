@@ -103,17 +103,19 @@ def word_start_stutters(h, sents, k_):
     첫소리만 내다 다시 시작해 '브바닷속'·'그게다가'처럼 들리는 곳 — 대본에 없는 글자 하나가 낱말 바로 앞에 끼었고
     그 글자의 첫소리가 다음 글자(낱말 첫 글자)의 첫소리와 같으면 더듬으로 봄. 반환: [(끼어든 글자+낱말 첫 글자, 문장)]"""
     ctx = sents[max(0, k_ - 1):k_ + 2]
-    ref, starts = "", set()
+    ref, starts, mixed = "", set(), set()
     for _, s in ctx:
         for w in s.split():
             hw = hangul(w)
+            if re.search(r"[0-9A-Za-z]", w):          # 숫자·영어가 섞인 낱말('2억'·'AI의')은 소리로 읽혀 글자가 달라짐 → 오탐이라 뺌
+                mixed.update(range(len(ref), len(ref) + len(hw) + 1))
             if hw:
                 starts.add(len(ref))
                 ref += hw
     out = []
     sm = difflib.SequenceMatcher(None, ref, h, autojunk=False)
     for op, i1, i2, j1, j2 in sm.get_opcodes():
-        if op == "insert" and j2 - j1 == 1 and i1 in starts and i1 < len(ref) and j2 < len(h):
+        if op == "insert" and j2 - j1 == 1 and i1 in starts and i1 not in mixed and i1 < len(ref) and j2 < len(h):
             c, nxt = h[j1], h[j2]
             if c != nxt and cho(c) == cho(nxt) and nxt == ref[i1]:
                 s_ = next((s for p, s in ctx if hangul(ref[i1:i1 + 4]) in hangul(s)), sents[k_][1])
