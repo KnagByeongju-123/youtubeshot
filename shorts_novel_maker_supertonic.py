@@ -4163,6 +4163,7 @@ def _thumb_compose(style, v, s, photo_im, size, fp):
         photos = [p for p in (v.get("_photos") or []) if p is not None] or [photo_im]
         if photo_im is not None and photos[0] is not photo_im:
             photos = [photo_im] + [p for p in photos if p is not photo_im]
+        photos = distinct_photos(photos, 4) or photos      # 대표 사진이 다른 객체로 다시 열려 두 번 들어가던 것 막음 (모두 다른 사진)
         return mod.render(style, v, s, photos, size, fp, H)
     except Exception as e:
         print("썸네일 합성 실패 → 기본 디자인:", (str(e).splitlines() or [type(e).__name__])[0][:100])
