@@ -1,0 +1,67 @@
+{
+ "seed": 397938424,
+ "src": ".wt_longform/장문/조디악/사진/c06.jpg",
+ "title": "조디악 살인마의\n[암호]",
+ "candidates": [
+  {
+   "file": "랜덤_1.jpg",
+   "font": "/home/user/youtubeshot/fonts/BlackHanSans-Regular.ttf",
+   "theme": "퍼플",
+   "title_style": "외곽선",
+   "overlay": "전체 어둡게",
+   "darkness": 48,
+   "align": "left",
+   "text_y": 68,
+   "font_size": 91,
+   "frame": "없음",
+   "tag_position": "좌측 상단",
+   "bg_saturation": 100,
+   "brightness": 97
+  },
+  {
+   "file": "랜덤_2.jpg",
+   "font": "/usr/share/fonts/truetype/nanum/NanumGothicExtraBold.ttf",
+   "theme": "블루",
+   "title_style": "네온 글로우",
+   "overlay": "비네팅",
+   "darkness": 45,
+   "align": "left",
+   "text_y": 25,
+   "font_size": 86,
+   "frame": "없음",
+   "tag_position": "좌측 상단",
+   "bg_saturation": 100,
+   "brightness": 91
+  },
+  {
+   "file": "랜덤_3.jpg",
+   "font": "/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc",
+   "theme": "옐로 타이틀",
+   "title_style": "박스 강조",
+   "overlay": "전체 어둡게",
+   "darkness": 72,
+   "align": "left",
+   "text_y": 23,
+   "font_size": 105,
+   "frame": "코너 장식",
+   "tag_position": "우측 상단",
+   "bg_saturation": 122,
+   "brightness": 87
+  },
+  {
+   "file": "랜덤_4.jpg",
+   "font": "/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc",
+   "theme": "퍼플",
+   "title_style": "그림자",
+   "overlay": "전체 어둡게",
+   "darkness": 75,
+   "align": "center",
+   "text_y": 21,
+   "font_size": 94,
+   "frame": "코너 장식",
+   "tag_position": "우측 상단",
+   "bg_saturation": 92,
+   "brightness": 104
+  }
+ ]
+}
