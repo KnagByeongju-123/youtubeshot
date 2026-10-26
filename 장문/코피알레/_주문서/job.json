@@ -1,0 +1,29 @@
+{
+ "items": [
+  {
+   "id": "c16",
+   "width": 1024,
+   "height": 576,
+   "seed": 1416,
+   "refs": [],
+   "prompt": "realistic historical watercolor painting, fine ink outlines, transparent layered watercolor washes, soft natural colors, visible paper texture, documentary illustration, realistic anatomy and proportions, historical documentary illustration, realistic proportions, museum-quality painting. Scene: an eighteenth century candlelit lodge room, a doorman, an adult man in a plain grey 1740s coat with white stockings and a short powdered wig tied at the back, leads the candidate, an adult man in his thirties wearing a brown 1740s frock coat, knee breeches and a powdered wig, by the hand through a doorway toward a long table, both men seen from behind and side, both clearly grown men, shadows on panelled walls, no modern objects. Every person has exactly two arms, two hands with five fingers each and two legs, hands simple and relaxed (partly hidden is fine). No signature, no artist mark. Cinematic composition, full-bleed image, no border, no frame, no paper edges. No text, no letters, no captions."
+  },
+  {
+   "id": "c17",
+   "width": 1024,
+   "height": 576,
+   "seed": 1417,
+   "refs": [],
+   "prompt": "realistic historical watercolor painting, fine ink outlines, transparent layered watercolor washes, soft natural colors, visible paper texture, documentary illustration, realistic anatomy and proportions, historical documentary illustration, realistic proportions, museum-quality painting. Scene: an older master of a secret society in a 1740s black coat with a white cravat (no bow tie) and a black tricorn hat over a powdered wig sits behind a table with two candles and an open book, facing the candidate, an adult man in his thirties wearing a brown 1740s frock coat, knee breeches and a powdered wig, standing before him, both clearly grown men, solemn questioning, panelled room, no modern objects. Every person has exactly two arms, two hands with five fingers each and two legs, hands simple and relaxed (partly hidden is fine). No signature, no artist mark. Cinematic composition, full-bleed image, no border, no frame, no paper edges. No text, no letters, no captions."
+  },
+  {
+   "id": "c19",
+   "width": 1024,
+   "height": 576,
+   "seed": 1419,
+   "refs": [],
+   "prompt": "realistic historical watercolor painting, fine ink outlines, transparent layered watercolor washes, soft natural colors, visible paper texture, documentary illustration, realistic anatomy and proportions, historical documentary illustration, realistic proportions, museum-quality painting. Scene: a single small pair of plain antique steel tweezers (two thin straight arms joined at one end) lying alone on a dark velvet cloth, a pair of round eighteenth century spectacles lying separately a hand's width away, the two objects not touching, candle light, close-up still life. No people, no hands, no arms anywhere.. No signature, no artist mark. Cinematic composition, full-bleed image, no border, no frame, no paper edges. No text, no letters, no captions."
+  }
+ ],
+ "skip_done": true
+}

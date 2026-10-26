@@ -81,8 +81,8 @@ for i, t in enumerate(langs):
     d.rounded_rectangle((cx, cy, cx + 320, cy + 110), 14, outline=(110, 110, 110), width=3)
     d.text((cx + 28, cy + 30), t, font=F(44), fill=WHITE)
     d.text((cx + 262, cy + 22), "✗", font=F(60, "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"), fill=RED)
-lines(d, 140, 760, ["… 모두 40개가 넘는 언어 → 전부 뜻 없는 글자", "한 글자를 여러 기호로 쓰는 방식으로 다시 풀어도 실패"], 46, WHITE)
-d.text((140, 960), "※ 논문에 나온 것은 독일어·영어·라틴어 + 40여 개 언어 (나머지 칸은 예)", font=F(30, FR), fill=GREY)
+lines(d, 140, 720, ["… 모두 40개가 넘는 언어 → 전부 뜻 없는 글자", "한 글자를 여러 기호로 쓰는 방식으로 다시 풀어도 실패"], 46, WHITE)
+d.text((140, 900), "※ 논문에 나온 것은 독일어·영어·라틴어 + 40여 개 언어 (나머지 칸은 예)", font=F(30, FR), fill=GREY)
 save(im, "c09")
 
 # c10 왜 독일어였을까
@@ -116,7 +116,7 @@ for t, sp in [("CEREMONIE", False), ("b", True), ("DER", False), ("k", True), ("
     x = chip(d, x, 330, t, (110, 180, 255) if sp else (255, 214, 90), size=74) + 26
 d.text((140, 500), "= 체레모니 데어 아우프나메 (입회 의식)", font=F(54), fill=WHITE)
 lines(d, 140, 660, ["파란 칸의 로마자는 띄어쓰기였다", "진짜 내용은 기묘한 기호들 쪽에 있었음 (처음 생각과 정반대)"], 46, WHITE)
-d.text((140, 900), "※ 파란 칸의 로마자는 설명을 위해 고른 예", font=F(32, FR), fill=GREY)
+d.text((140, 830), "※ 파란 칸의 로마자는 설명을 위해 고른 예", font=F(32, FR), fill=GREY)
 save(im, "c12")
 
 # c13 쌍점 · SCH
@@ -133,13 +133,13 @@ save(im, "c13")
 # c14 풀려난 첫 문장 (부록 A)
 im, d = canvas()
 x = left_page(im, (0, 0, 660, 890), 900) + 80
-lines(d, x, 120, ["책 첫머리, 풀려난 글"], 60, GOLD, FB)
+lines(d, x, 160, ["책 첫머리, 풀려난 글"], 56, GOLD, FB)
 rows = [("Gesetz Buchs …", "법전"), ("geheimer Theil.", "비밀 부분"), ("erster Abschnitt", "첫째 절"),
         ("geheimer Unterricht vor die Gesellen.", "수습생을 위한 비밀 가르침"), ("Ceremonien der Aufnahme.", "입회 의식")]
-y = 260
+y = 280
 for de, ko in rows:
-    d.text((x, y), de, font=F(40, FR), fill=GREY); d.text((x, y + 54), ko, font=F(50), fill=WHITE); y += 140
-d.text((x, 990), "출처: Knight·Megyesi·Schaefer (2011) 부록 A", font=F(28, FR), fill=GREY)
+    d.text((x, y), de, font=F(38, FR), fill=GREY); d.text((x, y + 50), ko, font=F(48), fill=WHITE); y += 128
+d.text((x, 930), "출처: Knight·Megyesi·Schaefer (2011) 부록 A", font=F(28, FR), fill=GREY)
 save(im, "c14")
 
 meta_p = os.path.join(HERE, "사진후보", "후보.json"); meta = json.load(open(meta_p, encoding="utf-8"))
