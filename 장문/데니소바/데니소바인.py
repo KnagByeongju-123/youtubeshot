@@ -324,7 +324,7 @@ def main():
                              "layout": "자막형(큰 제목+사진+자막)", "img_fill": "전체 화면(글자가 사진 위에)",
                              "img_motion": "영상처럼(확대·이동·전환)",
                              "head_show": "안 보임(제목 카드만)", "sub_split": "한 줄씩(문장·쉼표로 나눠 차례로)", "img_label": "on",
-                             "narr_voice": "Supertonic M2 (남성, 무료 로컬) [supertonic:M2]"}}
+                             "narr_voice": "Supertonic M1 (남성, 무료 로컬) [supertonic:M1]", "narr_rate": -8, "narr_tone_m": -2}   # 장문 다큐 성우(사용자 결정 2026-10-26: 샘플 3번)}
         out = os.path.join(HERE, "데니소바인.json")
         json.dump(proj, open(out, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
         print(out, len(story), "chars")
