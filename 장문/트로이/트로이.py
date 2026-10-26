@@ -28,27 +28,27 @@ CUTS = [
     ("c02", "real photo", "호메로스 흉상"),
     ("c03", "real photo", "트로이 전쟁을 그린 고대 그리스 도자기"),
     ("c04", "real photo", "아킬레우스와 헥토르"),
-    ("c05", "real photo", "트로이 목마 (옛 그림)"),
+    ("c05", "real photo", "트로이 유적의 목마 모형"),
     ("c06", "real photo", "히사를리크 언덕 — 트로이 유적"),
     ("c07", "real photo", "하인리히 슐리만"),
-    ("c08", "real photo", "슐리만의 큰 구덩이 (트로이 유적)"),
-    ("c09", "real photo", "'프리아모스의 보물'을 걸친 소피아 슐리만"),
+    ("c08", "real photo", "트로이 유적 — 여러 층이 드러난 모습"),
+    ("c09", "real photo", "하인리히 슐리만 (만년)"),
     ("c10", "diagram", "트로이의 9개 층"),
     ("c11", "real photo", "트로이 6층의 성벽"),
-    ("c12", "real photo", "트로이 유적의 성문"),
+    ("c12", "real photo", "트로이 6층의 동쪽 성문"),
     ("c13", "real photo", "히타이트 점토판"),
-    ("c14", "real photo", "히타이트 수도 하투샤"),
+    ("c14", "real photo", "히타이트 점토판 (쐐기 문자)"),
     ("c15", "real photo", "트로이 유적 전경"),
     ("c16", "real photo", "청동기 시대의 무기"),
     ("c17", "a pile of hundreds of small rounded sling stones of grey river pebbles and baked clay lying in excavated soil at the foot of an ancient limestone city wall, archaeological trench, measuring tape, sunny daylight, close view." + NP, "성벽 앞에 몰려 나온 투석 돌 (설명 그림)"),
-    ("c18", "Late Bronze Age soldiers in simple linen tunics and leather armour swinging leather slings and hurling stones toward a sloping limestone city wall with towers on a hill, smoke rising, dramatic but not gory, wide view, small figures", "투석 부대 (상상 복원)"),
-    ("c19", "real photo", "투석기용 돌 (고대 유물)"),
-    ("c20", "real photo", "트로이 박물관"),
-    ("c21", "real photo", "트로이 앞의 평야와 바다"),
-    ("c22", "real photo", "트로이 유적의 경사진 성벽"),
-    ("c23", "real photo", "다르다넬스 해협"),
+    ("c18", "real photo", "투석용 탄환들 (후대 유물, 참고)"),
+    ("c19", "real photo", "고대 그리스의 투석용 납 탄환 (참고 유물)"),
+    ("c20", "real photo", "트로이의 경사로"),
+    ("c21", "real photo", "트로이 유적과 주변 평야"),
+    ("c22", "real photo", "트로이 7층과 9층의 성벽"),
+    ("c23", "real photo", "트로이의 성벽"),
     ("c24", "real photo", "트로이 유적의 목마 모형"),
-    ("c25", "real photo", "트로이 유적 안내"),
+    ("c25", "real photo", "트로이 유적"),
     ("c26", "the ruined sloping limestone walls of ancient Troy on a hill at sunset, wild grass, the distant plain and sea, long shadows, timeless and contemplative." + NP, "신화와 역사 사이"),
 ]
 
@@ -169,13 +169,13 @@ STORY = """{c01}
 트로이 유적은 1998년 유네스코 세계유산이 되었고, 2018년에는 유적 근처에 트로이 박물관이 문을 열었습니다. 신화 속 트로이는 시인의 상상이었지만, 그 상상이 서 있던 땅은 진짜였습니다. 앞으로 발굴이 이어지면 투석 돌을 던진 사람들이 누구였는지도 밝혀질지 모릅니다. 여러분은 트로이 전쟁이 실제로 있었다고 생각하시나요? 댓글로 들려주세요."""
 
 
-REFS = {}
+REFS = {"c18": ["c11_1"], "c26": ["c01_4"]}
 SEED = {}
 REF_NOTE = ("Any real place or object shown must look exactly like the reference photo (same shape and colors), "
             "painted in the same watercolor style. ")
 
 # 컷 → 사진 후보 이름 (사진후보/후보.json 의 열쇠). 사진을 받은 뒤 채움
-PHOTOS = {}
+PHOTOS = {'c01': 'c01_4', 'c02': 'c02_1', 'c03': 'c03_2', 'c04': 'c04_1', 'c05': 'c24_3', 'c06': 'c01_1', 'c07': 'c07_1', 'c08': 'c12_2', 'c09': 'c07_4', 'c10': 'c10_도표', 'c11': 'c11_1', 'c12': 'c12_1', 'c13': 'c13_1', 'c14': 'c13_2', 'c15': 'c15_1', 'c16': 'c16_3', 'c18': 'c19_1', 'c19': 'c19_3', 'c20': 'c12_3', 'c21': 'c15_2', 'c22': 'c22_1', 'c23': 'c12_4', 'c24': 'c24_1', 'c25': 'c11_4'}
 
 
 def main():

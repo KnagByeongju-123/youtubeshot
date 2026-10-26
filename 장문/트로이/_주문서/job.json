@@ -1,0 +1,33 @@
+{
+ "items": [
+  {
+   "id": "c17",
+   "width": 1024,
+   "height": 576,
+   "seed": 317,
+   "refs": [],
+   "prompt": "realistic historical watercolor painting, fine ink outlines, transparent layered watercolor washes, soft natural colors, visible paper texture, documentary illustration, realistic anatomy and proportions, historical documentary illustration, realistic proportions, museum-quality painting. Scene: a pile of hundreds of small rounded sling stones of grey river pebbles and baked clay lying in excavated soil at the foot of an ancient limestone city wall, archaeological trench, measuring tape, sunny daylight, close view. No people, no hands, no arms anywhere.. No signature, no artist mark. Cinematic composition, full-bleed image, no border, no frame, no paper edges. No text, no letters, no captions."
+  },
+  {
+   "id": "c18",
+   "width": 1024,
+   "height": 576,
+   "seed": 318,
+   "refs": [
+    "/home/user/youtubeshot/.wt_longform/장문/트로이/사진후보/c11_1.jpg"
+   ],
+   "prompt": "realistic historical watercolor painting, fine ink outlines, transparent layered watercolor washes, soft natural colors, visible paper texture, documentary illustration, realistic anatomy and proportions, historical documentary illustration, realistic proportions, museum-quality painting. Scene: Late Bronze Age soldiers in simple linen tunics and leather armour swinging leather slings and hurling stones toward a sloping limestone city wall with towers on a hill, smoke rising, dramatic but not gory, wide view, small figures. Any real place or object shown must look exactly like the reference photo (same shape and colors), painted in the same watercolor style. Every person has exactly two arms, two hands with five fingers each and two legs, hands simple and relaxed (partly hidden is fine). No signature, no artist mark. Cinematic composition, full-bleed image, no border, no frame, no paper edges. No text, no letters, no captions."
+  },
+  {
+   "id": "c26",
+   "width": 1024,
+   "height": 576,
+   "seed": 326,
+   "refs": [
+    "/home/user/youtubeshot/.wt_longform/장문/트로이/사진후보/c01_4.jpg"
+   ],
+   "prompt": "realistic historical watercolor painting, fine ink outlines, transparent layered watercolor washes, soft natural colors, visible paper texture, documentary illustration, realistic anatomy and proportions, historical documentary illustration, realistic proportions, museum-quality painting. Scene: the ruined sloping limestone walls of ancient Troy on a hill at sunset, wild grass, the distant plain and sea, long shadows, timeless and contemplative. No people, no hands, no arms anywhere.. Any real place or object shown must look exactly like the reference photo (same shape and colors), painted in the same watercolor style. No signature, no artist mark. Cinematic composition, full-bleed image, no border, no frame, no paper edges. No text, no letters, no captions."
+  }
+ ],
+ "skip_done": true
+}
