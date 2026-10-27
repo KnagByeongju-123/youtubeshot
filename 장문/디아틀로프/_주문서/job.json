@@ -1,0 +1,21 @@
+{
+ "items": [
+  {
+   "id": "c23",
+   "width": 1024,
+   "height": 576,
+   "seed": 323,
+   "refs": [],
+   "prompt": "realistic historical watercolor painting, fine ink outlines, transparent layered watercolor washes, soft natural colors, visible paper texture, documentary illustration, realistic anatomy and proportions, historical documentary illustration, realistic proportions, museum-quality painting. Scene: the inside of a small canvas tent at night pitched in deep snow on a mountain slope, skis laid on the snow floor as a base under blankets, a dim lantern, heavy snow pressing on the tent wall, quiet and ominous. No people, no hands, no arms anywhere.. No signature, no artist mark. Cinematic composition, full-bleed image, no border, no frame, no paper edges. No text, no letters, no captions."
+  },
+  {
+   "id": "c26",
+   "width": 1024,
+   "height": 576,
+   "seed": 326,
+   "refs": [],
+   "prompt": "realistic historical watercolor painting, fine ink outlines, transparent layered watercolor washes, soft natural colors, visible paper texture, documentary illustration, realistic anatomy and proportions, historical documentary illustration, realistic proportions, museum-quality painting. Scene: a quiet snowy mountain pass in the northern Urals at dawn, a small memorial stone with nine flowers on the snow, soft pink light on the peaks, peaceful and solemn. No people, no hands, no arms anywhere.. No signature, no artist mark. Cinematic composition, full-bleed image, no border, no frame, no paper edges. No text, no letters, no captions."
+  }
+ ],
+ "skip_done": true
+}
