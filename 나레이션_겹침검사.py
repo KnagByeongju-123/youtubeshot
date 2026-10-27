@@ -5,7 +5,7 @@ python 나레이션_겹침검사.py <영상.mp4> <회차.py 또는 대본.txt> [
   - 찾는 규칙
     1) 소리를 쉼에서 15초 안쪽 조각으로 나눠 받아 적음
     2) 같은 글자 1~3자가 연달아 두 번 나오면(띄어쓰기 무시: '것만 만', '국국') 후보
-    3) 받아 적은 조각과 가장 비슷한 대본 문장을 찾아, 그 문장에 원래 같은 길이의 반복(무럭무럭·불쑥불쑥·타닥타닥)이 있으면 흉내말로 보고 넘김
+    3) 반복 바로 앞 글자들과 가장 비슷한 대본 문장을 찾아(숫자가 든 문장은 '1월 1일→일월 일일'처럼 원래 반복이 생겨서 뺌), 그 문장에 원래 같은 길이의 반복(무럭무럭·불쑥불쑥·타닥타닥)이 있으면 흉내말로 보고 넘김
     4) 대본 문장과 한 글자씩 맞춰 봐서 반복 자리에 글자가 '더 들어갔을' 때만 겹침 ('것만→것만만'). 글자 수가 같으면 발음 차이로 봄
        ('하늘나라→하늘라라', '닿을→다을')
   - 갑자기 빨라진 곳도 찾음: 쉼과 쉼 사이 한 마디씩 1초당 글자 수를 재서 영상 전체 마디의 중간값보다 25% 넘게 빠른 마디 (대사는 인물마다 빠르기가 달라 뺌)
@@ -92,6 +92,17 @@ def extra_syllables(ref, heard, i, n):
     return False
 
 
+def sentence_of(piece, sents):
+    """짧은 조각(반복 바로 앞 글자들)이 어느 대본 문장 속에 들어 있나 — 조각 글자가 문장에 얼마나 맞나로 고름"""
+    best, score = None, 0.0
+    for par, s in sents:
+        sm = difflib.SequenceMatcher(None, hangul(s), piece, autojunk=False)
+        hit = sum(b.size for b in sm.get_matching_blocks()) / max(1, len(piece))
+        if hit > score:
+            best, score = (par, s), hit
+    return best if score >= 0.6 else None
+
+
 def best_sentence(h, sents):
     """받아 적은 조각(한글만)이 들어 있는 대본 문장 — 반복 글자 자리에 가장 잘 맞는 문장 하나"""
     best, score = None, 0.0
@@ -170,8 +181,11 @@ def detect(video, script):
             for dd in sorted(doubles(h, n)):
                 i = h.find(dd)
                 ctx = h[max(0, i - 8):i + 2 * n + 8]                 # 반복 자리 앞뒤
-                ps = best_sentence(ctx, sents) or best_sentence(h, sents)
+                before = h[max(0, i - 10):i + n]                      # 반복 바로 앞 글자들 (뒤는 다음 문장에 걸치기 쉬움)
+                ps = sentence_of(before, sents) or best_sentence(ctx, sents) or best_sentence(h, sents)
                 if ps is None:
+                    continue
+                if re.search(r"\d", ps[1]):                           # 숫자는 소리로 읽으면 반복이 생김 ('1월 1일' → 일월 일일)
                     continue
                 sh = hangul(ps[1])
                 k_ = sents.index(ps)
