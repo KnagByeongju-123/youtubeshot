@@ -27,6 +27,16 @@ def save(im, name):
     im.save(os.path.join(HERE, "사진", name + ".jpg"), quality=92)
 
 
+# c06 일식 원리
+im, d = base("해가 달에 꼭 맞게 가려지는 까닭")
+d.polygon([(320, 340), (1700, 528), (1700, 552), (320, 740)], fill=(40, 46, 70))
+d.ellipse((120, 340, 520, 740), fill=SUN); d.text((320, 780), "해", font=F(48), fill=SUN, anchor="ma")
+d.text((1255, 600), "달", font=F(44), fill=WHITE, anchor="ma"); d.text((1670, 600), "지구", font=F(44), fill=BLUE, anchor="ma")
+d.ellipse((1240, 525, 1270, 555), fill=(200, 200, 210)); d.ellipse((1640, 510, 1700, 570), fill=BLUE)
+d.text((160, 230), "해는 달보다 약 400배 크고, 약 400배 멀리 있다 → 하늘에서 크기가 거의 같다", font=F(42), fill=WHITE)
+note(d, "크기와 거리는 실제 비율이 아닌 설명 그림")
+save(im, "c06")
+
 # c08 개기일식 띠
 im, d = base("개기일식은 좁은 띠 안에서만 보인다")
 d.polygon([(100, 820), (1820, 300), (1820, 420), (100, 940)], fill=(40, 46, 80))
@@ -79,7 +89,7 @@ save(im, "c17")
 
 mp = os.path.join(HERE, "사진후보", "후보.json")
 meta = json.load(open(mp, encoding="utf-8")) if os.path.exists(mp) else {}
-for k in ["c08", "c10", "c13", "c17"]:
+for k in ["c06", "c08", "c10", "c13", "c17"]:
     meta[k + "_도표"] = {"title": "도표: " + k, "artist": "설명 도표 (Hayakawa 외 2025)", "license": "—", "page": "", "source": "설명 도표", "file": k + ".jpg"}
 json.dump(meta, open(mp, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
 print("ok")

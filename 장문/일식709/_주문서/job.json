@@ -4,17 +4,17 @@
    "id": "c02",
    "width": 1024,
    "height": 576,
-   "seed": 302,
+   "seed": 1102,
    "refs": [],
-   "prompt": "realistic historical watercolor painting, fine ink outlines, transparent layered watercolor washes, soft natural colors, visible paper texture, documentary illustration, realistic anatomy and proportions, historical documentary illustration, realistic proportions, museum-quality painting. Scene: an ancient Chinese court of the Zhou era in summer, officials in long robes and black caps looking up in alarm at a darkened sky where the sun is completely covered by the moon with a glowing ring, a wooden palace with curved roofs, eerie twilight. Every person has exactly two arms, two hands with five fingers each and two legs, hands simple and relaxed (partly hidden is fine). No signature, no artist mark. Cinematic composition, full-bleed image, no border, no frame, no paper edges. No text, no letters, no captions."
+   "prompt": "realistic historical watercolor painting, fine ink outlines, transparent layered watercolor washes, soft natural colors, visible paper texture, documentary illustration, realistic anatomy and proportions, historical documentary illustration, realistic proportions, museum-quality painting. Scene: an ancient Chinese Zhou-era palace courtyard in the daytime during a total solar eclipse: high in the sky the sun is a pitch-black disc surrounded by a glowing white wispy corona halo, the daytime sky has turned deep twilight blue with a reddish horizon, officials in long robes and black caps looking up and pointing in alarm, wooden halls with curved roofs. Not the moon, not night. Every person has exactly two arms and two legs. Every person has exactly two arms, two hands with five fingers each and two legs, hands simple and relaxed (partly hidden is fine). No signature, no artist mark. Cinematic composition, full-bleed image, no border, no frame, no paper edges. No text, no letters, no captions."
   },
   {
    "id": "c26",
    "width": 1024,
    "height": 576,
-   "seed": 326,
+   "seed": 1126,
    "refs": [],
-   "prompt": "realistic historical watercolor painting, fine ink outlines, transparent layered watercolor washes, soft natural colors, visible paper texture, documentary illustration, realistic anatomy and proportions, historical documentary illustration, realistic proportions, museum-quality painting. Scene: a wide watercolor view of an ancient Chinese walled city with curved roofs at dusk under a sky where the sun is just reappearing from behind the moon, a thin bright crescent, peaceful and grand. No people, no hands, no arms anywhere.. No signature, no artist mark. Cinematic composition, full-bleed image, no border, no frame, no paper edges. No text, no letters, no captions."
+   "prompt": "realistic historical watercolor painting, fine ink outlines, transparent layered watercolor washes, soft natural colors, visible paper texture, documentary illustration, realistic anatomy and proportions, historical documentary illustration, realistic proportions, museum-quality painting. Scene: a wide watercolor view of an ancient Chinese walled city with curved tiled roofs and stone walls at sunrise, warm golden sunlight spreading across the roofs, misty hills behind, peaceful and grand, no electric poles, no wires, no modern objects. No people, no hands, no arms anywhere.. No signature, no artist mark. Cinematic composition, full-bleed image, no border, no frame, no paper edges. No text, no letters, no captions."
   }
  ],
  "skip_done": true

@@ -37,24 +37,24 @@ CUTS = [
     ("c05", "real photo", "후기 구석기 시대의 석기"),
     ("c06", "real photo", "빙하기의 사냥감, 붉은사슴"),
     ("c07", "real photo", "로미토 동굴 유적"),
-    ("c08", "real photo", "구석기 시대의 무덤 (복원 전시)"),
+    ("c08", "real photo", "구석기 시대 무덤에서 나온 물건들 (시베리아 말타)"),
     ("c09", "diagram", "두 사람, 로미토 1과 로미토 2"),
-    ("c10", "real photo", "사람의 팔다리뼈"),
+    ("c10", "real photo", "뼈가 자라는 성장판 (현미경 사진)"),
     ("c11", "diagram", "60년 동안의 수수께끼"),
     ("c12", "real photo", "귀 안쪽의 단단한 뼈 (측두골)"),
     ("c13", "real photo", "고대 DNA 실험실"),
     ("c14", "real photo", "DNA 이중 나선"),
     ("c15", "diagram", "DNA가 밝힌 답"),
-    ("c16", "real photo", "뼈가 자라는 성장판"),
+    ("c16", "real photo", "사람의 염색체"),
     ("c17", "diagram", "변이 두 벌과 한 벌"),
-    ("c18", "real photo", "사람의 염색체"),
-    ("c19", "a loving Ice Age family scene by a campfire inside a rock shelter: a short adult woman in fur clothing gently hugging her very small teenage daughter who has notably short arms and legs, other group members sharing roasted meat with them, warm firelight, tender mood. Every person has exactly two arms and two legs", "함께 살아간 가족 (상상 복원)"),
-    ("c20", "Ice Age hunter-gatherers in fur clothing walking along a mountain path, one adult carrying a very small teenage girl with short legs on her back, others carrying spears and bundles, misty mountains, autumn light. Every person has exactly two arms and two legs", "무리의 돌봄 (상상 복원)"),
+    ("c18", "real photo", "사람의 염색체 46개"),
+    ("c19", "Ice Age hunter-gatherers about 12,000 years ago sitting around a campfire under a rock shelter, everyone wears only simple animal fur and hide wraps (no buttons, no pockets, no shirts, no trousers, no boots, bare feet or hide wrappings), a short adult woman gently hugging her teenage daughter of about fifteen who is very small with notably short arms and legs (not a baby, not a toddler), two other women and a man sharing roasted meat on sticks with them, warm firelight, tender mood. Every person has exactly two arms and two legs", "함께 살아간 가족 (상상 복원)"),
+    ("c20", "real photo", "빙하기 사람들이 오르내렸을 폴리노 산지"),
     ("c21", "real photo", "샤니다르 동굴"),
-    ("c22", "real photo", "오늘날의 유전 상담"),
+    ("c22", "real photo", "사람의 염색체 (현미경 사진)"),
     ("c23", "real photo", "칼라브리아의 산과 계곡"),
-    ("c24", "real photo", "구석기 시대의 장신구"),
-    ("c25", "real photo", "로미토 동굴 앞 풍경"),
+    ("c24", "real photo", "선사 시대의 조개 장신구"),
+    ("c25", "real photo", "로미토 동굴 가까운 마을, 파파시데로"),
     ("c26", "a quiet rock shelter in the mountains at dawn, soft golden light falling on the stone floor where two small bunches of wild flowers lie, peaceful and tender, no bones, no skeletons." + NP, "1만 2천 년의 품 (상상 복원)"),
 ]
 
@@ -176,12 +176,14 @@ DNA는 우리 몸을 만드는 설계도입니다. 설계도의 한 글자만 �
 
 
 REFS = {}
-SEED = {}
+SEED = {"c19": 1219, "c20": 1220}
 REF_NOTE = ("Any real place or object shown must look exactly like the reference photo (same shape and colors), "
             "painted in the same watercolor style. ")
 
 # 컷 → 사진 후보 이름 (사진후보/후보.json 의 열쇠). 사진을 받은 뒤 채움
-PHOTOS = {}
+PHOTOS = {"c01": "c01_4", "c03": "c03_2", "c04": "c01_1", "c05": "c05_3", "c06": "c06_1", "c07": "c01_3", "c08": "c08_2", "c09": "c09_도표",
+          "c11": "c11_도표", "c13": "c13_1", "c14": "c14_1", "c15": "c15_도표", "c10": "c16_1", "c12": "c12_4", "c16": "c18_2", "c22": "c18_3", "c24": "c24_1", "c17": "c17_도표", "c18": "c18_1",
+          "c20": "c03_3", "c21": "c21_4", "c23": "c23_1", "c25": "c07_2"}
 
 
 def main():

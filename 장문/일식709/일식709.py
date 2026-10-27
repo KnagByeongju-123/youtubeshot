@@ -28,31 +28,31 @@ DIALOGUE = []
 NP = " No people, no hands, no arms anywhere."
 CUTS = [
     ("c01", "real photo", "개기일식"),
-    ("c02", "an ancient Chinese court of the Zhou era in summer, officials in long robes and black caps looking up in alarm at a darkened sky where the sun is completely covered by the moon with a glowing ring, a wooden palace with curved roofs, eerie twilight", "기원전 709년 노나라 궁정의 개기일식 (상상 복원)"),
+    ("c02", "an ancient Chinese Zhou-era palace courtyard in the daytime during a total solar eclipse: high in the sky the sun is a pitch-black disc surrounded by a glowing white wispy corona halo, the daytime sky has turned deep twilight blue with a reddish horizon, officials in long robes and black caps looking up and pointing in alarm, wooden halls with curved roofs. Not the moon, not night. Every person has exactly two arms and two legs", "기원전 709년 노나라 궁정의 개기일식 (상상 복원)"),
     ("c03", "real photo", "공자"),
-    ("c04", "real photo", "《춘추》 옛 책"),
-    ("c05", "real photo", "곡부의 공자 사당"),
-    ("c06", "real photo", "일식이 일어나는 원리"),
+    ("c04", "real photo", "옛 중국의 책들 (명나라)"),
+    ("c05", "real photo", "곡부 공자 사당의 지붕"),
+    ("c06", "diagram", "일식이 일어나는 원리"),
     ("c07", "real photo", "개기일식의 코로나"),
     ("c08", "diagram", "옛 기록이 맞지 않았다"),
     ("c09", "real photo", "곡부의 옛 성벽"),
     ("c10", "diagram", "곡부 좌표 바로잡기"),
     ("c11", "real photo", "밀물과 썰물"),
-    ("c12", "real photo", "달"),
+    ("c12", "real photo", "하늘을 지나가는 해와 달 (일식 연속 사진)"),
     ("c13", "diagram", "지구 자전이 늦어진 만큼, ΔT"),
-    ("c14", "real photo", "옛 해시계"),
-    ("c15", "real photo", "《한서》 옛 책"),
-    ("c16", "real photo", "태양 흑점"),
+    ("c14", "real photo", "옛 중국의 해시계 (베이징 자금성)"),
+    ("c15", "real photo", "《한서》 (송나라 때 찍은 책)"),
+    ("c16", "real photo", "흑점이 보이는 태양"),
     ("c17", "diagram", "태양의 11년 주기와 호메로스 극소기"),
     ("c18", "real photo", "나무의 나이테"),
     ("c19", "real photo", "극지방의 빙하 얼음 기둥"),
-    ("c20", "real photo", "태양 활동이 활발할 때의 코로나"),
-    ("c21", "real photo", "태양 활동이 잠잠할 때의 코로나"),
+    ("c20", "real photo", "태양 활동이 활발할 때의 코로나 (2024년)"),
+    ("c21", "real photo", "태양 활동이 잠잠할 때의 코로나 (2019년)"),
     ("c22", "real photo", "오늘날의 일식 관측"),
-    ("c23", "real photo", "옛 중국의 천문 관측 기구"),
+    ("c23", "real photo", "오늘날 천문대의 일식 관측"),
     ("c24", "real photo", "지구"),
     ("c25", "real photo", "부분일식"),
-    ("c26", "a wide watercolor view of an ancient Chinese walled city with curved roofs at dusk under a sky where the sun is just reappearing from behind the moon, a thin bright crescent, peaceful and grand." + NP, "다시 빛나는 해 (상상 복원)"),
+    ("c26", "a wide watercolor view of an ancient Chinese walled city with curved tiled roofs and stone walls at sunrise, warm golden sunlight spreading across the roofs, misty hills behind, peaceful and grand, no electric poles, no wires, no modern objects." + NP, "다시 빛나는 해 (상상 복원)"),
 ]
 
 STORY = """{c01}
@@ -173,12 +173,14 @@ STORY = """{c01}
 
 
 REFS = {}
-SEED = {}
+SEED = {"c02": 1102, "c26": 1126}
 REF_NOTE = ("Any real place or object shown must look exactly like the reference photo (same shape and colors), "
             "painted in the same watercolor style. ")
 
 # 컷 → 사진 후보 이름 (사진후보/후보.json 의 열쇠). 사진을 받은 뒤 채움
-PHOTOS = {}
+PHOTOS = {"c01": "c01_4", "c03": "c03_1", "c04": "c15_2", "c05": "c05_2", "c06": "c06_도표", "c07": "c07_1", "c08": "c08_도표", "c09": "c09_1",
+          "c10": "c10_도표", "c11": "c11_3", "c12": "c21_1", "c13": "c13_도표", "c14": "c14_1", "c15": "c15_1", "c16": "c25_3", "c17": "c17_도표",
+          "c18": "c18_1", "c19": "c19_1", "c20": "c20_3", "c21": "c21_2", "c22": "c20_2", "c23": "c21_3", "c24": "c24_3", "c25": "c25_4"}
 
 
 def main():

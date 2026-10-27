@@ -4,11 +4,11 @@ import os, sys
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "안티키테라"))
 import 사진_찾기 as F
 F.Q = {
-    "c01": "Grotta del Romito", "c03": "Pollino National Park", "c04": "Grotta del Romito Bos primigenius", "c05": "Upper Paleolithic flint tools",
-    "c06": "Red deer stag", "c07": "Papasidero", "c08": "Paleolithic burial reconstruction", "c10": "Human skeleton arm bones",
-    "c12": "Temporal bone petrous", "c13": "Ancient DNA laboratory", "c14": "DNA double helix", "c16": "Growth plate x-ray",
-    "c18": "Human chromosomes karyotype", "c21": "Shanidar Cave", "c22": "Genetic counseling", "c23": "Calabria mountains valley",
-    "c24": "Paleolithic shell necklace", "c25": "Lao river Calabria",
+    "c01": "Romito cave", "c03": "Pollino National Park", "c04": "Romito aurochs engraving", "c05": "Upper Paleolithic flint tools",
+    "c06": "Red deer stag", "c07": "Papasidero", "c08": "Paleolithic grave", "c10": "Human skeleton",
+    "c12": "Petrous part of the temporal bone", "c13": "Ancient DNA clean room", "c14": "DNA structure", "c16": "Epiphyseal plate",
+    "c18": "Human chromosomes karyotype", "c21": "Shanidar Cave", "c22": "DNA sequencing laboratory", "c23": "Calabria mountains valley",
+    "c24": "Shell beads prehistoric", "c25": "Papasidero landscape",
 }
 if __name__ == "__main__":
     F.main()

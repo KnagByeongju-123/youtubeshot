@@ -4,11 +4,11 @@ import os, sys
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "안티키테라"))
 import 사진_찾기 as F
 F.Q = {
-    "c01": "Total solar eclipse 2017", "c03": "Confucius portrait", "c04": "Chunqiu Zuozhuan", "c05": "Temple of Confucius Qufu",
-    "c06": "Solar eclipse diagram", "c07": "Solar corona eclipse", "c09": "Qufu city wall", "c11": "Low tide", "c12": "Full Moon",
-    "c14": "Chinese sundial", "c15": "Book of Han", "c16": "Sunspots", "c18": "Tree rings", "c19": "Ice core",
-    "c20": "Solar eclipse 2024 corona", "c21": "Solar eclipse 2019 corona", "c22": "Eclipse viewing glasses", "c23": "Beijing Ancient Observatory",
-    "c24": "Earth from space", "c25": "Partial solar eclipse",
+    "c01": "Total solar eclipse 2017", "c03": "Confucius portrait", "c04": "Chunqiu", "c05": "Temple of Confucius Qufu",
+    "c06": "Geometry of a total solar eclipse", "c07": "Solar corona", "c09": "Qufu city wall", "c11": "Low tide", "c12": "Full moon photo",
+    "c14": "Sundial Forbidden City", "c15": "Hanshu", "c16": "Sunspot", "c18": "Tree rings", "c19": "Ice core",
+    "c20": "Total solar eclipse 2024", "c21": "Solar eclipse 2019 Chile", "c22": "Eclipse viewing glasses", "c23": "Ancient Observatory Beijing",
+    "c24": "Earth from space", "c25": "Partial eclipse sun",
 }
 if __name__ == "__main__":
     F.main()
