@@ -18,49 +18,50 @@ GENRE = "고대 인류"
 STYLE = ("scientific documentary illustration, detailed digital painting like a National Geographic or science magazine illustration, "
          "natural realistic colors, clear readable composition, soft cinematic lighting, high detail")
 PEOPLE = ("Paleolithic modern humans with dark skin wearing simple animal-hide clothing, each person with exactly two arms and two legs, "
-          "natural anatomy")   # 사람이 나오는 컷에 붙임 (팔다리 수 규칙)
+          "natural anatomy")   # 옛 사람이 나오는 컷에 붙임 (팔다리 수 규칙)
+NOW = "modern-day people in contemporary clothing, each person with exactly two arms and two legs, natural anatomy"   # 오늘날 사람 컷 (과학자 등)
 
-# (컷번호, 그림 설명(영어), 화면 설명(한국어), 사람이 나오는 컷인지)
+# (컷번호, 그림 설명(영어), 화면 설명(한국어), 사람이 나오는 컷인지: True=옛 사람, "now"=오늘날 사람)
 CUTS = [
     ("c01", "a colossal volcanic eruption on a tropical island seen from far away, a gigantic ash column rising into the stratosphere and spreading into an umbrella cloud, lightning inside the ash, jungle in the foreground", "7만 4천 년 전 토바 화산", False),
     ("c02", "a small group of people standing on a hilltop at dusk looking at a dark sky full of falling gray ash, seen from behind", "하늘을 덮은 화산재", True),
     ("c03", "a vast gray landscape covered in thick volcanic ash, dead trees, a single small human footprint trail crossing it, dim sunlight through haze", "인류는 정말 사라질 뻔했을까", False),
-    ("c04", "satellite view of the island of Sumatra and the surrounding Indian Ocean from orbit, green island, clouds, realistic Earth photography style", "인도네시아 수마트라섬", False),
+    ("c04", "satellite view from orbit of a very long narrow green tropical island stretching diagonally across the frame from upper left to lower right, a volcanic mountain chain along its length, the Indian Ocean around it, scattered clouds, realistic Earth photography style", "인도네시아 수마트라섬", False),
     ("c05", "aerial view of a huge long caldera lake filling the frame, deep blue water surrounded by steep green mountain walls, a large green island in the middle of the lake, morning mist", "지금의 토바 호수", False),
     ("c06", "pyroclastic flows of glowing gray ash racing down mountain slopes and across a forested valley, enormous scale, dark sky", "산을 덮친 화산 쇄설류", False),
-    ("c07", "a comparison scene: a small volcano with a modest ash plume on the left and an enormous towering ash column many times larger on the right, same landscape, dramatic scale difference", "세인트헬렌스와 비교한 크기", False),
-    ("c08", "a gigantic plume of volcanic ash drifting west over the ocean seen from high altitude, the curvature of the Earth visible, sunlight on the cloud tops", "바람을 타고 퍼진 화산재", False),
-    ("c09", "an exposed riverbank cliff in India showing a thick pale gray-white layer of volcanic ash between brown soil layers, a geologist with a small trowel kneeling beside it for scale", "인도 땅속의 두꺼운 화산재층", True),
+    ("c07", "a tiny volcano with a thin small ash plume in the foreground, completely dwarfed by a colossal wall of ash cloud behind it that fills the entire sky from horizon to top of frame, dramatic sense of scale", "세인트헬렌스와 비교한 크기", False),
+    ("c08", "view from very high in the stratosphere: a vast brown-gray layer of volcanic ash cloud spreading flat over the ocean for thousands of kilometers, the curved horizon of the Earth, sunlight on the top of the ash layer", "바람을 타고 퍼진 화산재", False),
+    ("c09", "an exposed riverbank cliff in India showing a thick flat pale gray-white layer of volcanic ash sandwiched between brown soil layers, one modern geologist in a field shirt and hat kneeling beside it with a small trowel for scale", "인도 땅속의 두꺼운 화산재층", "now"),
     ("c10", "a coastal village landscape in the early 1800s under a dim yellow hazy sky, ruined crops in cold fields, gloomy summer", "1816년, 여름이 없던 해", False),
     ("c11", "the upper atmosphere seen from high above the Earth, a thin hazy veil of sulfuric aerosol spread around the planet dimming the sunlight, cold blue tones", "햇빛을 가린 얇은 막", False),
     ("c12", "a tropical forest turned cold and gray, leafless trees dusted with ash, a weak pale sun behind thick haze, frost on the ground", "화산 겨울", False),
-    ("c13", "a portrait of a thoughtful American anthropologist in his fifties in a 1990s university office full of books and stone tools, studying an ash sample in a glass jar, warm lamp light", "1998년, 앰브로즈의 가설", True),
+    ("c13", "close-up of two hands holding a small glass jar of gray volcanic ash above a wooden desk with open books and a few stone tools, a 1990s university office softly blurred behind, warm lamp light, no face visible", "1998년, 앰브로즈의 가설", "now"),
     ("c14", "a lonely small band of a few people walking across a cold bleak plain under a dark sky, carrying spears and bundles, wind blowing ash", "수천 명으로 줄었다는 인류", True),
     ("c15", "an hourglass shape made of glowing particles: many particles at the top, very few passing through the narrow middle, many again at the bottom, dark background, scientific concept art", "유전자 '병목'", False),
     ("c16", "a family group of chimpanzees in a lush African forest, sitting together on branches and the ground, realistic wildlife photography style", "숲 하나의 침팬지 무리", False),
-    ("c17", "a crowd of diverse modern people from many ethnic backgrounds walking in a busy city square, seen from above, daylight", "생각보다 서로 닮은 인류", True),
+    ("c17", "a crowd of diverse modern people from many ethnic backgrounds walking in a busy city square, seen from above, daylight", "생각보다 서로 닮은 인류", "now"),
     ("c18", "a dry rocky river valley in southern India under hot sunlight, low scrub, red earth, an archaeological excavation trench with string grid lines", "인도 줄라푸람 유적", False),
-    ("c19", "archaeologists in a deep excavation trench carefully brushing soil next to a pale volcanic ash layer, layered soil walls, bright daylight", "화산재층을 파는 고고학자들", True),
-    ("c20", "close-up of several Middle Paleolithic stone tools: flakes and Levallois points made of stone, laid on a cloth in two rows, museum lighting", "재 아래와 위의 비슷한 석기", False),
-    ("c21", "a small group of people knapping stone tools beside a river in a dry Indian landscape, sun shining through light haze", "폭발 뒤에도 살았던 사람들", True),
-    ("c22", "a research boat on a vast calm African lake with mountains on the far shore, scientists lowering a long sediment core tube into the water, morning light", "말라위 호수의 퇴적층 조사", True),
-    ("c23", "a long split sediment core lying on a laboratory table showing fine colored layers of mud, a microscope beside it, clean lab lighting", "호수 바닥 진흙 속 기록", False),
+    ("c19", "modern archaeologists in sun hats and field clothes in a deep excavation trench carefully brushing soil next to a pale volcanic ash layer, layered soil walls, bright daylight", "화산재층을 파는 고고학자들", "now"),
+    ("c20", "close-up of several Middle Paleolithic stone tools: sharp flint flakes and pointed Levallois points with clear chipped knapping scars and sharp edges, laid on a cloth in two rows, museum lighting", "재 아래와 위의 비슷한 석기", False),
+    ("c21", "a small group of men and women sitting beside a river in a dry Indian landscape, knapping stone tools by striking a stone core with a round hand-held hammerstone, no handles, sun shining through light haze", "폭발 뒤에도 살았던 사람들", True),
+    ("c22", "modern scientists on a small research boat on a vast calm African lake with mountains on the far shore, scientists lowering a long sediment core tube into the water, morning light", "말라위 호수의 퇴적층 조사", "now"),
+    ("c23", "a long half-cylinder lake sediment core lying in a plastic tray on a laboratory table, showing many fine thin layers of brown, olive and gray mud, a microscope beside it, clean lab lighting", "호수 바닥 진흙 속 기록", False),
     ("c24", "microscope view of tiny sharp glassy volcanic ash shards, transparent and curved, on a dark background, scientific microscope image", "눈에 안 보이는 화산 유리 조각", False),
     ("c25", "a rugged rocky coastline in South Africa with sea caves in the cliffs, ocean waves crashing, golden afternoon light", "남아프리카 피너클 포인트", False),
-    ("c26", "inside a sea cave rock shelter on the coast, a group of people sitting around a small fire, cooking shellfish, the ocean visible through the cave mouth", "바닷가 동굴에서 산 사람들", True),
+    ("c26", "inside a sea cave rock shelter on the coast, a family group of men, women and children sitting around a small fire, roasting mussels on hot stones at the edge of the fire, the ocean visible through the cave mouth", "바닷가 동굴에서 산 사람들", True),
     ("c27", "people gathering mussels and shellfish on rocky tidal pools at low tide, coastline, bright day", "바다가 준 먹을거리", True),
     ("c28", "a dry savanna landscape in northwestern Ethiopia with a seasonal river that has shrunk into a chain of small pools, acacia trees, hot dry season", "에티오피아 신파-메테마 유적", False),
     ("c29", "people catching fish by hand and with simple baskets in a shallow shrinking river pool during the dry season, savanna around them", "마른 계절, 웅덩이의 물고기", True),
     ("c30", "a small group of people walking along a riverbank in a line through a dry savanna, following the river, long shadows, evening", "강을 따라 옮겨 간 사람들", True),
     ("c31", "close-up of a few small triangular stone points on a dark cloth, tiny and finely made, museum lighting", "작은 돌 화살촉", False),
-    ("c32", "a map-like painted view of Africa and Arabia from high above, a faint glowing path of tiny dots leaving northeastern Africa toward Arabia, artistic, no text", "아프리카를 떠난 작은 무리", False),
-    ("c33", "a small group of people crossing a narrow strait in simple boats at dawn, a distant coastline ahead, calm sea", "작은 무리에서 퍼져 나간 인류", True),
-    ("c34", "a DNA double helix glowing softly above a field of ancient stone tools, scientific concept art, dark background", "아직 끝나지 않은 논쟁", False),
-    ("c35", "a group of people sharing food around a campfire at night under a starry sky, warm firelight, children and elders together", "서로 나눈 사람들", True),
-    ("c36", "a person carefully shaping a stone blade with a bone tool, close view of hands and the tool, firelight", "도구를 만든 손", True),
+    ("c32", "satellite view from orbit of the Horn of Africa and the Arabian Peninsula separated by the narrow Red Sea strait, desert colors, blue sea, realistic Earth photography style", "아프리카를 떠난 작은 무리", False),
+    ("c33", "a small group of men and women kneeling on a simple raft made of lashed logs, paddling across a narrow strait at dawn, a distant coastline ahead, calm sea", "작은 무리에서 퍼져 나간 인류", True),
+    ("c34", "a softly glowing DNA double helix floating in darkness above an ancient human skull resting on sand, scientific concept art", "아직 끝나지 않은 논쟁", False),
+    ("c35", "a band of men, women, children and elders, all dark-skinned and all wearing animal hides, sharing roasted meat by hand around a campfire at night under a starry sky, warm firelight", "서로 나눈 사람들", True),
+    ("c36", "close view of two hands pressing a pointed antler tool against the edge of a gray flint stone blade to flake it, small stone chips falling, firelight", "도구를 만든 손", True),
     ("c37", "a long line of people migrating across a wide landscape at sunrise, carrying belongings, a river and distant hills ahead, hopeful", "옮겨 다니며 버틴 인류", True),
     ("c38", "aerial view of Yellowstone geothermal landscape: a colorful hot spring with orange and blue rings, steam rising, forest around", "옐로스톤의 지금", False),
-    ("c39", "scientists in a modern volcano monitoring room looking at screens with seismic graphs, a volcano visible through the window", "화산을 지켜보는 과학자들", True),
+    ("c39", "scientists in a modern volcano monitoring room looking at screens with seismic graphs, a volcano visible through the window", "화산을 지켜보는 과학자들", "now"),
     ("c40", "a calm sunrise over the huge caldera lake with green mountains around it, peaceful fishing boats on the water, warm golden light", "다시 평화로운 토바 호수", False),
 ]
 
@@ -243,7 +244,7 @@ def main():
     cmd, folder = sys.argv[1], sys.argv[2]
     if cmd == "job":
         items = [{"id": cid, "width": 1024, "height": 576, "seed": 800 + int(cid[1:]),
-                  "prompt": f"{STYLE}. Scene: {desc}." + (f" {PEOPLE}." if people else "") +
+                  "prompt": f"{STYLE}. Scene: {desc}." + (f" {NOW}." if people == "now" else f" {PEOPLE}." if people else "") +
                             " Cinematic composition, full-bleed image, no border, no frame, no paper edges. No text, no letters, no labels, no numbers."}
                  for cid, desc, _, people in CUTS]
         os.makedirs(folder, exist_ok=True)
