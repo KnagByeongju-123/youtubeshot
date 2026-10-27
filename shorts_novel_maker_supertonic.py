@@ -262,8 +262,8 @@ UI_TABS = [
 ]
 
 THUMB_STYLES = ["자동(분위기에 맞춰)", "기본(사진 꽉 + 큰 글자)", "반분할(글 패널 + 사진)", "노랑 패널(고대비)", "시네마 띠",
-                "뉴스 속보", "미스터리 다크", "빨간 강조(원 + 화살표)",
-                "파스텔 하단 띠(감성)", "상단 큰 질문", "좌측 세로 띠", "하단 그라데이션(깔끔)", "메모지(손글씨 느낌)",
+                "뉴스 속보", "미스터리 다크",
+                "상단 큰 질문", "좌측 세로 띠", "하단 그라데이션(깔끔)", "메모지(손글씨 느낌)",
                 "오려 붙이기(누끼 + 큰 글자)", "콜라주 3장(사선 분할)", "원형 컷 2장", "폴라로이드 콜라주"]   # 요즘 유튜브에서 많이 쓰는 썸네일 스타일 (뒤 4개 = 썸네일_합성.py: 관련 사진을 오리고 잘라 붙임)
 
 # 허구 이야기 그림 스타일 (이름 → 그림 AI에 주는 영어 지시). 실제 작품·작가 이름은 쓰지 않고 특징으로 묘사
@@ -280,6 +280,10 @@ IMAGE_STYLES = {
     "레트로 로봇 애니": "1970s Korean retro giant robot animation style, bold mechanical designs, dramatic heroic poses, cel shaded, vintage poster colors, action scene",
     "동화책 수채화": "children's picture book illustration, soft watercolor texture, warm gentle colors, rounded friendly shapes",
     "애니 수채화풍": "children's picture book illustration, soft watercolor texture, warm gentle colors, rounded friendly shapes",
+    "다큐 수채화": "realistic historical watercolor painting, fine ink outlines, transparent layered watercolor washes, soft natural colors, visible paper texture, documentary illustration, realistic anatomy and proportions",
+    "빈티지 몽환 그림책": "vintage storybook illustration, aged textured paper with grain and speckles, muted dusty colors, deep dark blue-grey night sky with small glowing golden stars, whimsical surreal dreamlike mood, soft painterly shading, quiet poetic atmosphere",
+    "구아슈 밤 그림책": "gouache picture book illustration, opaque matte gouache paint with visible brush texture, deep navy starry night sky full of tiny stars, warm glowing golden window lights, soft rounded shapes, calm cozy lullaby mood",
+    "종이 질감 플랫 그림책": "flat children's picture book illustration, simple cut-paper shapes with soft paper and pencil texture, muted pastel colors, minimal clean composition with gentle negative space, charming storybook characters, soft grainy print texture",
     "파스텔 감성 일러스트": "soft pastel Korean emotional illustration, delicate thin warm-brown pencil line art, light transparent watercolor and colored-pencil coloring, low saturation pastel palette (peach, mint, cream), hazy warm sunlight glow, airy dreamy atmosphere, gentle rosy cheeks, simple cute faces, nostalgic summer mood, paper texture",
     "애니 일러스트(요즘)": "modern Japanese anime illustration, high-quality light novel cover art, large detailed glossy eyes with layered highlights, soft blush on cheeks, very fine detailed flowing hair strands with soft shading, clean thin line art, soft cel shading with gentle gradients, dreamy shallow depth of field with bokeh light particles, soft diffused lighting, delicate pastel color grading",
     "옛날 만화책(세피아 펜화)": "vintage 1970s-80s printed comic book illustration, bold black ink pen line art with fine cross-hatching, muted sepia and earth-tone coloring, visible halftone dot texture, aged yellowed paper, slightly faded old print look",
@@ -538,7 +542,7 @@ FIELDS = [
     ("영상", "fps", "FPS(60=부드러움, 30=빠른 제작)", "int", 30),
     ("영상", "quality", "화질(crf 18=최고·23=권장·28=작게)", "int", 23),
     ("영상", "scene_parts", "자막형: 장면별로 나눠 만들기(고친 장면만 다시·끝난 장면 유지)", "choice:on,off", "on"),
-    ("영상", "scene_trans", "장면 사이 전환 효과(장면별 제작 때)", "choice:페이드,밀어내기,덮기,닦아내기,확대,시대전환(느린 디졸브),섞어서,없음", "페이드"),
+    ("영상", "scene_trans", "장면 사이 전환 효과(장면별 제작 때)", "choice:자동(장면에 맞게),전진(확대하며 다음 장면),페이드,디졸브,검정,원형,빠른페이드,밀어내기,덮기,닦아내기,확대,시대전환(느린 디졸브),섞어서,없음", "자동(장면에 맞게)"),
     ("영상", "audio_out", "소리 저장 방식", "choice:MP4에 포함,MP4에 포함+MP3 따로,MP3만 따로(무음 MP4)", "MP4에 포함+MP3 따로"),
     ("영상", "thumb_style", "유튜브 썸네일 스타일(자동 저장용)", "choice:" + ",".join(THUMB_STYLES), THUMB_STYLES[0]),
     ("영상", "genre_auto", "장문: 소재 고르면 자막·그림 설정 자동", "choice:on,off", "on"),
@@ -3162,6 +3166,10 @@ IMAGE_STYLES_KO = {   # Claude·Gemini 에 한국어로 줄 화풍 설명
     "크라프트지 손그림(귀여운 낙서)": "갈색 크라프트지(재생지) 위에 그린 아이 그림 같은 귀여운 손그림, 납작하게 칠한 불투명 과슈 물감과 검은 펜 테두리, 점 같은 눈, 분홍 볼, 작은 웃음, 줄무늬·물방울무늬 옷, 크레용 질감, 분홍·파랑·노랑·흰색·검정 위주의 소박한 색, 종이 질감이 보이게.",
     "동화책 수채화": "부드러운 수채화 그림책 일러스트, 따뜻하고 은은한 색, 종이 질감.",
     "애니 수채화풍": "부드러운 수채화 그림책 일러스트, 애니메이션 영화 같은 따뜻하고 차분한 색감, 종이 질감.",
+    "다큐 수채화": "사실적인 역사 수채화, 가는 잉크 선과 맑게 겹친 물감, 종이 질감. 장문 다큐 기본 화풍(사용자 결정 2026-10-25).",
+    "빈티지 몽환 그림책": "낡은 종이 질감의 빈티지 그림책, 어두운 밤하늘과 작은 금빛 별, 몽환적이고 시적인 분위기.",
+    "구아슈 밤 그림책": "불투명 구아슈 물감 그림책, 짙은 남색 별밤과 따뜻한 창문 불빛, 포근한 자장가 분위기.",
+    "종이 질감 플랫 그림책": "오려 붙인 듯한 평평한 그림책, 종이·연필 질감, 은은한 파스텔, 여백 많은 단순한 구도.",
     "웹툰": "한국 웹툰 스타일, 깔끔한 선, 셀 채색, 밝은 파스텔 색.",
     "지브리풍 손그림 애니": "손으로 그린 일본 애니메이션 영화 느낌, 수채화 배경, 부드러운 자연광.",
     "사실 묘사": "사실적인 영화 장면 같은 디지털 페인팅, 자연스러운 빛.",
@@ -3727,7 +3735,7 @@ def description_text(pkg, story, portrait=False, max_sources=8):
 def best_photo(story):
     """대본 속 사진 중 가장 큰(해상도 높은) 사진 → PIL 이미지 또는 None"""
     best, area = None, 0
-    for p, _ in story_photos(story):
+    for p, _ in story_photos(story, no_diagram=True):
         p = p if os.path.isabs(p) else os.path.join(BASE, p)
         try:
             with Image.open(p) as im:
@@ -3825,7 +3833,7 @@ def make_thumbnails(model, base, title, story, category, s, log=None, keep_final
         download_free_font("ofl/blackhansans/BlackHanSans-Regular.ttf")
     except Exception:
         pass
-    photos = story_photos(story)
+    photos = story_photos(story, no_diagram=True) or story_photos(story)
     plist = "\n".join(f"{i + 1}. {cap}" for i, (_, cap) in enumerate(photos)) or "(사진 없음)"
     first = re.split(r"(?<=[.!?…])\s+", re.sub(r"\s+", " ", body.split("\n## ", 1)[0]).strip(), 1)[0][:120]
     promise = (f"\n\n[영상 첫 5초 - 썸네일이 이 장면과 맞아야 함] {first}\n(썸네일 문구·사진은 영상이 첫 5초에 바로 보여 주는 이 대상·숫자와 같은 약속이어야 한다. "
@@ -3834,6 +3842,10 @@ def make_thumbnails(model, base, title, story, category, s, log=None, keep_final
     vs = [x for x in (d.get("variants") or []) if isinstance(x, dict) and x.get("big")]
     if not vs:
         raise RuntimeError("썸네일 문구를 만들지 못했습니다")
+    if str(s.get("thumb_title_lock", "on")) == "on":      # 규칙(제목 통일): 썸네일 글씨 = 영상 제목 낱말 (작은 띠 + 큰 글씨 두 줄을 이어 읽으면 제목)
+        tl = title_thumb_words(title)
+        for v in vs:
+            v.update(tl)
     size = (1080, 1920) if portrait else (1280, 720)
     fallback = best_photo(story)
 
@@ -3873,7 +3885,7 @@ def make_thumbnails(model, base, title, story, category, s, log=None, keep_final
             for k in (len(photos) // 4 + 1, len(photos) // 2 + 1, len(photos) * 3 // 4 + 1):
                 if k != main_k and k not in ks and len(ks) < 3:
                     ks.append(k)
-        v["_photos"] = [photo_of(v)] + [im for im in (photo_k(k) for k in ks[:3]) if im is not None]
+        v["_photos"] = distinct_photos([photo_of(v)] + [photo_k(k) for k in ks[:3]] + [photo_k(k) for k in spread_order(len(photos), main_k)], 4)   # 규칙: 여러 장 쓰는 디자인은 사진이 모두 달라야 함
         v["_main_k"], v["_ks"] = main_k, ks[:3]       # 새 썸네일 엔진 후보·편집기용 (사진 번호)
     user_style = str(s.get("thumb_style") or THUMB_STYLES[0])
     cands = []   # (설명, PIL)
@@ -4004,12 +4016,66 @@ def mp4_scene_thumbs(base, title, v, log=None):
         log("  🎞 영상 장면 썸네일 실패(건너뜀): " + (str(e).splitlines() or [type(e).__name__])[0][:80])
 
 
-def story_photos(story):
-    """본문의 사진 줄 → [(경로, 설명)]"""
+def _dhash(im, n=8):
+    g = im.convert("L").resize((n + 1, n), Image.LANCZOS)
+    a = np.asarray(g, dtype=np.int16)
+    return (a[:, 1:] > a[:, :-1]).flatten()
+
+
+def distinct_photos(ims, k=4, min_dist=12):
+    """사진 목록에서 서로 다르게 보이는 것만 앞에서부터 k 장 (같은 사진·거의 같은 그림은 뺌 — 썸네일 콜라주·원형 컷·폴라로이드용)"""
+    out, hs = [], []
+    for im in ims:
+        if im is None:
+            continue
+        h_ = _dhash(im)
+        if all(int((h_ != h0).sum()) >= min_dist for h0 in hs):
+            out.append(im)
+            hs.append(h_)
+        if len(out) >= k:
+            break
+    return out
+
+
+def spread_order(n, main_k=0):
+    """사진 번호 1..n 을 영상 전체에 고르게 퍼지는 순서로 (대표 사진 번호는 뺌)"""
+    order, seen = [], {main_k}
+    for frac in (0.5, 0.25, 0.75, 0.12, 0.38, 0.62, 0.88, 0.05, 0.95):
+        k = min(n, max(1, int(round(frac * n)) or 1))
+        if k not in seen:
+            seen.add(k)
+            order.append(k)
+    return order
+
+
+def title_thumb_words(title):
+    """제목 → 썸네일 글씨 {small, big, big2, emph}. 쉼표가 있으면 앞 = 작은 띠, 뒤 = 큰 글씨.
+    없으면 끝에서부터 8자 넘게 될 때까지를 큰 글씨로, 나머지를 작은 띠로. 큰 글씨는 길이가 비슷하게 두 줄로 나눔"""
+    t = re.sub(r"\s+", " ", str(title or "")).strip()
+    parts = re.split(r",(?!\d{3})", t, 1)                 # 숫자 속 쉼표(5,200)에서는 나누지 않음 (구멍 띠: '구멍 5' / '200개'로 잘렸음)
+    if len(parts) == 2:
+        small, rest = [x.strip() for x in parts]
+    else:
+        ws = t.split(" ")
+        k = len(ws) - 1
+        while k > 0 and len("".join(ws[k:])) < 8:
+            k -= 1
+        small, rest = " ".join(ws[:k]), " ".join(ws[k:])
+    rw = rest.split(" ")
+    if len(rw) >= 2:
+        i = min(range(1, len(rw)), key=lambda j: abs(len("".join(rw[:j])) - len("".join(rw[j:]))))
+        big, big2 = " ".join(rw[:i]), " ".join(rw[i:])
+    else:
+        big, big2 = rest, ""
+    return {"small": small, "big": big, "big2": big2, "emph": big2 or big}
+
+
+def story_photos(story, no_diagram=False):
+    """본문의 사진 줄 → [(경로, 설명)]. no_diagram: 글자 많은 설명 도표(출처 칸에 '도표')는 뺌 — 썸네일 배경용 (코피알레: 도표가 배경으로 뽑혔음)"""
     out = []
     for ln in (story or "").split("\n"):
         m = parse_media(ln)
-        if m:
+        if m and not (no_diagram and "도표" in " ".join(str(x or "") for x in m[1:3])):
             out.append((m[0], m[1] or os.path.basename(m[0])))
     return out
 
@@ -4086,7 +4152,7 @@ def _thumb_basic(v, s, photo_im=None, size=None, font_path=None):
             y += lh
     return out.convert("RGB")
 
-THUMB_AUTO = {"충격": "빨간 강조(원 + 화살표)", "미스터리": "미스터리 다크", "감동": "시네마 띠", "정보": "반분할(글 패널 + 사진)"}
+THUMB_AUTO = {"충격": "노랑 패널(고대비)", "미스터리": "미스터리 다크", "감동": "시네마 띠", "정보": "반분할(글 패널 + 사진)"}
 
 
 def _thumb_compose(style, v, s, photo_im, size, fp):
@@ -4098,6 +4164,7 @@ def _thumb_compose(style, v, s, photo_im, size, fp):
         photos = [p for p in (v.get("_photos") or []) if p is not None] or [photo_im]
         if photo_im is not None and photos[0] is not photo_im:
             photos = [photo_im] + [p for p in photos if p is not photo_im]
+        photos = distinct_photos(photos, 4) or photos      # 대표 사진이 다른 객체로 다시 열려 두 번 들어가던 것 막음 (모두 다른 사진)
         return mod.render(style, v, s, photos, size, fp, H)
     except Exception as e:
         print("썸네일 합성 실패 → 기본 디자인:", (str(e).splitlines() or [type(e).__name__])[0][:100])
@@ -4205,6 +4272,35 @@ def _thumb_fit_font(fp, lines, maxw, start, min_size=28):
     return load_font(fp, size_)
 
 
+def _outline_text(d, xy, text, font, fill, sw, stroke_fill):
+    """테두리 글자: 글자 모양을 sw 만큼 두껍게 부풀린 판으로 테두리를 그림.
+    (PIL 의 stroke_width 는 검은고딕 같은 글꼴에서 'ㅇ' 안쪽 구멍 테두리가 빠지는 일이 있음 — 사용자 지적 2026-10-26)"""
+    if not sw:
+        d.text(xy, text, font=font, fill=fill)
+        return
+    img = getattr(d, "_image", None)
+    if img is None:
+        d.text(xy, text, font=font, fill=fill, stroke_width=sw, stroke_fill=stroke_fill)
+        return
+    x0, y0, x1, y1 = d.textbbox(xy, text, font=font)
+    pad = sw + 2
+    bx, by = int(x0) - pad, int(y0) - pad
+    m = Image.new("L", (int(x1 - x0) + pad * 2, int(y1 - y0) + pad * 2), 0)
+    ImageDraw.Draw(m).text((xy[0] - bx, xy[1] - by), text, font=font, fill=255)
+    big = m
+    r = 0
+    while r < sw:                              # 3칸 최대값 거르기를 되풀이 = 글자를 sw 만큼 둥글게 부풀림
+        step = 2 if sw - r >= 2 else 1
+        big = big.filter(ImageFilter.MaxFilter(step * 2 + 1))
+        r += step
+    col = stroke_fill if not isinstance(stroke_fill, str) else hex_rgb(stroke_fill)
+    a_ = col[3] if len(col) > 3 else 255
+    layer = Image.new("RGBA", m.size, tuple(col[:3]) + (255,))
+    mask = big.point(lambda v: v * a_ // 255)
+    img.paste(layer if img.mode == "RGBA" else layer.convert(img.mode), (bx, by), mask)
+    d.text(xy, text, font=font, fill=fill)
+
+
 def _thumb_lines(d, lines, emph, f_, x0, y, avail, c_big, c_emph, align="center", stroke=True, shadow=True, stroke_col="#000000"):
     """큰 글자 여러 줄 (강조 단어만 다른 색). 마지막 y 돌려줌"""
     lh = int(f_.size * 1.12)
@@ -4221,8 +4317,8 @@ def _thumb_lines(d, lines, emph, f_, x0, y, avail, c_big, c_emph, align="center"
             if not seg:
                 continue
             if shadow and sw:
-                d.text((cx + sw * 0.6, y + sw * 0.8), seg, font=f_, fill=(0, 0, 0, 170), stroke_width=sw, stroke_fill=(0, 0, 0, 170))
-            d.text((cx, y), seg, font=f_, fill=col, stroke_width=sw, stroke_fill=stroke_col)
+                _outline_text(d, (cx + sw * 0.6, y + sw * 0.8), seg, f_, (0, 0, 0, 170), sw, (0, 0, 0, 170))
+            _outline_text(d, (cx, y), seg, f_, col, sw, stroke_col)
             cx += f_.getlength(seg)
         y += lh
     return y
@@ -5145,6 +5241,7 @@ class SubtitleRenderer:
                 im = imcache[med[0]]
                 if im is not None:
                     self.images.append((im, med[1]))
+                    self.img_credits = getattr(self, "img_credits", []) + [med[2]]     # 사진 출처(오른쪽 위 꼬리표 둘째 줄)
                     self.img_paths = getattr(self, "img_paths", []) + [resolve_media(med[0]) or med[0]]
                     cur_img = len(self.images) - 1
                 continue
@@ -5770,6 +5867,95 @@ class SubtitleRenderer:
             self._img_cache[idx] = (big, mask, blur)
         return self._img_cache[idx]
 
+    def _face_box(self, idx):
+        """사진 속 얼굴들을 감싸는 상자 (0~1 비율) 또는 None. 확대·이동할 때 얼굴이 화면 밖으로 나가지 않게 씀
+        (사용자 지적 2026-10-25: 인물 사진을 훑을 때 몸만 나오고 얼굴이 잘림). 얼굴 찾기 = OpenCV YuNet (models/face_detection_yunet_2023mar.onnx)"""
+        cache = self.__dict__.setdefault("_face_box_cache", {})
+        if idx in cache:
+            return cache[idx]
+        box = None
+        mp = os.path.join(BASE, "models", "face_detection_yunet_2023mar.onnx")
+        try:
+            import cv2
+            if os.path.exists(mp):
+                im = np.asarray(self.images[idx][0].convert("RGB"))[:, :, ::-1]
+                h, w = im.shape[:2]
+                k = 640 / max(h, w)
+                sm = cv2.resize(im, (max(1, int(w * k)), max(1, int(h * k))))
+                det = cv2.FaceDetectorYN.create(mp, "", (sm.shape[1], sm.shape[0]), 0.6)
+                _, f = det.detect(sm)
+                if f is not None and len(f):
+                    f = [r for r in f if r[2] * r[3] >= 0.0015 * sm.shape[0] * sm.shape[1]]     # 아주 작은 얼굴(군중)은 빼고
+                    if f:
+                        big_a = max(r[2] * r[3] for r in f)
+                        f = [r for r in f if r[2] * r[3] >= 0.3 * big_a]                         # 주인공 얼굴(가장 큰 것과 비슷한 것)만
+                        x0 = min(r[0] for r in f); y0 = min(r[1] for r in f)
+                        x1 = max(r[0] + r[2] for r in f); y1 = max(r[1] + r[3] for r in f)
+                        box = (x0 / sm.shape[1], y0 / sm.shape[0], x1 / sm.shape[1], y1 / sm.shape[0])
+        except Exception as e:
+            print("얼굴 찾기 건너뜀:", e)
+        cache[idx] = box
+        return box
+
+    def _layer_spec(self, idx):
+        """그림 옆에 <그림이름>.layers.json 이 있으면 레이어 움직임 설정을 읽음 (레이어_움직임.py 와 같은 움직임 이름)
+        {"bg": "c01_bg.png", "layers": [{"png": "c01_ship.png", "move": "날아감:0.24,-0.2,0.5"}]}  — 경로는 json 기준"""
+        cache = self.__dict__.setdefault("_layer_cache", {})
+        if idx in cache:
+            return cache[idx]
+        spec = None
+        paths = getattr(self, "img_paths", [])
+        if idx < len(paths) and not getattr(self, "slide", False):
+            jp = os.path.splitext(paths[idx])[0] + ".layers.json"
+            if os.path.exists(jp):
+                try:
+                    import importlib.util as _iu
+                    _sp = _iu.spec_from_file_location("layer_motion", os.path.join(os.path.dirname(os.path.abspath(__file__)), "레이어_움직임.py"))
+                    LM = _iu.module_from_spec(_sp)
+                    _sp.loader.exec_module(LM)
+                    d = json.load(open(jp, encoding="utf-8"))
+                    base = os.path.dirname(jp)
+                    bg = Image.open(os.path.join(base, d["bg"])).convert("RGB")
+                    lays = []
+                    for L in d.get("layers") or []:
+                        im = Image.open(os.path.join(base, L["png"])).convert("RGBA").resize(bg.size, Image.LANCZOS)
+                        bb = im.getbbox() or (0, 0, bg.width, bg.height)
+                        mv, cut = LM.edge_safe(bb, bg.size, LM.parse(L.get("move", "확대")))   # 잘린 누끼가 단면을 드러내면 확대로
+                        if cut:
+                            print(f"레이어 움직임: {os.path.basename(jp)} 누끼가 {cut} 가장자리에서 잘려 있어 확대로 바꿈")
+                        lays.append((im.crop(bb), ((bb[0] + bb[2]) / 2, (bb[1] + bb[3]) / 2), mv))
+                    spans = [(s_["t0"], s_["t1"]) for s_ in getattr(self, "shots", []) if s_.get("img") == idx]
+                    g0, g1 = (min(a for a, _ in spans), max(b for _, b in spans)) if spans else (0.0, 1.0)
+                    spec = {"bg": bg, "layers": lays, "g0": g0, "g1": g1, "ease": LM.ease}
+                except Exception as e:
+                    print("레이어 움직임 설정을 못 읽음:", jp, e)
+        cache[idx] = spec
+        return spec
+
+    def _layered_big(self, idx, big, t, spec):
+        """레이어 움직임 한 장: 배경(빈자리 채운 그림)을 big 크기로 + 누끼 레이어를 시간에 맞춰 이동·확대·회전해 얹음"""
+        key = ("layer_bg", idx)
+        if key not in self._img_cache:
+            self._img_cache[key] = spec["bg"].resize(big.size, Image.LANCZOS).convert("RGBA")
+        frame = self._img_cache[key].copy()
+        sc = big.width / spec["bg"].width
+        q = min(1.0, max(0.0, (t - spec["g0"]) / max(0.1, spec["g1"] - spec["g0"])))
+        e = spec["ease"](q)
+        for obj, (ox, oy), (dx, dy, k, rot, shake) in spec["layers"]:
+            s_ = (1 + (k - 1) * e) * sc
+            x = (ox + dx * spec["bg"].width * e) * sc
+            y = (oy + dy * spec["bg"].height * e) * sc
+            if shake == 1:
+                x += np.sin(t * 40) * 6 * sc * (1 - q)
+                y += np.cos(t * 55) * 5 * sc * (1 - q)
+            elif shake == 2:
+                y += np.sin(q * np.pi * 2) * 10 * sc
+            o = obj.resize((max(1, int(obj.width * s_)), max(1, int(obj.height * s_))), Image.BICUBIC)
+            if rot:
+                o = o.rotate(rot * e, resample=Image.BICUBIC, expand=True)
+            frame.alpha_composite(o, (int(x - o.width / 2), int(y - o.height / 2)))
+        return frame.convert("RGB")
+
     def _shot_crop(self, sh, t):
         """장면 sh 의 t 시점 사진 (움직임 적용)"""
         x0, y0, x1, y1 = self.img_box
@@ -5809,6 +5995,9 @@ class SubtitleRenderer:
                     self._img_cache.pop(next(iter(self._img_cache)))
                 self._img_cache[key] = z
             return self._img_cache[key], mask
+        lay = self._layer_spec(sh["img"])
+        if lay:                                       # 레이어 움직임(애니메이션 연재 전용): 배경 + 누끼 레이어를 이 시점 모습으로 합침
+            big = self._layered_big(sh["img"], big, t, lay)
         z0, z1, ax, bx, ay, by = sh["m"]
         p = min(1.0, max(0.0, (t - sh["t0"]) / max(0.1, sh["t1"] - sh["t0"])))
         p = 0.5 - 0.5 * np.cos(np.pi * p)             # 부드럽게 시작·끝
@@ -5824,8 +6013,18 @@ class SubtitleRenderer:
         sx, sy = (big.width - cw) / 2, (big.height - ch) / 2
         cx = big.width / 2 + (ax + (bx - ax) * p) * sx
         cy = big.height / 2 + (ay + (by - ay) * p) * sy
+        fb = self._face_box(sh["img"]) if not lay else None
+        if fb:                                        # 얼굴이 잘리지 않게: 얼굴 상자가 잘라낼 칸 안에 들어오도록 카메라 위치를 당김
+            fx0, fy0, fx1, fy1 = fb[0] * big.width, fb[1] * big.height, fb[2] * big.width, fb[3] * big.height
+            mx, my = cw * 0.06, ch * 0.08
+            lo, hi = fx1 + mx - cw / 2, fx0 - mx + cw / 2
+            cx = min(max(cx, lo), hi) if lo <= hi else (fx0 + fx1) / 2
+            lo, hi = fy1 + my - ch / 2, fy0 - my + ch / 2
+            cy = min(max(cy, lo), hi) if lo <= hi else (fy0 + fy1) / 2
+            cx = min(max(cx, cw / 2), big.width - cw / 2)
+            cy = min(max(cy, ch / 2), big.height - ch / 2)
         l, tp = cx - cw / 2, cy - ch / 2
-        dbig = self._depth_for(sh["img"], big.size) if (getattr(self, "depth_on", False) and z < 1.22) else None   # 확대(줌)된 장면은 2.5D 안 함 (가장자리 겹침이 더 잘 보임)
+        dbig = self._depth_for(sh["img"], big.size) if (getattr(self, "depth_on", False) and z < 1.22 and not lay) else None   # 확대(줌)된 장면은 2.5D 안 함 (가장자리 겹침이 더 잘 보임)
         if dbig is None:
             return extent_resize(big, (bw, bh), (l, tp, l + cw, tp + ch)), mask
         # 2.5D 카메라 무빙: 장면이 진행되는 동안 한쪽으로 천천히 돌아가며(드리프트) + 7초 주기로 살짝 흔들림. 가까운 것은 많이, 먼 것은 조금 밀림
@@ -5900,6 +6099,12 @@ class SubtitleRenderer:
             row = np.clip((e * (w + fe) - xs) / fe, 0, 1)
             mk = Image.fromarray((np.repeat(row[None, :], h, 0) * 255).astype(np.uint8), "L")
             return Image.composite(b, a, mk)
+        if kind.startswith("전진"):                 # 전진(사용자 요청 2026-10-26): 앞 배경이 크게 확대되며(카메라가 앞으로 날아 들어감) 그 안에서 다음 배경이 서서히 드러남 → 계속 앞으로 나아가는 느낌
+            def zf(img, z):
+                cw, ch = w / z, h / z
+                return extent_resize(img, (w, h), ((w - cw) / 2, (h - ch) / 2, (w + cw) / 2, (h + ch) / 2))
+            q = float(smoothstep(e))
+            return Image.blend(zf(a, 1 + 0.9 * e * e), zf(b, 1.06 - 0.06 * q), q)
         if kind.startswith("확대"):                 # 확대: 앞 장은 다가오며 사라지고, 새 장은 살짝 멀리서 다가옴
             def zm(img, z):
                 cw, ch = w / z, h / z
@@ -5911,7 +6116,15 @@ class SubtitleRenderer:
                 return extent_resize(img, (w, h), ((w - cw) / 2, (h - ch) / 2, (w + cw) / 2, (h + ch) / 2))
             z = 1 + 0.06 * e                        # 앞·뒤 사진을 같은 비율로 살짝 확대 → 피사체 위치가 유지된 채 배경만 바뀌는 듯
             return Image.blend(zc(a, z), zc(b, z), float(smoothstep(e)))
-        return Image.blend(a, b, e)                 # 페이드
+        if kind.startswith("검정"):                 # 검정: 앞 장이 어둠 속으로 사라졌다가 새 장이 떠오름 (챕터가 바뀔 때)
+            blk = Image.new("RGB", (w, h), (0, 0, 0))
+            return Image.blend(a, blk, min(1.0, e * 2)) if e < 0.5 else Image.blend(blk, b, (e - 0.5) * 2)
+        if kind.startswith("원형"):                 # 원형 열기: 가운데에서 동그랗게 새 장이 열림 (신비한 장면)
+            yy, xx = np.ogrid[:h, :w]
+            r = np.hypot(xx - w / 2, yy - h / 2) / np.hypot(w / 2, h / 2)
+            mk = np.clip((e * 1.15 - r) / 0.15, 0, 1)
+            return Image.composite(b, a, Image.fromarray((mk * 255).astype(np.uint8), "L"))
+        return Image.blend(a, b, e)                 # 페이드·디졸브·빠른 페이드 (길이만 다름)
 
     def _zoom_rect(self, idx, whole=False):
         """확대 장면이면 원본 그림에서 잘라 올 영역(사진 상자 비율에 맞춤), 아니면 None. whole=True: 그림 전체"""
@@ -6153,12 +6366,30 @@ class SubtitleRenderer:
                 while f_.getlength(cap) > maxw - fs and len(cap) > 4:
                     cap = cap[:-2] + "…"
                 pad_x, pad_y = int(fs * 0.7), int(fs * 0.38)
-                bw, bh = int(f_.getlength(cap)) + pad_x * 2, int(fs * 1.28) + pad_y * 2 - int(fs * 0.25)
+                # 둘째 줄: 사진·그림 출처 (규칙: 장문 다큐는 오른쪽 위에 사진 정보 — 작가·라이선스 / AI 그림 표시)
+                cred = ""
+                crs = getattr(self, "img_credits", [])
+                if idx < len(crs) and str(self.s.get("img_label_credit", "on")) == "on":
+                    cred = re.sub(r"\s+", " ", str(crs[idx] or "")).strip()
+                    cred = re.sub(r"No machine-readable author provided\.?\s*", "", cred).strip(" /")
+                fs2 = max(14, int(fs * 0.62))
+                f2 = load_font(self.s.get("sub_font_path") or self.s.get("font_path"), fs2)
+                cjk = "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc"
+                if re.search(r"[぀-ヿ㐀-鿿]", cred) and os.path.exists(cjk):   # 한자·일본어 작가 이름(榊 등)은 한글 글꼴에 없어 □로 나옴
+                    f2 = ImageFont.truetype(cjk, fs2)
+                while cred and f2.getlength(cred) > maxw - fs and len(cred) > 4:
+                    cred = cred[:-2] + "…"
+                w1 = int(f_.getlength(cap))
+                w2 = int(f2.getlength(cred)) if cred else 0
+                h1 = int(fs * 1.28) + pad_y * 2 - int(fs * 0.25)
+                bw, bh = max(w1, w2) + pad_x * 2, h1 + (int(fs2 * 1.35) if cred else 0)
                 im = Image.new("RGBA", (bw, bh), (0, 0, 0, 0))
                 d = ImageDraw.Draw(im)
                 d.rounded_rectangle([0, 0, bw - 1, bh - 1], radius=int(fs * 0.45), fill=(10, 12, 18, 165))
                 d.rectangle([0, int(bh * 0.18), max(3, fs // 7), int(bh * 0.82)], fill=tuple(int(v) for v in self.accent) + (235,))
                 d.text((pad_x, pad_y - int(fs * 0.12)), cap, font=f_, fill=(255, 255, 255, 240))
+                if cred:
+                    d.text((pad_x, h1 - int(fs2 * 0.35)), cred, font=f2, fill=(215, 220, 230, 220))
                 mx, my = int(W * (0.035 if port else 0.025)), int(H * (0.16 if port else 0.045))
                 if port and str(self.s.get("head_show", "보임")).startswith("안"):
                     my = int(H * 0.05)
@@ -7801,8 +8032,8 @@ def supertonic_mood(text, idx=0, total=1, settings=None):
 def supertonic_prompt(text, mood):
     """표현 태그가 유효하지 않을 수도 있으므로 재생 결과를 반드시 시청/청취 확인."""
     # 규칙: 말 시작에 '휴' 같은 한숨·숨소리·웃음소리가 나오면 안 됨 → 소리를 내는 태그(<breath>·<sad>·<laugh>)는 쓰지 않고 말 빠르기로만 분위기를 냄
-    tags = {"차분": "", "공포·긴장": "", "슬픔·감동": "",
-            "놀람·반전": "<surprise> ", "분노·갈등": "<angry> ", "밝음·유머": ""}
+    # <surprise>·<angry> 도 소리를 냄: 2화에서 '놀람' 문단의 문장마다 앞에 '플라이스'·'라' 같은 소리가 붙었음 (사용자가 들음) → 태그 안 씀
+    tags = {}
     mul = {"차분": 1.0, "공포·긴장": .89, "슬픔·감동": .92, "놀람·반전": 1.05,
            "분노·갈등": 1.02, "밝음·유머": 1.04}
     return tags.get(mood, "") + tts_clean(text), mul.get(mood, 1.0)
@@ -8911,9 +9142,54 @@ def duck_env_from_audio(a, n, duration, duck):
 
 
 TRANS_ROT = ["밀어내기", "덮기", "닦아내기", "확대"]
+TRANS_SEC = {"전진": 1.3, "페이드": 0.4, "시대": 1.8, "검정": 0.9, "디졸브": 1.0, "빠른": 0.25, "원형": 0.8}
+_TR_TIME = ("그날 밤", "다음 날", "이듬해", "며칠 뒤", "수백 년", "한편", "같은 시각", "그 시각", "새벽", "무렵", "그 뒤", "얼마 후")
+_TR_TENSE = ("그 순간", "갑자기", "비명", "끼익", "쿵", "탁,", "그때였", "번쩍")
+_TR_MYST = ("빛", "눈을 떴", "어둠", "파란", "비밀", "수수께끼", "꿈")
 
 
-def merge_parts_with_fx(parts, out, s, kind, log=None, cancel=None, work_dir=None, bgm_style=None, want_audio=True, need_mix=False):
+def auto_transitions(scenes):
+    """규칙(사용자 결정 2026-10-25): 장면 사이 전환을 내용에 맞게 자동으로 — 챕터가 바뀌면 검정, 시간이 흐르면 디졸브,
+    긴장되는 장면은 빠른 페이드, 신비한 장면은 원형 열기, 나머지는 밀기·덮기·닦기·확대·디졸브를 돌려 씀. 돌려줌: 장면마다 들어올 때의 전환"""
+    out, rot = [None], ["밀어내기", "덮기", "닦아내기", "확대", "디졸브"]
+    for k in range(1, len(scenes)):
+        sc = scenes[k]
+        first = " ".join(sc.get("lines") or [])[:60]
+        if sc.get("chapter"):
+            out.append("검정")
+        elif any(w in first for w in _TR_TIME):
+            out.append("디졸브")
+        elif any(w in first for w in _TR_TENSE):
+            out.append("빠른페이드")
+        elif any(w in first for w in _TR_MYST):
+            out.append("원형")
+        else:
+            out.append(rot[k % len(rot)])
+    return out
+
+
+def _seq_audio(seq, ff, fps, flags=0):
+    """조각 MP4 들의 소리를 조각마다 '그림 길이'에 딱 맞게 자르거나 채워 이어 붙임 (스테레오 float32).
+    -c copy 로 이으면 AAC 조각마다 앞에 0.02~0.05초 빈 소리가 끼어 조각 100개면 소리가 3초 늦어짐
+    (데니소바 10분 영상: 8분 넘어서 그림과 나레이션이 어긋났음)"""
+    out = []
+    for f in seq:
+        q = subprocess.run([ff, "-nostdin", "-v", "error", "-i", f, "-map", "0:v:0", "-c", "copy", "-f", "framemd5", "-"],
+                           stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, errors="replace", creationflags=flags)
+        fr = sum(1 for ln in (q.stdout or "").splitlines() if ln.startswith("0,"))   # 그림 장 수 (-f null 은 새 ffmpeg 에서 frame= 을 안 찍음)
+        n = int(round(fr / fps * SR)) if fr else 0
+        p = subprocess.run([ff, "-v", "error", "-i", f, "-f", "f32le", "-ac", "2", "-ar", str(SR), "-"],
+                           stdout=subprocess.PIPE, stderr=subprocess.PIPE, creationflags=flags)
+        a = np.frombuffer(p.stdout, np.float32).reshape(-1, 2) if p.returncode == 0 and p.stdout else np.zeros((0, 2), np.float32)
+        if not n:
+            n = len(a)
+        b = np.zeros((n, 2), np.float32)
+        b[:min(n, len(a))] = a[:n]
+        out.append(b)
+    return np.concatenate(out) if out else np.zeros((0, 2), np.float32)
+
+
+def merge_parts_with_fx(parts, out, s, kind, log=None, cancel=None, work_dir=None, bgm_style=None, want_audio=True, need_mix=False, plan=None):
     """나레이션이 든 조각 MP4 들을 '전환 효과'를 끼워 이어 붙이고, 배경음은 마지막에 전체에 한 번에 깔기.
     kind: 밀어내기·덮기·닦아내기·확대·페이드·섞어서·없음.  돌려줌: 섞은 소리(스테레오) 또는 None"""
     log = log or (lambda x: None)
@@ -8925,11 +9201,13 @@ def merge_parts_with_fx(parts, out, s, kind, log=None, cancel=None, work_dir=Non
     seq = []
     for k, p in enumerate(parts):
         if k > 0 and kind != "없음":
-            if kind.startswith("섞어"):
+            if kind.startswith("자동") and plan and k < len(plan) and plan[k]:
+                kk = plan[k]                                           # 자동: 장면 내용에 맞춘 전환 (auto_transitions)
+            elif kind.startswith("섞어") or kind.startswith("자동"):
                 kk = "시대전환" if k % 5 == 0 else TRANS_ROT[k % 4]   # 섞어서: 가끔(5번째 전환마다) 시대 전환
             else:
                 kk = kind
-            sec = 0.4 if kk.startswith("페이드") else (1.8 if kk.startswith("시대") else 0.6)
+            sec = next((v for k_, v in TRANS_SEC.items() if kk.startswith(k_)), 0.6)
             key = (f"{int(os.path.getmtime(parts[k - 1]))}|{os.path.getsize(parts[k - 1])}|{int(os.path.getmtime(p))}|{os.path.getsize(p)}|"
                    f"{kk}|{sec}|{W}x{H}|{s['fps']}|{s['quality']}")
             tp = os.path.join(work_dir, f"trans_{k:03d}.mp4")
@@ -8948,13 +9226,24 @@ def merge_parts_with_fx(parts, out, s, kind, log=None, cancel=None, work_dir=Non
         seq.append(p)
     log(f"🔗 조각 {len(parts)}개" + (f" + 전환 효과 {len(seq) - len(parts)}개({kind})" if len(seq) > len(parts) else "") + " 합치는 중...")
     joined = os.path.join(work_dir, "joined.mp4")
-    concat_mp4_files(seq, joined)
+    vseq = []      # 그림만 남긴 조각으로 이음: 소리가 섞인 조각은 '소리 길이'만큼 자리를 잡아 그림이 조금씩 밀림
+    for f in seq:
+        vf = os.path.join(work_dir, "v_" + os.path.basename(os.path.dirname(f))[-8:].replace(os.sep, "_") + "_" + os.path.basename(f))
+        vkey = f"{int(os.path.getmtime(f))}|{os.path.getsize(f)}"
+        try:
+            ok = os.path.exists(vf) and open(vf + ".key", encoding="utf-8").read() == vkey
+        except OSError:
+            ok = False
+        if not ok:
+            subprocess.run([ff, "-y", "-v", "error", "-i", f, "-map", "0:v:0", "-c", "copy", "-an", vf],
+                           stdout=subprocess.PIPE, stderr=subprocess.PIPE, creationflags=flags)
+            atomic_write_text(vf + ".key", vkey)
+        vseq.append(vf)
+    concat_mp4_files(vseq, joined)
     bgm_on = str(s.get("bgm_mode", "없음")) != "없음"
     mixed = None
-    if bgm_on or not want_audio or need_mix:
-        p_ = subprocess.run([ff, "-v", "error", "-i", joined, "-f", "f32le", "-ac", "2", "-ar", str(SR), "-"],
-                            stdout=subprocess.PIPE, stderr=subprocess.PIPE, creationflags=flags)
-        narr = np.frombuffer(p_.stdout, np.float32).reshape(-1, 2).copy() if p_.returncode == 0 and p_.stdout else np.zeros((0, 2), np.float32)
+    if True:      # 소리는 늘 조각마다 그림 길이에 딱 맞춰 다시 이어 붙임 (아래 _seq_audio)
+        narr = _seq_audio(seq, ff, float(s["fps"]), flags)
         n = len(narr)
         if n == 0:
             q_ = subprocess.run([ff, "-i", joined], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, errors="replace", creationflags=flags)
@@ -8980,7 +9269,7 @@ def merge_parts_with_fx(parts, out, s, kind, log=None, cancel=None, work_dir=Non
         peak = float(np.abs(mixed).max()) if n else 0.0
         if peak > 0.95:
             mixed *= 0.95 / peak
-    if want_audio and mixed is not None and bgm_on:
+    if want_audio and mixed is not None:
         wav = os.path.join(work_dir, "audio_mix.wav")
         write_wav(wav, mixed)
         cmd = [ff, "-y", "-v", "error", "-i", joined, "-i", wav, "-map", "0:v", "-map", "1:a", "-c:v", "copy", "-c:a", "aac", "-b:a", "192k",
@@ -17691,7 +17980,7 @@ class App(tk.Tk):
     # ---- 장면별로 나눠 만들기 (자막형): 고친 장면만 다시, 오류 나도 끝난 장면은 남음 ----
     SCENE_FP_SKIP = {"out_dir", "bgm_mode", "bgm_style", "bgm_volume", "bgm_seed", "bgm_path", "audio_out", "openai_key", "gemini_key",
                      "openai_model", "gemini_model", "image_model", "image_quality", "image_style", "image_style_preset", "script_engine", "trans_engine", "auto_langs",
-                     "fiction_image", "hit_sound", "hit_volume", "reveal_hit", "narr_duck", "scene_parts", "photo_count", "narr_spoken"}
+                     "fiction_image", "hit_sound", "hit_volume", "reveal_hit", "narr_duck", "scene_parts", "photo_count", "narr_spoken", "scene_trans"}   # 전환은 합칠 때만 쓰므로 바뀌어도 장면은 다시 안 만듦
 
     def _make_mp4_scenes(self, story, title, s, style, base, out, kit, prog, publish=True):
         """본문을 장면(사진+문단)마다 따로 그려 조각으로 저장하고, 배경음은 전체에 한 번에 깔아 이어 붙임"""
@@ -17730,8 +18019,11 @@ class App(tk.Tk):
                     p_ = resolve_media(med[0]) if med else None
                     if p_:
                         imgs.append((os.path.basename(p_), int(os.path.getmtime(p_)), os.path.getsize(p_)))
+                lj = [os.path.splitext(resolve_media(parse_media(ln)[0]) or "")[0] + ".layers.json" for ln in text_k.split("\n") if parse_media(ln)]
+                lays = [(os.path.basename(x), int(os.path.getmtime(x))) for x in lj if os.path.exists(x)]   # 레이어 움직임 설정이 바뀌어도 그 장면만 다시
+                narr_a = self.narration_for(text_k, sk, log, self.cancel)      # 나레이션을 다시 녹음했으면(겹침 고치기) 그 장면만 다시
                 key = hashlib.md5((text_k + "|" + (title if k == 0 else "") + f"|{k == 0}|{k == N - 1}|{W}x{H}|" + fp_txt
-                                   + json.dumps(imgs)).encode("utf-8")).hexdigest()
+                                   + json.dumps(imgs) + json.dumps(lays) + "|" + ",".join(f"{d_:.3f}" for _, _, d_ in narr_a)).encode("utf-8")).hexdigest()
                 part = os.path.join(parts_dir, f"scene_{k + 1:03d}.mp4")
                 info = {}
                 try:
@@ -17745,7 +18037,6 @@ class App(tk.Tk):
                     log(f"🎬 장면 {k + 1}/{N} 만드는 중: {first}")
                     if str(sk.get("img_depth", "off")) == "on":
                         ensure_depth_maps(story_photo_paths(text_k), log, self.cancel)
-                    narr_a = self.narration_for(text_k, sk, log, self.cancel)
                     r = make_renderer(title, text_k, sk, narr_a)
                     if k == 0:
                         save_auto_thumb(r, base)
@@ -17770,14 +18061,14 @@ class App(tk.Tk):
         self.q.put(lambda: self.status.config(text="전환 효과 넣고 합치는 중..."))
         in_video = "MP4에 포함" in s["audio_out"]
         mixed = merge_parts_with_fx(parts, out, s, s.get("scene_trans", "페이드"), log, self.cancel, os.path.join(parts_dir, "_합치기"),
-                                    bgm_style=style, want_audio=in_video, need_mix=("MP3" in s["audio_out"]))
+                                    bgm_style=style, want_audio=in_video, need_mix=("MP3" in s["audio_out"]), plan=auto_transitions(scenes))
         mp3 = ""
         if "MP3" in s["audio_out"] and mixed is not None:
             mp3 = base + "_배경음.mp3"
             write_mp3(mp3, mixed)
         del mixed
         prog(N * 1000, N * 1000)
-        if publish and chapters:
+        if chapters:
             with open(base + "_타임스탬프.txt", "w", encoding="utf-8") as f_:
                 f_.write("\n".join(f"{hms(t_)} {n_}" for t_, n_ in [(0, "오프닝")] + chapters))
         size_mb = os.path.getsize(out) / 1e6

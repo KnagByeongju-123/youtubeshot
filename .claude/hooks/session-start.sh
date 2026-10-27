@@ -76,3 +76,40 @@ rm -rf /root/.cache/pip /root/.cache/huggingface/hub 2>/dev/null || true     # �
 if [ -n "${CLAUDE_ENV_FILE:-}" ]; then
   echo "export PATH=\"$CLAUDE_PROJECT_DIR/$VENV/bin:\$PATH\"" >> "$CLAUDE_ENV_FILE"
 fi
+
+# 6) 입체 움직임 모델 (영상에서 사진이 앞뒤로 움직이게, 약 50MB)
+# 손 찾기(손가락 검수용 확대): MediaPipe + 모델 + EGL 라이브러리
+if [ ! -f models/hand_landmarker.task ]; then
+  curl -sSL --retry 3 -o models/hand_landmarker.task.part \
+    https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/latest/hand_landmarker.task \
+    && mv models/hand_landmarker.task.part models/hand_landmarker.task || true
+fi
+[ -f /usr/lib/x86_64-linux-gnu/libEGL.so.1 ] || (apt-get install -y -q libegl1 libgles2 >/dev/null 2>&1 || (apt-get update -q >/dev/null 2>&1 && apt-get install -y -q libegl1 libgles2 >/dev/null 2>&1)) || true
+[ -x .sd_venv/bin/python ] && (.sd_venv/bin/python -c "import mediapipe" 2>/dev/null || .sd_venv/bin/pip install -q mediapipe >/dev/null 2>&1) || true
+# 손·발 확대 검수(손_확대검수.py): DWPose(rtmlib) + YOLO 손(hand_yolov8n). ultralytics 가 맞지 않는 torchvision 을 깔면 CPU 판으로 다시 맞춤
+[ -f models/hand_yolov8n.pt ] || curl -sSL --retry 3 -o models/hand_yolov8n.pt https://huggingface.co/Bingsu/adetailer/resolve/main/hand_yolov8n.pt || true
+if [ -x .sd_venv/bin/python ] && ! .sd_venv/bin/python -c "import rtmlib, ultralytics" 2>/dev/null; then
+  .sd_venv/bin/pip install -q rtmlib ultralytics onnxruntime >/dev/null 2>&1 \
+    && .sd_venv/bin/pip install -q --no-deps --force-reinstall torchvision --index-url https://download.pytorch.org/whl/cpu >/dev/null 2>&1 || true
+fi
+# 얼굴 찾기 모델(OpenCV YuNet, 230KB): 사진을 확대·이동할 때 얼굴이 잘리지 않게
+if [ ! -f models/face_detection_yunet_2023mar.onnx ]; then
+  curl -sSL --retry 3 -o models/face_detection_yunet_2023mar.onnx.part \
+    "https://media.githubusercontent.com/media/opencv/opencv_zoo/main/models/face_detection_yunet/face_detection_yunet_2023mar.onnx" \
+    && mv models/face_detection_yunet_2023mar.onnx.part models/face_detection_yunet_2023mar.onnx || true
+fi
+if [ ! -f models/depth_anything_v2_small_fp16.onnx ]; then
+  curl -sSL --retry 3 -o models/depth_anything_v2_small_fp16.onnx.part \
+    https://huggingface.co/onnx-community/depth-anything-v2-small/resolve/main/onnx/model_fp16.onnx \
+    && mv models/depth_anything_v2_small_fp16.onnx.part models/depth_anything_v2_small_fp16.onnx || true
+fi
+
+# 6-2) 썸네일 글씨 글꼴 Black Han Sans (OFL, 연재 썸네일_만들기.py 가 씀. github 는 막혀 있어 jsDelivr 사본에서)
+if [ ! -s fonts/BlackHanSans-Regular.ttf ]; then
+  mkdir -p fonts
+  curl -sSL --retry 3 -o fonts/BlackHanSans-Regular.ttf \
+    "https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/blackhansans/BlackHanSans-Regular.ttf" || true
+fi
+
+# 7) 서버가 바뀌어 꺼진 그림·영상 일을 남은 것부터 다시 (작업_이어하기.py 의 줄, 없으면 바로 끝남)
+nohup "$VENV/bin/python" 작업_이어하기.py run >/dev/null 2>&1 &

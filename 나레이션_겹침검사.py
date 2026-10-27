@@ -6,11 +6,12 @@ python 나레이션_겹침검사.py <영상.mp4> <회차.py 또는 대본.txt> [
     1) 소리를 쉼에서 15초 안쪽 조각으로 나눠 받아 적음
     2) 같은 글자 1~3자가 연달아 두 번 나오면(띄어쓰기 무시: '것만 만', '국국') 후보
     3) 받아 적은 조각과 가장 비슷한 대본 문장을 찾아, 그 문장에 원래 같은 길이의 반복(무럭무럭·불쑥불쑥·타닥타닥)이 있으면 흉내말로 보고 넘김
+       반복된 글자가 대본 어딘가에 그대로 있으면('단단히'·'쓸쓸해') 문장을 잘못 맞춘 오탐으로 보고 넘김
     4) 대본 문장과 한 글자씩 맞춰 봐서 반복 자리에 글자가 '더 들어갔을' 때만 겹침 ('것만→것만만'). 글자 수가 같으면 발음 차이로 봄
        ('하늘나라→하늘라라', '닿을→다을')
   - 갑자기 빨라진 곳도 찾음: 쉼과 쉼 사이 한 마디씩 1초당 글자 수를 재서 영상 전체 마디의 중간값보다 25% 넘게 빠른 마디 (대사는 인물마다 빠르기가 달라 뺌)
   - --고치기 <프로젝트.json> : 겹친 문장(과 그 문단)의 녹음 캐시를 output/tts_cache 에서 지움 → render_project 를 다시 돌리면 그 문장만 새로 녹음.
-    빨라진 문장은 다시 녹음해도 또 빨라서(짧은 문장) 그 녹음을 보통 빠르기로 늘림(목소리 높이 그대로)
+    빨라진 문장은 알리기만 하고 고치지 않음(사용자 결정: 늘린 녹음이 너무 느려 어색함). --빠름고치기 를 붙이면 보통 빠르기로 늘림
     (Supertonic 은 매번 조금씩 다르게 읽어서 보통 한 번에 고쳐짐. 다시 만든 영상도 검사해서 '겹침 없음'이 나올 때까지, 최대 3번)
   - 결과: '분:초 [겹친 글자] 대본: <문장> | 들림: <받아 적은 글>'
 (내부용) python 나레이션_겹침검사.py --지우기 <목록.json> <프로젝트.json>  ← .supertonic_venv 로 실행, 캐시 이름 계산·삭제"""
@@ -92,6 +93,71 @@ def extra_syllables(ref, heard, i, n):
     return False
 
 
+def cho(c):
+    """한글 글자의 첫소리(초성) 번호"""
+    return (ord(c) - 0xAC00) // 588 if "가" <= c <= "힣" else -1
+
+
+TENSE = {1: 0, 4: 3, 8: 7, 10: 9, 13: 12}          # 된소리 첫소리 → 예사소리 (ㄲ→ㄱ, ㄸ→ㄷ, ㅃ→ㅂ, ㅆ→ㅅ, ㅉ→ㅈ)
+
+
+def cho_like(a, b):
+    """두 글자의 첫소리가 같거나 된소리·예사소리 짝인가 ('들'과 '때')"""
+    x, y = cho(a), cho(b)
+    return x >= 0 and TENSE.get(x, x) == TENSE.get(y, y)
+
+
+def word_end_stutters(h, sents, k_):
+    """뒷말 더듬 (사용자 지적 2026-10-27 '처음 생길 때'를 '생길 때때로'): 낱말과 낱말 사이에 대본에 없는 글자 1~2개가 끼었고,
+    그 글자가 앞 낱말의 끝 글자와 같거나('때 때'), 첫소리가 앞 낱말 끝 글자·뒤 낱말 첫 글자와 같은 짝('생길 들 때')이면 더듬으로 봄.
+    반환: [(앞 끝 글자+끼어든 글자+뒤 첫 글자, 문장)]"""
+    ctx = sents[max(0, k_ - 1):k_ + 2]
+    ref, starts, mixed = "", set(), set()
+    for _, s in ctx:
+        for w in s.split():
+            hw = hangul(w)
+            if re.search(r"[0-9A-Za-z]", w):
+                mixed.update(range(len(ref), len(ref) + len(hw) + 1))
+            if hw:
+                starts.add(len(ref))
+                ref += hw
+    out = []
+    sm = difflib.SequenceMatcher(None, ref, h, autojunk=False)
+    for op, i1, i2, j1, j2 in sm.get_opcodes():
+        if op != "insert" or not 1 <= j2 - j1 <= 2 or i1 not in starts or i1 in mixed or not 0 < i1 < len(ref):
+            continue
+        prev, nxt, ins = ref[i1 - 1], ref[i1], h[j1:j2]
+        if ins[0] == prev or any(cho_like(c, prev) or cho_like(c, nxt) for c in ins):
+            s_ = next((s for p, s in ctx if hangul(ref[max(0, i1 - 3):i1 + 2]) in hangul(s)), sents[k_][1])
+            out.append((prev + ins + nxt, s_))
+    return out
+
+
+def word_start_stutters(h, sents, k_):
+    """단어 첫머리 더듬 (사용자 지적 2026-10-26 '단어 시작 때 더듬음'): 같은 글자 반복('게다다가')이 아니라
+    첫소리만 내다 다시 시작해 '브바닷속'·'그게다가'처럼 들리는 곳 — 대본에 없는 글자 하나가 낱말 바로 앞에 끼었고
+    그 글자의 첫소리가 다음 글자(낱말 첫 글자)의 첫소리와 같으면 더듬으로 봄. 반환: [(끼어든 글자+낱말 첫 글자, 문장)]"""
+    ctx = sents[max(0, k_ - 1):k_ + 2]
+    ref, starts, mixed = "", set(), set()
+    for _, s in ctx:
+        for w in s.split():
+            hw = hangul(w)
+            if re.search(r"[0-9A-Za-z]", w):          # 숫자·영어가 섞인 낱말('2억'·'AI의')은 소리로 읽혀 글자가 달라짐 → 오탐이라 뺌
+                mixed.update(range(len(ref), len(ref) + len(hw) + 1))
+            if hw:
+                starts.add(len(ref))
+                ref += hw
+    out = []
+    sm = difflib.SequenceMatcher(None, ref, h, autojunk=False)
+    for op, i1, i2, j1, j2 in sm.get_opcodes():
+        if op == "insert" and j2 - j1 == 1 and i1 in starts and i1 not in mixed and i1 < len(ref) and j2 < len(h):
+            c, nxt = h[j1], h[j2]
+            if c != nxt and cho(c) == cho(nxt) and nxt == ref[i1]:
+                s_ = next((s for p, s in ctx if hangul(ref[i1:i1 + 4]) in hangul(s)), sents[k_][1])
+                out.append((c + nxt, s_))
+    return out
+
+
 def best_sentence(h, sents):
     """받아 적은 조각(한글만)이 들어 있는 대본 문장 — 반복 글자 자리에 가장 잘 맞는 문장 하나"""
     best, score = None, 0.0
@@ -104,6 +170,20 @@ def best_sentence(h, sents):
         if hit > score:
             best, score = (par, s), hit
     return best if score >= 0.55 else None
+
+
+def best_sentence_part(h, sents):
+    """긴 문장이 쉼에서 잘려 조각에 반쪽만 들어온 경우 — 조각 글자가 문장에 얼마나 들어 있나로 맞춤 (2026-10-27 '처음 생길 될 때'를 놓쳤음)"""
+    best, score = None, 0.0
+    for par, s in sents:
+        sh = hangul(s)
+        if len(sh) < 8 or len(h) < 8:
+            continue
+        sm = difflib.SequenceMatcher(None, sh, h, autojunk=False)
+        hit = sum(b.size for b in sm.get_matching_blocks()) / len(h)
+        if hit > score:
+            best, score = (par, s), hit
+    return best if score >= 0.7 else None
 
 
 def fast_spots(sylls, sents, ratio=1.25, gap=0.3, min_syl=8):
@@ -150,6 +230,7 @@ def detect(video, script):
     m = AutoModelForCTC.from_pretrained(MODEL).eval()
     found, sylls = [], []          # sylls: (글자, 시각초) - 말 빠르기 재기용
     blank = p.tokenizer.pad_token_id
+    all_text = hangul(" ".join(x[1] for x in sents))
     for t0, t1 in chunks(a):
         off = max(0, t0 - 0.15)
         x = a[int(off * SR):int((t1 + 0.15) * SR)]
@@ -170,7 +251,7 @@ def detect(video, script):
             for dd in sorted(doubles(h, n)):
                 i = h.find(dd)
                 ctx = h[max(0, i - 8):i + 2 * n + 8]                 # 반복 자리 앞뒤
-                ps = best_sentence(ctx, sents) or best_sentence(h, sents)
+                ps = best_sentence(ctx, sents) or best_sentence(h, sents) or best_sentence_part(h, sents)
                 if ps is None:
                     continue
                 sh = hangul(ps[1])
@@ -178,9 +259,20 @@ def detect(video, script):
                 near = hangul(" ".join(x[1] for x in sents[max(0, k_ - 1):k_ + 2]))   # 앞뒤 문장까지 (조각이 문장 경계에 걸침)
                 if doubles(sh, n) or dd in near:      # 규칙 3: 대본에 원래 같은 반복(흉내말 '줄줄이·무럭무럭')이 있음
                     continue
+                if dd in all_text:                    # 규칙 3-2: 대본 어딘가에 그대로 있는 낱말('단단히·쓸쓸해') — 문장을 잘못 맞춘 오탐
+                    continue
                 if not extra_syllables(sh, ctx, ctx.find(dd), len(dd)):   # 규칙 4: 대본보다 글자가 늘어난 자리여야 겹침
                     continue
                 found.append({"t": t0, "dd": dd, "sentence": ps[1], "paragraph": ps[0], "heard": text})
+        ps = best_sentence(h, sents) or best_sentence_part(h, sents)    # 규칙 5: 단어 첫머리 더듬 ('브바닷속')
+        if ps is not None:
+            k_ = sents.index(ps)
+            for dd, s_ in word_start_stutters(h, sents, k_):
+                par = next((p for p, s in sents if s == s_), ps[0])
+                found.append({"t": t0, "dd": "첫머리 더듬 " + dd, "sentence": s_, "paragraph": par, "heard": text})
+            for dd, s_ in word_end_stutters(h, sents, k_):     # 규칙 6: 뒷말 더듬 ('생길 때 때', '생길 들 때')
+                par = next((p for p, s in sents if s == s_), ps[0])
+                found.append({"t": t0, "dd": "뒷말 더듬 " + dd, "sentence": s_, "paragraph": par, "heard": text})
     try:
         json.dump(sylls, open(os.path.join(tempfile.gettempdir(), "겹침_글자시각.json"), "w", encoding="utf-8"), ensure_ascii=False)
     except OSError:
@@ -273,13 +365,15 @@ def main(a):
     print(msg)
     if "--결과" in a:
         open(a[a.index("--결과") + 1], "w", encoding="utf-8").write(msg + "\n")
-    if items and "--고치기" in a:
+    # 규칙(사용자 결정 2026-10-25): 빨라진 곳은 알리기만 하고 고치지 않음 (늘린 녹음이 너무 느려 어색했음). --빠름고치기 면 예전처럼 늘림
+    fix = items if "--빠름고치기" in a else [it for it in items if not it.get("speed")]
+    if fix and "--고치기" in a:
         tmp = os.path.join(tempfile.gettempdir(), "겹침목록.json")
-        json.dump(items, open(tmp, "w", encoding="utf-8"), ensure_ascii=False)
+        json.dump(fix, open(tmp, "w", encoding="utf-8"), ensure_ascii=False)
         py = os.path.join(HERE, ".supertonic_venv", "Scripts" if os.name == "nt" else "bin", "python.exe" if os.name == "nt" else "python")
         subprocess.run([py, "-X", "utf8", os.path.abspath(__file__), "--지우기", tmp, a[a.index("--고치기") + 1]], check=True)
         print("→ render_project.py 를 다시 돌리면 이 문장들만 새로 녹음됩니다")
-    return 1 if items else 0
+    return 1 if fix else 0
 
 
 if __name__ == "__main__":

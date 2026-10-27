@@ -133,9 +133,37 @@ def load_image(path: str | Path) -> Image.Image:
         return ImageOps.exif_transpose(loaded).convert("RGBA")
 
 
+def face_center(image: Image.Image):
+    """사진 속 주인공 얼굴(들)의 가운데 (0~1 비율) 또는 None — OpenCV YuNet (models/face_detection_yunet_2023mar.onnx)"""
+    mp = Path(__file__).resolve().parent / "models" / "face_detection_yunet_2023mar.onnx"
+    try:
+        import cv2
+        import numpy as np
+        if not mp.exists():
+            return None
+        a = np.asarray(image.convert("RGB"))[:, :, ::-1]
+        h, w = a.shape[:2]
+        k = 640 / max(h, w)
+        sm = cv2.resize(a, (max(1, int(w * k)), max(1, int(h * k))))
+        det = cv2.FaceDetectorYN.create(str(mp), "", (sm.shape[1], sm.shape[0]), 0.6)
+        _, f = det.detect(sm)
+        if f is None or not len(f):
+            return None
+        big = max(r[2] * r[3] for r in f)
+        f = [r for r in f if r[2] * r[3] >= 0.3 * big]
+        cx = sum(r[0] + r[2] / 2 for r in f) / len(f) / sm.shape[1]
+        cy = sum(r[1] + r[3] / 2 for r in f) / len(f) / sm.shape[0]
+        return cx, cy
+    except Exception:
+        return None
+
+
 def fit_cover(image: Image.Image, size: tuple[int, int]) -> Image.Image:
-    """이미지를 왜곡하지 않고 중앙 기준으로 대상 크기에 가득 채움."""
-    return ImageOps.fit(image.convert("RGB"), size, method=Image.Resampling.LANCZOS, centering=(0.5, 0.5))
+    """이미지를 왜곡하지 않고 대상 크기에 가득 채움. 얼굴이 있으면 얼굴이 잘리지 않게 얼굴 쪽을 기준으로 자름
+    (규칙: 세로로 긴 초상화를 가로 썸네일에 채울 때 가운데만 자르면 얼굴이 잘림)"""
+    fc = face_center(image)
+    centering = (min(max(fc[0], 0.0), 1.0), min(max(fc[1] - 0.08, 0.0), 1.0)) if fc else (0.5, 0.5)   # 얼굴을 살짝 위쪽에
+    return ImageOps.fit(image.convert("RGB"), size, method=Image.Resampling.LANCZOS, centering=centering)
 
 
 HERE = Path(__file__).resolve().parent

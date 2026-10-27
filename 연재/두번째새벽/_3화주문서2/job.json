@@ -1,0 +1,77 @@
+{
+ "items": [
+  {
+   "id": "c11",
+   "width": 1024,
+   "height": 576,
+   "seed": 311,
+   "refs": [
+    "/home/user/youtubeshot/연재/두번째새벽/캐릭터시트_애니/잎새할머니.jpg"
+   ],
+   "prompt": "modern Japanese anime illustration, high-quality light novel cover art, large detailed glossy eyes with layered highlights, soft blush on cheeks, very fine detailed flowing hair strands with soft shading, clean thin line art, soft cel shading with gentle gradients, dreamy shallow depth of field with bokeh light particles, soft diffused lighting, delicate pastel color grading, medieval post-apocalyptic science fantasy anime illustration. Characters: 잎새 할머니 (the character from reference image 1): very old evolved female orangutan elder of a forest village who walks upright, long shaggy gray-orange hair, wise tired dark eyes with deep wrinkles, wide cheek pads, a cloak made of overlapping green and brown dried leaves, wooden bead necklaces, leaning on a tall carved wooden cane topped with a carved leaf. Each person has exactly two arms and two legs. Solo: exactly one person in the whole image, no other people, nobody in the background, no reflections, not a character sheet, single view only. Scene: the old orangutan village elder sitting on a carved wooden seat under a huge tree on a high platform, holding her cane, looking down with wise stern eyes, warm sunlight through leaves. Detailed background environment that matches the scene, NOT a white or plain background (ignore the white background of the reference sheets). Cinematic composition, full-bleed image, no border, no frame, no paper edges. No speech bubbles, no text, no letters."
+  },
+  {
+   "id": "c15",
+   "width": 1024,
+   "height": 576,
+   "seed": 315,
+   "refs": [
+    "/home/user/youtubeshot/연재/두번째새벽/캐릭터시트_애니/도토리.jpg"
+   ],
+   "prompt": "modern Japanese anime illustration, high-quality light novel cover art, large detailed glossy eyes with layered highlights, soft blush on cheeks, very fine detailed flowing hair strands with soft shading, clean thin line art, soft cel shading with gentle gradients, dreamy shallow depth of field with bokeh light particles, soft diffused lighting, delicate pastel color grading, medieval post-apocalyptic science fantasy anime illustration. Characters: 도토리 (the character from reference image 1): small young evolved chimpanzee child of about seven who walks upright, big round curious amber eyes, fluffy dark fur, a small white face-paint dot on the forehead, simple tunic of woven bark cloth, a little acorn-cap shaped straw hat, barefoot. Each person has exactly two arms and two legs. Solo: exactly one person in the whole image, no other people, nobody in the background, no reflections, not a character sheet, single view only. Scene: the small chimpanzee child lying on a straw mat with a fever, holding his stomach, eyes half closed, a wet cloth on his forehead, dim candlelight. Detailed background environment that matches the scene, NOT a white or plain background (ignore the white background of the reference sheets). Cinematic composition, full-bleed image, no border, no frame, no paper edges. No speech bubbles, no text, no letters."
+  },
+  {
+   "id": "c18",
+   "width": 1024,
+   "height": 576,
+   "seed": 318,
+   "refs": [
+    "/home/user/youtubeshot/연재/두번째새벽/캐릭터시트_애니/한별.jpg",
+    "/home/user/youtubeshot/연재/두번째새벽/캐릭터시트_애니/잎새할머니.jpg"
+   ],
+   "prompt": "modern Japanese anime illustration, high-quality light novel cover art, large detailed glossy eyes with layered highlights, soft blush on cheeks, very fine detailed flowing hair strands with soft shading, clean thin line art, soft cel shading with gentle gradients, dreamy shallow depth of field with bokeh light particles, soft diffused lighting, delicate pastel color grading, medieval post-apocalyptic science fantasy anime illustration. Characters: 한별 (the character from reference image 1): 17-year-old human girl mechanic apprentice, short messy auburn hair, freckles, determined green eyes, brown leather apron over a faded linen tunic, patched hooded traveling cloak, old scavenged brass goggles resting on her head, small bronze gear pendant necklace, fingerless leather gloves, worn leather boots; 잎새 할머니 (the character from reference image 2): very old evolved female orangutan elder of a forest village who walks upright, long shaggy gray-orange hair, wise tired dark eyes with deep wrinkles, wide cheek pads, a cloak made of overlapping green and brown dried leaves, wooden bead necklaces, leaning on a tall carved wooden cane topped with a carved leaf. Each person has exactly two arms and two legs. Exactly two people in the image, each appears only once, no duplicates, no extra copies in the background, not a character sheet. Scene: at night in a forest village, the girl inside a wooden branch cage speaking earnestly through the bars to the old orangutan elder holding a lantern and a cane outside the cage. Detailed background environment that matches the scene, NOT a white or plain background (ignore the white background of the reference sheets). Cinematic composition, full-bleed image, no border, no frame, no paper edges. No speech bubbles, no text, no letters."
+  },
+  {
+   "id": "c25",
+   "width": 1024,
+   "height": 576,
+   "seed": 325,
+   "refs": [
+    "/home/user/youtubeshot/연재/두번째새벽/캐릭터시트_애니/한별.jpg",
+    "/home/user/youtubeshot/연재/두번째새벽/캐릭터시트_애니/도토리.jpg"
+   ],
+   "prompt": "modern Japanese anime illustration, high-quality light novel cover art, large detailed glossy eyes with layered highlights, soft blush on cheeks, very fine detailed flowing hair strands with soft shading, clean thin line art, soft cel shading with gentle gradients, dreamy shallow depth of field with bokeh light particles, soft diffused lighting, delicate pastel color grading, medieval post-apocalyptic science fantasy anime illustration. Characters: 한별 (the character from reference image 1): 17-year-old human girl mechanic apprentice, short messy auburn hair, freckles, determined green eyes, brown leather apron over a faded linen tunic, patched hooded traveling cloak, old scavenged brass goggles resting on her head, small bronze gear pendant necklace, fingerless leather gloves, worn leather boots; 도토리 (the character from reference image 2): small young evolved chimpanzee child of about seven who walks upright, big round curious amber eyes, fluffy dark fur, a small white face-paint dot on the forehead, simple tunic of woven bark cloth, a little acorn-cap shaped straw hat, barefoot. Each person has exactly two arms and two legs. Exactly two people in the image, each appears only once, no duplicates, no extra copies in the background, not a character sheet. Scene: the girl gently stopping the small chimpanzee child from drinking from a bowl of clear water, kneeling to his eye level, a large pot of water boiling over a fire behind them. Detailed background environment that matches the scene, NOT a white or plain background (ignore the white background of the reference sheets). Cinematic composition, full-bleed image, no border, no frame, no paper edges. No speech bubbles, no text, no letters."
+  },
+  {
+   "id": "c28",
+   "width": 1024,
+   "height": 576,
+   "seed": 328,
+   "refs": [
+    "/home/user/youtubeshot/연재/두번째새벽/캐릭터시트_애니/도토리.jpg"
+   ],
+   "prompt": "modern Japanese anime illustration, high-quality light novel cover art, large detailed glossy eyes with layered highlights, soft blush on cheeks, very fine detailed flowing hair strands with soft shading, clean thin line art, soft cel shading with gentle gradients, dreamy shallow depth of field with bokeh light particles, soft diffused lighting, delicate pastel color grading, medieval post-apocalyptic science fantasy anime illustration. Characters: 도토리 (the character from reference image 1): small young evolved chimpanzee child of about seven who walks upright, big round curious amber eyes, fluffy dark fur, a small white face-paint dot on the forehead, simple tunic of woven bark cloth, a little acorn-cap shaped straw hat, barefoot. Each person has exactly two arms and two legs. Solo: exactly one person in the whole image, no other people, nobody in the background, no reflections, not a character sheet, single view only. Scene: the small chimpanzee child sitting up on his straw mat with a bright smile, drinking from a wooden cup of clear water, morning sunlight through the treehouse window. Detailed background environment that matches the scene, NOT a white or plain background (ignore the white background of the reference sheets). Cinematic composition, full-bleed image, no border, no frame, no paper edges. No speech bubbles, no text, no letters."
+  },
+  {
+   "id": "c30",
+   "width": 1024,
+   "height": 576,
+   "seed": 330,
+   "refs": [
+    "/home/user/youtubeshot/연재/두번째새벽/캐릭터시트_애니/잎새할머니.jpg"
+   ],
+   "prompt": "modern Japanese anime illustration, high-quality light novel cover art, large detailed glossy eyes with layered highlights, soft blush on cheeks, very fine detailed flowing hair strands with soft shading, clean thin line art, soft cel shading with gentle gradients, dreamy shallow depth of field with bokeh light particles, soft diffused lighting, delicate pastel color grading, medieval post-apocalyptic science fantasy anime illustration. Characters: 잎새 할머니 (the character from reference image 1): very old evolved female orangutan elder of a forest village who walks upright, long shaggy gray-orange hair, wise tired dark eyes with deep wrinkles, wide cheek pads, a cloak made of overlapping green and brown dried leaves, wooden bead necklaces, leaning on a tall carved wooden cane topped with a carved leaf. Each person has exactly two arms and two legs. Solo: exactly one person in the whole image, no other people, nobody in the background, no reflections, not a character sheet, single view only. Scene: the old orangutan elder opening the door of an empty wooden branch cage in a forest village, warm morning light, villagers watching quietly. Detailed background environment that matches the scene, NOT a white or plain background (ignore the white background of the reference sheets). Cinematic composition, full-bleed image, no border, no frame, no paper edges. No speech bubbles, no text, no letters."
+  },
+  {
+   "id": "c31",
+   "width": 1024,
+   "height": 576,
+   "seed": 331,
+   "refs": [
+    "/home/user/youtubeshot/연재/두번째새벽/캐릭터시트_애니/도토리.jpg",
+    "/home/user/youtubeshot/연재/두번째새벽/캐릭터시트_애니/한별.jpg"
+   ],
+   "prompt": "modern Japanese anime illustration, high-quality light novel cover art, large detailed glossy eyes with layered highlights, soft blush on cheeks, very fine detailed flowing hair strands with soft shading, clean thin line art, soft cel shading with gentle gradients, dreamy shallow depth of field with bokeh light particles, soft diffused lighting, delicate pastel color grading, medieval post-apocalyptic science fantasy anime illustration. Characters: 도토리 (the character from reference image 1): small young evolved chimpanzee child of about seven who walks upright, big round curious amber eyes, fluffy dark fur, a small white face-paint dot on the forehead, simple tunic of woven bark cloth, a little acorn-cap shaped straw hat, barefoot; 한별 (the character from reference image 2): 17-year-old human girl mechanic apprentice, short messy auburn hair, freckles, determined green eyes, brown leather apron over a faded linen tunic, patched hooded traveling cloak, old scavenged brass goggles resting on her head, small bronze gear pendant necklace, fingerless leather gloves, worn leather boots. Each person has exactly two arms and two legs. Exactly two people in the image, each appears only once, no duplicates, no extra copies in the background, not a character sheet. Scene: the small chimpanzee child shyly giving the girl a small carved wooden leaf token on a string, the girl kneeling to receive it with both hands, forest village. Detailed background environment that matches the scene, NOT a white or plain background (ignore the white background of the reference sheets). Cinematic composition, full-bleed image, no border, no frame, no paper edges. No speech bubbles, no text, no letters."
+  }
+ ]
+}

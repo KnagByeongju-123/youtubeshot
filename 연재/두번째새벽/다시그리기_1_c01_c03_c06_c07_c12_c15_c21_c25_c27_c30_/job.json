@@ -1,0 +1,120 @@
+{
+ "items": [
+  {
+   "id": "c01",
+   "width": 1024,
+   "height": 576,
+   "seed": 1301,
+   "refs": [
+    "/home/user/youtubeshot/연재/두번째새벽/캐릭터시트_애니/한별.jpg",
+    "/home/user/youtubeshot/연재/두번째새벽/캐릭터시트_애니/카룬.jpg"
+   ],
+   "prompt": "modern Japanese anime illustration, high-quality light novel cover art, large detailed glossy eyes with layered highlights, soft blush on cheeks, very fine detailed flowing hair strands with soft shading, clean thin line art, soft cel shading with gentle gradients, dreamy shallow depth of field with bokeh light particles, soft diffused lighting, delicate pastel color grading, medieval post-apocalyptic science fantasy anime illustration. Characters: 한별 (the character from reference image 1): 17-year-old human girl mechanic apprentice, short messy auburn hair, freckles, determined green eyes, brown leather apron over a faded linen tunic, patched hooded traveling cloak, old scavenged brass goggles resting on her head, small bronze gear pendant necklace, fingerless leather gloves, worn leather boots; 카룬 (the character from reference image 2): young evolved chimpanzee warrior who walks upright, intelligent amber eyes, white tribal face paint stripes, armor of woven tree bark and leather straps, necklace of old circuit-board charms, carrying a tall wooden staff decorated with copper wire and small circuit chips. Each person has exactly two arms and two legs. Exactly two people in the image, each appears only once, no duplicates, no extra copies in the background, not a character sheet. Scene: inside an abandoned old workshop at dawn, misty light through a broken window, the chimpanzee warrior pointing the tip of his staff at the startled girl who just woke up on a workbench under her cloak. Detailed background environment that matches the scene, NOT a white or plain background (ignore the white background of the reference sheets). the chimpanzee warrior wears NO goggles (the brass goggles are only on the girl's head) and points the tip of his staff straight at the startled girl's throat. Clearly separate characters, do not merge their faces or bodies, each keeps their own face. Cinematic composition, full-bleed image, no border, no frame, no paper edges. No speech bubbles, no text, no letters."
+  },
+  {
+   "id": "c03",
+   "width": 1024,
+   "height": 576,
+   "seed": 1303,
+   "refs": [],
+   "prompt": "modern Japanese anime illustration, high-quality light novel cover art, clean thin line art, soft cel shading with gentle gradients, rich saturated colors, strong contrast, dramatic cinematic lighting that matches the mood of the scene, medieval post-apocalyptic science fantasy anime illustration. Anime background art, environment and scenery illustration. No main character, no close-up face, no portrait, no girl in the foreground; any people are small figures in the scene. Scene: a line of medieval knights with torches and red banners marching through misty ruins at dawn toward an old workshop, seen from far away. Absolutely no letters, no writing, no numbers, no signs with text anywhere. Cinematic composition, full-bleed image, no border, no frame, no paper edges. No speech bubbles, no text, no letters."
+  },
+  {
+   "id": "c06",
+   "width": 1024,
+   "height": 576,
+   "seed": 1306,
+   "refs": [
+    "/home/user/youtubeshot/연재/두번째새벽/캐릭터시트_애니/아홉.jpg",
+    "/home/user/youtubeshot/연재/두번째새벽/캐릭터시트_애니/카룬.jpg"
+   ],
+   "prompt": "modern Japanese anime illustration, high-quality light novel cover art, large detailed glossy eyes with layered highlights, soft blush on cheeks, very fine detailed flowing hair strands with soft shading, clean thin line art, soft cel shading with gentle gradients, dreamy shallow depth of field with bokeh light particles, soft diffused lighting, delicate pastel color grading, medieval post-apocalyptic science fantasy anime illustration. Characters: 아홉 (the character from reference image 1): old humanoid maintenance robot, tall and thin, half-rusted iron body covered with patches of green moss and small vines, dented dome head with a menacing skull-like metal face and exposed teeth-like grille, his LEFT eye is a round glowing blue light (it appears on the RIGHT side of the picture when he faces the viewer), his right eye socket is broken and dark, the faded painted number 9 on its chest plate, long thin mechanical fingers, exposed cables at the neck; 카룬 (the character from reference image 2): young evolved chimpanzee warrior who walks upright, intelligent amber eyes, white tribal face paint stripes, armor of woven tree bark and leather straps, necklace of old circuit-board charms, carrying a tall wooden staff decorated with copper wire and small circuit chips. Each person has exactly two arms and two legs. Exactly two people in the image, each appears only once, no duplicates, no extra copies in the background, not a character sheet. Scene: the chimpanzee warrior binding the tall robot's wrists together with thick green vines, the robot standing still and letting him, in front of a ruined workshop at dawn. Detailed background environment that matches the scene, NOT a white or plain background (ignore the white background of the reference sheets). the robot's single glowing blue eye is on the RIGHT side of the picture (his own left eye), the eye socket on the left side of the picture is dark and broken. The robot has exactly ONE glowing blue eye; the other eye socket is broken and dark. Cinematic composition, full-bleed image, no border, no frame, no paper edges. No speech bubbles, no text, no letters."
+  },
+  {
+   "id": "c07",
+   "width": 1024,
+   "height": 576,
+   "seed": 1307,
+   "refs": [
+    "/home/user/youtubeshot/연재/두번째새벽/캐릭터시트_애니/한별.jpg",
+    "/home/user/youtubeshot/연재/두번째새벽/캐릭터시트_애니/아홉.jpg",
+    "/home/user/youtubeshot/연재/두번째새벽/캐릭터시트_애니/카룬.jpg"
+   ],
+   "prompt": "modern Japanese anime illustration, high-quality light novel cover art, large detailed glossy eyes with layered highlights, soft blush on cheeks, very fine detailed flowing hair strands with soft shading, clean thin line art, soft cel shading with gentle gradients, dreamy shallow depth of field with bokeh light particles, soft diffused lighting, delicate pastel color grading, medieval post-apocalyptic science fantasy anime illustration. Characters: 한별 (the character from reference image 1): 17-year-old human girl mechanic apprentice, short messy auburn hair, freckles, determined green eyes, brown leather apron over a faded linen tunic, patched hooded traveling cloak, old scavenged brass goggles resting on her head, small bronze gear pendant necklace, fingerless leather gloves, worn leather boots; 아홉 (the character from reference image 2): old humanoid maintenance robot, tall and thin, half-rusted iron body covered with patches of green moss and small vines, dented dome head with a menacing skull-like metal face and exposed teeth-like grille, his LEFT eye is a round glowing blue light (it appears on the RIGHT side of the picture when he faces the viewer), his right eye socket is broken and dark, the faded painted number 9 on its chest plate, long thin mechanical fingers, exposed cables at the neck; 카룬 (the character from reference image 3): young evolved chimpanzee warrior who walks upright, intelligent amber eyes, white tribal face paint stripes, armor of woven tree bark and leather straps, necklace of old circuit-board charms, carrying a tall wooden staff decorated with copper wire and small circuit chips. Each person has exactly two arms and two legs. Exactly three people in the image, each appears only once, no duplicates, no extra copies in the background, not a character sheet. Scene: the chimpanzee warrior leading the girl and the tall robot with vine-bound wrists past warning totems with hanging broken robot heads into a huge misty forest. Detailed background environment that matches the scene, NOT a white or plain background (ignore the white background of the reference sheets). the chimpanzee warrior walking ahead along a forest path leading the girl and the tall robot whose wrists are bound with green vines, walking pose seen from a three-quarter back view, broken metal ROBOT heads (not skulls) hanging from wooden poles, the robot's single glowing blue eye is on the RIGHT side of the picture (his own left eye), the eye socket on the left side of the picture is dark and broken. Cinematic composition, full-bleed image, no border, no frame, no paper edges. No speech bubbles, no text, no letters."
+  },
+  {
+   "id": "c12",
+   "width": 1024,
+   "height": 576,
+   "seed": 1312,
+   "refs": [
+    "/home/user/youtubeshot/연재/두번째새벽/캐릭터시트_애니/한별.jpg",
+    "/home/user/youtubeshot/연재/두번째새벽/캐릭터시트_애니/아홉.jpg"
+   ],
+   "prompt": "modern Japanese anime illustration, high-quality light novel cover art, large detailed glossy eyes with layered highlights, soft blush on cheeks, very fine detailed flowing hair strands with soft shading, clean thin line art, soft cel shading with gentle gradients, dreamy shallow depth of field with bokeh light particles, soft diffused lighting, delicate pastel color grading, medieval post-apocalyptic science fantasy anime illustration. Characters: 한별 (the character from reference image 1): 17-year-old human girl mechanic apprentice, short messy auburn hair, freckles, determined green eyes, brown leather apron over a faded linen tunic, patched hooded traveling cloak, old scavenged brass goggles resting on her head, small bronze gear pendant necklace, fingerless leather gloves, worn leather boots; 아홉 (the character from reference image 2): old humanoid maintenance robot, tall and thin, half-rusted iron body covered with patches of green moss and small vines, dented dome head with a menacing skull-like metal face and exposed teeth-like grille, his LEFT eye is a round glowing blue light (it appears on the RIGHT side of the picture when he faces the viewer), his right eye socket is broken and dark, the faded painted number 9 on its chest plate, long thin mechanical fingers, exposed cables at the neck. Each person has exactly two arms and two legs. Exactly two people in the image, each appears only once, no duplicates, no extra copies in the background, not a character sheet. Scene: the girl and the tall robot locked inside a big wooden cage made of thick branches hanging in a forest village, the girl gripping the bars, evening light. Detailed background environment that matches the scene, NOT a white or plain background (ignore the white background of the reference sheets). the robot's single glowing blue eye is on the RIGHT side of the picture (his own left eye), the eye socket on the left side of the picture is dark and broken. The robot has exactly ONE glowing blue eye; the other eye socket is broken and dark. Cinematic composition, full-bleed image, no border, no frame, no paper edges. No speech bubbles, no text, no letters."
+  },
+  {
+   "id": "c15",
+   "width": 1024,
+   "height": 576,
+   "seed": 1315,
+   "refs": [
+    "/home/user/youtubeshot/연재/두번째새벽/캐릭터시트_애니/도토리.jpg"
+   ],
+   "prompt": "modern Japanese anime illustration, high-quality light novel cover art, large detailed glossy eyes with layered highlights, soft blush on cheeks, very fine detailed flowing hair strands with soft shading, clean thin line art, soft cel shading with gentle gradients, dreamy shallow depth of field with bokeh light particles, soft diffused lighting, delicate pastel color grading, medieval post-apocalyptic science fantasy anime illustration. Characters: 도토리 (the character from reference image 1): small young evolved chimpanzee child of about seven who walks upright, big round curious amber eyes, fluffy dark fur, a small white face-paint dot on the forehead, simple tunic of woven bark cloth, a little acorn-cap shaped straw hat, barefoot, short dark fur on the head (no long hair), NO tail at all (chimpanzees have no tail). Each person has exactly two arms and two legs. Solo: exactly one person in the whole image, no other people, nobody in the background, no reflections, not a character sheet, single view only. Scene: the small chimpanzee child lying on a straw mat with a fever, holding his stomach, eyes half closed, a wet cloth on his forehead, dim candlelight. Detailed background environment that matches the scene, NOT a white or plain background (ignore the white background of the reference sheets). the small chimpanzee child has short dark fur on his head, no long hair, no tail. The hair is exactly as in the reference sheet (same length, style and color). Cinematic composition, full-bleed image, no border, no frame, no paper edges. No speech bubbles, no text, no letters."
+  },
+  {
+   "id": "c21",
+   "width": 1024,
+   "height": 576,
+   "seed": 1321,
+   "refs": [
+    "/home/user/youtubeshot/연재/두번째새벽/캐릭터시트_애니/아홉.jpg"
+   ],
+   "prompt": "modern Japanese anime illustration, high-quality light novel cover art, large detailed glossy eyes with layered highlights, soft blush on cheeks, very fine detailed flowing hair strands with soft shading, clean thin line art, soft cel shading with gentle gradients, dreamy shallow depth of field with bokeh light particles, soft diffused lighting, delicate pastel color grading, medieval post-apocalyptic science fantasy anime illustration. Characters: 아홉 (the character from reference image 1): old humanoid maintenance robot, tall and thin, half-rusted iron body covered with patches of green moss and small vines, dented dome head with a menacing skull-like metal face and exposed teeth-like grille, his LEFT eye is a round glowing blue light (it appears on the RIGHT side of the picture when he faces the viewer), his right eye socket is broken and dark, the faded painted number 9 on its chest plate, long thin mechanical fingers, exposed cables at the neck. Each person has exactly two arms and two legs. Solo: exactly one person in the whole image, no other people, nobody in the background, no reflections, not a character sheet, single view only. Scene: the tall robot drawing a simple diagram in the dirt with one long metal finger: layers stacked inside a tall container, its single blue eye glowing, forest village. Detailed background environment that matches the scene, NOT a white or plain background (ignore the white background of the reference sheets). the tall robot crouching and drawing simple lines in the bare dirt ground with one long metal finger: a tall container with stacked layers, no paper, the robot's single glowing blue eye is on the RIGHT side of the picture (his own left eye), the eye socket on the left side of the picture is dark and broken. The robot has exactly ONE glowing blue eye; the other eye socket is broken and dark. Cinematic composition, full-bleed image, no border, no frame, no paper edges. No speech bubbles, no text, no letters."
+  },
+  {
+   "id": "c25",
+   "width": 1024,
+   "height": 576,
+   "seed": 1325,
+   "refs": [
+    "/home/user/youtubeshot/연재/두번째새벽/캐릭터시트_애니/한별.jpg",
+    "/home/user/youtubeshot/연재/두번째새벽/캐릭터시트_애니/도토리.jpg"
+   ],
+   "prompt": "modern Japanese anime illustration, high-quality light novel cover art, large detailed glossy eyes with layered highlights, soft blush on cheeks, very fine detailed flowing hair strands with soft shading, clean thin line art, soft cel shading with gentle gradients, dreamy shallow depth of field with bokeh light particles, soft diffused lighting, delicate pastel color grading, medieval post-apocalyptic science fantasy anime illustration. Characters: 한별 (the character from reference image 1): 17-year-old human girl mechanic apprentice, short messy auburn hair, freckles, determined green eyes, brown leather apron over a faded linen tunic, patched hooded traveling cloak, old scavenged brass goggles resting on her head, small bronze gear pendant necklace, fingerless leather gloves, worn leather boots; 도토리 (the character from reference image 2): small young evolved chimpanzee child of about seven who walks upright, big round curious amber eyes, fluffy dark fur, a small white face-paint dot on the forehead, simple tunic of woven bark cloth, a little acorn-cap shaped straw hat, barefoot, short dark fur on the head (no long hair), NO tail at all (chimpanzees have no tail). Each person has exactly two arms and two legs. Exactly two people in the image, each appears only once, no duplicates, no extra copies in the background, not a character sheet. Scene: the girl gently stopping the small chimpanzee child from drinking from a bowl of clear water, kneeling to his eye level, a large pot of water boiling over a fire behind them. Detailed background environment that matches the scene, NOT a white or plain background (ignore the white background of the reference sheets). the small chimpanzee child has NO tail at all. Cinematic composition, full-bleed image, no border, no frame, no paper edges. No speech bubbles, no text, no letters."
+  },
+  {
+   "id": "c27",
+   "width": 1024,
+   "height": 576,
+   "seed": 1327,
+   "refs": [
+    "/home/user/youtubeshot/연재/두번째새벽/캐릭터시트_애니/아홉.jpg"
+   ],
+   "prompt": "modern Japanese anime illustration, high-quality light novel cover art, large detailed glossy eyes with layered highlights, soft blush on cheeks, very fine detailed flowing hair strands with soft shading, clean thin line art, soft cel shading with gentle gradients, dreamy shallow depth of field with bokeh light particles, soft diffused lighting, delicate pastel color grading, medieval post-apocalyptic science fantasy anime illustration. Characters: 아홉 (the character from reference image 1): old humanoid maintenance robot, tall and thin, half-rusted iron body covered with patches of green moss and small vines, dented dome head with a menacing skull-like metal face and exposed teeth-like grille, his LEFT eye is a round glowing blue light (it appears on the RIGHT side of the picture when he faces the viewer), his right eye socket is broken and dark, the faded painted number 9 on its chest plate, long thin mechanical fingers, exposed cables at the neck. Each person has exactly two arms and two legs. Solo: exactly one person in the whole image, no other people, nobody in the background, no reflections, not a character sheet, single view only. Scene: the tall robot carrying heavy wooden buckets of water up a long rope ladder in a giant tree at night under the moon, its blue eye glowing, sleeping village around. Detailed background environment that matches the scene, NOT a white or plain background (ignore the white background of the reference sheets). the robot's single glowing blue eye is on the RIGHT side of the picture (his own left eye), the eye socket on the left side of the picture is dark and broken. The robot has exactly ONE glowing blue eye; the other eye socket is broken and dark. Cinematic composition, full-bleed image, no border, no frame, no paper edges. No speech bubbles, no text, no letters."
+  },
+  {
+   "id": "c30",
+   "width": 1024,
+   "height": 576,
+   "seed": 1330,
+   "refs": [
+    "/home/user/youtubeshot/연재/두번째새벽/캐릭터시트_애니/잎새할머니.jpg"
+   ],
+   "prompt": "modern Japanese anime illustration, high-quality light novel cover art, large detailed glossy eyes with layered highlights, soft blush on cheeks, very fine detailed flowing hair strands with soft shading, clean thin line art, soft cel shading with gentle gradients, dreamy shallow depth of field with bokeh light particles, soft diffused lighting, delicate pastel color grading, medieval post-apocalyptic science fantasy anime illustration. Characters: 잎새 할머니 (the character from reference image 1): very old evolved female orangutan elder of a forest village who walks upright, long shaggy gray-orange hair, wise tired dark eyes with deep wrinkles, wide cheek pads, a cloak made of overlapping green and brown dried leaves, wooden bead necklaces, leaning on a tall carved wooden cane topped with a carved leaf. Each person has exactly two arms and two legs. Solo: exactly one person in the whole image, no other people, nobody in the background, no reflections, not a character sheet, single view only. Scene: the old orangutan elder opening the door of an empty wooden branch cage in a forest village, warm morning light, villagers watching quietly. Detailed background environment that matches the scene, NOT a white or plain background (ignore the white background of the reference sheets). all villagers in the background are evolved apes (chimpanzees and orangutans), no humans at all. Cinematic composition, full-bleed image, no border, no frame, no paper edges. No speech bubbles, no text, no letters."
+  },
+  {
+   "id": "c31",
+   "width": 1024,
+   "height": 576,
+   "seed": 1331,
+   "refs": [
+    "/home/user/youtubeshot/연재/두번째새벽/캐릭터시트_애니/도토리.jpg",
+    "/home/user/youtubeshot/연재/두번째새벽/캐릭터시트_애니/한별.jpg"
+   ],
+   "prompt": "modern Japanese anime illustration, high-quality light novel cover art, large detailed glossy eyes with layered highlights, soft blush on cheeks, very fine detailed flowing hair strands with soft shading, clean thin line art, soft cel shading with gentle gradients, dreamy shallow depth of field with bokeh light particles, soft diffused lighting, delicate pastel color grading, medieval post-apocalyptic science fantasy anime illustration. Characters: 도토리 (the character from reference image 1): small young evolved chimpanzee child of about seven who walks upright, big round curious amber eyes, fluffy dark fur, a small white face-paint dot on the forehead, simple tunic of woven bark cloth, a little acorn-cap shaped straw hat, barefoot, short dark fur on the head (no long hair), NO tail at all (chimpanzees have no tail); 한별 (the character from reference image 2): 17-year-old human girl mechanic apprentice, short messy auburn hair, freckles, determined green eyes, brown leather apron over a faded linen tunic, patched hooded traveling cloak, old scavenged brass goggles resting on her head, small bronze gear pendant necklace, fingerless leather gloves, worn leather boots. Each person has exactly two arms and two legs. Exactly two people in the image, each appears only once, no duplicates, no extra copies in the background, not a character sheet. Scene: the small chimpanzee child shyly giving the girl a small carved wooden leaf token on a string, the girl kneeling to receive it with both hands, forest village. Detailed background environment that matches the scene, NOT a white or plain background (ignore the white background of the reference sheets). the small chimpanzee child has NO tail at all. Cinematic composition, full-bleed image, no border, no frame, no paper edges. No speech bubbles, no text, no letters."
+  }
+ ],
+ "skip_done": true
+}

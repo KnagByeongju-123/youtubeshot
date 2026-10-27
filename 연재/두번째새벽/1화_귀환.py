@@ -1,6 +1,7 @@
 """《두 번째 새벽》 1화 '귀환' — 대본 + 컷별 그림 계획
-python 연재/두번째새벽/1화_귀환.py job <저장폴더>   → 그림 주문서(klein_worker 용) job.json
-python 연재/두번째새벽/1화_귀환.py project <그림폴더> → 프로젝트 파일(render_project 용) 연재/두번째새벽/1화_귀환.json
+python 연재/두번째새벽/1화_귀환.py job <저장폴더> [애니] [c01,c06,...]   → 그림 주문서(klein_worker 용) job.json
+  (애니 = 애니 일러스트 화풍 + 캐릭터시트_애니, 컷번호를 적으면 그 컷만)
+python 연재/두번째새벽/1화_귀환.py project <그림폴더> [애니] → 프로젝트 파일(render_project 용) 연재/두번째새벽/1화_귀환.json
 대본의 {컷번호} 자리에 그 컷 그림이 들어감. chars = 그 컷에 나오는 인물(캐릭터 시트를 기준 그림으로 넣음)"""
 import json
 import os
@@ -30,7 +31,7 @@ CUTS = [
     ("c03", ["한별"], "the girl working in a cramped engine room full of pipes and gauges, holding a wrench, sparks flying, oil on her cheek", "기관실의 정비공 견습 한별"),
     ("c04", ["한별"], "the girl pressing her hand against a round porthole window, looking at a small blue-green planet far away in space, wonder in her eyes", "창밖의 작은 파란 별을 바라보는 한별"),
     ("c05", [], "empty grain storage room in a starship, last few sacks, dim flickering lamps, rationing scale", "바닥을 드러낸 식량 창고"),
-    ("c06", [], "a grand starship hall like a medieval throne room, an old captain sitting on a metal throne, knights in armor standing in rows, crowd of commoners", "선장의 대전"),
+    ("c06", [], "a grand starship hall like a medieval throne room, a very old captain-king with a long white beard, a worn crown made of old metal parts and a heavy faded royal robe sitting on a metal throne, knights in armor standing in rows, crowd of commoners", "선장의 대전"),
     ("c07", ["강무진 경"], "the knight commander standing before the throne, hand on his sword hilt, stern face, red cape", "기사단장 강무진 경"),
     ("c08", ["서린"], "the young priestess with a silver circlet holding a small candle, praying with closed eyes in a chapel with a red sun emblem on the wall", "기도하는 견습 사제 서린"),
     ("c09", ["서린", "강무진 경"], "the knight commander and the young priestess, his adopted daughter, talking quietly in a dim corridor, she looks worried, he looks away", "양녀 서린과 강무진"),
@@ -280,31 +281,56 @@ STORY = """{c01}
 
 def main():
     cmd, folder = sys.argv[1], sys.argv[2]
+    anime = len(sys.argv) > 3 and sys.argv[3] == "애니"
     chars = {c["name"]: c for c in json.load(open(os.path.join(HERE, "등장인물.json"), encoding="utf-8"))["chars"]}
     src = open(os.path.join(HERE, "..", "..", "shorts_novel_maker_supertonic.py"), encoding="utf-8").read()
-    style = re.search(r'"옛날 만화책\(세피아 펜화\)": "([^"]+)"', src).group(1)
+    style_name = "애니 일러스트\\(요즘\\)" if anime else "옛날 만화책\\(세피아 펜화\\)"
+    style = re.search(f'"{style_name}": "([^"]+)"', src).group(1)
+    face, kind = ("face_anime", "anime illustration") if anime else ("face", "comic panel")
+    only = sys.argv[4].split(",") if len(sys.argv) > 4 else None
+    # 애니 화풍 설명의 눈·볼·머리카락 말 때문에 인물 없는 장면에 엉뚱한 소녀 얼굴이 크게 나옴 → 풍경 장면은 그 말을 빼고 배경 그림으로
+    scenery = re.sub(r"large detailed glossy eyes[^,]*, soft blush on cheeks, very fine detailed flowing hair strands with soft shading, ", "", style)
+    scenery = scenery.replace("dreamy shallow depth of field with bokeh light particles, soft diffused lighting, delicate pastel color grading",
+                              "rich saturated colors, strong contrast, dramatic cinematic lighting that matches the mood of the scene")
+    no_face = ("Anime background art, environment and scenery illustration. No main character, no close-up face, no portrait, no girl in the foreground; "
+               "any people are small figures in the scene. ")
+    # 같은 인물이 한 그림에 두 번 나오는 일(배경 복제·시트처럼 여러 모습)이 잦아서 사람 수를 못 박음
+    SOLO = "Solo: exactly one person in the whole image, no other people, nobody in the background, no reflections, not a character sheet, single view only. "
+    GROUP = "Exactly {} people in the image, each appears only once, no duplicates, no extra copies in the background, not a character sheet. "
+    NUM = {2: "two", 3: "three", 4: "four", 5: "five"}
+    BG = "Detailed background environment that matches the scene, NOT a white or plain background (ignore the white background of the reference sheets). "
     if cmd == "job":
         items = []
         for cid, who, desc, _ in CUTS:
+            if only and cid not in only:
+                continue
             looks = "; ".join(f"{nm} (the character from reference image {k + 1}): {chars[nm]['look']}" for k, nm in enumerate(who))
             items.append({"id": cid, "width": 1024, "height": 576, "seed": 100 + int(cid[1:]),
-                          "refs": [os.path.join(HERE, chars[nm]["face"]) for nm in who],
-                          "prompt": f"{style}, medieval post-apocalyptic science fantasy comic panel. "
-                                    + (f"Characters: {looks}. " if looks else "")
-                                    + f"Scene: {desc}. Cinematic composition, full-bleed image, no border, no frame, no paper edges. No speech bubbles, no text, no letters."})
+                          "refs": [os.path.join(HERE, chars[nm][face]) for nm in who],
+                          "prompt": f"{style if (who or not anime) else scenery}, medieval post-apocalyptic science fantasy {kind}. "
+                                    + (f"Characters: {looks}. Each person has exactly two arms and two legs. " + (SOLO if len(who) == 1 else GROUP.format(NUM[len(who)])) if looks
+                                       else no_face if anime else "")
+                                    + f"Scene: {desc}. " + (BG if who else "") + "Cinematic composition, full-bleed image, no border, no frame, no paper edges. No speech bubbles, no text, no letters."})
         os.makedirs(folder, exist_ok=True)
         json.dump({"items": items}, open(os.path.join(folder, "job.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
         print(len(items), "cuts")
     elif cmd == "project":
         story = STORY
         for cid, _, _, cap in CUTS:
-            story = story.replace("{" + cid + "}", f"[사진: {os.path.join(folder, cid + '.png')} | {cap} | AI 생성 그림 (FLUX.2 klein) | ]")
+            img = next((os.path.join(folder, cid + e) for e in (".png", ".jpg") if os.path.exists(os.path.join(folder, cid + e))), os.path.join(folder, cid + ".png"))
+            story = story.replace("{" + cid + "}", f"[사진: {img} | {cap} | AI 생성 그림 (FLUX.2 klein) | ]")
         proj = {"ver": 7, "category": "장문", "genre": "[이야기] SF·디스토피아", "topic": "두 번째 새벽", "title": TITLE,
-                "story": story, "sources": [], "notes": "창작 연재 《두 번째 새벽》 1화", "autophoto": False, "img_source": "그림: 옛날 만화책",
+                "story": story, "sources": [], "notes": "창작 연재 《두 번째 새벽》 1화", "autophoto": False, "img_source": "그림: 애니 일러스트" if anime else "그림: 옛날 만화책",
+                "trans_fix": {"ja": {"第二の夜明け": "二度目の夜明け", "二番目の夜明け": "二度目の夜明け", "2番目の夜明け": "二度目の夜明け", "セカンド・ドーン": "二度目の夜明け", "セカンドドーン": "二度目の夜明け"},
+                              "en": {"The Second Daybreak": "The Second Dawn"}},   # 연재 이름은 기획.md 에 정한 대로 고정
                 "cast": [{"name": nm, "look": c["look"], "look_ko": c["look_ko"], "voice": c.get("voice"),
-                          **({"sheet": os.path.join(HERE, c["face"])} if c.get("face") else {})} for nm, c in chars.items()],
+                          **({"sheet": os.path.join(HERE, c[face])} if c.get(face) else {})} for nm, c in chars.items()],
                 "dialogue": [{"text": t, "who": w} for t, w in DIALOGUE],
-                "settings": {"format": "롱폼 가로(1920×1080)", "narr_voice": "Supertonic M2 (남성, 무료 로컬) [supertonic:M2]"}}
+                "settings": {"format": "롱폼 가로(1920×1080)", "narration": "on",   # 새 서버 기본값(나레이션 꺼짐·스크롤형) 대신
+                             "layout": "자막형(큰 제목+사진+자막)", "img_fill": "전체 화면(글자가 사진 위에)",
+                             "img_motion": "영상처럼(확대·이동·전환)",
+                             "head_show": "안 보임(제목 카드만)", "sub_split": "한 줄씩(문장·쉼표로 나눠 차례로)", "img_label": "off",   # 연재 화면 규칙
+                             "narr_voice": "Supertonic M2 (남성, 무료 로컬) [supertonic:M2]"}}
         out = os.path.join(HERE, "1화_귀환.json")
         json.dump(proj, open(out, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
         print(out, len(story), "chars")
