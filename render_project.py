@@ -187,7 +187,8 @@ def main(a):
         subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-f", "f32le", "-ar", str(m.SR), "-ac", "1", "-i", raw,
                         "-b:a", "128k", base + "_나레이션.mp3"], check=True)
         os.remove(raw)
-        os.remove(base + ".만드는중")
+        if os.path.exists(base + ".만드는중"):
+            os.remove(base + ".만드는중")
         log("🎙 나레이션만 완성: " + base + "_나레이션.mp3")
         try:
             app.destroy()
