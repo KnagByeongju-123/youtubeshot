@@ -98,6 +98,41 @@ def cho(c):
     return (ord(c) - 0xAC00) // 588 if "가" <= c <= "힣" else -1
 
 
+TENSE = {1: 0, 4: 3, 8: 7, 10: 9, 13: 12}          # 된소리 첫소리 → 예사소리 (ㄲ→ㄱ, ㄸ→ㄷ, ㅃ→ㅂ, ㅆ→ㅅ, ㅉ→ㅈ)
+
+
+def cho_like(a, b):
+    """두 글자의 첫소리가 같거나 된소리·예사소리 짝인가 ('들'과 '때')"""
+    x, y = cho(a), cho(b)
+    return x >= 0 and TENSE.get(x, x) == TENSE.get(y, y)
+
+
+def word_end_stutters(h, sents, k_):
+    """뒷말 더듬 (사용자 지적 2026-10-27 '처음 생길 때'를 '생길 때때로'): 낱말과 낱말 사이에 대본에 없는 글자 1~2개가 끼었고,
+    그 글자가 앞 낱말의 끝 글자와 같거나('때 때'), 첫소리가 앞 낱말 끝 글자·뒤 낱말 첫 글자와 같은 짝('생길 들 때')이면 더듬으로 봄.
+    반환: [(앞 끝 글자+끼어든 글자+뒤 첫 글자, 문장)]"""
+    ctx = sents[max(0, k_ - 1):k_ + 2]
+    ref, starts, mixed = "", set(), set()
+    for _, s in ctx:
+        for w in s.split():
+            hw = hangul(w)
+            if re.search(r"[0-9A-Za-z]", w):
+                mixed.update(range(len(ref), len(ref) + len(hw) + 1))
+            if hw:
+                starts.add(len(ref))
+                ref += hw
+    out = []
+    sm = difflib.SequenceMatcher(None, ref, h, autojunk=False)
+    for op, i1, i2, j1, j2 in sm.get_opcodes():
+        if op != "insert" or not 1 <= j2 - j1 <= 2 or i1 not in starts or i1 in mixed or not 0 < i1 < len(ref):
+            continue
+        prev, nxt, ins = ref[i1 - 1], ref[i1], h[j1:j2]
+        if ins[0] == prev or any(cho_like(c, prev) or cho_like(c, nxt) for c in ins):
+            s_ = next((s for p, s in ctx if hangul(ref[max(0, i1 - 3):i1 + 2]) in hangul(s)), sents[k_][1])
+            out.append((prev + ins + nxt, s_))
+    return out
+
+
 def word_start_stutters(h, sents, k_):
     """단어 첫머리 더듬 (사용자 지적 2026-10-26 '단어 시작 때 더듬음'): 같은 글자 반복('게다다가')이 아니라
     첫소리만 내다 다시 시작해 '브바닷속'·'그게다가'처럼 들리는 곳 — 대본에 없는 글자 하나가 낱말 바로 앞에 끼었고
@@ -135,6 +170,20 @@ def best_sentence(h, sents):
         if hit > score:
             best, score = (par, s), hit
     return best if score >= 0.55 else None
+
+
+def best_sentence_part(h, sents):
+    """긴 문장이 쉼에서 잘려 조각에 반쪽만 들어온 경우 — 조각 글자가 문장에 얼마나 들어 있나로 맞춤 (2026-10-27 '처음 생길 될 때'를 놓쳤음)"""
+    best, score = None, 0.0
+    for par, s in sents:
+        sh = hangul(s)
+        if len(sh) < 8 or len(h) < 8:
+            continue
+        sm = difflib.SequenceMatcher(None, sh, h, autojunk=False)
+        hit = sum(b.size for b in sm.get_matching_blocks()) / len(h)
+        if hit > score:
+            best, score = (par, s), hit
+    return best if score >= 0.7 else None
 
 
 def fast_spots(sylls, sents, ratio=1.25, gap=0.3, min_syl=8):
@@ -202,7 +251,7 @@ def detect(video, script):
             for dd in sorted(doubles(h, n)):
                 i = h.find(dd)
                 ctx = h[max(0, i - 8):i + 2 * n + 8]                 # 반복 자리 앞뒤
-                ps = best_sentence(ctx, sents) or best_sentence(h, sents)
+                ps = best_sentence(ctx, sents) or best_sentence(h, sents) or best_sentence_part(h, sents)
                 if ps is None:
                     continue
                 sh = hangul(ps[1])
@@ -215,12 +264,15 @@ def detect(video, script):
                 if not extra_syllables(sh, ctx, ctx.find(dd), len(dd)):   # 규칙 4: 대본보다 글자가 늘어난 자리여야 겹침
                     continue
                 found.append({"t": t0, "dd": dd, "sentence": ps[1], "paragraph": ps[0], "heard": text})
-        ps = best_sentence(h, sents)                 # 규칙 5: 단어 첫머리 더듬 ('브바닷속')
+        ps = best_sentence(h, sents) or best_sentence_part(h, sents)    # 규칙 5: 단어 첫머리 더듬 ('브바닷속')
         if ps is not None:
             k_ = sents.index(ps)
             for dd, s_ in word_start_stutters(h, sents, k_):
                 par = next((p for p, s in sents if s == s_), ps[0])
                 found.append({"t": t0, "dd": "첫머리 더듬 " + dd, "sentence": s_, "paragraph": par, "heard": text})
+            for dd, s_ in word_end_stutters(h, sents, k_):     # 규칙 6: 뒷말 더듬 ('생길 때 때', '생길 들 때')
+                par = next((p for p, s in sents if s == s_), ps[0])
+                found.append({"t": t0, "dd": "뒷말 더듬 " + dd, "sentence": s_, "paragraph": par, "heard": text})
     try:
         json.dump(sylls, open(os.path.join(tempfile.gettempdir(), "겹침_글자시각.json"), "w", encoding="utf-8"), ensure_ascii=False)
     except OSError:
