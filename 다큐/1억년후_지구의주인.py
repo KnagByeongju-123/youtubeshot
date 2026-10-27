@@ -52,9 +52,9 @@ CUTS = [
     ("c33", "fossil skulls of early human species arranged in a row on a museum table, soft light, scientific display without labels", "사라진 인류의 친척들"),
     ("c34", "a cross section of rock layers deep underground with a thin dark layer containing fragments of plastic, concrete, glass and small bones, geology illustration", "땅속에 남을 인류의 얇은 지층"),
     ("c35", "a ruined skyscraper completely overgrown by forest and vines, collapsing into the earth, far future", "숲에 묻혀 가는 도시"),
-    ("c36", "the Voyager space probe drifting alone in deep space with distant stars, its golden record visible on its side", "우주를 떠도는 보이저호"),
-    ("c37", "close-up of the golden record disc of the Voyager probe glinting in starlight, engraved diagrams, deep space", "금빛 레코드"),
-    ("c38", "a future scientist-like creature of unknown species digging carefully in rock layers with a small tool, finding a strange plastic fragment, mysterious warm light", "우리 흔적을 발견할 미래의 누군가"),
+    ("c36", "NASA Voyager space probe in deep space: a large white parabolic dish antenna facing forward, a small ten-sided body behind it, long thin booms sticking out, a small gold disc mounted on the side, distant stars, accurate historical spacecraft", "우주를 떠도는 보이저호"),
+    ("c37", "close-up of a plain shiny gold disc like a gramophone record with fine circular grooves, glinting in starlight against black space, smooth surface", "금빛 레코드"),
+    ("c38", "a gentle intelligent furry animal descended from rodents, standing upright with small hands, carefully brushing dirt from a rock layer and holding up a faded piece of old plastic, curious soft eyes, warm sunset light, natural wildlife look", "우리 흔적을 발견할 미래의 누군가"),
     ("c39", "planet Earth seen from space with unfamiliar continents and a bright blue ocean, life glowing green on the land, hopeful", "여전히 살아 있는 지구"),
     ("c40", "a sunrise over a strange but beautiful future landscape with new forests and rivers, warm golden light, no humans", "1억 년 후의 새벽"),
 ]
