@@ -1,0 +1,29 @@
+{
+ "items": [
+  {
+   "id": "c02",
+   "width": 1024,
+   "height": 576,
+   "seed": 302,
+   "refs": [],
+   "prompt": "realistic historical watercolor painting, fine ink outlines, transparent layered watercolor washes, soft natural colors, visible paper texture, documentary illustration, realistic anatomy and proportions, historical documentary illustration, realistic proportions, museum-quality painting. Scene: a glowing abstract artificial intelligence made of soft blue light lines and points, thinking, floating in front of a vast starry universe, calm and contemplative, data visualization style, no letters, no numbers. No people, no hands, no arms anywhere.. No signature, no artist mark. Cinematic composition, full-bleed image, no border, no frame, no paper edges. No text, no letters, no captions."
+  },
+  {
+   "id": "c23",
+   "width": 1024,
+   "height": 576,
+   "seed": 323,
+   "refs": [],
+   "prompt": "realistic historical watercolor painting, fine ink outlines, transparent layered watercolor washes, soft natural colors, visible paper texture, documentary illustration, realistic anatomy and proportions, historical documentary illustration, realistic proportions, museum-quality painting. Scene: a person stepping into a glowing teleportation booth in a quiet white laboratory while an identical copy of the same person appears in a second booth far away, symbolic thought experiment, soft light, calm. Every person has exactly two arms, two hands with five fingers each and two legs, hands simple and relaxed (partly hidden is fine). No signature, no artist mark. Cinematic composition, full-bleed image, no border, no frame, no paper edges. No text, no letters, no captions."
+  },
+  {
+   "id": "c26",
+   "width": 1024,
+   "height": 576,
+   "seed": 326,
+   "refs": [],
+   "prompt": "realistic historical watercolor painting, fine ink outlines, transparent layered watercolor washes, soft natural colors, visible paper texture, documentary illustration, realistic anatomy and proportions, historical documentary illustration, realistic proportions, museum-quality painting. Scene: a quiet sunrise over a meadow with countless tiny glowing particles of light rising from the grass and flowers into the sky, symbolic of atoms returning to nature and becoming new life, peaceful and hopeful. No people, no hands, no arms anywhere.. No signature, no artist mark. Cinematic composition, full-bleed image, no border, no frame, no paper edges. No text, no letters, no captions."
+  }
+ ],
+ "skip_done": true
+}
