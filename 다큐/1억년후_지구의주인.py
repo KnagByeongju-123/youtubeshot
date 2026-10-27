@@ -17,11 +17,11 @@ STYLE = ("scientific documentary illustration, detailed digital painting like a 
 
 # (컷번호, 그림 설명(영어), 화면 설명(한국어))
 CUTS = [
-    ("c01", "planet Earth seen from space with unfamiliar continent shapes, a mountain range where the Mediterranean Sea used to be, glowing sunrise on the horizon", "1억 년 후의 지구"),
+    ("c01", "the Earth seen from orbit, a single globe filling the frame against black space, unfamiliar continent shapes, a mountain range where the Mediterranean Sea used to be, sunrise glow on the horizon", "1억 년 후의 지구"),
     ("c02", "a lush prehistoric Cretaceous landscape with long-necked dinosaurs grazing beside a river under a hazy sky", "1억 년 전, 공룡의 지구"),
     ("c03", "a strange future forest at dusk with unfamiliar alien-looking but plausible plants and small unknown animals silhouetted, mysterious atmosphere, no humans", "주인이 바뀐 미래의 숲"),
-    ("c04", "a giant spiral calendar of Earth's history from the formation of the planet to today, glowing timeline in space, infographic style without any text", "지구 46억 년의 달력"),
-    ("c05", "a single tiny glowing point at the very end of a huge timeline of Earth's history, representing humanity, dramatic scale, no text", "달력 마지막 34분의 인류"),
+    ("c04", "a towering canyon wall of countless colorful rock layers seen from below, representing billions of years of deep time, sunlight on the strata, a tiny hiker at the bottom for scale", "지구 46억 년의 달력"),
+    ("c05", "close-up of the very top of a huge cliff of rock layers: only the thin topmost layer of soil holds a single small human footprint, dramatic scale, warm evening light", "달력 마지막 34분의 인류"),
     ("c06", "mid-Cretaceous Earth seen from space 100 million years ago, India as an island in the ocean, a narrow young Atlantic Ocean", "1억 년 전의 대륙"),
     ("c07", "cross-section illustration of Earth's tectonic plates floating on the glowing mantle, arrows of slow movement shown only by shapes, no text", "천천히 움직이는 판"),
     ("c08", "close-up of a human hand with fingernails beside a cracked rock fault line, symbolic comparison of slow growth, soft light", "손톱이 자라는 속도"),
@@ -238,7 +238,7 @@ def main():
     cmd, folder = sys.argv[1], sys.argv[2]
     if cmd == "job":
         items = [{"id": cid, "width": 1024, "height": 576, "seed": 300 + int(cid[1:]),
-                  "prompt": f"{STYLE}. Scene: {desc}. Objects, planets and animals have no cartoon faces. "
+                  "prompt": f"{STYLE}. Scene: {desc}. "   # '행성' 같은 낱말을 넣으면 그림에 행성이 떠다님 → 장면에 없는 물건 이름은 쓰지 않음
                             "Cinematic composition, full-bleed image, no border, no frame, no paper edges. No text, no letters, no labels, no numbers."}
                  for cid, desc, _ in CUTS]
         os.makedirs(folder, exist_ok=True)
