@@ -6,6 +6,21 @@ import os
 import sys
 from PIL import Image, ImageDraw, ImageEnhance, ImageFont
 
+
+def outlined(im, xy, text, font, fill, edge, width, shadow=None):
+    """글씨 + 테두리(+그림자). 테두리는 글자 모양을 넓혀서 그림 — PIL stroke_width 는 이 글꼴에서 'ㄱ' 윗변 테두리가 빠지는 일이 있음"""
+    from PIL import ImageFilter
+    w, h = int(font.getlength(text)) + 4 * width + 40, int(font.size * 1.6) + 4 * width
+    m = Image.new("L", (w, h), 0)
+    ImageDraw.Draw(m).text((2 * width, 2 * width), text, font=font, fill=255)
+    ring = m.filter(ImageFilter.MaxFilter(2 * width + 1))
+    x, y = int(round(xy[0])) - 2 * width, int(round(xy[1])) - 2 * width
+    if shadow:
+        sw, (dx, dy) = shadow
+        im.paste((0, 0, 0), (x + dx, y + dy), m.filter(ImageFilter.MaxFilter(2 * sw + 1)))
+    im.paste(edge, (x, y), ring)
+    im.paste(fill, (x, y), m)
+
 src, out, l1, l2, hi, pos = sys.argv[1:7]
 badge = sys.argv[7] if len(sys.argv) > 7 else "엄마의 텃밭 1화"
 kind = sys.argv[8] if len(sys.argv) > 8 else "sans"
@@ -43,8 +58,7 @@ for k, ln in enumerate(lines):
     for word in ln.split(" "):
         col = HI if hi and hi in word else (255, 255, 255)
         w = d.textlength(word, font=f)
-        d.text((x + 5, y + 7), word, font=f, fill=(0, 0, 0), stroke_width=12, stroke_fill=(0, 0, 0))    # 그림자
-        d.text((x, y), word, font=f, fill=col, stroke_width=6, stroke_fill=(25, 12, 6))
+        outlined(im, (x, y), word, f, col, (25, 12, 6), 6, shadow=(11, (5, 7)))    # 테두리 + 그림자
         x += w + size * 0.26
 fb = ImageFont.truetype(os.path.join(HERE, "..", "..", "fonts", "BlackHanSans-Regular.ttf"), 44)   # 회차 띠
 bw = d.textlength(badge, font=fb) + 48
