@@ -1,0 +1,16 @@
+{
+  "_설명": "정보보안 교육 영상 등장인물. look = 그림 모델에 넣는 영어 묘사, look_ko = 한국어 설명, face = 확정한 캐릭터 시트",
+  "style": "웹툰",
+  "chars": [
+    {
+      "name": "민수",
+      "look": "young Korean male office worker aged 28, slim average build, friendly slightly naive face, short neat black hair with a side part, light sky-blue dress shirt with sleeves rolled to the elbows, navy necktie, dark gray slacks, black shoes, white employee ID card on a blue lanyard around his neck",
+      "look_ko": "28살 신입 사원. 보통 키의 마른 체형, 순하고 조금 덜렁대는 얼굴, 짧은 검은 머리(옆 가르마), 하늘색 셔츠(소매 걷음), 남색 넥타이, 짙은 회색 바지, 파란 줄 사원증"
+    },
+    {
+      "name": "박 팀장",
+      "look": "Korean woman security manager aged 45, medium height, confident kind face, black bob haircut to the chin, thin black rectangular glasses, navy blue blazer over a white blouse, navy knee-length skirt, low black heels, white employee ID card on a red lanyard",
+      "look_ko": "45살 보안 담당 팀장(여). 보통 키, 똑 부러지고 친절한 얼굴, 턱선 단발 검은 머리, 가는 검은 안경, 남색 재킷·흰 블라우스·남색 치마, 빨간 줄 사원증"
+    }
+  ]
+}
