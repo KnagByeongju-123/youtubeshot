@@ -1,0 +1,13 @@
+{
+ "items": [
+  {
+   "id": "c03",
+   "width": 1024,
+   "height": 576,
+   "seed": 303,
+   "refs": [],
+   "prompt": "realistic historical watercolor painting, fine ink outlines, transparent layered watercolor washes, soft natural colors, visible paper texture, documentary illustration, realistic anatomy and proportions, historical documentary illustration, realistic proportions, museum-quality painting. Scene: a 1930s single-engine propeller airplane flying low over barren desert hills in southern Peru, far below on a ridge a long faint band of many small round pits climbs the hill like a snake, hazy morning light, sense of discovery. No people, no hands, no arms anywhere.. No signature, no artist mark. Cinematic composition, full-bleed image, no border, no frame, no paper edges. No text, no letters, no captions."
+  }
+ ],
+ "skip_done": true
+}
