@@ -22,7 +22,7 @@ DIALOGUE = [
     ("이 도면, 친구한테 살짝 보여 줘도 되죠? 우리 회사 기술이 이렇게 대단하다고요.", "민수"),
     ("민수 씨, 비밀번호는 머릿속에만 두세요. 화면에 붙여 두면 누구나 볼 수 있어요.", "박 팀장"),
     ("민수 씨, 내 아이디로 잠깐 들어가서 그 자료 좀 봐 줄래요?", "옆자리 선배"),
-    ("죄송해요, 선배님. 아이디는 빌려 드릴 수가 없어요.", "민수"),
+    ("죄송해요, 선배님. 다른 사람 아이디로는 들어갈 수 없어요. 그 자료가 필요하면 제 권한부터 신청할게요.", "민수"),
     ("집에서 마저 보려고 화면을 찍어 두려는데요.", "민수"),
     ("잠깐만요. 회사 자료는 사진도, 메일로 보내는 것도, USB 도 안 돼요.", "박 팀장"),
     ("택배 배송 조회? 저 택배 시킨 적 없는데...", "민수"),
@@ -43,7 +43,7 @@ CUTS = [
     ("c05", [], "a neat stack of technical engineering drawings, blueprints and documents on an office desk with a big golden padlock and a chain lying on top, soft light, no people", "자물쇠로 지켜야 할 기술 정보"),
     ("c06", ["박 팀장", "민수"], "an office computer monitor with yellow sticky notes stuck on its frame, the young man (no glasses, bare eyes) sitting in front of it looking embarrassed and scratching his head with one hand, the woman manager with glasses standing behind him in her navy blazer and navy knee-length skirt, pointing at the sticky notes with a gentle frown", "모니터에 붙인 비밀번호 쪽지"),
     ("c07", [], "an empty office desk with an empty chair pushed back, a computer monitor showing a dark lock screen with a big white padlock symbol, a coffee mug beside the keyboard, no people", "자리를 비울 땐 화면 잠금"),
-    ("c08", ["민수"], "the young man at his desk politely refusing with both palms raised and an apologetic smile, turned toward an older male coworker in a gray suit leaning over his desk partition, bright office", "아이디를 빌려 달라는 선배를 거절하는 민수"),
+    ("c08", ["민수"], "the young man at his desk politely refusing with both palms raised and an apologetic smile, turned toward an older male coworker in a gray suit leaning over his desk partition, bright office", "선배 아이디로 들어가 달라는 부탁을 거절하는 민수"),
     ("c09", [], "a computer screen showing a row of colorful file folders, one big folder marked with a red padlock symbol, office desk, no people", "내 권한 밖의 자료"),
     ("c10", ["민수", "박 팀장"], "the young man standing next to his desk, both of his hands holding his smartphone up in front of his chest, aiming the phone camera at his computer monitor to take a photo of the screen, nothing else in his hands, the woman manager with glasses rushing in from the right side with one hand raised to stop him, surprised faces", "화면을 찍으려다 멈춘 민수"),
     ("c11", [], "four simple flat icons in a row on a plain pale cream background: a USB flash drive, a white mail envelope, a smartphone showing a chat bubble icon, and a plain fluffy white cloud (weather cloud, no face, no ears), every one of the four icons crossed out with a big red X, clean infographic illustration, no people", "USB·개인 메일·클라우드·메신저 반출 금지"),
@@ -111,7 +111,7 @@ STORY = """{c01}
 
 "민수 씨, 내 아이디로 잠깐 들어가서 그 자료 좀 봐 줄래요?"
 
-"죄송해요, 선배님. 아이디는 빌려 드릴 수가 없어요."
+"죄송해요, 선배님. 다른 사람 아이디로는 들어갈 수 없어요. 그 자료가 필요하면 제 권한부터 신청할게요."
 
 {c09}
 

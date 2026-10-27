@@ -76,9 +76,15 @@ def parse_dict(text):
     return sorted(out, key=lambda x: -len(x[0]))
 
 
+# 세는 말 '건'은 된소리로: 한건·한 건 → 한껀 (사용자 규칙, 2026-10-27). 앞뒤가 다른 글자에 붙은 건물·건강·'건강한 건' 등은 그대로
+_GEON = re.compile(r"(?<![가-힣])한(\s?)건(?=(?:이|을|은|도|의|에|만|씩|과|으로|입니다|이에요)?(?![가-힣]))")
+# 단가(물건값) → 단까 (사용자 규칙, 2026-10-27). 간단·판단·결단·일단·무단·독단 뒤의 '가'는 그대로 (간단가요, 판단가능)
+_DANGA = re.compile(r"(?<![간판결일무독])단가")
+
+
 def builtin_read(t):
     """읽기사전.txt 의 낱말 규칙 적용 (AI → 에이아이)"""
-    return apply_read(t, read_dict())
+    return _DANGA.sub("단까", _GEON.sub(r"한\1껀", apply_read(t, read_dict())))
 
 
 _KO_DIG = "영일이삼사오육칠팔구"
