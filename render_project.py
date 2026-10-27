@@ -8,6 +8,7 @@
   - --suffix 이름 : 결과 파일 이름 끝에 _이름 (같은 제목으로 덧붙일 부분을 따로 만들 때. 화면 제목은 그대로)
   - --썸네일만 : 영상은 만들지 않고 썸네일 후보만 새로 (디자인 16가지 + 영상 장면 실사 편집). 지금 유튜브 썸네일은 그대로
   - --대본그대로 : 손으로 쓴 대본의 오프닝(30초 후크·'끝까지 보시면')과 챕터 끝 예고를 AI 가 고쳐 쓰지 않음 (에세이처럼 원문 분위기를 지킬 때. 존댓말 고치기는 그대로)
+  - --나레이션만 : 영상은 만들지 않고 나레이션만 이어 붙인 mp3 (<제목>_나레이션.mp3). 녹음은 캐시에 남아 나중에 영상 만들 때 그대로 씀
   - --길이고정 : 롱폼 길이 규칙(10~15분, 짧으면 내용을 더해 늘림)을 건너뜀
   - --영어 : 영상 완성 뒤 영어 제목·설명란·자막(SRT)도 만듦 (유튜브 '번역'으로 덧붙이는 용도, 영어_번역.py)
   - --자막언어 영어,일본어,한국어 : 고른 언어마다 자막(SRT)과 제목·설명란 번역 (--영어 는 '영어'만과 같음)
@@ -176,6 +177,23 @@ def main(a):
         m.atomic_write_text(base + "_나레이션검증.txt", m._NV.report_text(title))
         n_bad = sum(1 for r_ in m._NV.REPORT if not r_[2]["ok"])
         log(f"🔎 나레이션 검증: {len(m._NV.REPORT)}문단 중 문제 {n_bad}개" + (f" → {os.path.basename(base)}_나레이션검증.txt 확인" if n_bad else " (모두 통과)"))
+    if "--나레이션만" in a:     # 그림 없이 녹음만 먼저 들어 보기: 문단 사이 0.5초 쉼으로 이어 붙인 mp3 (녹음은 캐시에 남아 영상 만들 때 그대로 씀)
+        import subprocess
+        import numpy as np
+        gap = np.zeros(int(m.SR * 0.5), np.float32)
+        wav = np.concatenate([x for _, au, d_ in narr if d_ > 0 for x in (np.asarray(au, np.float32).reshape(-1), gap)])
+        raw = base + "_나레이션.f32"
+        wav.tofile(raw)
+        subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-f", "f32le", "-ar", str(m.SR), "-ac", "1", "-i", raw,
+                        "-b:a", "128k", base + "_나레이션.mp3"], check=True)
+        os.remove(raw)
+        os.remove(base + ".만드는중")
+        log("🎙 나레이션만 완성: " + base + "_나레이션.mp3")
+        try:
+            app.destroy()
+        except Exception:
+            pass
+        return 0
 
     r = m.make_renderer(title, story, s, narr)
     vdir = "영상구간"
