@@ -14,6 +14,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 TITLE = "정보보안 서약, 이렇게 지켜요"
 
 # 대사 → 말하는 인물 (그 인물 목소리로 읽음, 목소리는 등장인물.json 의 voice)
+# ONE_VOICE = True 면 대사도 모두 나레이션 목소리(M2)로 (사용자 결정 2026-10-27: 대화 방식보다 1번 남자 목소리 하나로)
+ONE_VOICE = True
 DIALOGUE = [
     ("민수 씨, 입사를 축하해요. 일을 시작하기 전에 이 서약서부터 같이 읽어 볼까요?", "박 팀장"),
     ("서약서요? 그냥 사인만 하면 되는 거 아니에요?", "민수"),
@@ -243,7 +245,7 @@ def main():
                 "story": story, "sources": [], "notes": "사내 정보보안 서약서 교육 영상 (회사·고객사 이름 없이 '우리 회사')", "autophoto": False, "img_source": "그림: 웹툰",
                 "cast": [{"name": nm, "look": c.get("look", ""), "look_ko": c.get("look_ko", ""), "voice": c.get("voice"),
                           **({"sheet": os.path.join(HERE, c["face"])} if c.get("face") else {})} for nm, c in chars.items() if nm != "나레이션"],
-                "dialogue": [{"text": t, "who": w} for t, w in DIALOGUE],
+                "dialogue": [] if ONE_VOICE else [{"text": t, "who": w} for t, w in DIALOGUE],
                 "settings": {"format": "롱폼 가로(1920×1080)", "narration": "on",   # 새 PC·서버 기본값(나레이션 꺼짐·스크롤형) 대신 장문 설정 그대로
                              "layout": "자막형(큰 제목+사진+자막)", "img_fill": "전체 화면(글자가 사진 위에)",
                              "img_motion": "영상처럼(확대·이동·전환)", "fps": "24", "reveal_hit": "off", "reveal_fx": "off",
