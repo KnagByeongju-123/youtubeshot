@@ -15,7 +15,7 @@ for f in os.listdir(W+'/그림_새로'):
 " $W
 .supertonic_venv/bin/python $W/크레타미궁.py project $W/그림 || exit 1
 nice -n 5 xvfb-run -a .supertonic_venv/bin/python -X utf8 render_project.py $W/크레타미궁.json --대본그대로 --길이고정 || exit 1
-F=$(ls -t output/장문/*/"신화가 아니었다, 공항 공사장에서 나온 4천 년 전 크레타 미궁.mp4" output/장문/"신화가 아니었다, 공항 공사장에서 나온 4천 년 전 크레타 미궁.mp4" 2>/dev/null | head -1)
+F=$(ls -t output/장문/*/*.mp4 2>/dev/null | head -1)   # 가장 최근에 만든 영상 (제목이 길면 폴더·파일 이름이 잘림)
 .sd_venv/bin/python 나레이션_발음검사.py "$F" $W/크레타미궁.py --기준 0.6 --결과 "${F%.mp4}_발음검사.txt"
 .sd_venv/bin/python 나레이션_겹침검사.py "$F" $W/크레타미궁.py --결과 "${F%.mp4}_겹침검사.txt"
 exit 0
