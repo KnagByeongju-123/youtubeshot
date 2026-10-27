@@ -4052,8 +4052,9 @@ def title_thumb_words(title):
     """제목 → 썸네일 글씨 {small, big, big2, emph}. 쉼표가 있으면 앞 = 작은 띠, 뒤 = 큰 글씨.
     없으면 끝에서부터 8자 넘게 될 때까지를 큰 글씨로, 나머지를 작은 띠로. 큰 글씨는 길이가 비슷하게 두 줄로 나눔"""
     t = re.sub(r"\s+", " ", str(title or "")).strip()
-    if "," in t:
-        small, rest = [x.strip() for x in t.split(",", 1)]
+    parts = re.split(r",(?!\d{3})", t, 1)                 # 숫자 속 쉼표(5,200)에서는 나누지 않음 (구멍 띠: '구멍 5' / '200개'로 잘렸음)
+    if len(parts) == 2:
+        small, rest = [x.strip() for x in parts]
     else:
         ws = t.split(" ")
         k = len(ws) - 1
