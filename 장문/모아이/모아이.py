@@ -28,12 +28,12 @@ DIALOGUE = []
 
 NP = " No people, no hands, no arms anywhere."
 CUTS = [
-    ("c01", "real photo", "아후 통가리키의 모아이 15개"),
+    ("c01", "real photo", "아후 통가리키의 모아이"),
     ("c02", "real photo", "태평양 한가운데의 이스터섬"),
     ("c03", "real photo", "채석장 라노 라라쿠의 모아이"),
     ("c04", "real photo", "채석장에 남은 미완성 모아이"),
     ("c05", "real photo", "제단(아후) 위의 모아이"),
-    ("c06", "real photo", "1722년 이스터섬에 온 로헤베인의 배 (옛 그림)"),
+    ("c06", "real photo", "유럽 사람들이 그린 이스터섬의 모아이 (18세기 그림)"),
     ("c07", "real photo", "토르 헤위에르달"),
     ("c08", "diagram", "모아이를 옮긴 방법, 쏟아진 가설"),
     ("c09", "real photo", "나무가 사라진 이스터섬의 풀밭"),
@@ -41,14 +41,14 @@ CUTS = [
     ("c11", "diagram", "길가 모아이의 비밀"),
     ("c12", "real photo", "옆에서 본 모아이"),
     ("c13", "diagram", "4.35톤 복제 모아이 실험"),
-    ("c14", "Rapa Nui islanders in simple bark-cloth wraps walking a large upright stone moai statue along a dirt road using three long ropes, one team on each side pulling alternately and one team behind, the statue rocking side to side, grassy hills and the sea behind, morning light", "밧줄로 모아이를 '걷게' 하는 모습 (상상 복원)"),
-    ("c15", "real photo", "라노 라라쿠에서 뻗어 나간 옛길"),
+    ("c14", "Rapa Nui islanders in simple bark-cloth wraps moving ONE large upright moai stone statue along a dirt road with three long ropes tied around its head, one team pulling from the left side and one team from the right side alternately, a small team behind holding a rope, the statue is a legless stone torso with a long head and no legs, no feet, its wide flat bottom touching the dirt road directly (no stone slab, no pedestal, no platform, no base block under it), it leans slightly forward and rocks side to side, grassy hills and the sea behind, morning light. Only one statue in the picture. Every person has exactly two arms and two legs", "밧줄로 모아이를 '걷게' 하는 모습 (상상 복원)"),
+    ("c15", "real photo", "채석장 라노 라라쿠와 주변 들판"),
     ("c16", "diagram", "모아이가 걸은 길"),
     ("c17", "real photo", "옮기다 깨진 모아이"),
     ("c18", "diagram", "채석장 가까이에 쓰러진 석상들"),
-    ("c19", "real photo", "아후 아키비의 일곱 모아이"),
+    ("c19", "real photo", "제단 위에 다시 세운 모아이"),
     ("c20", "real photo", "모아이의 붉은 돌 모자(푸카오)"),
-    ("c21", "real photo", "이스터섬의 돌밭(바위 정원)"),
+    ("c21", "traditional Rapa Nui rock gardens on Easter Island: fields scattered densely with dark volcanic stones, small low circular stone-walled enclosures (manavai) with green banana and taro plants growing inside, grassy hills and the ocean behind, overcast light." + NP, "이스터섬의 돌밭과 돌담 정원 (설명 그림)"),
     ("c22", "real photo", "오늘날의 라파누이 사람들"),
     ("c23", "real photo", "아후 통가리키의 해돋이"),
     ("c24", "real photo", "라노 라라쿠 비탈의 모아이 머리들"),
@@ -175,13 +175,15 @@ STORY = """{c01}
 과학이 한 일은 그 이야기를 믿을 수 있게 증명한 것뿐입니다. 옛사람들의 지혜를 얕보지 않는 것, 어쩌면 그것이 모아이가 우리에게 남긴 가장 큰 교훈일지도 모릅니다. 여러분은 모아이가 정말 걸어서 갔다고 생각하시나요? 댓글로 들려주세요."""
 
 
-REFS = {"c14": []}
-SEED = {}
+REFS = {"c14": ["c03_1"], "c26": ["c01_4"]}
+SEED = {"c14": 1014}
 REF_NOTE = ("Any real place or object shown must look exactly like the reference photo (same shape and colors), "
             "painted in the same watercolor style. ")
 
 # 컷 → 사진 후보 이름 (사진후보/후보.json 의 열쇠). 사진을 받은 뒤 채움
-PHOTOS = {}
+PHOTOS = {"c01": "c01_1", "c02": "c02_4", "c03": "c03_1", "c04": "c04_2", "c05": "c05_2", "c06": "c06_4", "c07": "c07_2", "c08": "c08_도표",
+          "c09": "c03_3", "c10": "c17_2", "c11": "c11_도표", "c12": "c03_2", "c13": "c13_도표", "c15": "c03_4", "c16": "c16_도표", "c17": "c17_1",
+          "c18": "c18_도표", "c19": "c05_4", "c20": "c20_1", "c22": "c22_3", "c23": "c23_1", "c24": "c04_3", "c25": "c25_4"}
 
 
 def main():

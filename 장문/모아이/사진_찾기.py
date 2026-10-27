@@ -4,11 +4,11 @@ import os, sys
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "안티키테라"))
 import 사진_찾기 as F
 F.Q = {
-    "c01": "Ahu Tongariki", "c02": "Easter Island aerial", "c03": "Rano Raraku", "c04": "Rano Raraku unfinished moai El Gigante",
-    "c05": "Ahu Nau Nau", "c06": "Roggeveen Easter Island", "c07": "Thor Heyerdahl", "c09": "Easter Island grassland landscape",
-    "c10": "fallen moai road", "c12": "moai profile side view", "c15": "Rano Raraku moai road", "c17": "broken moai",
-    "c19": "Ahu Akivi", "c20": "Pukao Puna Pau", "c21": "Rapa Nui manavai garden", "c22": "Tapati Rapa Nui festival",
-    "c23": "Ahu Tongariki sunrise", "c24": "Rano Raraku moai heads slope", "c25": "Anakena moai",
+    "c01": "Ahu Tongariki", "c02": "Easter Island aerial", "c03": "Rano Raraku", "c04": "El Gigante moai",
+    "c05": "Ahu Nau Nau", "c06": "Jacob Roggeveen", "c07": "Thor Heyerdahl", "c09": "Easter Island landscape",
+    "c10": "toppled moai", "c12": "moai side view", "c15": "Rano Raraku moai road", "c17": "broken moai",
+    "c19": "Ahu Akivi moai", "c20": "Pukao Puna Pau", "c21": "Manavai", "c22": "Tapati Rapa Nui festival",
+    "c23": "Tongariki sunrise", "c24": "Rano Raraku heads", "c25": "Anakena moai",
 }
 if __name__ == "__main__":
     F.main()

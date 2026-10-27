@@ -32,7 +32,7 @@ DIALOGUE = []
 NP = " No people, no hands, no arms anywhere."
 CUTS = [
     ("c01", "real photo", "하늘에서 본 몬테 시에르페 '구멍 띠'"),
-    ("c02", "real photo", "페루 남부 피스코 계곡"),
+    ("c02", "real photo", "피스코 계곡을 흐르는 피스코강"),
     ("c03", "a 1930s single-engine propeller airplane flying low over barren desert hills in southern Peru, far below on a ridge a long faint band of many small round pits climbs the hill like a snake, hazy morning light, sense of discovery." + NP, "1930년대 항공 탐사 (상상 복원)"),
     ("c04", "real photo", "구멍 띠를 가까이에서"),
     ("c05", "diagram", "구멍 띠의 크기"),
@@ -46,7 +46,7 @@ CUTS = [
     ("c13", "paper figure", "구멍 흙에서 나온 꽃가루 (d = 옥수수, c = 부들)"),
     ("c14", "real photo", "부들"),
     ("c15", "real photo", "안데스 시장의 바구니와 농작물"),
-    ("c16", "real photo", "안데스의 호박과 고추"),
+    ("c16", "real photo", "안데스의 고추, 아히 아마리요"),
     ("c17", "a busy open-air barter gathering on a dry desert ridge in southern Peru around 1350, Indigenous Chincha people in plain ancient Andean cotton tunics, bare heads with long black hair, kneeling and placing woven baskets of maize, squash and cotton down into rows of shallow round pits dug into the bare ground (holes in the earth, not raised), the pits lined with reeds at the bottom, a long band of pits stretching up the hill, warm afternoon light. Every person has exactly two arms and two legs", "구멍 띠의 물물교환 (상상 복원)"),
     ("c18", "paper figure", "구멍 띠 주변의 친차 양식 토기 조각"),
     ("c19", "real photo", "새똥 거름이 쌓인 바예스타스 섬"),
@@ -54,14 +54,14 @@ CUTS = [
     ("c21", "real photo", "키푸로 숫자를 읽는 법 (1923년 그림)"),
     ("c22", "an Inca official in an ancient Andean tunic with a geometric pattern and no hat, standing beside rows of shallow round pits dug into a desert ridge, holding up a khipu: one thick main cord with dozens of thin colored strings hanging down from it, each string tied with small knots, workers in plain ancient tunics with bare heads carrying bundles of goods wrapped in reeds into the pits, mountains behind, clear morning light, no modern clothes, no hats, no shorts", "잉카 관리가 세금을 세는 모습 (상상 복원)"),
     ("c23", "real photo", "잉카의 길, 카팍 냔"),
-    ("c24", "real photo", "잉카의 키푸 장부를 든 관리 (옛 그림)"),
-    ("c25", "real photo", "피스코 계곡의 사막 언덕"),
+    ("c24", "real photo", "옛 키푸 (1923년 책 그림)"),
+    ("c25", "real photo", "페루 남부의 해안 사막"),
     ("c26", "a long band of thousands of shallow round pits running up a barren desert ridge in southern Peru at sunset, long shadows inside every pit, quiet and mysterious, wide aerial view." + NP, "해 질 녘의 구멍 띠"),
 ]
 
 STORY = """{c01}
 
-페루 남부의 메마른 언덕. 산비탈을 따라 이상한 무늬가 길게 이어집니다. 가까이 가 보면 모두 구멍입니다. 사람 키만 한 구멍이 무려 5,200개, 1.5킬로미터에 걸쳐 줄지어 파여 있습니다.
+페루 남부의 메마른 언덕. 산비탈을 따라 이상한 무늬가 길게 이어집니다. 가까이 가 보면 모두 구멍입니다. 커다란 구멍이 무려 5,200개, 1.5킬로미터에 걸쳐 줄지어 파여 있습니다.
 
 {c02}
 
@@ -121,7 +121,7 @@ STORY = """{c01}
 
 {c14}
 
-더 이상한 것은 부들이었습니다. 물가에서 자라는 풀인 부들의 꽃가루가 거의 모든 구멍에서 나왔습니다. 그런데 부들 꽃가루는 보통 50미터에서 100미터밖에 날아가지 못합니다. 메마른 언덕 위 구멍까지 바람에 실려 왔을 리가 없습니다. 누군가 부들을 구멍 바닥에 깔았거나, 부들로 묶은 짐을 날라 온 것입니다.
+더 이상한 것은 부들이었습니다. 물가에서 자라는 풀인 부들, 그 꽃가루가 거의 모든 구멍에서 나왔습니다. 그런데 부들 꽃가루는 보통 50미터에서 100미터밖에 날아가지 못합니다. 메마른 언덕 위 구멍까지 바람에 실려 왔을 리가 없습니다. 누군가 부들을 구멍 바닥에 깔았거나, 부들로 묶은 짐을 날라 온 것입니다.
 
 {c15}
 
@@ -169,7 +169,7 @@ STORY = """{c01}
 
 {c25}
 
-둘째, 시장에서 장부로 바뀌었다는 설명이 지금까지 나온 가설 가운데 증거와 가장 잘 맞습니다. 하지만 아직 끝난 이야기는 아닙니다. 연대를 잰 숯은 단 한 점뿐이고, 구역을 나누는 경계도 일부는 연구자의 판단입니다. 먼 지방의 물건은 아직 나오지 않았고, 연구팀도 땅을 직접 파 보는 발굴과 더 많은 연대 측정, 그리고 이 지역에서 나온 다른 키푸에 대한 연구가 더 필요하다고 말합니다.
+둘째, 시장에서 장부로 바뀌었다는 설명이 지금까지 나온 가설 가운데 증거와 가장 잘 맞습니다. 하지만 아직 끝난 이야기는 아닙니다. 연대를 잰 숯은 아직 하나뿐이고, 구역을 나누는 경계도 일부는 연구자의 판단입니다. 먼 지방의 물건은 아직 나오지 않았고, 연구팀도 땅을 직접 파 보는 발굴과 더 많은 연대 측정, 그리고 이 지역에서 나온 다른 키푸에 대한 연구가 더 필요하다고 말합니다.
 
 {c26}
 
@@ -182,7 +182,9 @@ REF_NOTE = ("Any real place or object shown must look exactly like the reference
             "painted in the same watercolor style. ")
 
 # 컷 → 사진 후보 이름 (사진후보/후보.json 의 열쇠). 사진을 받은 뒤 채움
-PHOTOS = {}
+PHOTOS = {"c01": "p3b", "c02": "c02_1", "c04": "p3d", "c05": "c05_도표", "c06": "c06_도표", "c07": "c07_2", "c08": "c08_1", "c09": "p3c",
+          "c10": "p6", "c11": "c11_1", "c12": "p2", "c13": "p8", "c14": "c14_4", "c15": "c15_1", "c16": "c16_3", "c18": "p5", "c19": "c19_2",
+          "c20": "c20_3", "c21": "c20_2", "c23": "c23_1", "c24": "c24_1", "c25": "c25_4"}
 
 
 def main():

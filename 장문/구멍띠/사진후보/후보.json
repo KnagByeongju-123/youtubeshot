@@ -222,5 +222,169 @@
   "license": "CC BY-SA 4.0",
   "page": "https://commons.wikimedia.org/wiki/File:Zaadpluizen_grote_lisdodde_(Typha_latifolia)._13-02-2023_(d.j.b.)_01.jpg",
   "file": "c14_4.jpg"
+ },
+ "c16_1": {
+  "title": "File:Aji amarillo fruits.jpg",
+  "artist": "Frozenmadness",
+  "license": "CC BY-SA 4.0",
+  "page": "https://commons.wikimedia.org/wiki/File:Aji_amarillo_fruits.jpg",
+  "file": "c16_1.jpg"
+ },
+ "c16_2": {
+  "title": "File:Ají peruano.jpg",
+  "artist": "No machine-readable author provided. Manuel González Olaechea assumed (based on ",
+  "license": "CC BY 3.0",
+  "page": "https://commons.wikimedia.org/wiki/File:Aj%C3%AD_peruano.jpg",
+  "file": "c16_2.jpg"
+ },
+ "c16_3": {
+  "title": "File:Aji Amarillo pepper.jpg",
+  "artist": "Luis Tamayo",
+  "license": "CC BY-SA 2.0",
+  "page": "https://commons.wikimedia.org/wiki/File:Aji_Amarillo_pepper.jpg",
+  "file": "c16_3.jpg"
+ },
+ "c16_4": {
+  "title": "File:Aji amarillo partido.jpg",
+  "artist": "MiguelAlanCS",
+  "license": "CC BY-SA 4.0",
+  "page": "https://commons.wikimedia.org/wiki/File:Aji_amarillo_partido.jpg",
+  "file": "c16_4.jpg"
+ },
+ "c24_1": {
+  "title": "File:The Ancient Quipu Plate XXII.jpg",
+  "artist": "Leslie Leland Locke",
+  "license": "Public domain",
+  "page": "https://commons.wikimedia.org/wiki/File:The_Ancient_Quipu_Plate_XXII.jpg",
+  "file": "c24_1.jpg"
+ },
+ "c24_2": {
+  "title": "File:The Ancient Quipu Plate XXI.jpg",
+  "artist": "Leslie Leland Locke",
+  "license": "Public domain",
+  "page": "https://commons.wikimedia.org/wiki/File:The_Ancient_Quipu_Plate_XXI.jpg",
+  "file": "c24_2.jpg"
+ },
+ "c24_3": {
+  "title": "File:The Ancient Quipu Plate XXIV.jpg",
+  "artist": "Leslie Leland Locke",
+  "license": "Public domain",
+  "page": "https://commons.wikimedia.org/wiki/File:The_Ancient_Quipu_Plate_XXIV.jpg",
+  "file": "c24_3.jpg"
+ },
+ "c24_4": {
+  "title": "File:The Ancient Quipu Figure 45.jpg",
+  "artist": "Leslie Leland Locke",
+  "license": "Public domain",
+  "page": "https://commons.wikimedia.org/wiki/File:The_Ancient_Quipu_Figure_45.jpg",
+  "file": "c24_4.jpg"
+ },
+ "c25_1": {
+  "title": "File:Oasis de Huacachina, Ica, Perú, 2015-07-29, DD 18.JPG",
+  "artist": "Diego Delso",
+  "license": "CC BY-SA 4.0",
+  "page": "https://commons.wikimedia.org/wiki/File:Oasis_de_Huacachina,_Ica,_Per%C3%BA,_2015-07-29,_DD_18.JPG",
+  "file": "c25_1.jpg"
+ },
+ "c25_2": {
+  "title": "File:Oasis de Huacachina, Ica, Perú, 2015-07-29, DD 19-22 PAN.JPG",
+  "artist": "Diego Delso",
+  "license": "CC BY-SA 4.0",
+  "page": "https://commons.wikimedia.org/wiki/File:Oasis_de_Huacachina,_Ica,_Per%C3%BA,_2015-07-29,_DD_19-22_PAN.JPG",
+  "file": "c25_2.jpg"
+ },
+ "c25_3": {
+  "title": "File:Desert - Ica - panoramio.jpg",
+  "artist": "Pavel Špindler",
+  "license": "CC BY 3.0",
+  "page": "https://commons.wikimedia.org/wiki/File:Desert_-_Ica_-_panoramio.jpg",
+  "file": "c25_3.jpg"
+ },
+ "c25_4": {
+  "title": "File:Ica 2407-2409mod.jpg",
+  "artist": "JYB Devot",
+  "license": "CC BY-SA 4.0",
+  "page": "https://commons.wikimedia.org/wiki/File:Ica_2407-2409mod.jpg",
+  "file": "c25_4.jpg"
+ },
+ "c05_도표": {
+  "title": "도표: c05",
+  "artist": "설명 도표 (Bongers 외 2025 수치)",
+  "license": "—",
+  "page": "",
+  "source": "설명 도표",
+  "file": "c05.jpg"
+ },
+ "c06_도표": {
+  "title": "도표: c06",
+  "artist": "설명 도표 (Bongers 외 2025 수치)",
+  "license": "—",
+  "page": "",
+  "source": "설명 도표",
+  "file": "c06.jpg"
+ },
+ "p2": {
+  "title": "논문 그림",
+  "artist": "J.L. Bongers (Bongers 외, Antiquity 2025)",
+  "license": "CC BY 4.0",
+  "page": "https://doi.org/10.15184/aqy.2025.10237",
+  "source": "Antiquity",
+  "file": "p2.jpg"
+ },
+ "p3a": {
+  "title": "논문 그림",
+  "artist": "J.L. Bongers (Bongers 외, Antiquity 2025)",
+  "license": "CC BY 4.0",
+  "page": "https://doi.org/10.15184/aqy.2025.10237",
+  "source": "Antiquity",
+  "file": "p3a.jpg"
+ },
+ "p3b": {
+  "title": "논문 그림",
+  "artist": "J.L. Bongers (Bongers 외, Antiquity 2025)",
+  "license": "CC BY 4.0",
+  "page": "https://doi.org/10.15184/aqy.2025.10237",
+  "source": "Antiquity",
+  "file": "p3b.jpg"
+ },
+ "p3c": {
+  "title": "논문 그림",
+  "artist": "J.L. Bongers (Bongers 외, Antiquity 2025)",
+  "license": "CC BY 4.0",
+  "page": "https://doi.org/10.15184/aqy.2025.10237",
+  "source": "Antiquity",
+  "file": "p3c.jpg"
+ },
+ "p3d": {
+  "title": "논문 그림",
+  "artist": "C. Stanish (Bongers 외, Antiquity 2025)",
+  "license": "CC BY 4.0",
+  "page": "https://doi.org/10.15184/aqy.2025.10237",
+  "source": "Antiquity",
+  "file": "p3d.jpg"
+ },
+ "p5": {
+  "title": "논문 그림",
+  "artist": "Bongers 외 (Bongers 외, Antiquity 2025)",
+  "license": "CC BY 4.0",
+  "page": "https://doi.org/10.15184/aqy.2025.10237",
+  "source": "Antiquity",
+  "file": "p5.jpg"
+ },
+ "p6": {
+  "title": "논문 그림",
+  "artist": "Bongers 외 (Bongers 외, Antiquity 2025)",
+  "license": "CC BY 4.0",
+  "page": "https://doi.org/10.15184/aqy.2025.10237",
+  "source": "Antiquity",
+  "file": "p6.jpg"
+ },
+ "p8": {
+  "title": "논문 그림",
+  "artist": "C. Kiahtipes (Bongers 외, Antiquity 2025)",
+  "license": "CC BY 4.0",
+  "page": "https://doi.org/10.15184/aqy.2025.10237",
+  "source": "Antiquity",
+  "file": "p8.jpg"
  }
 }

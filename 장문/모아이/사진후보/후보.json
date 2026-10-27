@@ -42,24 +42,24 @@
   "file": "c03_2.jpg"
  },
  "c03_3": {
+  "title": "File:Rano-Raraku-from-South.jpg",
+  "artist": "Bjørn Christian Tørrissen",
+  "license": "CC BY-SA 3.0",
+  "page": "https://commons.wikimedia.org/wiki/File:Rano-Raraku-from-South.jpg",
+  "file": "c03_3.jpg"
+ },
+ "c03_4": {
   "title": "File:Volcán Rano Raraku y cantera de moais.JPG",
   "artist": "JUAN CARLOS VILCHEZ",
   "license": "CC BY-SA 3.0",
   "page": "https://commons.wikimedia.org/wiki/File:Volc%C3%A1n_Rano_Raraku_y_cantera_de_moais.JPG",
-  "file": "c03_3.jpg"
- },
- "c03_4": {
-  "title": "File:Rano Raraku 01.jpg",
-  "artist": "LBM1948",
-  "license": "CC BY-SA 4.0",
-  "page": "https://commons.wikimedia.org/wiki/File:Rano_Raraku_01.jpg",
   "file": "c03_4.jpg"
  },
  "c06_1": {
-  "title": "File:L'écriture, p. 127.jpg",
-  "artist": "Unknown authorUnknown author",
-  "license": "Public domain",
-  "page": "https://commons.wikimedia.org/wiki/File:L%27%C3%A9criture,_p._127.jpg",
+  "title": "File:Interieur, toilet en teksten op muur van Jacob Roggeveen, in de oudbouw - Middelburg - 20374714 - RCE.jpg",
+  "artist": "Gerard Dukker",
+  "license": "CC BY-SA 4.0",
+  "page": "https://commons.wikimedia.org/wiki/File:Interieur,_toilet_en_teksten_op_muur_van_Jacob_Roggeveen,_in_de_oudbouw_-_Middelburg_-_20374714_-_RCE.jpg",
   "file": "c06_1.jpg"
  },
  "c15_1": {
@@ -91,10 +91,10 @@
   "file": "c20_1.jpg"
  },
  "c20_2": {
-  "title": "File:Puna Pau.jpg",
-  "artist": "Jorge Morales Piderit",
-  "license": "CC0",
-  "page": "https://commons.wikimedia.org/wiki/File:Puna_Pau.jpg",
+  "title": "File:Puna Pau brochure-2.jpg",
+  "artist": "E. Tucki",
+  "license": "Public domain",
+  "page": "https://commons.wikimedia.org/wiki/File:Puna_Pau_brochure-2.jpg",
   "file": "c20_2.jpg"
  },
  "c20_3": {
@@ -126,10 +126,10 @@
   "file": "c23_2.jpg"
  },
  "c23_3": {
-  "title": "File:Amanecer en tongakiri, isla de pascua (2).JPG",
+  "title": "File:Amanecer en tongakiri donde se encuentran los 15 majestuosos moais, isla de pascua.JPG",
   "artist": "Claire Provost",
   "license": "CC BY-SA 3.0",
-  "page": "https://commons.wikimedia.org/wiki/File:Amanecer_en_tongakiri,_isla_de_pascua_(2).JPG",
+  "page": "https://commons.wikimedia.org/wiki/File:Amanecer_en_tongakiri_donde_se_encuentran_los_15_majestuosos_moais,_isla_de_pascua.JPG",
   "file": "c23_3.jpg"
  },
  "c23_4": {
@@ -140,31 +140,31 @@
   "file": "c23_4.jpg"
  },
  "c25_1": {
-  "title": "File:Anakena Moai and More -- Rapa Nui - Easter Island - Isla de Pasqua.jpg",
-  "artist": "Joe Ross",
-  "license": "CC BY-SA 2.0",
-  "page": "https://commons.wikimedia.org/wiki/File:Anakena_Moai_and_More_--_Rapa_Nui_-_Easter_Island_-_Isla_de_Pasqua.jpg",
-  "file": "c25_1.jpg"
- },
- "c25_2": {
   "title": "File:Moai caido en la Playa de Anakena, Isla de Pascua.JPG",
   "artist": "Claire Provost",
   "license": "CC BY-SA 3.0",
   "page": "https://commons.wikimedia.org/wiki/File:Moai_caido_en_la_Playa_de_Anakena,_Isla_de_Pascua.JPG",
-  "file": "c25_2.jpg"
+  "file": "c25_1.jpg"
  },
- "c25_3": {
+ "c25_2": {
   "title": "File:Anakena Moai - Rapa Nui - Easter Island - Isla de Pasqua.jpg",
   "artist": "Joe Ross",
   "license": "CC BY-SA 2.0",
   "page": "https://commons.wikimedia.org/wiki/File:Anakena_Moai_-_Rapa_Nui_-_Easter_Island_-_Isla_de_Pasqua.jpg",
-  "file": "c25_3.jpg"
+  "file": "c25_2.jpg"
  },
- "c25_4": {
+ "c25_3": {
   "title": "File:Moai en Playa Anakena - panoramio.jpg",
   "artist": "Jorge Manriquez P.",
   "license": "CC BY-SA 3.0",
   "page": "https://commons.wikimedia.org/wiki/File:Moai_en_Playa_Anakena_-_panoramio.jpg",
+  "file": "c25_3.jpg"
+ },
+ "c25_4": {
+  "title": "File:\"Culitos\" de Moai, en Anakena (8245534985).jpg",
+  "artist": "Carlos Reusser Monsalvez from Santiago, Chile",
+  "license": "CC BY 2.0",
+  "page": "https://commons.wikimedia.org/wiki/File:%22Culitos%22_de_Moai,_en_Anakena_(8245534985).jpg",
   "file": "c25_4.jpg"
  },
  "c01_1": {
@@ -194,5 +194,199 @@
   "license": "CC BY 2.0",
   "page": "https://commons.wikimedia.org/wiki/File:Ahu_Tongariki_-_Easter_Island_(5956406190).jpg",
   "file": "c01_4.jpg"
+ },
+ "c05_1": {
+  "title": "File:Ahu Nau Nau.JPG",
+  "artist": "LuxoDresden",
+  "license": "CC BY-SA 3.0",
+  "page": "https://commons.wikimedia.org/wiki/File:Ahu_Nau_Nau.JPG",
+  "file": "c05_1.jpg"
+ },
+ "c05_2": {
+  "title": "File:Ahu Nau Nau1.JPG",
+  "artist": "LuxoDresden",
+  "license": "CC BY-SA 3.0",
+  "page": "https://commons.wikimedia.org/wiki/File:Ahu_Nau_Nau1.JPG",
+  "file": "c05_2.jpg"
+ },
+ "c05_3": {
+  "title": "File:Ahu Nau Nau2.JPG",
+  "artist": "LuxoDresden",
+  "license": "CC BY-SA 3.0",
+  "page": "https://commons.wikimedia.org/wiki/File:Ahu_Nau_Nau2.JPG",
+  "file": "c05_3.jpg"
+ },
+ "c05_4": {
+  "title": "File:196 Ahu Nau Nau.JPG",
+  "artist": "Carmen cerezo",
+  "license": "CC BY-SA 3.0",
+  "page": "https://commons.wikimedia.org/wiki/File:196_Ahu_Nau_Nau.JPG",
+  "file": "c05_4.jpg"
+ },
+ "c07_1": {
+  "title": "File:0139 Thor Heyerdal in Kiel V-P.jpg",
+  "artist": "Virtual-Pano",
+  "license": "CC BY-SA 4.0",
+  "page": "https://commons.wikimedia.org/wiki/File:0139_Thor_Heyerdal_in_Kiel_V-P.jpg",
+  "file": "c07_1.jpg"
+ },
+ "c07_2": {
+  "title": "File:Thor Heyerdahl - L0061 934Fo30141701190044.jpg",
+  "artist": "Bjørn Fjørtoft",
+  "license": "CC BY 4.0",
+  "page": "https://commons.wikimedia.org/wiki/File:Thor_Heyerdahl_-_L0061_934Fo30141701190044.jpg",
+  "file": "c07_2.jpg"
+ },
+ "c07_3": {
+  "title": "File:Thor-Heyerdahl – The Kon-Tiki Man08.jpg",
+  "artist": "Nüşabə M.Ə.",
+  "license": "CC BY-SA 4.0",
+  "page": "https://commons.wikimedia.org/wiki/File:Thor-Heyerdahl_%E2%80%93_The_Kon-Tiki_Man08.jpg",
+  "file": "c07_3.jpg"
+ },
+ "c22_1": {
+  "title": "File:Tapati 3188a.jpg",
+  "artist": "Yves Picq",
+  "license": "CC BY-SA 3.0",
+  "page": "https://commons.wikimedia.org/wiki/File:Tapati_3188a.jpg",
+  "file": "c22_1.jpg"
+ },
+ "c22_2": {
+  "title": "File:Tapati 2809a.jpg",
+  "artist": "Yves Picq",
+  "license": "CC BY-SA 3.0",
+  "page": "https://commons.wikimedia.org/wiki/File:Tapati_2809a.jpg",
+  "file": "c22_2.jpg"
+ },
+ "c22_3": {
+  "title": "File:Tapati 3005a.jpg",
+  "artist": "Yves Picq",
+  "license": "CC BY-SA 3.0",
+  "page": "https://commons.wikimedia.org/wiki/File:Tapati_3005a.jpg",
+  "file": "c22_3.jpg"
+ },
+ "c22_4": {
+  "title": "File:Tapati Festival (16686175785).jpg",
+  "artist": "Mike W. from Vancouver, Canada",
+  "license": "CC BY-SA 2.0",
+  "page": "https://commons.wikimedia.org/wiki/File:Tapati_Festival_(16686175785).jpg",
+  "file": "c22_4.jpg"
+ },
+ "c04_1": {
+  "title": "File:Chile-03059 - Te Tokanga (49072937586).jpg",
+  "artist": "Dennis G. Jarvis",
+  "license": "CC BY-SA 2.0",
+  "page": "https://commons.wikimedia.org/wiki/File:Chile-03059_-_Te_Tokanga_(49072937586).jpg",
+  "file": "c04_1.jpg"
+ },
+ "c04_2": {
+  "title": "File:Partially carved moai abandoned in place.jpg",
+  "artist": "Docrgd",
+  "license": "CC BY 4.0",
+  "page": "https://commons.wikimedia.org/wiki/File:Partially_carved_moai_abandoned_in_place.jpg",
+  "file": "c04_2.jpg"
+ },
+ "c04_3": {
+  "title": "File:Rano Raraku 02.jpg",
+  "artist": "LBM1948",
+  "license": "CC BY-SA 4.0",
+  "page": "https://commons.wikimedia.org/wiki/File:Rano_Raraku_02.jpg",
+  "file": "c04_3.jpg"
+ },
+ "c04_4": {
+  "title": "File:Rano Raraku 06.jpg",
+  "artist": "LBM1948",
+  "license": "CC BY-SA 4.0",
+  "page": "https://commons.wikimedia.org/wiki/File:Rano_Raraku_06.jpg",
+  "file": "c04_4.jpg"
+ },
+ "c06_2": {
+  "title": "File:Samoa $1 1972 Jacob Roggeveen.jpg",
+  "artist": "Berlin-George",
+  "license": "CC BY-SA 3.0",
+  "page": "https://commons.wikimedia.org/wiki/File:Samoa_$1_1972_Jacob_Roggeveen.jpg",
+  "file": "c06_2.jpg"
+ },
+ "c06_3": {
+  "title": "File:Interieur, vloer van het archiefcafé in de nieuwbouw, met teksten van Jacob Roggeveen - Middelburg - 20374620 - RCE.jpg",
+  "artist": "Gerard Dukker",
+  "license": "CC BY-SA 4.0",
+  "page": "https://commons.wikimedia.org/wiki/File:Interieur,_vloer_van_het_archiefcaf%C3%A9_in_de_nieuwbouw,_met_teksten_van_Jacob_Roggeveen_-_Middelburg_-_20374620_-_RCE.jpg",
+  "file": "c06_3.jpg"
+ },
+ "c06_4": {
+  "title": "File:L'écriture, p. 127.jpg",
+  "artist": "작가 미상 (18세기 판화)",
+  "license": "Public domain",
+  "page": "https://commons.wikimedia.org/wiki/File:L%27%C3%A9criture,_p._127.jpg",
+  "file": "c06_4.jpg"
+ },
+ "c12_1": {
+  "title": "File:Side view of Moai head from Rapa Nui in the Gallery of Five Continents, Louvre, taken July 26, 2026.jpg",
+  "artist": "Abzeronow",
+  "license": "CC BY 4.0",
+  "page": "https://commons.wikimedia.org/wiki/File:Side_view_of_Moai_head_from_Rapa_Nui_in_the_Gallery_of_Five_Continents,_Louvre,_taken_July_26,_2026.jpg",
+  "file": "c12_1.jpg"
+ },
+ "c12_2": {
+  "title": "File:Kneeling Moai Side View.JPG",
+  "artist": "Koppas",
+  "license": "CC BY-SA 3.0",
+  "page": "https://commons.wikimedia.org/wiki/File:Kneeling_Moai_Side_View.JPG",
+  "file": "c12_2.jpg"
+ },
+ "c12_3": {
+  "title": "File:Kneeling Moai Detail Face Side.JPG",
+  "artist": "Koppas",
+  "license": "CC BY-SA 3.0",
+  "page": "https://commons.wikimedia.org/wiki/File:Kneeling_Moai_Detail_Face_Side.JPG",
+  "file": "c12_3.jpg"
+ },
+ "c12_4": {
+  "title": "File:Photomontage (Forggensee Panorama) -2.jpg",
+  "artist": "Photomontage by: Mmxx (talk / email)\n\n\n\n\n\n\nThis  is a retouched picture, which m",
+  "license": "CC BY-SA 3.0",
+  "page": "https://commons.wikimedia.org/wiki/File:Photomontage_(Forggensee_Panorama)_-2.jpg",
+  "file": "c12_4.jpg"
+ },
+ "c08_도표": {
+  "title": "도표: c08",
+  "artist": "설명 도표 (Lipo·Hunt 2025 수치)",
+  "license": "—",
+  "page": "",
+  "source": "설명 도표",
+  "file": "c08.jpg"
+ },
+ "c11_도표": {
+  "title": "도표: c11",
+  "artist": "설명 도표 (Lipo·Hunt 2025 수치)",
+  "license": "—",
+  "page": "",
+  "source": "설명 도표",
+  "file": "c11.jpg"
+ },
+ "c13_도표": {
+  "title": "도표: c13",
+  "artist": "설명 도표 (Lipo·Hunt 2025 수치)",
+  "license": "—",
+  "page": "",
+  "source": "설명 도표",
+  "file": "c13.jpg"
+ },
+ "c16_도표": {
+  "title": "도표: c16",
+  "artist": "설명 도표 (Lipo·Hunt 2025 수치)",
+  "license": "—",
+  "page": "",
+  "source": "설명 도표",
+  "file": "c16.jpg"
+ },
+ "c18_도표": {
+  "title": "도표: c18",
+  "artist": "설명 도표 (Lipo·Hunt 2025 수치)",
+  "license": "—",
+  "page": "",
+  "source": "설명 도표",
+  "file": "c18.jpg"
  }
 }

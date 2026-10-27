@@ -1,0 +1,15 @@
+{
+ "items": [
+  {
+   "id": "c14",
+   "width": 1024,
+   "height": 576,
+   "seed": 1014,
+   "refs": [
+    "/home/user/youtubeshot/.wt_longform/장문/모아이/사진후보/c03_1.jpg"
+   ],
+   "prompt": "realistic historical watercolor painting, fine ink outlines, transparent layered watercolor washes, soft natural colors, visible paper texture, documentary illustration, realistic anatomy and proportions, historical documentary illustration, realistic proportions, museum-quality painting. Scene: Rapa Nui islanders in simple bark-cloth wraps moving ONE large upright moai stone statue along a dirt road with three long ropes tied around its head, one team pulling from the left side and one team from the right side alternately, a small team behind holding a rope, the statue is a legless stone torso with a long head and no legs, no feet, its wide flat bottom touching the dirt road directly (no stone slab, no pedestal, no platform, no base block under it), it leans slightly forward and rocks side to side, grassy hills and the sea behind, morning light. Only one statue in the picture. Every person has exactly two arms and two legs. Any real place or object shown must look exactly like the reference photo (same shape and colors), painted in the same watercolor style. Every person has exactly two arms, two hands with five fingers each and two legs, hands simple and relaxed (partly hidden is fine). No signature, no artist mark. Cinematic composition, full-bleed image, no border, no frame, no paper edges. No text, no letters, no captions."
+  }
+ ],
+ "skip_done": true
+}
