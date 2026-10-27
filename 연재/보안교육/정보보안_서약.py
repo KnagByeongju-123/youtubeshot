@@ -1,4 +1,5 @@
 """정보보안 교육 영상 '정보보안 서약, 이렇게 지켜요' — 대본 + 컷별 그림 계획 (사내 정보보안 서약서 8개 항목 + 관리자 추가 서약)
+회사 메일이 따로 없음(사용자) → '개인 메일' 대신 '메일로 보내기', 보낼 일이 있으면 먼저 승인
 python 연재/보안교육/정보보안_서약.py job <저장폴더>   → 그림 주문서(klein_worker 용) job.json
 python 연재/보안교육/정보보안_서약.py project <그림폴더> → 프로젝트 파일(render_project 용) 연재/보안교육/정보보안_서약.json
   영상은 render_project.py <프로젝트> --대본그대로 --길이고정 (교육 영상이라 5분 그대로, 오프닝을 고쳐 쓰지 않게)
@@ -21,7 +22,7 @@ DIALOGUE = [
     ("민수 씨, 내 아이디로 잠깐 들어가서 그 자료 좀 봐 줄래요?", "옆자리 선배"),
     ("죄송해요, 선배님. 아이디는 빌려 드릴 수가 없어요.", "민수"),
     ("집에서 마저 보려고 화면을 찍어 두려는데요.", "민수"),
-    ("잠깐만요. 회사 자료는 사진도, 개인 메일도, USB 도 안 돼요.", "박 팀장"),
+    ("잠깐만요. 회사 자료는 사진도, 메일로 보내는 것도, USB 도 안 돼요.", "박 팀장"),
     ("택배 배송 조회? 저 택배 시킨 적 없는데...", "민수"),
     ("팀장님, 이상한 메일을 열어 버린 것 같아요!", "민수"),
     ("잘했어요. 바로 알려 준 게 제일 중요해요. 랜선부터 뽑아 둘게요.", "박 팀장"),
@@ -38,19 +39,19 @@ CUTS = [
     ("c03", ["박 팀장", "민수"], "the woman manager with glasses standing beside the young man's desk with a kind smile, handing him a single sheet of paper document, he looks up at her curiously, bright office", "서약서를 건네는 박 팀장"),
     ("c04", ["민수"], "the young man at his desk looking at a big monitor showing a detailed mechanical engineering blueprint drawing of a car part, impressed face", "회사의 기술 도면을 보는 민수"),
     ("c05", [], "a neat stack of technical engineering drawings, blueprints and documents on an office desk with a big golden padlock and a chain lying on top, soft light, no people", "자물쇠로 지켜야 할 기술 정보"),
-    ("c06", ["박 팀장", "민수"], "close view of an office computer monitor with yellow sticky notes stuck on its frame, the young man sitting in front of it looking embarrassed and scratching his head, the woman manager with glasses standing behind him pointing at the sticky notes with a gentle frown", "모니터에 붙인 비밀번호 쪽지"),
+    ("c06", ["박 팀장", "민수"], "an office computer monitor with yellow sticky notes stuck on its frame, the young man (no glasses, bare eyes) sitting in front of it looking embarrassed and scratching his head with one hand, the woman manager with glasses standing behind him in her navy blazer and navy knee-length skirt, pointing at the sticky notes with a gentle frown", "모니터에 붙인 비밀번호 쪽지"),
     ("c07", [], "an empty office desk with an empty chair pushed back, a computer monitor showing a dark lock screen with a big white padlock symbol, a coffee mug beside the keyboard, no people", "자리를 비울 땐 화면 잠금"),
     ("c08", ["민수"], "the young man at his desk politely refusing with both palms raised and an apologetic smile, turned toward an older male coworker in a gray suit leaning over his desk partition, bright office", "아이디를 빌려 달라는 선배를 거절하는 민수"),
     ("c09", [], "a computer screen showing a row of colorful file folders, one big folder marked with a red padlock symbol, office desk, no people", "내 권한 밖의 자료"),
-    ("c10", ["민수", "박 팀장"], "the young man holding up his smartphone to take a photo of his computer monitor at his desk, the woman manager with glasses rushing in from the side with one hand raised to stop him, surprised faces", "화면을 찍으려다 멈춘 민수"),
-    ("c11", [], "flat lay on an office desk: a USB flash drive, a smartphone, a small paper envelope and a little white cloud-shaped toy, each with a big red X mark over it, clean infographic illustration, no people", "USB·개인 메일·클라우드·메신저 반출 금지"),
-    ("c12", [], "an office printer with forgotten printed papers left in its output tray, and beside it a paper shredder cutting documents into thin strips, bright office corner, no people", "출력물은 회수하고 파기"),
+    ("c10", ["민수", "박 팀장"], "the young man standing next to his desk, both of his hands holding his smartphone up in front of his chest, aiming the phone camera at his computer monitor to take a photo of the screen, nothing else in his hands, the woman manager with glasses rushing in from the right side with one hand raised to stop him, surprised faces", "화면을 찍으려다 멈춘 민수"),
+    ("c11", [], "four simple flat icons in a row on a plain pale cream background: a USB flash drive, a white mail envelope, a smartphone showing a chat bubble icon, and a plain fluffy white cloud (weather cloud, no face, no ears), every one of the four icons crossed out with a big red X, clean infographic illustration, no people", "USB·개인 메일·클라우드·메신저 반출 금지"),
+    ("c12", [], "a plain unbranded white office printer with forgotten blank papers covered in gray lines left in its output tray, and beside it a paper shredder with thin paper strips falling into its bin, bright office corner, no people, no labels, no brand names", "출력물은 회수하고 파기"),
     ("c13", [], "a clean modern server room with tall rows of server racks with small blinking blue and green lights, cool blue light, no people", "접속·출력 이력이 남는 서버"),
-    ("c14", ["박 팀장"], "the woman manager with glasses standing beside a large wall monitor showing simple bar charts and line graphs, explaining with one open hand, confident kind smile, meeting room", "이력 관리를 설명하는 박 팀장"),
+    ("c14", ["박 팀장"], "only one person: the woman manager with glasses standing beside one large wall monitor showing only simple colored bar charts with no words or numbers, explaining with one open hand, confident kind smile, meeting room, she appears only once", "이력 관리를 설명하는 박 팀장"),
     ("c15", ["민수"], "the young man at his desk staring at a laptop screen showing an email with a big fishing hook symbol and a dark warning envelope icon, confused suspicious face, one hand on the mouse", "의심스러운 피싱 메일"),
     ("c16", ["민수"], "the young man standing up at his desk talking urgently on an office desk phone, worried face, his laptop open beside him", "보안담당자에게 바로 신고"),
     ("c17", ["박 팀장", "민수"], "the woman manager with glasses sitting at the young man's laptop unplugging a network cable from it, the young man standing beside her looking relieved, office", "랜선을 뽑는 박 팀장"),
-    ("c18", ["민수"], "the young man at his desk about to click a big colorful game download button on his computer screen with the mouse, sneaky grin, an office desk", "몰래 게임을 깔려는 민수"),
+    ("c18", ["민수"], "the young man at his desk with his hand on the mouse about to click, his computer screen shows a colorful cartoon game picture with a cute dragon and a big round green play-arrow button icon, no words on the screen, sneaky grin, office desk", "몰래 게임을 깔려는 민수"),
     ("c19", [], "an office computer monitor showing a big glowing green shield symbol with a white check mark, a keyboard and mouse in front, clean desk, no people", "백신과 보안 설정은 켜 둔 채로"),
     ("c20", ["민수", "박 팀장"], "the young man handing a cardboard box of folders and a closed laptop across a desk to the woman manager with glasses, she receives it with a warm smile, moving boxes in the background, office", "자료와 노트북을 반납하는 민수"),
     ("c21", ["박 팀장"], "the woman manager with glasses sitting at her desk reviewing paper approval forms and pressing a red approval stamp on one, focused calm face, office", "승인 기록을 확인하는 관리자"),
@@ -68,7 +69,7 @@ STORY = """{c01}
 
 {c02}
 
-오늘은 민수 씨의 첫 출근 날입니다. 새 자리, 새 컴퓨터. 모든 것이 설레기만 합니다.
+오늘은 민수 씨의 첫 출근 날입니다. 새 자리, 새 컴퓨터. 모든 것이 새롭고 설레요.
 
 {c03}
 
@@ -120,11 +121,11 @@ STORY = """{c01}
 
 "집에서 마저 보려고 화면을 찍어 두려는데요."
 
-"잠깐만요. 회사 자료는 사진도, 개인 메일도, USB 도 안 돼요."
+"잠깐만요. 회사 자료는 사진도, 메일로 보내는 것도, USB 도 안 돼요."
 
 {c11}
 
-시스템 화면과 출력물, 파일은 승인 없이 촬영하거나 복사하지 않습니다. 외부 메일, USB, 개인 클라우드, 메신저로 밖에 보내는 것도 금지입니다.
+시스템 화면과 출력물, 파일은 승인 없이 촬영하거나 복사하지 않습니다. 메일, USB, 개인 클라우드, 메신저로 밖에 보내는 것도 금지입니다. 우리 회사는 따로 회사 메일이 없으니, 업무 때문에 자료를 메일로 보내야 할 때는 반드시 먼저 승인을 받습니다.
 
 {c12}
 

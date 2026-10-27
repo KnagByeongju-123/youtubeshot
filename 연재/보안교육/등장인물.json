@@ -5,12 +5,52 @@
     {
       "name": "민수",
       "look": "young Korean male office worker aged 28, slim average build, friendly slightly naive face, short neat black hair with a side part, light sky-blue dress shirt with sleeves rolled to the elbows, navy necktie, dark gray slacks, black shoes, white employee ID card on a blue lanyard around his neck",
-      "look_ko": "28살 신입 사원. 보통 키의 마른 체형, 순하고 조금 덜렁대는 얼굴, 짧은 검은 머리(옆 가르마), 하늘색 셔츠(소매 걷음), 남색 넥타이, 짙은 회색 바지, 파란 줄 사원증"
+      "look_ko": "28살 신입 사원. 보통 키의 마른 체형, 순하고 조금 덜렁대는 얼굴, 짧은 검은 머리(옆 가르마), 하늘색 셔츠(소매 걷음), 남색 넥타이, 짙은 회색 바지, 파란 줄 사원증",
+      "voice": {
+        "code": "M1",
+        "rate": 5,
+        "semis": 1,
+        "fx": "",
+        "why": "마른 체형·신입 → 가볍고 조금 빠르게 (사용자가 1번 고름)"
+      },
+      "face": "캐릭터시트/민수.jpg"
     },
     {
       "name": "박 팀장",
       "look": "Korean woman security manager aged 45, medium height, confident kind face, black bob haircut to the chin, thin black rectangular glasses, navy blue blazer over a white blouse, navy knee-length skirt, low black heels, white employee ID card on a red lanyard",
-      "look_ko": "45살 보안 담당 팀장(여). 보통 키, 똑 부러지고 친절한 얼굴, 턱선 단발 검은 머리, 가는 검은 안경, 남색 재킷·흰 블라우스·남색 치마, 빨간 줄 사원증"
+      "look_ko": "45살 보안 담당 팀장(여). 보통 키, 똑 부러지고 친절한 얼굴, 턱선 단발 검은 머리, 가는 검은 안경, 남색 재킷·흰 블라우스·남색 치마, 빨간 줄 사원증",
+      "voice": {
+        "code": "F1",
+        "rate": -5,
+        "semis": -1,
+        "fx": "",
+        "why": "팀장 → 조금 느리고 낮게 (사용자가 1번 고름)"
+      },
+      "face": "캐릭터시트/박팀장.jpg"
+    },
+    {
+      "name": "옆자리 선배",
+      "look": "",
+      "look_ko": "c08 에만 나오는 선배(시트 없음, 회색 정장 남자)",
+      "voice": {
+        "code": "M3",
+        "rate": -3,
+        "semis": -1,
+        "fx": "",
+        "why": "선배 → 조금 낮고 느리게 (사용자가 1번 고름)"
+      }
+    },
+    {
+      "name": "나레이션",
+      "look": "",
+      "look_ko": "나레이션 성우",
+      "voice": {
+        "code": "M2",
+        "rate": 0,
+        "semis": 0,
+        "fx": "",
+        "why": "기본 규칙 남자 성우 2 (사용자가 1번 고름)"
+      }
     }
   ]
 }
