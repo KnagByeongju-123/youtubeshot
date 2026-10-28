@@ -147,6 +147,29 @@ def fast_spots(sylls, sents, ratio=1.25, gap=0.3, min_syl=8):
     return out
 
 
+def stretch_spots(spans, sents, ratio=3.0, min_sec=0.5, last_sec=0.75):
+    """늘어진 곳: 글자 하나를 소리 내는 시간이 보통 글자의 3배 넘게(그리고 0.5초 넘게) 길고, 그동안 소리가 계속 나는 곳.
+    ('다아아' 처럼 끄는 소리. 쉼은 소리가 없어서 빠짐) 쉼 바로 앞 글자는 원래 조금 길어지니 0.75초 넘을 때만"""
+    import numpy as np
+    durs = [s_["dur"] for s_ in spans if not s_["last"] and s_["dur"] < 0.6]
+    if len(durs) < 50:
+        return []
+    med = float(np.median(durs))
+    out = []
+    for s_ in spans:
+        lim = max(last_sec if s_["last"] else min_sec, med * ratio)
+        if s_["dur"] <= lim or s_["voiced"] < 0.8:
+            continue
+        h = s_["ctx"]
+        piece = h[max(0, s_["i"] - 10):s_["i"] + 1]
+        ps = sentence_of(piece, sents) or best_sentence(h, sents)
+        if ps is None or ps[1].lstrip().startswith(('"', '“')):
+            continue
+        out.append({"t": s_["t"], "dd": f"늘어짐 '{s_['ch']}' {s_['dur']:.2f}초(보통 글자 {med:.2f}초)",
+                    "sentence": ps[1], "paragraph": ps[0], "heard": h})
+    return out
+
+
 def detect(video, script):
     import numpy as np
     import torch
@@ -159,7 +182,7 @@ def detect(video, script):
     torch.set_num_threads(max(1, os.cpu_count() or 4))
     p = AutoProcessor.from_pretrained(MODEL)
     m = AutoModelForCTC.from_pretrained(MODEL).eval()
-    found, sylls = [], []          # sylls: (글자, 시각초) - 말 빠르기 재기용
+    found, sylls, spans = [], [], []          # sylls: (글자, 시각초) - 말 빠르기 재기용, spans: 글자마다 길이 (늘어짐 찾기용)
     blank = p.tokenizer.pad_token_id
     for t0, t1 in chunks(a):
         off = max(0, t0 - 0.15)
@@ -171,12 +194,26 @@ def detect(video, script):
         seq = ids[0].tolist()
         step = len(x) / SR / max(1, len(seq))       # 한 칸(약 0.02초)
         prev = None
+        starts = []
         for k, tid in enumerate(seq):               # 글자가 처음 나온 칸 = 그 글자를 말한 시각
             if tid != prev and tid != blank:
                 ch = p.tokenizer.convert_ids_to_tokens(tid)
                 if re.fullmatch(r"[가-힣]", ch or ""):
                     sylls.append((ch, off + k * step))
+                    starts.append((k, ch))
             prev = tid
+        # 글자 길이 재기(정렬): 모델이 칸마다 어느 글자를 듣는지로 글자 하나가 차지한 시간 + 그동안 소리가 나고 있었는지
+        fr_ = max(1, int(0.02 * SR))
+        n_ = len(x) // fr_
+        rms_ = np.sqrt((x[:n_ * fr_].reshape(n_, fr_) ** 2).mean(1)) if n_ else np.zeros(1)
+        loud = max(1e-4, float(np.percentile(rms_, 90)) * 0.12)
+        for i_, (k, ch) in enumerate(starts):
+            end = starts[i_ + 1][0] if i_ + 1 < len(starts) else len(seq)
+            a0, a1 = int(k * step / 0.02), max(int(k * step / 0.02) + 1, int(end * step / 0.02))
+            seg_ = rms_[a0:a1]
+            voiced = float((seg_ > loud).mean()) if len(seg_) else 0.0
+            spans.append({"ch": ch, "t": off + k * step, "dur": (end - k) * step, "voiced": voiced,
+                          "last": i_ + 1 == len(starts), "ctx": h, "i": i_})
         for n in (1, 2, 3):
             for dd in sorted(doubles(h, n)):
                 i = h.find(dd)
@@ -200,6 +237,7 @@ def detect(video, script):
     except OSError:
         pass
     found += fast_spots(sylls, sents)
+    found += stretch_spots(spans, sents)
     uniq, seen = [], set()
     for f in found:
         if f["sentence"] not in seen:

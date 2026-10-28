@@ -5146,6 +5146,8 @@ class SubtitleRenderer:
                 if im is not None:
                     self.images.append((im, med[1]))
                     self.img_paths = getattr(self, "img_paths", []) + [resolve_media(med[0]) or med[0]]
+                    # AI 로 그린 그림인지 (출처 칸에 'AI'·'생성'). 실제 사진은 누끼를 쓰지 않음 (사용자 결정)
+                    self.img_ai = getattr(self, "img_ai", []) + [bool(re.search(r"AI|생성", str(med[2] or "")))]
                     cur_img = len(self.images) - 1
                 continue
             hm = HOLD_RE.match(para)
@@ -5869,6 +5871,9 @@ class SubtitleRenderer:
     def _cutout_for(self, idx, big, dbig):
         """idx 사진의 누끼 (앞 가림막 float32 0~1, 앞을 지우고 메운 배경 uint8). 앞이 너무 작거나 크면 (None, None) → 보통 입체 움직임"""
         cc = self.__dict__.setdefault("_cut_big", {})
+        ai = getattr(self, "img_ai", [])
+        if not (idx < len(ai) and ai[idx]):          # 실제 사진은 누끼 없이 보통 입체 움직임 (오린 자국이 사진에서 더 티 남)
+            return None, None, {}
         if idx not in cc:
             if len(cc) >= 4:
                 cc.pop(next(iter(cc)))
