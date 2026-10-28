@@ -7026,14 +7026,14 @@ def reveal_fx(n, t_hit, rng, kind="쿵"):
 
 
 def decode_audio(path, n):
-    """음악 파일을 읽어서 길이에 맞게 반복"""
+    """음악 파일을 읽어서 길이에 맞게 반복 (이음매는 겹쳐서 부드럽게 — 뚝 끊고 처음으로 가면 '툭' 소리가 남)"""
     p = subprocess.run([get_ffmpeg(), "-v", "error", "-i", path, "-f", "f32le", "-ac", "2", "-ar", str(SR), "-"],
                        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                        creationflags=(subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0))
     x = np.frombuffer(p.stdout, np.float32).reshape(-1, 2) if p.returncode == 0 else np.zeros((0, 2), np.float32)
     if not len(x):
         raise RuntimeError("음악 파일을 읽지 못했습니다: " + p.stderr.decode("utf-8", "ignore")[:200])
-    return np.tile(x, (int(np.ceil(n / len(x))), 1))[:n].copy()
+    return loop_xfade(x.copy(), n)
 
 
 def resolve_style(s, topic):
@@ -7128,7 +7128,7 @@ def build_audio(r, s, style):
     """영상 길이에 맞춘 최종 소리 (배경음 + 반전 효과음). 없으면 None"""
     n = int(r.duration * SR)
     rng = np.random.default_rng(None if s["bgm_seed"] == 0 else s["bgm_seed"])
-    long_ = n > LONG_MUSIC_SEC * 1.2 * SR
+    long_ = n > LONG_MUSIC_SEC * 1.2 * SR and s["bgm_mode"] != "파일"   # 음악 파일은 decode_audio 가 곡 단위로 이어 붙임
     music = make_music(s, style, min(n, LONG_MUSIC_SEC * SR) if long_ else n)
     hit_t = r.reveal_t if s["reveal_hit"] == "on" else None
     narr = getattr(r, "narr_at", []) if s.get("narration", "off") == "on" else []
@@ -8965,7 +8965,7 @@ def merge_parts_with_fx(parts, out, s, kind, log=None, cancel=None, work_dir=Non
         mixed[:len(narr)] += narr
         if bgm_on:
             log("🎵 배경음을 전체에 깔고 말할 때는 낮추는 중...")
-            long_ = n > LONG_MUSIC_SEC * 1.2 * SR
+            long_ = n > LONG_MUSIC_SEC * 1.2 * SR and s["bgm_mode"] != "파일"   # 음악 파일은 decode_audio 가 곡 단위로 이어 붙임
             music = make_music(s, bgm_style or "잔잔한 패드", min(n, LONG_MUSIC_SEC * SR) if long_ else n)
             if music is not None:
                 music = loudness_fit(music) * max(0, s["bgm_volume"])
