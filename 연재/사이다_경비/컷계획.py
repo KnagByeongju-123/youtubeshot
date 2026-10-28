@@ -157,7 +157,7 @@ CUTS = [
     ("c146", 190, ["강회장", "강민혁"], "the chairman looks coldly at his son", "차가운 눈빛"),
     ("c147", 192, ["강민혁"], "the rich young man pleads desperately, hands raised", "제가 설명할게요"),
     ("c148", 194, ["강민혁"], "the rich young man collapses to sit on the floor of the hall, looking up helplessly", "털썩 주저앉은 강민혁"),
-    ("c149", 195, ["오소장", "김만석"], "the building manager kneels on the floor before the old guard, begging", "무릎 꿇은 오 소장"),
+    ("c149", 195, ["오소장", "김만석"], "the building manager kneels on the floor begging, while the old guard stands upright in front of him looking down calmly", "무릎 꿇은 오 소장"),
     ("c150", 197, ["김만석", "오소장"], "the old guard helps the kneeling building manager to his feet", "일으켜 세운 김 씨"),
     ("c151", 199, ["김만석", "강민혁"], "the old guard stands before the rich young man sitting on the floor with his head down", "강민혁 앞에 선 김 씨"),
     ("c152", 201, ["강민혁"], "the rich young man bows his head sincerely, shoulders trembling", "진심으로 숙인 고개"),
@@ -180,3 +180,18 @@ CUTS = [
     ("c169", 224, ["김만석", "박군"], "seen from behind, the old guard and the young guard walk side by side into a dark corridor, two flashlight beams ahead", "나란히 걷는 두 불빛"),
     ("c170", 225, [], "the luxury tower at dawn, sky turning gold, the small guard booth window still glowing warmly at its foot", "가장 낮은 자리의 불빛"),
 ]
+
+# 컷마다 인물 기준 그림을 시트의 어느 모습으로 넣을지 (기본 '앞'). '뒤' = 뒷모습(떠나는·바라보는 장면), '옆' = 옆모습(인사·손가락질·건네기)
+# 설명에 "from behind" 가 있으면 그 컷 인물은 모두 '뒤' (사용자 결정 2026-10-28: 정면·측면·후면 중 골라서 넣음)
+VIEWS = {
+    "c011": {"김만석": "옆"}, "c023": {"김만석": "옆"}, "c024": {"강민혁": "뒤"}, "c034": {"김만석": "옆"},
+    "c036": {"김만석": "옆"}, "c040": {"김만석": "옆"}, "c053": {"강민혁": "옆"}, "c068": {"김만석": "옆"},
+    "c075": {"김만석": "옆"}, "c081": {"오소장": "옆"}, "c096": {"김만석": "옆"}, "c097": {"김만석": "옆"},
+    "c106": {"강민혁": "옆"}, "c132": {"김만석": "옆"}, "c133": {"강민혁": "옆"}, "c134": {"김만석": "뒤"},
+    "c145": {"김만석": "뒤"}, "c149": {"오소장": "옆"},
+}
+
+# 컷마다 옷이 시트와 다를 때 그 인물 생김새 글을 바꿔 씀 (기준 그림 옷보다 이 글을 따르라고 적음)
+WORKER = ("a 32-year-old Korean man with glossy black hair and a handsome face (same face as the reference), now wearing dusty gray work clothes, "
+          "a yellow hard hat and work boots instead of a suit")
+OUTFIT = {c: {"강민혁": WORKER} for c in ("c162", "c163", "c164", "c165")}
