@@ -1,0 +1,12 @@
+{
+ "items": [
+  {
+   "id": "주인공_막내",
+   "width": 768,
+   "height": 432,
+   "seed": 7701,
+   "prompt": "simple Korean webtoon gag comic style, thick black marker outlines, very simple round shapes, minimal flat colors, exaggerated funny expressions, roughly drawn on purpose, comedic. Character model sheet of one single original character shown three times side by side: front view, side view, back view, full body, standing, plain pure white background. Character: 25-year-old newbie office worker man, the youngest in his company, round head, short messy black hair with one strand sticking up, small dot eyes, big expressive mouth, slightly too-big white dress shirt with a loose crooked blue tie, company ID badge on a lanyard, gray slacks, white sneakers, nervous but eager smile. Exactly two arms and two legs in each view. No text, no labels."
+  }
+ ],
+ "crop_border": false
+}
