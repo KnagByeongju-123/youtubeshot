@@ -5885,6 +5885,9 @@ class SubtitleRenderer:
                     spec = json.load(open(side, encoding="utf-8"))
                 except Exception:
                     spec = {}
+            if spec.get("off"):                       # 검수에서 오린 자리가 깔끔히 안 메워진 그림 → 누끼 끄기 (보통 입체 움직임)
+                cc[idx] = (None, None, spec)
+                return cc[idx]
             cc[idx] = cutout_layers(img_np(big), dbig, spec) + (spec,)
         return cc[idx]
 
