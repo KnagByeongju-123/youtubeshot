@@ -1,0 +1,45 @@
+{
+ "items": [
+  {
+   "id": "부장님",
+   "width": 768,
+   "height": 432,
+   "seed": 7710,
+   "refs": [
+    "연재/막내개그/캐릭터시트/주인공_막내.png"
+   ],
+   "prompt": "simple Korean webtoon gag comic style, same drawing style as the reference sheet, thick black marker outlines, very simple round shapes, minimal flat colors, exaggerated funny expressions, roughly drawn on purpose, comedic, ordinary Korean office worker. Character model sheet of one single original character (not the reference person) shown three times side by side: front view, side view, back view, full body, standing, plain pure white background. Character: 55-year-old Korean department head man, balding head with a few combed-over hairs, round belly, thick black-rimmed glasses, small mustache, short-sleeved light blue dress shirt with a wide brown tie, suspenders, brown slacks, holding a coffee mug, smug self-satisfied face. Exactly two arms and two legs in each view. No text, no labels."
+  },
+  {
+   "id": "팀장님",
+   "width": 768,
+   "height": 432,
+   "seed": 7711,
+   "refs": [
+    "연재/막내개그/캐릭터시트/주인공_막내.png"
+   ],
+   "prompt": "simple Korean webtoon gag comic style, same drawing style as the reference sheet, thick black marker outlines, very simple round shapes, minimal flat colors, exaggerated funny expressions, roughly drawn on purpose, comedic, ordinary Korean office worker. Character model sheet of one single original character (not the reference person) shown three times side by side: front view, side view, back view, full body, standing, plain pure white background. Character: 42-year-old Korean team leader woman, short neat bob hair, sharp eyes, thin rectangular glasses, navy blazer over a white blouse, black skirt, holding a tablet, stern no-nonsense face, arms folded. Exactly two arms and two legs in each view. No text, no labels."
+  },
+  {
+   "id": "이대리",
+   "width": 768,
+   "height": 432,
+   "seed": 7712,
+   "refs": [
+    "연재/막내개그/캐릭터시트/주인공_막내.png"
+   ],
+   "prompt": "simple Korean webtoon gag comic style, same drawing style as the reference sheet, thick black marker outlines, very simple round shapes, minimal flat colors, exaggerated funny expressions, roughly drawn on purpose, comedic, ordinary Korean office worker. Character model sheet of one single original character (not the reference person) shown three times side by side: front view, side view, back view, full body, standing, plain pure white background. Character: 30-year-old Korean assistant manager man, tall and thin, slick side-parted hair, sly smirk, slim gray suit with a skinny tie, smartphone in hand, cunning sly senior. Exactly two arms and two legs in each view. No text, no labels."
+  },
+  {
+   "id": "동기_박사원",
+   "width": 768,
+   "height": 432,
+   "seed": 7713,
+   "refs": [
+    "연재/막내개그/캐릭터시트/주인공_막내.png"
+   ],
+   "prompt": "simple Korean webtoon gag comic style, same drawing style as the reference sheet, thick black marker outlines, very simple round shapes, minimal flat colors, exaggerated funny expressions, roughly drawn on purpose, comedic, ordinary Korean office worker. Character model sheet of one single original character (not the reference person) shown three times side by side: front view, side view, back view, full body, standing, plain pure white background. Character: 25-year-old Korean newbie office woman, same year as the hero, cheerful round face, long hair in a low ponytail, beige cardigan over a white blouse, black slacks, company ID badge on a lanyard, a big smile, kind and quick-witted. Exactly two arms and two legs in each view. No text, no labels."
+  }
+ ],
+ "crop_border": false
+}

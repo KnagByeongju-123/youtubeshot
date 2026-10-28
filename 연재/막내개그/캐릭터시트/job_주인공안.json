@@ -1,0 +1,26 @@
+{
+ "items": [
+  {
+   "id": "주인공안1_왕안경_더듬이",
+   "width": 768,
+   "height": 432,
+   "seed": 7720,
+   "prompt": "simple Korean webtoon gag comic style, thick black marker outlines, very simple round shapes, minimal flat colors, exaggerated funny expressions, roughly drawn on purpose, comedic, very distinctive memorable silhouette. Character model sheet of one single original character shown three times side by side: front view, side view, back view, full body, standing, plain pure white background. Character: 25-year-old newbie office worker man with a big round head and a small body, huge round glasses covering half of his face, one long antenna-like strand of hair sticking straight up from the top of his head and curling at the tip, tiny body in a white shirt with a crooked red tie, gray slacks, sneakers, eager goofy grin. Exactly two arms and two legs in each view. No text, no labels."
+  },
+  {
+   "id": "주인공안2_다크서클_미역머리",
+   "width": 768,
+   "height": 432,
+   "seed": 7721,
+   "prompt": "simple Korean webtoon gag comic style, thick black marker outlines, very simple round shapes, minimal flat colors, exaggerated funny expressions, roughly drawn on purpose, comedic, very distinctive memorable silhouette. Character model sheet of one single original character shown three times side by side: front view, side view, back view, full body, standing, plain pure white background. Character: 25-year-old newbie office worker man, tall and skinny with long noodle-like arms, wavy seaweed-like messy dark green-black hair, huge dark circles under sleepy half-closed eyes, always holding a giant coffee cup, wrinkled white shirt half untucked, loose striped tie, slacks, slippers, exhausted zombie-like face. Exactly two arms and two legs in each view. No text, no labels."
+  },
+  {
+   "id": "주인공안3_바가지머리_땀방울",
+   "width": 768,
+   "height": 432,
+   "seed": 7722,
+   "prompt": "simple Korean webtoon gag comic style, thick black marker outlines, very simple round shapes, minimal flat colors, exaggerated funny expressions, roughly drawn on purpose, comedic, very distinctive memorable silhouette. Character model sheet of one single original character shown three times side by side: front view, side view, back view, full body, standing, plain pure white background. Character: 25-year-old newbie office worker man, short and chubby, shiny black bowl-cut hair, tiny dot eyes, very big mouth, constant big sweat drops flying from his head, round red cheeks, yellow short-sleeve shirt with a tiny tie, brown pants pulled up high, nervous panicking face. Exactly two arms and two legs in each view. No text, no labels."
+  }
+ ],
+ "crop_border": false
+}
