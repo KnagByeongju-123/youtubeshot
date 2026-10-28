@@ -201,7 +201,7 @@ STORY = """{c01}
 
 {c32}
 
-그렇다면 처음의 질문으로 다시 돌아가 보겠습니다. 인류의 유전자가 서로 비슷한 이유는 무엇일까요? 여기에는 다른 설명도 있습니다.
+그렇다면 처음의 질문으로 다시 돌아가 보겠습니다. 인류의 유전자가 서로 비슷한 이유는 무엇일까요? 여기에는 학자들이 내놓은 다른 설명도 있습니다.
 
 {c33}
 
@@ -266,7 +266,8 @@ def main():
                              "narr_voice": "Supertonic M2 (남성, 무료 로컬) [supertonic:M2]",
                              "layout": "자막형(큰 제목+사진+자막)", "img_fill": "전체 화면(글자가 사진 위에)",
                              "img_motion": "영상처럼(확대·이동·전환)", "fps": "24", "reveal_hit": "off", "reveal_fx": "off",
-                             "head_show": "안 보임(제목 카드만)", "sub_split": "한 줄씩(문장·쉼표로 나눠 차례로)", "img_label": "off"}}
+                             "head_show": "안 보임(제목 카드만)", "sub_split": "한 줄씩(문장·쉼표로 나눠 차례로)", "img_label": "off",
+                             "img_depth": "on", "img_depth_amt": "누끼(앞 인물 따로)"}}   # 그림 속 앞 인물을 오려 따로 움직임 (사용자 결정)
         out = os.path.join(HERE, "토바_인류가사라질뻔한날.json")
         json.dump(proj, open(out, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
         print(out, len(story), "chars")

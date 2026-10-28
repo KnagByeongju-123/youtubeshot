@@ -524,7 +524,7 @@ FIELDS = [
     ("자막형", "motion_popup", "모션: 키워드 팝업(핵심어·대사가 튀어나옴)", "choice:on,off", "off"),
     ("자막형", "img_depth", "사진 입체 움직임(2.5D · 깊이 AI, 앞뒤가 다르게 움직임)", "choice:on,off", "on"),
     ("자막형", "img_filter", "사진 필터(포토샵풍 · 모든 그림·사진에 덧씌움)", "choice:없음,연필 스케치,색연필,수채화,유화,컷아웃(포스터화),하프톤(망점),펜화(선),목탄,카툰,크라프트지 질감", "없음"),
-    ("자막형", "img_depth_amt", "입체 움직임 세기(카메라 무빙)", "choice:약하게,보통,강하게", "약하게"),   # 세게 하면 가장자리 사물이 겹쳐 보임
+    ("자막형", "img_depth_amt", "입체 움직임 세기(카메라 무빙)", "choice:약하게,보통,강하게,누끼(앞 인물 따로)", "약하게"),   # 세게 하면 가장자리 사물이 겹쳐 보임
     ("자막형", "shot_sec", "한 장면 최대 길이(초)", "float", 4.5),
     ("자막형", "img_fill", "사진 배치", "choice:전체 화면(글자가 사진 위에),가운데 상자", "전체 화면(글자가 사진 위에)"),
     ("자막형", "img_bg", "상자 모드: 뒤 배경을 사진 흐림으로", "choice:on,off", "on"),
@@ -5830,6 +5830,10 @@ class SubtitleRenderer:
             return extent_resize(big, (bw, bh), (l, tp, l + cw, tp + ch)), mask
         # 2.5D 카메라 무빙: 장면이 진행되는 동안 한쪽으로 천천히 돌아가며(드리프트) + 7초 주기로 살짝 흔들림. 가까운 것은 많이, 먼 것은 조금 밀림
         amt = str(self.s.get("img_depth_amt", "약하게"))
+        if amt.startswith("누끼"):                                 # 누끼: 앞(가까운 인물·사물)을 오려 따로 움직임 → 뒤 배경과 다르게 다가오며 입체감
+            fgm, bgn = self._cutout_for(sh["img"], big, dbig)
+            if fgm is not None:
+                return Image.fromarray(cutout_frame(img_np(big), bgn, fgm, (l, tp, cw, ch), p, (bw, bh), float(z))), mask
         ax_, ay_ = DEPTH_AMP.get(amt, DEPTH_AMP["약하게"])
         if amt.startswith("약"):                                   # 약하게 = 맨 처음 방식 그대로 (9초 주기로 살짝 흔들림, 드리프트 없음)
             ph = 2 * np.pi * t / 9.0
@@ -5848,6 +5852,15 @@ class SubtitleRenderer:
         dcrop = extent_np(dbig, size_p, box)                                 # float32 0~255
         warped = parallax_warp_np(crop_pad, dcrop, ox, oy)
         return Image.fromarray(np.ascontiguousarray(warped[my:my + bh, mx:mx + bw])), mask
+
+    def _cutout_for(self, idx, big, dbig):
+        """idx 사진의 누끼 (앞 가림막 float32 0~1, 앞을 지우고 메운 배경 uint8). 앞이 너무 작거나 크면 (None, None) → 보통 입체 움직임"""
+        cc = self.__dict__.setdefault("_cut_big", {})
+        if idx not in cc:
+            if len(cc) >= 4:
+                cc.pop(next(iter(cc)))
+            cc[idx] = cutout_layers(img_np(big), dbig)
+        return cc[idx]
 
     def _depth_for(self, idx, size):
         """idx 사진의 깊이 지도를 큰 사진 크기의 L 이미지로 (캐시)"""
@@ -6486,6 +6499,70 @@ try:
     import cv2 as _cv2   # 있으면 사진 확대·이동을 훨씬 빠르게 (pip install opencv-python-headless)
 except Exception:
     _cv2 = None
+
+
+def cutout_layers(arr, dbig):
+    """누끼 나누기: 깊이 지도에서 가까운 부분(인물·앞 사물)을 오려 가림막(float32 0~1, 가장자리 부드럽게)으로,
+    그 자리를 주변 색으로 메운 배경(uint8)을 함께 돌려줌. 앞이 그림의 6%보다 작거나 65%보다 크면 (None, None)"""
+    if dbig is None or _cv2 is None:
+        return None, None
+    h, w = arr.shape[:2]
+    sm = 512 / max(w, h)                                   # 작게 줄여서 계산 (빠름), 결과만 원래 크기로
+    sw, sh_ = max(16, int(w * sm)), max(16, int(h * sm))
+    d = _cv2.resize(dbig, (sw, sh_), interpolation=_cv2.INTER_AREA).astype(np.uint8)
+    th, _m = _cv2.threshold(d, 0, 255, _cv2.THRESH_BINARY + _cv2.THRESH_OTSU)   # 가까움/멂 두 무리로 나누는 경계
+    th = max(th, float(np.percentile(d, 55)))              # 너무 넓게 잡히지 않게 (가까운 쪽 45% 이하)
+    m = (d > th).astype(np.uint8)
+    m = _cv2.morphologyEx(m, _cv2.MORPH_OPEN, np.ones((5, 5), np.uint8))
+    n, lab, stats, _c = _cv2.connectedComponentsWithStats(m, 8)
+    keep = np.zeros_like(m)
+    for k in range(1, n):                                  # 작은 부스러기는 버림
+        if stats[k, _cv2.CC_STAT_AREA] >= sw * sh_ * 0.01:
+            keep[lab == k] = 1
+    frac = float(keep.mean())
+    if frac < 0.06 or frac > 0.65:
+        return None, None
+    iw, ih = min(w, 1280), int(h * min(w, 1280) / w)       # 메우기는 좀 더 크게 (작게 메우면 번진 자국이 보임)
+    keep = _cv2.resize(keep, (iw, ih), interpolation=_cv2.INTER_NEAREST)
+    try:                                                   # 깊이 지도는 흐릿해서 오린 선이 인물 밖으로 삐져나옴 → 그림 색으로 가장자리를 다시 맞춤 (GrabCut)
+        gm = np.full((ih, iw), _cv2.GC_PR_BGD, np.uint8)
+        gm[_cv2.dilate(keep, np.ones((25, 25), np.uint8)) > 0] = _cv2.GC_PR_FGD
+        gm[_cv2.erode(keep, np.ones((25, 25), np.uint8)) > 0] = _cv2.GC_FGD
+        gm[_cv2.dilate(keep, np.ones((61, 61), np.uint8)) == 0] = _cv2.GC_BGD
+        img_s = _cv2.resize(arr, (iw, ih), interpolation=_cv2.INTER_AREA)
+        _cv2.grabCut(_cv2.cvtColor(img_s, _cv2.COLOR_RGB2BGR), gm, None, np.zeros((1, 65), np.float64), np.zeros((1, 65), np.float64), 3, _cv2.GC_INIT_WITH_MASK)
+        k2 = ((gm == _cv2.GC_FGD) | (gm == _cv2.GC_PR_FGD)).astype(np.uint8)
+        if 0.04 < float(k2.mean()) < 0.7:
+            keep = _cv2.morphologyEx(k2, _cv2.MORPH_OPEN, np.ones((3, 3), np.uint8))
+    except Exception:
+        pass
+    hole = _cv2.dilate(keep, np.ones((7, 7), np.uint8))    # 가장자리 테두리 남지 않게 조금 넓게
+    fill = _cv2.inpaint(_cv2.resize(arr, (iw, ih), interpolation=_cv2.INTER_AREA), hole * 255, 5, _cv2.INPAINT_TELEA)
+    fill_big = _cv2.resize(fill, (w, h), interpolation=_cv2.INTER_CUBIC)
+    hole_big = _cv2.GaussianBlur(_cv2.resize(hole.astype(np.float32), (w, h), interpolation=_cv2.INTER_LINEAR), (0, 0), max(1.5, w / 900))
+    bg = (arr.astype(np.float32) * (1 - hole_big[..., None]) + fill_big.astype(np.float32) * hole_big[..., None]).astype(np.uint8)
+    fg = _cv2.resize(keep.astype(np.float32), (w, h), interpolation=_cv2.INTER_LINEAR)
+    fg = _cv2.GaussianBlur(fg, (0, 0), max(1.5, w / 900))  # 오린 가장자리를 살짝 부드럽게
+    return np.clip(fg, 0, 1), bg
+
+
+def cutout_frame(arr, bg, fgm, box, p, size, z=1.0):
+    """누끼 장면 한 장: 배경은 거의 그대로(살짝 반대로 밀림), 앞 인물은 장면 동안 조금씩 커지며 다가옴 + 옆으로 밀림.
+    p: 장면 진행 0~1 (부드럽게 바뀐 값), box: (왼, 위, 폭, 높이) 지금 카메라가 보는 곳"""
+    l, tp, cw, ch = box
+    cx, cy = l + cw / 2, tp + ch / 2
+    zk = 1.0 / max(1.0, z) ** 1.5                          # 이미 확대된 장면은 덜 움직임
+    fz = 1 + 0.03 * p * zk                                 # 앞: 3%까지 다가옴 (더 크면 오린 자리 뒤 메운 배경이 번져 보임)
+    dx = cw * 0.008 * (2 * p - 1) * zk                     # 앞은 오른쪽으로, 배경은 왼쪽으로 조금
+    bz = 1 + 0.005 * p * zk                                 # 배경도 아주 조금 다가옴 (앞과의 차이 2.5% = 입체감, 오린 자리는 거의 안 드러남)
+    fw, fh = cw / fz, ch / fz
+    fbox = (cx - dx - fw / 2, cy - fh / 2 + ch * 0.01 * p * zk, cx - dx + fw / 2, cy + fh / 2 + ch * 0.01 * p * zk)
+    bw_, bh_ = cw / bz, ch / bz
+    bbox = (cx + dx * 0.35 - bw_ / 2, cy - bh_ / 2, cx + dx * 0.35 + bw_ / 2, cy + bh_ / 2)
+    out_bg = extent_np(bg, size, bbox).astype(np.float32)
+    out_fg = extent_np(arr, size, fbox).astype(np.float32)
+    m = extent_np(fgm, size, fbox)[..., None]
+    return np.clip(out_bg * (1 - m) + out_fg * m, 0, 255).astype(np.uint8)
 
 
 def extent_np(arr, size, box):
