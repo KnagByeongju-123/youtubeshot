@@ -5831,9 +5831,11 @@ class SubtitleRenderer:
         # 2.5D 카메라 무빙: 장면이 진행되는 동안 한쪽으로 천천히 돌아가며(드리프트) + 7초 주기로 살짝 흔들림. 가까운 것은 많이, 먼 것은 조금 밀림
         amt = str(self.s.get("img_depth_amt", "약하게"))
         if amt.startswith("누끼"):                                 # 누끼: 앞(가까운 인물·사물)을 오려 따로 움직임 → 뒤 배경과 다르게 다가오며 입체감
-            fgm, bgn = self._cutout_for(sh["img"], big, dbig)
+            fgm, bgn, spec = self._cutout_for(sh["img"], big, dbig)
             if fgm is not None:
-                return Image.fromarray(cutout_frame(img_np(big), bgn, fgm, (l, tp, cw, ch), p, (bw, bh), float(z))), mask
+                anc = spec.get("anchor")
+                return Image.fromarray(cutout_frame(img_np(big), bgn, fgm, (l, tp, cw, ch), p, (bw, bh), float(z), zoom=float(spec.get("zoom", 0.03)),
+                                                    anchor=(anc[0] * big.width, anc[1] * big.height) if anc else None)), mask
         ax_, ay_ = DEPTH_AMP.get(amt, DEPTH_AMP["약하게"])
         if amt.startswith("약"):                                   # 약하게 = 맨 처음 방식 그대로 (9초 주기로 살짝 흔들림, 드리프트 없음)
             ph = 2 * np.pi * t / 9.0
@@ -5859,7 +5861,15 @@ class SubtitleRenderer:
         if idx not in cc:
             if len(cc) >= 4:
                 cc.pop(next(iter(cc)))
-            cc[idx] = cutout_layers(img_np(big), dbig)
+            spec = {}
+            paths = getattr(self, "img_paths", [])
+            side = (paths[idx] + ".누끼.json") if idx < len(paths) and paths[idx] else ""
+            if side and os.path.exists(side):        # 그림마다 오릴 곳을 정해 둔 파일 (예: 화산 연기만 오려 부풀림)
+                try:
+                    spec = json.load(open(side, encoding="utf-8"))
+                except Exception:
+                    spec = {}
+            cc[idx] = cutout_layers(img_np(big), dbig, spec) + (spec,)
         return cc[idx]
 
     def _depth_for(self, idx, size):
@@ -6501,12 +6511,15 @@ except Exception:
     _cv2 = None
 
 
-def cutout_layers(arr, dbig):
+def cutout_layers(arr, dbig, spec=None):
     """누끼 나누기: 깊이 지도에서 가까운 부분(인물·앞 사물)을 오려 가림막(float32 0~1, 가장자리 부드럽게)으로,
-    그 자리를 주변 색으로 메운 배경(uint8)을 함께 돌려줌. 앞이 그림의 6%보다 작거나 65%보다 크면 (None, None)"""
-    if dbig is None or _cv2 is None:
+    그 자리를 주변 색으로 메운 배경(uint8)을 함께 돌려줌. 앞이 그림의 6%보다 작거나 65%보다 크면 (None, None)
+    spec["box"] = [왼, 위, 오른, 아래] (그림 비율 0~1) 가 있으면 깊이 대신 그 상자 안의 덩어리(화산 연기 등)를 그림 색으로 오림"""
+    if _cv2 is None or (dbig is None and not (spec or {}).get("box")):
         return None, None
     h, w = arr.shape[:2]
+    if (spec or {}).get("box"):
+        return _cutout_box(arr, spec["box"])
     sm = 512 / max(w, h)                                   # 작게 줄여서 계산 (빠름), 결과만 원래 크기로
     sw, sh_ = max(16, int(w * sm)), max(16, int(h * sm))
     d = _cv2.resize(dbig, (sw, sh_), interpolation=_cv2.INTER_AREA).astype(np.uint8)
@@ -6546,17 +6559,49 @@ def cutout_layers(arr, dbig):
     return np.clip(fg, 0, 1), bg
 
 
-def cutout_frame(arr, bg, fgm, box, p, size, z=1.0):
+def _cutout_box(arr, box):
+    """정해 준 상자 안의 덩어리를 GrabCut 으로 오리고 그 자리를 메운 배경과 함께 (연기·구름처럼 깊이로 안 잡히는 것)"""
+    h, w = arr.shape[:2]
+    iw, ih = min(w, 1280), int(h * min(w, 1280) / w)
+    img_s = _cv2.resize(arr, (iw, ih), interpolation=_cv2.INTER_AREA)
+    x0, y0, x1, y1 = [int(round(v * (iw if k % 2 == 0 else ih))) for k, v in enumerate(box)]
+    x0, y0, x1, y1 = max(1, x0), max(1, y0), min(iw - 2, x1), min(ih - 2, y1)
+    gm = np.zeros((ih, iw), np.uint8)
+    try:
+        _cv2.grabCut(_cv2.cvtColor(img_s, _cv2.COLOR_RGB2BGR), gm, (x0, y0, x1 - x0, y1 - y0), np.zeros((1, 65), np.float64),
+                     np.zeros((1, 65), np.float64), 4, _cv2.GC_INIT_WITH_RECT)
+    except Exception:
+        return None, None
+    keep = ((gm == _cv2.GC_FGD) | (gm == _cv2.GC_PR_FGD)).astype(np.uint8)
+    keep = _cv2.morphologyEx(keep, _cv2.MORPH_CLOSE, np.ones((9, 9), np.uint8))
+    keep = _cv2.morphologyEx(keep, _cv2.MORPH_OPEN, np.ones((5, 5), np.uint8))
+    if not 0.03 < float(keep.mean()) < 0.85:
+        return None, None
+    hole = _cv2.dilate(keep, np.ones((7, 7), np.uint8))
+    fill_big = _cv2.resize(_cv2.inpaint(img_s, hole * 255, 5, _cv2.INPAINT_TELEA), (w, h), interpolation=_cv2.INTER_CUBIC)
+    hole_big = _cv2.GaussianBlur(_cv2.resize(hole.astype(np.float32), (w, h), interpolation=_cv2.INTER_LINEAR), (0, 0), max(1.5, w / 900))
+    bg = (arr.astype(np.float32) * (1 - hole_big[..., None]) + fill_big.astype(np.float32) * hole_big[..., None]).astype(np.uint8)
+    fg = _cv2.GaussianBlur(_cv2.resize(keep.astype(np.float32), (w, h), interpolation=_cv2.INTER_LINEAR), (0, 0), max(2.0, w / 600))   # 연기는 가장자리를 더 부드럽게
+    return np.clip(fg, 0, 1), bg
+
+
+def cutout_frame(arr, bg, fgm, box, p, size, z=1.0, zoom=0.03, anchor=None):
     """누끼 장면 한 장: 배경은 거의 그대로(살짝 반대로 밀림), 앞 인물은 장면 동안 조금씩 커지며 다가옴 + 옆으로 밀림.
     p: 장면 진행 0~1 (부드럽게 바뀐 값), box: (왼, 위, 폭, 높이) 지금 카메라가 보는 곳"""
     l, tp, cw, ch = box
     cx, cy = l + cw / 2, tp + ch / 2
     zk = 1.0 / max(1.0, z) ** 1.5                          # 이미 확대된 장면은 덜 움직임
-    fz = 1 + 0.03 * p * zk                                 # 앞: 3%까지 다가옴 (더 크면 오린 자리 뒤 메운 배경이 번져 보임)
+    fz = 1 + zoom * p * zk                                 # 앞: 기본 3%까지 다가옴 (더 크면 오린 자리 뒤 메운 배경이 번져 보임)
     dx = cw * 0.008 * (2 * p - 1) * zk                     # 앞은 오른쪽으로, 배경은 왼쪽으로 조금
     bz = 1 + 0.005 * p * zk                                 # 배경도 아주 조금 다가옴 (앞과의 차이 2.5% = 입체감, 오린 자리는 거의 안 드러남)
     fw, fh = cw / fz, ch / fz
-    fbox = (cx - dx - fw / 2, cy - fh / 2 + ch * 0.01 * p * zk, cx - dx + fw / 2, cy + fh / 2 + ch * 0.01 * p * zk)
+    if anchor is not None:                                 # 기준점(화산 분화구 등)에서 부풀어 오름: 기준점은 제자리, 나머지가 바깥으로 커짐
+        axp, ayp = anchor
+        fl, ft = axp - (axp - l) / fz, ayp - (ayp - tp) / fz
+        fbox = (fl, ft, fl + fw, ft + fh)
+        dx = 0.0
+    else:
+        fbox = (cx - dx - fw / 2, cy - fh / 2 + ch * 0.01 * p * zk, cx - dx + fw / 2, cy + fh / 2 + ch * 0.01 * p * zk)
     bw_, bh_ = cw / bz, ch / bz
     bbox = (cx + dx * 0.35 - bw_ / 2, cy - bh_ / 2, cx + dx * 0.35 + bw_ / 2, cy + bh_ / 2)
     out_bg = extent_np(bg, size, bbox).astype(np.float32)

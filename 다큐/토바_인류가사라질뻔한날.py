@@ -65,6 +65,14 @@ CUTS = [
     ("c40", "a calm sunrise over the huge caldera lake with green mountains around it, peaceful fishing boats on the water, warm golden light", "다시 평화로운 토바 호수", False),
 ]
 
+# 누끼를 깊이(가까운 인물) 대신 정해 준 덩어리로: 화산 연기는 오려서 분화구(anchor)에서 부풀어 오르게 (사용자 결정)
+# box = 오릴 곳 [왼, 위, 오른, 아래], anchor = 커지는 기준점, zoom = 장면 동안 커지는 정도 (그림 비율 0~1)
+CUTOUT = {
+    "c01": {"box": [0.07, 0.0, 0.93, 0.72], "anchor": [0.5, 0.68], "zoom": 0.08},
+    "c06": {"box": [0.07, 0.0, 0.64, 0.72], "anchor": [0.4, 0.62], "zoom": 0.07},
+    "c07": {"box": [0.33, 0.03, 0.8, 0.76], "anchor": [0.52, 0.75], "zoom": 0.08},
+}
+
 STORY = """{c01}
 
 약 7만 4천 년 전, 지금의 인도네시아 수마트라섬에서 땅이 터져 나갔습니다. 최근 200만 년 사이, 지구에서 가장 큰 화산 폭발 가운데 하나였습니다.
@@ -268,6 +276,8 @@ def main():
                              "img_motion": "영상처럼(확대·이동·전환)", "fps": "24", "reveal_hit": "off", "reveal_fx": "off",
                              "head_show": "안 보임(제목 카드만)", "sub_split": "한 줄씩(문장·쉼표로 나눠 차례로)", "img_label": "off",
                              "img_depth": "on", "img_depth_amt": "누끼(앞 인물 따로)"}}   # 그림 속 앞 인물을 오려 따로 움직임 (사용자 결정)
+        for cid, spec in CUTOUT.items():           # 그림 옆에 누끼 설정 파일 (영상 프로그램이 읽음)
+            json.dump(spec, open(os.path.join(folder, cid + ".png.누끼.json"), "w", encoding="utf-8"))
         out = os.path.join(HERE, "토바_인류가사라질뻔한날.json")
         json.dump(proj, open(out, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
         print(out, len(story), "chars")
