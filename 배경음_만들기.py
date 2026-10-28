@@ -38,6 +38,8 @@ def main():
     os.makedirs(out_dir, exist_ok=True)
     import torch
     torch.set_num_threads(os.cpu_count())
+    import acestep.model_downloader as md       # 안 쓰는 큰 언어모델(3.5GB)을 '없음'으로 보고 자동으로 받지 않게
+    md.MAIN_MODEL_COMPONENTS[:] = [c for c in md.MAIN_MODEL_COMPONENTS if "-lm-" not in c]
     from acestep.handler import AceStepHandler
     from acestep.llm_inference import LLMHandler
     from acestep.inference import GenerationParams, GenerationConfig, generate_music
