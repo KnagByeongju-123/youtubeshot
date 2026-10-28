@@ -13,6 +13,11 @@ python 나레이션_겹침검사.py <영상.mp4> <회차.py 또는 대본.txt> [
     빨라진 문장도 캐시를 지워 다시 녹음만 함. 녹음을 억지로 늘리지 않음(늘어져 들림) — 영상 길이가 나레이션에 맞춰짐
     (Supertonic 은 매번 조금씩 다르게 읽어서 보통 한 번에 고쳐짐. 다시 만든 영상도 검사해서 '겹침 없음'이 나올 때까지, 최대 3번)
   - 결과: '분:초 [겹친 글자] 대본: <문장> | 들림: <받아 적은 글>'
+  - 늘어진 곳(강제 정렬): 대본 글자(성우가 읽은 글)를 소리에 한 글자씩 맞춰(CTC 비터비 정렬, torchaudio forced_align 과 같은 방법)
+    글자 하나가 보통 글자의 3배·0.5초 넘게 소리를 끄는 곳 ('다아아')
+  - 어색한 문장(UTMOS): 문장마다 말소리 자연스러움 점수(오픈소스 SpeechMOS UTMOS22, MIT, 외부도구/speechmos)를 매겨 중간값보다 0.7점 넘게 낮고 3점 아래인 문장
+    (가중치 models/utmos22_strong_step7459_v1.pt 가 없으면 건너뜀). --고치기 면 둘 다 그 문장을 다시 녹음
+  - --프로젝트 <프로젝트.json> : 고치지 않고 검사만 할 때도 읽기 설정(숫자 읽기 등)을 맞춤 (--고치기 면 자동)
 (내부용) python 나레이션_겹침검사.py --지우기 <목록.json> <프로젝트.json>  ← .supertonic_venv 로 실행, 캐시 이름 계산·삭제"""
 import difflib
 import importlib.util
@@ -147,30 +152,147 @@ def fast_spots(sylls, sents, ratio=1.25, gap=0.3, min_syl=8):
     return out
 
 
-def stretch_spots(spans, sents, ratio=3.0, min_sec=0.5, last_sec=0.75):
-    """늘어진 곳: 글자 하나를 소리 내는 시간이 보통 글자의 3배 넘게(그리고 0.5초 넘게) 길고, 그동안 소리가 계속 나는 곳.
-    ('다아아' 처럼 끄는 소리. 쉼은 소리가 없어서 빠짐) 쉼 바로 앞 글자는 원래 조금 길어지니 0.75초 넘을 때만"""
+def spoken_script(sents, project):
+    """대본 문장마다 성우가 실제로 읽는 글(숫자 → 한글 읽기, 읽기 사전)을 한글만 이어 붙임 + 글자마다 몇 번째 문장인지.
+    읽는 글 바꾸기는 프로그램(.supertonic_venv)에 있어서 그쪽으로 물어봄. 안 되면 대본 글자 그대로"""
+    texts = [s_ for _, s_ in sents]
+    tmp = os.path.join(tempfile.gettempdir(), "겹침_말소리.json")
+    try:
+        json.dump(texts, open(tmp, "w", encoding="utf-8"), ensure_ascii=False)
+        r = subprocess.run([PY_ST, "-X", "utf8", os.path.abspath(__file__), "--말소리", tmp] + ([project] if project else []),
+                           capture_output=True, check=True, timeout=600)
+        spoken = json.load(open(tmp, encoding="utf-8"))
+    except Exception:
+        spoken = texts
+    all_, owner = [], []
+    for k, t in enumerate(spoken):
+        h = hangul(t)
+        all_.append(h)
+        owner += [k] * len(h)
+    return "".join(all_), owner
+
+
+def ctc_align(lp, tokens, blank):
+    """CTC 강제 정렬(비터비) — torchaudio.functional.forced_align 과 같은 방법. lp: (칸, 낱말표) 로그 확률.
+    반환: 칸마다 몇 번째 글자인지(-1 = 빈칸) 또는 None(칸이 모자람)"""
     import numpy as np
-    durs = [s_["dur"] for s_ in spans if not s_["last"] and s_["dur"] < 0.6]
+    T, L = lp.shape[0], len(tokens)
+    if L == 0 or T < L:
+        return None
+    ext = [blank]
+    for t_ in tokens:
+        ext += [t_, blank]
+    ext = np.array(ext)
+    S, NEG = len(ext), -1e30
+    emit = lp[:, ext]
+    skip = np.zeros(S, bool)
+    skip[2:] = (ext[2:] != blank) & (ext[2:] != ext[:-2])
+    dp = np.full(S, NEG)
+    dp[0], dp[1] = emit[0, 0], emit[0, 1]
+    bp = np.zeros((T, S), np.int8)
+    for t in range(1, T):
+        one = np.concatenate([[NEG], dp[:-1]])
+        two = np.concatenate([[NEG, NEG], dp[:-2]])
+        two[~skip] = NEG
+        st = np.stack([dp, one, two])
+        arg = st.argmax(0)
+        dp = st[arg, np.arange(S)] + emit[t]
+        bp[t] = arg
+    s_ = S - 1 if dp[S - 1] >= dp[S - 2] else S - 2
+    path = np.zeros(T, int)
+    for t in range(T - 1, -1, -1):
+        path[t] = (s_ - 1) // 2 if s_ % 2 else -1
+        s_ -= bp[t, s_]
+    return path
+
+
+def syllable_spans(tf, qs, spoken_all, owner, x, off, step):
+    """정렬 결과로 글자마다 (시작 시각, 길이, 그동안 소리가 난 비율, 문장 번호)"""
+    import numpy as np
+    fr_ = max(1, int(0.02 * SR))
+    n_ = len(x) // fr_
+    rms_ = np.sqrt((x[:n_ * fr_].reshape(n_, fr_) ** 2).mean(1)) if n_ else np.zeros(1)
+    loud = max(1e-4, float(np.percentile(rms_, 90)) * 0.12)
+    first = {}
+    for k, ti in enumerate(tf):
+        if ti >= 0 and ti not in first:
+            first[ti] = k
+    out = []
+    for ti in range(len(qs)):
+        if ti not in first:
+            continue
+        k0 = first[ti]
+        k1 = first.get(ti + 1, max([k for k, t_ in enumerate(tf) if t_ == ti]) + 1)
+        a0 = int(k0 * step / 0.02)
+        a1 = max(a0 + 1, int(k1 * step / 0.02))
+        seg_ = rms_[a0:a1]
+        out.append({"ch": spoken_all[qs[ti]], "t": off + k0 * step, "dur": (k1 - k0) * step,
+                    "voiced": float((seg_ > loud).mean()) if len(seg_) else 0.0, "sent": owner[qs[ti]],
+                    "end": off + (max([k for k, t_ in enumerate(tf) if t_ == ti]) + 1) * step})
+    return out
+
+
+def stretch_spots(aligned, sents, ratio=3.0, min_sec=0.5):
+    """늘어진 곳: 강제 정렬로 잰 글자 하나의 길이가 보통 글자의 3배 넘게(그리고 0.5초 넘게) 길고, 그동안 소리가 계속 나는 곳
+    ('다아아' 처럼 끄는 소리. 쉼은 소리가 없어서 빠짐)"""
+    import numpy as np
+    durs = [s_["dur"] for s_ in aligned if s_["dur"] < 0.6]
     if len(durs) < 50:
         return []
     med = float(np.median(durs))
     out = []
-    for s_ in spans:
-        lim = max(last_sec if s_["last"] else min_sec, med * ratio)
-        if s_["dur"] <= lim or s_["voiced"] < 0.8:
+    for s_ in aligned:
+        if s_["dur"] <= max(min_sec, med * ratio) or s_["voiced"] < 0.8:
             continue
-        h = s_["ctx"]
-        piece = h[max(0, s_["i"] - 10):s_["i"] + 1]
-        ps = sentence_of(piece, sents) or best_sentence(h, sents)
-        if ps is None or ps[1].lstrip().startswith(('"', '“')):
+        par, sent = sents[s_["sent"]]
+        if sent.lstrip().startswith(('"', '“')):
             continue
         out.append({"t": s_["t"], "dd": f"늘어짐 '{s_['ch']}' {s_['dur']:.2f}초(보통 글자 {med:.2f}초)",
-                    "sentence": ps[1], "paragraph": ps[0], "heard": h})
+                    "sentence": sent, "paragraph": par, "heard": ""})
     return out
 
 
-def detect(video, script):
+def utmos_spots(a, aligned, sents, drop=0.7, floor=3.0):
+    """어색한 문장: 문장마다 UTMOS(말소리 자연스러움 1~5점, 오픈소스 SpeechMOS·MIT)를 매겨,
+    영상 전체 문장의 중간값보다 0.7점 넘게 낮고 3.0점 아래인 문장 (기계음·지직거림·이상한 억양). 가중치가 없으면 건너뜀"""
+    import numpy as np
+    w = os.path.join(HERE, "models", "utmos22_strong_step7459_v1.pt")
+    if not os.path.exists(w) or not aligned:
+        return []
+    import torch
+    sys.path.insert(0, os.path.join(HERE, "외부도구"))
+    from speechmos.utmos22.strong.model import UTMOS22Strong
+    um = UTMOS22Strong()
+    um.load_state_dict(torch.load(w, map_location="cpu", weights_only=True))
+    um.eval()
+    rng = {}
+    for s_ in aligned:
+        r = rng.setdefault(s_["sent"], [s_["t"], s_["end"]])
+        r[0], r[1] = min(r[0], s_["t"]), max(r[1], s_["end"])
+    scores = {}
+    for k, (t0, t1) in rng.items():
+        if t1 - t0 < 1.0:
+            continue
+        seg_ = a[int(max(0, t0 - 0.05) * SR):int((t1 + 0.15) * SR)].copy()
+        with torch.no_grad():
+            scores[k] = float(um(torch.tensor(seg_).unsqueeze(0), SR).item())
+    if len(scores) < 10:
+        return []
+    med = float(np.median(list(scores.values())))
+    UTMOS_REPORT[:] = [(rng[k][0], v, sents[k][1]) for k, v in sorted(scores.items())]
+    out = []
+    for k, v in scores.items():
+        if v < med - drop and v < floor and not sents[k][1].lstrip().startswith(('"', '“')):
+            out.append({"t": rng[k][0], "dd": f"어색함 {v:.2f}점(보통 {med:.2f}점)", "sentence": sents[k][1],
+                        "paragraph": sents[k][0], "heard": ""})
+    return out
+
+
+UTMOS_REPORT = []
+PY_ST = os.path.join(HERE, ".supertonic_venv", "Scripts" if os.name == "nt" else "bin", "python.exe" if os.name == "nt" else "python")
+
+
+def detect(video, script, project=None):
     import numpy as np
     import torch
     from transformers import AutoModelForCTC, AutoProcessor
@@ -182,38 +304,42 @@ def detect(video, script):
     torch.set_num_threads(max(1, os.cpu_count() or 4))
     p = AutoProcessor.from_pretrained(MODEL)
     m = AutoModelForCTC.from_pretrained(MODEL).eval()
-    found, sylls, spans = [], [], []          # sylls: (글자, 시각초) - 말 빠르기 재기용, spans: 글자마다 길이 (늘어짐 찾기용)
+    found, sylls, aligned = [], [], []          # sylls: (글자, 시각초) - 말 빠르기 재기용, aligned: 강제 정렬한 글자마다 길이
     blank = p.tokenizer.pad_token_id
+    vocab = {k_: v_ for k_, v_ in p.tokenizer.get_vocab().items() if re.fullmatch(r"[가-힣]", k_)}
+    spoken_all, owner = spoken_script(sents, project)       # 성우가 실제로 읽은 글(한글만) + 글자마다 몇 번째 문장인지
+    pos = 0
     for t0, t1 in chunks(a):
         off = max(0, t0 - 0.15)
         x = a[int(off * SR):int((t1 + 0.15) * SR)]
         with torch.no_grad():
-            ids = m(**p(x, sampling_rate=SR, return_tensors="pt")).logits.argmax(-1)
+            logits = m(**p(x, sampling_rate=SR, return_tensors="pt")).logits
+        ids = logits.argmax(-1)
         text = p.batch_decode(ids)[0]
         h = hangul(text)
         seq = ids[0].tolist()
         step = len(x) / SR / max(1, len(seq))       # 한 칸(약 0.02초)
         prev = None
-        starts = []
         for k, tid in enumerate(seq):               # 글자가 처음 나온 칸 = 그 글자를 말한 시각
             if tid != prev and tid != blank:
                 ch = p.tokenizer.convert_ids_to_tokens(tid)
                 if re.fullmatch(r"[가-힣]", ch or ""):
                     sylls.append((ch, off + k * step))
-                    starts.append((k, ch))
             prev = tid
-        # 글자 길이 재기(정렬): 모델이 칸마다 어느 글자를 듣는지로 글자 하나가 차지한 시간 + 그동안 소리가 나고 있었는지
-        fr_ = max(1, int(0.02 * SR))
-        n_ = len(x) // fr_
-        rms_ = np.sqrt((x[:n_ * fr_].reshape(n_, fr_) ** 2).mean(1)) if n_ else np.zeros(1)
-        loud = max(1e-4, float(np.percentile(rms_, 90)) * 0.12)
-        for i_, (k, ch) in enumerate(starts):
-            end = starts[i_ + 1][0] if i_ + 1 < len(starts) else len(seq)
-            a0, a1 = int(k * step / 0.02), max(int(k * step / 0.02) + 1, int(end * step / 0.02))
-            seg_ = rms_[a0:a1]
-            voiced = float((seg_ > loud).mean()) if len(seg_) else 0.0
-            spans.append({"ch": ch, "t": off + k * step, "dur": (end - k) * step, "voiced": voiced,
-                          "last": i_ + 1 == len(starts), "ctx": h, "i": i_})
+        # 강제 정렬: 이 조각에 해당하는 대본(성우가 실제로 읽은 글, 숫자는 한글 읽기) 글자를 찾아 소리에 한 글자씩 맞춤
+        if spoken_all:
+            win = spoken_all[pos:pos + int(len(h) * 1.6) + 30]
+            sm_ = difflib.SequenceMatcher(None, win, h, autojunk=False)
+            blocks = [b_ for b_ in sm_.get_matching_blocks() if b_.size >= 2]
+            if h and blocks and sum(b_.size for b_ in blocks) / len(h) >= 0.5:
+                g0, g1 = pos + blocks[0].a, pos + blocks[-1].a + blocks[-1].size
+                keep = [(q, vocab[spoken_all[q]]) for q in range(g0, g1) if spoken_all[q] in vocab]
+                if keep:
+                    lp = torch.log_softmax(logits[0], -1).numpy()
+                    tf = ctc_align(lp, [t_ for _, t_ in keep], blank)
+                    if tf is not None:
+                        aligned += syllable_spans(tf, [q for q, _ in keep], spoken_all, owner, x, off, step)
+                pos = g1
         for n in (1, 2, 3):
             for dd in sorted(doubles(h, n)):
                 i = h.find(dd)
@@ -237,7 +363,8 @@ def detect(video, script):
     except OSError:
         pass
     found += fast_spots(sylls, sents)
-    found += stretch_spots(spans, sents)
+    found += stretch_spots(aligned, sents)
+    found += utmos_spots(a, aligned, sents)
     uniq, seen = [], set()
     for f in found:
         if f["sentence"] not in seen:
@@ -280,6 +407,18 @@ def delete_caches(items, project):
 
 
 def main(a):
+    if a and a[0] == "--말소리":               # (내부용, .supertonic_venv) 문장마다 성우가 읽는 글로 바꿔 같은 파일에 다시 씀
+        sys.path.insert(0, HERE)
+        spec = importlib.util.spec_from_file_location("snm", os.path.join(HERE, "shorts_novel_maker_supertonic.py"))
+        m = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(m)
+        if len(a) > 2:
+            st = json.load(open(a[2], encoding="utf-8")).get("settings") or {}
+            m.set_tts_cfg(st)
+        m.spoken_load(os.path.join(HERE, "output", "tts_cache"))
+        texts = json.load(open(a[1], encoding="utf-8"))
+        json.dump([m.tts_clean(t) for t in texts], open(a[1], "w", encoding="utf-8"), ensure_ascii=False)
+        return 0
     if a and a[0] == "--지우기":
         delete_caches(json.load(open(a[1], encoding="utf-8")), a[2])
         return 0
@@ -287,9 +426,13 @@ def main(a):
         print(__doc__)
         return 2
     video, script = a[0], a[1]
-    items = detect(video, script)
+    proj = a[a.index("--고치기") + 1] if "--고치기" in a else (a[a.index("--프로젝트") + 1] if "--프로젝트" in a else None)
+    items = detect(video, script, proj)
     lines = [f"{int(f['t'] // 60)}:{int(f['t'] % 60):02d} [{f['dd']}] 대본: {f['sentence']} | 들림: {f['heard']}" for f in items]
-    msg = "\n".join(lines) if lines else "겹침·빨라진 곳 없음"
+    msg = "\n".join(lines) if lines else "겹침·빨라진 곳 없음 (늘어짐·어색함도 없음)"
+    if UTMOS_REPORT:
+        v_ = sorted(x_[1] for x_ in UTMOS_REPORT)
+        msg += f"\n(UTMOS 자연스러움: 문장 {len(v_)}개 · 중간 {v_[len(v_) // 2]:.2f}점 · 가장 낮음 {v_[0]:.2f}점)"
     print(msg)
     if "--결과" in a:
         open(a[a.index("--결과") + 1], "w", encoding="utf-8").write(msg + "\n")
