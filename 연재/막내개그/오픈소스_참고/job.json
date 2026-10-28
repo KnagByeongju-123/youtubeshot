@@ -1,0 +1,15 @@
+{
+ "items": [
+  {
+   "id": "시험_오픈피플기준",
+   "width": 768,
+   "height": 432,
+   "seed": 7801,
+   "refs": [
+    "연재/막내개그/오픈소스_참고/openpeeps_longCurly_tired.png"
+   ],
+   "prompt": "simple Korean webtoon gag comic style, thick black marker outlines, very simple round shapes, minimal flat colors, exaggerated funny expressions, comedic. Character model sheet of one character based on the face and hair of the reference drawing, shown three times side by side: front view, side view, back view, full body, standing, plain pure white background. Character: 25-year-old newbie office worker man with the big messy wavy black hair and tired droopy eyes from the reference, heavy dark circles, wrinkled white shirt half untucked, loose striped tie, gray slacks, slippers, holding a giant coffee cup. Exactly two arms and two legs in each view. No text, no labels."
+  }
+ ],
+ "crop_border": false
+}
