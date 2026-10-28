@@ -13,7 +13,7 @@ TITLE = "세라 시리즈 1편 - 별을 읽는 소녀"
 STYLE = ("nostalgic 1980s Japanese TV cartoon cel animation, bright saturated cheerful colors, clean bold outlines, flat vivid cel shading, "
          "attractive appealing character design, steampunk space adventure")
 
-# 대사 → 말하는 인물 (그 인물 목소리로 읽음, 목소리는 등장인물.json 의 voice — 샘플을 들려준 뒤 정함)
+# 대사 → 말하는 인물 (기록용. 1편은 나레이션 1명이 대사까지 모두 읽음 — 사용자 결정)
 DIALOGUE = [
     ("이루! 갑판 닦으랬지, 별 구경하랬냐!", "레오"),
     ("언젠가 내가 이 배로 별 끝까지 날아갈 거야!", "이루"),
@@ -420,7 +420,7 @@ def main():
                 "story": story, "sources": [], "notes": "창작 애니 단편 세라 시리즈 1편", "autophoto": False, "img_source": "그림: 애니",
                 "cast": [{"name": nm, "look": c["look"], "voice": c.get("voice"), "sheet": os.path.join(HERE, c["face"])}
                          for nm, c in chars.items() if c["kind"] in ("인물", "외계 종족")],
-                "dialogue": [{"text": t, "who": w} for t, w in DIALOGUE],
+                "dialogue": [],   # 나레이션 1명(남자 성우 2)이 대사까지 모두 읽음 (사용자 결정, 2026-10-28). DIALOGUE 는 누가 한 말인지 기록용
                 "settings": {"format": "롱폼 가로(1920×1080)", "narration": "on",
                              "narr_voice": "Supertonic M2 (남성, 무료 로컬) [supertonic:M2]",
                              "layout": "자막형(큰 제목+사진+자막)", "img_fill": "전체 화면(글자가 사진 위에)",
