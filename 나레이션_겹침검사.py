@@ -166,6 +166,7 @@ def spoken_script(sents, project):
         spoken = texts
     all_, owner = [], []
     for k, t in enumerate(spoken):
+        t = re.sub(r"[A-Z]", lambda m_: LETTER_KO[m_.group(0)], t)   # 'HIV' 처럼 대문자 줄임말은 성우가 글자 이름으로 읽음 (빼면 앞 글자가 늘어난 것처럼 보임)
         h = hangul(t)
         all_.append(h)
         owner += [k] * len(h)
@@ -289,6 +290,8 @@ def utmos_spots(a, aligned, sents, drop=0.7, floor=3.0):
 
 
 UTMOS_REPORT = []
+LETTER_KO = dict(zip("ABCDEFGHIJKLMNOPQRSTUVWXYZ", ["에이", "비", "씨", "디", "이", "에프", "지", "에이치", "아이", "제이", "케이", "엘", "엠", "엔", "오", "피",
+                                                    "큐", "알", "에스", "티", "유", "브이", "더블유", "엑스", "와이", "제트"]))
 PY_ST = os.path.join(HERE, ".supertonic_venv", "Scripts" if os.name == "nt" else "bin", "python.exe" if os.name == "nt" else "python")
 
 
