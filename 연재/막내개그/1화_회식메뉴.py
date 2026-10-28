@@ -2,7 +2,11 @@
 python 연재/막내개그/1화_회식메뉴.py txt <파일>   → 사용자 확인용 대본
 (컷 만들기·영상은 대본 확인 뒤에 붙임)
 나레이션 1명(남자 성우 2)이 해설과 대사를 모두 읽음. 1~2분, 8컷, 마지막 컷 반전"""
+import json
+import os
 import sys
+
+HERE = os.path.dirname(os.path.abspath(__file__))
 
 TITLE = "막내 1화 - 회식 메뉴"
 
@@ -83,6 +87,20 @@ def main():
             story = story.replace("{" + cid + "}", f"[컷 {cid[1:]}: {cap} — 배경 {bg} / {people} / {prop}]")
         open(out, "w", encoding="utf-8").write(f"{TITLE}\n\n{story}\n")
         print(out, len(STORY), "chars")
+    elif cmd == "project":                     # out = 컷 그림 폴더 (p1.png …)
+        story = STORY
+        for cid, bg, who, prop, cap in PANELS:
+            story = story.replace("{" + cid + "}", f"[사진: {os.path.join(out, cid + '.png')} | {cap} | 그림: Open Peeps(CC0)·AI 생성 배경 | ]")
+        proj = {"ver": 7, "category": "장문", "genre": "[이야기] 코믹 일상 장편 썰", "topic": "막내 개그 카툰", "title": TITLE,
+                "story": story, "sources": [], "notes": "개그 카툰 1화", "autophoto": False, "img_source": "그림: 카툰",
+                "settings": {"format": "롱폼 가로(1920×1080)", "narration": "on",
+                             "narr_voice": "Supertonic M2 (남성, 무료 로컬) [supertonic:M2]",
+                             "layout": "자막형(큰 제목+사진+자막)", "img_fill": "전체 화면(글자가 사진 위에)",
+                             "img_motion": "없음", "img_depth": "off", "fps": "24", "reveal_hit": "off", "reveal_fx": "off",
+                             "head_show": "안 보임(제목 카드만)", "sub_split": "한 줄씩(문장·쉼표로 나눠 차례로)", "img_label": "on"}}
+        dst = os.path.join(HERE, "1화_회식메뉴.json")
+        json.dump(proj, open(dst, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+        print(dst)
 
 
 if __name__ == "__main__":
