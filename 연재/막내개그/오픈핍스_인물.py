@@ -29,12 +29,12 @@ CAST = {
 FACES = ["tired", "hectic", "rage", "smileLOL", "concerned", "blank", "suspicious", "cute"]
 
 
-def get(name, face, size=512):
+def get(name, face, size=512, fmt="png", **extra):
     c = {k: v for k, v in CAST[name].items() if k != "설명"}
-    p = dict(c, seed=name, face=face, size=str(size))
+    p = dict(c, seed=name, face=face, size=str(size), **{k: str(v) for k, v in extra.items()})
     for k in ("accessoriesProbability", "facialHairProbability"):
         p[k] = str(p[k])
-    url = API + "?" + urllib.parse.urlencode(p)
+    url = (API.replace("/png", "/svg") if fmt == "svg" else API) + "?" + urllib.parse.urlencode(p)
     for k in range(3):
         try:
             req = urllib.request.Request(url, headers={"User-Agent": "youtubeshot/1.0"})

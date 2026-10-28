@@ -1,0 +1,65 @@
+{
+ "items": [
+  {
+   "id": "bg_사무실",
+   "width": 768,
+   "height": 432,
+   "seed": 1101,
+   "refs": [
+    "연재/막내개그/오픈소스_참고/openpeeps_longCurly_tired.png"
+   ],
+   "prompt": "same simple drawing style as the reference, thick black outlines, flat colors, minimal shading, cheerful pastel palette. Empty Korean office interior, wide view: rows of white desks with computer monitors and office chairs, big window with warm Friday afternoon sunlight, whiteboard on the wall, potted plant, water cooler, light beige walls. full-bleed image, no border, no frame, no paper edges. No text."
+  },
+  {
+   "id": "bg_순댓국식탁",
+   "width": 768,
+   "height": 432,
+   "seed": 1112,
+   "refs": [
+    "연재/막내개그/오픈소스_참고/openpeeps_longCurly_tired.png"
+   ],
+   "prompt": "same simple drawing style as the reference, thick black outlines, flat colors, minimal shading, warm evening palette. Cozy small Korean restaurant interior in the evening: a wooden table in the lower part of the image with a steaming black earthenware bowl of pork soup, small dishes of kimchi and kkakdugi radish, a plain green glass bottle, metal spoons and chopsticks, warm yellow pendant lights, plain wooden wall panels and a paper sliding door behind. full-bleed image, no border, no frame, no paper edges. No text, no letters."
+  },
+  {
+   "id": "prop_초밥",
+   "width": 512,
+   "height": 512,
+   "seed": 1201,
+   "refs": [
+    "연재/막내개그/오픈소스_참고/openpeeps_longCurly_tired.png"
+   ],
+   "prompt": "same simple drawing style as the reference, thick black outlines, flat colors. A single round plate of colorful sushi, salmon and tuna nigiri, centered, plain pure white background. No text."
+  },
+  {
+   "id": "prop_파스타",
+   "width": 512,
+   "height": 512,
+   "seed": 1212,
+   "refs": [
+    "연재/막내개그/오픈소스_참고/openpeeps_longCurly_tired.png"
+   ],
+   "prompt": "same simple drawing style as the reference, thick black outlines, flat colors. A single white plate of spaghetti pasta with red tomato sauce, basil leaf on top, a fork resting on the plate rim, centered, plain pure white background. No text."
+  },
+  {
+   "id": "prop_고기",
+   "width": 512,
+   "height": 512,
+   "seed": 1203,
+   "refs": [
+    "연재/막내개그/오픈소스_참고/openpeeps_longCurly_tired.png"
+   ],
+   "prompt": "same simple drawing style as the reference, thick black outlines, flat colors. A single round Korean barbecue grill with sizzling slices of pork belly samgyeopsal, centered, plain pure white background. No text."
+  },
+  {
+   "id": "prop_순댓국",
+   "width": 512,
+   "height": 512,
+   "seed": 1204,
+   "refs": [
+    "연재/막내개그/오픈소스_참고/openpeeps_longCurly_tired.png"
+   ],
+   "prompt": "same simple drawing style as the reference, thick black outlines, flat colors. A single steaming black earthenware bowl of Korean sundae-gukbap pork soup with sliced sausage and green onions, centered, plain pure white background. No text."
+  }
+ ],
+ "crop_border": true
+}
