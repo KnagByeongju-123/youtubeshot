@@ -1,0 +1,194 @@
+{
+ "_설명": "세라 시리즈 등장인물·종족·우주선. look = 그림 주문에 넣는 영어 묘사, face = 확정 시트(이 폴더 기준), voice = 목소리(샘플을 들려준 뒤 정함)",
+ "style": "A안 80년대 TV 만화",
+ "chars": [
+  {
+   "name": "이루",
+   "kind": "인물",
+   "look": "20-year-old handsome young man, apprentice pilot of a steampunk spaceship, sun-tanned skin, spiky short black hair, bright confident smile, thick eyebrows, blue sleeveless vest over a white shirt, brown work trousers with a rope belt, brass aviator goggles on his forehead, small brass gear charm necklace, leather boots",
+   "face": "캐릭터시트_A/01_이루_남주.png",
+   "voice": null
+  },
+  {
+   "name": "세라",
+   "kind": "인물",
+   "look": "20-year-old beautiful young woman, star navigator, long flowing silver-blue hair with a small star hairpin, big gentle violet eyes, warm smile, fitted white and sky-blue navigator jacket with brass buttons, short dark blue skirt over black leggings, brass compass pendant, white boots",
+   "face": "캐릭터시트_A/02_세라_여주.png",
+   "voice": null
+  },
+  {
+   "name": "카이",
+   "kind": "인물",
+   "look": "22-year-old very handsome tall young man, rival ace pilot, neat golden blond hair, sharp blue eyes, confident smirk, long white flight coat with gold trim and high collar, red scarf, black gloves, tall black boots",
+   "face": "캐릭터시트_A/03_카이_라이벌.png",
+   "voice": null
+  },
+  {
+   "name": "미오",
+   "kind": "인물",
+   "look": "19-year-old cute young woman, cheerful ship mechanic, pink hair in two short twin tails, big green eyes, freckles, orange overalls with one strap down over a white tank top, brass goggles around her neck, a big wrench, work boots",
+   "face": "캐릭터시트_A/04_미오_정비사.png",
+   "voice": null
+  },
+  {
+   "name": "레오",
+   "kind": "인물",
+   "look": "24-year-old tall muscular handsome man, gentle ship engineer, short brown hair under a red bandana, kind smile, sleeveless dark green work shirt, leather apron with tools, thick leather gloves, heavy boots",
+   "face": "캐릭터시트_A/05_레오_기관장.png",
+   "voice": null
+  },
+  {
+   "name": "루나",
+   "kind": "인물",
+   "look": "21-year-old elegant beautiful princess of a moon colony, very long straight black hair with a crescent moon tiara, calm golden eyes, white and pale gold long gown with a short silver cape, delicate silver gloves",
+   "face": "캐릭터시트_A/06_루나_달공주.png",
+   "voice": null
+  },
+  {
+   "name": "진",
+   "kind": "인물",
+   "look": "20-year-old cool handsome quiet young man, sharpshooter, dark navy hair falling over one eye, calm gray eyes, long dark purple scarf, black fitted jacket with brass buckles, dark trousers, long brass steam rifle on his back",
+   "face": "캐릭터시트_A/07_진_저격수.png",
+   "voice": null
+  },
+  {
+   "name": "아리아",
+   "kind": "인물",
+   "look": "23-year-old confident beautiful woman, sky pirate captain, wavy crimson red hair, bold amber eyes, red long captain's coat with gold trim, black tricorn hat with a white feather, white blouse, black trousers, tall brown boots, cutlass at her hip",
+   "face": "캐릭터시트_A/08_아리아_해적선장.png",
+   "voice": null
+  },
+  {
+   "name": "노아",
+   "kind": "인물",
+   "look": "18-year-old cute young genius inventor boy, curly light brown hair, round glasses, bright excited eyes, oversized mustard yellow sweater with rolled sleeves, brown shorts, suspenders, small brass robot owl on his shoulder",
+   "face": "캐릭터시트_A/09_노아_발명가.png",
+   "voice": null
+  },
+  {
+   "name": "제논",
+   "kind": "인물",
+   "look": "28-year-old handsome cold imperial commander, silver hair swept back, sharp red eyes, black military uniform with silver epaulettes and medals, long black cape with a red lining, white gloves, tall black boots",
+   "face": "캐릭터시트_A/10_제논_악역.png",
+   "voice": null
+  },
+  {
+   "name": "루미나",
+   "kind": "외계 종족",
+   "look": "a peaceful floating jellyfish-like alien species: translucent glowing pink and violet bell-shaped head, two big gentle round eyes, many soft trailing glowing tendrils instead of legs, two slender arms with three fingers, floating above the ground, kind and wise",
+   "face": "외계인_A/A1_루미나_해파리족.png"
+  },
+  {
+   "name": "크라그",
+   "kind": "외계 종족",
+   "look": "a giant gentle rock-turtle alien species: huge stocky body three times taller than a human, back covered by a rocky gray shell with small crystals and moss, wide friendly face with a beak-like mouth and small eyes, two thick strong arms, two short sturdy legs, wearing a brass shoulder belt",
+   "face": "외계인_A/A2_크라그_바위거북족.png"
+  },
+  {
+   "name": "핍핍",
+   "kind": "외계 종족",
+   "look": "a tiny round fluffy trader alien species knee-high to a human: round ball of soft teal fur, huge floppy ears, big shiny black eyes, small happy mouth, two tiny arms carrying a big backpack full of trinkets, two little feet, a small brass monocle",
+   "face": "외계인_A/A3_핍핍_털복숭이상인족.png"
+  },
+  {
+   "name": "베스페라",
+   "kind": "외계 종족",
+   "look": "an elegant noble alien species: slender tall humanoid with pale lavender skin, large iridescent moth wings on the back with eye patterns, two feathery antennae, large almond-shaped golden eyes without pupils, flowing dark blue robe with silver embroidery, graceful and mysterious",
+   "face": "외계인_A/A4_베스페라_나방귀족.png"
+  },
+  {
+   "name": "스칼",
+   "kind": "외계 종족",
+   "look": "a tough reptile bounty hunter alien species: muscular lizard humanoid with green-scaled skin, long tail, yellow slit eyes, a row of small horns on the head, scarred snout, patched leather and brass armor, a utility belt, a heavy steam blaster",
+   "face": "외계인_A/A5_스칼_도마뱀사냥꾼족.png"
+  },
+  {
+   "name": "오비스",
+   "kind": "외계 종족",
+   "look": "an ancient slow forest spirit alien species: tall thin humanoid made of living tree bark, moss and small blooming flowers, long branch-like fingers, a face of bark with softly glowing green eyes, a crown of leaves, roots like feet, calm and wise",
+   "face": "외계인_A/A6_오비스_숲정령족.png"
+  },
+  {
+   "name": "루미나의 해파리함",
+   "kind": "외계 함선",
+   "look": "a living jellyfish-shaped alien ship: a giant translucent glowing pink and violet dome with long trailing light tendrils, soft bioluminescent patterns, floating gracefully",
+   "face": "외계인_A/S1_루미나의_해파리함.png"
+  },
+  {
+   "name": "크라그의 소행성요새",
+   "kind": "외계 함선",
+   "look": "a slow massive alien ship carved from a huge asteroid: rocky gray hull with glowing crystal windows, moss gardens, big brass engines bolted on the back, like a flying mountain fortress",
+   "face": "외계인_A/S2_크라그의_소행성요새.png"
+  },
+  {
+   "name": "핍핍의 잡화상선",
+   "kind": "외계 함선",
+   "look": "a cute patchwork trader alien ship: a round teal hull stacked with cargo crates, umbrellas, lanterns and hanging trinkets, small mismatched engines, a big ear-shaped radar dish, cluttered and cheerful",
+   "face": "외계인_A/S3_핍핍의_잡화상선.png"
+  },
+  {
+   "name": "베스페라의 나방왕실선",
+   "kind": "외계 함선",
+   "look": "an elegant royal alien ship: a slender silver hull with four huge iridescent moth-wing solar sails with eye patterns, delicate antennae-like spires, soft lavender lights",
+   "face": "외계인_A/S4_베스페라의_나방왕실선.png"
+  },
+  {
+   "name": "스칼의 현상금사냥선",
+   "kind": "외계 함선",
+   "look": "a sleek dangerous bounty hunter ship shaped like a lizard skull: green and dark metal hull with spikes, glowing yellow slit cockpit windows, a long tail-like rear boom, rusty brass weapon pods",
+   "face": "외계인_A/S5_스칼의_현상금사냥선.png"
+  },
+  {
+   "name": "오비스의 씨앗선",
+   "kind": "외계 함선",
+   "look": "a living seed-pod alien ship: a huge wooden acorn-like hull wrapped in green vines and blooming flowers, glowing green windows between the bark, leaves as fins, calm and ancient",
+   "face": "외계인_A/S6_오비스의_씨앗선.png"
+  },
+  {
+   "name": "황동고래호 주인공배",
+   "kind": "우주선",
+   "look": "the heroes' cargo spaceship: a chubby rounded whale-shaped brass and copper hull with riveted plates and round portholes, two big side engines with glowing blue exhausts, a small bridge dome on top, a cargo ramp, patched panels, cozy and lovable",
+   "face": "우주선_A/1_황동고래호_주인공배.png"
+  },
+  {
+   "name": "카이의 전투기",
+   "kind": "우주선",
+   "look": "a sleek single-seat racing fighter: long pointed white and gold body, swept-back wings with gold trim, a clear bubble cockpit, twin slim engines with orange flames, a red stripe",
+   "face": "우주선_A/2_카이의_전투기.png"
+  },
+  {
+   "name": "아리아의 해적선",
+   "kind": "우주선",
+   "look": "a sky pirate ship in space: a galleon-shaped red and dark wood hull with brass fittings, three masts with glowing golden solar sails, a pirate flag shape without symbols, cannons along the sides, a big rear steam engine",
+   "face": "우주선_A/3_아리아의_해적선.png"
+  },
+  {
+   "name": "제논의 제국기함",
+   "kind": "우주선",
+   "look": "a gigantic imperial flagship: long angular black armored hull like a dagger, rows of red lights, many gun turrets, a tall command tower at the rear, huge engines with red glow, menacing and powerful",
+   "face": "우주선_A/4_제논의_제국기함.png"
+  },
+  {
+   "name": "제국 소형전투기",
+   "kind": "우주선",
+   "look": "a small imperial fighter: compact triangular black body with a single round red-glass cockpit in front, two short angled wings, one rear engine with red glow, mass-produced look",
+   "face": "우주선_A/5_제국_소형전투기.png"
+  },
+  {
+   "name": "루나의 달셔틀",
+   "kind": "우주선",
+   "look": "an elegant royal moon shuttle: smooth pearl-white rounded hull with silver and pale gold details, two graceful crescent-shaped wings, soft blue glowing engines, a large window cabin",
+   "face": "우주선_A/6_루나의_달셔틀.png"
+  },
+  {
+   "name": "미오의 수리셔틀",
+   "kind": "우주선",
+   "look": "a small boxy maintenance tug ship: orange and yellow painted body with dents and patches, two mechanical robot arms with claws in front, a searchlight, toolbox compartments, tiny round cockpit",
+   "face": "우주선_A/7_미오의_수리셔틀.png"
+  }
+ ],
+ "narrator_voice": {
+  "code": "M2",
+  "why": "나레이션"
+ }
+}
