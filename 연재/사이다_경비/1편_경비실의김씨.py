@@ -519,11 +519,15 @@ def main():
         sys.path.insert(0, HERE)
         from 컷계획 import CUTS, VIEWS, OUTFIT
         from 인물 import CAST, STYLE
-        def view(cid, desc, n):        # 정면·측면·후면 중 장면에 맞는 모습 (VIEWS, 'from behind' 는 뒷모습)
+        def view(cid, desc, n):        # 앞·왼·오른·옆·뒤 중 장면에 맞는 모습 (VIEWS, 'from behind' 는 뒷모습). 왼 = 왼쪽을 보는 옆모습
             return VIEWS.get(cid, {}).get(n) or ("뒤" if "from behind" in desc else "앞")
         items = []
         for k, (cid, _, who, desc, _) in enumerate(CUTS):
-            people = " ".join(f"Character {j + 1} (reference image {j + 1}): {OUTFIT.get(cid, {}).get(n) or CAST[n]}." for j, n in enumerate(who))
+            place = {"오른": " Place this character on the left side of the image, facing right.",   # 오른쪽을 보는 모습 = 화면 왼쪽에 둠
+                     "왼": " Place this character on the right side of the image, facing left.",
+                     "뒤": " This character is seen from behind."}
+            people = " ".join(f"Character {j + 1} (reference image {j + 1}): {OUTFIT.get(cid, {}).get(n) or CAST[n]}.{place.get(view(cid, desc, n), '')}"
+                              for j, n in enumerate(who))
             if who:
                 people += " Each character appears only once in the image."
                 crowd = re.search(r"resident|reporter|crowd|people|employee|audience|investor|paramedic|children|family|workers|men in|woman with|grandmother|boy|executives|coworkers", desc)
