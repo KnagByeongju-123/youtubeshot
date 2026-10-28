@@ -325,7 +325,7 @@ def main():
                 "settings": {"format": "롱폼 가로(1920×1080)", "narration": "on",   # 새 PC·서버 기본값(나레이션 꺼짐·스크롤형) 대신 장문 설정 그대로
                              "layout": "자막형(큰 제목+사진+자막)", "img_fill": "전체 화면(글자가 사진 위에)",
                              "img_motion": "영상처럼(확대·이동·전환)", "fps": "24", "reveal_hit": "off", "reveal_fx": "off",
-                             "head_show": "안 보임(제목 카드만)", "sub_split": "한 줄씩(문장·쉼표로 나눠 차례로)", "img_label": "off",   # 규칙: 위 큰 제목·장면 설명 없이, 자막은 한 줄씩
+                             "head_show": "안 보임(제목 카드만)", "sub_split": "한 줄씩(문장·쉼표로 나눠 차례로)", "img_label": "on",   # 규칙: 위 큰 제목 없이, 자막은 한 줄씩, 오른쪽 위 그림 설명은 꼭 보임
                              "narr_voice": f"Supertonic {narr.get('code', 'F5')} (여성, 무료 로컬) [supertonic:{narr.get('code', 'F5')}]",
                              "narr_rate": str(narr.get("rate", 0)), "narr_tone_f": float(narr.get("semis", 0)),
                              "st_emotion": "차분"}}   # 샘플로 고른 빠르기 그대로 (감정별 빠르기 조절 없이)
