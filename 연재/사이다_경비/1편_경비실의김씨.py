@@ -524,6 +524,9 @@ def main():
             people = " ".join(f"Character {j + 1} (reference image {j + 1}): {CAST[n]}." for j, n in enumerate(who))
             if who:
                 people += " Each character appears only once in the image."
+                crowd = re.search(r"resident|reporter|crowd|people|employee|audience|investor|paramedic|children|family|workers|men in|woman with|grandmother|boy|executives|coworkers", desc)
+                if not crowd:     # 이름 있는 인물만 나오는 컷: 사람 수를 못 박음 (같은 인물이 둘·셋 나오던 문제)
+                    people += f" Exactly {len(who)} {'person' if len(who) == 1 else 'people'} in the whole image."
             body = " Each person has exactly two arms and two legs, natural anatomy." if who or "people" in desc or "resident" in desc or "reporter" in desc or "man" in desc or "woman" in desc else ""
             items.append({"id": cid, "width": 768, "height": 432, "seed": 5000 + k,
                           "refs": [os.path.join(SHEETS, f"앞_{n}.png") for n in who],   # 시트의 앞모습만 (세 모습을 넣으면 한 장에 같은 사람이 여럿 나옴)
