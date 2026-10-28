@@ -59,7 +59,7 @@ CUTS = [
     ("c34", "the Basque countryside with green hills and a stone farmhouse in northern Spain, misty morning, no people", "홀로 서 있는 다른 언어들", False),
     ("c35", "a long caravan of people from many eras walking through northeast Asia over thousands of years: Neolithic farmers, bronze age villagers, ancient kingdom people, along a river valley, symbolic, sunset", "수천 년의 이동과 만남", True),
     ("c36", "a family of three generations in modern Korea, a grandmother, a mother and a child, laughing and talking together at a dinner table, warm home light", "할머니에게서 아이에게로", "now"),
-    ("c37", "over-the-shoulder view of a young child in a modern classroom holding a pencil and writing in a notebook, the page out of focus and blurred, warm soft light, shallow depth of field", "오늘 쓰는 한글", "now"),
+    ("c37", "over-the-shoulder view of a young Korean elementary school child with black hair in a modern Korean classroom holding a pencil and writing in a notebook, the page out of focus and blurred, warm soft light, shallow depth of field", "오늘 쓰는 한글", "now"),
     ("c38", "an old tree with deep roots spreading through the soil shown in cross-section, the roots fading into darkness, concept art", "보이지 않는 깊은 뿌리", False),
     ("c39", "a sunrise over the Korean peninsula seen from high above, mountains and rivers lit in gold, peaceful", "말이 이어 온 땅", False),
     ("c40", "a wide warm sunset over a Korean village with people walking home along a path, talking together, peaceful", "우리말이 걸어온 길", "now"),
