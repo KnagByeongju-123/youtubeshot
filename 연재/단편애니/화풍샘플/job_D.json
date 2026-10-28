@@ -1,0 +1,24 @@
+{
+ "items": [
+  {
+   "id": "D_손그림애니_움직이는성",
+   "width": 1024,
+   "height": 576,
+   "seed": 9300,
+   "refs": [
+    "연재/단편애니/캐릭터시트_후보/남주_이루.png"
+   ],
+   "prompt": "classic hand-drawn Japanese animation film style, lush hand-painted watercolor backgrounds, bright warm sunlight, soft rounded character design, whimsical steampunk fantasy, vivid but gentle colors. Scene: the boy from the reference sheet, 12-year-old energetic boy, deeply sun-tanned skin, spiky short black hair, big bright smile, blue sleeveless vest, rolled-up brown cropped trousers, rope belt, barefoot, exactly two arms and two legs, standing on a green hill with wildflowers, looking up in wonder at a gigantic walking steampunk castle in the distance: a huge clunky patchwork of brass pipes, copper turrets, chimneys puffing white steam, small windows and gears, walking on tall mechanical bird-like legs across a sunny meadow, a pretty European mountain town and blue sky with big white clouds behind. Full-bleed image, no border. No text, no letters."
+  },
+  {
+   "id": "D_손그림애니_움직이는성_작게",
+   "width": 768,
+   "height": 432,
+   "seed": 9300,
+   "refs": [
+    "연재/단편애니/캐릭터시트_후보/남주_이루.png"
+   ],
+   "prompt": "classic hand-drawn Japanese animation film style, lush hand-painted watercolor backgrounds, bright warm sunlight, soft rounded character design, whimsical steampunk fantasy, vivid but gentle colors. Scene: the boy from the reference sheet, 12-year-old energetic boy, deeply sun-tanned skin, spiky short black hair, big bright smile, blue sleeveless vest, rolled-up brown cropped trousers, rope belt, barefoot, exactly two arms and two legs, standing on a green hill with wildflowers, looking up in wonder at a gigantic walking steampunk castle in the distance: a huge clunky patchwork of brass pipes, copper turrets, chimneys puffing white steam, small windows and gears, walking on tall mechanical bird-like legs across a sunny meadow, a pretty European mountain town and blue sky with big white clouds behind. Full-bleed image, no border. No text, no letters."
+  }
+ ]
+}
