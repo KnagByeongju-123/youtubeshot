@@ -26,6 +26,9 @@
   예: `연재/막내개그/오픈핍스_인물.py` (CAST 에 인물 생김새, `시트` = 인물별 표정 모음, `한장 <이름> <표정> <파일>` = 컷 합성용 투명 PNG).
   얼굴·상반신만 있으므로 컷은 '상반신 + 표정 + 배경 + 자막'으로 짜고, 배경 몇 장만 AI 로 한 번 그려 돌려 씀.
   전신이 꼭 필요하면 Open Peeps 얼굴을 klein refs 로 넣어 우리 화풍 전신 시트를 그림 (`연재/막내개그/오픈소스_참고/`)
+  Open Peeps 에는 **사람만** 있음(우주복·헬멧·사물 없음, 2026-10-28 확인). 사물·우주인·외계인·로켓·감정 표시(땀방울·화남·Zzz)는
+  같은 굵은 선 그림체인 OpenMoji 로 (`https://cdn.jsdelivr.net/npm/openmoji@15.1.0/color/svg/<유니코드>.svg`, SVG→PNG 는 `node 연재/막내개그/svg2png.js`).
+  OpenMoji 는 CC BY-SA 4.0 → 쓰면 유튜브 설명란에 'OpenMoji – the open-source emoji and icon project. License: CC BY-SA 4.0' 출처를 꼭 적음
 - 만화 그림: `klein_worker.py` (사용법은 파일 맨 위)
   - 인물마다 캐릭터 시트(앞·옆·뒤 전신, 흰 배경)를 먼저 그려 사용자 확인 → `등장인물/` 에 저장, `등장인물.json` 의 face 에 경로
   - 장면은 그 장면 인물의 시트를 refs 로 넣어 그림 (기준 그림은 작게: ref_max_area 기본값). 1024×576 기준 인물 장면 약 2분, 풍경 약 40초
