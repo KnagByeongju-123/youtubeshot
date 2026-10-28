@@ -14,7 +14,7 @@ python 나레이션_겹침검사.py <영상.mp4> <회차.py 또는 대본.txt> [
     (Supertonic 은 매번 조금씩 다르게 읽어서 보통 한 번에 고쳐짐. 다시 만든 영상도 검사해서 '겹침 없음'이 나올 때까지, 최대 3번)
   - 결과: '분:초 [겹친 글자] 대본: <문장> | 들림: <받아 적은 글>'
   - 늘어진 곳(강제 정렬): 대본 글자(성우가 읽은 글)를 소리에 한 글자씩 맞춰(CTC 비터비 정렬, torchaudio forced_align 과 같은 방법)
-    글자 하나가 보통 글자의 3배·0.5초 넘게 소리를 끄는 곳 ('다아아')
+    글자 하나가 보통 글자의 3배·0.4초 넘게 소리를 끄는 곳 ('다아아')
   - 어색한 문장(UTMOS): 문장마다 말소리 자연스러움 점수(오픈소스 SpeechMOS UTMOS22, MIT, 외부도구/speechmos)를 매겨 중간값보다 0.7점 넘게 낮고 3점 아래인 문장
     (가중치 models/utmos22_strong_step7459_v1.pt 가 없으면 건너뜀). --고치기 면 둘 다 그 문장을 다시 녹음
   - --프로젝트 <프로젝트.json> : 고치지 않고 검사만 할 때도 읽기 설정(숫자 읽기 등)을 맞춤 (--고치기 면 자동)
@@ -202,7 +202,7 @@ def ctc_align(lp, tokens, blank):
     path = np.zeros(T, int)
     for t in range(T - 1, -1, -1):
         path[t] = (s_ - 1) // 2 if s_ % 2 else -1
-        s_ -= bp[t, s_]
+        s_ -= int(bp[t, s_])
     return path
 
 
@@ -232,8 +232,8 @@ def syllable_spans(tf, qs, spoken_all, owner, x, off, step):
     return out
 
 
-def stretch_spots(aligned, sents, ratio=3.0, min_sec=0.5):
-    """늘어진 곳: 강제 정렬로 잰 글자 하나의 길이가 보통 글자의 3배 넘게(그리고 0.5초 넘게) 길고, 그동안 소리가 계속 나는 곳
+def stretch_spots(aligned, sents, ratio=3.0, min_sec=0.4):
+    """늘어진 곳: 강제 정렬로 잰 글자 하나의 길이가 보통 글자의 3배 넘게(그리고 0.4초 넘게) 길고, 그동안 소리가 계속 나는 곳
     ('다아아' 처럼 끄는 소리. 쉼은 소리가 없어서 빠짐)"""
     import numpy as np
     durs = [s_["dur"] for s_ in aligned if s_["dur"] < 0.6]
