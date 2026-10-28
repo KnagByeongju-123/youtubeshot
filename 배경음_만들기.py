@@ -5,7 +5,7 @@
   - 결과: <이름>_원곡.mp3 · <이름>_반복용.mp3(앞 HEAD초·뒤 TAIL초를 잘라 낸 것 → 프로젝트 settings 의 bgm_path 로)
           · <이름>_이음매듣기.mp3(반복용 곡의 끝 15초 → 처음 15초로 넘어가는 곳, 프로그램과 같은 4초 겹침) + 전체듣기.mp3
   - 그래픽카드 없는 서버: bfloat16 + VAE 조각 128 이라야 메모리 15GB 에 맞음. AMX 서버에서 30초 곡 약 65초, 10초 곡 약 22초
-  - 준비: .acestep/ (github ace-step/ACE-Step-1.5), .acestep_venv (CPU torch), models/ACE-Step1.5 (CLAUDE.md 참고)"""
+  - 준비(필요할 때만 한 번): bash 배경음_준비.sh → .acestep/ · .acestep_venv (CPU torch) · models/ACE-Step1.5"""
 import os
 import shutil
 import subprocess
