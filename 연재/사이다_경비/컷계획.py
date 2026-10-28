@@ -21,7 +21,7 @@ CUTS = [
     ("c015", 18, ["강민혁", "김만석"], "the rich young man looks down at the old guard with contempt, standing beside the sports car", "경비가?"),
     ("c016", 19, [], "well-dressed Korean residents in a luxury marble lobby turn their heads to watch something with curiosity", "지켜보는 입주민들"),
     ("c017", 20, ["강민혁", "김만석"], "in a luxury marble lobby, the rich young man points his finger and sneers at the calm old guard", "월급이 얼마예요?"),
-    ("c018", 21, [], "close-up of a car key with a luxury emblem lying on a polished marble floor in front of one pair of worn black leather shoes (two shoes)", "발밑에 던진 열쇠"),
+    ("c018", 21, [], "close-up of a small black smart car key fob with a luxury emblem lying on a polished marble floor in front of one pair of worn black leather shoes (two shoes)", "발밑에 던진 열쇠"),
     ("c019", 22, ["강민혁"], "the rich young man smirks coldly, arms crossed", "흠집 하나라도 나면"),
     ("c020", 23, ["오소장", "강민혁"], "the chubby building manager hurries in sweating and bows low, while the rich young man stands upright looking down at him coldly", "헐레벌떡 뛰어온 오 소장"),
     ("c021", 24, ["오소장", "김만석"], "the chubby building manager shouts angrily at the old guard, red-faced", "얼른 죄송하다고 해요!"),
