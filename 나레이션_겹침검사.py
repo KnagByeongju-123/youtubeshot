@@ -227,7 +227,8 @@ def syllable_spans(tf, qs, spoken_all, owner, x, off, step):
         a0 = int(k0 * step / 0.02)
         a1 = max(a0 + 1, int(k1 * step / 0.02))
         seg_ = rms_[a0:a1]
-        out.append({"ch": spoken_all[qs[ti]], "t": off + k0 * step, "dur": (k1 - k0) * step,
+        gap = (ti > 0 and qs[ti] - qs[ti - 1] > 1) or (ti + 1 < len(qs) and qs[ti + 1] - qs[ti] > 1)   # 앞뒤 글자가 모델 낱말표에 없어 빠짐('얄밉게'의 얄·밉) → 그 시간이 이 글자에 붙어 길어 보임
+        out.append({"ch": spoken_all[qs[ti]], "t": off + k0 * step, "dur": (k1 - k0) * step, "gap": gap,
                     "voiced": float((seg_ > loud).mean()) if len(seg_) else 0.0, "sent": owner[qs[ti]],
                     "end": off + (max([k for k, t_ in enumerate(tf) if t_ == ti]) + 1) * step})
     return out
@@ -243,7 +244,7 @@ def stretch_spots(aligned, sents, ratio=3.0, min_sec=0.4):
     med = float(np.median(durs))
     out = []
     for s_ in aligned:
-        if s_["dur"] <= max(min_sec, med * ratio) or s_["voiced"] < 0.8:
+        if s_["dur"] <= max(min_sec, med * ratio) or s_["voiced"] < 0.8 or s_.get("gap"):
             continue
         par, sent = sents[s_["sent"]]
         if sent.lstrip().startswith(('"', '“')):

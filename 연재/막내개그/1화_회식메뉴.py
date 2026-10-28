@@ -10,6 +10,26 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 
 TITLE = "막내 1화 - 회식 메뉴"
 
+# 인물별 목소리 (사용자가 후보 3개씩 듣고 고름, 2026-10-28). code=성우, rate=빠르기%, semis=톤 반음
+VOICES = {
+    "막내": {"code": "M1", "rate": 0, "semis": 0, "fx": "", "why": "후보 3번: 남자 성우 1 보통"},
+    "부장님": {"code": "M3", "rate": -12, "semis": -1, "fx": "", "why": "후보 2번: 남자 성우 3, 느리고 조금 낮게"},
+    "팀장님": {"code": "F3", "rate": -6, "semis": 0, "fx": "", "why": "후보 2번: 여자 성우 3, 조금 느리게"},
+    "이대리": {"code": "M4", "rate": 0, "semis": 0, "fx": "", "why": "후보 1번: 남자 성우 4 보통"},
+}
+
+# 대사 → 말하는 인물 (그 인물 목소리로 읽음. 나머지 해설은 나레이션 남자 성우 2)
+DIALOGUE = [
+    ("오늘 회식은 막내가 먹고 싶은 걸로 하자!", "부장님"),
+    ("정말요? 그럼… 초밥이요!", "막내"),
+    ("초밥? 좋지. 근데 날것은 배탈 나.", "부장님"),
+    ("그럼… 파스타요!", "막내"),
+    ("부장님 밀가루 안 드셔.", "팀장님"),
+    ("그, 그럼… 고기는요?", "막내"),
+    ("부장님 어제 고기 드셨어.", "이대리"),
+    ("그래, 막내 말대로 하자! 우리 늘 가던 그 순댓국집!", "부장님"),
+]
+
 # 컷: (컷번호, 배경, [(인물, 표정, 자리)], 소품·효과, 화면 설명)
 #   표정 = Open Peeps face (smileBig·cute·tired·hectic·suspicious·contempt·blank·concerned·smileLOL·rage …), 자리 = 왼·가운데·오른
 PANELS = [
@@ -93,6 +113,8 @@ def main():
             story = story.replace("{" + cid + "}", f"[사진: {os.path.join(out, cid + '.png')} | {cap} | 그림: Open Peeps(CC0)·AI 생성 배경 | ]")
         proj = {"ver": 7, "category": "장문", "genre": "[이야기] 코믹 일상 장편 썰", "topic": "막내 개그 카툰", "title": TITLE,
                 "story": story, "sources": [], "notes": "개그 카툰 1화", "autophoto": False, "img_source": "그림: 카툰",
+                "cast": [{"name": n, "voice": v} for n, v in VOICES.items()],
+                "dialogue": [{"text": t, "who": w} for t, w in DIALOGUE],
                 "settings": {"format": "롱폼 가로(1920×1080)", "narration": "on",
                              "narr_voice": "Supertonic M2 (남성, 무료 로컬) [supertonic:M2]",
                              "layout": "자막형(큰 제목+사진+자막)", "img_fill": "전체 화면(글자가 사진 위에)",
