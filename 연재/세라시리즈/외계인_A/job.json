@@ -1,0 +1,89 @@
+{
+ "items": [
+  {
+   "id": "A1_루미나_해파리족",
+   "width": 768,
+   "height": 432,
+   "seed": 9800,
+   "prompt": "nostalgic 1980s Japanese TV cartoon cel animation, bright saturated cheerful colors, clean bold outlines, flat vivid cel shading, imaginative original alien creature design for a steampunk space adventure. Character model sheet of one single original alien creature shown three times side by side: front view, side view, back view, full body, neutral pose, plain pure white background. Creature: a peaceful floating jellyfish-like alien species: translucent glowing pink and violet bell-shaped head, two big gentle round eyes, many soft trailing glowing tendrils instead of legs, two slender arms with three fingers, floating above the ground, kind and wise. No text, no labels."
+  },
+  {
+   "id": "A2_크라그_바위거북족",
+   "width": 768,
+   "height": 432,
+   "seed": 9801,
+   "prompt": "nostalgic 1980s Japanese TV cartoon cel animation, bright saturated cheerful colors, clean bold outlines, flat vivid cel shading, imaginative original alien creature design for a steampunk space adventure. Character model sheet of one single original alien creature shown three times side by side: front view, side view, back view, full body, neutral pose, plain pure white background. Creature: a giant gentle rock-turtle alien species: huge stocky body three times taller than a human, back covered by a rocky gray shell with small crystals and moss, wide friendly face with a beak-like mouth and small eyes, two thick strong arms, two short sturdy legs, wearing a brass shoulder belt. No text, no labels."
+  },
+  {
+   "id": "A3_핍핍_털복숭이상인족",
+   "width": 768,
+   "height": 432,
+   "seed": 9802,
+   "prompt": "nostalgic 1980s Japanese TV cartoon cel animation, bright saturated cheerful colors, clean bold outlines, flat vivid cel shading, imaginative original alien creature design for a steampunk space adventure. Character model sheet of one single original alien creature shown three times side by side: front view, side view, back view, full body, neutral pose, plain pure white background. Creature: a tiny round fluffy trader alien species knee-high to a human: round ball of soft teal fur, huge floppy ears, big shiny black eyes, small happy mouth, two tiny arms carrying a big backpack full of trinkets, two little feet, a small brass monocle. No text, no labels."
+  },
+  {
+   "id": "A4_베스페라_나방귀족",
+   "width": 768,
+   "height": 432,
+   "seed": 9803,
+   "prompt": "nostalgic 1980s Japanese TV cartoon cel animation, bright saturated cheerful colors, clean bold outlines, flat vivid cel shading, imaginative original alien creature design for a steampunk space adventure. Character model sheet of one single original alien creature shown three times side by side: front view, side view, back view, full body, neutral pose, plain pure white background. Creature: an elegant noble alien species: slender tall humanoid with pale lavender skin, large iridescent moth wings on the back with eye patterns, two feathery antennae, large almond-shaped golden eyes without pupils, flowing dark blue robe with silver embroidery, graceful and mysterious. No text, no labels."
+  },
+  {
+   "id": "A5_스칼_도마뱀사냥꾼족",
+   "width": 768,
+   "height": 432,
+   "seed": 9804,
+   "prompt": "nostalgic 1980s Japanese TV cartoon cel animation, bright saturated cheerful colors, clean bold outlines, flat vivid cel shading, imaginative original alien creature design for a steampunk space adventure. Character model sheet of one single original alien creature shown three times side by side: front view, side view, back view, full body, neutral pose, plain pure white background. Creature: a tough reptile bounty hunter alien species: muscular lizard humanoid with green-scaled skin, long tail, yellow slit eyes, a row of small horns on the head, scarred snout, patched leather and brass armor, a utility belt, a heavy steam blaster. No text, no labels."
+  },
+  {
+   "id": "A6_오비스_숲정령족",
+   "width": 768,
+   "height": 432,
+   "seed": 9805,
+   "prompt": "nostalgic 1980s Japanese TV cartoon cel animation, bright saturated cheerful colors, clean bold outlines, flat vivid cel shading, imaginative original alien creature design for a steampunk space adventure. Character model sheet of one single original alien creature shown three times side by side: front view, side view, back view, full body, neutral pose, plain pure white background. Creature: an ancient slow forest spirit alien species: tall thin humanoid made of living tree bark, moss and small blooming flowers, long branch-like fingers, a face of bark with softly glowing green eyes, a crown of leaves, roots like feet, calm and wise. No text, no labels."
+  },
+  {
+   "id": "S1_루미나의_해파리함",
+   "width": 768,
+   "height": 432,
+   "seed": 9900,
+   "prompt": "nostalgic 1980s Japanese TV cartoon cel animation, bright saturated cheerful colors, clean bold outlines, flat vivid cel shading, imaginative original alien creature design for a steampunk space adventure. Alien spaceship design sheet: the same single ship shown twice side by side, side view and three-quarter view, whole ship visible, plain pure white background. Ship: a living jellyfish-shaped alien ship: a giant translucent glowing pink and violet dome with long trailing light tendrils, soft bioluminescent patterns, floating gracefully. No text, no letters, no logos."
+  },
+  {
+   "id": "S2_크라그의_소행성요새",
+   "width": 768,
+   "height": 432,
+   "seed": 9901,
+   "prompt": "nostalgic 1980s Japanese TV cartoon cel animation, bright saturated cheerful colors, clean bold outlines, flat vivid cel shading, imaginative original alien creature design for a steampunk space adventure. Alien spaceship design sheet: the same single ship shown twice side by side, side view and three-quarter view, whole ship visible, plain pure white background. Ship: a slow massive alien ship carved from a huge asteroid: rocky gray hull with glowing crystal windows, moss gardens, big brass engines bolted on the back, like a flying mountain fortress. No text, no letters, no logos."
+  },
+  {
+   "id": "S3_핍핍의_잡화상선",
+   "width": 768,
+   "height": 432,
+   "seed": 9902,
+   "prompt": "nostalgic 1980s Japanese TV cartoon cel animation, bright saturated cheerful colors, clean bold outlines, flat vivid cel shading, imaginative original alien creature design for a steampunk space adventure. Alien spaceship design sheet: the same single ship shown twice side by side, side view and three-quarter view, whole ship visible, plain pure white background. Ship: a cute patchwork trader alien ship: a round teal hull stacked with cargo crates, umbrellas, lanterns and hanging trinkets, small mismatched engines, a big ear-shaped radar dish, cluttered and cheerful. No text, no letters, no logos."
+  },
+  {
+   "id": "S4_베스페라의_나방왕실선",
+   "width": 768,
+   "height": 432,
+   "seed": 9903,
+   "prompt": "nostalgic 1980s Japanese TV cartoon cel animation, bright saturated cheerful colors, clean bold outlines, flat vivid cel shading, imaginative original alien creature design for a steampunk space adventure. Alien spaceship design sheet: the same single ship shown twice side by side, side view and three-quarter view, whole ship visible, plain pure white background. Ship: an elegant royal alien ship: a slender silver hull with four huge iridescent moth-wing solar sails with eye patterns, delicate antennae-like spires, soft lavender lights. No text, no letters, no logos."
+  },
+  {
+   "id": "S5_스칼의_현상금사냥선",
+   "width": 768,
+   "height": 432,
+   "seed": 9904,
+   "prompt": "nostalgic 1980s Japanese TV cartoon cel animation, bright saturated cheerful colors, clean bold outlines, flat vivid cel shading, imaginative original alien creature design for a steampunk space adventure. Alien spaceship design sheet: the same single ship shown twice side by side, side view and three-quarter view, whole ship visible, plain pure white background. Ship: a sleek dangerous bounty hunter ship shaped like a lizard skull: green and dark metal hull with spikes, glowing yellow slit cockpit windows, a long tail-like rear boom, rusty brass weapon pods. No text, no letters, no logos."
+  },
+  {
+   "id": "S6_오비스의_씨앗선",
+   "width": 768,
+   "height": 432,
+   "seed": 9905,
+   "prompt": "nostalgic 1980s Japanese TV cartoon cel animation, bright saturated cheerful colors, clean bold outlines, flat vivid cel shading, imaginative original alien creature design for a steampunk space adventure. Alien spaceship design sheet: the same single ship shown twice side by side, side view and three-quarter view, whole ship visible, plain pure white background. Ship: a living seed-pod alien ship: a huge wooden acorn-like hull wrapped in green vines and blooming flowers, glowing green windows between the bark, leaves as fins, calm and ancient. No text, no letters, no logos."
+  }
+ ],
+ "crop_border": false
+}
