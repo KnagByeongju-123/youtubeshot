@@ -1,5 +1,7 @@
 """사이다 반전 드라마 「경비실의 김 씨」 — 대본 (약 30분, AI 웹툰 그림)
-python 연재/사이다_경비/1편_경비실의김씨.py txt <파일>   → 사용자 확인용 대본 (마당 제목 포함)
+python 연재/사이다_경비/1편_경비실의김씨.py txt <파일>      → 사용자 확인용 대본 (마당 제목 포함)
+python 연재/사이다_경비/1편_경비실의김씨.py job <그림폴더>   → 장면 그림 주문서 job.json (컷계획.py · 인물.py, 시트는 output/사이다/시트)
+python 연재/사이다_경비/1편_경비실의김씨.py project <그림폴더> → 프로젝트 파일 (컷을 문단 앞에 넣음, 그림이 없으면 컷 없이)
 대사는 STORY 안에서 '@이름 "대사"' 로 적음 → 이름표는 빼고 DIALOGUE(대사 → 인물)로 모음 (인물 목소리로 읽음)
 나레이션은 남자 성우 2(M2). 인물 목소리·컷 계획은 대본 확인 뒤에 붙임"""
 import os
@@ -490,6 +492,20 @@ def _build():
 
 STORY_TXT = _build()      # 마당 제목(##) 포함, 이름표 뺌
 STORY = re.sub(r"^## .*\n\n", "", STORY_TXT, flags=re.M)   # 영상용: 마당 제목은 읽지 않음
+SHEETS = os.path.join(HERE, "..", "..", "output", "사이다", "시트")
+CUTOUT = {}      # 누끼가 번지는 컷은 {"c07": {"off": True}}
+
+
+def story_with_cuts(folder):
+    """컷 계획대로 문단 앞에 [사진: …] 을 넣은 영상용 대본 (마당 제목 뺌, 그림 파일이 있는 컷만)"""
+    sys.path.insert(0, HERE)
+    from 컷계획 import CUTS
+    ps = [x for x in STORY_TXT.split("\n\n") if x.strip()]
+    for cid, k, _, _, cap in CUTS:
+        f = os.path.join(folder, cid + ".png")
+        if os.path.exists(f):
+            ps[k] = f"[사진: {f} | {cap} | AI 생성 그림 (FLUX.2 klein) | ]\n\n" + ps[k]
+    return "\n\n".join(x for x in ps if not x.startswith("## "))
 
 
 def main():
@@ -498,10 +514,25 @@ def main():
         body = len(re.sub(r"\s", "", STORY))
         open(out, "w", encoding="utf-8").write(f"{TITLE}\n(본문 {len(STORY)}자, 띄어쓰기 빼고 {body}자, 대사 {len(DIALOGUE)}줄)\n\n{STORY_TXT}\n")
         print(out, len(STORY), body, len(DIALOGUE))
+    elif cmd == "job":                         # out = 그림 폴더
+        import json
+        sys.path.insert(0, HERE)
+        from 컷계획 import CUTS
+        from 인물 import CAST, STYLE
+        items = []
+        for k, (cid, _, who, desc, _) in enumerate(CUTS):
+            people = " ".join(f"Character {j + 1} (reference image {j + 1}): {CAST[n]}." for j, n in enumerate(who))
+            body = " Each person has exactly two arms and two legs, natural anatomy." if who or "people" in desc or "resident" in desc or "reporter" in desc or "man" in desc or "woman" in desc else ""
+            items.append({"id": cid, "width": 768, "height": 432, "seed": 5000 + k,
+                          "refs": [os.path.join(SHEETS, f"시트_{n}.png") for n in who],
+                          "prompt": f"{STYLE}. Scene: {desc}. {people}{body} Cinematic composition, full-bleed image, no border, no frame, no paper edges. No text, no letters."})
+        os.makedirs(out, exist_ok=True)
+        json.dump({"items": items}, open(os.path.join(out, "job.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+        print(len(items), "cuts")
     elif cmd == "project":                     # out = 컷 그림 폴더 (컷 계획을 붙이기 전에는 그림 없이 나레이션만)
         import json
         proj = {"ver": 7, "category": "장문", "genre": "[이야기] 사이다 반전 드라마", "topic": "경비원 반전 드라마", "title": TITLE,
-                "story": STORY, "sources": [], "notes": "사이다 드라마 1편", "autophoto": False,
+                "story": story_with_cuts(out), "sources": [], "notes": "사이다 드라마 1편", "autophoto": False,
                 "cast": [{"name": n, "voice": v} for n, v in VOICES.items()],
                 "dialogue": [{"text": t, "who": w} for t, w in DIALOGUE],
                 "settings": {"format": "롱폼 가로(1920×1080)", "narration": "on",
@@ -509,6 +540,8 @@ def main():
                              "layout": "자막형(큰 제목+사진+자막)", "img_fill": "전체 화면(글자가 사진 위에)",
                              "img_motion": "영상처럼(확대·이동·전환)", "img_depth": "on", "img_depth_amt": "누끼(앞 인물 따로)",
                              "fps": "24", "head_show": "안 보임(제목 카드만)", "sub_split": "한 줄씩(문장·쉼표로 나눠 차례로)", "img_label": "on"}}
+        for cid, spec in CUTOUT.items():           # 그림 옆에 누끼 설정 파일 (영상 프로그램이 읽음)
+            json.dump(spec, open(os.path.join(out, cid + ".png.누끼.json"), "w", encoding="utf-8"))
         dst = os.path.join(HERE, "1편_경비실의김씨.json")
         json.dump(proj, open(dst, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
         print(dst)
