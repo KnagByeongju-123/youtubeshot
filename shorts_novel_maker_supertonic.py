@@ -276,6 +276,8 @@ IMAGE_STYLES = {
     "지브리풍 손그림 애니": "classic hand-drawn Japanese animation film style, lush painted watercolor backgrounds, soft natural light, gentle rounded character design, nostalgic and warm, film still",
     "70~80년대 순정만화": "1970s retro shoujo manga anime style, very large sparkling eyes with star highlights, flowing hair, soft pastel tones, screentone shading, vintage cel animation look",
     "70~80년대 레트로 SF 애니": "late 1970s retro Japanese sci-fi adventure anime cel style, muted earthy colors, film grain, simple flat shading, vintage animation still, dramatic skies",
+    "카툰(단순 개그 만화체)": "simple Korean webtoon gag comic style, thick black marker outlines, very simple round shapes, minimal flat colors, exaggerated funny expressions, roughly drawn on purpose, comedic",   # 개그 만화 — 사람은 Open Peeps, 나머지는 이 화풍 (CLAUDE.md 카툰 규칙)
+    "80년대 TV 만화(화사한 셀)": "nostalgic 1980s Japanese TV cartoon cel animation, bright saturated cheerful colors, clean bold outlines, flat vivid cel shading, attractive appealing character design",   # 세라 시리즈 A안
     "짱구풍 코믹 애니": "simple comedic Japanese TV anime style, round simplified characters with thick outlines, flat bright colors, minimal detail, playful exaggerated expressions",
     "레트로 로봇 애니": "1970s Korean retro giant robot animation style, bold mechanical designs, dramatic heroic poses, cel shaded, vintage poster colors, action scene",
     "동화책 수채화": "children's picture book illustration, soft watercolor texture, warm gentle colors, rounded friendly shapes",
@@ -2763,7 +2765,7 @@ def sd_style_lora(preset):
 
 
 # 그림 스타일 → 어울리는 모델 (애니·만화 모델이 없으면 dreamshaper 로)
-SD_STYLE_MODEL = {"웹툰": "anime", "애니 일러스트(요즘)": "anime", "지브리풍 손그림 애니": "anime", "70~80년대 순정만화": "anime", "70~80년대 레트로 SF 애니": "anime",
+SD_STYLE_MODEL = {"카툰(단순 개그 만화체)": "anime", "80년대 TV 만화(화사한 셀)": "anime", "웹툰": "anime", "애니 일러스트(요즘)": "anime", "지브리풍 손그림 애니": "anime", "70~80년대 순정만화": "anime", "70~80년대 레트로 SF 애니": "anime",
                   "짱구풍 코믹 애니": "anime", "레트로 로봇 애니": "anime", "풀컬러 만화(코믹스)": "anime",
                   "애니 수채화풍": "anime", "동화책 수채화": "anime",   # 수채화도 애니 모델(동화책 수채화는 + 수채화 보조). 일러스트 모델은 쓰지 않음
                   "유화(붓터치)": "anime", "유화(화사한 색)": "anime", "우키요에 목판화": "anime", "펜화 판화": "anime", "크레용 그림": "anime",
@@ -2996,6 +2998,7 @@ IMG_SOURCE_WEB = "근거 사진(웹)"
 IMG_SOURCE_PRESET = {"그림: 애니(웹툰)": "웹툰", "그림: 애니+수채화": "동화책 수채화", "그림: 애니 모델 그대로": "애니 수채화풍",   # 애니 모델 + 수채화 지시(보조 없음)
                      "그림: 파스텔 감성": "파스텔 감성 일러스트",
                      "그림: 애니 일러스트": "애니 일러스트(요즘)",
+                     "그림: 카툰": "카툰(단순 개그 만화체)", "그림: 80년대 TV 만화": "80년대 TV 만화(화사한 셀)",
                      "그림: 옛날 만화책": "옛날 만화책(세피아 펜화)",
                      "그림: 크라프트지 낙서": "크라프트지 손그림(귀여운 낙서)", "그림: 실루엣": "실루엣(노을 그림자)",
                      "그림: 색칠공부 밑그림": "색칠공부 밑그림(선만)", "그림: 동화 난쟁이 마을": "동화 난쟁이 마을",
@@ -3127,6 +3130,8 @@ def zip_image_files(zip_path, out_dir):
 
 
 IMAGE_STYLES_KO = {   # Claude·Gemini 에 한국어로 줄 화풍 설명
+    "카툰(단순 개그 만화체)": "단순한 한국 웹툰 개그 만화체, 굵은 검은 마커 외곽선, 단순한 둥근 모양, 평평한 색, 과장된 표정, 일부러 대충 그린 듯 웃긴 그림.",
+    "80년대 TV 만화(화사한 셀)": "추억의 80년대 TV 만화 셀 애니, 선명하고 화사한 색, 깔끔하고 굵은 외곽선, 평평한 셀 채색, 예쁘고 멋진 인물.",
     "인상주의 유화": "인상주의 유화, 유화 질감이 보이는 그림, 선명하게 쪼갠 색, 분위기 있는 빛.",
     "잉크 스케치": "자유로운 잉크 스케치, 손으로 그린 표현적인 잉크 선, 간결하고 즉흥적.",
     "모네 인상주의": "모네풍 인상주의 그림, 점점이 흩어진 붓질, 부드러운 빛, 야외 장면.",
