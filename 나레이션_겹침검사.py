@@ -309,6 +309,7 @@ def detect(video, script, project=None):
     vocab = {k_: v_ for k_, v_ in p.tokenizer.get_vocab().items() if re.fullmatch(r"[가-힣]", k_)}
     spoken_all, owner = spoken_script(sents, project)       # 성우가 실제로 읽은 글(한글만) + 글자마다 몇 번째 문장인지
     pos = 0
+    whole = hangul(" ".join(s_ for _, s_ in sents))          # 대본 전체 (반복이 대본 어딘가에 원래 있으면 겹침 아님)
     for t0, t1 in chunks(a):
         off = max(0, t0 - 0.15)
         x = a[int(off * SR):int((t1 + 0.15) * SR)]
@@ -353,7 +354,7 @@ def detect(video, script, project=None):
                 sh = hangul(ps[1])
                 k_ = sents.index(ps)
                 near = hangul(" ".join(x[1] for x in sents[max(0, k_ - 1):k_ + 2]))   # 앞뒤 문장까지 (조각이 문장 경계에 걸침)
-                if doubles(sh, n) or dd in near:      # 규칙 3: 대본에 원래 같은 반복(흉내말 '줄줄이·무럭무럭')이 있음
+                if doubles(sh, n) or dd in near or dd in whole:   # 규칙 3: 대본에 원래 같은 반복(흉내말 '줄줄이·무럭무럭', '하나하나')이 있음
                     continue
                 if not extra_syllables(sh, ctx, ctx.find(dd), len(dd)):   # 규칙 4: 대본보다 글자가 늘어난 자리여야 겹침
                     continue
