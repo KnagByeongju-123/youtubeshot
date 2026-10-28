@@ -1,0 +1,75 @@
+{
+ "items": [
+  {
+   "id": "01_이루_남주",
+   "width": 768,
+   "height": 432,
+   "seed": 9600,
+   "prompt": "nostalgic 1980s Japanese TV cartoon cel animation, bright saturated cheerful colors, clean bold outlines, flat vivid cel shading, attractive appealing character design, steampunk space adventure. Character model sheet of one single original character shown three times side by side: front view, side view, back view, full body from head to feet, standing in neutral pose, plain pure white background. Character: 20-year-old handsome young man, apprentice pilot of a steampunk spaceship, sun-tanned skin, spiky short black hair, bright confident smile, thick eyebrows, blue sleeveless vest over a white shirt, brown work trousers with a rope belt, brass aviator goggles on his forehead, small brass gear charm necklace, leather boots. Each view has exactly two arms and two legs. No text, no labels."
+  },
+  {
+   "id": "02_세라_여주",
+   "width": 768,
+   "height": 432,
+   "seed": 9601,
+   "prompt": "nostalgic 1980s Japanese TV cartoon cel animation, bright saturated cheerful colors, clean bold outlines, flat vivid cel shading, attractive appealing character design, steampunk space adventure. Character model sheet of one single original character shown three times side by side: front view, side view, back view, full body from head to feet, standing in neutral pose, plain pure white background. Character: 20-year-old beautiful young woman, star navigator, long flowing silver-blue hair with a small star hairpin, big gentle violet eyes, warm smile, fitted white and sky-blue navigator jacket with brass buttons, short dark blue skirt over black leggings, brass compass pendant, white boots. Each view has exactly two arms and two legs. No text, no labels."
+  },
+  {
+   "id": "03_카이_라이벌",
+   "width": 768,
+   "height": 432,
+   "seed": 9602,
+   "prompt": "nostalgic 1980s Japanese TV cartoon cel animation, bright saturated cheerful colors, clean bold outlines, flat vivid cel shading, attractive appealing character design, steampunk space adventure. Character model sheet of one single original character shown three times side by side: front view, side view, back view, full body from head to feet, standing in neutral pose, plain pure white background. Character: 22-year-old very handsome tall young man, rival ace pilot, neat golden blond hair, sharp blue eyes, confident smirk, long white flight coat with gold trim and high collar, red scarf, black gloves, tall black boots. Each view has exactly two arms and two legs. No text, no labels."
+  },
+  {
+   "id": "04_미오_정비사",
+   "width": 768,
+   "height": 432,
+   "seed": 9603,
+   "prompt": "nostalgic 1980s Japanese TV cartoon cel animation, bright saturated cheerful colors, clean bold outlines, flat vivid cel shading, attractive appealing character design, steampunk space adventure. Character model sheet of one single original character shown three times side by side: front view, side view, back view, full body from head to feet, standing in neutral pose, plain pure white background. Character: 19-year-old cute young woman, cheerful ship mechanic, pink hair in two short twin tails, big green eyes, freckles, orange overalls with one strap down over a white tank top, brass goggles around her neck, a big wrench, work boots. Each view has exactly two arms and two legs. No text, no labels."
+  },
+  {
+   "id": "05_레오_기관장",
+   "width": 768,
+   "height": 432,
+   "seed": 9604,
+   "prompt": "nostalgic 1980s Japanese TV cartoon cel animation, bright saturated cheerful colors, clean bold outlines, flat vivid cel shading, attractive appealing character design, steampunk space adventure. Character model sheet of one single original character shown three times side by side: front view, side view, back view, full body from head to feet, standing in neutral pose, plain pure white background. Character: 24-year-old tall muscular handsome man, gentle ship engineer, short brown hair under a red bandana, kind smile, sleeveless dark green work shirt, leather apron with tools, thick leather gloves, heavy boots. Each view has exactly two arms and two legs. No text, no labels."
+  },
+  {
+   "id": "06_루나_달공주",
+   "width": 768,
+   "height": 432,
+   "seed": 9605,
+   "prompt": "nostalgic 1980s Japanese TV cartoon cel animation, bright saturated cheerful colors, clean bold outlines, flat vivid cel shading, attractive appealing character design, steampunk space adventure. Character model sheet of one single original character shown three times side by side: front view, side view, back view, full body from head to feet, standing in neutral pose, plain pure white background. Character: 21-year-old elegant beautiful princess of a moon colony, very long straight black hair with a crescent moon tiara, calm golden eyes, white and pale gold long gown with a short silver cape, delicate silver gloves. Each view has exactly two arms and two legs. No text, no labels."
+  },
+  {
+   "id": "07_진_저격수",
+   "width": 768,
+   "height": 432,
+   "seed": 9606,
+   "prompt": "nostalgic 1980s Japanese TV cartoon cel animation, bright saturated cheerful colors, clean bold outlines, flat vivid cel shading, attractive appealing character design, steampunk space adventure. Character model sheet of one single original character shown three times side by side: front view, side view, back view, full body from head to feet, standing in neutral pose, plain pure white background. Character: 20-year-old cool handsome quiet young man, sharpshooter, dark navy hair falling over one eye, calm gray eyes, long dark purple scarf, black fitted jacket with brass buckles, dark trousers, long brass steam rifle on his back. Each view has exactly two arms and two legs. No text, no labels."
+  },
+  {
+   "id": "08_아리아_해적선장",
+   "width": 768,
+   "height": 432,
+   "seed": 9607,
+   "prompt": "nostalgic 1980s Japanese TV cartoon cel animation, bright saturated cheerful colors, clean bold outlines, flat vivid cel shading, attractive appealing character design, steampunk space adventure. Character model sheet of one single original character shown three times side by side: front view, side view, back view, full body from head to feet, standing in neutral pose, plain pure white background. Character: 23-year-old confident beautiful woman, sky pirate captain, wavy crimson red hair, bold amber eyes, red long captain's coat with gold trim, black tricorn hat with a white feather, white blouse, black trousers, tall brown boots, cutlass at her hip. Each view has exactly two arms and two legs. No text, no labels."
+  },
+  {
+   "id": "09_노아_발명가",
+   "width": 768,
+   "height": 432,
+   "seed": 9608,
+   "prompt": "nostalgic 1980s Japanese TV cartoon cel animation, bright saturated cheerful colors, clean bold outlines, flat vivid cel shading, attractive appealing character design, steampunk space adventure. Character model sheet of one single original character shown three times side by side: front view, side view, back view, full body from head to feet, standing in neutral pose, plain pure white background. Character: 18-year-old cute young genius inventor boy, curly light brown hair, round glasses, bright excited eyes, oversized mustard yellow sweater with rolled sleeves, brown shorts, suspenders, small brass robot owl on his shoulder. Each view has exactly two arms and two legs. No text, no labels."
+  },
+  {
+   "id": "10_제논_악역",
+   "width": 768,
+   "height": 432,
+   "seed": 9609,
+   "prompt": "nostalgic 1980s Japanese TV cartoon cel animation, bright saturated cheerful colors, clean bold outlines, flat vivid cel shading, attractive appealing character design, steampunk space adventure. Character model sheet of one single original character shown three times side by side: front view, side view, back view, full body from head to feet, standing in neutral pose, plain pure white background. Character: 28-year-old handsome cold imperial commander, silver hair swept back, sharp red eyes, black military uniform with silver epaulettes and medals, long black cape with a red lining, white gloves, tall black boots. Each view has exactly two arms and two legs. No text, no labels."
+  }
+ ],
+ "crop_border": false
+}
