@@ -493,7 +493,7 @@ def _build():
 STORY_TXT = _build()      # 마당 제목(##) 포함, 이름표 뺌
 STORY = re.sub(r"^## .*\n\n", "", STORY_TXT, flags=re.M)   # 영상용: 마당 제목은 읽지 않음
 SHEETS = os.path.join(HERE, "..", "..", "output", "사이다", "시트")
-CUTOUT = {}      # 누끼가 번지는 컷은 {"c07": {"off": True}}
+CUTOUT = {c: {"off": True} for c in ("c063", "c067", "c111", "c121", "c124", "c125", "c136", "c153")}   # 누끼 끝 장면에 번진 자국·겹친 물건이 보인 컷 (2026-10-28 검수)
 
 
 def story_with_cuts(folder):
