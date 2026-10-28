@@ -23,9 +23,9 @@ NOW = "modern-day people in contemporary clothing, each person with exactly two 
 
 # (컷번호, 그림 설명(영어), 화면 설명(한국어), 사람이 나오는 컷인지: True=옛 사람, "now"=오늘날 사람)
 CUTS = [
-    ("c01", "a busy city street in Seoul at dusk seen from slightly above, crowds of people walking and talking in pairs, shop lights blurred into soft round bokeh, shallow depth of field, no signs in focus", "오늘도 한국어로 말하는 사람들", "now"),
+    ("c01", "people chatting in small groups on the grassy riverside park of the Han River in Seoul at dusk, a long bridge with blurred lights in the background, warm evening light", "오늘도 한국어로 말하는 사람들", "now"),
     ("c02", "a lone old tree standing on a wide open plain at sunrise, no other trees around it, symbolic and calm", "친척이 보이지 않는 외로운 언어", False),
-    ("c03", "the Korean peninsula seen from high orbit at dawn, its mountainous green land between the Yellow Sea and the East Sea, soft clouds, realistic satellite photography style", "한국어는 어디에서 왔을까", False),
+    ("c03", "a misty sunrise seen from a mountain peak in Korea, endless layers of blue mountain ridges fading into the distance, golden light, no people", "한국어는 어디에서 왔을까", False),
     ("c04", "a quiet 1920s study room with a tall window: a wooden desk with a fountain pen, an ink bottle, stacks of closed old books and a globe, warm lamp light, no people", "1920년대 람스테트의 서재", False),
     ("c05", "a vast steppe landscape of Mongolia and Central Asia with rolling grassland, distant mountains and a few nomad felt tents, golden light", "알타이 산맥에서 이어진 초원", False),
     ("c06", "three groups of people from different Asian steppe and forest cultures in traditional clothing standing apart on a grassland, talking among themselves, distant mountains", "닮은 말을 쓰는 이웃들", True),
@@ -47,13 +47,13 @@ CUTS = [
     ("c22", "a calm sea between the southern Korean coast and the Japanese island of Kyushu at dawn, a small wooden sailing boat crossing, islands", "바다 건너 일본어", True),
     ("c23", "two ancient village communities on opposite sides of a river in the Korean peninsula, smoke rising from thatched huts, people working in fields, misty morning", "한반도에 함께 살았던 두 말?", True),
     ("c24", "a broad river valley in northeastern China with loess hills and early Neolithic fields of millet, golden light", "랴오허강 유역", False),
-    ("c25", "Neolithic farmers about 9000 years ago harvesting foxtail millet by hand in a field near round semi-subterranean houses with conical thatched roofs, cutting the drooping bushy millet heads with small handheld polished stone knives, no metal, warm light", "기장을 기르던 농부들", True),
-    ("c26", "close-up of two hands holding drooping bushy golden foxtail millet heads and a small half-moon shaped polished stone knife with two holes, soft light", "기장 이삭", True),
+    ("c25", "a Neolithic village about 9000 years ago at harvest time: a golden field of foxtail millet with drooping bushy heads, round semi-subterranean houses with conical thatched roofs, villagers carrying woven baskets full of millet heads, warm light", "기장을 기르던 농부들", True),
+    ("c26", "close-up of two cupped hands holding a bundle of drooping bushy golden foxtail millet heads, tiny round grains, soft warm light", "기장 이삭", True),
     ("c27", "a long line of Neolithic farming families migrating east carrying baskets of seeds and tools across hills toward distant mountains, sunrise", "농사와 함께 퍼진 말?", True),
     ("c28", "one laboratory table holding a microscope next to an ancient tooth, several old pottery shards and a closed old leather book, warm lab light", "언어학·고고학·유전학", False),
     ("c29", "a diverse group of modern East Asian and European linguists, men and women, discussing around a seminar table with papers and laptops, seen from the side, plain wall behind", "엇갈리는 학자들의 의견", "now"),
     ("c30", "a balance scale on a wooden table with a small heap of grain on one side and a stack of closed old books on the other, perfectly level, soft light", "아직 결론은 없다", False),
-    ("c31", "Jeju island coast with black volcanic rocks and a low black stone wall, in the distance the broad gently sloping wide shield volcano Hallasan, a haenyeo woman diver in a black wetsuit with an orange float in the sea, bright day", "제주의 말", True),
+    ("c31", "Jeju island coast with black volcanic rocks and a low black stone wall, an orange haenyeo float bobbing on the blue sea, in the far distance a very wide low gently rounded dome mountain under clouds, bright day, no people", "제주의 말", False),
     ("c32", "two small saplings growing side by side from the same root in rich soil, close-up, morning dew, soft light", "한국어족: 한국어와 제주어", False),
     ("c33", "the night side of the Earth seen from orbit, glowing golden city lights spread across East Asia, a thin blue line of atmosphere on the curved horizon", "세계의 수많은 언어", False),
     ("c34", "the Basque countryside with green hills and a stone farmhouse in northern Spain, misty morning, no people", "홀로 서 있는 다른 언어들", False),
