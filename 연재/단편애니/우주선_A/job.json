@@ -1,0 +1,54 @@
+{
+ "items": [
+  {
+   "id": "1_황동고래호_주인공배",
+   "width": 768,
+   "height": 432,
+   "seed": 9700,
+   "prompt": "nostalgic 1980s Japanese TV cartoon cel animation, bright saturated cheerful colors, clean bold outlines, flat vivid cel shading, steampunk space adventure vehicle design, worn used-future look with riveted panels, brass pipes and small steam vents. Spaceship concept design, one single spaceship in three-quarter view, whole ship visible, centered, plain pure white background. Ship: the heroes' cargo spaceship: a chubby rounded whale-shaped brass and copper hull with riveted plates and round portholes, two big side engines with glowing blue exhausts, a small bridge dome on top, a cargo ramp, patched panels, cozy and lovable. No text, no letters, no logos."
+  },
+  {
+   "id": "2_카이의_전투기",
+   "width": 768,
+   "height": 432,
+   "seed": 9701,
+   "prompt": "nostalgic 1980s Japanese TV cartoon cel animation, bright saturated cheerful colors, clean bold outlines, flat vivid cel shading, steampunk space adventure vehicle design, worn used-future look with riveted panels, brass pipes and small steam vents. Spaceship concept design, one single spaceship in three-quarter view, whole ship visible, centered, plain pure white background. Ship: a sleek single-seat racing fighter: long pointed white and gold body, swept-back wings with gold trim, a clear bubble cockpit, twin slim engines with orange flames, a red stripe. No text, no letters, no logos."
+  },
+  {
+   "id": "3_아리아의_해적선",
+   "width": 768,
+   "height": 432,
+   "seed": 9702,
+   "prompt": "nostalgic 1980s Japanese TV cartoon cel animation, bright saturated cheerful colors, clean bold outlines, flat vivid cel shading, steampunk space adventure vehicle design, worn used-future look with riveted panels, brass pipes and small steam vents. Spaceship concept design, one single spaceship in three-quarter view, whole ship visible, centered, plain pure white background. Ship: a sky pirate ship in space: a galleon-shaped red and dark wood hull with brass fittings, three masts with glowing golden solar sails, a pirate flag shape without symbols, cannons along the sides, a big rear steam engine. No text, no letters, no logos."
+  },
+  {
+   "id": "4_제논의_제국기함",
+   "width": 768,
+   "height": 432,
+   "seed": 9703,
+   "prompt": "nostalgic 1980s Japanese TV cartoon cel animation, bright saturated cheerful colors, clean bold outlines, flat vivid cel shading, steampunk space adventure vehicle design, worn used-future look with riveted panels, brass pipes and small steam vents. Spaceship concept design, one single spaceship in three-quarter view, whole ship visible, centered, plain pure white background. Ship: a gigantic imperial flagship: long angular black armored hull like a dagger, rows of red lights, many gun turrets, a tall command tower at the rear, huge engines with red glow, menacing and powerful. No text, no letters, no logos."
+  },
+  {
+   "id": "5_제국_소형전투기",
+   "width": 768,
+   "height": 432,
+   "seed": 9704,
+   "prompt": "nostalgic 1980s Japanese TV cartoon cel animation, bright saturated cheerful colors, clean bold outlines, flat vivid cel shading, steampunk space adventure vehicle design, worn used-future look with riveted panels, brass pipes and small steam vents. Spaceship concept design, one single spaceship in three-quarter view, whole ship visible, centered, plain pure white background. Ship: a small imperial fighter: compact triangular black body with a single round red-glass cockpit in front, two short angled wings, one rear engine with red glow, mass-produced look. No text, no letters, no logos."
+  },
+  {
+   "id": "6_루나의_달셔틀",
+   "width": 768,
+   "height": 432,
+   "seed": 9705,
+   "prompt": "nostalgic 1980s Japanese TV cartoon cel animation, bright saturated cheerful colors, clean bold outlines, flat vivid cel shading, steampunk space adventure vehicle design, worn used-future look with riveted panels, brass pipes and small steam vents. Spaceship concept design, one single spaceship in three-quarter view, whole ship visible, centered, plain pure white background. Ship: an elegant royal moon shuttle: smooth pearl-white rounded hull with silver and pale gold details, two graceful crescent-shaped wings, soft blue glowing engines, a large window cabin. No text, no letters, no logos."
+  },
+  {
+   "id": "7_미오의_수리셔틀",
+   "width": 768,
+   "height": 432,
+   "seed": 9706,
+   "prompt": "nostalgic 1980s Japanese TV cartoon cel animation, bright saturated cheerful colors, clean bold outlines, flat vivid cel shading, steampunk space adventure vehicle design, worn used-future look with riveted panels, brass pipes and small steam vents. Spaceship concept design, one single spaceship in three-quarter view, whole ship visible, centered, plain pure white background. Ship: a small boxy maintenance tug ship: orange and yellow painted body with dents and patches, two mechanical robot arms with claws in front, a searchlight, toolbox compartments, tiny round cockpit. No text, no letters, no logos."
+  }
+ ],
+ "crop_border": false
+}
