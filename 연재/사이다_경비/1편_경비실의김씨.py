@@ -522,11 +522,14 @@ def main():
         items = []
         for k, (cid, _, who, desc, _) in enumerate(CUTS):
             people = " ".join(f"Character {j + 1} (reference image {j + 1}): {CAST[n]}." for j, n in enumerate(who))
+            if who:
+                people += " Each character appears only once in the image."
             body = " Each person has exactly two arms and two legs, natural anatomy." if who or "people" in desc or "resident" in desc or "reporter" in desc or "man" in desc or "woman" in desc else ""
             items.append({"id": cid, "width": 768, "height": 432, "seed": 5000 + k,
-                          "refs": [os.path.join(SHEETS, f"시트_{n}.png") for n in who],
+                          "refs": [os.path.join(SHEETS, f"앞_{n}.png") for n in who],   # 시트의 앞모습만 (세 모습을 넣으면 한 장에 같은 사람이 여럿 나옴)
                           "prompt": f"{STYLE}. Scene: {desc}. {people}{body} Cinematic composition, full-bleed image, no border, no frame, no paper edges. No text, no letters."})
         os.makedirs(out, exist_ok=True)
+        items = [it for it in items if not os.path.exists(os.path.join(out, it["id"] + ".png"))]   # 이미 그린(검수 합격) 컷은 건너뜀
         json.dump({"items": items}, open(os.path.join(out, "job.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
         print(len(items), "cuts")
     elif cmd == "project":                     # out = 컷 그림 폴더 (컷 계획을 붙이기 전에는 그림 없이 나레이션만)
