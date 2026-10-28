@@ -53,7 +53,7 @@ CUTS = [
     ("c28", "one laboratory table holding a microscope next to an ancient tooth, several old pottery shards and a closed old leather book, warm lab light", "언어학·고고학·유전학", False),
     ("c29", "a diverse group of modern East Asian and European linguists, men and women, discussing around a seminar table with papers and laptops, seen from the side, plain wall behind", "엇갈리는 학자들의 의견", "now"),
     ("c30", "a balance scale on a wooden table with a small heap of grain on one side and a stack of closed old books on the other, perfectly level, soft light", "아직 결론은 없다", False),
-    ("c31", "Jeju island coast with black volcanic rocks and a low black stone wall, an orange haenyeo float bobbing on the blue sea, in the far distance a very wide low gently rounded dome mountain under clouds, bright day, no people", "제주의 말", False),
+    ("c31", "Jeju island coastline close view: jagged black volcanic basalt rocks, a low dry-stone wall of black lava stones, a round orange haenyeo float bobbing on clear turquoise water, yellow canola flowers on the shore, bright day, no people", "제주의 말", False),
     ("c32", "two small saplings growing side by side from the same root in rich soil, close-up, morning dew, soft light", "한국어족: 한국어와 제주어", False),
     ("c33", "the night side of the Earth seen from orbit, glowing golden city lights spread across East Asia, a thin blue line of atmosphere on the curved horizon", "세계의 수많은 언어", False),
     ("c34", "the Basque countryside with green hills and a stone farmhouse in northern Spain, misty morning, no people", "홀로 서 있는 다른 언어들", False),
