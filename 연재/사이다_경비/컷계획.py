@@ -14,7 +14,7 @@ CUTS = [
     ("c008", 10, ["김만석"], "in a bright marble lobby, the old guard carries two heavy shopping bags while a small elderly grandmother in a purple cardigan and a cane walks beside him smiling", "할머니의 장바구니"),
     ("c009", 11, ["박군"], "the young guard struggles over a structural engineering calculation sheet at the booth desk at night, scratching his head", "건물 무게 계산 숙제"),
     ("c010", 12, [], "close-up of a wrinkled old hand drawing a few quick pencil lines of a beam and column diagram on the corner of a paper", "연필 선 몇 개"),
-    ("c011", 13, ["박군", "김만석"], "inside the guard booth at night, the young guard alone tilts his head in wonder at a sheet of paper in his hands", "고개를 갸웃한 박 군"),
+    ("c011", 13, ["박군"], "inside the guard booth at night, the young guard alone tilts his head in wonder at a sheet of paper in his hands", "고개를 갸웃한 박 군"),
     ("c012", 14, [], "morning at the modern glass entrance driveway of a luxury apartment skyscraper: luxury cars leave in a line, and a black sports car is parked crookedly in a red-painted fire lane", "소방차 자리의 스포츠카"),
     ("c013", 15, ["김만석"], "the old guard politely approaches the black sports car with a slight bow", "공손하게 말하는 김 씨"),
     ("c014", 17, ["강민혁"], "the arrogant rich young man steps out of a black sports car and takes off his sunglasses slowly", "재벌 2세 강민혁"),
