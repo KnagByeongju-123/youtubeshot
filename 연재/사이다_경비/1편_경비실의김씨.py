@@ -461,6 +461,20 @@ STORY_SRC = """## 첫째 마당. 새벽 경비실
 
 높은 곳만 바라보던 사람들은 끝내 몰랐습니다. 이 건물에서 가장 높은 사람은, 언제나 가장 낮은 자리에서 불을 켜고 있었다는 것을요."""
 
+# 인물별 목소리 (사용자가 후보 3개씩 듣고 고름, 2026-10-28). code=성우, rate=빠르기%, semis=톤 반음
+VOICES = {
+    "김만석": {"code": "M3", "rate": -15, "semis": -2, "fx": "", "why": "후보 1번: 남자 성우 3, 느리고 낮게 (65세, 담담)"},
+    "강민혁": {"code": "M4", "rate": 0, "semis": 0, "fx": "", "why": "후보 1번: 남자 성우 4 보통 (재벌 2세)"},
+    "오소장": {"code": "M5", "rate": 4, "semis": 0, "fx": "", "why": "후보 1번: 남자 성우 5, 조금 빠르게 (호들갑)"},
+    "윤채린": {"code": "F1", "rate": 0, "semis": 0, "fx": "", "why": "후보 1번: 여자 성우 1 보통 (29세 의사)"},
+    "차유나": {"code": "F5", "rate": 2, "semis": 1, "fx": "", "why": "후보 1번: 여자 성우 5, 조금 높게 (26세 가수)"},
+    "박군": {"code": "M1", "rate": 0, "semis": 0, "fx": "", "why": "기본값: 젊은 남자"},
+    "강회장": {"code": "M3", "rate": -12, "semis": -1, "fx": "", "why": "기본값: 높은 지위 중년 남자"},
+    "한서윤": {"code": "F3", "rate": -6, "semis": 0, "fx": "", "why": "기본값: 차분한 어른 여자"},
+    "기자": {"code": "M4", "rate": 0, "semis": 0, "fx": "", "why": "단역"},
+    "투자자": {"code": "M5", "rate": 0, "semis": 0, "fx": "", "why": "단역"},
+}
+
 DIALOGUE = []
 _TAG = re.compile(r'@(\S+) "([^"]+)"')
 
@@ -484,6 +498,20 @@ def main():
         body = len(re.sub(r"\s", "", STORY))
         open(out, "w", encoding="utf-8").write(f"{TITLE}\n(본문 {len(STORY)}자, 띄어쓰기 빼고 {body}자, 대사 {len(DIALOGUE)}줄)\n\n{STORY_TXT}\n")
         print(out, len(STORY), body, len(DIALOGUE))
+    elif cmd == "project":                     # out = 컷 그림 폴더 (컷 계획을 붙이기 전에는 그림 없이 나레이션만)
+        import json
+        proj = {"ver": 7, "category": "장문", "genre": "[이야기] 사이다 반전 드라마", "topic": "경비원 반전 드라마", "title": TITLE,
+                "story": STORY, "sources": [], "notes": "사이다 드라마 1편", "autophoto": False,
+                "cast": [{"name": n, "voice": v} for n, v in VOICES.items()],
+                "dialogue": [{"text": t, "who": w} for t, w in DIALOGUE],
+                "settings": {"format": "롱폼 가로(1920×1080)", "narration": "on",
+                             "narr_voice": "Supertonic M2 (남성, 무료 로컬) [supertonic:M2]",
+                             "layout": "자막형(큰 제목+사진+자막)", "img_fill": "전체 화면(글자가 사진 위에)",
+                             "img_motion": "영상처럼(확대·이동·전환)", "img_depth": "on", "img_depth_amt": "누끼(앞 인물 따로)",
+                             "fps": "24", "head_show": "안 보임(제목 카드만)", "sub_split": "한 줄씩(문장·쉼표로 나눠 차례로)", "img_label": "on"}}
+        dst = os.path.join(HERE, "1편_경비실의김씨.json")
+        json.dump(proj, open(dst, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+        print(dst)
 
 
 if __name__ == "__main__":
