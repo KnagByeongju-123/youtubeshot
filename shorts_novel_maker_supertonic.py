@@ -5721,7 +5721,8 @@ class SubtitleRenderer:
                         mt = ms[m]
                     else:                            # 기본(은은하게): 같은 사진이면 앞 장면에서 이어서 서서히 확대 → 서서히 축소·이동
                         mt, up = self._gentle_chain(sg["img"], first=not same, up=up, rng=rng)
-                    shots.append({"img": sg["img"], "t0": a, "t1": b, "m": mt, "first": not same})
+                    run = shots[-1].get("run", 0) + 1 if same else 0     # 같은 사진이 몇 번째로 이어지는 장면인지 (누끼가 사진이 보이는 내내 이어서 다가오게)
+                    shots.append({"img": sg["img"], "t0": a, "t1": b, "m": mt, "first": not same, "run": run})
         else:   # 사진이 바뀔 때만 장면 전환
             for k, sg in enumerate(self.segs):
                 if sg["img"] < 0:
@@ -5734,6 +5735,14 @@ class SubtitleRenderer:
                     shots.append({"img": sg["img"], "t0": sg["t0"] if shots else 0.0, "t1": t1, "m": zm})
         if shots:
             shots[-1]["t1"] = max(shots[-1]["t1"], end_t)
+        k = 0
+        while k < len(shots):                         # 같은 사진이 이어지는 장면 묶음마다 전체 장면 수 (누끼 진행을 묶음 전체로 나눔)
+            j = k
+            while j + 1 < len(shots) and shots[j + 1].get("run", 0) > 0:
+                j += 1
+            for i in range(k, j + 1):
+                shots[i]["nrun"] = j - k + 1
+            k = j + 1
         return shots
 
     def _img_src(self, idx):
@@ -5834,7 +5843,9 @@ class SubtitleRenderer:
             fgm, bgn, spec = self._cutout_for(sh["img"], big, dbig)
             if fgm is not None:
                 anc = spec.get("anchor")
-                return Image.fromarray(cutout_frame(img_np(big), bgn, fgm, (l, tp, cw, ch), p, (bw, bh), float(z), zoom=float(spec.get("zoom", 0.03)),
+                # 사진이 보이는 내내(이어지는 장면 모두) 한 방향으로 천천히 다가오고 되돌아가지 않음 (장면마다 처음으로 확 돌아가던 것, 사용자 결정)
+                pc = (sh.get("run", 0) + p) / max(1, sh.get("nrun", 1))
+                return Image.fromarray(cutout_frame(img_np(big), bgn, fgm, (l, tp, cw, ch), pc, (bw, bh), float(z), zoom=float(spec.get("zoom", 0.03)),
                                                     anchor=(anc[0] * big.width, anc[1] * big.height) if anc else None)), mask
         ax_, ay_ = DEPTH_AMP.get(amt, DEPTH_AMP["약하게"])
         if amt.startswith("약"):                                   # 약하게 = 맨 처음 방식 그대로 (9초 주기로 살짝 흔들림, 드리프트 없음)
@@ -6389,7 +6400,7 @@ _DEPTH_CACHE = {}
 _DEPTH_WARNED = set()
 _GRID_CACHE = {}
 DEPTH_AMP = {"약하게": (0.007, 0.003), "보통": (0.022, 0.010), "강하게": (0.035, 0.016)}   # 약하게는 아주 은은하게(기본)
-RENDER_VER = "2026-10-17b"   # 그리는 방식이 바뀌면 올림 → 장문 영상 구간 캐시를 새로 그림   # (가로, 세로) 최대 밀림 = 화면 크기 비율
+RENDER_VER = "2026-10-28a"   # 그리는 방식이 바뀌면 올림 → 장문 영상 구간 캐시를 새로 그림   # (가로, 세로) 최대 밀림 = 화면 크기 비율
 
 
 def depth_key(path):
