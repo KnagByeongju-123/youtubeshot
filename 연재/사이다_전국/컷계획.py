@@ -188,7 +188,7 @@ CUTS = [
     ("c174", 180, ["미나미"], f"{NOW}: close-up of the beautiful schoolgirl with a silver cherry blossom hairpin smiling shyly, sunset glow", "공주님을 꼭 닮았대"),
     ("c175", 181, ["한도윤"], f"{NOW}: the boy smiles gently, sunset glow at the shrine", "정말 많이 닮았어"),
     ("c176", 183, ["미나미", "한도윤"], f"{NOW}: at the shrine the schoolgirl laughs and playfully taps the boy's shoulder, sunset light", "툭 친 어깨"),
-    ("c177", 184, [], "night: a full moon reflected in the old stone well water, and in the moonlight the faint silhouette of a female ninja waving from a tree", "달빛 속의 그림자"),
+    ("c177", 184, [], "night: close-up of an old mossy stone well with a full moon reflected in its still water, glowing softly, no people anywhere", "달빛 속의 그림자"),
     ("c178", 185, [], f"{NOW}: the old Shinto shrine on the hill at night under a full moon, the city lights of Kyoto below, peaceful wide shot", "끝내 지켜진 약속"),
 ]
 
