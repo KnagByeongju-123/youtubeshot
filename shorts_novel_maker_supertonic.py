@@ -6162,6 +6162,11 @@ class SubtitleRenderer:
                 mx, my = int(W * (0.035 if port else 0.025)), int(H * (0.16 if port else 0.045))
                 if port and str(self.s.get("head_show", "보임")).startswith("안"):
                     my = int(H * 0.05)
+                hl = getattr(self, "head_layer", None)    # 규칙: 위 제목(왼쪽 위 작게)이 길면 사진 제목과 겹침 → 겹치면 제목 아래로 내림
+                if hl is not None and not str(self.s.get("head_show", "보임")).startswith("안"):
+                    hb = hl.getchannel("A").point(lambda a: 255 if a > 24 else 0).getbbox()
+                    if hb and hb[2] > W - bw - mx and hb[1] < my + bh and hb[3] > my:
+                        my = hb[3] + int(fs * 0.4)
                 cache[idx] = (im, (W - bw - mx, my))
         lab = cache[idx]
         if lab is None:
@@ -6366,7 +6371,7 @@ _DEPTH_CACHE = {}
 _DEPTH_WARNED = set()
 _GRID_CACHE = {}
 DEPTH_AMP = {"약하게": (0.007, 0.003), "보통": (0.022, 0.010), "강하게": (0.035, 0.016)}   # 약하게는 아주 은은하게(기본)
-RENDER_VER = "2026-10-17b"   # 그리는 방식이 바뀌면 올림 → 장문 영상 구간 캐시를 새로 그림   # (가로, 세로) 최대 밀림 = 화면 크기 비율
+RENDER_VER = "2026-10-29a"   # 그리는 방식이 바뀌면 올림 → 장문 영상 구간 캐시를 새로 그림   # (가로, 세로) 최대 밀림 = 화면 크기 비율
 
 
 def depth_key(path):
