@@ -5131,6 +5131,7 @@ class SubtitleRenderer:
         self.keys = True if self.narration else None
         durs = {i: d for i, _, d in self.narration}
         clips = {i: c for i, c, _ in self.narration}
+        self._clips = clips          # 자막 한 줄씩 나눌 때 실제 녹음의 쉬는 곳에 맞추려고 (chunk_starts)
         gap = max(0.0, float(s.get("narr_gap", 0.5)))
         spc = max(0.04, float(s.get("sec_per_char", 0.12)))
         self.intro = s["intro_sec"] if title.strip() else 0
@@ -6131,6 +6132,67 @@ class SubtitleRenderer:
         sg["chunk_dlg"] = flags if chunks else [True]
         return sg["chunks"]
 
+    def chunk_starts(self, sg, chunks):
+        """자막 조각마다 시작 시각(문단 시작 기준 초). 규칙(사용자 결정 2026-10-29): 자막은 나레이션 소리에 맞춤 —
+        글자 수 비율로 짐작한 경계를 실제 녹음에서 가장 가까운 쉬는 곳(0.08초 넘게 조용한 곳)으로 옮김.
+        인물 대사는 목소리마다 빠르기가 달라 글자 수 비율만으로는 자막이 소리보다 앞서거나 늦었음. 녹음이 없으면 글자 수 비율"""
+        if "chunk_t" in sg and len(sg["chunk_t"]) == len(chunks):
+            return sg["chunk_t"]
+        tot = max(1, sum(len(c) for c in chunks))
+        a = self._clips.get(sg.get("i")) if getattr(self, "_clips", None) else None
+        span = (len(a) / SR) if a is not None and len(a) > SR * 0.3 else max(0.1, sg["dur"] - float(self.s.get("narr_gap", 0.5)))
+        est, acc = [0.0], 0.0
+        for c in chunks[:-1]:
+            acc += span * len(c) / tot
+            est.append(acc)
+        if a is None or len(a) <= SR * 0.3 or len(chunks) < 2:
+            sg["chunk_t"] = est
+            return est
+        x = np.asarray(a, np.float32)
+        hop = int(SR * 0.02)
+        n = len(x) // hop
+        rms = np.sqrt(np.mean(x[:n * hop].reshape(n, hop).astype(np.float64) ** 2, axis=1)) if n else np.zeros(0)
+        quiet = rms < max(0.004, float(rms.max() if len(rms) else 0) * 0.06)
+        pauses, k = [], 0
+        while k < len(quiet):                   # 0.08초(4칸) 넘게 이어진 조용한 곳의 가운데 → 쉬는 곳 후보
+            if quiet[k]:
+                e = k
+                while e < len(quiet) and quiet[e]:
+                    e += 1
+                if e - k >= 4 and k > 0 and e < len(quiet):
+                    pauses.append((k + e) / 2 * hop / SR)
+                k = e
+            else:
+                k += 1
+        # 경계 j(1..)마다 쉬는 곳 하나를 차례대로(앞 경계보다 뒤) 고르되, 짐작한 시각과의 차이 합이 가장 작게 (동적 계획법).
+        # 맞는 쉬는 곳이 없으면 짐작한 시각을 그대로 쓰고 벌점 2초
+        J, P = len(est) - 1, len(pauses)
+        INF = float("inf")
+        best = [[INF] * (P + 1) for _ in range(J + 1)]   # best[j][q]: 경계 j까지, 마지막으로 쓴 쉬는 곳이 q-1 (0 = 아직 안 씀)
+        back = [[None] * (P + 1) for _ in range(J + 1)]
+        best[0][0] = 0.0
+        for j in range(1, J + 1):
+            for q in range(P + 1):
+                if best[j - 1][q] == INF:
+                    continue
+                c = best[j - 1][q] + 2.0                  # 이 경계는 쉬는 곳 없이 짐작 그대로
+                if c < best[j][q]:
+                    best[j][q], back[j][q] = c, (q, None)
+                for r in range(q, P):                      # 쉬는 곳 r 을 씀 (앞에서 쓴 것보다 뒤)
+                    c = best[j - 1][q] + abs(pauses[r] - est[j])
+                    if c < best[j][r + 1]:
+                        best[j][r + 1], back[j][r + 1] = c, (q, r)
+        q = min(range(P + 1), key=lambda q_: best[J][q_])
+        out = [0.0] * len(est)
+        for j in range(J, 0, -1):
+            pq, r = back[j][q]
+            out[j] = pauses[r] if r is not None else est[j]
+            q = pq
+        for j in range(1, len(out)):                       # 순서가 뒤집히지 않게
+            out[j] = max(out[j], out[j - 1] + 0.3)
+        sg["chunk_t"] = out
+        return out
+
     def _intro_bg(self, t):
         if getattr(self, "_intro_arr", None) is None:
             im = self.images[self.shots[0]["img"]][0].convert("RGB")
@@ -6263,15 +6325,13 @@ class SubtitleRenderer:
                 lay = None
             else:
                 chunks = self._chunks(sg)
-                if len(chunks) > 1:   # 한 줄씩: 글자 수 비율로 시간을 나눠 차례로 보여줌
-                    tot = sum(len(c) for c in chunks)
-                    span = max(0.1, sg["dur"] - float(self.s.get("narr_gap", 0.5)))
-                    acc, j = 0.0, 0
-                    for j, c in enumerate(chunks):
-                        nxt = acc + span * len(c) / tot
-                        if age < nxt or j == len(chunks) - 1:
-                            break
-                        acc = nxt
+                if len(chunks) > 1:   # 한 줄씩: 나레이션 소리의 쉬는 곳에 맞춰 차례로 보여줌 (chunk_starts)
+                    starts = self.chunk_starts(sg, chunks)
+                    j = 0
+                    for j_ in range(len(chunks)):
+                        if age >= starts[j_]:
+                            j = j_
+                    acc = starts[j]
                     only_dlg = str(self.s.get("sub_dialog", "없음")).startswith("대사만")
                     flags = sg.get("chunk_dlg") or []
                     if only_dlg and j < len(flags) and not flags[j]:
