@@ -110,7 +110,7 @@ CUTS = [
     ("c101", 126, ["차유나"], "a press conference: the young singer at a table facing many camera flashes", "기자 회견"),
     ("c102", 127, ["차유나"], "the young singer sings on a big concert stage under bright spotlights, a sea of glowing light sticks", "복귀 공연"),
     ("c103", 128, ["차유나"], "the young singer speaks emotionally to the audience holding a microphone, eyes shining", "그분께 드리는 노래"),
-    ("c104", 129, ["강민혁"], "the rich young man watches the concert on his phone in a dark room, grinding his teeth", "이를 가는 강민혁"),
+    ("c104", 129, ["강민혁"], "the rich young man sits in an armchair in a dark room grinding his teeth, holding a smartphone with both hands (exactly two hands, both on the phone)", "이를 가는 강민혁"),
     ("c105", 131, ["오소장", "강민혁"], "the building manager bursts into the guard booth, the rich young man stands behind with arms crossed", "벌컥 열린 문"),
     ("c106", 133, ["강민혁"], "the rich young man sneers and points around the booth", "경비실 좀 뒤져 봐요"),
     ("c107", 134, ["오소장"], "the building manager pulls a shiny gold wristwatch out of a booth drawer in triumph", "서랍에서 나온 금시계"),
