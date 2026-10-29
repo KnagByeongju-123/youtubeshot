@@ -382,6 +382,7 @@ VOICES = {
     "관장": {"code": "M5", "rate": -2, "semis": 0, "fx": "", "why": "단역 (체험관 관장)"},
 }
 LINE_VOICE = {}
+ONE_VOICE = True   # 사용자 결정 2026-10-29: 나레이션 성우 한 명(M2)이 대사까지 모두 읽음 (인물별 목소리 안 씀). False 면 VOICES 로 인물 목소리
 
 DIALOGUE = []
 _TAG = re.compile(r'@(\S+) "([^"]+)"')
@@ -459,8 +460,8 @@ def main():
         story = story_with_cuts(out) if os.path.exists(os.path.join(HERE, "컷계획.py")) else STORY
         proj = {"ver": 7, "category": "장문", "genre": "[이야기] 사이다 반전 드라마", "topic": "시간여행 역사 드라마", "title": TITLE,
                 "story": story, "sources": [], "notes": "사이다 드라마 3편 (한산도)", "autophoto": False,
-                "cast": [{"name": n, "voice": v} for n, v in VOICES.items()],
-                "dialogue": [dict({"text": t, "who": w}, **({"voice": v} if (v := next((v for k, v in LINE_VOICE.items() if t.startswith(k)), None)) else {})) for t, w in DIALOGUE],
+                "cast": [] if ONE_VOICE else [{"name": n, "voice": v} for n, v in VOICES.items()],
+                "dialogue": [] if ONE_VOICE else [dict({"text": t, "who": w}, **({"voice": v} if (v := next((v for k, v in LINE_VOICE.items() if t.startswith(k)), None)) else {})) for t, w in DIALOGUE],
                 "settings": {"format": "롱폼 가로(1920×1080)", "narration": "on",
                              "narr_voice": "Supertonic M2 (남성, 무료 로컬) [supertonic:M2]",
                              "layout": "자막형(큰 제목+사진+자막)", "img_fill": "전체 화면(글자가 사진 위에)",
