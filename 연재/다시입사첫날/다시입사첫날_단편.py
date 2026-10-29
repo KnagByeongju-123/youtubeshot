@@ -730,6 +730,106 @@ STORY = """{c001}
 두 번째 입사 첫날. 도윤은 이번엔, 모든 것을 지켜 냈습니다."""
 
 
+TSHIRT = "wearing a plain gray T-shirt instead of his usual outfit"
+JACKET = "wearing a padded work jacket over his navy suit instead of his usual outfit"
+OLD_JH = "aged 32 in the future with a tired face, wearing a gray office suit instead of his usual outfit"
+
+# 30분에 그림 180장 (한 장 약 10초, 사용자 결정) — 긴 장면을 나눈 추가 컷
+# (바로 앞 컷, 컷번호, 나오는 인물, 그림 설명(영어), 화면 설명(한국어), 대본에서 이 컷이 시작되는 글귀)
+EXTRA = [
+    ("c001", "c001a", ["도윤"], f"close-up of the young man {OLD}, rain streaming down his face, empty hollow eyes, night", "텅 빈 눈", "횡령범이라는 누명, 배신한 동기"),
+    ("c002", "c002a", ["도윤"], f"extreme close-up of the young man's eyes opening wide in shock, {TSHIRT}, morning sunlight on his face", "번쩍 뜬 눈", "2016년 3월 2일. 십 년 전"),
+    ("c003", "c003a", ["박 과장"], "dramatic shot of the heavy-set man in a gray three-piece suit smirking in deep shadow, red-tinted lighting, ominous", "모든 일의 시작인 그 사람", "누가 자신을 배신하고"),
+    ("c005", "c005a", ["박 과장"], f"a company awards ceremony stage, the heavy-set man {OLD_PARK}, receiving a trophy and smiling proudly under spotlights, audience clapping", "공을 가로챈 박 부장의 시상식", "하지만 그 공은 언제나"),
+    ("c006", "c006a", ["도윤"], f"the young man {OLD}, sitting at his office desk staring at a hospital bill paper with abstract lines, rubbing his forehead, night", "엄마의 병원비 고지서", "그래도 도윤은 참았습니다"),
+    ("c007", "c007a", [], "a corporate office in chaos, employees in suits gathered around monitors and phones with alarmed faces, papers scattered", "뒤집힌 회사", "그리고 그 돈을 보낸 결재 서류에는"),
+    ("c009", "c009a", [], "Korean executives in dark suits seated along a meeting table with cold skeptical faces, arms crossed, looking forward", "아무도 믿지 않는 임원들", "그때, 감사실장이 말했습니다"),
+    ("c010", "c010a", ["도윤", "준혁"], "faded blue-toned memory: the young man and the tall lanky young man with glasses, both in new employee suits, laughing and clinking beer glasses at a small Korean restaurant at night", "십 년을 함께한 동기", "준혁은 도윤의 눈을 피한 채"),
+    ("c011", "c011a", ["준혁"], f"close-up of the tall lanky man with glasses {OLD_JH}, looking down with a sweaty guilty face, avoiding eyes", "끝내 눈을 피하는 준혁", "준혁은 끝까지 도윤을"),
+    ("c013", "c013a", ["도윤"], f"the young man {OLD}, walking out of a glass office lobby in the rain carrying a cardboard box, security guards watching, employees staring", "회사를 나서는 도윤", "십 년의 회사 생활이"),
+    ("c014", "c014a", [], "a doctor in a white coat standing in a dim hospital corridor at night looking at a medical chart with a grim face", "의사의 말", "의사는 말했습니다"),
+    ("c014a", "c014b", ["엄마"], "faded blue-toned memory: the small slim woman in a lavender cardigan alone in a small kitchen, pressing her stomach in pain with one hand and hiding it, forcing a smile", "아픈 걸 숨긴 엄마", "엄마는 아들이 바쁠까 봐"),
+    ("c015", "c015a", [], "close-up of a thin pale elderly woman's hand holding a young man's hand on a white hospital blanket, IV tube, dim light", "맞잡은 두 손", "도윤은 엄마의 손에 이마를"),
+    ("c016", "c016a", ["도윤"], f"the young man {OLD}, screaming at the stormy sky with clenched fists on a rooftop in heavy rain, lightning behind", "하늘을 향한 외침", "\"한 번만. 딱 한 번만"),
+    ("c018", "c018a", [], "view of a small old bedroom ceiling with faded floral wallpaper and an old lamp, soft morning sunlight, no people", "익숙한 천장", "익숙한 천장"),
+    ("c020", "c020a", ["도윤"], f"close-up of the young man {TSHIRT}, pinching his own cheek hard in a small bathroom, wincing, eyes wide", "볼을 꼬집어 보는 도윤", "도윤은 자기 뺨을"),
+    ("c021", "c021a", [], "close-up of a bubbling earthenware pot of Korean soybean paste stew on a gas stove in a cozy kitchen, steam rising, morning light", "보글보글 끓는 된장찌개", "\"우리 아들, 첫 출근인데"),
+    ("c023", "c023a", ["도윤"], "the young man in a navy suit walking down a quiet residential alley in the morning, looking back up at an old apartment window with a determined face", "다짐하며 집을 나서는 도윤", "도윤은 속으로 다짐했습니다"),
+    ("c024", "c024a", ["도윤"], "back view of the young man in a navy suit walking confidently through a big glass corporate lobby toward the elevators, morning light", "로비를 걸어가는 도윤", "하지만 그 안으로 걸어 들어가는"),
+    ("c026", "c026a", ["도윤"], "faded blue-toned memory: the young man in a navy suit running happily through an office lobby carrying a tray full of coffee cups, naive smile", "십 년 전의 순진한 신입", "십 년 전, 도윤은 이 카드를"),
+    ("c030", "c030a", ["도윤"], "close-up of the young man in a navy suit turning his head in an office hallway, recognizing someone, eyes narrowing thoughtfully", "그 이름을 기억하는 도윤", "도윤은 그 이름을 똑똑히"),
+    ("c032", "c032a", [], "close-up of an office desk at night covered with empty coffee cups, sticky notes and printed charts with abstract lines, desk lamp glow", "밤샘의 흔적", "동남아 냉동 물류 사업 기획안. 원래"),
+    ("c033", "c033a", [], "a large map of Southeast Asia pinned on an office wall with red strings connecting ports and push pins, no readable letters", "이미 알고 있는 미래의 지도", "어디에 창고를 지어야"),
+    ("c034", "c034a", ["박 과장"], "close-up of the heavy-set man in a gray three-piece suit with a sly greedy grin reaching out his hand, gold watch shining", "손을 내미는 박 과장", "십 년 전과 토씨"),
+    ("c035", "c035a", [], "close-up of a laptop screen showing a document file icon with a red mark being removed, abstract interface, no readable text", "빼 둔 핵심 내용", "둘째, 박 과장에게"),
+    ("c036", "c036a", ["최 전무"], "close-up of the dignified silver-haired executive reading documents through black-rimmed glasses, stern sharp eyes", "깐깐한 최 전무", "숫자 하나 틀리는"),
+    ("c037", "c037a", ["도윤"], "the young man in a navy suit sitting quietly in the back row of a conference room with folded arms, watching calmly", "맨 뒷자리에서 지켜보는 도윤", "화면에는 도윤이 만든"),
+    ("c041", "c041a", [], "Korean executives around a conference table eagerly writing notes with pens, leaning forward with interest", "받아 적기 시작한 임원들", "임원들이 하나둘 펜을"),
+    ("c042", "c042a", [], "close-up of a tablet screen showing an email layout with an attached file icon and abstract lines, no readable letters, held in an older man's hands", "일주일 전 새벽의 메일", "최 전무가 고개를 들어 박 과장을"),
+    ("c043", "c043a", ["박 과장"], "the heavy-set man in a gray three-piece suit alone in an empty hallway punching the wall in rage, teeth clenched", "벽을 치는 박 과장", "그리고 실무 담당자로"),
+    ("c044", "c044a", [], "close-up of a thuggish man in a black jacket sneering under a dim street lamp in a dark alley at night, rain", "사채업자", "\"이번 달 이자"),
+    ("c046", "c046a", ["준혁"], "faded blue-toned memory: the tall lanky young man with glasses wearing a black mourning suit instead of his usual outfit, crying in front of a funeral altar with white chrysanthemums and a framed photo of a middle-aged man", "아버지가 남긴 빚", "그리고 박 과장은 그 약점을"),
+    ("c047", "c047a", [], "close-up of a young man's trembling hand reaching toward a thick white envelope held out by a hand with a gold wristwatch", "흔들리는 손", "준혁의 손이 떨렸습니다"),
+    ("c048", "c048a", ["준혁"], "close-up of the tall lanky young man with glasses crying with a soju glass in hand under an orange street food tent light at night", "털어놓는 준혁", "\"나 그 봉투 받으려고"),
+    ("c048a", "c048b", ["도윤"], "the young man in a navy suit gently putting his hand over a friend's soju glass at a street food tent table, serious kind face", "술잔을 내려놓게 하는 도윤", "도윤이 준혁의 술잔을"),
+    ("c049", "c049a", ["유나"], "close-up of the slender woman in a beige blazer pointing at a loan contract with a pen, confident calm expression", "법을 짚어 주는 유나", "그녀는 계약서를"),
+    ("c052", "c052a", ["박 과장"], "the heavy-set man in a gray three-piece suit glaring through an office glass wall with cold hateful eyes, two young employees laughing far in the background blurred", "이를 가는 박 과장", "박 과장은 이를 갈았습니다"),
+    ("c053", "c053a", ["도윤"], "the young man in a navy suit looking seriously at a desk calendar with one day circled in red marker, no readable numbers", "달력의 빨간 동그라미", "원래의 미래에서, 회사를 처음으로"),
+    ("c054", "c054a", [], "faded blue-toned memory: a crowded hospital emergency room with many patients holding their stomachs on beds and chairs", "식중독 환자들", "그리고 박 과장은 그 책임을"),
+    ("c054a", "c054b", ["박 과장"], "in a private restaurant room, the heavy-set man in a gray three-piece suit secretly receiving a thick envelope under the table from a sleazy businessman, both grinning", "뒷돈을 받는 박 과장", "동진식품은 박 과장이"),
+    ("c055", "c055a", ["도윤"], f"the young man {JACKET}, arriving alone at a huge cold-storage warehouse gate at dawn, white breath visible, determined", "새벽의 창고에 도착한 도윤", "영하 이십 도의"),
+    ("c057", "c057a", ["도윤"], f"the young man {JACKET}, speaking into a walkie-talkie with a firm serious face in a cold misty warehouse", "출고 중지", "도윤은 즉시 무전기를"),
+    ("c059", "c059a", [], "close-up of a ringing smartphone in a hand with a gold wristwatch, the screen showing an abstract incoming call icon, no readable text", "계속 울리는 전화", "박 과장은 아무 말도 못 하고"),
+    ("c060", "c060a", [], "close-up of petri dishes in a laboratory covered with many bacteria colonies, gloved hand holding one up", "기준치의 열두 배", "만약 그 새우가"),
+    ("c062", "c062a", [], "close-up of a small handwritten sticky note stuck on a computer monitor edge, only scribbled lines, no readable letters, dark office", "도윤의 쪽지", "숫자를 따라가던"),
+    ("c062a", "c062b", ["유나"], "close-up of the slender woman in a beige blazer with eyes wide in shock, monitor glow on her face, dark office at night", "놀란 유나", "그리고 하늘무역의 대표는"),
+    ("c064", "c064a", ["박 과장"], "in a dim hallway corner, the heavy-set man in a gray three-piece suit secretly shaking hands with another middle-aged manager in a brown suit, both smirking", "인사팀과 손잡은 박 과장", "신입을 석 달 만에"),
+    ("c065", "c065a", [], "close-up of a card payment terminal printing a long receipt on a nightclub counter with neon lights, abstract lines, no readable numbers", "사백팔십만 원", "결재 금액"),
+    ("c066", "c066a", [], "office workers at their desks whispering to each other behind their hands and looking at their phones with suspicious faces", "퍼지는 소문", "평택에서 서류를"),
+    ("c068", "c068a", ["박 과장"], "close-up of the heavy-set man in a gray three-piece suit whose smug smile freezes for a moment, eyes flickering with doubt", "잠깐 굳은 미소", "박 과장의 웃음이 아주 잠깐"),
+    ("c069", "c069a", ["도윤"], "the young man in a navy suit jumping into a taxi in a hurry on a busy city street, worried face", "병원으로 달려가는 도윤", "진료실에서, 의사가"),
+    ("c070", "c070a", ["엄마"], "faded blue-toned memory: the small slim woman wearing a hospital gown, lying weak and pale in a hospital bed at night with an IV", "원래 미래의 엄마", "원래의 미래에서, 엄마의 암은"),
+    ("c071", "c071a", ["도윤", "엄마"], "the small mother in a lavender cardigan hugging her son in a navy suit in a bright hospital hallway and patting his back, both smiling with tears", "\"다 우리 아들 덕분이야\"", "병원 문을 나서는"),
+    ("c073", "c073a", [], "a tiny empty run-down rented office with bare walls, one dusty desk, and a mailbox overflowing with envelopes, no readable sign", "이름뿐인 회사", "그리고 이 회사로"),
+    ("c074", "c074a", [], "close-up of hands highlighting rows on bank documents with a yellow marker next to cold coffee cups, late night desk lamp", "숫자 맞추기", "도윤이 계좌의 흐름을"),
+    ("c077", "c077a", ["도윤"], f"the young man {JACKET}, holding a clipboard and checking boxes in a warehouse at night, a CCTV camera on the ceiling pointed at him", "CCTV 아래의 야간 근무", "창고에는 CCTV가"),
+    ("c078", "c078a", ["박 과장"], "close-up of the heavy-set man in a gray three-piece suit with a sly whispering face, half in shadow in a dim underground parking lot", "속삭이는 박 과장", "\"준혁아. 이번 감사위원회"),
+    ("c079", "c079a", ["준혁"], "close-up of the tall lanky young man with glasses bowing his head, the light glinting on his glasses hiding his eyes, a determined faint smile", "다른 뜻의 대답", "원래의 미래에서와 똑같은"),
+    ("c080", "c080a", [], "low angle shot of a tall glass corporate tower against a clear morning sky, dramatic", "운명의 금요일", "긴 탁자에 임원들이 앉았고, 맨 끝"),
+    ("c083", "c083a", [], "Korean executives at a boardroom table murmuring and looking down the table with suspicious frowns", "술렁이는 임원들", "이런 직원이 우리 팀에"),
+    ("c085", "c085a", ["도윤"], "close-up of the young man in a navy suit pointing calmly at a big presentation screen in a boardroom, confident eyes", "\"그렇다면 그 카드는, 누가 썼을까요?\"", "\"저는 그 시각에"),
+    ("c087", "c087a", ["박 과장"], "the heavy-set man in a gray three-piece suit smiling with relief toward the boardroom door, confident", "증인을 반기는 박 과장", "하지만 준혁은 박 과장을 지나쳐"),
+    ("c087a", "c087b", ["도윤", "준혁"], "the young man in a navy suit and the tall lanky young man with glasses standing side by side at one end of a boardroom table facing the executives", "도윤 옆에 선 준혁", "그리고 휴대폰을 탁자 위에"),
+    ("c088", "c088a", [], "close-up of a finger pressing the play button on a smartphone lying on a dark wood boardroom table", "재생 버튼", "회의실에 박 과장의 목소리가"),
+    ("c091", "c091a", [], "close-up of audit documents on a table with several bank transfer rows highlighted in red, abstract numbers, no readable text", "박 과장 계좌로 흘러간 돈", "그리고 그 돈의 절반이"),
+    ("c091a", "c091b", [], "Korean executives in a boardroom gasping in shock, one covering his mouth, others staring", "경악한 임원들", "동진식품의 불량 새우가 우리"),
+    ("c092", "c092a", ["최 전무"], "close-up of the dignified silver-haired executive's cold furious eyes behind black-rimmed glasses", "차가운 최 전무의 눈", "\"박 과장. 나는 어제"),
+    ("c094", "c094a", [], "close-up of steel handcuffs locked on a thick wrist right next to a shiny gold wristwatch", "금시계 위의 수갑", "기름 바른 올백 머리가 흐트러졌고"),
+    ("c095", "c095a", ["박 과장"], "close-up of the heavy-set man in a gray suit with handcuffs shouting desperately, messy hair, veins on his forehead", "\"너, 대체 뭐야!\"", "도윤은 박 과장에게 한 발짝"),
+    ("c096", "c096a", ["도윤"], "the young man in a navy suit standing alone by the tall window of an empty boardroom, sunlight streaming in, quiet relieved face", "홀로 남은 도윤", "십 년 동안 도윤의 모든 것을"),
+    ("c097", "c097a", [], "close-up of a new business team proposal folder on a polished desk with an official stamp, abstract shapes, no readable letters, warm light", "신규 사업팀 신설", "\"자네가 시작한 일이니"),
+    ("c098", "c098a", ["준혁"], "the tall lanky young man with glasses straightening his crooked red tie with a big bright grin, office background", "넥타이를 고쳐 매는 준혁", "\"이번엔 나도 진짜"),
+    ("c101", "c101a", ["박 과장"], "the heavy-set man wearing a gray prison uniform instead of his usual outfit, sitting alone on a bench in a small prison cell with his head down, messy hair", "징역형을 받은 박상철", "박상철은 징역형을"),
+    ("c103", "c103a", [], "pink cherry blossom petals flying in the wind over a city skyline seen from an office rooftop on a bright sunny day, no people", "옥상까지 날아온 벚꽃", "벚꽃 잎이 바람을"),
+    ("c105", "c105b", ["도윤"], "close-up of the young man in a navy suit smiling warmly at the viewer in a bright spring lobby, cherry blossom petals floating, hopeful", "두 번째 입사 첫날", "두 번째 입사 첫날. 도윤은"),
+]
+
+
+def _merge():
+    """추가 컷을 대본(STORY)과 컷 목록(CUTS)에 끼워 넣음"""
+    global STORY
+    for prev, cid, who, desc, cap, start in EXTRA:
+        assert STORY.count(start) == 1, (cid, start)
+        STORY = STORY.replace(start, "\n\n{" + cid + "}\n\n" + start, 1).replace(" \n\n{" + cid + "}", "\n\n{" + cid + "}")
+        i = next(k for k, c in enumerate(CUTS) if c[0] == prev)
+        CUTS.insert(i + 1, (cid, who, desc, cap))
+    while "\n\n\n" in STORY:
+        STORY = STORY.replace("\n\n\n", "\n\n")
+
+
+_merge()
+
+
 def main():
     cmd, folder = sys.argv[1], sys.argv[2]
     chars = {c["name"]: c for c in json.load(open(os.path.join(HERE, "등장인물.json"), encoding="utf-8"))["chars"]}
@@ -740,7 +840,7 @@ def main():
             looks = "; ".join(f"person {k + 1} (the character from reference image {k + 1}): {chars[nm]['look']}"
                               + ("" if custom else ", " + chars[nm]["outfit"])
                               for k, nm in enumerate(who))   # 한글 이름은 그림에 글자로 나올 수 있어 번호로
-            items.append({"id": cid, "width": 1024, "height": 576, "seed": 100 + int(cid[1:]),
+            items.append({"id": cid, "width": 1024, "height": 576, "seed": 100 + len(items),
                           "refs": [os.path.join(HERE, chars[nm]["face"]) for nm in who],
                           "prompt": f"{STYLE}, Korean office drama. "
                                     + (f"Characters: {looks}. Each person appears only once, exactly two arms and two legs. " if looks else "No main characters. ")
