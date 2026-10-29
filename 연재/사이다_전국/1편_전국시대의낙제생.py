@@ -462,10 +462,12 @@ def main():
                 crowd = re.search(r"student|villager|soldier|retainer|samurai|audience|classmate|boys|friends|mother|children|men|messenger|researcher|riders|families", desc)
                 if not crowd:     # 이름 있는 인물만 나오는 컷: 사람 수를 못 박음 (같은 인물이 둘·셋 나오던 문제)
                     people += f" Exactly {len(who)} {'person' if len(who) == 1 else 'people'} in the whole image."
+                    if len(who) == 1:     # 같은 인물을 둘 그리는 일(c017·c029·c034)이 있어 한 번 더 못 박음
+                        people += " Only one single person appears; never draw a second copy of this character."
             body = " Each person has exactly two arms and two legs, natural anatomy." if who or re.search(r"people|student|villager|soldier|samurai|man|woman|mother|messenger|researcher", desc) else ""
             items.append({"id": cid, "width": 768, "height": 432, "seed": 7000 + k,
                           "refs": [os.path.join(SHEETS, f"{view(cid, desc, n)}_{n}.png") for n in who],   # 시트에서 한 모습만
-                          "prompt": f"{STYLE}. Scene: {desc}. {people}{body} Cinematic composition, full-bleed image, no border, no frame, no paper edges. No text, no letters."})
+                          "prompt": f"{STYLE}. Scene: {desc}. {people}{body} Cinematic composition, full-bleed image, no border, no frame, no paper edges. No text, no letters, no speech bubbles."})
         os.makedirs(out, exist_ok=True)
         items = [it for it in items if not os.path.exists(os.path.join(out, it["id"] + ".png"))]   # 이미 그린(검수 합격) 컷은 건너뜀
         json.dump({"items": items}, open(os.path.join(out, "job.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
