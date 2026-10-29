@@ -438,7 +438,7 @@ def main():
                               for j, n in enumerate(who))
             if who:
                 people += " Each character appears only once in the image."
-                crowd = re.search(r"student|villager|soldier|retainer|samurai|audience|classmate|boys|friends|mother|children|men|messenger|researcher|riders|families", desc)
+                crowd = re.search(r"student|villager|soldier|commander|officer|teacher|director|crew|chief|father|sailor|woman in white|old Korean woman|child|rower|cadet|stands|people", desc)
                 if not crowd:     # 이름 있는 인물만 나오는 컷: 사람 수를 못 박음 (같은 인물이 둘·셋 나오던 문제)
                     people += f" Exactly {len(who)} {'person' if len(who) == 1 else 'people'} in the whole image."
                     if len(who) == 1:     # 같은 인물을 둘 그리는 일(c017·c029·c034)이 있어 한 번 더 못 박음
