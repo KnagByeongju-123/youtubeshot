@@ -3692,6 +3692,9 @@ def save_auto_thumb(r, base):
 DESC_MAX = 5000      # (참고) 유튜브 설명란 한도 5,000바이트 - 실제 맞추기는 유튜브_정책.fit_description
 
 
+DESC_SPLIT = "▼▼▼ 여기부터 유튜브 설명란에 그대로 붙여넣기 ▼▼▼"
+
+
 def description_text(pkg, story, portrait=False, max_sources=8):
     """유튜브 설명란에 그대로 붙여넣는 완성본: 설명 + 챕터 + 주요 출처 + 사진 출처 + 해시태그"""
     head = [str(pkg.get("description", "")).strip()]
@@ -3786,7 +3789,9 @@ def publish_kit(model, base, title, story, category, genre, s, chapters=None, so
                 log("  ⚠ 건강·의료 주제 + AI 목소리 → 본인 목소리 도입부 권장 (" + os.path.basename(base) + "_업로드_체크.txt)")
         except Exception:
             pass
-        atomic_write_text(base + "_설명란.txt", description_text(pkg, story, portrait))
+        tl = [str(t).strip() for t in (pkg.get("titles") or []) if str(t).strip()]   # 규칙(사용자 결정): 설명란 파일 맨 위에 제목 후보 (올릴 때 하나 골라 제목 칸에)
+        top = ("[제목 후보 — 하나 골라 유튜브 '제목' 칸에]\n" + "\n".join(f"{i + 1}. {t}" for i, t in enumerate(tl)) + "\n\n" + DESC_SPLIT + "\n\n") if tl else ""
+        atomic_write_text(base + "_설명란.txt", top + description_text(pkg, story, portrait))
         log("  📝 업로드 문구·설명란 저장: " + os.path.basename(base) + "_설명란.txt (유튜브 설명란에 그대로 붙여넣기)")
     except Exception as e:
         log("  📝 업로드 문구 자동 생성 실패(📝 버튼으로 다시 만들 수 있어요): " + str(e).splitlines()[0][:100])

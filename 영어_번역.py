@@ -171,6 +171,8 @@ def make_translations(target, langs=("en",), log=print):
     langs = [x for x in langs if x in LANGS]
     log(f"🌐 자막·번역 키트 ({', '.join(LANGS[x][0] for x in langs)}): {title}")
     desc_ko = _read(base + "_설명란.txt")
+    if m.DESC_SPLIT in desc_ko:          # 맨 위 제목 후보는 빼고 설명란만 번역
+        desc_ko = desc_ko.split(m.DESC_SPLIT, 1)[1].strip()
     chunks = transcribe_chunks(mp4, log)
     for lang in langs:
         name = LANGS[lang][0]
