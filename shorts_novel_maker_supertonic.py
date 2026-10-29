@@ -7805,21 +7805,12 @@ def supertonic_prompt(text, mood):
             "놀람·반전": "<surprise> ", "분노·갈등": "<angry> ", "밝음·유머": ""}
     mul = {"차분": 1.0, "공포·긴장": .89, "슬픔·감동": .92, "놀람·반전": 1.05,
            "분노·갈등": 1.02, "밝음·유머": 1.04}
-    return tags.get(mood, "") + tts_clean(text), mul.get(mood, 1.0) * (ST_SHORT_MUL if st_short(text) else 1.0)
-
-
-# 규칙: Supertonic 은 짧은 문장('수로벨은 이렇게 말했습니다.')을 보통보다 25~45% 빨리 읽음 → 한글 20자 이하 문장은 처음부터 성우 빠르기를 낮춰 녹음
-# (녹음을 나중에 늘리면 목소리가 질질 끌려서 안 씀)
-ST_SHORT_CHARS, ST_SHORT_MUL = 20, 0.85
-
-
-def st_short(text):
-    return 0 < len(re.sub(r"[^가-힣]", "", text)) <= ST_SHORT_CHARS
+    return tags.get(mood, "") + tts_clean(text), mul.get(mood, 1.0)
 
 
 def supertonic_cache_text(text, mood, steps):
     prompt, _ = supertonic_prompt(text, mood)
-    return f"{SUPERTONIC_REV}|steps={int(steps)}|mood={mood}|{'short85|' if st_short(text) else ''}{prompt}"
+    return f"{SUPERTONIC_REV}|steps={int(steps)}|mood={mood}|{prompt}"
 
 
 def _supertonic_python():
