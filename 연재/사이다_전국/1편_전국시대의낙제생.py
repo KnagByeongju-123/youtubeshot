@@ -1,5 +1,6 @@
 """사이다 시간여행 드라마 「전국시대에 떨어진 낙제생」 — 대본 (약 30분, AI 웹툰 그림)
 python 연재/사이다_전국/1편_전국시대의낙제생.py txt <파일>   → 사용자 확인용 대본 (마당 제목 포함)
+python 연재/사이다_전국/1편_전국시대의낙제생.py project <그림폴더> → 프로젝트 파일 (컷 계획이 없으면 그림 없이 나레이션만)
 대사는 STORY 안에서 '@이름 "대사"' 로 적음 → 이름표는 빼고 DIALOGUE(대사 → 인물)로 모음 (인물 목소리로 읽음)
 나레이션은 남자 성우 2(M2). 인물 목소리·컷 계획·그림 주문서는 대본 확인 뒤에 붙임 (경비실의 김 씨와 같은 방법)
 역사 배경: 1560년(에이로쿠 3년) 음력 5월 19일 오케하자마 전투 — 이마가와 요시모토 대군이 오와리로 들어와 아침에 마루네·와시즈 요새를
@@ -384,6 +385,21 @@ USB도 화면 자료도 없었습니다. 도윤은 칠판에 분필 하나로 �
 
 역사책 속의 한 줄은 바꿀 수 없다고들 합니다. 하지만 그날, 바다를 건너온 한 소년은 사람을 살리는 쪽으로 역사를 읽었습니다. 그리고 사백육십 년 전의 약속은, 끝내 지켜졌습니다."""
 
+# 인물별 목소리 (사용자가 후보 3개씩 듣고 고름, 2026-10-29). code=성우, rate=빠르기%, semis=톤 반음
+VOICES = {
+    "한도윤": {"code": "M4", "rate": 2, "semis": 1, "fx": "", "why": "후보 3번: 남자 성우 4, 조금 밝게 (17세 주인공)"},
+    "미나미": {"code": "F1", "rate": 2, "semis": 1, "fx": "", "why": "후보 2번: 여자 성우 1, 밝게 (17세 같은 반 여학생)"},
+    "유키": {"code": "F5", "rate": 0, "semis": 1, "fx": "", "why": "후보 3번: 여자 성우 5, 조금 높게 (17세 성주의 딸)"},
+    "사쿠라": {"code": "F4", "rate": -4, "semis": -1, "fx": "", "why": "후보 3번: 여자 성우 4, 낮고 느리게 (20세 여자 닌자)"},
+    "타쿠야": {"code": "M4", "rate": 0, "semis": 0, "fx": "", "why": "후보 1번: 남자 성우 4 보통 (17세 얄미운 반장)"},
+    "스기모토": {"code": "M3", "rate": -12, "semis": -1, "fx": "", "why": "후보 1번: 남자 성우 3, 느리고 낮게 (55세 성주)"},
+    "쿠로다": {"code": "M5", "rate": -6, "semis": -1, "fx": "", "why": "후보 1번: 남자 성우 5, 조금 느리고 낮게 (45세 배신자 가로)"},
+    "야마다선생님": {"code": "F3", "rate": -6, "semis": 0, "fx": "", "why": "기본표: 차분한 어른 여자"},
+    "할아버지": {"code": "M3", "rate": -15, "semis": -2, "fx": "", "why": "기본표: 노인 남자"},
+    "전령": {"code": "M4", "rate": 4, "semis": 0, "fx": "", "why": "단역 (급한 소식)"},
+    "연구원": {"code": "M5", "rate": -4, "semis": 0, "fx": "", "why": "단역 (박물관 연구원)"},
+}
+
 DIALOGUE = []
 _TAG = re.compile(r'@(\S+) "([^"]+)"')
 
@@ -401,12 +417,39 @@ STORY_TXT = _build()      # 마당 제목(##) 포함, 이름표 뺌
 STORY = re.sub(r"^## .*\n\n", "", STORY_TXT, flags=re.M)   # 영상용: 마당 제목은 읽지 않음
 
 
+def story_with_cuts(folder):
+    """컷 계획대로 문단 앞에 [사진: …] 을 넣은 영상용 대본 (마당 제목 뺌, 그림 파일이 있는 컷만)"""
+    sys.path.insert(0, HERE)
+    from 컷계획 import CUTS
+    ps = [x for x in STORY_TXT.split("\n\n") if x.strip()]
+    for cid, k, _, _, cap in CUTS:
+        f = os.path.join(folder, cid + ".png")
+        if os.path.exists(f):
+            ps[k] = f"[사진: {f} | {cap} | AI 생성 그림 (FLUX.2 klein) | ]\n\n" + ps[k]
+    return "\n\n".join(x for x in ps if not x.startswith("## "))
+
+
 def main():
     cmd, out = sys.argv[1], sys.argv[2]
     if cmd == "txt":
         body = len(re.sub(r"\s", "", STORY))
         open(out, "w", encoding="utf-8").write(f"{TITLE}\n(본문 {len(STORY)}자, 띄어쓰기 빼고 {body}자, 대사 {len(DIALOGUE)}줄)\n\n{STORY_TXT}\n")
         print(out, len(STORY), body, len(DIALOGUE))
+    elif cmd == "project":                     # out = 컷 그림 폴더 (컷 계획을 붙이기 전에는 그림 없이 나레이션만)
+        import json
+        story = story_with_cuts(out) if os.path.exists(os.path.join(HERE, "컷계획.py")) else STORY
+        proj = {"ver": 7, "category": "장문", "genre": "[이야기] 사이다 반전 드라마", "topic": "시간여행 역사 드라마", "title": TITLE,
+                "story": story, "sources": [], "notes": "사이다 드라마 2편 (전국시대)", "autophoto": False,
+                "cast": [{"name": n, "voice": v} for n, v in VOICES.items()],
+                "dialogue": [{"text": t, "who": w} for t, w in DIALOGUE],
+                "settings": {"format": "롱폼 가로(1920×1080)", "narration": "on",
+                             "narr_voice": "Supertonic M2 (남성, 무료 로컬) [supertonic:M2]",
+                             "layout": "자막형(큰 제목+사진+자막)", "img_fill": "전체 화면(글자가 사진 위에)",
+                             "img_motion": "영상처럼(확대·이동·전환)", "img_depth": "on", "img_depth_amt": "약하게",   # 누끼 안 씀
+                             "fps": "24", "head_show": "안 보임(제목 카드만)", "sub_split": "한 줄씩(문장·쉼표로 나눠 차례로)", "img_label": "on"}}
+        dst = os.path.join(HERE, "1편_전국시대의낙제생.json")
+        json.dump(proj, open(dst, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+        print(dst)
 
 
 if __name__ == "__main__":
