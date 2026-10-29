@@ -37,6 +37,20 @@
       "look_ko": "50대 초반 학부모회장(태오 엄마). 키 크고 날씬, 진한 화장·빨간 립스틱, 어깨 길이 밤색 웨이브 머리, 크림색 트위드 정장, 진주 목걸이, 명품 가방, 하이힐",
       "face": "",
       "voice": {}
+    },
+    {
+      "name": "최 교감",
+      "look": "Korean male school vice principal in his early sixties, short chubby build with a round belly, balding head with combed-over gray hair, sly greasy smile, small narrow eyes, brown suit with a gold tie pin, brown leather shoes",
+      "look_ko": "60대 초반 교감. 작고 배 나온 체격, 벗어진 머리·빗어 넘긴 흰머리, 능글맞은 웃음, 가는 눈, 갈색 양복·금색 넥타이핀",
+      "face": "",
+      "voice": {}
+    },
+    {
+      "name": "장학관",
+      "look": "tall dignified Korean man in his mid fifties, lean straight posture, short neat gray hair, calm kind face with deep-set eyes and a small scar on his left eyebrow, dark navy suit, white shirt, plain blue tie, black leather shoes, holding a thin black document folder",
+      "look_ko": "50대 중반 교육청 장학관 정민호(40년 전 할머니가 밥을 먹여 준 소년원 아이). 키 크고 꼿꼿함, 단정한 회색 머리, 차분하고 따뜻한 얼굴, 왼쪽 눈썹의 작은 흉터, 남색 양복, 검은 서류철",
+      "face": "",
+      "voice": {}
     }
   ]
 }
