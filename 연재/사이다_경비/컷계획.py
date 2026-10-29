@@ -175,7 +175,7 @@ CUTS = [
     ("c164", 217, ["김만석", "강민혁"], "the old guard speaks kindly to the young worker at the construction site at dawn", "나도 처음엔 벽돌 날랐다네"),
     ("c165", 218, ["강민혁"], "at a construction site at dawn, the young worker holds a paper coffee cup in both hands and smiles genuinely for the first time, cranes and steel frames behind", "계산 없는 웃음"),
     ("c166", 219, ["김만석"], "the old guard sits contentedly in the guard booth, warm light", "늘 같은 대답"),
-    ("c167", 221, ["김만석"], "inside the tiny lit guard booth at 4 a.m., the old guard alone pours hot water from an old steel thermos into a paper cup", "다시 켜진 경비실 불"),
+    ("c167", 221, ["김만석"], "inside the tiny lit guard booth at 4 a.m., the old guard alone sits at a small desk slowly stirring a paper cup of coffee, an old steel thermos standing on the desk beside it, warm desk lamp", "다시 켜진 경비실 불"),
     ("c168", 222, ["박군", "김만석"], "two coffee cups on the booth desk; the young guard yawns and picks up a flashlight beside the old guard", "하나 더 놓인 커피잔"),
     ("c169", 224, ["김만석", "박군"], "seen from behind, the old guard and the young guard walk side by side into a dark corridor, two flashlight beams ahead", "나란히 걷는 두 불빛"),
     ("c170", 225, [], "the luxury tower at dawn, sky turning gold, the small guard booth window still glowing warmly at its foot", "가장 낮은 자리의 불빛"),
