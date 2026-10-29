@@ -466,6 +466,8 @@ def main():
                         people += " Only one single person appears; never draw a second copy of this character."
             if "1560" in desc and "한도윤" in who:    # 옛날 장면에서 마을 사람까지 교복·양복을 입던 문제 (c054·c089·c108·c109)
                 people += " Everyone else wears Sengoku-era peasant or samurai clothing; only the boy wears a modern school uniform."
+            if "1560" in desc:        # 옛날 장면에 전봇대·전깃줄·요즘 지도가 나오던 문제 (c117·c135)
+                people += " No modern objects at all: no power lines, no utility poles, no printed maps."
             body = " Each person has exactly two arms and two legs, natural anatomy." if who or re.search(r"people|student|villager|soldier|samurai|man|woman|mother|messenger|researcher", desc) else ""
             items.append({"id": cid, "width": 768, "height": 432, "seed": 7000 + k,
                           "refs": [os.path.join(SHEETS, f"{view(cid, desc, n)}_{n}.png") for n in who],   # 시트에서 한 모습만
