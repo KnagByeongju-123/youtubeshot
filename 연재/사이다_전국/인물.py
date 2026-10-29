@@ -14,11 +14,12 @@ CAST = {
     "미나미": f"a 17-year-old Japanese girl, {PRETTY}, waist-length straight black hair with see-through bangs, a gentle warm smile, "
              "wearing a Japanese high school uniform: navy blazer with a small gold school emblem, white shirt, red ribbon bow, navy pleated knee-length skirt, "
              "navy knee socks, brown loafers",
-    "유키": f"a 17-year-old Japanese princess of the 1560 Sengoku era, {PRETTY}, the same face as a modern schoolgirl, waist-length black hair tied low with a white ribbon, "
+    "유키": f"a 17-year-old Japanese princess of the 1560 Sengoku era, {PRETTY}, the same face as a modern schoolgirl, very long straight black hair reaching down to her waist "
+           "with see-through bangs, the long hair loosely tied at the back of her waist with a white ribbon, "
            "a small silver cherry blossom hairpin, wearing a light pink silk kimono with a small cherry blossom pattern, a deep crimson hakama skirt, "
            "a brown leather archery arm guard on her left forearm, white tabi socks and straw sandals",
     "사쿠라": f"a 20-year-old Japanese female ninja (kunoichi) of the 1560 Sengoku era, {PRETTY}, sharp elegant almond eyes, a high ponytail of glossy black hair, "
-             "athletic, wearing a fitted black ninja outfit with a dark purple sash, a black cloth mask pulled down around her neck so her face is visible, "
+             "athletic, wearing a fitted black ninja outfit with a dark purple sash, her whole face uncovered and clearly visible with no mask over her mouth or nose, a black scarf loosely around her neck, "
              "black arm wraps, black tabi boots, a short sword strapped on her back",
     "타쿠야": f"a 17-year-old Japanese boy, tall, styled light brown dyed hair, a smug handsome face with a sneer, wearing {UNIFORM_M} worn loosely with the tie loosened, "
              "an expensive silver wristwatch",
@@ -69,8 +70,10 @@ def main():
             if len(runs) != 4:
                 print(n, "나누기 실패: 모습", len(runs), "개 → 직접 확인")
                 continue
-            for v, (x0, x1) in zip(VIEWS, runs):
-                im.crop((max(0, x0 - 6), 0, min(im.width, x1 + 6), im.height)).save(os.path.join(out, f"{v}_{n}.png"))
+            # 셋째 모습은 오른쪽 옆모습 대신 비스듬한 앞모습으로 그려지는 일이 많아 쓰지 않음 → 오른 = 왼쪽 옆모습을 좌우로 뒤집음
+            cut = [im.crop((max(0, x0 - 6), 0, min(im.width, x1 + 6), im.height)) for x0, x1 in runs]
+            for v, c in (("앞", cut[0]), ("왼", cut[1]), ("오른", cut[1].transpose(Image.FLIP_LEFT_RIGHT)), ("뒤", cut[3])):
+                c.save(os.path.join(out, f"{v}_{n}.png"))
             print(n, "4면 저장")
 
 
