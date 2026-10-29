@@ -133,7 +133,7 @@ CUTS = [
     ("c121", 125, [], f"{OLD}: dozens of torches burning in a long line along a dark mountain ridge in the rain, looking like a huge army", "수십 개의 횃불"),
     ("c122", 126, [], f"{OLD}: in the rain the Imagawa cavalry captain turns his horse around and his riders retreat down the slope, torches glowing on the ridge behind", "말머리를 돌린 선발대"),
     ("c123", 127, [], f"{OLD}: evening, a muddy messenger gallops on horseback up the castle path under clearing skies", "달려온 전령"),
-    ("c124", 128, [], f"{OLD}: a muddy Sengoku-era foot messenger with a topknot and straw sandals kneels in the castle yard and shouts the news joyfully, samurai in kimono and simple armor gathering around", "이마가와가 죽었습니다!"),
+    ("c124", 128, [], f"{OLD}: a muddy Sengoku-era foot messenger with a topknot, a short kimono and straw sandals kneels in the castle yard and shouts the news joyfully; around him Japanese samurai with topknots in traditional lacquered samurai armor and kimono, holding spears and katanas; no modern uniforms, no modern helmets", "이마가와가 죽었습니다!"),
     ("c125", 129, [], f"{OLD}: evening, cheering villagers and soldiers raise their arms in the castle yard as families return from the mountain path", "모두 살아 돌아오다"),
     ("c126", 130, ["한도윤"], f"{OLD}: in the castle yard a peasant mother bows deeply before the boy and old villagers hold his hands with tears", "엎드려 절한 엄마"),
     ("c127", 131, ["쿠로다"], f"{OLD}: seen from behind, the bound thin retainer is led away by two soldiers across the evening castle yard", "끌려가는 쿠로다"),
