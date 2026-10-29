@@ -1,0 +1,41 @@
+{
+  "_설명": "《전학 온 할머니》 등장인물. look = 그림 모델에 넣는 영어 묘사(모든 컷에 그대로), look_ko = 한국어 설명, face = 확정한 캐릭터 시트(이 폴더 기준 경로), voice = 샘플을 들려준 뒤 사용자가 고른 목소리",
+  "style": "웹툰",
+  "chars": [
+    {
+      "name": "말순",
+      "look": "small sturdy elderly Korean grandmother aged 71, short compact body with a straight back, short curly white permed hair, tanned wrinkled face with a warm smile but sharp wise eyes, slightly rough working hands, wearing a brand-new Korean high school uniform: navy blazer a little too big for her, white shirt, red ribbon tie, navy pleated knee-length skirt, black tights, white sneakers, old brown cloth bag",
+      "look_ko": "71살 주인공. 작고 단단한 몸, 꼿꼿한 허리, 짧은 흰 파마머리, 그을린 주름 얼굴·따뜻한 웃음·날카로운 눈빛, 거친 손, 조금 큰 남색 교복 재킷·흰 셔츠·빨간 리본·남색 주름치마·흰 운동화, 낡은 갈색 천가방",
+      "face": "",
+      "voice": {}
+    },
+    {
+      "name": "태오",
+      "look": "tall broad-shouldered Korean high school boy aged 17, big athletic build, sharp handsome face with a cold arrogant expression, messy dyed dark brown hair, navy school blazer worn open, white shirt untucked with loosened red tie, navy trousers, expensive white sneakers, small bruise on his left wrist",
+      "look_ko": "17살 일진 대장. 키 크고 어깨 넓은 덩치, 차갑고 거만한 잘생긴 얼굴, 흐트러진 갈색 머리, 재킷 풀어 입고 셔츠 빼 입음·넥타이 느슨, 비싼 운동화, 왼쪽 손목에 작은 멍",
+      "face": "",
+      "voice": {}
+    },
+    {
+      "name": "하린",
+      "look": "small thin timid Korean high school girl aged 16, petite frame, pale face, round black-framed glasses, straight black hair in a low ponytail with bangs, neat navy school blazer, white shirt, red ribbon tie, navy pleated skirt, black shoes, often looking down shyly",
+      "look_ko": "16살 괴롭힘당하는 아이. 작고 마른 몸, 창백한 얼굴, 동그란 검은 안경, 앞머리 있는 낮은 검은 포니테일, 단정한 교복, 늘 고개 숙임",
+      "face": "",
+      "voice": {}
+    },
+    {
+      "name": "박 담임",
+      "look": "Korean male high school math teacher in his mid forties, medium slim build, stern cold face, thin silver-rimmed glasses, short neat black hair with gray at the temples, gray suit jacket, white shirt, dark tie, black slacks, holding an attendance clipboard",
+      "look_ko": "40대 중반 수학 담임. 보통 마른 체격, 냉정한 얼굴, 얇은 은테 안경, 옆머리 희끗한 단정한 머리, 회색 양복·어두운 넥타이, 출석부",
+      "face": "",
+      "voice": {}
+    },
+    {
+      "name": "오정희",
+      "look": "glamorous arrogant Korean woman in her early fifties, slim tall, sharp heavily made-up face with red lipstick, wavy shoulder-length chestnut hair, cream luxury tweed jacket and skirt set, pearl necklace, designer handbag, high heels",
+      "look_ko": "50대 초반 학부모회장(태오 엄마). 키 크고 날씬, 진한 화장·빨간 립스틱, 어깨 길이 밤색 웨이브 머리, 크림색 트위드 정장, 진주 목걸이, 명품 가방, 하이힐",
+      "face": "",
+      "voice": {}
+    }
+  ]
+}
