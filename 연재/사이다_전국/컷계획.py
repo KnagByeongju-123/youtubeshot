@@ -19,7 +19,7 @@ CUTS = [
     ("c011", 11, ["미나미"], f"{NOW}: the beautiful schoolgirl stands alone by the classroom window and glares sharply toward the right, sunlight on her long black hair, nobody else in the picture", "창가의 미나미"),
     ("c012", 12, ["미나미", "타쿠야"], f"{NOW}: in the classroom the beautiful schoolgirl scolds the class president, who looks embarrassed", "그만해, 타쿠야"),
     ("c013", 13, ["미나미"], f"{NOW}: close-up portrait of the beautiful schoolgirl with long glossy black hair smiling softly, cherry blossom petals floating by the window", "구로카와 미나미"),
-    ("c014", 14, ["야마다선생님"], f"{NOW}: the woman history teacher stands at the blackboard giving an assignment to the class, one single old map of Japan hangs on the board", "역사 발표회 과제"),
+    ("c014", 14, ["야마다선생님"], f"{NOW}: the woman history teacher stands in front of a clean empty green blackboard giving an assignment to the class, nothing drawn or hung on the board", "역사 발표회 과제"),
     ("c015", 15, ["야마다선생님"], f"{NOW}: the kind woman teacher in glasses smiles at the front of the classroom beside a large framed photo of a grand old museum building, no letters anywhere", "학교 대표는 박물관으로"),
     ("c016", 16, ["타쿠야", "한도윤"], f"{NOW}: the class president leans over the exchange student's desk and taps it rudely with one finger", "책상을 두드리는 타쿠야"),
     ("c017", 17, ["타쿠야"], f"{NOW}: close-up portrait of the smug class president alone, making a bet with a cocky grin, empty classroom behind him", "무릎 꿇고 사과할게"),
@@ -29,7 +29,7 @@ CUTS = [
     ("c021", 21, ["한도윤"], "night: seen from inside an old stone well looking up, the boy falls backward toward the water with both arms spread, exactly two arms and two legs with two shoes, blinding white moonlight bursting around him", "달빛 속으로"),
     # 둘째 마당. 첩자로 몰린 소년
     ("c022", 23, ["한도윤"], f"{OLD}: the boy in a school uniform lies on wet grass waking up, behind him on a hill a small wooden mountain castle with palisades and watchtowers", "1560년의 산성"),
-    ("c023", 24, ["사쿠라", "한도윤"], f"{OLD}: the female ninja holds one single short sword in her right hand pointed near the throat of the startled boy lying on the grass; only one sword in the whole picture, morning mist", "목에 닿은 칼날"),
+    ("c023", 24, ["사쿠라", "한도윤"], f"{OLD}: the female ninja crouches beside the startled boy lying on the grass and holds the tip of one short straight single-edged blade under his chin; one short straight blade only, morning mist", "목에 닿은 칼날"),
     ("c024", 25, ["사쿠라"], f"{OLD}: close-up of the female ninja with a black scarf pulled up over her nose, sharp beautiful eyes glaring, misty forest", "이마가와 쪽 첩자냐?"),
     ("c025", 26, ["사쿠라"], f"{OLD}: the beautiful female ninja stands in a misty forest with her high ponytail blowing, holding a short sword at her side", "여자 닌자 사쿠라"),
     ("c026", 27, ["한도윤"], f"{OLD}: a thatched-roof village below the castle, women hurriedly packing bundles and frightened children; the boy walks up the path with both hands tied together behind his back, no long rope", "전쟁 앞의 마을"),
