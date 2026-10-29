@@ -1,0 +1,56 @@
+# 편별 사진 목록 (위키미디어 공용, 자유 라이선스 확인 완료) — 형식: 파일이름|화면 설명
+# 대본의 {이름} 자리에 넣을 사진. 클라우드 서버에서는 위키미디어·Flickr 가 IP 대역을 막아(2026-10-29) 못 받음 → PC 에서 받기
+
+## 9_몬테베르데
+File:Monte_Verde_2012.jpg|몬테베르데 유적지와 친치우아피 개울
+File:Monte_Verde_1.JPG|유적 옆을 흐르는 친치우아피 개울
+File:Monte_Verde_3.JPG|개울이 굽이치는 몬테베르데 유적지
+File:Sitio_Arqueológico_de_Monte_Verde_21.JPG|논쟁의 무대가 된 개울가 퇴적층
+File:Sitio_arqueológico_de_Monte_Verde_25.JPG|오늘날 몬테베르데 유적지의 초원
+File:Monte_Verde_Estero_Chinchihuapi.png|친치우아피 개울 위치 옛 지도 (1945)
+File:Volcán_Osorno_y_lago_Llanquihue_desde_el_sector_Los_Riscos.jpg|칠레 남부 얀키우에 호수와 오소르노 화산
+File:Parque_Costanera,_Puerto_Montt_-_A74057020240105.jpg|항구 도시 푸에르토몬트
+File:Notiomastodon_platensis-Buenos-Aires-Argentina.tif|노티오마스토돈 머리뼈
+File:Notiomastodon_paleoreconstruction.png|빙하기 남미의 노티오마스토돈 복원도
+File:Manada_de_Gonfoterios_(Parque_chuyaca_-_Osorno).jpg|칠레 오소르노 공원의 곰포테리움 조형물
+File:Mastodon_skeleton_at_AMNH.jpg|코끼리 친척 거대 동물의 골격 (북미 마스토돈)
+File:Clovis_spear_point,_British_Museum.jpg|클로비스 창끝 (대영박물관)
+File:Clovis_point,_11500-9000_BC,_Sevier_County,_Utah,_chert_-_Natural_History_Museum_of_Utah_-_DSC07376.JPG|미국 유타에서 나온 클로비스 찌르개
+File:White_Sands_Fossil_Footprints.png|화이트샌즈 발자국과 연대 측정용 씨앗 채취
+File:Human_fossil_tracks_at_White_Sands_New_Mexico.jpg|뉴멕시코 화이트샌즈의 사람 발자국 화석
+File:Footprints_in_the_Trench_(102bfaa8-3486-4923-8999-dc7f9b565a00).JPG|화이트샌즈 발굴 도랑 바닥의 발자국
+File:Beringia-Map_Bathymetry_web72_final.png|아시아와 북미를 잇던 베링 육교 지도
+File:Beringia_land_bridge-noaagov.gif|바다에 잠겨 가는 베링 육교
+File:Ice_free_corridor_and_coastal_migration_hypothesis.svg|두 가지 이주 길: 해안 경로와 얼음 없는 통로
+File:Cooper's_Ferry_archaeology_-_July_2018_(28367399117).jpg|아이다호 쿠퍼스 페리 발굴 현장
+File:Chronosphere_Laboratory_of_Radiocarbon_Dating_P3097636.jpg|방사성탄소 연대 측정 장비
+File:Michinmahuida.JPG|미친마우이다 화산
+File:The-glaciated-michinmavida-volcano-lies-directly-behind-chaiten-in-eruption.jpg|분화하는 차이텐 화산과 뒤쪽 미친마우이다 화산
+File:Soil_Profile_Showing_1912_ash_layer_and_ash_C,_Archeological_Compliance_Excavation_Near_Brooks_Camp_Visitor_Center_(13542983894).jpg|땅속 화산재 층의 예 (알래스카 발굴 단면)
+
+## 10_술라웨시손자국
+File:Boat_Depiction_(Liang_Metanduno).jpg|무나섬 리앙 메탄두노 동굴 벽의 배 그림 (손자국보다 훨씬 뒤 시대)
+File:Leang_Tedongnge_rock_art_panel_credit_AA_Oktaviana-01.jpg|레앙 테동게의 술라웨시 혹멧돼지 그림 (최소 4만 5,500년 전)
+File:Leang_Tedongnge_rock_art_panel_credit_Basran_Burhan.jpg|레앙 테동게 벽화 (돼지 그림과 손 스텐실)
+File:Leang_Tedongnge_cave_mouth_credit_AA_Oktaviana.jpg|석회암 절벽 아래 레앙 테동게 동굴 입구
+File:Karampuang,_a_cave_which_has_world's_oldest_cave_painting.jpg|숲에 둘러싸인 레앙 카람푸앙 동굴
+File:Oldest_painting_in_the_world_in_Leang_Karampuang.jpg|레앙 카람푸앙 이야기 그림 (최소 5만 1,200년 전, Oktaviana et al. 2024)
+File:Hands_in_Pettakere_Cave.jpg|술라웨시 마로스 페타케레 동굴의 손 스텐실 (무나섬 손자국 아님)
+File:Hands_in_Pettakere_Cave_detail.jpg|페타케레 동굴 손 스텐실 확대 (무나섬 손자국 아님)
+File:Lukisan_Tangan_di_Leang-Leang_Maros.jpg|마로스 레앙레앙 동굴의 손 그림
+File:Rammang_Rammang_in_der_Nähe_von_Maros_(Indonesien).jpg|마로스 람망람망의 석회암 카르스트
+File:Landscape_of_Leang-Leang_Karst.jpg|레앙레앙 카르스트 풍경
+File:Leang_Leang_Archeological_Park_in_Maros,_South_Sulawesi.jpg|남술라웨시 레앙레앙 고고학 공원
+File:Sea_in_Tampo_Village,_Napabalano_District,_Muna_Regency,_South_East_Sulawesi,_Indonesia.jpg|무나섬 탐포 마을의 바다
+File:Sulawesi_Topography.png|술라웨시섬 지형도 (무나섬은 남동쪽 끝)
+File:Map_of_Sunda_and_Sahul.png|빙하기의 순다·사훌 대륙과 그 사이 섬들
+File:Sunda-sahul-wallacea-migration.png|순다에서 사훌로 간 초기 인류 이동 경로
+File:SantaCruz-CuevaManos-P2210651b.jpg|아르헨티나 '손의 동굴' (훨씬 뒤 시대의 손 스텐실)
+File:Cueva_del_Castillo_interior.jpg|스페인 엘 카스티요 동굴 벽화
+File:Cueva_de_la_Pasiega,Puente_Viesgo..jpg|스페인 라 파시에가 동굴
+File:EntradaMaltravieso.JPG|스페인 말트라비에소 동굴 입구
+File:Paintings_from_the_Chauvet_cave_(museum_replica).jpg|프랑스 쇼베 동굴 벽화 복제품
+File:Homo_sapiens_neanderthalensis-Jäger.jpg|네안데르탈인 사냥꾼 복원 모형 (네안데르탈 박물관)
+File:Brno,_Neanderthal_Mother_(detail_of_diorama).jpg|네안데르탈인 어머니 복원 모형
+File:Blombos_Cave_-_deposit_layers.jpg|남아공 블롬보스 동굴 퇴적층
+File:All_activitychart.png|우라늄 계열 연대 측정의 원리 그래프

@@ -4,6 +4,7 @@
 #  - .supertonic_venv : 파이썬 3.12 실행 환경 (프로그램 + Supertonic 성우)
 #  - supertonic_assets : Supertonic 3 목소리 모델 (기본 성우 = 남자 성우 2, M2)
 #  - .sd_venv + models/FLUX2_klein_4B : 만화·그림 장면을 그리는 그림 모델 (캐릭터 시트 기준·부분 수정)
+# 배경음악 AI(ACE-Step)는 필요할 때만: bash 배경음_준비.sh
 # PC(윈도우)에서는 실행되지 않음. 여러 번 실행해도 이미 된 것은 건너뜀.
 set -euo pipefail
 
