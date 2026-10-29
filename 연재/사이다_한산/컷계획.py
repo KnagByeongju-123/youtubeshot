@@ -35,7 +35,7 @@ CUTS = [
     ("c021", 22, ["연화"], f"{OLD}: close-up of the beautiful Korean woman archer aiming her bow with sharp eyes, the sea behind her", "왜놈들이 보낸 첩자냐?"),
     ("c022", 23, ["연화"], f"{OLD}: the beautiful Korean woman archer stands on the shore with her long braid blowing in the wind, holding her bow", "활을 든 여인"),
     ("c023", 24, ["연화"], f"{OLD}: the Korean woman archer stands alone guarding a small Joseon fishing village at dusk, bow in hand", "마을을 지키는 연화"),
-    ("c024", 25, ["연화"], f"{OLD}: close-up of the woman archer questioning sternly, bow still raised", "어느 나라 말을 하느냐"),
+    ("c024", 25, ["연화"], f"{OLD}: close-up portrait from the chest up of the woman archer questioning sternly, holding one complete curved Korean bow lowered at her side, the whole bow visible in front of her body", "어느 나라 말을 하느냐"),
     ("c025", 26, ["이서진"], f"{OLD}: the soaked girl raises both hands and speaks desperately on the rocks", "우리말이요!"),
     ("c026", 27, ["연화"], f"{OLD}: the woman archer raises one eyebrow in surprise but keeps aiming her bow", "움찔한 눈썹"),
     ("c027", 28, ["이서진"], f"{OLD}: Korean Joseon villagers in white hanbok holding clubs and fishing spears surround the girl in a tracksuit on the beach", "몽둥이를 든 마을 사람들"),
