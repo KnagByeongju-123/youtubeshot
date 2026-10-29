@@ -139,7 +139,7 @@ CUTS = [
     ("c129", 168, ["강민혁"], "the rich young man announces from the podium with a victorious grin", "과반을 넘었습니다"),
     ("c130", 169, ["한서윤", "윤채린", "차유나"], "three women stand in the audience with frustrated angry faces", "분한 세 사람"),
     ("c131", 170, ["김만석"], "the old guard walks slowly alone down the center aisle between seated residents in casual clothes in the community hall; he is the only person in a uniform", "걸어 나온 김 씨"),
-    ("c132", 172, [], "close-up of an old wrinkled hand in a dark navy uniform sleeve gently placing a small plain blank silver name badge with no engraving on a wooden table", "떼어 놓은 명찰"),
+    ("c132", 172, [], "close-up of a small plain blank silver name badge with no engraving lying alone on an empty polished wooden table, soft warm light from above, quiet and lonely mood", "떼어 놓은 명찰"),
     ("c133", 173, ["강민혁"], "the rich young man flicks a small silver name badge across the table with his finger, mocking", "명찰을 튕기는 강민혁"),
     ("c134", 175, ["김만석"], "the old guard silently looks toward the closed doors of the hall, waiting", "문 쪽을 바라보는 김 씨"),
     # 여섯째 마당. 정체 공개
