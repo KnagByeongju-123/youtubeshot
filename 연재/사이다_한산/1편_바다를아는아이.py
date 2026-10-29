@@ -446,7 +446,10 @@ def main():
             if "1592" in desc and "이서진" in who:    # 옛날 장면에서 마을 사람까지 요즘 옷을 입던 문제 (전국시대 편에서 배움)
                 people += " Everyone else wears Sengoku-era peasant or samurai clothing; only the girl wears modern clothes."
             if "1592" in desc:        # 옛날 장면에 전봇대·전깃줄·요즘 지도가 나오던 문제
-                people += " An untouched 16th-century Korean landscape where every building is wooden with thatched or tiled roofs and the sky above is completely clear and open."   # 금지 낱말(전봇대 등)을 쓰면 오히려 그려짐 → 있는 것만 적음
+                if re.search(r"lamp|inside|storehouse|room|hut", desc):   # 실내 장면에 바깥 마을 문장을 붙이면 밤 방 안 장면이 낮 마을 길로 나옴 (c117~c127)
+                    people += " Indoors at night inside a small simple 16th-century Korean wooden room with paper windows, lit only by a small oil lamp; dark warm shadows."
+                else:                                          # 금지 낱말(전봇대 등)을 쓰면 오히려 그려짐 → 있는 것만 적음
+                    people += " An untouched 16th-century Korean landscape where every building is wooden with thatched or tiled roofs and the sky above is completely clear and open."
             body = " Each person has exactly two arms and two legs, natural anatomy." if who or re.search(r"people|student|villager|soldier|samurai|man|woman|mother|messenger|researcher", desc) else ""
             items.append({"id": cid, "width": 768, "height": 432, "seed": 7000 + k,
                           "refs": [os.path.join(SHEETS, f"{view(cid, desc, n)}_{n}.png") for n in who],   # 시트에서 한 모습만

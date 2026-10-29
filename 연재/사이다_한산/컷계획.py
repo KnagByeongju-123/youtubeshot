@@ -109,7 +109,7 @@ CUTS = [
     ("c091", 96, ["연화"], f"{OLD}: close-up of the woman archer calling out to the villagers bravely", "어서 산으로!"),
     ("c092", 97, [], f"{OLD}: Korean Joseon villagers in white hanbok carrying bundles climb up a mountain path, mothers with babies on their backs", "뒷산으로 오르는 사람들"),
     ("c093", 98, ["이서진"], f"{OLD}: the girl kneels in front of an old Korean woman in white hanbok sitting at the door of a small hut", "할머니 앞에 무릎 꿇은 서진"),
-    ("c094", 99, ["이서진"], f"{OLD}: the girl helps a bent old Korean woman with a walking stick up the mountain path", "부축한 굽은 등"),
+    ("c094", 99, ["이서진"], f"{OLD}: the girl helps a bent old Korean grandmother with gray hair in a bun, wearing a white hanbok, who walks with a stick up the mountain path", "부축한 굽은 등"),
     ("c095", 100, [], f"{SEA}: a few {PANOK} appear at the mouth of a narrow strait and turn back, while many {JAPAN} chase them", "꾀어내는 판옥선"),
     ("c096", 101, [], f"{SEA}: seen from a high hill, dozens of {PANOK} spread in a huge crane-wing curve around many {JAPAN} on the wide sea", "학익진"),
     ("c097", 102, ["돌쇠"], f"{OLD}: on the hilltop the skinny boy jumps and shouts excitedly, pointing at the sea", "학익진이다!"),
@@ -125,7 +125,7 @@ CUTS = [
     ("c107", 112, ["최역관"], f"{OLD}: the plump interpreter alone, covered in mud, kneels on the mudflat with his head down", "진흙투성이 최 역관"),
     ("c108", 113, ["최역관"], f"{OLD}: close-up of the muddy plump interpreter alone begging with a frightened face", "살려 주시오!"),
     ("c109", 114, ["연화"], f"{OLD}: close-up portrait of the woman archer glaring down coldly", "네 욕심에 나라를 판 것"),
-    ("c110", 115, [], f"{OLD}: Japanese soldiers stuck in the mud raise their hands and drop their weapons on the mudflat", "손을 든 왜군"),
+    ("c110", 115, [], f"{OLD}: Japanese samurai foot soldiers of 1592 in lacquered armor and conical jingasa hats, stuck in the mud, raise their hands and drop their spears and katanas on the mudflat", "손을 든 왜군"),
     ("c111", 116, ["연화", "이서진"], f"{OLD}: on the shore the woman archer puts a hand on the shoulder of the exhausted girl sitting on the sand, both smiling", "우리가 해냈다"),
     # 여섯째 마당. 바다를 읽는 아이
     ("c112", 118, [], f"{SEA}: sunset over a quiet sea with burnt wrecks of Japanese ships and Korean warships in a line, smoke rising", "조용해진 한산도 앞바다"),
