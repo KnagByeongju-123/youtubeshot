@@ -6,9 +6,10 @@
 NOW = "present-day Tongyeong, South Korea"
 OLD = "Korean Joseon dynasty in 1592, near a small fishing village on Mireukdo island"
 SEA = "Korean Joseon dynasty in 1592, the sea off Hansando island"
+DECK = "on the flat open wooden upper deck of a Korean panokseon warship, surrounded by low wooden battlements and a small wooden pavilion, the sky open above with only one short plain flagpole"
 PANOK = "large Korean Joseon panokseon warships (flat-bottomed wooden warships with a high deck and a pavilion on top, many oars)"
 TURTLE = "a Korean turtle ship (geobukseon) with a spiked iron-plated roof and a dragon head at the bow"
-JAPAN = "Japanese warships of 1592 with square sails"
+JAPAN = "Japanese atakebune warships of 1592 (boxy wooden ships with a tall wooden castle-like cabin and one flat woven-mat sail)"
 CUTS = [
     # 첫째 마당. 통영의 배 덕후
     ("c001", 1, [], f"{NOW}: a beautiful harbor city with many green islands scattered on a blue sea, fishing boats in the port, wide establishing shot", "섬이 보석처럼 흩어진 통영"),
@@ -52,11 +53,11 @@ CUTS = [
     ("c038", 39, ["이서진"], f"{OLD}: dramatic close-up of the girl's shocked face with wide eyes, dark clouds over the sea", "이틀 뒤 한산도 대첩"),
     ("c039", 40, ["이서진"], f"{OLD}: night, the girl sits with her hands tied in a dark straw-roofed storehouse, moonlight through a gap in the door", "창고에 갇힌 밤"),
     ("c040", 41, ["연화"], f"{OLD}: night, outside the storehouse the woman archer crouches and slides a round barley cake through the door gap, moonlight", "보리개떡"),
-    ("c041", 42, ["이서진"], f"{OLD}: night in the storehouse, the girl eats a small barley cake with teary eyes in the moonlight", "따뜻한 개떡"),
+    ("c041", 42, ["이서진"], f"{OLD}: night, inside a dark small wooden storehouse, the girl sits alone on the straw floor eating a small barley cake with teary eyes, moonlight through the door gap; nobody else", "따뜻한 개떡"),
     ("c042", 43, ["연화"], f"{OLD}: night, the woman archer sits leaning against the storehouse wall, looking at the moonlit sea with a sad face", "의병이던 아버지"),
     ("c043", 44, ["이서진"], f"{OLD}: night, the girl speaks softly by the door gap with a sad face, moonlight", "바다를 잘 아는 사람"),
     ("c044", 45, [], f"{OLD}: night, moonlit waves rolling onto the dark beach of a small fishing village", "파도 소리"),
-    ("c045", 47, ["이서진"], f"{OLD}: night, the girl leans close to the door gap and whispers seriously", "김천손이라는 목동"),
+    ("c045", 47, ["이서진"], f"{OLD}: night, inside the dark storehouse the girl alone leans close to the closed wooden door and whispers seriously through the gap; nobody else visible", "김천손이라는 목동"),
     ("c046", 48, ["연화"], f"{OLD}: night, the woman archer lies awake on a straw mat in a small Joseon hut, eyes open, thinking", "잠 못 이룬 연화"),
     # 셋째 마당. 목동을 지켜라
     ("c047", 50, ["돌쇠"], f"{OLD}: dawn, the skinny boy bursts through the storehouse door, out of breath", "숨을 헐떡이는 돌쇠"),
@@ -64,31 +65,31 @@ CUTS = [
     ("c049", 52, ["이서진"], f"{OLD}: close-up of the girl realizing something, eyes sharp, dawn light", "번쩍한 머릿속"),
     ("c050", 53, ["이서진", "연화"], f"{OLD}: in the storehouse the girl pleads earnestly to the woman archer", "제발 저를 믿어 주세요"),
     ("c051", 54, ["연화", "이서진"], f"{OLD}: the woman archer cuts the rope on the girl's wrists with a small knife, both standing", "끊어진 밧줄"),
-    ("c052", 55, ["연화"], f"{OLD}: the woman archer turns toward the door with her bow, ready to go", "나를 따라오너라"),
-    ("c053", 56, ["이서진", "연화", "돌쇠"], f"{OLD}: the girl and the woman archer and a skinny boy run up a mountain path through a pine forest", "고갯길로 달리는 세 사람"),
+    ("c052", 55, ["연화"], f"{OLD}: close-up portrait from the chest up of the woman archer alone turning toward the door, holding her bow, ready to go", "나를 따라오너라"),
+    ("c053", 56, ["이서진", "연화", "돌쇠"], f"{OLD}: the girl in a tracksuit, the woman archer (white hanbok jeogori top and indigo skirt, same as the reference) and the skinny boy run up a mountain path through a pine forest", "고갯길로 달리는 세 사람"),
     ("c054", 57, ["연화"], f"{OLD}: in the pine forest the woman archer draws her bow and shouts", "멈춰라!"),
     ("c055", 58, ["최역관"], f"{OLD}: in the pine forest the plump interpreter alone drops a knife and runs away into the trees", "달아나는 최 역관"),
     ("c056", 59, ["김천손"], f"{OLD}: the old Korean cattle herder sits on the forest path, startled, his cows behind him", "목동 김천손"),
     ("c057", 60, [], f"{OLD}: seen from a hilltop, many {JAPAN} crowded in a narrow sea strait between hills", "견내량의 왜선들"),
     ("c058", 61, ["이서진", "김천손"], f"{OLD}: on the forest path the girl speaks warmly to the old cattle herder", "믿어 주실 거예요"),
     ("c059", 62, ["김천손"], f"{OLD}: seen from behind, the old cattle herder hurries down the mountain path toward the sea", "당포로 서두르는 김천손"),
-    ("c060", 63, ["돌쇠"], f"{OLD}: on the coastal road the skinny boy points at a small ship on the horizon", "수평선의 작은 배"),
+    ("c060", 63, ["돌쇠"], f"{OLD}: on the coastal road the skinny boy points at a small Japanese boat with one flat woven-mat sail far on the horizon", "수평선의 작은 배"),
     ("c061", 64, [], f"{OLD}: a small Japanese scout boat with a square sail slides along the coast, seen from behind rocks", "왜놈 척후선"),
     ("c062", 65, ["이서진", "연화"], f"{OLD}: the girl and the woman archer hide tightly behind big wet rocks on the shore, waves splashing at their feet", "갯바위 틈에 숨은 사람들"),
     ("c063", 66, ["연화"], f"{OLD}: the woman archer looks at someone with a softened trusting face for the first time", "사라진 의심"),
     ("c064", 67, [], f"{OLD}: a Korean Joseon naval fleet of {PANOK} anchored in a calm bay at midday", "당포의 조선 수군"),
     # 넷째 마당. 장군 앞에 선 소녀
-    ("c065", 69, ["이순신"], f"{OLD}: on the high deck of a Korean panokseon warship the dignified Korean admiral sits calmly under a pavilion", "장대 아래의 이순신"),
+    ("c065", 69, ["이순신"], f"{OLD}: {DECK}, the dignified Korean admiral sits calmly under a pavilion", "장대 아래의 이순신"),
     ("c066", 70, ["이순신"], f"{OLD}: close-up of the dignified Korean admiral listening seriously", "끝까지 듣는 장군"),
-    ("c067", 71, ["이순신"], f"{OLD}: the Korean admiral alone on the warship deck asks a question with a calm steady face", "너는 어디서 온 아이냐"),
-    ("c068", 72, [], f"{OLD}: a Korean Joseon military officer in a dark blue uniform and a black hat sneers on the warship deck", "코웃음 치는 군관"),
+    ("c067", 71, ["이순신"], f"{OLD}: the Korean admiral alone {DECK} asks a question with a calm steady face", "너는 어디서 온 아이냐"),
+    ("c068", 72, [], f"{OLD}: a Korean Joseon military officer wearing a dark blue Joseon military robe with a red sash and a black wide-brimmed horsehair gat hat sneers {DECK}", "코웃음 치는 군관"),
     ("c069", 73, [], f"{OLD}: close-up of the Korean Joseon military officer in a black hat speaking scornfully", "계집아이가 무슨 군사 일을"),
     ("c070", 74, ["이순신"], f"{OLD}: close-up portrait of the Korean admiral alone speaking firmly with quiet authority", "사내든 계집이든"),
-    ("c071", 75, ["이서진"], f"{OLD}: on the warship deck the girl in a tracksuit stands with teary moved eyes", "뜨거워진 가슴"),
-    ("c072", 76, ["이서진"], f"{OLD}: on the warship deck the girl bows politely and speaks", "아주 먼 곳에서 왔습니다"),
-    ("c073", 77, ["이서진"], f"{OLD}: the girl takes a deep breath on the warship deck, the sea behind her", "깊은 숨"),
+    ("c071", 75, ["이서진"], f"{OLD}: {DECK}, the girl in a tracksuit stands with teary moved eyes", "뜨거워진 가슴"),
+    ("c072", 76, ["이서진"], f"{OLD}: {DECK}, the girl bows politely and speaks", "아주 먼 곳에서 왔습니다"),
+    ("c073", 77, ["이서진"], f"{OLD}: the girl takes a deep breath {DECK}, the sea behind her", "깊은 숨"),
     ("c074", 78, [], f"{OLD}: a narrow sea strait with fast currents and dark reefs between steep hills, seen from above", "좁고 암초가 많은 견내량"),
-    ("c075", 79, [], f"{OLD}: Korean Joseon military commanders in armor murmur to each other on a warship deck", "술렁이는 장수들"),
+    ("c075", 79, [], f"{OLD}: Korean Joseon military commanders in red Joseon military robes, lamellar armor and black wide-brimmed hats murmur to each other {DECK}", "술렁이는 장수들"),
     ("c076", 80, ["이순신"], f"{OLD}: close-up of the Korean admiral alone with a faint smile, calm eyes", "학의 날개처럼"),
     ("c077", 81, ["이순신"], f"{OLD}: the Korean admiral alone looks at the sea from the warship deck, thinking", "더 묻지 않은 장군"),
     ("c078", 82, ["이순신"], f"{OLD}: the Korean admiral alone turns his head and asks a serious question", "우리가 놓치는 곳"),
