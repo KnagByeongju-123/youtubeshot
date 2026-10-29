@@ -8566,7 +8566,7 @@ def set_dialog_voices(dialogue, cast):
     DIALOG_VOICES.clear()
     vo = {c.get("name"): c.get("voice") for c in (cast or []) if isinstance(c, dict) and isinstance(c.get("voice"), dict)}
     for d in dialogue or []:
-        v = vo.get(d.get("who")) if isinstance(d, dict) else None
+        v = (d.get("voice") or vo.get(d.get("who"))) if isinstance(d, dict) else None   # 대사마다 따로 정한 목소리(명령하는 말 등)가 먼저
         if v and v.get("code") and _dlg_key(d.get("text")):
             code = str(v["code"])
             DIALOG_VOICES[_dlg_key(d["text"])] = {
@@ -8575,9 +8575,32 @@ def set_dialog_voices(dialogue, cast):
     return len(DIALOG_VOICES)
 
 
+def _short_end(a, tail=0.4, tempo=1.45):
+    """끝 단어를 짧게: 뒤쪽 조용한 부분을 잘라 내고 마지막 말소리 tail 초만 tempo 배 빠르게 (음 높이는 그대로) — 명령하는 말이 늘어지지 않게"""
+    a = np.asarray(a, np.float32)
+    env = np.abs(a)
+    loud = np.where(env > max(0.02, float(env.max()) * 0.05))[0]
+    if len(loud) == 0:
+        return a
+    end = min(len(a), int(loud[-1]) + int(SR * 0.04))
+    cut = max(0, end - int(SR * tail))
+    head, t = a[:cut], a[cut:end]
+    p = subprocess.run([get_ffmpeg(), "-v", "error", "-f", "f32le", "-ar", str(SR), "-ac", "1", "-i", "-", "-af", f"atempo={tempo}",
+                        "-f", "f32le", "-ar", str(SR), "-ac", "1", "-"], input=t.tobytes(), stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                       creationflags=(subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0))
+    if p.returncode != 0 or not p.stdout:
+        return a
+    t2 = np.frombuffer(p.stdout, np.float32).copy()
+    n = min(int(SR * 0.08), len(t2))
+    t2[-n:] *= np.linspace(1, 0, n, dtype=np.float32)       # 끝을 부드럽게 닫음 (딱 끊기는 소리 방지)
+    return np.concatenate([head, t2])
+
+
 def voice_fx_extra(a, fx):
-    """인물 목소리 효과. robot = 금속성 울림(짧은 메아리 두 겹 + 플랜저) + 둔한 저음 줄임"""
-    if fx != "robot" or len(a) < 10:
+    """인물 목소리 효과. robot = 금속성 울림(짧은 메아리 두 겹 + 플랜저) + 둔한 저음 줄임, short_end = 끝 단어를 짧게(_short_end)"""
+    if "short_end" in str(fx) and len(a) > 10:
+        a = _short_end(a)
+    if "robot" not in str(fx) or len(a) < 10:
         return a
     p = subprocess.run([get_ffmpeg(), "-v", "error", "-f", "f32le", "-ar", str(SR), "-ac", "1", "-i", "-",
                         "-af", "aecho=0.8:0.7:6|11:0.35|0.25,flanger=delay=1:depth=2:speed=0.3,highpass=f=140",

@@ -401,6 +401,10 @@ VOICES = {
     "연구원": {"code": "M5", "rate": -4, "semis": 0, "fx": "", "why": "단역 (박물관 연구원)"},
 }
 
+# 대사마다 따로 정한 목소리 (대사 앞부분 → 목소리). 쿠로다가 명령할 때는 후보 '나'(조금 빠르고 강하게) + 끝 단어 짧게 (사용자 결정 2026-10-29)
+KURODA_ORDER = {"code": "M4", "rate": -1, "semis": -2, "fx": "short_end", "why": "명령하는 말: 후보 나 (M4 -1% -2), 끝 단어 짧게"}
+LINE_VOICE = {"주군, 볼 것도 없습니다": KURODA_ORDER, "점쟁이 흉내까지": KURODA_ORDER, "저 조선 놈이": KURODA_ORDER}
+
 DIALOGUE = []
 _TAG = re.compile(r'@(\S+) "([^"]+)"')
 
@@ -472,7 +476,7 @@ def main():
         proj = {"ver": 7, "category": "장문", "genre": "[이야기] 사이다 반전 드라마", "topic": "시간여행 역사 드라마", "title": TITLE,
                 "story": story, "sources": [], "notes": "사이다 드라마 2편 (전국시대)", "autophoto": False,
                 "cast": [{"name": n, "voice": v} for n, v in VOICES.items()],
-                "dialogue": [{"text": t, "who": w} for t, w in DIALOGUE],
+                "dialogue": [dict({"text": t, "who": w}, **({"voice": v} if (v := next((v for k, v in LINE_VOICE.items() if t.startswith(k)), None)) else {})) for t, w in DIALOGUE],
                 "settings": {"format": "롱폼 가로(1920×1080)", "narration": "on",
                              "narr_voice": "Supertonic M2 (남성, 무료 로컬) [supertonic:M2]",
                              "layout": "자막형(큰 제목+사진+자막)", "img_fill": "전체 화면(글자가 사진 위에)",
