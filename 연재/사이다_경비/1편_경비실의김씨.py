@@ -550,7 +550,8 @@ def main():
                 "settings": {"format": "롱폼 가로(1920×1080)", "narration": "on",
                              "narr_voice": "Supertonic M2 (남성, 무료 로컬) [supertonic:M2]",
                              "layout": "자막형(큰 제목+사진+자막)", "img_fill": "전체 화면(글자가 사진 위에)",
-                             "img_motion": "영상처럼(확대·이동·전환)", "img_depth": "on", "img_depth_amt": "누끼(앞 인물 따로)",
+                             "img_motion": "영상처럼(확대·이동·전환)", "img_depth": "on", "img_depth_amt": "약하게",   # 누끼 안 씀 (사용자 결정 2026-10-29)
+                            
                              "fps": "24", "head_show": "안 보임(제목 카드만)", "sub_split": "한 줄씩(문장·쉼표로 나눠 차례로)", "img_label": "on"}}
         for cid, spec in CUTOUT.items():           # 그림 옆에 누끼 설정 파일 (영상 프로그램이 읽음)
             json.dump(spec, open(os.path.join(out, cid + ".png.누끼.json"), "w", encoding="utf-8"))
