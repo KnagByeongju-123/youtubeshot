@@ -1,5 +1,5 @@
 # 편별 사진 목록 (위키미디어 공용, 자유 라이선스 확인 완료) — 형식: 파일이름|화면 설명
-# 대본의 {이름} 자리에 넣을 사진. 클라우드 서버에서는 위키미디어·Flickr 가 IP 대역을 막아(2026-10-29) 못 받음 → PC 에서 받기
+# 대본의 {이름} 자리에 넣을 사진. 받은 사진은 실화/사진/ (가로 1600px 이하로 줄임). 위키미디어가 원본 서버(upload)를 막으면 commons.wikimedia.org/w/thumb.php?f=<파일이름>&w=1600 으로 받음
 
 ## 9_몬테베르데
 File:Monte_Verde_2012.jpg|몬테베르데 유적지와 친치우아피 개울
@@ -54,3 +54,28 @@ File:Homo_sapiens_neanderthalensis-Jäger.jpg|네안데르탈인 사냥꾼 복�
 File:Brno,_Neanderthal_Mother_(detail_of_diorama).jpg|네안데르탈인 어머니 복원 모형
 File:Blombos_Cave_-_deposit_layers.jpg|남아공 블롬보스 동굴 퇴적층
 File:All_activitychart.png|우라늄 계열 연대 측정의 원리 그래프
+
+## 11_폼페이 (폼페이_사실확인.md 5번 표에서 고름)
+File:Pompeii,_Porta_Nocera,_Fugitives_01.jpg|폼페이 노체라 문 근처 희생자 석고상
+File:Casa_del_bracciale_d'oro,_bracciale_con_teste_di_serpente_che_reggono_disco_con_busto_di_selene,_I_secolo_dc.jpg|집 이름이 된 뱀 머리 금팔찌 (황금 팔찌의 집)
+File:Forum_(Pompeii)_and_the_Vesuvio.jpg|폼페이 포룸 너머의 베수비오 화산
+File:Augustins_-_Eruption_du_Vesuve_-_Pierre-Henri_de_Valenciennes_78_1_1.jpg|79년 분화와 대플리니우스의 죽음을 그린 그림 (발랑시엔, 1813)
+File:Mt_Vesuvius_79_AD_eruption.svg|79년 분화 때 화산재가 쌓인 범위
+File:Scheletri-ercolano-dettaglio.jpg|헤르쿨라네움 바닷가 배 창고의 유골
+File:Giuseppe_Fiorelli.jpg|석고상 기법을 만든 주세페 피오렐리
+File:Orto_dei_Fuggiaschi_17.JPG|도망자의 정원 희생자 석고상들
+File:Pompeii_casts_07.jpg|폼페이 희생자 석고상
+File:Fresco-Casa_del_bracciale_d'oro.jpg|황금 팔찌의 집 정원 벽화
+File:Cast_of_Child_from_House_of_the_Golden_Bracelet_stored_in_Forum_Granary_Pompeii_ProWalk_Tours.jpg|황금 팔찌의 집에서 나온 아이 석고상
+File:Day_22_-_Body_from_Pompeii_(8011715524).jpg|유리관 속 희생자 석고상 (껴안은 두 사람 석고상 아님)
+File:Villa_dei_Misteri,_affresco_01.jpg|신비의 저택 벽화
+File:Roman_fresco_Villa_dei_Misteri_Pompeii_009.jpg|신비의 저택 벽화 세부
+File:Pliny_the_Younger,_Letters,_Biblioteca_Malatestiana.jpg|소플리니우스 서간집 필사본 (말라테스티아나 도서관)
+File:Pliny,_Letters,_Vat._lat._1777.jpg|바티칸 도서관의 플리니우스 서간 필사본
+File:Fresco_showing_a_piece_of_bread_and_two_figs,_from_Pompeii,_Naples_National_Archaeological_Museum_(14843173354).jpg|빵과 무화과 두 개를 그린 폼페이 벽화
+File:Villa_Regina_view_of_dolia_in_situ.jpg|보스코레알레 레지나 별장 땅속 포도주 항아리
+File:Ancient_roman_bread_Pompeii_Museum_Boscoreale.jpg|숯이 된 로마 빵
+File:Cast_victim_eruptions_Pompeii.jpg|웅크린 희생자 석고상 (양모 연구 대상 석고상 아님)
+File:Pompeii_Forum_&_Mt._Vesuvius_(9809458366).jpg|폼페이 포룸과 베수비오 화산
+File:Vista_aerea_del_vesuvio.jpg|하늘에서 본 베수비오 화산
+File:Karl_Brullov_-_The_Last_Day_of_Pompeii_-_Google_Art_Project.jpg|그림 「폼페이 최후의 날」 (브률로프, 1830~33)
