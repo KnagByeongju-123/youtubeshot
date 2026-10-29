@@ -1,5 +1,6 @@
 """사이다 시간여행 드라마 「전국시대에 떨어진 낙제생」 — 대본 (약 30분, AI 웹툰 그림)
 python 연재/사이다_전국/1편_전국시대의낙제생.py txt <파일>   → 사용자 확인용 대본 (마당 제목 포함)
+python 연재/사이다_전국/1편_전국시대의낙제생.py job <그림폴더>     → 장면 그림 주문서 job.json (컷계획.py · 인물.py, 시트는 output/사이다2/시트)
 python 연재/사이다_전국/1편_전국시대의낙제생.py project <그림폴더> → 프로젝트 파일 (컷 계획이 없으면 그림 없이 나레이션만)
 대사는 STORY 안에서 '@이름 "대사"' 로 적음 → 이름표는 빼고 DIALOGUE(대사 → 인물)로 모음 (인물 목소리로 읽음)
 나레이션은 남자 성우 2(M2). 인물 목소리·컷 계획·그림 주문서는 대본 확인 뒤에 붙임 (경비실의 김 씨와 같은 방법)
@@ -417,6 +418,9 @@ STORY_TXT = _build()      # 마당 제목(##) 포함, 이름표 뺌
 STORY = re.sub(r"^## .*\n\n", "", STORY_TXT, flags=re.M)   # 영상용: 마당 제목은 읽지 않음
 
 
+SHEETS = os.path.join(HERE, "..", "..", "output", "사이다2", "시트")
+
+
 def story_with_cuts(folder):
     """컷 계획대로 문단 앞에 [사진: …] 을 넣은 영상용 대본 (마당 제목 뺌, 그림 파일이 있는 컷만)"""
     sys.path.insert(0, HERE)
@@ -435,6 +439,33 @@ def main():
         body = len(re.sub(r"\s", "", STORY))
         open(out, "w", encoding="utf-8").write(f"{TITLE}\n(본문 {len(STORY)}자, 띄어쓰기 빼고 {body}자, 대사 {len(DIALOGUE)}줄)\n\n{STORY_TXT}\n")
         print(out, len(STORY), body, len(DIALOGUE))
+    elif cmd == "job":                         # out = 그림 폴더
+        import json
+        sys.path.insert(0, HERE)
+        from 컷계획 import CUTS, VIEWS, OUTFIT
+        from 인물 import CAST, STYLE
+        def view(cid, desc, n):        # 앞·왼·오른·뒤 중 장면에 맞는 모습 (VIEWS, 'from behind' 는 뒷모습)
+            return VIEWS.get(cid, {}).get(n) or ("뒤" if "from behind" in desc else "앞")
+        place = {"오른": " Place this character on the left side of the image, facing right.",
+                 "왼": " Place this character on the right side of the image, facing left.",
+                 "뒤": " This character is seen from behind."}
+        items = []
+        for k, (cid, _, who, desc, _) in enumerate(CUTS):
+            people = " ".join(f"Character {j + 1} (reference image {j + 1}): {OUTFIT.get(cid, {}).get(n) or CAST[n]}.{place.get(view(cid, desc, n), '')}"
+                              for j, n in enumerate(who))
+            if who:
+                people += " Each character appears only once in the image."
+                crowd = re.search(r"student|villager|soldier|retainer|samurai|audience|classmate|boys|friends|mother|children|men|messenger|researcher|riders|families", desc)
+                if not crowd:     # 이름 있는 인물만 나오는 컷: 사람 수를 못 박음 (같은 인물이 둘·셋 나오던 문제)
+                    people += f" Exactly {len(who)} {'person' if len(who) == 1 else 'people'} in the whole image."
+            body = " Each person has exactly two arms and two legs, natural anatomy." if who or re.search(r"people|student|villager|soldier|samurai|man|woman|mother|messenger|researcher", desc) else ""
+            items.append({"id": cid, "width": 768, "height": 432, "seed": 7000 + k,
+                          "refs": [os.path.join(SHEETS, f"{view(cid, desc, n)}_{n}.png") for n in who],   # 시트에서 한 모습만
+                          "prompt": f"{STYLE}. Scene: {desc}. {people}{body} Cinematic composition, full-bleed image, no border, no frame, no paper edges. No text, no letters."})
+        os.makedirs(out, exist_ok=True)
+        items = [it for it in items if not os.path.exists(os.path.join(out, it["id"] + ".png"))]   # 이미 그린(검수 합격) 컷은 건너뜀
+        json.dump({"items": items}, open(os.path.join(out, "job.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+        print(len(items), "cuts")
     elif cmd == "project":                     # out = 컷 그림 폴더 (컷 계획을 붙이기 전에는 그림 없이 나레이션만)
         import json
         story = story_with_cuts(out) if os.path.exists(os.path.join(HERE, "컷계획.py")) else STORY
