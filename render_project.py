@@ -91,6 +91,7 @@ def main(a):
         bgm_vol /= 100
     app.vars["bgm_volume"].set(str(max(0.0, min(2.0, bgm_vol))))
     app.vars["target_sec"].set("0")
+    app.vars["head_show"].set("안 보임(제목 카드만)")   # 규칙(사용자 결정): 왼쪽 위 제목줄 없앰 — 길면 사진 설명과 겹침. 제목은 시작 제목 카드로만
     # 저장한 성우(⭐ 새 성우로 저장): --성우프리셋 "이름" 또는 장문_설정.json 의 "성우_프리셋" (비우면 기본 성우 그대로)
     vp = a[a.index("--성우프리셋") + 1].strip() if "--성우프리셋" in a and a.index("--성우프리셋") + 1 < len(a) else str(cfg.get("성우_프리셋") or "").strip()
     if vp:
