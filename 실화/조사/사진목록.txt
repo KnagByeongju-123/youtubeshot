@@ -56,7 +56,7 @@ File:Blombos_Cave_-_deposit_layers.jpg|남아공 블롬보스 동굴 퇴적층
 File:All_activitychart.png|우라늄 계열 연대 측정의 원리 그래프
 
 ## 11_폼페이 (폼페이_사실확인.md 5번 표에서 고름)
-File:Pompeii,_Porta_Nocera,_Fugitives_01.jpg|폼페이 노체라 문 근처 희생자 석고상
+File:Pompeii,_Porta_Nocera,_Fugitives_01.jpg|폼페이 노체라 문 근처 희생자 석고상 (양모 연구 대상 석고상 아님)
 File:Casa_del_bracciale_d'oro,_bracciale_con_teste_di_serpente_che_reggono_disco_con_busto_di_selene,_I_secolo_dc.jpg|집 이름이 된 뱀 머리 금팔찌 (황금 팔찌의 집)
 File:Forum_(Pompeii)_and_the_Vesuvio.jpg|폼페이 포룸 너머의 베수비오 화산
 File:Augustins_-_Eruption_du_Vesuve_-_Pierre-Henri_de_Valenciennes_78_1_1.jpg|79년 분화와 대플리니우스의 죽음을 그린 그림 (발랑시엔, 1813)
@@ -71,11 +71,10 @@ File:Day_22_-_Body_from_Pompeii_(8011715524).jpg|유리관 속 희생자 석고�
 File:Villa_dei_Misteri,_affresco_01.jpg|신비의 저택 벽화
 File:Roman_fresco_Villa_dei_Misteri_Pompeii_009.jpg|신비의 저택 벽화 세부
 File:Pliny_the_Younger,_Letters,_Biblioteca_Malatestiana.jpg|소플리니우스 서간집 필사본 (말라테스티아나 도서관)
-File:Pliny,_Letters,_Vat._lat._1777.jpg|바티칸 도서관의 플리니우스 서간 필사본
 File:Fresco_showing_a_piece_of_bread_and_two_figs,_from_Pompeii,_Naples_National_Archaeological_Museum_(14843173354).jpg|빵과 무화과 두 개를 그린 폼페이 벽화
 File:Villa_Regina_view_of_dolia_in_situ.jpg|보스코레알레 레지나 별장 땅속 포도주 항아리
 File:Ancient_roman_bread_Pompeii_Museum_Boscoreale.jpg|숯이 된 로마 빵
-File:Cast_victim_eruptions_Pompeii.jpg|웅크린 희생자 석고상 (양모 연구 대상 석고상 아님)
+File:Cast_victim_eruptions_Pompeii.jpg|웅크린 희생자 석고상
 File:Pompeii_Forum_&_Mt._Vesuvius_(9809458366).jpg|폼페이 포룸과 베수비오 화산
 File:Vista_aerea_del_vesuvio.jpg|하늘에서 본 베수비오 화산
 File:Karl_Brullov_-_The_Last_Day_of_Pompeii_-_Google_Art_Project.jpg|그림 「폼페이 최후의 날」 (브률로프, 1830~33)
