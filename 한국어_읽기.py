@@ -3,7 +3,7 @@ r"""한국어 읽기 모듈 - 성우(TTS)가 읽을 글을 만드는 규칙을 �
 자막은 맞춤법대로(2026년, 42%, AI) 두고, 성우에게 넘기는 글만 소리 나는 대로 바꿉니다.
   - 낱말 규칙: 읽기사전.txt 에  AI=에이아이  처럼 한 줄씩 적으면 다음 문장부터 바로 적용 (프로그램을 다시 켤 필요 없음)
   - 숫자 규칙: 아래 ko_numbers (2026년 → 이천이십육 년, 3개 → 세 개, 341곳 → 삼백사십한 곳 …)
-  - 건 → 껀, 전화번호는 한 자리씩, 낱말 '사번' → '사원번호'
+  - 건 → 껀 ('한 건'은 건수일 때만 '한 껀', '그가 한 건(것은)'은 그대로), 전화번호는 한 자리씩, 낱말 '사번' → '사원번호'
 
 미리 들어 보기 전에 글로 확인:  py -3.11 -X utf8 한국어_읽기.py "AI가 만든 3D 지도 341곳"
 """
@@ -183,7 +183,20 @@ def geon_kkeon(t):
         return (ko_sino(n - n % 10) + ko_native(n % 10) if n % 10 else ko_sino(n)) + " 껀"
     t = re.sub(r"(?<![\d.])(\d{1,3}(?:,\d{3})+|[1-9]\d{2,})\s?건" + _GEON_FOLLOW, big_, t)   # 447건 → 사백사십일곱 껀
     t = re.sub(r"(\d)\s?건" + _GEON_FOLLOW, r"\1 껀", t)
-    return re.sub(r"(?<![가-힣])(" + _GEON_WORD + r")\s?건" + _GEON_FOLLOW, r"\1 껀", t)
+    t = re.sub(r"(?<![가-힣])(?!한)(" + _GEON_WORD + r")\s?건" + _GEON_FOLLOW, r"\1 껀", t)
+    return re.sub(r"(?<![가-힣])한\s?건" + _GEON_FOLLOW, _han_geon, t)
+
+
+# '한 건' 은 두 가지 (사용자 규칙, 2026-10-29): 건수(사고 한 건, 단 한 건도) → [한 껀] / '~을 한 것은'(그가 한 건 거짓말) → [한 건] 그대로
+_HAN_COUNT_BEFORE = r"(?:단|딱|총|겨우|고작|단지|모두|불과|최소|적어도|하루에?|매일|매달|매년|한 달에?|일 년에?|해마다|날마다)\s+$"
+_HAN_COUNT_AFTER = r"(?:도|의|씩|만|당|이라도|조차|뿐|꼴|가량|정도|에|이|으로|과|와|째)(?![가-힣])|\s+(?:더|씩|이상|넘게|정도|가량|꼴|났|발생|접수|생겼|생기|일어|있|올라|올랐|나왔|나와|확인|보고|신고|기록|늘|줄)"
+
+
+def _han_geon(m_):
+    before, after = m_.string[:m_.start()], m_.string[m_.end():]
+    if re.search(_HAN_COUNT_BEFORE, before) or re.match(_HAN_COUNT_AFTER, after):
+        return "한 껀"
+    return m_.group(0)
 
 
 def read_korean(t):
