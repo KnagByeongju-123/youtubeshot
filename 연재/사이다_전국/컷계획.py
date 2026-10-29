@@ -11,7 +11,7 @@ CUTS = [
     ("c003", 3, ["한도윤"], "flashback in Korea: the boy reads a thick old history book late at night in his small bedroom under a desk lamp, piles of history books around", "역사 덕후"),
     ("c004", 4, ["할아버지", "한도윤"], "warm sepia flashback in a Korean home: the grandfather tells a story to a small 8-year-old boy sitting beside him on a wooden floor", "할아버지의 이야기"),
     ("c005", 5, ["할아버지"], "warm sepia flashback: close-up of the kind grandfather smiling gently as he speaks, soft window light", "역사는 사람을 읽는 것"),
-    ("c006", 6, [], "an open notebook on a desk with one line of handwriting on the first page, an airplane ticket to Japan beside it, soft light", "공책 첫 장의 말"),
+    ("c006", 6, [], "a closed brown leather notebook lying on a wooden desk beside a small toy airplane and a pair of folded glasses, soft window light, no writing visible anywhere", "공책 첫 장의 말"),
     ("c007", 7, ["타쿠야"], f"{NOW}: in the classroom the class president stands up holding a test paper high and grins mockingly", "시험지를 든 타쿠야"),
     ("c008", 8, ["타쿠야", "한도윤"], f"{NOW}: in the classroom the smug class president points at the exchange student, who sits at his desk with his head lowered", "십이 점이래"),
     ("c009", 9, [], f"{NOW}: Japanese high school students in navy blazers laughing loudly at their desks in a classroom", "와르르 웃는 반 아이들"),
