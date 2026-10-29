@@ -12,7 +12,7 @@ JAPAN = "Japanese warships of 1592 with square sails"
 CUTS = [
     # 첫째 마당. 통영의 배 덕후
     ("c001", 1, [], f"{NOW}: a beautiful harbor city with many green islands scattered on a blue sea, fishing boats in the port, wide establishing shot", "섬이 보석처럼 흩어진 통영"),
-    ("c002", 2, ["이서진"], f"{NOW}: at the back of a group of high school students on a seaside promenade, the girl stands alone gazing at the sea", "바다만 바라보는 서진"),
+    ("c002", 2, ["이서진"], f"{NOW}: on a seaside promenade the girl with a ponytail stands alone at the railing gazing at the sea, a group of boys in gray hoodies chatting far behind her; she is the only girl", "바다만 바라보는 서진"),
     ("c003", 3, ["이서진"], f"{NOW}: the girl sits on a harbor bench drawing a warship in her sketchbook, ships in the harbor behind her", "해군사관학교가 꿈인 배 덕후"),
     ("c004", 4, [], f"{NOW}: a full-size replica of {TURTLE} moored at a harbor pier in Tongyeong, tourists around it", "거북선 체험관 앞"),
     ("c005", 5, ["태윤"], f"{NOW}: the tall boy in a school tracksuit grins mockingly with his arms crossed in front of the turtle ship replica, classmates behind him", "여자가 무슨 해군이야"),
@@ -26,12 +26,12 @@ CUTS = [
     ("c013", 13, ["이서진"], f"{NOW}: night, the girl sits on her bed holding a smartphone to her ear, smiling, a packed travel bag beside her", "할머니의 전화"),
     ("c014", 14, ["할머니"], f"{NOW}: night, the grandmother sits alone in a cozy old house talking on an old phone with a serious loving face", "그 순간에 해내는 것"),
     ("c015", 15, ["이서진"], f"{NOW}: inside a museum hall full of wooden models of Korean Joseon warships, the girl stands alone in a quiet corner", "판옥선·거북선 모형"),
-    ("c016", 16, ["이서진"], f"{NOW}: seen from behind, the girl stands reading a small museum display panel on the wall, the panel too far away to read", "안내판 앞의 서진"),
-    ("c017", 17, [], "inside a glass display case, an old rusty brass compass lies on a cloth, museum lighting", "녹슨 놋쇠 나침반"),
+    ("c016", 16, ["이서진"], f"{NOW}: in a dim museum corner, the girl seen from the side leans close and reads something on the wall at the right edge of the picture, the wall item cut off by the frame, soft spotlight on her face", "안내판 앞의 서진"),
+    ("c017", 17, [], "inside a glass display case, an old rusty brass compass lies alone on a white cloth, museum spotlight, nothing else in the case", "녹슨 놋쇠 나침반"),
     ("c018", 18, ["이서진"], f"{NOW}: the museum is dark during a power outage, lightning flashes outside the window, and the girl touches a glass case where an old compass glows blue", "푸르게 빛나는 나침반"),
     # 둘째 마당. 왜의 첩자로 몰린 소녀
     ("c019", 20, ["이서진"], f"{OLD}: the soaked girl in a tracksuit crawls up onto rocks from the sea, a small thatched-roof fishing village and drying nets behind her", "1592년의 바닷가"),
-    ("c020", 21, ["연화", "이서진"], f"{OLD}: the beautiful Korean woman archer aims her drawn bow at the soaked girl sitting on the rocks", "목 앞에 멈춘 화살촉"),
+    ("c020", 21, ["연화", "이서진"], f"{OLD}: on the rocky shore the beautiful Korean woman archer on the left points her drawn bow and arrow to the right, directly at the soaked girl sitting on the rocks on the right, who looks back frightened", "목 앞에 멈춘 화살촉"),
     ("c021", 22, ["연화"], f"{OLD}: close-up of the beautiful Korean woman archer aiming her bow with sharp eyes, the sea behind her", "왜놈들이 보낸 첩자냐?"),
     ("c022", 23, ["연화"], f"{OLD}: the beautiful Korean woman archer stands on the shore with her long braid blowing in the wind, holding her bow", "활을 든 여인"),
     ("c023", 24, ["연화"], f"{OLD}: the Korean woman archer stands alone guarding a small Joseon fishing village at dusk, bow in hand", "마을을 지키는 연화"),
