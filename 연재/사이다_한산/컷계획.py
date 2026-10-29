@@ -162,7 +162,7 @@ CUTS = [
     ("c142", 149, ["이서진"], f"{NOW}: close-up of the girl shouting firmly toward someone in the ferry cabin", "지금은 네가 필요해"),
     ("c143", 150, ["태윤"], f"{NOW}: the tall boy in an orange life jacket helps a younger student fasten a life jacket, gritting his teeth", "조끼 끈을 묶어 주는 태윤"),
     ("c144", 151, ["이서진"], f"{NOW}: the girl runs into the ferry's wheelhouse and picks up a radio handset", "무전기를 든 서진"),
-    ("c145", 152, ["이서진"], f"{NOW}: in the ferry wheelhouse the girl speaks urgently into a radio handset, rain on the windows", "메이데이, 메이데이"),
+    ("c145", 152, ["이서진"], f"{NOW}: in the ferry wheelhouse the girl holds one single radio handset to her mouth with her right hand and speaks urgently, her left hand resting on the control panel, rain on the windows; only one handset in the picture", "메이데이, 메이데이"),
     ("c146", 153, [], f"{NOW}: a young ferry crew member in a uniform stands pale and frozen in the wheelhouse", "하얗게 질린 승무원"),
     ("c147", 154, ["이서진"], f"{NOW}: in the wheelhouse the girl points out the window toward rocks and speaks clearly", "닻을 내려 주세요"),
     ("c148", 155, [], f"{NOW}: the ferry stops with its anchor down a few dozen meters before dark rocks, the bow turned into the wind", "바위 앞에서 멈춘 배"),
