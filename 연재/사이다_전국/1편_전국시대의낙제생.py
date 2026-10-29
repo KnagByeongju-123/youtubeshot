@@ -464,6 +464,8 @@ def main():
                     people += f" Exactly {len(who)} {'person' if len(who) == 1 else 'people'} in the whole image."
                     if len(who) == 1:     # 같은 인물을 둘 그리는 일(c017·c029·c034)이 있어 한 번 더 못 박음
                         people += " Only one single person appears; never draw a second copy of this character."
+            if "1560" in desc and "한도윤" in who:    # 옛날 장면에서 마을 사람까지 교복·양복을 입던 문제 (c054·c089·c108·c109)
+                people += " Everyone else wears Sengoku-era peasant or samurai clothing; only the boy wears a modern school uniform."
             body = " Each person has exactly two arms and two legs, natural anatomy." if who or re.search(r"people|student|villager|soldier|samurai|man|woman|mother|messenger|researcher", desc) else ""
             items.append({"id": cid, "width": 768, "height": 432, "seed": 7000 + k,
                           "refs": [os.path.join(SHEETS, f"{view(cid, desc, n)}_{n}.png") for n in who],   # 시트에서 한 모습만
