@@ -35,7 +35,7 @@ CUTS = [
     ("c026", 27, ["한도윤"], f"{OLD}: a thatched-roof village below the castle, women hurriedly packing bundles and frightened children; the boy, his hands tied with rope, is led up the path", "전쟁 앞의 마을"),
     ("c027", 28, ["사쿠라"], f"{OLD}: seen from behind, the female ninja looks down at the frightened villagers from the castle path", "저 사람들이 모두"),
     ("c028", 29, ["스기모토", "쿠로다"], f"{OLD}: inside a wooden castle hall with tatami floor, the samurai lord sits on a raised platform and his thin retainer sits beside him glaring", "성주와 가로"),
-    ("c029", 30, ["쿠로다"], f"{OLD}: the thin sly retainer alone in the empty castle hall points forward angrily and demands an execution", "목을 베셔야 합니다"),
+    ("c029", 30, ["쿠로다"], f"{OLD}: close-up portrait from the chest up of the thin sly retainer shouting angrily with one finger raised, shoji screens of a castle hall behind him", "목을 베셔야 합니다"),
     ("c030", 31, ["유키"], f"{OLD}: the beautiful princess appears at the end of the castle hall's wooden corridor, soft light behind her", "맑은 목소리"),
     ("c031", 32, ["유키"], f"{OLD}: the beautiful princess kneels on the tatami and speaks up to her father with a pleading face", "잠깐만요"),
     ("c032", 33, ["유키"], f"{OLD}: close-up portrait of the beautiful princess with very long black hair and a silver cherry blossom hairpin, gentle eyes", "성주의 딸 유키"),
