@@ -99,7 +99,7 @@ CUTS = [
     ("c088", 91, ["한도윤"], f"{OLD}: the boy kneels beside a crying peasant mother and her sick child, thinking hard", "보건 시간에 배운 것"),
     ("c089", 92, ["한도윤"], f"{OLD}: the boy points at a clay pot of water boiling over a small fire, explaining to a peasant mother in a plain brown Sengoku-era kimono", "물을 펄펄 끓여서"),
     ("c090", 93, [], f"{OLD}: a peasant mother hugs her recovered little boy, who smiles, warm afternoon light in the castle yard", "다시 웃은 아이"),
-    ("c091", 94, ["유키"], f"{OLD}: on a castle wall the beautiful princess draws a long Japanese bow (yumi) aiming at a traditional round straw-bale target on a wooden stand far away at the other end of the wall, the arrow not yet released", "성벽 위의 활"),
+    ("c091", 94, ["유키"], f"{OLD}: on a castle wall at sunset the beautiful princess draws a long Japanese bow (yumi), aiming far into the distance over the rooftops; no target, nothing in front of the arrow, open sky ahead of her", "성벽 위의 활"),
     ("c092", 95, ["유키"], f"{OLD}: on the castle wall the beautiful princess stands holding one long wooden bow lowered at her side, a frightened sad face, wind in her long hair", "볼모로 가야 할까요"),
     ("c093", 96, ["한도윤", "유키"], f"{OLD}: on the castle wall the boy speaks firmly to the princess, who listens with teary eyes", "제가 약속할게요"),
     ("c094", 97, ["유키"], f"{OLD}: on the castle wall the princess pulls her bowstring again with a steady determined face", "떨리지 않는 손"),
