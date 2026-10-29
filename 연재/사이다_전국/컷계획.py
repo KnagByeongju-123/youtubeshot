@@ -179,7 +179,7 @@ CUTS = [
     ("c165", 171, [], f"{NOW}: the whole auditorium audience applauds, and many heads turn toward one boy sitting in the middle", "쏟아진 박수"),
     ("c166", 172, ["타쿠야"], f"{NOW}: the class president kneels on the floor in front of the stage with his head bowed", "무릎 꿇은 타쿠야"),
     ("c167", 173, ["타쿠야"], f"{NOW}: close-up of the kneeling class president apologizing with a sincere ashamed face", "정말 미안해"),
-    ("c168", 174, ["한도윤", "타쿠야"], f"{NOW}: in front of the stage the boy reaches down and helps the kneeling class president stand up", "일으켜 세운 손"),
+    ("c168", 174, ["한도윤", "타쿠야"], f"{NOW}: in the school auditorium the class president kneels on the floor and looks up, and the boy standing in front of him holds out one hand to him with a kind smile; both faces visible, exactly two people", "일으켜 세운 손"),
     ("c169", 175, ["한도윤"], f"{NOW}: the boy grins playfully in the auditorium", "노부나가 생일 모르잖아"),
     ("c170", 176, [], f"{NOW}: the auditorium audience laughs happily together, warm atmosphere", "웃음바다가 된 강당"),
     ("c171", 177, ["한도윤"], f"{NOW}: in the school cafeteria the boy sits surrounded by cheerful classmates with lunch trays, everyone smiling", "달라진 점심시간"),
