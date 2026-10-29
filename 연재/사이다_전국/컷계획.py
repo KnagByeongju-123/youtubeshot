@@ -32,7 +32,7 @@ CUTS = [
     ("c023", 24, ["사쿠라", "한도윤"], f"{OLD}: the female ninja crouches beside the startled boy lying on the grass and holds the tip of one short straight single-edged blade under his chin; one short straight blade only, morning mist", "목에 닿은 칼날"),
     ("c024", 25, ["사쿠라"], f"{OLD}: close-up of the female ninja with a black scarf pulled up over her nose, sharp beautiful eyes glaring, misty forest", "이마가와 쪽 첩자냐?"),
     ("c025", 26, ["사쿠라"], f"{OLD}: the beautiful female ninja stands in a misty forest with her high ponytail blowing, holding a short sword at her side", "여자 닌자 사쿠라"),
-    ("c026", 27, ["한도윤"], f"{OLD}: a thatched-roof village below the castle, women hurriedly packing bundles and frightened children; the boy walks up the path with both hands tied together behind his back, no long rope", "전쟁 앞의 마을"),
+    ("c026", 27, ["사쿠라", "한도윤"], f"{OLD}: on a path through a thatched-roof village below the castle, the female ninja walks behind the boy and leads him by a short rope tied loosely around his wrists in front of him; frightened villagers watch from the doorways", "전쟁 앞의 마을"),
     ("c027", 28, ["사쿠라"], f"{OLD}: seen from behind, the female ninja looks down at the frightened villagers from the castle path", "저 사람들이 모두"),
     ("c028", 29, ["스기모토", "쿠로다"], f"{OLD}: inside a wooden castle hall with tatami floor, the samurai lord sits on a raised platform and his thin retainer sits beside him glaring", "성주와 가로"),
     ("c029", 30, ["쿠로다"], f"{OLD}: close-up portrait from the chest up of the thin sly retainer shouting angrily with one finger raised, shoji screens of a castle hall behind him", "목을 베셔야 합니다"),
@@ -79,7 +79,7 @@ CUTS = [
     ("c069", 71, ["미나미", "한도윤"], f"{NOW}: evening in a traditional room at the shrine, the schoolgirl and the boy sit side by side at a low table with one notebook, she points at it and he listens; only these two people", "옛말 공부"),
     ("c070", 72, ["미나미"], f"{NOW}: the beautiful schoolgirl looks at someone with gentle serious eyes, warm lamp light", "누군가를 구하러 가는 사람"),
     ("c071", 73, ["한도윤"], f"{NOW}: the boy nods quietly with a determined face, warm lamp light", "정말 그럴지도"),
-    ("c072", 74, ["한도윤"], f"{NOW}: night, seen from a distance, the boy touches the water of the old stone well and vanishes in a burst of white moonlight", "사라진 도윤"),
+    ("c072", 74, ["한도윤"], f"{NOW}: night at the shrine, seen from the side at a distance, the boy kneels at the edge of an old stone well and reaches one hand down into the water, a burst of white moonlight rising from the well around him", "사라진 도윤"),
     ("c073", 75, ["미나미"], f"{NOW}: night, the schoolgirl crouches beside the stone well with her hands together in prayer, a full moon reflected in the water", "꼭 돌아와야 해"),
     ("c074", 76, [], "night: looking down into an old stone well, only a soft pale reflection of the moon shimmers on the dark water surface with gentle ripples; the real moon is not inside the well", "우물 속 달"),
     # 넷째 마당. 배신자의 밀서
@@ -195,10 +195,11 @@ CUTS = [
 # 컷마다 인물 기준 그림을 시트의 어느 모습으로 넣을지 (기본 '앞'). '뒤' = 뒷모습, '왼' = 왼쪽을 보는 옆모습(화면 오른쪽에 섬), '오른' = 오른쪽을 보는 옆모습(화면 왼쪽에 섬)
 # 설명에 "from behind" 가 있으면 그 컷 인물은 모두 '뒤'
 VIEWS = {
+    "c026": {"사쿠라": "오른", "한도윤": "오른"},
     "c008": {"타쿠야": "오른", "한도윤": "왼"}, "c012": {"미나미": "오른", "타쿠야": "왼"}, "c016": {"타쿠야": "오른", "한도윤": "왼"},
     "c019": {"한도윤": "오른"}, "c023": {"사쿠라": "오른"}, "c028": {"스기모토": "앞", "쿠로다": "왼"}, "c031": {"유키": "왼"},
     "c045": {"유키": "왼"}, "c056": {"미나미": "오른"}, "c061": {"미나미": "오른", "한도윤": "왼"}, "c069": {"미나미": "오른", "한도윤": "왼"},
-    "c072": {"한도윤": "뒤"}, "c075": {"사쿠라": "오른", "한도윤": "왼"}, "c078": {"사쿠라": "오른", "한도윤": "왼"},
+    "c072": {"한도윤": "오른"}, "c075": {"사쿠라": "오른", "한도윤": "왼"}, "c078": {"사쿠라": "오른", "한도윤": "왼"},
     "c079": {"한도윤": "뒤"}, "c084": {"쿠로다": "왼"}, "c088": {"한도윤": "오른"}, "c093": {"한도윤": "오른", "유키": "왼"},
     "c095": {"사쿠라": "오른", "한도윤": "왼"}, "c100": {"사쿠라": "오른"}, "c103": {"쿠로다": "오른"}, "c108": {"한도윤": "뒤"},
     "c112": {"유키": "오른"}, "c119": {"한도윤": "오른", "스기모토": "왼"}, "c120": {"한도윤": "오른"}, "c126": {"한도윤": "왼"},
