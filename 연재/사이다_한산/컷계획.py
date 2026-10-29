@@ -27,7 +27,7 @@ CUTS = [
     ("c013", 13, ["이서진"], f"{NOW}: night, the girl sits on her bed holding a smartphone to her ear, smiling, a packed travel bag beside her", "할머니의 전화"),
     ("c014", 14, ["할머니"], f"{NOW}: night, the grandmother sits alone in a cozy old house talking on an old phone with a serious loving face", "그 순간에 해내는 것"),
     ("c015", 15, ["이서진"], f"{NOW}: inside a museum hall full of wooden models of Korean Joseon warships, the girl stands alone in a quiet corner", "판옥선·거북선 모형"),
-    ("c016", 16, ["이서진"], f"{NOW}: in a dim museum corner, the girl seen from the side leans close and reads something on the wall at the right edge of the picture, the wall item cut off by the frame, soft spotlight on her face", "안내판 앞의 서진"),
+    ("c016", 16, ["이서진"], f"{NOW}: close-up of the girl's face in a dim museum, eyes lowered as if reading carefully, a soft warm spotlight on her face, dark plain background", "안내판 앞의 서진"),
     ("c017", 17, [], "inside a glass display case, an old rusty brass compass lies alone on a white cloth, museum spotlight, nothing else in the case", "녹슨 놋쇠 나침반"),
     ("c018", 18, ["이서진"], f"{NOW}: the museum is dark during a power outage, lightning flashes outside the window, and the girl touches a glass case where an old compass glows blue", "푸르게 빛나는 나침반"),
     # 둘째 마당. 왜의 첩자로 몰린 소녀
