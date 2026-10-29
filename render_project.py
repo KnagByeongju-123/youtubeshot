@@ -57,6 +57,10 @@ def main(a):
     for k in m.KEEP_KEYS:                       # 내 키·AI 엔진 설정은 지금 PC 것 그대로
         if not str(st.get(k, "")).strip() or k in m.SECRET_KEYS:
             st[k] = cur.get(k, m.DEFAULTS.get(k, ""))
+    if os.name != "nt":                         # 윈도우 PC 에서 만든 프로젝트를 리눅스(클라우드)에서: C:\... 경로(출력 폴더·글꼴 등)는 이 서버 값으로
+        for k, v in list(st.items()):
+            if isinstance(v, str) and len(v) > 2 and v[1] == ":" and v[2] in "\\/":
+                st[k] = cur.get(k, m.DEFAULTS.get(k, ""))
     c["settings"] = st
     app.apply_cfg(c)
     n_dlg = m.set_dialog_voices(c.get("dialogue") or [], c.get("cast") or [])   # 인물 대사는 그 인물 목소리로 (프로젝트 dialogue + cast 의 voice)
