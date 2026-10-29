@@ -1,6 +1,6 @@
 """번호 붙인 컷 모음표 — 사용자가 전체 그림을 한 번에 보고 고칠 컷 번호를 직접 지시하도록 (영상 합치기 전에 보냄)
-python 컷_모음표.py <컷폴더> <저장폴더> [한 장에 몇 컷=24]
-  - 컷폴더의 c001.png … 를 번호 순서대로 4줄×6칸(기본)에 크게 놓고, 칸마다 왼쪽 위에 큰 번호(c001)를 적음
+python 컷_모음표.py <컷폴더> <저장폴더> [한 장에 몇 컷=25]
+  - 컷폴더의 c001.png … 를 번호 순서대로 5줄×5칸(기본, 칸이 그림과 같은 16:9)에 크게 놓고, 칸마다 왼쪽 위에 큰 번호(c001)를 적음
   - 결과: <저장폴더>/모음_01.jpg, 모음_02.jpg … (한 장 1920×1080, 폰에서 확대해 보기 좋게)"""
 import glob
 import os
@@ -16,14 +16,14 @@ def main(a):
         print(__doc__)
         return 2
     src, out = a[0], a[1]
-    per = int(a[2]) if len(a) > 2 else 24
-    cols = 6 if per > 12 else 4
+    per = int(a[2]) if len(a) > 2 else 25
+    cols = max(1, round(per ** 0.5))
     rows = (per + cols - 1) // cols
     W, H = 1920, 1080
     cw, ch = W // cols, H // rows
     fs = sorted(f for f in glob.glob(os.path.join(src, "c*.png")) if os.path.basename(f)[1:4].isdigit())
     os.makedirs(out, exist_ok=True)
-    font = ImageFont.truetype(FONT, max(22, ch // 7))
+    font = ImageFont.truetype(FONT, max(20, ch // 8))
     for p in range(0, len(fs), per):
         sheet = Image.new("RGB", (W, H), "black")
         d = ImageDraw.Draw(sheet)
