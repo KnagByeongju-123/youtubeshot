@@ -5657,6 +5657,28 @@ class SubtitleRenderer:
                 fc[img_idx] = False
         return fc[img_idx]
 
+    def _focus(self, img_idx):
+        """자를 때 가운데로 둘 곳 (0~1 비율): 얼굴들이 있으면 얼굴 묶음의 가운데(조금 아래 — 얼굴 위 머리·아래 몸이 보이게),
+        얼굴이 없는 세로로 긴 사진(인물 사진·초상화)은 위쪽 1/3, 나머지는 한가운데"""
+        fc = self.__dict__.setdefault("_focus_cache", {})
+        if img_idx not in fc:
+            im = self.images[img_idx][0]
+            try:
+                faces = thumb_faces(im)
+            except Exception:
+                faces = []
+            if faces:
+                big_ = faces[0][2] * faces[0][3]
+                fs_ = [f for f in faces if f[2] * f[3] >= big_ * 0.25]
+                x0_ = min(f[0] for f in fs_); x1_ = max(f[0] + f[2] for f in fs_)
+                y0_ = min(f[1] for f in fs_); y1_ = max(f[1] + f[3] for f in fs_)
+                fc[img_idx] = ((x0_ + x1_) / 2, (y0_ + y1_) / 2 + (y1_ - y0_) * 0.35)
+            elif im.height > im.width * 1.05:
+                fc[img_idx] = (0.5, 0.33)
+            else:
+                fc[img_idx] = (0.5, 0.5)
+        return fc[img_idx]
+
     def _motion_set(self, img_idx):
         """이 사진에 쓸 움직임 목록: 설정 '사진 움직임 세기'가 '크게(예전)'면 예전 그대로, 아니면 은은하게 (+ 얼굴 사진은 더 조용히)"""
         if str(self.s.get("img_motion_amt", "은은하게")).startswith("크게"):
@@ -5827,9 +5849,11 @@ class SubtitleRenderer:
         cw, ch = bw * base / z, bh * base / z         # big 안에서 잘라낼 크기
         cw, ch = min(cw, big.width), min(ch, big.height)
         sx, sy = (big.width - cw) / 2, (big.height - ch) / 2
-        cx = big.width / 2 + (ax + (bx - ax) * p) * sx
-        cy = big.height / 2 + (ay + (by - ay) * p) * sy
+        fx, fy = self._focus(sh["img"])               # 규칙: 얼굴이 잘리지 않게 얼굴(없으면 세로 사진은 위쪽)을 중심으로 자름
+        cx = min(max(fx * big.width, cw / 2), big.width - cw / 2) + (ax + (bx - ax) * p) * sx
+        cy = min(max(fy * big.height, ch / 2), big.height - ch / 2) + (ay + (by - ay) * p) * sy
         l, tp = cx - cw / 2, cy - ch / 2
+        l, tp = min(max(l, 0.0), big.width - cw), min(max(tp, 0.0), big.height - ch)
         dbig = self._depth_for(sh["img"], big.size) if (getattr(self, "depth_on", False) and z < 1.22) else None   # 확대(줌)된 장면은 2.5D 안 함 (가장자리 겹침이 더 잘 보임)
         if dbig is None:
             return extent_resize(big, (bw, bh), (l, tp, l + cw, tp + ch)), mask
@@ -6376,7 +6400,7 @@ _DEPTH_CACHE = {}
 _DEPTH_WARNED = set()
 _GRID_CACHE = {}
 DEPTH_AMP = {"약하게": (0.007, 0.003), "보통": (0.022, 0.010), "강하게": (0.035, 0.016)}   # 약하게는 아주 은은하게(기본)
-RENDER_VER = "2026-10-29a"   # 그리는 방식이 바뀌면 올림 → 장문 영상 구간 캐시를 새로 그림   # (가로, 세로) 최대 밀림 = 화면 크기 비율
+RENDER_VER = "2026-10-29b"   # 그리는 방식이 바뀌면 올림 → 장문 영상 구간 캐시를 새로 그림   # (가로, 세로) 최대 밀림 = 화면 크기 비율
 
 
 def depth_key(path):
