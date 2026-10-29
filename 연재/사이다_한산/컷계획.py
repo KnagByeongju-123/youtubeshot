@@ -157,7 +157,7 @@ CUTS = [
     ("c137", 144, [], f"{NOW}: inside the rocking ferry cabin, frightened high school students in navy tracksuits scream and hold onto seats", "아수라장이 된 배"),
     ("c138", 145, ["이서진"], f"{NOW}: inside the rocking ferry, close-up of the girl with an indigo ribbon fluttering on her wrist, determined eyes", "펄럭인 쪽빛 댕기"),
     ("c139", 146, ["이서진"], f"{NOW}: inside the rocking ferry cabin, the girl stands up firmly among the panicking students", "벌떡 일어선 서진"),
-    ("c140", 147, ["이서진"], f"{NOW}: inside the ferry cabin the girl hands out orange life jackets to students, shouting instructions", "구명조끼부터 입어!"),
+    ("c140", 147, ["이서진"], f"{NOW}: inside the ferry cabin the girl with a high ponytail stands in the aisle holding up one orange life jacket and shouting instructions, short-haired boys sitting in the seats around her; she is the only girl", "구명조끼부터 입어!"),
     ("c141", 148, ["태윤"], f"{NOW}: the tall boy crouches scared in a corner of the ferry cabin, an orange life jacket landing in front of him", "웅크린 태윤"),
     ("c142", 149, ["이서진"], f"{NOW}: close-up of the girl shouting firmly toward someone in the ferry cabin", "지금은 네가 필요해"),
     ("c143", 150, ["태윤"], f"{NOW}: the tall boy in an orange life jacket helps a younger student fasten a life jacket, gritting his teeth", "조끼 끈을 묶어 주는 태윤"),
