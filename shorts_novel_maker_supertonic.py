@@ -5836,7 +5836,8 @@ class SubtitleRenderer:
         bw, bh = crop.size
         plate = np.asarray(extent_resize(data["plate"], (bw, bh), self._last_rect))
         M = np.asarray(extent_resize(data["mask"], (bw, bh), self._last_rect), np.float32) / 255 if data["mask"] is not None else None
-        out = _drawfx().frame(np.asarray(crop.convert("RGB")), plate, M, prog, seed=sh["img"])
+        fog = np.asarray(extent_resize(data["fog"], (bw, bh), self._last_rect), np.float32) / 255 if data.get("fog") is not None else None
+        out = _drawfx().frame(np.asarray(crop.convert("RGB")), plate, M, prog, seed=sh["img"], fog=fog)
         return Image.fromarray(out).convert(crop.mode), mask
 
     def _draw_fx_at(self, idx, t):
@@ -5866,10 +5867,11 @@ class SubtitleRenderer:
                     M = fx_.soft_mask(np.asarray(mk))
             except Exception:
                 M = None
-            plate = fx_.empty_plate(full, M if M is not None else np.zeros(full.shape[:2], np.float32))
+            plate, fog = fx_.empty_plate(full, M if M is not None else np.zeros(full.shape[:2], np.float32), with_fog=True)
             if len(cache) >= 4:
                 cache.pop(next(iter(cache)))
-            cache[idx] = {"plate": Image.fromarray(plate), "mask": Image.fromarray((M * 255).astype(np.uint8)) if M is not None else None}
+            cache[idx] = {"plate": Image.fromarray(plate), "mask": Image.fromarray((M * 255).astype(np.uint8)) if M is not None else None,
+                          "fog": Image.fromarray((fog * 255).astype(np.uint8)) if M is not None else None}
         return max(0.0, prog), cache[idx]
 
     def _expr_at(self, idx, t, crop):

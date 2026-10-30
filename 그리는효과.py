@@ -55,18 +55,24 @@ def fields(w, h, seed=0):
     return _FIELDS[key]
 
 
-def empty_plate(full, M):
-    """인물 자리를 둘레 색으로 메운 배경 (흐리게, 흰 바탕 쪽으로) — 배경 단계에서 인물 자리를 비워 둔 느낌"""
+def empty_plate(full, M, with_fog=False):
+    """인물 자리를 둘레 배경색으로 메우고 강하게 흐리게(blur) — 경계도 넓게 번져서 인물 자리가 안개처럼 자연스럽게 비어 보임
+    (사용자 결정: 하얗게 비운 구멍보다 흐림 효과처럼)"""
     h, w = M.shape
     hole = (M > 0.05).astype(np.uint8) * 255
     if not hole.any():
-        return full.astype(np.uint8)
+        return (full.astype(np.uint8), np.zeros((h, w), np.float32)) if with_fog else full.astype(np.uint8)
     small = cv2.resize(full.astype(np.uint8), (w // 4, h // 4))
-    fill = cv2.inpaint(small, cv2.resize(hole, (w // 4, h // 4)), 9, cv2.INPAINT_TELEA)
-    fill = cv2.GaussianBlur(cv2.resize(fill, (w, h)).astype(np.float32), (0, 0), 12)
-    plate = fill * 0.55 + PAPER * 0.45
-    Mf = cv2.GaussianBlur(M.astype(np.float32), (0, 0), 4)[..., None]
-    return (full.astype(np.float32) * (1 - Mf) + plate * Mf).astype(np.uint8)
+    hs = cv2.dilate(cv2.resize(hole, (w // 4, h // 4)), cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * (w // 160) + 1, 2 * (w // 160) + 1)))
+    fill = cv2.inpaint(small, hs, 15, cv2.INPAINT_TELEA)
+    fill = cv2.GaussianBlur(fill.astype(np.float32), (0, 0), max(4, w / 120))          # 둘레 색을 흐리게 번진 배경
+    fill = cv2.resize(fill, (w, h), interpolation=cv2.INTER_CUBIC)
+    plate = fill * 0.85 + PAPER * 0.15
+    r = max(6, int(w / 64))                                                            # 인물 윤곽선(먹선)·빠진 투구 끝까지 완전히 덮고
+    Mf = cv2.dilate(M.astype(np.float32), cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (4 * r + 1, 4 * r + 1)))
+    Mf = cv2.GaussianBlur(Mf, (0, 0), r / 2)[..., None]                                # 그 바깥에서 넓게 번지게 (안개처럼)
+    out = (full.astype(np.float32) * (1 - Mf) + plate * Mf).astype(np.uint8)
+    return (out, Mf[..., 0]) if with_fog else out
 
 
 def soft_mask(mask_u8):
@@ -85,9 +91,10 @@ def _reveal(f, p, soft=0.06):
     return np.clip((p * (1 + soft) - f) / soft, 0, 1)
 
 
-def frame(full, plate, M, prog, seed=0):
+def frame(full, plate, M, prog, seed=0, fog=None):
     """그리는 중인 한 장면. full·plate: (h, w, 3) uint8, M: (h, w) 0~1 인물(없으면 None), prog: 0~1 (1 이면 완성 그림)
-    인물이 있으면 배경 선 30% → 배경 색 25% → 인물 선 22% → 인물 색 23%, 없으면 선 50% → 색 50%"""
+    인물이 있으면 배경 선 30% → 배경 색 25% → 인물 선 22% → 인물 색 23%, 없으면 선 50% → 색 50%
+    fog: 인물 둘레 안개 범위(empty_plate(with_fog=True)) — 인물 색칠 때 이 범위까지 함께 원래 그림으로 (안개 테두리가 갑자기 바뀌지 않게)"""
     if prog >= 1:
         return full
     h, w = full.shape[:2]
@@ -109,7 +116,7 @@ def frame(full, plate, M, prog, seed=0):
         k_ = 0.55 * rp * (1 - p[3])
         img = img * (1 - k_) + PAPER * k_
         img = img * (1 - pl * rp) + INK * (pl * rp)                     # 3) 인물 먹선
-        cp = _reveal(f_pc, p[3], 0.15) * Mm
+        cp = _reveal(f_pc, p[3], 0.15) * (np.maximum(Mm, fog[..., None]) if fog is not None else Mm)
         img = img * (1 - cp) + full_f * cp                              # 4) 인물 색
     return np.clip(img, 0, 255).astype(np.uint8)
 
@@ -123,13 +130,13 @@ def main(a):
     fps = int(a[a.index("--fps") + 1]) if "--fps" in a else 24
     full = cv2.resize(cv2.imread(a[0], cv2.IMREAD_COLOR), (W, H), interpolation=cv2.INTER_LANCZOS4)[..., ::-1].copy()
     M = soft_mask(cv2.resize(cv2.imread(a[1], cv2.IMREAD_GRAYSCALE), (W, H))) if a[1] != "-" else None
-    plate = empty_plate(full, M if M is not None else np.zeros((H, W), np.float32))
+    plate, fog = empty_plate(full, M if M is not None else np.zeros((H, W), np.float32), with_fog=True)
     E = min(7.5, max(3.0, sec * 0.65))
     import imageio_ffmpeg
     wr = imageio_ffmpeg.write_frames(a[2], (W, H), fps=fps, codec="libx264", quality=8, macro_block_size=8)
     wr.send(None)
     for i in range(int(sec * fps)):
-        wr.send(np.ascontiguousarray(frame(full, plate, M, i / fps / E)))
+        wr.send(np.ascontiguousarray(frame(full, plate, M, i / fps / E, fog=fog)))
     wr.close()
     print("OK", a[2])
     return 0
