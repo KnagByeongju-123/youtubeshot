@@ -186,8 +186,15 @@ def main(a):
             ch["sheet"] = sh
     m.SCRIPT_ENGINE["s"] = s
     draw_s = dict(s, fiction_image="로컬 그림 생성(무료 · 이 PC · 느림)")
-    if "--스타일" in a:
-        draw_s["image_style_preset"] = m.IMG_SOURCE_PRESET.get(a[a.index("--스타일") + 1], a[a.index("--스타일") + 1])
+    want = a[a.index("--스타일") + 1] if "--스타일" in a else str(c.get("img_source") or "")
+    if want not in m.IMG_SOURCE_PRESET and str(c.get("genre") or "").startswith("[실화] 기록으로 보는 진짜 역사"):   # 예전 역사 편: 프로젝트에 스타일 기록이 없음
+        try:
+            want = json.load(open(os.path.join(HERE, "장문_설정.json"), encoding="utf-8")).get("역사_이미지") or ""
+        except Exception:
+            want = ""
+        want = want or "그림: 역사 수묵 담채"
+    if want:
+        draw_s["image_style_preset"] = m.IMG_SOURCE_PRESET.get(want, want)
     log(f"그림 스타일: {draw_s.get('image_style_preset')} · 등장인물 {len(m.IMAGE_CAST.get('chars') or [])}명")
     model = app.model_var.get().strip()
 
