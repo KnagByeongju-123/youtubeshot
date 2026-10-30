@@ -3523,7 +3523,8 @@ def photo_credits(story):
     for l in (story or "").split("\n"):
         m = parse_media(l)
         if m:
-            res.append(f"- {m[1] or os.path.basename(m[0])}: {m[2] or '출처 미기재'}" + (f" ({m[3]})" if m[3] else ""))
+            cap_ = re.sub(r"\s*(zoom|focus)=[\d.,]+", "", m[1] or "").strip()
+            res.append(f"- {cap_ or os.path.basename(m[0])}: {m[2] or '출처 미기재'}" + (f" ({m[3]})" if m[3] else ""))
     return res
 
 
@@ -5663,6 +5664,10 @@ class SubtitleRenderer:
         fc = self.__dict__.setdefault("_focus_cache", {})
         if img_idx not in fc:
             im = self.images[img_idx][0]
+            fm = re.search(r"focus=([\d.]+),([\d.]+)", str(self.images[img_idx][1] or ""))   # 사진 설명에 focus=0.5,0.15 로 직접 지정 (명화처럼 얼굴을 못 찾는 그림)
+            if fm:
+                fc[img_idx] = (float(fm.group(1)), float(fm.group(2)))
+                return fc[img_idx]
             try:
                 faces = thumb_faces(im)
             except Exception:
@@ -6171,7 +6176,7 @@ class SubtitleRenderer:
         cache = self.__dict__.setdefault("_lab_cache", {})
         if idx not in cache:
             cap = str(self.images[idx][1] or "")
-            cap = re.sub(r"zoom=[\d.,]+", "", cap).split("|")[0].strip(" ·-")
+            cap = re.sub(r"(zoom|focus)=[\d.,]+", "", cap).split("|")[0].strip(" ·-")
             if not cap:
                 cache[idx] = None
             else:
@@ -6400,7 +6405,7 @@ _DEPTH_CACHE = {}
 _DEPTH_WARNED = set()
 _GRID_CACHE = {}
 DEPTH_AMP = {"약하게": (0.007, 0.003), "보통": (0.022, 0.010), "강하게": (0.035, 0.016)}   # 약하게는 아주 은은하게(기본)
-RENDER_VER = "2026-10-29b"   # 그리는 방식이 바뀌면 올림 → 장문 영상 구간 캐시를 새로 그림   # (가로, 세로) 최대 밀림 = 화면 크기 비율
+RENDER_VER = "2026-10-30a"   # 그리는 방식이 바뀌면 올림 → 장문 영상 구간 캐시를 새로 그림   # (가로, 세로) 최대 밀림 = 화면 크기 비율
 
 
 def depth_key(path):
