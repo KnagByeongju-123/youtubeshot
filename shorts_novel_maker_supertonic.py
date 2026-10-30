@@ -5823,6 +5823,64 @@ class SubtitleRenderer:
         return self._img_cache[idx]
 
     def _shot_crop(self, sh, t):
+        """장면 sh 의 t 시점 사진 (움직임 적용) + 그림이 처음 나타날 때 그리는 효과 (그림 옆에 <그림>.인물.json 이 있으면)"""
+        self._last_rect = None
+        crop, mask = self._shot_crop_raw(sh, t)
+        fx = None if getattr(self, "slide", False) or self._last_rect is None else self._draw_fx_at(sh["img"], t)
+        if fx is None:
+            return crop, mask
+        prog, data = fx
+        bw, bh = crop.size
+        plate = np.asarray(extent_resize(data["plate"], (bw, bh), self._last_rect))
+        M = np.asarray(extent_resize(data["mask"], (bw, bh), self._last_rect), np.float32) / 255 if data["mask"] is not None else None
+        out = _drawfx().frame(np.asarray(crop.convert("RGB")), plate, M, prog, seed=sh["img"])
+        return Image.fromarray(out).convert(crop.mode), mask
+
+    def _draw_fx_at(self, idx, t):
+        """그 그림이 나타난 지 얼마나 됐는지 → (그리는 진행 0~1, 효과 자료) 또는 None (효과 없음·다 그림)
+        효과 길이 = 그림이 머무는 시간의 65% (3~7.5초), 나머지는 완성 그림"""
+        paths = getattr(self, "img_paths", [])
+        if idx >= len(paths) or not os.path.exists(paths[idx] + ".인물.json"):
+            return None
+        piece = next(((a_, b_) for im_, a_, b_ in self._img_pieces(self.duration) if im_ == idx and t < b_), None)
+        if piece is None:
+            return None
+        a_, b_ = piece
+        E = min(7.5, max(3.0, 0.65 * (b_ - a_)))
+        prog = (t - a_) / E
+        if prog >= 1:
+            return None
+        cache = self.__dict__.setdefault("_fx_data", {})
+        if idx not in cache:
+            fx_ = _drawfx()
+            big = self._img_src(idx)[0].convert("RGB")
+            full = np.asarray(big)
+            M = None
+            try:
+                info = json.load(open(paths[idx] + ".인물.json", encoding="utf-8"))
+                if info.get("boxes") and os.path.exists(paths[idx] + ".인물.png"):
+                    mk = Image.open(paths[idx] + ".인물.png").convert("L").resize(big.size, Image.BILINEAR)
+                    M = fx_.soft_mask(np.asarray(mk))
+            except Exception:
+                M = None
+            plate = fx_.empty_plate(full, M if M is not None else np.zeros(full.shape[:2], np.float32))
+            if len(cache) >= 4:
+                cache.pop(next(iter(cache)))
+            cache[idx] = {"plate": Image.fromarray(plate), "mask": Image.fromarray((M * 255).astype(np.uint8)) if M is not None else None}
+        return max(0.0, prog), cache[idx]
+
+    @property
+    def fx_sig(self):
+        """그리는 효과 자료(인물 영역 파일)가 바뀌면 영상 구간 캐시도 새로 그리게"""
+        sig = []
+        for p_ in getattr(self, "img_paths", []):
+            try:
+                sig.append(str(int(os.path.getmtime(p_ + ".인물.json"))))
+            except OSError:
+                sig.append("-")
+        return hashlib.md5(",".join(sig).encode()).hexdigest()[:12] if any(x != "-" for x in sig) else ""
+
+    def _shot_crop_raw(self, sh, t):
         """장면 sh 의 t 시점 사진 (움직임 적용)"""
         x0, y0, x1, y1 = self.img_box
         bw, bh = x1 - x0, y1 - y0
@@ -5877,6 +5935,7 @@ class SubtitleRenderer:
         cx = big.width / 2 + (ax + (bx - ax) * p) * sx
         cy = big.height / 2 + (ay + (by - ay) * p) * sy
         l, tp = cx - cw / 2, cy - ch / 2
+        self._last_rect = (l, tp, l + cw, tp + ch)
         dbig = self._depth_for(sh["img"], big.size) if (getattr(self, "depth_on", False) and z < 1.22) else None   # 확대(줌)된 장면은 2.5D 안 함 (가장자리 겹침이 더 잘 보임)
         if dbig is None:
             return extent_resize(big, (bw, bh), (l, tp, l + cw, tp + ch)), mask
@@ -6418,7 +6477,7 @@ _DEPTH_CACHE = {}
 _DEPTH_WARNED = set()
 _GRID_CACHE = {}
 DEPTH_AMP = {"약하게": (0.007, 0.003), "보통": (0.022, 0.010), "강하게": (0.035, 0.016)}   # 약하게는 아주 은은하게(기본)
-RENDER_VER = "2026-10-30a"   # 그리는 방식이 바뀌면 올림 → 장문 영상 구간 캐시를 새로 그림   # (가로, 세로) 최대 밀림 = 화면 크기 비율
+RENDER_VER = "2026-10-30b"   # 그리는 방식이 바뀌면 올림 → 장문 영상 구간 캐시를 새로 그림   # (가로, 세로) 최대 밀림 = 화면 크기 비율
 
 
 def depth_key(path):
@@ -6559,6 +6618,19 @@ def img_np(img):
         except Exception:
             pass
     return arr
+
+
+_DRAWFX_MOD = {}
+
+
+def _drawfx():
+    """그리는효과.py (그림이 그려지듯 나타나는 효과) 를 한 번만 불러옴"""
+    if "m" not in _DRAWFX_MOD:
+        spec_ = importlib.util.spec_from_file_location("drawfx", os.path.join(BASE, "그리는효과.py"))
+        mod_ = importlib.util.module_from_spec(spec_)
+        spec_.loader.exec_module(mod_)
+        _DRAWFX_MOD["m"] = mod_
+    return _DRAWFX_MOD["m"]
 
 
 def extent_resize(img, size, box):
