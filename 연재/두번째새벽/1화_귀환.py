@@ -303,7 +303,7 @@ def main():
                 "story": story, "sources": [], "notes": "창작 연재 《두 번째 새벽》 1화", "autophoto": False, "img_source": "그림: 옛날 만화책",
                 "cast": [{"name": nm, "look": c["look"], "look_ko": c["look_ko"], "voice": c.get("voice"),
                           **({"sheet": os.path.join(HERE, c["face"])} if c.get("face") else {})} for nm, c in chars.items()],
-                "dialogue": [{"text": t, "who": w} for t, w in DIALOGUE],
+                "dialogue": [],   # 규칙(사용자 결정): 인물 대사도 따로 목소리 없이 모두 나레이션(남자 성우 2)이 읽음 (DIALOGUE 는 누가 한 말인지 기록용)
                 "settings": {"format": "롱폼 가로(1920×1080)", "narr_voice": "Supertonic M2 (남성, 무료 로컬) [supertonic:M2]"}}
         out = os.path.join(HERE, "1화_귀환.json")
         json.dump(proj, open(out, "w", encoding="utf-8"), ensure_ascii=False, indent=1)

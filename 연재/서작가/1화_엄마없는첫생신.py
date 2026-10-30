@@ -12,7 +12,7 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 TITLE = "엄마의 텃밭 1화 - 엄마 없는 첫 생신"
 
-# 대사 → 말하는 인물 (그 인물 목소리로 읽음, 목소리는 등장인물.json 의 voice. 나레이션은 남자 성우 2, '나'의 대사도 나레이션이 읽음)
+# 대사 → 말하는 인물 (그 인물 목소리로 읽음, 목소리는 등장인물.json 의 voice. 나레이션은 남자 성우 2, 인물 대사도 모두 나레이션이 읽음)
 DIALOGUE = [
     ("엄마, 저 왔어요.", "나"),
     ("왔구나. 길 많이 막혔지? 어서 들어와.", "오빠"),
@@ -320,12 +320,12 @@ def main():
                 "story": story, "sources": [], "notes": "서작가 에세이 연재 《엄마의 텃밭》 1화", "autophoto": False, "img_source": "그림: 파스텔 감성",
                 "cast": [{"name": nm, "look": c["look"], "look_ko": c["look_ko"], "voice": c.get("voice"),
                           **({"sheet": os.path.join(HERE, c["face"])} if c.get("face") else {})} for nm, c in chars.items()],
-                "dialogue": [{"text": t, "who": w} for t, w in DIALOGUE if w != "나"],   # 규칙(사용자 결정): '나'의 대사는 따로 목소리 없이 나레이션(남자 성우 2)이 읽음
+                "dialogue": [],   # 규칙(사용자 결정): 인물 대사도 따로 목소리 없이 모두 나레이션(남자 성우 2)이 읽음 (DIALOGUE 는 누가 한 말인지 기록용)
                 "settings": {"format": "롱폼 가로(1920×1080)", "narration": "on",   # 새 PC·서버 기본값(나레이션 꺼짐·스크롤형) 대신 장문 설정 그대로
                              "layout": "자막형(큰 제목+사진+자막)", "img_fill": "전체 화면(글자가 사진 위에)",
                              "img_motion": "영상처럼(확대·이동·전환)", "fps": "24", "reveal_hit": "off", "reveal_fx": "off",
                              "head_show": "안 보임(제목 카드만)", "sub_split": "한 줄씩(문장·쉼표로 나눠 차례로)", "img_label": "off",   # 규칙: 위 큰 제목·장면 설명 없이, 자막은 한 줄씩
-                             "narr_voice": "Supertonic M2 (남성, 무료 로컬) [supertonic:M2]",   # 규칙(사용자 결정): 연재 나레이션은 남자 성우 2. '나'의 대사도 나레이션이 읽음
+                             "narr_voice": "Supertonic M2 (남성, 무료 로컬) [supertonic:M2]",   # 규칙(사용자 결정): 연재 나레이션은 남자 성우 2. 인물 대사도 모두 나레이션이 읽음
                              "st_emotion": "차분"}}   # 샘플로 고른 빠르기 그대로 (감정별 빠르기 조절 없이)
         out = os.path.join(HERE, "1화_엄마없는첫생신.json")
         json.dump(proj, open(out, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
