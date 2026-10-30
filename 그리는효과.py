@@ -1,8 +1,10 @@
 """그리는 효과 — 그림 한 장이 붓으로 그려지듯 나타나는 짧은 영상 (배경 먹선 → 배경 색칠 → 인물 먹선 → 인물 색칠)
 
-  python -X utf8 그리는효과.py <완성 그림> <빈 배경 그림> <결과.mp4> [--초 10] [--fps 24]
-  - 빈 배경 그림: 같은 그림에서 인물만 지운 것 (klein 으로 '인물을 지우고 나머지는 그대로' 고친 그림)
-  - 인물 자리 = 완성 그림과 빈 배경이 크게 다른 곳 (가장 큰 덩어리들만). 인물 밖 배경은 완성 그림 그대로 써서 마지막 장면이 원래 그림과 똑같음
+  python -X utf8 그리는효과.py <완성 그림> <인물 상자 x0,y0,x1,y1[;x0,y0,x1,y1...]> <결과.mp4> [--초 10] [--fps 24]
+  - 인물 상자: 그림 크기 대비 비율(0~1). 그 상자 안에서 인물 윤곽을 GrabCut 으로 땀
+    (klein 으로 '인물만 지운 빈 배경'을 만들면 그림 전체가 바뀌어 버려서 쓰지 않음)
+  - 배경 단계에서 인물 자리는 둘레 색으로 흐리게 메우고 종이색 쪽으로 (화가가 인물 자리를 비워 두고 배경부터 칠하는 느낌)
+  - 인물 밖 배경은 완성 그림 그대로 → 마지막 장면이 원래 그림과 똑같음
   - 먹선 = 그림에서 둘레보다 어두운 가는 선. 종이(화선지 색) 위에 먹선이 붓 가는 방향으로 번져 나타나고, 색은 물감처럼 얼룩지며 퍼짐
   - 결과와 함께 <결과>_인물영역.png (인물로 잡힌 곳 확인용)
 """
@@ -45,24 +47,34 @@ def field(seed, scale, warp_dir=None):
     return (f - f.min()) / (f.max() - f.min())
 
 
-def person_mask(full, bg):
-    d = np.abs(full - bg).mean(2)
-    d = cv2.GaussianBlur(d, (0, 0), 6)
-    m = (d > 28).astype(np.uint8)
-    m = cv2.morphologyEx(m, cv2.MORPH_CLOSE, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (41, 41)))
-    m = cv2.morphologyEx(m, cv2.MORPH_OPEN, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (15, 15)))
-    n, lab, stats, _ = cv2.connectedComponentsWithStats(m)
-    keep = np.zeros_like(m)
-    big = sorted(range(1, n), key=lambda i: -stats[i, cv2.CC_STAT_AREA])
-    for i in big[:3]:
-        if stats[i, cv2.CC_STAT_AREA] > W * H * 0.01:
-            keep[lab == i] = 1
-    # 구멍 메우기 (외곽선 안쪽 전부)
-    cnts, _ = cv2.findContours(keep, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    fill = np.zeros_like(keep)
-    cv2.drawContours(fill, cnts, -1, 1, -1)
-    fill = cv2.dilate(fill, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (9, 9)))
-    return cv2.GaussianBlur(fill.astype(np.float32), (0, 0), 4)
+def person_mask(full, boxes):
+    """상자마다 GrabCut 으로 인물 윤곽 → 0~1 (가장자리 부드럽게)"""
+    img = full.astype(np.uint8)[..., ::-1].copy()
+    out = np.zeros((H, W), np.uint8)
+    for x0, y0, x1, y1 in boxes:
+        rect = (int(x0 * W), int(y0 * H), max(8, int((x1 - x0) * W) - 1), max(8, int((y1 - y0) * H) - 1))
+        mk = np.zeros((H, W), np.uint8)
+        bgm, fgm = np.zeros((1, 65), np.float64), np.zeros((1, 65), np.float64)
+        cv2.grabCut(img, mk, rect, bgm, fgm, 6, cv2.GC_INIT_WITH_RECT)
+        fg = ((mk == cv2.GC_FGD) | (mk == cv2.GC_PR_FGD)).astype(np.uint8)
+        n, lab, stats, _ = cv2.connectedComponentsWithStats(fg)
+        if n > 1:                                   # 가장 큰 덩어리 + 구멍 메우기
+            big = 1 + int(np.argmax(stats[1:, cv2.CC_STAT_AREA]))
+            fg = (lab == big).astype(np.uint8)
+            cnts, _ = cv2.findContours(fg, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            cv2.drawContours(fg, cnts, -1, 1, -1)
+        out |= fg
+    out = cv2.dilate(out, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (11, 11)))
+    return cv2.GaussianBlur(out.astype(np.float32), (0, 0), 4)
+
+
+def empty_plate(full, M):
+    """인물 자리를 둘레 색으로 메운 배경 (흐리게, 종이색 쪽으로)"""
+    hole = (M > 0.05).astype(np.uint8) * 255
+    small = cv2.resize(full.astype(np.uint8), (W // 4, H // 4))
+    fill = cv2.inpaint(small, cv2.resize(hole, (W // 4, H // 4)), 9, cv2.INPAINT_TELEA)
+    fill = cv2.GaussianBlur(cv2.resize(fill, (W, H)).astype(np.float32), (0, 0), 12)
+    return fill * 0.55 + PAPER * 0.45
 
 
 def ease(x):
@@ -81,8 +93,10 @@ def main(a):
         return 2
     sec = float(a[a.index("--초") + 1]) if "--초" in a else 10.0
     fps = int(a[a.index("--fps") + 1]) if "--fps" in a else 24
-    full, plate = load(a[0]), load(a[1])
-    M = person_mask(full, plate)[..., None]
+    full = load(a[0])
+    boxes = [[float(v) for v in b.split(",")] for b in a[1].split(";") if b.strip()]
+    M = person_mask(full, boxes)[..., None]
+    plate = empty_plate(full, M[..., 0])
     cv2.imwrite(a[2][:-4] + "_인물영역.png", (np.concatenate([full * (0.35 + 0.65 * M)], 1)[..., ::-1]).astype(np.uint8))
     bg = full * (1 - M) + plate * M                        # 인물 밖은 원래 그림 그대로
     paper = np.broadcast_to(PAPER, full.shape)
