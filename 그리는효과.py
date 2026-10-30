@@ -68,7 +68,7 @@ def empty_plate(full, M, with_fog=False):
     fill = cv2.GaussianBlur(fill.astype(np.float32), (0, 0), max(4, w / 120))          # 둘레 색을 흐리게 번진 배경
     fill = cv2.resize(fill, (w, h), interpolation=cv2.INTER_CUBIC)
     plate = fill * 0.85 + PAPER * 0.15
-    r = max(6, int(w / 64))                                                            # 인물 윤곽선(먹선)·빠진 투구 끝까지 완전히 덮고
+    r = max(5, int(w / 110))                                                           # 인물 윤곽선(먹선)·빠진 투구 끝까지 완전히 덮고
     Mf = cv2.dilate(M.astype(np.float32), cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (4 * r + 1, 4 * r + 1)))
     Mf = cv2.GaussianBlur(Mf, (0, 0), r / 2)[..., None]                                # 그 바깥에서 넓게 번지게 (안개처럼)
     out = (full.astype(np.float32) * (1 - Mf) + plate * Mf).astype(np.uint8)
