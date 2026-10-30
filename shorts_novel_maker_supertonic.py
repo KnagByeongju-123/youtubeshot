@@ -111,7 +111,7 @@ class _ColorButton(ttk.Button):
 ttk.Button = _ColorButton
 from tkinter.scrolledtext import ScrolledText
 import numpy as np
-from PIL import Image, ImageDraw, ImageFont, ImageTk, ImageFilter, ImageEnhance, ImageOps
+from PIL import Image, ImageDraw, ImageFont, ImageTk, ImageFilter, ImageEnhance, ImageOps, ImageColor
 
 W, H = 1080, 1920            # 현재 화면 크기 (set_format 으로 바뀜)
 FORMATS = {"쇼츠 세로(1080×1920)": (1080, 1920), "롱폼 가로(1920×1080)": (1920, 1080)}
@@ -4087,7 +4087,7 @@ def _thumb_basic(v, s, photo_im=None, size=None, font_path=None):
                 if not seg:
                     continue
                 d.text((cx + sw * 0.6, y + sw * 0.8), seg, font=f_, fill=(0, 0, 0, 170), stroke_width=sw, stroke_fill=(0, 0, 0, 170))
-                d.text((cx, y), seg, font=f_, fill=col, stroke_width=sw, stroke_fill="#000000")
+                text_stroked(d, (cx, y), seg, f_, col, sw, "#000000")
                 cx += f_.getlength(seg)
             y += lh
     return out.convert("RGB")
@@ -4211,6 +4211,30 @@ def _thumb_fit_font(fp, lines, maxw, start, min_size=28):
     return load_font(fp, size_)
 
 
+def text_stroked(d, xy, txt, font, fill, sw, stroke_fill):
+    """굵은 테두리 글자 + 글자 속 닫힌 빈 곳(ㅇ·ㅁ 안쪽 등)을 테두리 색으로 메움 — 테두리를 굵게 하면 'ㅇ' 가운데로 배경이 구멍처럼 비쳤음 (썸네일 '안')"""
+    im_ = getattr(d, "_image", None)
+    if sw and im_ is not None:
+        try:
+            x0, y0, x1, y1 = d.textbbox(xy, txt, font=font, stroke_width=sw)
+            pad = 4
+            mk = Image.new("L", (int(x1 - x0) + pad * 2, int(y1 - y0) + pad * 2), 0)
+            ImageDraw.Draw(mk).text((xy[0] - x0 + pad, xy[1] - y0 + pad), txt, font=font, fill=255, stroke_width=sw, stroke_fill=255)
+            holes = mk.point(lambda v: 255 if v < 128 else 0)
+            ImageDraw.floodfill(holes, (0, 0), 0)                     # 바깥과 이어진 빈 곳은 지우고, 갇힌 빈 곳만 남김
+            if holes.getbbox():
+                holes = holes.filter(ImageFilter.MaxFilter(3))
+                col = ImageColor.getcolor(stroke_fill, "RGBA") if isinstance(stroke_fill, str) else tuple(stroke_fill) + ((255,) if len(stroke_fill) == 3 else ())
+                layer = Image.new("RGBA", mk.size, col)
+                if im_.mode == "RGBA":
+                    im_.alpha_composite(Image.composite(layer, Image.new("RGBA", mk.size, (0, 0, 0, 0)), holes), (int(x0) - pad, int(y0) - pad))
+                else:
+                    im_.paste(layer.convert(im_.mode), (int(x0) - pad, int(y0) - pad), holes)
+        except Exception:
+            pass
+    d.text(xy, txt, font=font, fill=fill, stroke_width=sw, stroke_fill=stroke_fill)
+
+
 def _thumb_lines(d, lines, emph, f_, x0, y, avail, c_big, c_emph, align="center", stroke=True, shadow=True, stroke_col="#000000"):
     """큰 글자 여러 줄 (강조 단어만 다른 색). 마지막 y 돌려줌"""
     lh = int(f_.size * 1.12)
@@ -4228,7 +4252,7 @@ def _thumb_lines(d, lines, emph, f_, x0, y, avail, c_big, c_emph, align="center"
                 continue
             if shadow and sw:
                 d.text((cx + sw * 0.6, y + sw * 0.8), seg, font=f_, fill=(0, 0, 0, 170), stroke_width=sw, stroke_fill=(0, 0, 0, 170))
-            d.text((cx, y), seg, font=f_, fill=col, stroke_width=sw, stroke_fill=stroke_col)
+            text_stroked(d, (cx, y), seg, f_, col, sw, stroke_col)
             cx += f_.getlength(seg)
         y += lh
     return y
