@@ -3835,7 +3835,7 @@ def description_text(pkg, story, portrait=False, max_sources=8):
         if k and k not in seen:
             seen.add(k)
             src.append(str(x))
-    src = src[:max_sources]
+    src = sorted(src, key=lambda x: not x.startswith("배경음악"))[:max_sources]   # 배경음악 출처(CC BY 표시 의무)는 맨 앞에: 설명란이 길어 출처를 앞 3개만 남겨도 빠지지 않게
     credits = [c for c in photo_credits(story) if "AI 생성 이미지" not in c]
     tags = str(pkg.get("hashtags", "")).strip()
     if portrait and "#shorts" not in tags.lower():
