@@ -11,6 +11,7 @@
   - --길이고정 : 롱폼 길이 규칙(10~15분, 짧으면 내용을 더해 늘림)을 건너뜀
   - --영어 : 영상 완성 뒤 영어 제목·설명란·자막(SRT)도 만듦 (유튜브 '번역'으로 덧붙이는 용도, 영어_번역.py)
   - --자막언어 영어,일본어,한국어 : 고른 언어마다 자막(SRT)과 제목·설명란 번역 (--영어 는 '영어'만과 같음)
+  - --나레이션만 : 나레이션만 만들어 <제목>_나레이션만.wav + _나레이션대본.txt 로 저장하고 끝냄 (규칙: 나레이션 먼저 듣고·겹침검사로 고친 뒤 영상)
   - --쇼츠 : 롱폼 완성 뒤 40~50초 세로 쇼츠도 함께 만듦 (기본은 쇼츠를 안 만듦, 쇼츠_자동.py)
   - --성우프리셋 "이름" : 🎤 성우 선택 창에서 '⭐ 새 성우로 저장'한 목소리(성우·속도·톤·감정·쉼)로 (장문_설정.json "성우_프리셋" 도 같음)
   - --성우 M1 : 프로젝트 파일은 그대로 두고 이번만 이 Supertonic 성우로 (보통 --suffix 성우1 과 같이)
@@ -181,6 +182,24 @@ def main(a):
         m.atomic_write_text(base + "_나레이션검증.txt", m._NV.report_text(title))
         n_bad = sum(1 for r_ in m._NV.REPORT if not r_[2]["ok"])
         log(f"🔎 나레이션 검증: {len(m._NV.REPORT)}문단 중 문제 {n_bad}개" + (f" → {os.path.basename(base)}_나레이션검증.txt 확인" if n_bad else " (모두 통과)"))
+    if "--나레이션만" in a:     # 규칙: 나레이션 먼저 → 듣고(겹침검사) 고친 뒤 영상. 나레이션만 이어 붙인 소리 파일을 만들고 끝냄
+        import wave
+        import numpy as np
+        gap = np.zeros(int(m.SR * max(0.0, float(s.get("narr_gap", 0.5)))), np.float32)
+        pcm = np.concatenate([x for _, c, _ in (narr or []) for x in (np.asarray(c, np.float32), gap)] or [gap])
+        out = base + "_나레이션만.wav"
+        with wave.open(out, "wb") as w_:
+            w_.setnchannels(1)
+            w_.setsampwidth(2)
+            w_.setframerate(m.SR)
+            w_.writeframes((np.clip(pcm, -1, 1) * 32767).astype("<i2").tobytes())
+        m.atomic_write_text(base + "_나레이션대본.txt", story)          # 겹침검사에 넣을 실제 읽은 대본 (오프닝을 고쳐 썼을 수 있음)
+        log(f"🎧 나레이션만 저장: {out} (겹침검사 → 고친 뒤 --나레이션만 없이 다시 실행하면 영상)")
+        try:
+            app.destroy()
+        except Exception:
+            pass
+        return 0
 
     r = m.make_renderer(title, story, s, narr)
     vdir = "영상구간"
