@@ -69,6 +69,7 @@ TRUE_STORY_GENRES = ["[실화] 과학이 밝혀낸 미스터리", "[실화] 최�
                      "[실화] 믿기 힘든 우연", "[실화] 희대의 사기와 범죄", "[실화] 평범한 사람의 위대한 순간", "[실화] 재난에서 살아남은 날",
                      "[실화] 불가능에 도전한 사람들"]
 HISTORY_GENRES = ["[실화] 기록으로 보는 진짜 역사"]
+SAMGUK_WORDS = ["삼국", "정사", "연의", "관우", "조조", "유비", "제갈량", "주유", "여포", "손견", "손권", "화웅", "동탁", "초선", "조운", "조자룡", "맹획", "적벽", "진수", "배송지"]   # 삼국지 편 알아보는 말
 HISTORY_CHANNEL_NOTE = ("기록으로 보는 진짜 역사 - 사극과 소설(삼국지연의)로 알려진 장면을 조선왕조실록·정사 『삼국지』의 실제 기록과 맞대어 보는 "
                         "10~30분 역사 다큐 채널. 시청자는 역사를 좋아하는 중장년층")
 ONE = "--한편" in sys.argv or "--one" in sys.argv     # 버튼 하나로: AI가 새 인기 주제를 골라 긴 영상 '한 편'만 끝까지 (묻지 않음, 쇼츠 없음)
@@ -690,6 +691,17 @@ def run_doc(m, app, c, gate):
     ch_ = m._YP.vary_settings(s, title, log)     # 규칙: 영상마다 강조색·자막 효과·배경음을 다르게 (유튜브 '대량 생산 콘텐츠' 정책)
     if not str(c.get("배경음") or "").strip() or str(c.get("배경음")).startswith("자동"):
         c["배경음"] = ch_["bgm_style"]
+    if HISTORY and any(w_ in (str(c.get("주제", "")) + str(c.get("기획메모", "")) + title) for w_ in SAMGUK_WORDS):
+        c["배경음"] = m.CHINA_STRINGS          # 삼국지 편: 고쟁·얼후 (사용자 결정 2026-10-30, 실록 편은 그대로)
+        log("🎵 배경음: 중국 현악(고쟁·얼후) · 챕터마다 고쟁 연주")
+        try:                                   # 프로젝트에도 저장 (다시 만들 때 같은 배경음)
+            pj_ = json.load(open(base + "_프로젝트.json", encoding="utf-8"))
+            pj_.setdefault("settings", {})["bgm_style"] = m.CHINA_STRINGS
+            m.atomic_write_text(base + "_프로젝트.json", json.dumps(pj_, ensure_ascii=False, indent=1))
+        except Exception:
+            pass
+    if c["배경음"] == m.CHINA_STRINGS:
+        s["chapter_hold"] = 4.2               # 챕터 제목 동안 나레이션을 쉬고 고쟁 연주
 
     # 2) 나레이션 (문단마다 저장 → 이어서)
     log("🎙 나레이션 만드는 중... (이미 만든 문단은 건너뜀)")

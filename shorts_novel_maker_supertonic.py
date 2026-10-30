@@ -5194,7 +5194,7 @@ class SubtitleRenderer:
             d = durs.get(idx)
             if d is None:
                 d = max(1.6, len(tts_clean(text)) * spc + 0.6)
-            d = (max(d, 1.0) + 1.0) if kind == "chapter" else d + gap   # 챕터 제목: 읽지 않고 약 2초 보여줌
+            d = max((max(d, 1.0) + 1.0), float(s.get("chapter_hold") or 0)) if kind == "chapter" else d + gap   # 챕터 제목: 읽지 않고 약 2초 보여줌 (chapter_hold: 그 사이 음악 연주 시간)
             segs.append({"i": idx, "kind": kind, "text": text, "img": cur_img, "dur": d, "sfx": pend,
                          "imgs": stack or None})
             pend, stack = [], []
@@ -7081,7 +7081,21 @@ def gen_melody_box(n, rng, melody, bpm=90):
     return _norm(pad + _norm(reverb(mel, rng, 2.8, 0.35)) * 0.85)
 
 
+CHINA_STRINGS = "중국 현악(고쟁·얼후)"   # 삼국지 편: 나레이션 아래 잔잔한 고쟁·얼후 + 챕터마다 고쟁 연주 (중국현악.py, 직접 합성)
+_CHINA_MOD = {}
+
+
+def _china():
+    if "m" not in _CHINA_MOD:
+        spec_ = importlib.util.spec_from_file_location("china_strings", os.path.join(BASE, "중국현악.py"))
+        mod_ = importlib.util.module_from_spec(spec_)
+        spec_.loader.exec_module(mod_)
+        _CHINA_MOD["m"] = mod_
+    return _CHINA_MOD["m"]
+
+
 SOUND_STYLES = {
+    CHINA_STRINGS: lambda n, r: _china().bed(n, r),
     "노래 멜로디(오르골)": lambda n, r: gen_melody_box(n, r, CURRENT_MELODY.get("melody", ""), CURRENT_MELODY.get("bpm", 90)),
     "잔잔한 패드": lambda n, r: gen_pad(n, r, "warm"),
     "슬픈 패드": lambda n, r: gen_pad(n, r, "sad"),
@@ -7276,7 +7290,18 @@ def build_audio(r, s, style):
             g = g * np.interp(t, [0, a, b, hit_t + 1.5, hit_t + 4.5, 1e9], [1, 1, 0.25, 0.25, 1, 1])
         if narr:   # 말하는 동안 음악을 낮춤 (더킹)
             g = g * duck_env(n, narr, r.duration, float(s.get("narr_duck", 0.35)))
+        if style == CHINA_STRINGS:     # 고쟁·얼후는 '거의 안 들림' 크기로는 묻혀서 조금 키움
+            g = g * max(1.0, 0.3 / max(0.01, float(s["bgm_volume"])))
         out += music * g[:, None].astype(np.float32)
+    if style == CHINA_STRINGS:         # 나레이션 사이(챕터 제목이 나오는 동안) 고쟁 한 소절
+        rng_i = np.random.default_rng(len(getattr(r, "segs", [])))
+        for sg in getattr(r, "segs", []):
+            if sg.get("kind") == "chapter":
+                it = _china().interlude(rng_i)
+                it = it / (np.abs(it).max() + 1e-6) * 0.42
+                i0 = int((sg["t0"] + 0.15) * SR)
+                seg = it[: max(0, n - i0)]
+                out[i0:i0 + len(seg)] += seg
     for st, clip in narr:
         vol = max(0, float(s.get("narr_volume", 1.0)))
         i0 = int(st * SR)
