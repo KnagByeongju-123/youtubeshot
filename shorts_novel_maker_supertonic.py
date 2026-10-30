@@ -3041,12 +3041,35 @@ def draw_settings():
 CAST_PRESET_FILE = os.path.join(BASE, "등장인물", "등장인물.json")   # 미리 정해 둔 인물 (face = 확정한 캐릭터 시트 그림)
 
 
+def cast_base(name):
+    """'조조(청년기, 20~30대)' → '조조' (확정 시트·외모를 이름 앞부분으로 찾음)"""
+    return re.split(r"[(\[]", str(name or ""))[0].strip()
+
+
+def add_preset_cast(text, log=None):
+    """등장인물.json 에서 확정 시트(face)가 있고 글에 이름이 나오는 인물을 IMAGE_CAST 에 먼저 등록 → 그림 기획이 그 외모를 그대로 씀"""
+    try:
+        chars = json.load(open(CAST_PRESET_FILE, encoding="utf-8")).get("chars") or []
+    except Exception:
+        return
+    have = {cast_base(c.get("name")) for c in IMAGE_CAST.get("chars") or []}
+    add = []
+    for c in chars:
+        nm, face = str(c.get("name") or ""), str(c.get("face") or "")
+        face = face if not face or os.path.isabs(face) else os.path.join(BASE, face)
+        if nm and c.get("look") and face and os.path.exists(face) and nm in text and nm not in have:
+            add.append({"name": nm, "look": str(c["look"]), "look_ko": str(c.get("look_ko") or ""), "sheet": face})
+    if add:
+        IMAGE_CAST["chars"] = list(IMAGE_CAST.get("chars") or []) + add
+        (log or (lambda x: None))("  👤 확정 캐릭터 시트 사용: " + ", ".join(c["name"] for c in add))
+
+
 def make_cast_sheets(names, style, media_dir, log=None, cancel=None):
     """그림에 나오는 인물마다 캐릭터 시트(앞·옆·뒤 전신, 흰 배경)를 klein 으로 그려 {이름: 경로}.
     이미 있는 시트(IMAGE_CAST 의 sheet, 등장인물.json 의 face)는 그대로 씀 → 모든 컷·회차가 같은 얼굴·옷"""
     log = log or (lambda x: None)
     try:
-        preset = {c.get("name"): c for c in json.load(open(CAST_PRESET_FILE, encoding="utf-8")).get("chars") or []}
+        preset = {cast_base(c.get("name")): c for c in json.load(open(CAST_PRESET_FILE, encoding="utf-8")).get("chars") or []}
     except Exception:
         preset = {}
     out, jobs = {}, []
@@ -3054,7 +3077,7 @@ def make_cast_sheets(names, style, media_dir, log=None, cancel=None):
         nm = c.get("name")
         if not nm or nm not in names or not c.get("look"):
             continue
-        face = str((preset.get(nm) or {}).get("face") or "")
+        face = str((preset.get(cast_base(nm)) or {}).get("face") or "")
         face = face if os.path.isabs(face) else os.path.join(BASE, face) if face else ""
         if c.get("sheet") and os.path.exists(c["sheet"]):
             out[nm] = c["sheet"]
@@ -3254,6 +3277,7 @@ def make_ai_images(model, category, title, story, n, s, media_dir, log, cancel=N
     style = image_style_text(s)
     preset = str(s.get("image_style_preset", "") or "")
     log(f"🎨 그림 {n}장 기획 중... (스타일: {preset if preset in IMAGE_STYLES else '직접 입력'})")
+    add_preset_cast(story_text_only(story) + " " + str(title), log)   # 확정 시트가 있는 인물은 그 외모 그대로 (AI가 옷 색을 새로 짓지 않게)
     cast = cast_text()
     fact_img = cat_info(category)[0] and not doc_is_fiction(str(category))   # 규칙: 사실 콘텐츠의 AI 그림은 개념도·상상도로만 (유튜브_정책.py)
     plan = ask_script_json(model, fit_ratio(IMAGE_PLAN_SYSTEM + (_YP.FACT_IMAGE_RULE if fact_img else "")), f"화면: {ratio_ko()}\n콘텐츠 종류: {category}\n그림 수: {n}장\n그림 스타일(모든 그림 공통): {style or '사실적인 영화 장면'}"
@@ -3266,9 +3290,9 @@ def make_ai_images(model, category, title, story, n, s, media_dir, log, cancel=N
             cap_ = str(it.get("caption", "")).strip()
             it["caption"] = cap_ if cap_.startswith(_YP.AI_CAPTION) else (f"{_YP.AI_CAPTION} · {cap_}" if cap_ else _YP.AI_CAPTION)
     if plan.get("cast"):     # 기획이 새로 정한 인물 외모를 등록(이미 있는 인물은 그대로) → 이후 모든 그림·회차에 같은 얼굴·머리·수염·체형
-        have = {c.get("name") for c in IMAGE_CAST.get("chars") or []}
+        have = {cast_base(c.get("name")) for c in IMAGE_CAST.get("chars") or []}
         new = [{"name": str(x.get("name", "")), "look": str(x.get("look", "")), "look_ko": str(x.get("look_ko", ""))}
-               for x in plan["cast"] if isinstance(x, dict) and x.get("name") and x.get("look") and str(x.get("name")) not in have]
+               for x in plan["cast"] if isinstance(x, dict) and x.get("name") and x.get("look") and cast_base(x.get("name")) not in have]
         if new:
             IMAGE_CAST["chars"] = list(IMAGE_CAST.get("chars") or []) + new
             cast = cast_text()
