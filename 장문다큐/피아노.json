@@ -12,7 +12,7 @@
   "Sony CSL 보도 (sonycsl.co.jp/?p=25015)",
   "ScienceDaily, 'A 100-year-old piano mystery has finally been solved', 2026.5.28",
   "Goebl, Bresin & Fujinaga, 'Perception of touch quality in piano tones', JASA 2014 (논쟁의 역사: Bryan 1913 단일 변수 가설, Ortmann 1925)",
-  "배경음악: 'Gymnopedie No.1 (jazz piano)' - 에릭 사티 작곡, 한국저작권위원회 편곡·연주, 공유마당 CC BY (gongu.copyright.or.kr/gongu/wrt/wrt/view.do?wrtSn=13159074&menuNo=200020)"
+  "배경음악: 'Gloomy Winter' - 오정석, 공유마당 CC BY (gongu.copyright.or.kr/gongu/wrt/wrt/view.do?wrtSn=13243529&menuNo=200020)"
  ],
  "notes": "피아니스트 20명은 2차 보도 기준(논문 원문 미확인) → '보도에 따르면'. 움직임 특징 5개·음색 3범주(무게·선명함·밝기)는 논문 요약 기준. 오트만의 정확한 입장은 자료마다 달라 '건반 움직임을 분석한 책'으로만. 크리스토포리 피아노 약 1700년.",
  "song": null,
@@ -155,7 +155,7 @@
   "hit_sound": "자동(코미디=두둥탁)",
   "hit_volume": 0.6,
   "bgm_seed": 0,
-  "bgm_path": "배경음/피아노_짐노페디1.mp3",
+  "bgm_path": "배경음/피아노_GloomyWinter_오정석.mp3",
   "narr_replace": "",
   "bgm_file_volume": 0.05
  }
