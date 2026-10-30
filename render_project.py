@@ -78,7 +78,15 @@ def main(a):
             app.apply_genre_profile(genre, quiet=True, sync=True)
         app.update()
     bgm = str((c.get("settings") or {}).get("bgm_style") or "").strip() or m.SOUND_BY_TOPIC.get(genre, "잔잔한 패드")   # 프로젝트에 정한 배경음 우선
-    app.vars["bgm_mode"].set("자동생성")
+    bgm_file = str((c.get("settings") or {}).get("bgm_path") or "").strip()   # 프로젝트에 음악 파일을 정했으면(국악 배경음 등) 그 파일을, 아니면 자동 생성
+    if bgm_file and not os.path.isabs(bgm_file):
+        bgm_file = os.path.join(HERE, bgm_file)
+    if str((c.get("settings") or {}).get("bgm_mode")) == "파일" and os.path.exists(bgm_file):
+        app.vars["bgm_mode"].set("파일")
+        app.vars["bgm_path"].set(bgm_file)
+        bgm = "파일 " + os.path.basename(bgm_file)
+    else:
+        app.vars["bgm_mode"].set("자동생성")
     try:
         bgm_vol = float(cfg.get("배경음_크기", 0.03))
     except (TypeError, ValueError):
