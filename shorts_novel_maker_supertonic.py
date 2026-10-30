@@ -1480,8 +1480,12 @@ def doc_add_photos(model, title, story, media_dir, log, cancel=None, sec=None, f
         """오프닝·챕터 하나: 사진 담당 AI가 찾고(필요 수 + 여유분) → 글과 맞는지 검사 → 모자라면 보충 AI가 다른 사진 창고에서 한 번 더"""
         text = "\n\n".join(blk)
         name = blk[0][3:] if blk[0].startswith("## ") else "오프닝"
-        got = 0
-        for rnd in range(1 + DOC_PHOTO_ROUNDS):
+        got, rnd0 = 0, 0
+        part = prog.setdefault("_part", {}).get(bkey(blk))      # 지난번에 찾다 멈춘 구간: 찾아 둔 사진부터 이어서
+        if part:
+            text, got, rnd0 = part
+            log(f"  📷 '{name}' 지난번에 찾아 둔 사진부터 이어서 ({rnd0}회차까지 끝남)")
+        for rnd in range(rnd0, 1 + DOC_PHOTO_ROUNDS):
             if cancel is not None and cancel.is_set():
                 raise RuntimeError("취소됨")
             cur = split_paras(text)
@@ -1514,6 +1518,9 @@ def doc_add_photos(model, title, story, media_dir, log, cancel=None, sec=None, f
                 text = place_photos(text, ph)
                 text, n_drop, _ = check_photo_fit(model, text, log, fiction=fiction)
                 got += len(ph) - n_drop
+                with lock:                                        # 한 번 찾을 때마다 저장 (구간 하나가 30분 넘게 걸려도 꺼지면 잃지 않게)
+                    prog["_part"][bkey(blk)] = [text, got, rnd + 1]
+                    atomic_write_text(prog_p, json.dumps(prog, ensure_ascii=False))
             except RuntimeError:
                 raise
             except Exception as e:
@@ -7059,7 +7066,14 @@ def decode_audio(path, n):
     x = np.frombuffer(p.stdout, np.float32).reshape(-1, 2) if p.returncode == 0 else np.zeros((0, 2), np.float32)
     if not len(x):
         raise RuntimeError("음악 파일을 읽지 못했습니다: " + p.stderr.decode("utf-8", "ignore")[:200])
-    return np.tile(x, (int(np.ceil(n / len(x))), 1))[:n].copy()
+    # 곡 앞뒤의 조용한 부분(페이드아웃 꼬리)을 잘라 반복할 때 소리가 끊기지 않게, 이음매는 4초 겹쳐 부드럽게 (예전: 그대로 이어 붙여 2~3분마다 뚝 끊김)
+    hop = SR // 10
+    lv = np.sqrt(np.mean(x[:len(x) // hop * hop].reshape(-1, hop, 2) ** 2, axis=(1, 2))) + 1e-9
+    db = 20 * np.log10(lv / lv.max())
+    keep = np.where(db > -30)[0]
+    if len(keep) and (keep[-1] - keep[0]) * hop > 20 * SR:
+        x = x[keep[0] * hop:(keep[-1] + 1) * hop]
+    return loop_xfade(np.ascontiguousarray(x, np.float32), n).copy()
 
 
 def resolve_style(s, topic):

@@ -93,6 +93,8 @@ def main(a):
         bgm_vol = 0.03
     if bgm_vol > 2:          # 25 처럼 퍼센트로 적었으면 0.25 로 (0~2 범위가 아니면 배경음이 목소리를 덮음)
         bgm_vol /= 100
+    if app.vars["bgm_mode"].get() == "파일" and (c.get("settings") or {}).get("bgm_file_volume"):   # 음악 파일은 프로젝트에 정한 크기로 (국악처럼 들려야 하는 음악)
+        bgm_vol = float(c["settings"]["bgm_file_volume"])
     app.vars["bgm_volume"].set(str(max(0.0, min(2.0, bgm_vol))))
     app.vars["target_sec"].set("0")
     # 저장한 성우(⭐ 새 성우로 저장): --성우프리셋 "이름" 또는 장문_설정.json 의 "성우_프리셋" (비우면 기본 성우 그대로)
