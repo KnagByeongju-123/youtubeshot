@@ -4212,24 +4212,34 @@ def _thumb_fit_font(fp, lines, maxw, start, min_size=28):
 
 
 def text_stroked(d, xy, txt, font, fill, sw, stroke_fill):
-    """굵은 테두리 글자 + 글자 속 닫힌 빈 곳(ㅇ·ㅁ 안쪽 등)을 테두리 색으로 메움 — 테두리를 굵게 하면 'ㅇ' 가운데로 배경이 구멍처럼 비쳤음 (썸네일 '안')"""
+    """굵은 테두리 글자. 테두리를 글꼴 기능(stroke) 대신 글자 모양을 둥글게 부풀려 직접 그림:
+    검은고딕의 '안'처럼 겹친 획(ㅇ)에는 글꼴 테두리가 안 그려져 흰 글자가 배경에 바로 닿았고, 'ㅇ' 가운데로 배경이 구멍처럼 비쳤음.
+    부풀린 테두리 안의 닫힌 빈 곳도 테두리 색으로 메움"""
     im_ = getattr(d, "_image", None)
-    if sw and im_ is not None:
+    if sw and im_ is not None and _cv2 is not None:
         try:
             x0, y0, x1, y1 = d.textbbox(xy, txt, font=font, stroke_width=sw)
-            pad = 4
+            pad = sw + 4
             mk = Image.new("L", (int(x1 - x0) + pad * 2, int(y1 - y0) + pad * 2), 0)
-            ImageDraw.Draw(mk).text((xy[0] - x0 + pad, xy[1] - y0 + pad), txt, font=font, fill=255, stroke_width=sw, stroke_fill=255)
-            holes = mk.point(lambda v: 255 if v < 128 else 0)
-            ImageDraw.floodfill(holes, (0, 0), 0)                     # 바깥과 이어진 빈 곳은 지우고, 갇힌 빈 곳만 남김
-            if holes.getbbox():
-                holes = holes.filter(ImageFilter.MaxFilter(3))
-                col = ImageColor.getcolor(stroke_fill, "RGBA") if isinstance(stroke_fill, str) else tuple(stroke_fill) + ((255,) if len(stroke_fill) == 3 else ())
-                layer = Image.new("RGBA", mk.size, col)
-                if im_.mode == "RGBA":
-                    im_.alpha_composite(Image.composite(layer, Image.new("RGBA", mk.size, (0, 0, 0, 0)), holes), (int(x0) - pad, int(y0) - pad))
-                else:
-                    im_.paste(layer.convert(im_.mode), (int(x0) - pad, int(y0) - pad), holes)
+            ImageDraw.Draw(mk).text((xy[0] - x0 + pad, xy[1] - y0 + pad), txt, font=font, fill=255)
+            k = _cv2.getStructuringElement(_cv2.MORPH_ELLIPSE, (2 * sw + 1, 2 * sw + 1))
+            dil = Image.fromarray(_cv2.dilate(np.asarray(mk), k))
+            holes = dil.point(lambda v: 255 if v < 128 else 0)
+            ImageDraw.floodfill(holes, (0, 0), 0)                     # 바깥과 이어진 빈 곳은 그대로, 갇힌 빈 곳만 메움
+            ring = Image.fromarray(np.maximum(np.asarray(dil), np.asarray(holes.filter(ImageFilter.MaxFilter(3)))))
+            col = ImageColor.getcolor(stroke_fill, "RGBA") if isinstance(stroke_fill, str) else tuple(stroke_fill) + ((255,) if len(stroke_fill) == 3 else ())
+            if len(col) == 4 and col[3] < 255:
+                ring = ring.point(lambda v, a_=col[3]: v * a_ // 255)
+            layer = Image.new("RGBA", mk.size, col[:3] + (255,))
+            pos = (int(x0) - pad, int(y0) - pad)
+            if im_.mode == "RGBA":
+                lay = Image.new("RGBA", mk.size, (0, 0, 0, 0))
+                lay.paste(layer, (0, 0), ring)
+                im_.alpha_composite(lay, (max(0, pos[0]), max(0, pos[1])), (max(0, -pos[0]), max(0, -pos[1])))
+            else:
+                im_.paste(layer.convert(im_.mode), pos, ring)
+            d.text(xy, txt, font=font, fill=fill)
+            return
         except Exception:
             pass
     d.text(xy, txt, font=font, fill=fill, stroke_width=sw, stroke_fill=stroke_fill)
