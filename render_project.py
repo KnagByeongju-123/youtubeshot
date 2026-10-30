@@ -83,13 +83,23 @@ def main(a):
             app.apply_genre_profile(genre, quiet=True, sync=True)
         app.update()
     bgm = str((c.get("settings") or {}).get("bgm_style") or "").strip() or m.SOUND_BY_TOPIC.get(genre, "잔잔한 패드")   # 프로젝트에 정한 배경음 우선
-    app.vars["bgm_mode"].set("자동생성")
+    bgm_file = str((c.get("settings") or {}).get("bgm_path") or "").strip()   # 프로젝트에 음악 파일을 정했으면(국악 배경음 등) 그 파일을, 아니면 자동 생성
+    if bgm_file and not os.path.isabs(bgm_file):
+        bgm_file = os.path.join(HERE, bgm_file)
+    if str((c.get("settings") or {}).get("bgm_mode")) == "파일" and os.path.exists(bgm_file):
+        app.vars["bgm_mode"].set("파일")
+        app.vars["bgm_path"].set(bgm_file)
+        bgm = "파일 " + os.path.basename(bgm_file)
+    else:
+        app.vars["bgm_mode"].set("자동생성")
     try:
         bgm_vol = float(cfg.get("배경음_크기", 0.03))
     except (TypeError, ValueError):
         bgm_vol = 0.03
     if bgm_vol > 2:          # 25 처럼 퍼센트로 적었으면 0.25 로 (0~2 범위가 아니면 배경음이 목소리를 덮음)
         bgm_vol /= 100
+    if app.vars["bgm_mode"].get() == "파일" and (c.get("settings") or {}).get("bgm_file_volume"):   # 음악 파일은 프로젝트에 정한 크기로 (국악처럼 들려야 하는 음악)
+        bgm_vol = float(c["settings"]["bgm_file_volume"])
     app.vars["bgm_volume"].set(str(max(0.0, min(2.0, bgm_vol))))
     app.vars["target_sec"].set("0")
     app.vars["head_show"].set("안 보임(제목 카드만)")   # 규칙(사용자 결정): 왼쪽 위 제목줄 없앰 — 길면 사진 설명과 겹침. 제목은 시작 제목 카드로만
