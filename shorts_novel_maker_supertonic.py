@@ -5157,7 +5157,7 @@ class SubtitleRenderer:
         self.hs, self.he = s["hold_start"], s["hold_end"]
         # 문단 → 구간
         self.images, segs, idx, cur_img = [], [], 0, -1
-        imcache, pend = {}, []
+        imcache, pend, stack = {}, [], []     # stack: 문단 앞에 연달아 놓인 그림들 → 그 문단 시간을 나눠 차례로 보여줌 (안 그러면 마지막 한 장만 보임)
         paras_for_narr = narration_paras(story)
         for para in story.replace("\r", "").split("\n"):
             para = para.strip()
@@ -5172,11 +5172,13 @@ class SubtitleRenderer:
                     self.images.append((im, med[1]))
                     self.img_paths = getattr(self, "img_paths", []) + [resolve_media(med[0]) or med[0]]
                     cur_img = len(self.images) - 1
+                    stack.append(cur_img)
                 continue
             hm = HOLD_RE.match(para)
             if hm:                                 # [쉼:2.5] 말 없이 화면만 (몽타주)
-                segs.append({"i": None, "kind": "hold", "text": "", "img": cur_img, "dur": max(0.5, float(hm.group(1))), "sfx": pend})
-                pend = []
+                segs.append({"i": None, "kind": "hold", "text": "", "img": cur_img, "dur": max(0.5, float(hm.group(1))), "sfx": pend,
+                             "imgs": stack if len(stack) > 1 else None})
+                pend, stack = [], []
                 continue
             fm = SFX_RE.match(para)
             if fm:                                 # [효과:알림] 다음 문단 시작에 효과음
@@ -5193,8 +5195,9 @@ class SubtitleRenderer:
             if d is None:
                 d = max(1.6, len(tts_clean(text)) * spc + 0.6)
             d = (max(d, 1.0) + 1.0) if kind == "chapter" else d + gap   # 챕터 제목: 읽지 않고 약 2초 보여줌
-            segs.append({"i": idx, "kind": kind, "text": text, "img": cur_img, "dur": d, "sfx": pend})
-            pend = []
+            segs.append({"i": idx, "kind": kind, "text": text, "img": cur_img, "dur": d, "sfx": pend,
+                         "imgs": stack if len(stack) > 1 else None})
+            pend, stack = [], []
             idx += 1
         if self.images:   # 첫 사진이 나오기 전 문단들도 첫 사진을 보여줌 (빈 화면 방지)
             for sg in segs:
@@ -5709,6 +5712,29 @@ class SubtitleRenderer:
         st[img_idx] = (z1, x1, y1)
         return (z0, z1, x0, x1, y0, y1), up
 
+    def _img_pieces(self, end_t):
+        """[(그림 번호, 시작, 끝)]: 문단마다 그 문단의 그림. 문단 앞에 그림이 여러 장 연달아 있으면 문단 시간을 똑같이 나눠 차례로"""
+        out = []
+        for k, sg in enumerate(self.segs):
+            if sg["img"] < 0:
+                continue
+            t0 = sg["t0"]
+            t1 = self.segs[k + 1]["t0"] if k + 1 < len(self.segs) else end_t
+            imgs = sg.get("imgs") or [sg["img"]]
+            for j, im_ in enumerate(imgs):
+                out.append((im_, t0 + (t1 - t0) * j / len(imgs), t0 + (t1 - t0) * (j + 1) / len(imgs)))
+        return out
+
+    def _img_at(self, sg, t):
+        """그 시각에 보이는 그림 번호 (문단 앞에 그림이 여러 장이면 나눈 차례대로)"""
+        imgs = sg.get("imgs")
+        if not imgs:
+            return sg["img"]
+        k = self.segs.index(sg)
+        t1 = self.segs[k + 1]["t0"] if k + 1 < len(self.segs) else self.duration
+        j = int((t - sg["t0"]) / max(1e-6, (t1 - sg["t0"]) / len(imgs)))
+        return imgs[max(0, min(len(imgs) - 1, j))]
+
     def _make_shots(self):
         """문단·사진에 맞춰 장면 목록 만들기. 영상처럼 모드: 문단마다(긴 문단은 나눠서) 다른 움직임으로 컷"""
         mode = str(self.s.get("img_motion", "영상처럼"))
@@ -5725,38 +5751,33 @@ class SubtitleRenderer:
             rng = np.random.default_rng(len(self.images) * 131 + len(self.segs))
             last = -1
             up = False
-            for k, sg in enumerate(self.segs):
-                if sg["img"] < 0:
-                    continue
-                t0 = sg["t0"] if shots else 0.0
-                t1 = self.segs[k + 1]["t0"] if k + 1 < len(self.segs) else end_t
+            for img_, t0, t1 in self._img_pieces(end_t):
+                if not shots:
+                    t0 = 0.0
                 n = max(1, int(np.ceil((t1 - t0) / mx)))
                 for j in range(n):
                     a, b = t0 + (t1 - t0) * j / n, t0 + (t1 - t0) * (j + 1) / n
-                    same = bool(shots) and shots[-1]["img"] == sg["img"]
+                    same = bool(shots) and shots[-1]["img"] == img_
                     if same and shots[-1]["t1"] - shots[-1]["t0"] < 1.2:
                         shots[-1]["t1"] = b          # 너무 짧은 장면은 앞 장면에 붙임
                         continue
                     if big_motion:                   # '크게(예전)': 장면마다 다른 움직임을 무작위로
-                        ms = self._motion_set(sg["img"])
+                        ms = self._motion_set(img_)
                         m = int(rng.integers(len(ms)))
                         if m == last and len(ms) > 1:
                             m = (m + 1 + int(rng.integers(len(ms) - 1))) % len(ms)
                         last = m
                         mt = ms[m]
                     else:                            # 기본(은은하게): 같은 사진이면 앞 장면에서 이어서 서서히 확대 → 서서히 축소·이동
-                        mt, up = self._gentle_chain(sg["img"], first=not same, up=up, rng=rng)
-                    shots.append({"img": sg["img"], "t0": a, "t1": b, "m": mt, "first": not same})
+                        mt, up = self._gentle_chain(img_, first=not same, up=up, rng=rng)
+                    shots.append({"img": img_, "t0": a, "t1": b, "m": mt, "first": not same})
         else:   # 사진이 바뀔 때만 장면 전환
-            for k, sg in enumerate(self.segs):
-                if sg["img"] < 0:
-                    continue
-                t1 = self.segs[k + 1]["t0"] if k + 1 < len(self.segs) else end_t
-                if shots and shots[-1]["img"] == sg["img"]:
+            for img_, t0_, t1 in self._img_pieces(end_t):
+                if shots and shots[-1]["img"] == img_:
                     shots[-1]["t1"] = t1
                 else:
                     zm = (1.0, 1.12, 0, 0, 0, 0) if mode.startswith("천천히") else (1.06, 1.06, 0, 0, 0, 0)
-                    shots.append({"img": sg["img"], "t0": sg["t0"] if shots else 0.0, "t1": t1, "m": zm})
+                    shots.append({"img": img_, "t0": t0_ if shots else 0.0, "t1": t1, "m": zm})
         if shots:
             shots[-1]["t1"] = max(shots[-1]["t1"], end_t)
         return shots
@@ -6223,7 +6244,7 @@ class SubtitleRenderer:
             if sg["img"] >= 0 and self.images:
                 canvas = self._paint_images(canvas, t)
                 if str(self.s.get("img_label", "on")) == "on":      # 규칙: 사진이 나올 때 오른쪽 위에 사진 제목
-                    lab = self._img_label(sg["img"], t)
+                    lab = self._img_label(self._img_at(sg, t), t)
                     if lab is not None:
                         canvas.alpha_composite(lab[0], lab[1])
             if getattr(self, "overlay", None) is not None:      # 시네마 띠·뉴스 띠·가운데 자막용 어둡게
@@ -6391,7 +6412,7 @@ _DEPTH_CACHE = {}
 _DEPTH_WARNED = set()
 _GRID_CACHE = {}
 DEPTH_AMP = {"약하게": (0.007, 0.003), "보통": (0.022, 0.010), "강하게": (0.035, 0.016)}   # 약하게는 아주 은은하게(기본)
-RENDER_VER = "2026-10-17b"   # 그리는 방식이 바뀌면 올림 → 장문 영상 구간 캐시를 새로 그림   # (가로, 세로) 최대 밀림 = 화면 크기 비율
+RENDER_VER = "2026-10-30a"   # 그리는 방식이 바뀌면 올림 → 장문 영상 구간 캐시를 새로 그림   # (가로, 세로) 최대 밀림 = 화면 크기 비율
 
 
 def depth_key(path):
