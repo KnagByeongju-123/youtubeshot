@@ -151,8 +151,18 @@ def missing_spots(sylls, sents, min_gap=3):
         return []
     out = []
     sm = difflib.SequenceMatcher(None, ref, hy, autojunk=False)
+    blocks, cur = [], None          # 맞지 않는 칸이 이어진 덩어리(바꿔 적힘·더 들림 포함)로 묶어 '모자란 글자 수'를 셈
     for op, a0, a1, b0, b1 in sm.get_opcodes():
-        if op in ("delete", "replace") and (a1 - a0) - (b1 - b0) >= min_gap:
+        if op == "equal" and a1 - a0 >= 2:
+            if cur:
+                blocks.append(cur)
+            cur = None
+            continue
+        cur = [a0, a1, b0, b1] if cur is None else [cur[0], a1, cur[2], b1]
+    if cur:
+        blocks.append(cur)
+    for a0, a1, b0, b1 in blocks:   # '논쟁의 씨앗이'를 '논쟁이 시아시'로 잘못 알아들은 것은 글자 수가 같아 빠짐이 아님
+        if (a1 - a0) - (b1 - b0) >= min_gap:
             par, s = sents[owner[a0]]
             t = sylls[min(b0, len(sylls) - 1)][1]
             out.append({"t": t, "dd": f"빠짐 '{ref[a0:a1]}'", "sentence": s, "paragraph": par, "heard": hy[max(0, b0 - 12):b1 + 12]})
