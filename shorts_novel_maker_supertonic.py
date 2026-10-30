@@ -894,6 +894,11 @@ MULTI_SYSTEM = f"""너는 한국 유튜브 쇼츠 '썰/단편소설' 전문 작�
 
 반드시 JSON만 출력: {{"drafts": [{{"title": "제목", "story": "본문"}}, {{"title": "제목", "story": "본문"}}, {{"title": "제목", "story": "본문"}}]}}"""
 
+DOC_VIDEO_CLIPS = False   # 근거 자료에 짧은 동영상도 넣을지 (사용자 결정 2026-10-30: 넣지 않음. True 로 바꾸면 사진 AI가 영상도 찾음)
+VIDEO_CLIP_RULE = """- [영상 자료] 그 문단의 대상을 실제로 보여주는 짧은 동영상(위키미디어 공용의 .webm/.ogv/.mp4 파일, 공유마당 영상 중 기증·CC BY·공공누리 제1유형)이
+  있으면 사진 대신 넣어도 된다: 구간(오프닝·챕터)마다 많아야 1~2개. url 은 영상 파일 주소 그대로(.webm/.ogv/.mp4 로 끝남), start 에 쓸 장면의 시작 초(숫자, 없으면 0).
+  프로그램이 그 자리부터 7초만 잘라 소리 없이 넣는다. 공연·연주·실험·동물 움직임처럼 움직임이 의미 있는 장면을 고른다. 출처·라이선스 확인 규칙은 사진과 같다
+"""
 PHOTO_RULES = """[사진 규칙]
 - [최우선: 문맥 관련성] 사진은 붙는 문단의 내용과 직접 관련된 것만 쓴다. 그 문단에 나오는 바로 그 대상·장소·인물·장치·자료를 보여주지 않으면 쓰지 않는다.
   사진 수를 채우려고 일반 분위기 사진(진료실·의사·알약·체중계·실험실·우주 배경·도시 풍경·회사 건물 같은 스톡 사진)을 넣지 않는다. 맞는 사진이 없으면 그 자리는 비워 둔다
@@ -914,10 +919,7 @@ PHOTO_RULES = """[사진 규칙]
 - caption 에는 그 문단의 핵심 대상 이름을 그대로 넣는다(예: '리벳 실험의 시계', '마리아나 해구 챌린저 해연 위치'). after 는 그 대상이 나오는 바로 그 문단의 앞부분
 - after: 그 사진이 보여주는 문단의 앞부분(원문 그대로 10~20자). 사진은 그 문단 **바로 앞 줄**에 들어간다(사진 → 글 순서). 본문이 아직 없으면 그 사진이 보여주는 사실의 핵심 단어
 - caption: 15자 이내 한국어 설명 / credit: "작가 또는 기관 / 라이선스" / page: 출처 페이지 URL
-- [영상 자료] 그 문단의 대상을 실제로 보여주는 짧은 동영상(위키미디어 공용의 .webm/.ogv/.mp4 파일, 공유마당 영상 중 기증·CC BY·공공누리 제1유형)이
-  있으면 사진 대신 넣어도 된다: 구간(오프닝·챕터)마다 많아야 1~2개. url 은 영상 파일 주소 그대로(.webm/.ogv/.mp4 로 끝남), start 에 쓸 장면의 시작 초(숫자, 없으면 0).
-  프로그램이 그 자리부터 7초만 잘라 소리 없이 넣는다. 공연·연주·실험·동물 움직임처럼 움직임이 의미 있는 장면을 고른다. 출처·라이선스 확인 규칙은 사진과 같다
-- q: 그 대상을 Wikimedia Commons 에서 찾을 영어 검색어(고유명사 위주, 2~4단어). 예: "Gwanggaeto Stele", "Rosetta Stone", "Meroe pyramids". url 을 못 찾아도 q 는 꼭 적는다(프로그램이 q 로 실제 파일을 직접 검색해 받는다)."""
+- q: 그 대상을 Wikimedia Commons 에서 찾을 영어 검색어(고유명사 위주, 2~4단어). 예: "Gwanggaeto Stele", "Rosetta Stone", "Meroe pyramids". url 을 못 찾아도 q 는 꼭 적는다(프로그램이 q 로 실제 파일을 직접 검색해 받는다).""" + "\n" + (VIDEO_CLIP_RULE if DOC_VIDEO_CLIPS else "- 동영상 파일(.webm/.ogv/.mp4)은 고르지 않는다. 사진·그림만\n")
 
 RESEARCH_SYSTEM = """너는 유튜브 쇼츠 대본을 위한 자료조사원이다. WebSearch 로 주제를 검색하고, 중요한 내용은 WebFetch 로 원문을 열어 확인한다.
 주제가 비어 있으면 해당 소재에서 쇼츠로 반응이 좋을 실제 주제를 하나 골라서 조사한다.
@@ -2734,6 +2736,8 @@ def fetch_photos(items, media_dir, log, limit=3):
         # 1) AI가 준 URL 시도
         if it.get("url"):
             try:
+                if is_video(it["url"]) and not DOC_VIDEO_CLIPS:
+                    raise ValueError("동영상은 넣지 않음(설정)")
                 path = (download_video(str(it["url"]), media_dir, it.get("start") or 0) if is_video(it["url"])
                         else download_image(str(it["url"]), media_dir))
                 got.append({"path": path, "caption": it.get("caption", ""), "credit": it.get("credit", ""),
