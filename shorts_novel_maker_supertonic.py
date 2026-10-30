@@ -898,6 +898,10 @@ PHOTO_RULES = """[사진 규칙]
 - [최우선: 문맥 관련성] 사진은 붙는 문단의 내용과 직접 관련된 것만 쓴다. 그 문단에 나오는 바로 그 대상·장소·인물·장치·자료를 보여주지 않으면 쓰지 않는다.
   사진 수를 채우려고 일반 분위기 사진(진료실·의사·알약·체중계·실험실·우주 배경·도시 풍경·회사 건물 같은 스톡 사진)을 넣지 않는다. 맞는 사진이 없으면 그 자리는 비워 둔다
 - 우선순위: Wikimedia Commons(퍼블릭 도메인·CC 라이선스), NASA·NOAA·USGS·ESA 등 공공기관 공개 이미지
+- 한국 주제(한국 역사·문화·전통·인물·장소)면 한국 공공기관 사진도 같은 순위로 찾는다: 공공누리 **제1유형**(출처만 밝히면 상업 이용·변경 가능) 표시가 있는 것만.
+  예: 대한민국 정책브리핑(korea.kr) 사진, 해외문화홍보원 Korea.net 플리커(flickr.com/photos/koreanet, CC BY-SA), e뮤지엄(emuseum.go.kr)·국립중앙박물관·국립민속박물관 공개 이미지,
+  공유마당(gongu.copyright.or.kr), 공공누리(kogl.or.kr), 한국관광공사 포토코리아. 제2·3·4유형(상업 금지·변경 금지)은 쓰지 않는다(유튜브 수익·영상 움직임이 걸림).
+  credit 은 "기관명 / 공공누리 제1유형" 처럼, url 은 그 사이트의 원본 이미지 파일 주소
 - url 은 이미지 파일 주소(.jpg/.jpeg/.png). 예: https://upload.wikimedia.org/... 또는 https://commons.wikimedia.org/wiki/File:파일이름.jpg
 - 저작권이 불분명한 뉴스·블로그 사진, AI 생성 이미지, 워터마크 있는 사진은 쓰지 않는다
 - 명화 이야기면 그 그림 자체(Wikimedia Commons 의 PD-Art 파일, 화가 사후 70년 경과작만)를 첫 번째로, 그 다음 이야기에 나오는 부분의 확대 이미지나 화가 초상. 한국 그림은 국립중앙박물관·간송미술관 공개 이미지도 가능.
@@ -1492,7 +1496,8 @@ def doc_add_photos(model, title, story, media_dir, log, cancel=None, sec=None, f
                 avoid = "\n".join(sorted(used))[:3000]
             extra = ("" if rnd == 0 else "\n\n[보충 검색] 앞에서 찾은 사진이 모자라거나 글과 안 맞아 빠졌다. 이번에는 다른 곳에서 찾는다: "
                      "위키미디어 공용의 관련 분류(Category), 미국 항공우주국·유럽 우주국·유럽 남방 천문대 이미지 갤러리, 대학·연구소 보도자료 사진, "
-                     "미국 국립보건원·질병관리청 같은 공공기관 자료 사진. 자유 이용 허락(퍼블릭 도메인·CC)이 분명한 것만. "
+                     "미국 국립보건원·질병관리청 같은 공공기관 자료 사진, 한국 주제면 정책브리핑(korea.kr)·Korea.net 플리커·e뮤지엄·국립민속박물관·공유마당 같은 "
+                     "한국 공공기관의 공공누리 제1유형 사진. 자유 이용 허락(퍼블릭 도메인·CC·공공누리 제1유형)이 분명한 것만. "
                      "단, 수를 채우려고 문맥과 상관없는 사진을 고르지 않는다: 붙일 문단에 나오는 대상을 직접 보여주는 사진만, 없으면 적게 골라도 된다.")
             try:
                 d = ask_json(model, PHOTO_SYSTEM,
@@ -1515,12 +1520,33 @@ def doc_add_photos(model, title, story, media_dir, log, cancel=None, sec=None, f
                 log(f"  '{name}' 사진 찾기 실패(그대로 둠): " + (str(e).splitlines() or [""])[0][:80])
         return text, got
 
-    todo = [bi for bi, blk in enumerate(blocks) if doc_photo_target("\n\n".join(blk), sec) > sum(1 for p in blk if parse_media(p))]
+    # 중간에 꺼져도 끝난 구간(오프닝·챕터)의 사진은 남게: 구간마다 결과를 media 폴더에 저장 → 다시 실행하면 그 구간은 건너뜀
+    import hashlib as _hl
+    prog_p = os.path.join(media_dir, "_사진진행_" + _hl.md5(title.encode("utf-8")).hexdigest()[:10] + ".json")
+    try:
+        prog = json.load(open(prog_p, encoding="utf-8"))
+    except Exception:
+        prog = {}
+    bkey = lambda blk: _hl.md5("\n\n".join(blk).encode("utf-8")).hexdigest()
     results = {bi: ("\n\n".join(blk), 0) for bi, blk in enumerate(blocks)}
+    for bi, blk in enumerate(blocks):
+        if bkey(blk) in prog:
+            results[bi] = tuple(prog[bkey(blk)])
+    if any(bkey(blk) in prog for blk in blocks):
+        log(f"  📷 지난번에 끝낸 구간 {sum(1 for blk in blocks if bkey(blk) in prog)}개는 저장된 사진 그대로 (건너뜀)")
+    todo = [bi for bi, blk in enumerate(blocks) if bkey(blk) not in prog
+            and doc_photo_target("\n\n".join(blk), sec) > sum(1 for p in blk if parse_media(p))]
+
+    def one_saved(bi):
+        r_ = one_block(blocks[bi])
+        with lock:
+            prog[bkey(blocks[bi])] = list(r_)
+            atomic_write_text(prog_p, json.dumps(prog, ensure_ascii=False))
+        return r_
     if todo:
         log(f"  🔎 사진 담당 AI {min(DOC_PHOTO_AGENTS, len(todo))}명이 {len(todo)}개 구간을 나눠 찾습니다 (모자라면 보충 검색 {DOC_PHOTO_ROUNDS}회)")
         with ThreadPoolExecutor(max_workers=max(1, min(DOC_PHOTO_AGENTS, len(todo)))) as ex:
-            futs = {bi: ex.submit(one_block, blocks[bi]) for bi in todo}
+            futs = {bi: ex.submit(one_saved, bi) for bi in todo}
             for bi, f_ in futs.items():
                 results[bi] = f_.result()
     out, seen, added = [], set(), 0
@@ -2516,8 +2542,8 @@ def commons_search(query, limit=6, log=None, fresh=True):
     })
     try:
         gap = time.time() - _last_dl[0]
-        if gap < 1.0:
-            time.sleep(1.0 - gap)
+        if gap < 2.0:
+            time.sleep(2.0 - gap)
         _last_dl[0] = time.time()
         req = urllib.request.Request(api, headers={"User-Agent": UA, "Accept": "application/json"})
         with urllib.request.urlopen(req, timeout=40) as r:
@@ -2561,8 +2587,8 @@ def download_image(url, media_dir, stem=None):
     data = None
     for attempt in range(3):
         gap = time.time() - _last_dl[0]
-        if gap < 1.0:                      # 요청 사이 최소 1초 간격
-            time.sleep(1.0 - gap)
+        if gap < 2.0:                      # 요청 사이 최소 2초 간격 (1초면 위키미디어가 자주 429로 막음)
+            time.sleep(2.0 - gap)
         _last_dl[0] = time.time()
         req = urllib.request.Request(target, headers={"User-Agent": UA, "Accept": "image/*,*/*;q=0.8"})
         try:
