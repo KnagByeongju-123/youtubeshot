@@ -5826,7 +5826,10 @@ class SubtitleRenderer:
         """장면 sh 의 t 시점 사진 (움직임 적용) + 그림이 처음 나타날 때 그리는 효과 (그림 옆에 <그림>.인물.json 이 있으면)"""
         self._last_rect = None
         crop, mask = self._shot_crop_raw(sh, t)
-        fx = None if getattr(self, "slide", False) or self._last_rect is None else self._draw_fx_at(sh["img"], t)
+        if getattr(self, "slide", False) or self._last_rect is None:
+            return crop, mask
+        crop = self._expr_at(sh["img"], t, crop)
+        fx = self._draw_fx_at(sh["img"], t)
         if fx is None:
             return crop, mask
         prog, data = fx
@@ -5869,13 +5872,40 @@ class SubtitleRenderer:
             cache[idx] = {"plate": Image.fromarray(plate), "mask": Image.fromarray((M * 255).astype(np.uint8)) if M is not None else None}
         return max(0.0, prog), cache[idx]
 
+    def _expr_at(self, idx, t, crop):
+        """표정 바뀌기: 그림 옆 <그림>.표정.json {"image": 표정만 바꾼 그림, "at": 그림이 머무는 시간 중 바뀌는 때(0~1)} 이 있으면
+        그 때부터 0.8초 동안 표정 그림으로 부드럽게 바뀜 (얼굴 칸만 다시 그린 그림이라 나머지는 그대로)"""
+        paths = getattr(self, "img_paths", [])
+        if idx >= len(paths) or not os.path.exists(paths[idx] + ".표정.json"):
+            return crop
+        piece = next(((a_, b_) for im_, a_, b_ in self._img_pieces(self.duration) if im_ == idx and t < b_), None)
+        if piece is None:
+            return crop
+        cache = self.__dict__.setdefault("_expr_data", {})
+        if idx not in cache:
+            try:
+                info = json.load(open(paths[idx] + ".표정.json", encoding="utf-8"))
+                big = self._img_src(idx)[0]
+                cache[idx] = (Image.open(info["image"]).convert("RGB").resize(big.size, Image.LANCZOS), float(info.get("at", 0.7)))
+            except Exception:
+                cache[idx] = None
+        if cache[idx] is None:
+            return crop
+        ex, at = cache[idx]
+        a_, b_ = piece
+        k = smoothstep((t - (a_ + (b_ - a_) * at)) / 0.8)
+        if k <= 0:
+            return crop
+        ec = extent_resize(ex, crop.size, self._last_rect).convert(crop.mode)
+        return Image.blend(crop, ec, float(k))
+
     @property
     def fx_sig(self):
         """그리는 효과 자료(인물 영역 파일)가 바뀌면 영상 구간 캐시도 새로 그리게"""
         sig = []
         for p_ in getattr(self, "img_paths", []):
             try:
-                sig.append(str(int(os.path.getmtime(p_ + ".인물.json"))))
+                sig.append(str(int(os.path.getmtime(p_ + ".인물.json"))) + (str(int(os.path.getmtime(p_ + ".표정.json"))) if os.path.exists(p_ + ".표정.json") else ""))
             except OSError:
                 sig.append("-")
         return hashlib.md5(",".join(sig).encode()).hexdigest()[:12] if any(x != "-" for x in sig) else ""
