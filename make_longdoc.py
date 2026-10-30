@@ -702,6 +702,14 @@ def run_doc(m, app, c, gate):
             pass
     if c["배경음"] == m.CHINA_STRINGS:
         s["chapter_hold"] = 4.2               # 챕터 제목 동안 나레이션을 쉬고 고쟁 연주
+    if HISTORY:                                # 역사 편: 입체 움직임(2.5D) 끔 — 그리는 효과와 겹치고 없는 게 나음 (사용자 결정 2026-10-30)
+        s["img_depth"] = "off"
+        try:
+            pj_ = json.load(open(base + "_프로젝트.json", encoding="utf-8"))
+            pj_.setdefault("settings", {})["img_depth"] = "off"
+            m.atomic_write_text(base + "_프로젝트.json", json.dumps(pj_, ensure_ascii=False, indent=1))
+        except Exception:
+            pass
 
     # 2) 나레이션 (문단마다 저장 → 이어서)
     log("🎙 나레이션 만드는 중... (이미 만든 문단은 건너뜀)")
