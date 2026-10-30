@@ -17,8 +17,7 @@
   "한국학호남진흥원 — 목포의 눈물 노래비 https://www.hiks.or.kr/HonamHeritage/32/read/372",
   "일본어 위키백과 「古賀政男」 https://ja.wikipedia.org/wiki/古賀政男",
   "서울신문(이호섭) 2022-04-11 https://m.seoul.co.kr/news/2022/04/11/20220411024007 · 데일리안 https://www.dailian.co.kr/news/view/1490602",
-  "뉴시스 2020-03-15 미스터트롯 결승 시청률 https://mobile.newsis.com/view/NISX20200315_0000955969",
-  "배경음: 음악 AI ACE-Step 1.5 (MIT 라이선스)로 직접 만든 곡"
+  "뉴시스 2020-03-15 미스터트롯 결승 시청률 https://mobile.newsis.com/view/NISX20200315_0000955969"
  ],
  "notes": "엔카 영향설·독자 발전설을 같은 무게로. 폭스트롯 어원·뽕짝 어원은 '알려져 있다'. 고가 마사오 발언 원문 미확인 → '전한다'. 동백 아가씨 금지 이유는 두 해석 모두. 노래 음원·음반 표지·가수 사진은 쓰지 않음(목포의 눈물 레코드는 공공누리 1유형 e뮤지엄 사진). 가수·작곡가 평가 금지.",
  "song": null,
@@ -160,14 +159,12 @@
   "image_quality": "medium",
   "image_style_preset": "크라프트지 손그림(귀여운 낙서)",
   "image_style": "영화 장면 같은 사실적인 사진, 분위기 있는 조명",
-  "bgm_mode": "파일",
-  "bgm_style": "자동(소재별)",
+  "bgm_mode": "자동생성",
+  "bgm_style": "슬픈 패드",
   "bgm_volume": 0.03,
   "reveal_hit": "off",
   "hit_sound": "자동(코미디=두둥탁)",
   "hit_volume": 0.6,
-  "bgm_seed": 0,
-  "bgm_path": "배경음/트로트_정통트로트_ACEStep.mp3",
-  "bgm_file_volume": 0.05
+  "bgm_seed": 0
  }
 }
