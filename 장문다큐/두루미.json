@@ -11,7 +11,8 @@
   "Stewart et al., 'Ancient DNA study resolves the taxonomic status of the extinct large Palaearctic crane Grus primigenia Milne-Edwards, 1871', Royal Society Open Science 13(10), 2026, doi:10.1098/rsos.260699",
   "Bournemouth University 보도, 2026.10.28 (bournemouth.ac.uk/news/2026-10-28/study-has-solved-150-year-old-mystery-identity-extinct-giant-crane)",
   "phys.org, '150-year-old mystery about the identity of an extinct giant crane solved', 2026.10",
-  "Greek Reporter, 2026.10.28 (원본 표본 미검사·사루스/시베리아흰두루미 배제)"
+  "Greek Reporter, 2026.10.28 (원본 표본 미검사·사루스/시베리아흰두루미 배제)",
+  "배경음악: 'Cloud' - 유민규, 공유마당(한국저작권위원회) 기증저작물 자유이용 (gongu.copyright.or.kr/gongu/wrt/wrt/view.do?wrtSn=13073873&menuNo=200020)"
  ],
  "notes": "고대 DNA 18점 모두 검은목두루미(Grus grus). 원래 이름 붙인 파리의 표본은 손상 우려로 검사 안 함 → '더 연구 필요'. 작아진 이유(습지·토지 이용)는 가설. 영국 두루미: 약 400년 전 번식 끊김, 1979년 노퍽 습지로 자연 귀환, 이후 복원 사업(숫자는 단정하지 않음). 검은목두루미 키 1m 남짓·날개 편 길이 약 2m는 일반 도감 기준.",
  "song": null,
@@ -147,7 +148,7 @@
   "image_quality": "medium",
   "image_style_preset": "크라프트지 손그림(귀여운 낙서)",
   "image_style": "영화 장면 같은 사실적인 사진, 분위기 있는 조명",
-  "bgm_mode": "자동생성",
+  "bgm_mode": "파일",
   "bgm_style": "자동(소재별)",
   "bgm_volume": 0.03,
   "reveal_hit": "off",
@@ -155,6 +156,7 @@
   "hit_volume": 0.6,
   "bgm_seed": 0,
   "narr_replace": "",
-  "bgm_file_volume": 0.05
+  "bgm_file_volume": 0.05,
+  "bgm_path": "배경음/두루미_Cloud_유민규.mp3"
  }
 }
