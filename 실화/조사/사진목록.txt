@@ -99,7 +99,7 @@ File:Giotto_-_Scrovegni_-_-31-_-_Kiss_of_Judas.jpg|조토 「유다의 입맞춤
 File:Evenki_shaman_family_-_1907.jpg|시베리아 에벤키족 무당 가족 (1907년 사진)
 File:Star_Carr_headdress_cropped.JPG|영국 스타 카의 사슴 머리 쓰개 (약 1만 1,000년 전)
 File:HILAZON_(334).jpg|이스라엘 갈릴리의 힐라존 계곡
-File:Natoufien.svg|나투프 문화가 퍼졌던 지역
+File:Natoufien.svg|나투프 문화가 퍼졌던 지역 focus=0.5,0.62
 File:Star_Carr_headdress.jpg|스타 카 사슴 머리 쓰개
 File:Evenk_shaman_costume.jpg|에벤키족 무당의 옷 (박물관)
 File:Bad_Dürrenberg_in_2012.jpg|독일 바트 뒤렌베르크
