@@ -914,6 +914,9 @@ PHOTO_RULES = """[사진 규칙]
 - caption 에는 그 문단의 핵심 대상 이름을 그대로 넣는다(예: '리벳 실험의 시계', '마리아나 해구 챌린저 해연 위치'). after 는 그 대상이 나오는 바로 그 문단의 앞부분
 - after: 그 사진이 보여주는 문단의 앞부분(원문 그대로 10~20자). 사진은 그 문단 **바로 앞 줄**에 들어간다(사진 → 글 순서). 본문이 아직 없으면 그 사진이 보여주는 사실의 핵심 단어
 - caption: 15자 이내 한국어 설명 / credit: "작가 또는 기관 / 라이선스" / page: 출처 페이지 URL
+- [영상 자료] 그 문단의 대상을 실제로 보여주는 짧은 동영상(위키미디어 공용의 .webm/.ogv/.mp4 파일, 공유마당 영상 중 기증·CC BY·공공누리 제1유형)이
+  있으면 사진 대신 넣어도 된다: 구간(오프닝·챕터)마다 많아야 1~2개. url 은 영상 파일 주소 그대로(.webm/.ogv/.mp4 로 끝남), start 에 쓸 장면의 시작 초(숫자, 없으면 0).
+  프로그램이 그 자리부터 7초만 잘라 소리 없이 넣는다. 공연·연주·실험·동물 움직임처럼 움직임이 의미 있는 장면을 고른다. 출처·라이선스 확인 규칙은 사진과 같다
 - q: 그 대상을 Wikimedia Commons 에서 찾을 영어 검색어(고유명사 위주, 2~4단어). 예: "Gwanggaeto Stele", "Rosetta Stone", "Meroe pyramids". url 을 못 찾아도 q 는 꼭 적는다(프로그램이 q 로 실제 파일을 직접 검색해 받는다)."""
 
 RESEARCH_SYSTEM = """너는 유튜브 쇼츠 대본을 위한 자료조사원이다. WebSearch 로 주제를 검색하고, 중요한 내용은 WebFetch 로 원문을 열어 확인한다.
@@ -941,7 +944,7 @@ PHOTO_SYSTEM = """너는 유튜브 쇼츠 사실 콘텐츠의 사진 자료조�
 
 """ + PHOTO_RULES + """
 
-반드시 JSON만 출력: {"photos": [{"after": "...", "url": "...", "q": "영어 검색어", "caption": "...", "credit": "...", "page": "..."}]}"""
+반드시 JSON만 출력: {"photos": [{"after": "...", "url": "...", "q": "영어 검색어", "caption": "...", "credit": "...", "page": "...", "start": 0}]}"""
 
 WEB_VERIFY_BLOCK = """
 
@@ -1353,7 +1356,10 @@ def check_photo_fit(model, text, log=None, min_score=None, fiction=False):
     def _src_of(i_):
         md_ = parse_media(paras[i_]) or ("", "", "", "")
         return (f" | 출처: {md_[2]}" if md_[2] else "") + (f" | 원본 페이지: {md_[3]}" if md_[3] else "")
-    plist = "\n".join(f"사진{k + 1}: {x[1] if os.path.isabs(x[1]) else os.path.join(BASE, x[1])} | 설명: {x[2]}{_src_of(x[0])} | 붙은 문단: {x[3]}"
+    def _see(p_):                   # 영상 자료는 대표 화면 그림을 열어 봄
+        p_ = p_ if os.path.isabs(p_) else os.path.join(BASE, p_)
+        return (video_poster(p_) + " (짧은 영상의 대표 화면)") if is_video(p_) else p_
+    plist = "\n".join(f"사진{k + 1}: {_see(x[1])} | 설명: {x[2]}{_src_of(x[0])} | 붙은 문단: {x[3]}"
                       for k, x in enumerate(ph))
     tlist = "\n".join(f"[{n + 1}] {story_text_only(paras[i])[:220]}" for n, i in enumerate(items))
     try:
@@ -2487,10 +2493,40 @@ def filtered_media(path, name):
     return out
 
 
+VIDEO_EXTS = (".mp4", ".webm", ".ogv", ".mov", ".mkv")
+
+
+def is_video(path):
+    return str(path or "").lower().split("?")[0].endswith(VIDEO_EXTS)
+
+
+def _cover_box(src, dst):
+    """src 크기 그림을 dst 비율로 가득 채울 때 잘라 올 영역 (가운데)"""
+    sw, sh_ = src
+    asp = dst[0] / dst[1]
+    if sw / sh_ > asp:
+        w = sh_ * asp
+        return ((sw - w) / 2, 0, (sw + w) / 2, sh_)
+    h = sw / asp
+    return (0, (sh_ - h) / 2, sw, (sh_ + h) / 2)
+
+
 def load_media_image(path):
     q = resolve_media(path)
     if not q:
         return None
+    if is_video(q) and _cv2 is None:
+        return None
+    if is_video(q):                       # 영상 자료: 가운데 화면 한 장을 대표 그림으로 (썸네일·사진 검사용). 영상에서는 움직이는 화면을 씀
+        try:
+            cap = _cv2.VideoCapture(q)
+            n = int(cap.get(_cv2.CAP_PROP_FRAME_COUNT) or 0)
+            cap.set(_cv2.CAP_PROP_POS_FRAMES, max(0, n // 2))
+            ok, fr = cap.read()
+            cap.release()
+            return Image.fromarray(_cv2.cvtColor(fr, _cv2.COLOR_BGR2RGB)) if ok else None
+        except Exception:
+            return None
     try:
         im = Image.open(q)
         im.load()
@@ -2587,6 +2623,63 @@ def commons_search(query, limit=6, log=None, fresh=True):
     return out
 
 
+CLIP_SEC = 7.0      # 영상 자료는 앞(또는 지정한 시작점부터) 이만큼만 잘라 소리 없이 넣음
+
+
+def download_video(url, media_dir, start=0.0):
+    """짧은 영상 자료 받기 → media/clip_*.mp4 (소리 없음, 가로 1280, CLIP_SEC 초). 위키미디어 429면 잠시 기다렸다 다시"""
+    import urllib.request, urllib.error, tempfile
+    data = None
+    for attempt in range(3):
+        gap = time.time() - _last_dl[0]
+        if gap < 2.0:
+            time.sleep(2.0 - gap)
+        _last_dl[0] = time.time()
+        req = urllib.request.Request(fix_image_url(url), headers={"User-Agent": UA, "Accept": "video/*,*/*;q=0.8"})
+        try:
+            with urllib.request.urlopen(req, timeout=120) as r:
+                data = r.read(150 * 1024 * 1024 + 1)
+            break
+        except urllib.error.HTTPError as e:
+            if e.code in (429, 503) and attempt < 2:
+                time.sleep(6.0 * (attempt + 1))
+                continue
+            raise
+    if not data or len(data) > 150 * 1024 * 1024:
+        raise ValueError("영상이 없거나 너무 큼")
+    os.makedirs(media_dir, exist_ok=True)
+    ext = os.path.splitext(url.lower().split("?")[0])[1] or ".mp4"
+    with tempfile.NamedTemporaryFile(suffix=ext, delete=False, dir=media_dir) as f:
+        f.write(data)
+        tmp = f.name
+    out = os.path.join(media_dir, time.strftime("clip_%Y%m%d_%H%M%S") + f"_{int(time.time() * 1000) % 1000:03d}.mp4")
+    try:
+        p = subprocess.run([get_ffmpeg(), "-v", "error", "-y", "-ss", f"{max(0.0, float(start or 0)):.2f}", "-i", tmp, "-t", f"{CLIP_SEC:.1f}", "-an",
+                            "-vf", "scale='min(1280,iw)':-2,fps=24", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-crf", "20", out],
+                           capture_output=True, creationflags=(subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0))
+    finally:
+        try:
+            os.remove(tmp)
+        except OSError:
+            pass
+    if p.returncode != 0 or not os.path.exists(out):
+        raise ValueError("영상 변환 실패: " + p.stderr.decode("utf-8", "ignore")[:80])
+    if _cv2 is not None:
+        cap = _cv2.VideoCapture(out)
+        w_ = int(cap.get(_cv2.CAP_PROP_FRAME_WIDTH) or 0)
+        cap.release()
+        poster = load_media_image(out)
+        if poster is None or w_ < 400:
+            os.remove(out)
+            raise ValueError("영상이 너무 작거나 읽을 수 없음")
+        poster.save(video_poster(out), quality=90)      # 사진 검사(AI가 열어 봄)용 대표 화면
+    return short_path(out)
+
+
+def video_poster(path):
+    return os.path.splitext(path)[0] + "_poster.jpg"
+
+
 def download_image(url, media_dir, stem=None):
     """사진 내려받기. 위키미디어 429(너무 자주 요청)면 잠시 기다렸다 최대 3번 재시도"""
     import urllib.request, urllib.error
@@ -2641,7 +2734,8 @@ def fetch_photos(items, media_dir, log, limit=3):
         # 1) AI가 준 URL 시도
         if it.get("url"):
             try:
-                path = download_image(str(it["url"]), media_dir)
+                path = (download_video(str(it["url"]), media_dir, it.get("start") or 0) if is_video(it["url"])
+                        else download_image(str(it["url"]), media_dir))
                 got.append({"path": path, "caption": it.get("caption", ""), "credit": it.get("credit", ""),
                             "page": it.get("page", ""), "after": it.get("after", "")})
                 if it.get("page"):
@@ -5842,6 +5936,11 @@ class SubtitleRenderer:
                     self._img_cache.pop(next(iter(self._img_cache)))
                 self._img_cache[key] = z
             return self._img_cache[key], mask
+        paths_ = getattr(self, "img_paths", [])
+        if sh["img"] < len(paths_) and is_video(paths_[sh["img"]]):     # 영상 자료: 장면이 시작된 뒤 지난 시간의 화면 (끝나면 마지막 화면에서 멈춤)
+            fr = self._video_frame(paths_[sh["img"]], t - sh.get("g0", sh["t0"]))   # 같은 영상이 여러 장면으로 나뉘어도 이어서 재생
+            if fr is not None:
+                return extent_resize(fr, (bw, bh), _cover_box(fr.size, (bw, bh))), mask
         z0, z1, ax, bx, ay, by = sh["m"]
         p = min(1.0, max(0.0, (t - sh["t0"]) / max(0.1, sh["t1"] - sh["t0"])))
         p = 0.5 - 0.5 * np.cos(np.pi * p)             # 부드럽게 시작·끝
@@ -5881,6 +5980,33 @@ class SubtitleRenderer:
         dcrop = extent_np(dbig, size_p, box)                                 # float32 0~255
         warped = parallax_warp_np(crop_pad, dcrop, ox, oy)
         return Image.fromarray(np.ascontiguousarray(warped[my:my + bh, mx:mx + bw])), mask
+
+    def _video_frame(self, path, dt):
+        """영상 자료의 dt 초 화면 (PIL). 앞에서부터 차례로 읽고, 뒤로 가면 다시 엶. 끝나면 마지막 화면"""
+        vs = self.__dict__.setdefault("_vids", {})
+        v = vs.get(path)
+        fps = 24.0
+        want = max(0, int(dt * fps))
+        if v is None or want < v["i"]:
+            if v is not None:
+                v["cap"].release()
+            cap = _cv2.VideoCapture(resolve_media(path) or path)
+            fps = float(cap.get(_cv2.CAP_PROP_FPS) or 24.0) or 24.0
+            v = vs[path] = {"cap": cap, "i": -1, "fr": None, "fps": fps, "end": False}
+            want = max(0, int(dt * fps))
+        want = max(0, int(dt * v["fps"]))
+        while v["i"] < want and not v["end"]:
+            ok, fr = v["cap"].read()
+            if not ok:
+                v["end"] = True
+                break
+            v["i"] += 1
+            v["fr"] = fr
+        if v["fr"] is None:
+            return None
+        if v.get("pil_i") != v["i"]:
+            v["pil"], v["pil_i"] = Image.fromarray(_cv2.cvtColor(v["fr"], _cv2.COLOR_BGR2RGB)), v["i"]
+        return v["pil"]
 
     def _depth_for(self, idx, size):
         """idx 사진의 깊이 지도를 큰 사진 크기의 L 이미지로 (캐시)"""
@@ -6414,7 +6540,7 @@ def depth_ready():
 def ensure_depth_maps(paths, log=None, cancel=None):
     """사진들의 깊이 지도를 미리 계산해 둠 (한 번 계산하면 재사용). 모델이 없으면 조용히 건너뜀"""
     log = log or (lambda x: None)
-    paths = [p for p in dict.fromkeys(paths) if p and os.path.exists(p)]
+    paths = [p for p in dict.fromkeys(paths) if p and os.path.exists(p) and not is_video(p)]   # 영상 자료는 깊이 계산 안 함 (원래 움직임 그대로)
     if not paths:
         return 0
     if not depth_ready():
