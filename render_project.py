@@ -177,6 +177,8 @@ def main(a):
         n_bad = sum(1 for r_ in m._NV.REPORT if not r_[2]["ok"])
         log(f"🔎 나레이션 검증: {len(m._NV.REPORT)}문단 중 문제 {n_bad}개" + (f" → {os.path.basename(base)}_나레이션검증.txt 확인" if n_bad else " (모두 통과)"))
 
+    if bgm == getattr(m, "CHINA_STRINGS", ""):
+        s["chapter_hold"] = 4.2               # 챕터 제목 동안 나레이션을 쉬고 고쟁 연주
     r = m.make_renderer(title, story, s, narr)
     vdir = "영상구간"
     if "--vi" in a:     # 한글 자막 위에 베트남어 자막
@@ -208,7 +210,7 @@ def main(a):
             log(f"  MP4 {p}%")
     keys = ("fps", "format", "layout", "img_fill", "img_motion", "img_depth", "img_depth_amt", "head_style", "head_pos", "head_size", "head_show", "sub_style",
             "sub_size", "sub_layout", "sub_dialog", "sub_anim", "sub_split", "style_preset", "text_color", "sub_box_alpha", "font_path", "title_font_path", "bgm_volume", "intro_sec", "outro_sec", "outro_text", "img_filter", "motion_count", "motion_chart", "motion_icon", "motion_lower", "motion_popup", "sub_trans", "sub2_above")
-    key = hashlib.md5((story + "|" + getattr(m, "RENDER_VER", "") + "|" + json.dumps({k: s.get(k) for k in keys}, ensure_ascii=False) + "|" + title + "|" + ",".join(f"{d_:.3f}" for _, _, d_ in narr) + "|" + ",".join(f"{sg_['t0']:.2f}" for sg_ in getattr(r, "segs", [])) + f"|{r.duration:.2f}").encode("utf-8")).hexdigest()   # 나레이션이 바뀌면(발음 수정 등) 영상 구간도 새로
+    key = hashlib.md5((story + "|" + getattr(m, "RENDER_VER", "") + "|" + json.dumps({k: s.get(k) for k in keys}, ensure_ascii=False) + "|" + title + "|" + ",".join(f"{d_:.3f}" for _, _, d_ in narr) + "|" + ",".join(f"{sg_['t0']:.2f}" for sg_ in getattr(r, "segs", [])) + f"|{r.duration:.2f}" + getattr(r, "fx_sig", "")).encode("utf-8")).hexdigest()   # 나레이션이 바뀌면(발음 수정 등) 영상 구간도 새로
     m.export_mp4_resumable(r, base + ".mp4", prog, gate, audio, work_dir=os.path.join(work, vdir), seg_sec=120, log=log, key=key)
     del audio
     r.thumbnail().save(base + "_썸네일.png")

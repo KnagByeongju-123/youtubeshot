@@ -50,6 +50,8 @@ DEFAULT = {
     "재미_소재": [],        # 비우면 아래 FUN_GENRES 를 돌아가며
     "그림_스타일": "자동(돌아가며)",   # 이야기 편 그림 스타일: 자동 또는 프로그램의 그림 스타일 이름(웹툰, 지브리풍 손그림 애니, 70~80년대 순정만화 …) 또는 직접 쓴 영어 지시
     "이미지": "근거 사진(웹)",   # 사실 주제 이미지: 근거 사진(웹) / 그림: 애니(웹툰) / 그림: 애니+수채화 / 그림: 파스텔 감성 / 그림: 애니 일러스트 / 그림: 애니 모델 그대로 (그림은 이 PC에서 그림)
+    "역사_이미지": "그림: 역사 수묵 담채",   # 역사 채널(--역사) 이미지: 옛 인물·전투는 사진이 없어 이 PC에서 그림 (사용자 결정 2026-10-30: 샘플 4번째 그림의 수묵 담채). "근거 사진(웹)" 으로 바꾸면 웹 사진
+    "그림_간격_초": 10,      # 그림(이미지가 '그림: …')일 때 간격. 대본 글자 수로 어림한 초라 실제 화면에서는 약 8초 (규칙: 그림 한 장 5~12초)
     "썸네일_선택": "프로그램",   # 유튜브 썸네일 최종본: 프로그램(AI가 고른 것 그대로) / 외부 자동(소재탐색 썸네일 중 점수로 고른 것) /
                                # 수동(창): 영상이 끝나면 프로그램 후보 + 소재탐색 후보를 한 화면에 띄워 클릭으로 고름 (연속 제작 중엔 창을 띄우지 않고 '외부 자동'처럼)
                                # 나중에 고르려면: 썸네일_고르기.bat 에 <제목>_썸네일_후보 폴더를 끌어다 놓기
@@ -67,6 +69,7 @@ TRUE_STORY_GENRES = ["[실화] 과학이 밝혀낸 미스터리", "[실화] 최�
                      "[실화] 믿기 힘든 우연", "[실화] 희대의 사기와 범죄", "[실화] 평범한 사람의 위대한 순간", "[실화] 재난에서 살아남은 날",
                      "[실화] 불가능에 도전한 사람들"]
 HISTORY_GENRES = ["[실화] 기록으로 보는 진짜 역사"]
+SAMGUK_WORDS = ["삼국", "정사", "연의", "관우", "조조", "유비", "제갈량", "주유", "여포", "손견", "손권", "화웅", "동탁", "초선", "조운", "조자룡", "맹획", "적벽", "진수", "배송지"]   # 삼국지 편 알아보는 말
 HISTORY_CHANNEL_NOTE = ("기록으로 보는 진짜 역사 - 사극과 소설(삼국지연의)로 알려진 장면을 조선왕조실록·정사 『삼국지』의 실제 기록과 맞대어 보는 "
                         "10~30분 역사 다큐 채널. 시청자는 역사를 좋아하는 중장년층")
 ONE = "--한편" in sys.argv or "--one" in sys.argv     # 버튼 하나로: AI가 새 인기 주제를 골라 긴 영상 '한 편'만 끝까지 (묻지 않음, 쇼츠 없음)
@@ -336,6 +339,7 @@ def main():
         c["연속_소재"] = list(HISTORY_GENRES)
         c["연속_구성"] = ["지식"]
         CHANNEL_NOTE = HISTORY_CHANNEL_NOTE
+        c["이미지"] = str(c.get("역사_이미지") or DEFAULT["역사_이미지"])   # 실화 채널과 따로: 역사 편은 정해 둔 스타일로 그림
         print("📜 역사 연속 제작 모드: 실록·정사 기록으로 보는 진짜 역사 다큐를 만듭니다 (주제: 역사\\주제목록.txt)")
     elif TRUE_STORY:   # 실화 모드: 실화 소재만, 전부 지식 다큐로 (설정 파일의 연속_소재·연속_구성 무시)
         c["연속_소재"] = list(TRUE_STORY_GENRES)
@@ -365,6 +369,8 @@ def main():
         return
     global SEG_SEC
     m.DOC_PHOTO_SEC = max(6, float(c.get("사진_간격_초", 8)))   # 규칙: 관련 사진 최대한 많이 (8초마다 한 장)
+    if str(c.get("이미지") or "").startswith("그림:"):    # 이 PC에서 그리는 그림: 한 장 5~12초 (그리는 효과로 볼거리, 사용자 결정 2026-10-30)
+        m.DOC_PHOTO_SEC = float(c.get("그림_간격_초") or DEFAULT["그림_간격_초"])
     SEG_SEC = int(max(1, float(c.get("영상_구간_분", 2))) * 60)
 
     app = m.App()
@@ -588,6 +594,7 @@ def run_doc(m, app, c, gate):
     if src_ == m.IMG_SOURCE_WEB and str(c["소재"]).startswith("[교육]"):     # 교육 소재는 기본이 그림 (실제 사람 사진 대신)
         src_ = m.genre_profile(c["소재"]).get("img_source", src_)
     m.IMG_SOURCE["mode"] = src_ if src_ in m.IMG_SOURCE_PRESET else m.IMG_SOURCE_WEB
+    app.img_src_var.set(m.IMG_SOURCE["mode"])       # 프로젝트 파일에도 저장 (다시 만들기·그림 보강 때 같은 스타일로)
     if m.IMG_SOURCE["mode"] != m.IMG_SOURCE_WEB:
         log(f"🖌 이미지: {m.IMG_SOURCE['mode']} (사실 주제도 웹 사진 대신 이 PC에서 그림)")
     if m.doc_is_fiction(c["소재"]):
@@ -684,6 +691,17 @@ def run_doc(m, app, c, gate):
     ch_ = m._YP.vary_settings(s, title, log)     # 규칙: 영상마다 강조색·자막 효과·배경음을 다르게 (유튜브 '대량 생산 콘텐츠' 정책)
     if not str(c.get("배경음") or "").strip() or str(c.get("배경음")).startswith("자동"):
         c["배경음"] = ch_["bgm_style"]
+    if HISTORY and any(w_ in (str(c.get("주제", "")) + str(c.get("기획메모", "")) + title) for w_ in SAMGUK_WORDS):
+        c["배경음"] = m.CHINA_STRINGS          # 삼국지 편: 고쟁·얼후 (사용자 결정 2026-10-30, 실록 편은 그대로)
+        log("🎵 배경음: 중국 현악(고쟁·얼후) · 챕터마다 고쟁 연주")
+        try:                                   # 프로젝트에도 저장 (다시 만들 때 같은 배경음)
+            pj_ = json.load(open(base + "_프로젝트.json", encoding="utf-8"))
+            pj_.setdefault("settings", {})["bgm_style"] = m.CHINA_STRINGS
+            m.atomic_write_text(base + "_프로젝트.json", json.dumps(pj_, ensure_ascii=False, indent=1))
+        except Exception:
+            pass
+    if c["배경음"] == m.CHINA_STRINGS:
+        s["chapter_hold"] = 4.2               # 챕터 제목 동안 나레이션을 쉬고 고쟁 연주
 
     # 2) 나레이션 (문단마다 저장 → 이어서)
     log("🎙 나레이션 만드는 중... (이미 만든 문단은 건너뜀)")
@@ -706,7 +724,7 @@ def run_doc(m, app, c, gate):
     import hashlib
     key = hashlib.md5((story + "|" + getattr(m, "RENDER_VER", "") + "|" + json.dumps({k: s.get(k) for k in ("fps", "format", "layout", "img_fill", "img_motion", "img_depth", "img_depth_amt", "head_style", "head_pos", "head_size", "head_show", "sub_style", "sub_size", "sub_layout", "sub_dialog", "sub_anim", "sub_split", "style_preset", "text_color", "sub_box_alpha",
                                                                          "font_path", "title_font_path", "bgm_volume", "intro_sec", "outro_sec", "outro_text", "img_filter", "motion_count", "motion_chart", "motion_icon", "motion_lower", "motion_popup")}, ensure_ascii=False)
-                       + "|" + title + "|" + ",".join(f"{d_:.3f}" for _, _, d_ in narr) + "|" + ",".join(f"{sg_['t0']:.2f}" for sg_ in getattr(r, "segs", [])) + f"|{r.duration:.2f}").encode("utf-8")).hexdigest()   # 나레이션이 바뀌면(발음 수정 등) 영상 구간도 새로
+                       + "|" + title + "|" + ",".join(f"{d_:.3f}" for _, _, d_ in narr) + "|" + ",".join(f"{sg_['t0']:.2f}" for sg_ in getattr(r, "segs", [])) + f"|{r.duration:.2f}" + getattr(r, "fx_sig", "")).encode("utf-8")).hexdigest()   # 나레이션이 바뀌면(발음 수정 등) 영상 구간도 새로
     m.export_mp4_resumable(r, base + ".mp4", prog, gate, audio, work_dir=os.path.join(work, "영상구간"), seg_sec=SEG_SEC, log=log, key=key)
     del audio
     r.thumbnail().save(base + "_썸네일.png")
