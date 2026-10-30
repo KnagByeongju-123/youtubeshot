@@ -151,6 +151,9 @@ def main(a):
     hooked = False
     if "--대본그대로" not in a:      # 규칙: 30초 후크 + 첫 5초 = 제목·썸네일 약속 (--대본그대로 면 손으로 쓴 오프닝 그대로)
         story, hooked = m.hook_fix(app.model_var.get().strip(), story, log, gate, title=title if is_long else "")
+    else:                           # 대본 그대로여도 후크는 검사만 (고치지 않음) — 규칙: 30초 후크는 대본을 쓸 때부터 넣음
+        iss = m.hook_check(story, title if is_long else "")
+        log("🎣 30초 후크 확인: " + ("통과" if not iss else "⚠ " + " / ".join(iss) + " → 대본 오프닝을 직접 고치세요 (프로그램은 고치지 않음)"))
     n_ret = 0
     if is_long and "--형식고정" not in a and "--대본그대로" not in a:     # 규칙(1위 영상 분석): 챕터 끝 예고 + 마무리 시리즈 한 줄
         story, n_ret = m.retention_fix(app.model_var.get().strip(), story, title, log, gate)
