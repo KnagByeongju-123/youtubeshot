@@ -104,6 +104,7 @@ def main(a):
         fixes.append({"id": f"e{k}", "image": p_, "out": p_ + ".표정.jpg", "box": box, "seed": 7 + k,
                       "refs": [sheets[who]] if who in sheets else [],
                       "prompt": (f"Close-up of the same person's face, same face shape, same hair, beard, headwear and same ink wash painting style. "
+                                 f"Keep exactly the same head angle, head direction and gaze direction as the original (do not turn the face toward the viewer). "
                                  f"Change only the facial expression: {ex}. No text, no seal stamp.")})
     jp = os.path.join(os.path.dirname(proj), "_표정_job.json")
     json.dump({"items": [], "fixes": fixes}, open(jp, "w", encoding="utf-8"), ensure_ascii=False)
