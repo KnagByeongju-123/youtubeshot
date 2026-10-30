@@ -1239,10 +1239,10 @@ DOC_PHOTO_SPARE = 3   # 글과 안 맞아 빠지거나 내려받기 실패할 �
 
 
 def doc_photo_target(text, sec=None):
-    """장문 한 덩어리(챕터·오프닝)에 넣을 사진 수: 나레이션 sec 초마다 한 장 (3~16장)"""
+    """장문 한 덩어리(챕터·오프닝)에 넣을 사진 수: 나레이션 sec 초마다 한 장 (최소 3장, 챕터마다 상한 없음 — 사용자 결정 2026-10-30)"""
     chars = len(story_text_only(text or ""))
     per = DOC_CHARS_PER_MIN * (sec or DOC_PHOTO_SEC) / 60
-    return max(3, min(16, round(chars / max(1, per))))
+    return max(3, round(chars / max(1, per)))
 
 
 DOC_STYLE = """[장문 다큐 나레이션 문체 - 반드시 지킬 것]
@@ -3483,8 +3483,8 @@ def _split_inline_ph(text):
 
 
 def place_photos(story, photos):
-    """본문의 [사진N] 자리표시를 실제 사진 줄로 바꾸고, 자리표시가 없는 사진은 알맞은 곳에 끼움 (최대 5장)"""
-    photos = list(photos or [])[:20]
+    """본문의 [사진N] 자리표시를 실제 사진 줄로 바꾸고, 자리표시가 없는 사진은 알맞은 곳에 끼움 (장 수 제한 없음)"""
+    photos = list(photos or [])
     paras = split_paras(_split_inline_ph(story))
     used = set()
     for i, p in enumerate(paras):
