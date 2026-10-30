@@ -914,6 +914,17 @@ def span_phrase(text):
     return ""
 
 
+def hit_head(text, name):
+    """채널 인기 공식(큰 숫자 + '아무도 못') 제목 머리. 원문에 기간이 없으면 빈 문자열.
+    'N년간'(풀리지 않은 기간)만 '동안 아무도 못 푼'으로 쓰고, 'N년 전·N세기'(만들어진 때)는 나이로만 씀."""
+    span = span_phrase(text)
+    if span.endswith("년간"):
+        return f"{span[:-1]} 동안 아무도 못 푼 {name}"
+    if span:
+        return f"아무도 못 푼 {span} {name}"
+    return ""
+
+
 def template_titles(it):
     """규칙 기반 제목 틀. [소재] 자리에 한국어 소재명을 넣어 쓰면 됩니다.
     해결 상태에 맞는 표현만 쓰고, 원문에 없는 기간·기술은 넣지 않음."""
@@ -921,18 +932,22 @@ def template_titles(it):
     pre = f"{span} " if span else ""
     tech = it["tech"].split(", ")[0] if it["tech"] else ""
     st = it["status"]
+    head = hit_head(it["title"] + " " + it["summary"], "[소재]")   # 채널 인기 공식 틀을 맨 앞에
+    t = []
     if st == "해결 근거":
-        t = [f"{pre}풀리지 않던 [소재] 수수께끼, 마침내 답이 나왔다",
+        t = [f"{head}, 그 답을 풀어낸 단서"] if head else []
+        t += [f"{pre}풀리지 않던 [소재] 수수께끼, 마침내 답이 나왔다",
              f"[소재]의 정체, 과학이 밝혀낸 진실"]
         if tech:
             t.append(f"{tech}로 풀어낸 [소재]의 비밀")
     elif st == "가설 제안":
-        t = [f"{pre}[소재]의 수수께끼, 드디어 풀렸을까?",
+        t = [f"{head}, 드디어 풀렸을까?"] if head else []
+        t += [f"{pre}[소재]의 수수께끼, 드디어 풀렸을까?",
              f"[소재]에 대한 새로운 답, 과학자들이 내놓은 유력한 가설"]
         if tech:
             t.append(f"{tech}가 찾아낸 [소재]의 새 단서")
     elif st == "미해결":
-        t = [f"{pre}아직 아무도 풀지 못한 [소재]의 수수께끼",
+        t += [f"{pre}아직 아무도 풀지 못한 [소재]의 수수께끼",
              f"과학자들도 답을 모른다, [소재]에 남은 질문들"]
     else:
         t = [f"[소재], 과학자들이 새로 찾아낸 단서",
