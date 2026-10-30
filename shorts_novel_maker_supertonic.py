@@ -5899,13 +5899,54 @@ class SubtitleRenderer:
         ec = extent_resize(ex, crop.size, self._last_rect).convert(crop.mode)
         return Image.blend(crop, ec, float(k))
 
+    def _year_cap_at(self, t):
+        """연도 자막: 그림 옆 <그림>.연도.json {"year": "191년", "label": "양인 전투"} — 앞 그림과 연도가 다를 때만,
+        그림이 나타난 뒤 4초 동안 화면 위쪽 가운데에 큰 연도 + 한 줄 설명 (VGraphs 쇼츠처럼). 반환 (RGBA 그림, 위치) 또는 None"""
+        if not hasattr(self, "_ycap_plan"):
+            plan, last = {}, None
+            paths = getattr(self, "img_paths", [])
+            for im_, a_, b_ in self._img_pieces(self.duration):
+                info = None
+                if im_ < len(paths) and os.path.exists(paths[im_] + ".연도.json"):
+                    try:
+                        info = json.load(open(paths[im_] + ".연도.json", encoding="utf-8"))
+                    except Exception:
+                        info = None
+                y_ = str((info or {}).get("year") or "").strip()
+                if y_ and y_ != last:
+                    plan[a_] = (y_, str(info.get("label") or "").strip())
+                if y_:
+                    last = y_
+            self._ycap_plan, self._ycap_img = plan, {}
+        a_ = next((a for a in self._ycap_plan if a <= t < a + 4.0), None)
+        if a_ is None:
+            return None
+        if a_ not in self._ycap_img:
+            y_, lab = self._ycap_plan[a_]
+            fp = self.s.get("title_font_path") or self.s.get("font_path")
+            f1, f2 = load_font(fp, int(H * 0.085)), load_font(self.s.get("font_path"), int(H * 0.036))
+            im = Image.new("RGBA", (W, int(H * 0.2)), (0, 0, 0, 0))
+            d = ImageDraw.Draw(im)
+            for txt, f_, y in ((y_, f1, 0), (lab, f2, int(H * 0.105))):
+                if not txt:
+                    continue
+                w_ = d.textlength(txt, font=f_)
+                d.text(((W - w_) / 2, y), txt, font=f_, fill=(255, 255, 255, 255), stroke_width=max(2, int(H * 0.004)), stroke_fill=(20, 20, 20, 230))
+            self._ycap_img[a_] = im
+        k = min(smoothstep((t - a_) / 0.4), smoothstep((a_ + 4.0 - t) / 0.6))
+        im = self._ycap_img[a_]
+        if k < 1:
+            im = im.copy()
+            im.putalpha(im.getchannel("A").point(lambda v: int(v * k)))
+        return im, (0, int(H * 0.06))
+
     @property
     def fx_sig(self):
         """그리는 효과 자료(인물 영역 파일)가 바뀌면 영상 구간 캐시도 새로 그리게"""
         sig = []
         for p_ in getattr(self, "img_paths", []):
             try:
-                sig.append(str(int(os.path.getmtime(p_ + ".인물.json"))) + (str(int(os.path.getmtime(p_ + ".표정.json"))) if os.path.exists(p_ + ".표정.json") else ""))
+                sig.append(str(int(os.path.getmtime(p_ + ".인물.json"))) + "".join(str(int(os.path.getmtime(p_ + x_))) for x_ in (".표정.json", ".연도.json") if os.path.exists(p_ + x_)))
             except OSError:
                 sig.append("-")
         return hashlib.md5(",".join(sig).encode()).hexdigest()[:12] if any(x != "-" for x in sig) else ""
@@ -6342,6 +6383,9 @@ class SubtitleRenderer:
                     lab = self._img_label(self._img_at(sg, t), t)
                     if lab is not None:
                         canvas.alpha_composite(lab[0], lab[1])
+                yc = self._year_cap_at(t)                      # 연도 자막 (그림 옆 <그림>.연도.json, 연도가 바뀌는 그림에서만)
+                if yc is not None:
+                    canvas.alpha_composite(yc[0], yc[1])
             if getattr(self, "overlay", None) is not None:      # 시네마 띠·뉴스 띠·가운데 자막용 어둡게
                 canvas.alpha_composite(self.overlay)
             if not str(self.s.get("head_show", "보임")).startswith("안"):
