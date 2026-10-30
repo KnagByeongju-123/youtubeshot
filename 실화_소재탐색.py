@@ -4,6 +4,7 @@ r"""실화 소재 탐색 → 주제 목록·기획메모·썸네일을 장문 �
   (프로그램 창의 🔎 소재 탐색 버튼이 같은 일을 함. 영문 옵션: --count --discovery --list-only --rule-titles --genre)
   py -3.11 -X utf8 실화_소재탐색.py --편수 3 --days 365     # 1년치에서 3편
   py -3.11 -X utf8 실화_소재탐색.py --발견                 # 최신 발견 모드: 최근 90일, 수수께끼가 아니어도 새로 밝혀진 사실 (실화_최신발견탐색.bat)
+  py -3.11 -X utf8 실화_소재탐색.py --해독                 # 해독 모드: 최근 1년, 못 읽던 고대 문자·비문·암호를 읽어 낸 이야기만 (실화_해독탐색.bat)
   py -3.11 -X utf8 실화_소재탐색.py --bg-commons           # 썸네일 배경에 위키미디어 공용 자유 이용 사진 사용 (켤 때만, 출처 자동 기록)
   py -3.11 -X utf8 실화_소재탐색.py --목록만               # 실화\주제목록.txt 는 건드리지 않고 기획메모·리포트만 만듦
   py -3.11 -X utf8 실화_소재탐색.py --규칙제목             # Claude Code 로 한국어 주제 다듬기 생략 (규칙 기반 제목)
@@ -65,7 +66,15 @@ def rule_topic(it):
     """규칙 기반 한국어 주제: 소재명 + 해결 상태에 맞는 어미."""
     name = (it.get("topic_name") or "").strip() or re.split(r"[,.?!:·—-]", it.get("title_ko") or "")[0][:16]
     st = it.get("status", "")
-    if st == "해결 근거":
+    import topic_finder as tf
+    head = tf.hit_head(it.get("title", "") + " " + it.get("summary", ""), name)   # 채널 인기 공식: 큰 숫자 + '아무도 못'
+    if head and st == "해결 근거":
+        t = f"{head}, 마침내 풀린 답은?"
+    elif head and st == "가설 제안":
+        t = f"{head}, 드디어 풀렸을까?"
+    elif head and st == "미해결":
+        t = f"{head}, 왜 아직 못 풀까?"
+    elif st == "해결 근거":
         t = f"{name}, 마침내 풀린 수수께끼의 답은?"
     elif st == "가설 제안":
         t = f"{name}, 드디어 풀렸을까?"
@@ -79,7 +88,10 @@ def rule_topic(it):
 AI_TOPIC_SYSTEM = """너는 한국 유튜브 10분 지식 다큐 채널의 기획자다. 영어 연구/기사 정보를 보고 한국어 '주제(제목)'를 정한다.
 규칙: (1) 35자 이내, 궁금증을 부르는 질문·반전형 (2) status 가 '해결 근거'일 때만 '풀렸다/밝혀졌다' 같은 단정 허용,
 '가설 제안'은 의문형이나 '유력한 답', '미해결'은 아직 풀리지 않았음이 드러나게 (3) 원문에 없는 숫자·연도·기관을 지어내지 않는다
-(4) 소재명은 자연스러운 한국어로(기계번역 티 제거). 반드시 JSON만: {"topics": [{"id": 0, "topic": "...", "memo": "대본 작가에게 한 줄 조언"}]}"""
+(4) 소재명은 자연스러운 한국어로(기계번역 티 제거)
+(5) 우선순위(채널 인기 공식, 우리 채널 인기작 '1,700년 잠든 쿠샨 문자, 2026년 새로 밝혀진 해독의 반전은'·'4천 년 동안 아무도 못 읽던 문자, 은잔에 새긴 왕의 이름이 풀어낸 선형 엘람 문자'):
+큰 숫자(얼마나 오래·많이, 원문에 있을 때만) > '아무도 못 ~던' > 풀림의 약속(답은 말하지 않음, 해결 상태 규칙 안에서) > 손에 잡히는 단서 하나(유물·장면) > 최신성(실제 발표 연도).
+memo 에는 제목·썸네일에 쓸 구체적 단서(물건·장면)를 적는다. 반드시 JSON만: {"topics": [{"id": 0, "topic": "...", "memo": "대본 작가에게 한 줄 조언"}]}"""
 
 
 def ai_topics(items, m):
@@ -186,9 +198,11 @@ def load_main_module():
 def main():
     ap = argparse.ArgumentParser(description="실화 소재 탐색 → 주제 목록·기획메모·썸네일")
     ap.add_argument("--편수", "--count", type=int, default=5, help="실화\\주제목록.txt 에 넘길 편수 (기본 5)")
-    ap.add_argument("--days", type=int, default=None, help="검색 기간(일), 기본 180 (--발견 이면 90)")
+    ap.add_argument("--days", type=int, default=None, help="검색 기간(일), 기본 180 (--발견 이면 90, --해독 이면 365)")
     ap.add_argument("--발견", "--discovery", action="store_true",
                     help=f"수수께끼가 아니어도 최근 새로 밝혀진 사실을 찾음(최신일수록 우대). 소재 기본값은 '{DISCOVERY_GENRE}'")
+    ap.add_argument("--해독", "--decipher", action="store_true",
+                    help="못 읽던 고대 문자·비문·암호·두루마리를 읽어 낸 이야기만 찾음 (채널 인기 소재: 쿠샨·선형 엘람 문자). 기본 기간 365일")
     ap.add_argument("--bg-commons", action="store_true", help="썸네일 배경에 위키미디어 공용 자유 이용 사진 사용 (켤 때만)")
     ap.add_argument("--no-youtube", action="store_true", help="유튜브 수요·경쟁 확인 생략 (빠름)")
     ap.add_argument("--no-thumbs", action="store_true", help="썸네일·해시태그 생략")
@@ -198,8 +212,10 @@ def main():
     ap.add_argument("--썸네일선택", default="자동", choices=["자동", "없음"],
                     help="소재별 썸네일 3안 중 최종 1장 자동 선택(기본). 직접 고르려면 '없음' 뒤 썸네일_고르기.bat 로 소재 폴더를 열기")
     a = ap.parse_args()
+    if a.발견 and a.해독:
+        ap.error("--발견 과 --해독 은 함께 쓸 수 없습니다.")
     if a.days is None:
-        a.days = 90 if a.발견 else 180
+        a.days = 90 if a.발견 else 365 if a.해독 else 180
     if a.소재 is None:
         a.소재 = DISCOVERY_GENRE if a.발견 else GENRE
     if a.편수 < 1:
@@ -221,8 +237,8 @@ def main():
         argv.append("--no-youtube")
     if a.no_thumbs:
         argv.append("--no-thumbs")
-    argv += ["--썸네일선택", a.썸네일선택, "--mode", "발견" if a.발견 else "미스터리"]
-    log(f"▶ 소재 탐색 시작: 최근 {a.days}일 · 후보 {pick}개 중 {a.편수}편 선정" + (" · 최신 발견 모드" if a.발견 else "")
+    argv += ["--썸네일선택", a.썸네일선택, "--mode", "발견" if a.발견 else "해독" if a.해독 else "미스터리"]
+    log(f"▶ 소재 탐색 시작: 최근 {a.days}일 · 후보 {pick}개 중 {a.편수}편 선정" + (" · 최신 발견 모드" if a.발견 else " · 문자·암호 해독 모드" if a.해독 else "")
         + (" · 공용 사진" if a.bg_commons else ""))
     res = tf.main(argv)
     picks = res["picks"]
