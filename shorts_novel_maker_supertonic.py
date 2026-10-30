@@ -174,7 +174,7 @@ def find_font_lang(lang, bold=False):
 
 # 자체 합성 배경음 스타일 (아래 SOUND_STYLES 와 이름이 같아야 함)
 SOUND_STYLE_NAMES = ["노래 멜로디(오르골)", "잔잔한 패드", "슬픈 패드", "감성 오르골", "밝은 오르골", "긴장 펄스", "어두운 드론",
-                     "공포 심장박동", "비 오는 밤", "빗소리", "심해", "우주", "바람", "파도"]
+                     "공포 심장박동", "비 오는 밤", "빗소리", "심해", "우주", "바람", "파도", "중국 현악(고쟁·얼후)"]
 
 # 소재별 자동 배경음
 SOUND_BY_TOPIC = {
@@ -7095,7 +7095,6 @@ def _china():
 
 
 SOUND_STYLES = {
-    CHINA_STRINGS: lambda n, r: _china().bed(n, r),
     "노래 멜로디(오르골)": lambda n, r: gen_melody_box(n, r, CURRENT_MELODY.get("melody", ""), CURRENT_MELODY.get("bpm", 90)),
     "잔잔한 패드": lambda n, r: gen_pad(n, r, "warm"),
     "슬픈 패드": lambda n, r: gen_pad(n, r, "sad"),
@@ -7111,6 +7110,7 @@ SOUND_STYLES = {
     "바람": gen_wind,
     "파도": gen_waves,
 }
+SOUND_STYLES[CHINA_STRINGS] = lambda n, r: _china().bed(n, r)
 assert list(SOUND_STYLES) == SOUND_STYLE_NAMES
 CURRENT_MELODY = {"melody": "", "bpm": 90}   # 현재 대본의 노래 멜로디 (올드 팝송일 때 채워짐)
 
