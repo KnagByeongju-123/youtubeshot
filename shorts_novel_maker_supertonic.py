@@ -5177,7 +5177,7 @@ class SubtitleRenderer:
             hm = HOLD_RE.match(para)
             if hm:                                 # [쉼:2.5] 말 없이 화면만 (몽타주)
                 segs.append({"i": None, "kind": "hold", "text": "", "img": cur_img, "dur": max(0.5, float(hm.group(1))), "sfx": pend,
-                             "imgs": stack if len(stack) > 1 else None})
+                             "imgs": stack or None})
                 pend, stack = [], []
                 continue
             fm = SFX_RE.match(para)
@@ -5196,7 +5196,7 @@ class SubtitleRenderer:
                 d = max(1.6, len(tts_clean(text)) * spc + 0.6)
             d = (max(d, 1.0) + 1.0) if kind == "chapter" else d + gap   # 챕터 제목: 읽지 않고 약 2초 보여줌
             segs.append({"i": idx, "kind": kind, "text": text, "img": cur_img, "dur": d, "sfx": pend,
-                         "imgs": stack if len(stack) > 1 else None})
+                         "imgs": stack or None})
             pend, stack = [], []
             idx += 1
         if self.images:   # 첫 사진이 나오기 전 문단들도 첫 사진을 보여줌 (빈 화면 방지)
@@ -5713,27 +5713,33 @@ class SubtitleRenderer:
         return (z0, z1, x0, x1, y0, y1), up
 
     def _img_pieces(self, end_t):
-        """[(그림 번호, 시작, 끝)]: 문단마다 그 문단의 그림. 문단 앞에 그림이 여러 장 연달아 있으면 문단 시간을 똑같이 나눠 차례로"""
-        out = []
+        """[(그림 번호, 시작, 끝)]: 그림 줄이 나온 문단부터 다음 그림 줄이 나오는 문단 전까지가 그 그림들의 시간.
+        그림이 여러 장 연달아 있으면 그 시간을 똑같이 나눠 차례로 (예전엔 마지막 한 장만 보여서 그림 한 장이 10~20초씩 머물렀음)"""
+        if getattr(self, "_pieces_end", None) == end_t:
+            return self._pieces
+        out, grp = [], None
         for k, sg in enumerate(self.segs):
             if sg["img"] < 0:
                 continue
-            t0 = sg["t0"]
-            t1 = self.segs[k + 1]["t0"] if k + 1 < len(self.segs) else end_t
-            imgs = sg.get("imgs") or [sg["img"]]
+            if grp is None or sg.get("imgs"):
+                if grp:
+                    out.append((grp[0], grp[1], sg["t0"]))
+                grp = (sg.get("imgs") or [sg["img"]], sg["t0"])
+        if grp:
+            out.append((grp[0], grp[1], end_t))
+        pieces = []
+        for imgs, t0, t1 in out:
             for j, im_ in enumerate(imgs):
-                out.append((im_, t0 + (t1 - t0) * j / len(imgs), t0 + (t1 - t0) * (j + 1) / len(imgs)))
-        return out
+                pieces.append((im_, t0 + (t1 - t0) * j / len(imgs), t0 + (t1 - t0) * (j + 1) / len(imgs)))
+        self._pieces, self._pieces_end = pieces, end_t
+        return pieces
 
     def _img_at(self, sg, t):
-        """그 시각에 보이는 그림 번호 (문단 앞에 그림이 여러 장이면 나눈 차례대로)"""
-        imgs = sg.get("imgs")
-        if not imgs:
-            return sg["img"]
-        k = self.segs.index(sg)
-        t1 = self.segs[k + 1]["t0"] if k + 1 < len(self.segs) else self.duration
-        j = int((t - sg["t0"]) / max(1e-6, (t1 - sg["t0"]) / len(imgs)))
-        return imgs[max(0, min(len(imgs) - 1, j))]
+        """그 시각에 보이는 그림 번호 (그림이 여러 장 연달아 있으면 나눈 차례대로)"""
+        for im_, t0, t1 in self._img_pieces(self.duration):
+            if t0 <= t < t1:
+                return im_
+        return sg["img"]
 
     def _make_shots(self):
         """문단·사진에 맞춰 장면 목록 만들기. 영상처럼 모드: 문단마다(긴 문단은 나눠서) 다른 움직임으로 컷"""
