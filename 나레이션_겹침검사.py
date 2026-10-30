@@ -9,6 +9,8 @@ python 나레이션_겹침검사.py <영상.mp4> <회차.py 또는 대본.txt> [
     4) 대본 문장과 한 글자씩 맞춰 봐서 반복 자리에 글자가 '더 들어갔을' 때만 겹침 ('것만→것만만'). 글자 수가 같으면 발음 차이로 봄
        ('하늘나라→하늘라라', '닿을→다을')
   - 갑자기 빨라진 곳도 찾음: 쉼과 쉼 사이 한 마디씩 1초당 글자 수를 재서 영상 전체 마디의 중간값보다 25% 넘게 빠른 마디 (대사는 인물마다 빠르기가 달라 뺌)
+  - 읽다가 빠뜨린 말도 찾음: 받아 적은 글 전체를 대본 전체와 한 글자씩 맞춰 봐서, 대본에 있는 3글자 넘는 말이 소리에 통째로 없는 곳
+    (트로트 편에서 '이야기가 전해집니다'를 '이야기가 전'까지만, '논쟁의 씨앗이'를 '논쟁이'로 읽었음 — Whisper 검증은 문장을 채워 적어서 못 찾음)
   - --고치기 <프로젝트.json> : 겹친 문장(과 그 문단)의 녹음 캐시를 output/tts_cache 에서 지움 → render_project 를 다시 돌리면 그 문장만 새로 녹음.
     빨라진 문장도 녹음을 지워 새로 녹음함 (예전처럼 소리를 늘리면 목소리가 질질 끌려서 안 씀. 다시 녹음해도 조금 빠르면 그대로 둠 — 영상은 나레이션 길이에 맞춰짐)
     (Supertonic 은 매번 조금씩 다르게 읽어서 보통 한 번에 고쳐짐. 다시 만든 영상도 검사해서 '겹침 없음'이 나올 때까지, 최대 3번)
@@ -136,6 +138,27 @@ def fast_spots(sylls, sents, ratio=1.25, gap=0.3, min_syl=8):
     return out
 
 
+def missing_spots(sylls, sents, min_gap=3):
+    """빠뜨린 말: 받아 적은 글자 전체와 대본 글자 전체를 맞춰(difflib) 대본 쪽이 3글자 넘게 비는 곳 → 그 문장.
+    잘못 알아들은 글자(바꿔 적힘)는 글자 수가 비슷해서 걸리지 않음. 대사(따옴표)는 인물 목소리라 빼지 않고 똑같이 봄"""
+    ref, owner = "", []
+    for k, (par, s) in enumerate(sents):
+        h = hangul(s)
+        ref += h
+        owner += [k] * len(h)
+    hy = "".join(c for c, _ in sylls)
+    if not ref or not hy:
+        return []
+    out = []
+    sm = difflib.SequenceMatcher(None, ref, hy, autojunk=False)
+    for op, a0, a1, b0, b1 in sm.get_opcodes():
+        if op in ("delete", "replace") and (a1 - a0) - (b1 - b0) >= min_gap:
+            par, s = sents[owner[a0]]
+            t = sylls[min(b0, len(sylls) - 1)][1]
+            out.append({"t": t, "dd": f"빠짐 '{ref[a0:a1]}'", "sentence": s, "paragraph": par, "heard": hy[max(0, b0 - 12):b1 + 12]})
+    return out
+
+
 def detect(video, script):
     import numpy as np
     import torch
@@ -186,6 +209,7 @@ def detect(video, script):
     except OSError:
         pass
     found += fast_spots(sylls, sents)
+    found += missing_spots(sylls, sents)
     uniq, seen = [], set()
     for f in found:
         if f["sentence"] not in seen:
@@ -235,7 +259,7 @@ def main(a):
     video, script = a[0], a[1]
     items = detect(video, script)
     lines = [f"{int(f['t'] // 60)}:{int(f['t'] % 60):02d} [{f['dd']}] 대본: {f['sentence']} | 들림: {f['heard']}" for f in items]
-    msg = "\n".join(lines) if lines else "겹침·빨라진 곳 없음"
+    msg = "\n".join(lines) if lines else "겹침·빨라진·빠진 곳 없음"
     print(msg)
     if "--결과" in a:
         open(a[a.index("--결과") + 1], "w", encoding="utf-8").write(msg + "\n")
