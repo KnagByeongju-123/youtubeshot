@@ -8,7 +8,7 @@
   - --suffix 이름 : 결과 파일 이름 끝에 _이름 (같은 제목으로 덧붙일 부분을 따로 만들 때. 화면 제목은 그대로)
   - --썸네일만 : 영상은 만들지 않고 썸네일 후보만 새로 (디자인 16가지 + 영상 장면 실사 편집). 지금 유튜브 썸네일은 그대로
   - --대본그대로 : 손으로 쓴 대본의 오프닝(30초 후크·'끝까지 보시면')과 챕터 끝 예고를 AI 가 고쳐 쓰지 않음 (에세이처럼 원문 분위기를 지킬 때. 존댓말 고치기는 그대로)
-  - --길이고정 : 롱폼 길이 규칙(10~15분, 짧으면 내용을 더해 늘림)을 건너뜀
+  - --길이고정 : 롱폼 길이 규칙(8~15분, 짧으면 내용을 더해 늘림)을 건너뜀
   - --영어 : 영상 완성 뒤 영어 제목·설명란·자막(SRT)도 만듦 (유튜브 '번역'으로 덧붙이는 용도, 영어_번역.py)
   - --자막언어 영어,일본어,한국어 : 고른 언어마다 자막(SRT)과 제목·설명란 번역 (--영어 는 '영어'만과 같음)
   - --쇼츠 : 롱폼 완성 뒤 40~50초 세로 쇼츠도 함께 만듦 (기본은 쇼츠를 안 만듦, 쇼츠_자동.py)
@@ -127,7 +127,7 @@ def main(a):
     gate = m.PauseGate(os.path.join(HERE, "장문_일시정지중.flag"), app.cancel, log)
     app.cancel = gate
     is_long = (c.get("category") or m.DOC_CATEGORY) == m.DOC_CATEGORY and not suf and "세로" not in str(s.get("format", ""))
-    if is_long and "--길이고정" not in a:    # 규칙: 롱폼은 10~15분. 짧으면 사진을 찾기 전에 내용을 더해 늘리고 프로젝트에 저장
+    if is_long and "--길이고정" not in a:    # 규칙: 롱폼은 8~15분. 짧으면 사진을 찾기 전에 내용을 더해 늘리고 프로젝트에 저장
         story, longer = m.length_fix(app.model_var.get().strip(), story, c.get("notes", ""), c.get("sources") or [], log, gate)
         if longer:
             app.set_story(story)

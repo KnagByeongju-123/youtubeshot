@@ -7563,15 +7563,15 @@ def _plain_sentences(t):
     return out
 
 
-# ---- 긴 영상 길이 규칙: 롱폼(장문)은 10~15분 (중간 광고는 8분 이상부터 · 시청 시간 확보). 내용을 더해 늘리고, 같은 말 반복으로 채우지 않음 ----
-LONG_MIN_MIN, LONG_MAX_MIN = 10, 15
+# ---- 긴 영상 길이 규칙: 롱폼(장문)은 8~15분 (사용자 결정 2026-10-30: 최소 8분 = 중간 광고가 붙는 길이. 예전 10분). 내용을 더해 늘리고, 같은 말 반복으로 채우지 않음 ----
+LONG_MIN_MIN, LONG_MAX_MIN = 8, 15
 LONG_CHARS_PER_MIN = 440          # 실측: 대본 본문 2,675자(공백 포함, 사진·챕터 제목 줄 뺌) → 6분 4초
 LONG_TARGET_CHARS = (int(10.5 * LONG_CHARS_PER_MIN), int(13.5 * LONG_CHARS_PER_MIN))   # 대본을 새로 늘릴 때 목표 (약 4,600~5,900자)
 LENGTH_RULE = (f"\n[공통 규칙 - 긴 영상 길이, 반드시 지킬 것] 롱폼 다큐 나레이션은 {LONG_MIN_MIN}~{LONG_MAX_MIN}분 분량이다: "
                f"본문(공백 포함, 챕터 제목 줄 빼고) 약 {LONG_TARGET_CHARS[0]:,}~{LONG_TARGET_CHARS[1]:,}자, 챕터 5~7개. "
                "길이는 같은 말 되풀이·빈 감탄으로 채우지 말고 내용을 더해 채운다: 배경 이야기, 발견·연구 과정의 구체적 장면, 반대 주장과 그 근거, 아직 남은 수수께끼. "
                "확인된 사실만 쓰고, 모르는 것은 모른다고 쓴다.\n")
-LENGTHEN_SYSTEM = """너는 유튜브 다큐 채널의 작가다. 아래 대본이 너무 짧다(영상이 10분에 못 미침). 같은 이야기를 10~15분짜리로 늘려 '대본 전체'를 다시 쓴다.
+LENGTHEN_SYSTEM = """너는 유튜브 다큐 채널의 작가다. 아래 대본이 너무 짧다(영상이 8분에 못 미침). 같은 이야기를 8~15분짜리로 늘려 '대본 전체'를 다시 쓴다.
 - 목표: 본문 공백 포함 {lo:,}~{hi:,}자 (챕터 제목 줄 빼고). 챕터 5~7개, 머리말은 '## 1. 제목' 형식 그대로.
 - 늘리는 방법: 챕터 1~3개를 새로 넣거나 기존 챕터를 깊게. 배경 역사, 발견·연구 과정의 구체적 장면, 다른 학자들의 반대 의견과 근거, 아직 풀리지 않은 질문, 비슷한 다른 사례.
 - 같은 말 반복·뜻 없는 감탄·'자세히 알아보겠습니다' 같은 빈 문장으로 채우지 않는다.
@@ -7587,7 +7587,7 @@ def narration_chars(story):
 
 
 def length_fix(model, story, notes="", sources=None, log=None, cancel=None):
-    """규칙: 롱폼은 10~15분. 본문이 10분에 못 미치면 AI가 내용을 더해 늘려 씀 (실패하면 원래대로). 반환: (새 대본, 늘렸는지)"""
+    """규칙: 롱폼은 8~15분. 본문이 8분에 못 미치면 AI가 내용을 더해 늘려 씀 (실패하면 원래대로). 반환: (새 대본, 늘렸는지)"""
     log = log or (lambda x: None)
     n, lo = narration_chars(story), LONG_MIN_MIN * LONG_CHARS_PER_MIN
     if n >= lo:
@@ -14911,7 +14911,7 @@ class App(tk.Tk):
             if state_path:
                 os.makedirs(os.path.dirname(os.path.abspath(state_path)), exist_ok=True)
                 atomic_write_text(state_path, json.dumps(st8, ensure_ascii=False))   # 전원이 꺼져도 반쯤 쓴 파일이 안 남게
-        minutes = max(float(LONG_MIN_MIN), min(float(LONG_MAX_MIN), float(minutes)))   # 규칙: 롱폼은 10~15분
+        minutes = max(float(LONG_MIN_MIN), min(float(LONG_MAX_MIN), float(minutes)))   # 규칙: 롱폼은 8~15분
         total = int(minutes * DOC_CHARS_PER_MIN)
         open_c, close_c = max(350, int(total * 0.05)), max(300, int(total * 0.035))
         body_c = total - open_c - close_c
