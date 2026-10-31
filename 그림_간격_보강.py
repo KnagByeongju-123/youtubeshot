@@ -21,7 +21,7 @@ import time
 HERE = os.path.dirname(os.path.abspath(__file__))
 os.chdir(HERE)
 T0 = time.time()
-NEW_COST = 15.0      # 새로 그리는 대신 이미 그린 그림을 이 초보다 멀리 옮기지는 않음 (내용이 어긋나지 않게)
+NEW_COST = float(next((sys.argv[i + 1] for i, x in enumerate(sys.argv[:-1]) if x == "--옮김"), 15.0))      # 새로 그리는 대신 이미 그린 그림을 이 초보다 멀리 옮기지는 않음 (내용이 어긋나지 않게)
 
 
 def log(x):

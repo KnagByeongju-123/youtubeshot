@@ -705,7 +705,7 @@ def run_doc(m, app, c, gate):
             pass
     if m.is_trad(c["배경음"]):
         s["chapter_hold"] = 4.2               # 챕터 제목 동안 나레이션을 쉬고 고쟁 연주
-        pc_ = re.search(r"타악\s*[:：]\s*(징|북|연속북|없음)", str(c.get("기획메모", "")))   # 주제목록 메모의 '타악: 연속북' (없으면 권역 기본)
+        pc_ = re.search(r"타악\s*[:：]\s*(진군북|난타|연속북|징|북|없음)", str(c.get("기획메모", "")))   # 주제목록 메모의 '타악: 연속북' (없으면 권역 기본)
         if pc_:
             s["chapter_perc"] = "off" if pc_.group(1) == "없음" else pc_.group(1)
             log(f"🥁 챕터 시작 타악: {pc_.group(1)}")

@@ -319,16 +319,42 @@ class Region:
 
 
 OPEN_DELAY = 0.9          # 타악이 울리고 가락이 들어오기까지 (초)
-PERC_KINDS = ["징", "북", "연속북"]   # 막을 여는 타악 (사용자 결정 2026-10-31: 섞지 말고 하나만, 긴장감용 연속 북)
+PERC_KINDS = ["징", "북", "연속북", "진군북", "난타"]   # 막을 여는 타악 (사용자 결정 2026-10-31: 섞지 말고 하나만, 긴장감용 연속 북·진군의 북소리·난타)
 
 
 def perc(kind, rng, f0=None):
     """막을 여는 타악 하나 → (스테레오, 가락이 들어올 때까지 초).
-    징: 맑은 징 한 번 / 북: 큰 북 한 번 / 연속북: 점점 빨라지고 커지는 북 굴림 끝에 큰 북 (긴장감)"""
+    징: 맑은 징 한 번 / 북: 큰 북 한 번 / 연속북: 점점 빨라지고 커지는 북 굴림 끝에 큰 북 (긴장감)
+    진군북: 행진하듯 '둥 · 둥 · 둥둥 둥' 두 마디 점점 크게 → 큰 북 (출정·전투) / 난타: 여러 북이 빠르게 주고받다 한꺼번에 쾅"""
     if kind == "징":
         return opener([(lambda r: gong(f0 or 110, 6.0, bend=0.02, rng=r), 0.0, 1.0, 0.0)], rng), OPEN_DELAY
     if kind == "북":
         return opener([(lambda r: big_drum(f0 or 62, 2.6, r), 0.0, 1.0, 0.0)], rng), OPEN_DELAY
+    if kind == "진군북":                        # 행진하듯 무거운 군대 북: 둥 · 둥 · 둥둥 둥 · (두 마디, 점점 크게) → 마지막 큰 북
+        f = f0 or 62
+        beat, hits = 60 / 100, []
+        pat = [(0, 1.0, 1), (1, 0.7, 1), (2, 0.85, 1), (2.5, 0.6, 0), (3, 0.95, 1)]   # (박, 세기, 1=큰 북 0=작은 북)
+        for bar in range(2):
+            for b, g, big in pat:
+                t = (bar * 4 + b) * beat
+                gain = g * (0.55 + 0.25 * bar)
+                hits.append(((lambda r: big_drum(f, 1.6, r)) if big else (lambda r: big_drum(f * 1.9, 0.6, r)), t, gain, -0.1 if big else 0.2))
+        hits.append((lambda r: big_drum(f * 0.85, 3.0, r), 8 * beat, 1.0, 0.0))
+        return opener(hits, rng, sec=8 * beat + 3.2), 8 * beat + 0.4
+    if kind == "난타":                          # 여러 북이 빠르게 주고받다 한꺼번에 쾅
+        f = f0 or 70
+        hits, step = [], 60 / 130 / 2       # 8분음표
+        seq = "X.x.Xxx.X.x.XxXx" + "XxXxXxXx"           # X=큰 북, x=작은 북, .=쉼
+        for i, ch in enumerate(seq):
+            if ch == ".":
+                continue
+            t = i * step
+            g = (0.9 if ch == "X" else 0.55) * (0.6 + 0.4 * i / len(seq))
+            hits.append(((lambda r: big_drum(f, 1.2, r)) if ch == "X" else (lambda r: big_drum(f * 2.2, 0.4, r)), t, g, (-0.3 if i % 2 else 0.3)))
+        end = len(seq) * step
+        hits.append((lambda r: big_drum(f * 0.8, 3.0, r), end, 1.0, -0.15))
+        hits.append((lambda r: big_drum(f * 1.3, 2.4, r), end, 0.8, 0.15))
+        return opener(hits, rng, sec=end + 3.2), end + 0.4
     hits, t, gap = [], 0.0, 0.34                 # 연속북: 간격 0.34초 → 0.07초, 크기 0.25 → 0.8
     while t < 2.3:
         g = 0.25 + 0.55 * (t / 2.3)
