@@ -104,6 +104,11 @@
   캐릭터 시트를 그 기본 시트를 refs 로 넣어 그림 → 얼굴·나이·수염만 그 인물. 궁궐 복식 설명은 `등장인물/조선/궁궐복식_정리.md`,
   관리 사모(2026-10-31 1편 검수): 인물 설명에 'hat'이라는 말을 쓰지 않음('gauze hat'이면 갓으로 그림) → 'black brimless two-tiered samo cap with two flat oval wings'.
   장면 그림에는 시트의 **앞모습만** 잘라 넣고(`sheet_front`, 옆·뒤 모습이 섞이면 사모가 갓처럼 나옴) 사모 모양 기준 `등장인물/조선/_관모/사모_앞.png` 를 함께 넣음
+  조선 머리·모자 그림 주문 문구(필수, 사용자 결정 2026-10-31 — 그림 모델이 중국·일본식으로 그려서 모양을 풀어 씀):
+  · 상투(결혼한 남자): "Joseon sangtu topknot: hair pulled up and tied in a small tight bun on the top of the head, a thin black horsehair headband (manggeon) around the forehead, no hairpin sticking out sideways" — 일본식 촌마게(앞머리 민 머리)·중국식 큰 비녀 아님
+  · 갓(양반·선비, 밖에서): "Joseon gat: a black wide flat round brim with a tall narrow cylindrical crown, made of see-through horsehair, tied under the chin with black strings, the sangtu topknot visible through the crown" — 서양 중절모·삿갓처럼 둥근 테 아님
+  · 사모(관리, 관복 입을 때): 'hat' 이라는 말을 쓰지 않음 → "black brimless two-tiered samo cap with two flat oval wings sticking out to the left and right" (갓과 섞이지 않게: 관복+사모, 도포+갓)
+  · 익선관(왕): "black brimless two-tiered cap with two cicada-wing shaped wings standing upright at the back"
   시트 따로 그리기는 `캐릭터시트_만들기.py` (조선 옷 사전 KO_COSTUME + 관모 기준 그림, 그림 모델은 사모·익선관·단령 같은 이름을 몰라 중국·일본 옷으로 그림)
 - 캐릭터 시트(역사 채널): 자동 제작이 인물마다 시트를 그리지만, 여러 편에 나오는 인물(관우·조조·유비·여포 등)은 사용자가 확인한 시트를
   `등장인물/` + `등장인물.json` 의 face 에 저장해 모든 편에서 같은 얼굴로
