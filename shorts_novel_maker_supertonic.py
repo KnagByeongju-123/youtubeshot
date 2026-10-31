@@ -2690,7 +2690,8 @@ IMAGE_PLAN_SYSTEM = """너는 유튜브 쇼츠 영상의 아트 디렉터다. �
 - [등장인물 외모]가 주어졌으면 그 외모를 그대로 쓰고, 거기 없는 새 인물이 그림에 나오면 그 인물만 cast 에 추가한다.
   주어지지 않았으면 그림에 나오는 인물마다 cast 를 먼저 정한다: name(본문의 이름), look(영어 25~40단어: 나이·성별·얼굴형(둥근/갸름한/각진)·눈과 눈썹·머리 길이와 색·머리 스타일(가르마·앞머리·묶음·곱슬 등)·안경 유무와 테 모양·색·수염(없음/콧수염/턱수염/구레나룻·색)·체형과 키·대표 옷차림(색까지).
   인물끼리 겹치지 않게. 회상 등으로 나이가 다르면 "이름(시기, 나이)"로 따로), look_ko(한국어 요약). 새 인물이 없으면 cast 는 [].
-반드시 JSON만 출력: {"cast": [{"name": "...", "look": "...", "look_ko": "..."}], "images": [{"after": "...", "prompt": "...", "caption": "...", "chars": ["이름"]}]}"""
+조선 시대 인물이면 cast 마다 "base" 에 옷차림이 가장 가까운 조선 기본 인물 하나를 적음 (왕·왕비·문관·상궁·내관·무관·사대부·상인·백정·기생·농민·아낙네, 조선이 아니면 빈칸) → 그 기본 캐릭터 시트의 옷차림 그대로 그림.
+반드시 JSON만 출력: {"cast": [{"name": "...", "look": "...", "look_ko": "...", "base": "..."}], "images": [{"after": "...", "prompt": "...", "caption": "...", "chars": ["이름"]}]}"""
 
 
 _IMG_OK = {}
@@ -3082,6 +3083,26 @@ def add_preset_cast(text, log=None):
         (log or (lambda x: None))("  👤 확정 캐릭터 시트 사용: " + ", ".join(c["name"] for c in add))
 
 
+JOSEON_BASE_DIR = os.path.join(BASE, "등장인물", "조선")   # 조선 기본 캐릭터 시트 12명 (기본_<역할>.png, 수묵 담채 앞·옆·뒤, 사용자 결정 2026-10-31: 영상의 조선 인물은 이 세트 기준)
+JOSEON_BASE_WORDS = [("왕비", ["queen", "왕비", "중전", "왕후"]), ("왕", ["king", "임금", "왕 "]), ("상궁", ["court lady", "palace maid", "상궁", "궁녀", "nain"]),
+                     ("내관", ["eunuch", "내관", "내시"]), ("무관", ["general", "military", "soldier", "commander", "무관", "장수", "군사", "포졸"]),
+                     ("문관", ["official", "minister", "councillor", "문관", "정승", "판서", "관리"]), ("기생", ["gisaeng", "기생"]),
+                     ("백정", ["butcher", "백정"]), ("상인", ["merchant", "peddler", "상인", "보부상"]), ("사대부", ["yangban", "seonbi", "scholar", "nobleman", "선비", "양반", "사대부"]),
+                     ("아낙네", ["townswoman", "common woman", "peasant woman", "아낙", "여인"]), ("농민", ["farmer", "peasant", "townsman", "commoner", "농민", "백성", "농부"])]
+
+
+def joseon_base(c):
+    """조선 인물이면 옷차림 기준이 될 기본 시트 경로 (cast 의 base 칸, 없으면 외모 설명의 낱말로 짐작). 아니면 ''"""
+    look = (str(c.get("look", "")) + " " + str(c.get("look_ko", ""))).lower()
+    base = str(c.get("base") or "").strip()
+    if not base:
+        if "joseon" not in look and "조선" not in look:
+            return ""
+        base = next((b for b, ws in JOSEON_BASE_WORDS if any(w in look for w in ws)), "")
+    p = os.path.join(JOSEON_BASE_DIR, f"기본_{base}.png")
+    return p if base and os.path.exists(p) else ""
+
+
 def make_cast_sheets(names, style, media_dir, log=None, cancel=None):
     """그림에 나오는 인물마다 캐릭터 시트(앞·옆·뒤 전신, 흰 배경)를 klein 으로 그려 {이름: 경로}.
     이미 있는 시트(IMAGE_CAST 의 sheet, 등장인물.json 의 face)는 그대로 씀 → 모든 컷·회차가 같은 얼굴·옷"""
@@ -3102,10 +3123,13 @@ def make_cast_sheets(names, style, media_dir, log=None, cancel=None):
         elif face and os.path.exists(face):
             out[nm] = c["sheet"] = face
         else:
-            jobs.append({"id": f"sheet{len(jobs)}", "name": nm, "width": 1024, "height": 576, "seed": 7,
+            base_ = joseon_base(c)
+            jobs.append({"id": f"sheet{len(jobs)}", "name": nm, "width": 1024, "height": 576, "seed": 7, "refs": [base_] if base_ else [],
                          "prompt": f"Character design sheet, {style or 'illustration'}. The same character shown three times side by side on a plain white "
                                    f"background: front view, side view, back view, full body, standing. Character: {c['look']}. "
-                                   "Consistent design in every view, no close-ups, no other people"})
+                                   "Consistent design in every view, no close-ups, no other people"
+                                   + (". Dress the character in exactly the same costume as the reference character sheet (same hat or hairstyle, robe cut, collar, badges, belt, shoes and colors); "
+                                      "face, age, beard and body follow the description" if base_ else "")})
     if jobs:
         log(f"  👤 캐릭터 시트 {len(jobs)}명 그리는 중 (모든 컷에서 같은 얼굴·옷으로 그리는 기준): " + ", ".join(j["name"] for j in jobs))
         got = sd_generate(jobs, os.path.join(media_dir, "_sd"), log, cancel)
@@ -3158,7 +3182,8 @@ GEMINI_PROMPT_SYSTEM = """너는 유튜브 영상의 아트 디렉터다. 사용
 - [등장인물 외모]가 주어지지 않았으면 cast 를 먼저 정한다: 주요 인물마다 name(한국어 이름, 회상 등으로 나이가 달라지면 "이름(1979년, 20세)"처럼 시기별로 따로),
   look(영어 쉼표 나열 25~45단어: 나이·성별·얼굴형(둥근/갸름한/각진)·눈과 눈썹·머리 길이와 색·머리 스타일(가르마·앞머리·묶음·곱슬 등)·안경 유무와 테 모양·색·수염(없음/콧수염/턱수염/구레나룻·색)·체형과 키·대표 옷차림(색까지). 인물끼리 겹치지 않게), look_ko(한국어 요약). 주어졌으면 cast 는 [].
 - ko: 15자 이내 한국어 장면 설명
-반드시 JSON만 출력: {"cast": [{"name": "...", "look": "...", "look_ko": "..."}], "prompts": [{"para": 문단번호, "ko": "...", "prompt": "...", "chars": ["이름"]}]}"""
+조선 시대 인물이면 cast 마다 "base" 에 옷차림이 가장 가까운 조선 기본 인물 하나를 적음 (왕·왕비·문관·상궁·내관·무관·사대부·상인·백정·기생·농민·아낙네, 조선이 아니면 빈칸) → 그 기본 캐릭터 시트의 옷차림 그대로 그림.
+반드시 JSON만 출력: {"cast": [{"name": "...", "look": "...", "look_ko": "...", "base": "..."}], "prompts": [{"para": 문단번호, "ko": "...", "prompt": "...", "chars": ["이름"]}]}"""
 
 
 def zip_image_files(zip_path, out_dir):
@@ -3309,7 +3334,7 @@ def make_ai_images(model, category, title, story, n, s, media_dir, log, cancel=N
             it["caption"] = cap_ if cap_.startswith(_YP.AI_CAPTION) else (f"{_YP.AI_CAPTION} · {cap_}" if cap_ else _YP.AI_CAPTION)
     if plan.get("cast"):     # 기획이 새로 정한 인물 외모를 등록(이미 있는 인물은 그대로) → 이후 모든 그림·회차에 같은 얼굴·머리·수염·체형
         have = {cast_base(c.get("name")) for c in IMAGE_CAST.get("chars") or []}
-        new = [{"name": str(x.get("name", "")), "look": str(x.get("look", "")), "look_ko": str(x.get("look_ko", ""))}
+        new = [{"name": str(x.get("name", "")), "look": str(x.get("look", "")), "look_ko": str(x.get("look_ko", "")), "base": str(x.get("base", "") or "")}
                for x in plan["cast"] if isinstance(x, dict) and x.get("name") and x.get("look") and cast_base(x.get("name")) not in have]
         if new:
             IMAGE_CAST["chars"] = list(IMAGE_CAST.get("chars") or []) + new
