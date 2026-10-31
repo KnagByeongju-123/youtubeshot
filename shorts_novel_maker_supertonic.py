@@ -581,7 +581,7 @@ FIELDS = [
     ("나레이션", "narr_style", "연기 지시(ChatGPT·Gemini 음성)", "str", "차분하고 또렷한 다큐멘터리 내레이터처럼. 반전 부분은 긴장감 있게."),
     ("나레이션", "openai_tts_model", "ChatGPT 음성 모델", "str", "gpt-4o-mini-tts"),
     ("나레이션", "gemini_tts_model", "Gemini 음성 모델", "str", "gemini-2.5-flash-preview-tts"),
-    ("나레이션", "narr_rate", "말 속도(%, -30~+40)", "float", 5),
+    ("나레이션", "narr_rate", "말 속도(%, -30~+40)", "float", 0),   # 기본 = 정상 속도 (사용자 결정 2026-10-31, 남자 성우 4·톤 -1.5 와 함께)
     ("나레이션", "narr_volume", "나레이션 볼륨(0~2)", "float", 1.0),
     ("나레이션", "narr_gap", "문단 사이 쉼(초)", "float", 0.5),
     ("나레이션", "narr_photo_pause", "사진 보는 시간(초)", "float", 1.5),
