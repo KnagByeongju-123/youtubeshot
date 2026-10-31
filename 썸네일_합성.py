@@ -116,11 +116,25 @@ def _text_block(H, out, v, s, fp, x, y_bottom, avail, size_frac, align="left", c
     return y0
 
 
+def _unique(photos):
+    """그림 내용이 같은 사진(같은 파일을 두 번 연 것 포함)은 한 장만"""
+    out, seen = [], set()
+    for p in photos:
+        try:
+            k = p.convert("RGB").resize((24, 14)).tobytes()
+        except Exception:
+            k = id(p)
+        if k not in seen:
+            seen.add(k)
+            out.append(p)
+    return out
+
+
 def render(style, v, s, photos, size, fp, H):
     """style: STYLES 중 하나. photos: 관련 사진(PIL) 목록 (첫 장 = 이 시안의 대표 사진). H: 프로그램의 그리기 도구"""
     w, h = size
     port = h > w
-    photos = [p for p in (photos or []) if p is not None]
+    photos = _unique([p for p in (photos or []) if p is not None])   # 같은 그림이 두 번 들어가지 않게 (콜라주에 같은 사진이 두 칸, 2026-10-31)
     lines, emph, small, mood = H.vparts(v)
     m = int(w * 0.045)
     accent = H.moods.get(mood, ("#FFFFFF", "#FFE135", "#E53935", "#FFFFFF"))
@@ -150,7 +164,7 @@ def render(style, v, s, photos, size, fp, H):
         return out.convert("RGB")
 
     if style.startswith("콜라주"):
-        ps = (photos * 3)[:3] if photos else [None] * 3
+        ps = photos[:3] if photos else [None] * 3                     # 다른 사진 수만큼만 칸을 나눔 (2장이면 2칸)
         out = Image.new("RGBA", (w, h), (255, 255, 255, 255))
         n = len(ps)
         gap = max(6, w // 140)
@@ -183,7 +197,7 @@ def render(style, v, s, photos, size, fp, H):
                else Image.new("RGB", (w, h), "#1A1A2E")).convert("RGBA")
         dark = Image.new("RGBA", (w, h), (8, 10, 20, 150))
         out.alpha_composite(dark)
-        circ = (photos[1:3] if len(photos) >= 3 else (photos * 2)[:2]) or [None, None]
+        circ = (photos[1:3] if len(photos) >= 3 else photos[:2]) or [None]
         spots = ([(0.5, 0.25, 0.25), (0.78, 0.5, 0.15)] if port else [(0.68, 0.46, 0.33), (0.9, 0.78, 0.18)])
         for (fx, fy, fr), p in zip(spots, circ):
             r = int(min(w, h) * fr) if port else int(h * fr)
@@ -208,7 +222,7 @@ def render(style, v, s, photos, size, fp, H):
     out = (_cover(main, w, h).filter(ImageFilter.GaussianBlur(max(10, w // 60))) if main is not None
            else Image.new("RGB", (w, h), "#2B2B2B")).convert("RGBA")
     out.alpha_composite(Image.new("RGBA", (w, h), (20, 16, 12, 165)))
-    ps = (photos * 3)[:3] if photos else [None] * 3
+    ps = photos[:3] if photos else [None] * 3
     pw = int(w * (0.56 if port else 0.3))
     ph_ = int(pw * 0.82)
     spots = ([(0.08, 0.06, -7), (0.38, 0.2, 6), (0.12, 0.38, -2)] if port else [(0.04, 0.08, -8), (0.36, 0.04, 5), (0.66, 0.1, -4)])
