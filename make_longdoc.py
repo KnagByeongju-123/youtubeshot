@@ -655,6 +655,14 @@ def run_doc(m, app, c, gate):
             for k_, v_ in tmp.items():
                 if k_ in app.vars:
                     app.vars[k_].set(str(v_))
+    LONG_FIX = {"narration": "on", "layout": "자막형(큰 제목+사진+자막)", "img_fill": "전체 화면(글자가 사진 위에)",   # 장문 화면 규칙 (CLAUDE.md):
+                "img_motion": "영상처럼(확대·이동·전환)", "head_show": "안 보임(제목 카드만)",                   # 새 서버의 프로그램 기본값(쇼츠 세로 등)을 쓰지 않게
+                "sub_split": "한 줄씩(문장·쉼표로 나눠 차례로)", "img_label": "off"}
+    for k_, v_ in LONG_FIX.items():
+        if k_ in app.vars:
+            app.vars[k_].set(v_)
+    app.vars["format"].set("롱폼 가로(1920×1080)")
+    app.apply_format("롱폼 가로(1920×1080)")                # 장문은 항상 가로 16:9 (그림도 가로로 그려짐)
     s = app.get_settings()
     out_root = os.path.join(s["out_dir"], "장문")
     work = m._load_korean_reading("콘텐츠_정리").find_work(out_root, m.safe_name(c["주제"])[:40])   # 정리된 콘텐츠면 그 폴더 안의 작업 폴더
@@ -796,7 +804,7 @@ def run_doc(m, app, c, gate):
         import subprocess
         pj_ = json.load(open(base + "_프로젝트.json", encoding="utf-8"))
         pj_["story"] = story
-        pj_["settings"] = {k: v for k, v in dict(pj_.get("settings") or {}, **s).items() if k not in m.SECRET_KEYS}   # 이 편 설정 그대로 (fps·제목·배경음 등)
+        pj_["settings"] = {k: v for k, v in dict(pj_.get("settings") or {}, **dict(s, bgm_style=c["배경음"])).items() if k not in m.SECRET_KEYS}   # 이 편 설정 그대로 (fps·제목·배경음 등)
         m.atomic_write_text(base + "_프로젝트.json", json.dumps(pj_, ensure_ascii=False, indent=1))
         for tool in ("그림_간격_보강.py", "인물영역_만들기.py"):
             log(f"🖌 {tool} 실행 중...")
