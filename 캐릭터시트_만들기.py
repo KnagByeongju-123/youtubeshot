@@ -50,6 +50,8 @@ KO_COSTUME = {
     "beongeoji": "beongeoji = a black felt hat with a wide round brim and a red tassel on top",
 }
 KO_REFS = {"samo": "등장인물/조선/_관모/samo.png", "ikseongwan": "등장인물/조선/_관모/ikseongwan.png"}   # 말로는 모양을 못 따라 해서(사모가 야구모자·갓처럼) 모양 기준 그림을 함께 넣음
+OUTFIT_STYLE = ("traditional East Asian ink wash painting with light color washes: expressive black ink brush outlines, "
+                "rich clear colors applied as transparent watercolor washes, rice paper texture")   # 조선 기본 시트 12명과 같은 그림체
 KO_HEAD = "Korean Joseon dynasty costume (hanbok) - NOT Chinese hanfu, NOT Japanese kimono. "
 
 
@@ -66,14 +68,17 @@ for c in json.load(open(lst, encoding="utf-8"))["chars"]:
         continue
     kind = c.get("kind", "person")
     outfit = [os.path.join(HERE, r_) for r_ in (c.get("refs") or []) if os.path.exists(os.path.join(HERE, r_))]   # 옷차림 기준 그림 (등장인물/조선/_기준/왕·왕비·문관·상궁·내관·무관)
+    style_ = OUTFIT_STYLE if outfit else style    # 옷차림 기준이 있으면 기본 시트와 같은 선명한 색 (채널 기본 문구의 '차분한 색'은 옷 색을 회색으로 빼 버림)
+    woman = re.search(r"\b(woman|queen|lady|girl|gisaeng|maid|female)\b", c["look"].lower())
     refs = outfit or [os.path.join(HERE, v) for k, v in KO_REFS.items() if re.search(r"\b" + k + r"\b", c["look"].lower())]
     jobs.append({"id": f"s{len(jobs)}", "name": c["name"], "dst": dst, "look": c["look"], "refs": refs, "width": 1024, "height": 576, "seed": int(c.get("seed", 7)),
-                 "prompt": f"Character design sheet, {style}. The same {'animal' if kind == 'animal' else 'character'} shown three times side by side "
+                 "prompt": f"Character design sheet, {style_}. The same {'animal' if kind == 'animal' else 'character'} shown three times side by side "
                            f"on a plain white background: {VIEWS.get(kind, VIEWS['person'])}. {'Animal' if kind == 'animal' else 'Character'}: {explain(c['look'])}. "
                            + ("Exactly four legs and one tail. " if kind == "animal" and "nine" not in c["look"] and "fish" not in c["look"] and "bird" not in c["look"] and "crane" not in c["look"] and "rooster" not in c["look"] and "dragon" not in c["look"] else "")
                            + ("Exactly two arms and two legs. " if kind != "animal" else "")
                            + ("Dress the character in exactly the same costume as the person in the reference image: the same hat shape, robe cut, collar, badges, belt, shoes and colors"
-                              + (f" (robe color: {c['color']})" if c.get("color") else "") + ". Face, age, beard and body follow the description, not the reference. " if outfit else
+                              + (f" (robe color: {c['color']})" if c.get("color") else "") + ", keep the colors as clear and strong as in the reference. Face, age, gender and body follow the description, not the reference. "
+                              + ("She is a woman: no beard, no mustache, no facial hair, no hat. " if woman else "") if outfit else
                               "The black cap must have exactly the shape shown in the reference image (front, side, back), drawn in the same ink wash style. " if refs else "")
                            + "Consistent design in every view, no close-ups, no other people or animals, no text, no red seal stamp"})
 print(f"그릴 시트 {len(jobs)}장: " + ", ".join(j["name"] for j in jobs), flush=True)
