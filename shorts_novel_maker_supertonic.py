@@ -534,6 +534,7 @@ FIELDS = [
     ("자막형", "sub_max_chars", "자막 한 번에 글자 수", "int", 28),
     ("자막형", "img_motion", "사진 움직임", "choice:영상처럼(확대·이동·전환),천천히 확대만,없음", "영상처럼(확대·이동·전환)"),
     ("자막형", "img_label", "사진 제목 표시(오른쪽 위)", "choice:on,off", "on"),
+    ("자막형", "sub_hide", "자막 숨김(나레이션만 · 장문 기본 on)", "choice:off,on", "off"),
     ("자막형", "img_motion_amt", "사진 움직임 세기", "choice:은은하게,크게(예전)", "은은하게"),
     ("자막형", "motion_count", "모션: 숫자 카운트업(통계 수치가 올라감)", "choice:on,off", "off"),
     ("자막형", "motion_chart", "모션: 그래프 성장(% 수치 막대·게이지)", "choice:on,off", "off"),

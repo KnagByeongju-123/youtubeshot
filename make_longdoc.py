@@ -40,6 +40,7 @@ DEFAULT = {
     "연속_편수": 5,
     "연속_소재": [],
     "제목_표시": "왼쪽 위 작게",      # 위 가운데 / 왼쪽 위 작게 / 숨김  (10분 다큐는 큰 제목이 화면을 가려 작게)
+    "자막": "숨김",                 # 숨김(나레이션만, 사용자 결정 2026-10-31: 그림·나레이션 중심, 자막이 그림을 가림) / 보임
     "자막_스타일": "자동",            # 자동(소재에 맞춰) 또는 프로그램의 '인기 롱폼 스타일' 이름 그대로
     "끝나면": "그대로",              # 연속 제작이 끝난 뒤: 그대로 / 절전 / 끄기  (시작할 때 물어봄)
     "claude_path": "",             # Claude Code 실행 파일 경로 (자동으로 못 찾을 때만 적음, 예: C:\\Users\\이름\\.local\\bin\\claude.exe)
@@ -724,6 +725,18 @@ def run_doc(m, app, c, gate):
         except Exception:
             pass
 
+    s["sub_hide"] = "off" if str(c.get("자막", "숨김")).strip() == "보임" else "on"   # 장문(실화·역사) 자막 없이 나레이션만 (사용자 결정 2026-10-31)
+    try:
+        pj_ = json.load(open(base + "_프로젝트.json", encoding="utf-8"))
+        pj_.setdefault("settings", {})["sub_hide"] = s["sub_hide"]
+        m.atomic_write_text(base + "_프로젝트.json", json.dumps(pj_, ensure_ascii=False, indent=1))
+    except Exception:
+        pass
+
+    if "--영상제외" in sys.argv:            # 대본·그림만 이 서버에서 → 나레이션·영상은 다른 서버 (같은 명령을 --영상제외 없이 다시 실행하면 여기서부터)
+        log("⏸ --영상제외: 대본·그림·설정까지 끝. output/장문 을 다른 서버로 옮겨 --영상제외 없이 같은 명령으로 이어서 하세요")
+        raise SystemExit(0)
+
     # 2) 나레이션 (문단마다 저장 → 이어서)
     log("🎙 나레이션 만드는 중... (이미 만든 문단은 건너뜀)")
     if hasattr(m, "ensure_depth_maps") and str(s.get("img_depth", "off")) == "on":
@@ -743,7 +756,7 @@ def run_doc(m, app, c, gate):
             last[0] = p
             log(f"  MP4 {p}%")
     import hashlib
-    key = hashlib.md5((story + "|" + getattr(m, "RENDER_VER", "") + "|" + json.dumps({k: s.get(k) for k in ("fps", "format", "layout", "img_fill", "img_motion", "img_depth", "img_depth_amt", "head_style", "head_pos", "head_size", "head_show", "sub_style", "sub_size", "sub_layout", "sub_dialog", "sub_anim", "sub_split", "style_preset", "text_color", "sub_box_alpha",
+    key = hashlib.md5((story + "|" + getattr(m, "RENDER_VER", "") + "|" + json.dumps({k: s.get(k) for k in ("fps", "format", "layout", "img_fill", "img_motion", "img_depth", "img_depth_amt", "head_style", "head_pos", "head_size", "head_show", "sub_style", "sub_size", "sub_layout", "sub_dialog", "sub_anim", "sub_split", "sub_hide", "style_preset", "text_color", "sub_box_alpha",
                                                                          "font_path", "title_font_path", "bgm_volume", "intro_sec", "outro_sec", "outro_text", "img_filter", "motion_count", "motion_chart", "motion_icon", "motion_lower", "motion_popup")}, ensure_ascii=False)
                        + "|" + title + "|" + ",".join(f"{d_:.3f}" for _, _, d_ in narr) + "|" + ",".join(f"{sg_['t0']:.2f}" for sg_ in getattr(r, "segs", [])) + f"|{r.duration:.2f}" + getattr(r, "fx_sig", "")).encode("utf-8")).hexdigest()   # 나레이션이 바뀌면(발음 수정 등) 영상 구간도 새로
     m.export_mp4_resumable(r, base + ".mp4", prog, gate, audio, work_dir=os.path.join(work, "영상구간"), seg_sec=SEG_SEC, log=log, key=key)
