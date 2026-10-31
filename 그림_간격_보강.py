@@ -238,8 +238,17 @@ def main(a):
             if not groups or groups[-1][0] != ch:
                 groups.append((ch, []))
             groups[-1][1].append(i)
-    new_pic = {}
+    prog_p = proj[:-5] + "_그림진행.json"     # 챕터 묶음마다 저장 → 중간에 꺼져도(실행 시간 제한 등) 다시 돌리면 끝난 묶음은 건너뜀
+    try:
+        prog = json.load(open(prog_p, encoding="utf-8"))
+        new_pic = {int(k): v for k, v in prog.get("pics", {}).items()} if prog.get("n_slots") == len(slots) else {}
+    except Exception:
+        new_pic = {}
+    if new_pic:
+        log(f"♻ 이어서: 이미 그린 그림 {len(new_pic)}장은 건너뜀 ({os.path.basename(prog_p)})")
     for ch, ids in groups:
+        if all(i in new_pic for i in ids):
+            continue
         text = "\n\n".join(f"[그림 {n + 1}번] {text_during(slots[i][1], slots[i][2])}" for n, i in enumerate(ids))
         log(f"🖌 '{ch}' 새 그림 {len(ids)}장")
         got = m.make_ai_images(model, m.DOC_CATEGORY, f"{title} - {ch}",
@@ -249,6 +258,7 @@ def main(a):
             if n < len(got):
                 new_pic[i] = m.make_marker(got[n]["path"], got[n].get("caption"), got[n].get("credit"), got[n].get("page"))
         log(f"   {len(got)}/{len(ids)}장 완성")
+        m.atomic_write_text(prog_p, json.dumps({"n_slots": len(slots), "pics": new_pic}, ensure_ascii=False, indent=1))
 
     # ---- 새 대본: 그림 줄을 모두 빼고 자리마다 다시 넣음 ----
     before = {}
