@@ -5878,7 +5878,9 @@ class SubtitleRenderer:
         plate = np.asarray(extent_resize(data["plate"], (bw, bh), self._last_rect))
         M = np.asarray(extent_resize(data["mask"], (bw, bh), self._last_rect), np.float32) / 255 if data["mask"] is not None else None
         fog = np.asarray(extent_resize(data["fog"], (bw, bh), self._last_rect), np.float32) / 255 if data.get("fog") is not None else None
-        out = _drawfx().frame(np.asarray(crop.convert("RGB")), plate, M, prog, seed=sh["img"], fog=fog)
+        brush = ([np.asarray(extent_resize(b_, (bw, bh), self._last_rect), np.float32) / 255 for b_ in data["brush"]]
+                 if data.get("brush") else None)       # 인물을 붓 획 순서로 드러냄 (사용자 결정 2026-10-31)
+        out = _drawfx().frame(np.asarray(crop.convert("RGB")), plate, M, prog, seed=sh["img"], fog=fog, brush=brush)
         return Image.fromarray(out).convert(crop.mode), mask
 
     def _draw_fx_at(self, idx, t):
@@ -5911,8 +5913,10 @@ class SubtitleRenderer:
             plate, fog = fx_.empty_plate(full, M if M is not None else np.zeros(full.shape[:2], np.float32), with_fog=True)
             if len(cache) >= 4:
                 cache.pop(next(iter(cache)))
+            br_ = fx_.brush_fields(M, seed=idx) if (M is not None and hasattr(fx_, "brush_fields")) else None
             cache[idx] = {"plate": Image.fromarray(plate), "mask": Image.fromarray((M * 255).astype(np.uint8)) if M is not None else None,
-                          "fog": Image.fromarray((fog * 255).astype(np.uint8)) if M is not None else None}
+                          "fog": Image.fromarray((fog * 255).astype(np.uint8)) if M is not None else None,
+                          "brush": [Image.fromarray((b_ * 255).astype(np.uint8)) for b_ in br_] if br_ else None}
         return max(0.0, prog), cache[idx]
 
     @property
@@ -6523,7 +6527,7 @@ _DEPTH_CACHE = {}
 _DEPTH_WARNED = set()
 _GRID_CACHE = {}
 DEPTH_AMP = {"약하게": (0.007, 0.003), "보통": (0.022, 0.010), "강하게": (0.035, 0.016)}   # 약하게는 아주 은은하게(기본)
-RENDER_VER = "2026-10-30b"   # 그리는 방식이 바뀌면 올림 → 장문 영상 구간 캐시를 새로 그림   # (가로, 세로) 최대 밀림 = 화면 크기 비율
+RENDER_VER = "2026-10-31a"   # 그리는 방식이 바뀌면 올림 → 장문 영상 구간 캐시를 새로 그림   # (가로, 세로) 최대 밀림 = 화면 크기 비율
 
 
 def depth_key(path):
