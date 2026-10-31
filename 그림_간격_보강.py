@@ -1,7 +1,7 @@
 """그림 간격 맞추기 — 그림 한 장이 화면에 '최소'~'최대' 초 머물게 그림 자리를 다시 짜고, 모자란 자리는 새로 그림
-(규칙: 그림 한 장 5~12초 — 나레이션 동안 그림이 그려지는 효과로 볼거리를 줌, 사용자 결정 2026-10-30)
+(규칙: 그림 한 장 5~15초 — 나레이션 동안 그림이 그려지는 효과로 볼거리를 줌, 사용자 결정 2026-10-30)
 
-  python -X utf8 그림_간격_보강.py <프로젝트.json> [--최소 5] [--최대 12] [--측정만 | --계획만]
+  python -X utf8 그림_간격_보강.py <프로젝트.json> [--최소 5] [--최대 15] [--측정만 | --계획만]
   (화면 부품 때문에 서버에서는 xvfb-run -a 로 실행)
 
   1) 나레이션(이미 녹음한 캐시)으로 영상과 똑같이 시간을 재서 그림마다 화면에 나오는 시간을 구함
@@ -21,7 +21,7 @@ import time
 HERE = os.path.dirname(os.path.abspath(__file__))
 os.chdir(HERE)
 T0 = time.time()
-NEW_COST = 15.0      # 새로 그리는 대신 이미 그린 그림을 이 초보다 멀리 옮기지는 않음 (내용이 어긋나지 않게)
+NEW_COST = float(next((sys.argv[i + 1] for i, x in enumerate(sys.argv[:-1]) if x == "--옮김"), 15.0))      # 새로 그리는 대신 이미 그린 그림을 이 초보다 멀리 옮기지는 않음 (내용이 어긋나지 않게)
 
 
 def log(x):
@@ -119,7 +119,7 @@ def main(a):
     if not a or not a[0].lower().endswith(".json"):
         print(__doc__)
         return 2
-    hi = float(a[a.index("--최대") + 1]) if "--최대" in a else 12.0
+    hi = float(a[a.index("--최대") + 1]) if "--최대" in a else 15.0   # 사용자 결정 2026-10-31: 15초까지 괜찮음
     lo = float(a[a.index("--최소") + 1]) if "--최소" in a else 5.0
     proj = os.path.abspath(a[0])
     spec = importlib.util.spec_from_file_location("snm", os.path.join(HERE, "shorts_novel_maker_supertonic.py"))
