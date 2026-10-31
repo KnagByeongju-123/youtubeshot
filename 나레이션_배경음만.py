@@ -27,6 +27,7 @@ s["narration"] = "on"
 if "--배경음배율" in sys.argv:      # 배율을 직접 주면 프로젝트의 bgm_mul 은 쓰지 않음 (두 번 줄지 않게)
     s["bgm_mul"] = 1.0
 story, title = pj.get("story", ""), pj.get("title", "")
+m.set_tts_cfg(s)     # 성우 톤(반음)·숨소리 다듬기 설정을 녹음에 적용
 style = s.get("bgm_style")
 if m.is_trad(style):
     s["chapter_hold"] = 4.2
