@@ -225,7 +225,19 @@ def main(a):
                 groups.append((ch, []))
             groups[-1][1].append(i)
     new_pic = {}
+    prog_p = proj[:-5] + "_그림진행.json"    # 장마다 다 그리면 저장 → 서버가 꺼졌다 켜져도 그린 장은 건너뜀
+    sig = f"{len(slots)}|" + "|".join(f"{a_:.1f}" for _, a_, _ in slots)
+    try:
+        prog = json.load(open(prog_p, encoding="utf-8"))
+        if prog.get("sig") == sig:
+            new_pic = {int(k): v for k, v in prog.get("pics", {}).items()}
+            if new_pic:
+                log(f"이어서: 이미 그린 그림 {len(new_pic)}장은 건너뜀")
+    except Exception:
+        pass
     for ch, ids in groups:
+        if all(i in new_pic for i in ids):
+            continue
         text = "\n\n".join(f"[그림 {n + 1}번] {text_during(slots[i][1], slots[i][2])}" for n, i in enumerate(ids))
         log(f"🖌 '{ch}' 새 그림 {len(ids)}장")
         got = m.make_ai_images(model, m.DOC_CATEGORY, f"{title} - {ch}",
@@ -235,6 +247,7 @@ def main(a):
             if n < len(got):
                 new_pic[i] = m.make_marker(got[n]["path"], got[n].get("caption"), got[n].get("credit"), got[n].get("page"))
         log(f"   {len(got)}/{len(ids)}장 완성")
+        m.atomic_write_text(prog_p, json.dumps({"sig": sig, "pics": {str(k): v for k, v in new_pic.items()}}, ensure_ascii=False, indent=1))
 
     # ---- 새 대본: 그림 줄을 모두 빼고 자리마다 다시 넣음 ----
     before = {}
