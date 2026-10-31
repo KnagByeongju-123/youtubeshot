@@ -177,7 +177,7 @@ def main(a):
         n_bad = sum(1 for r_ in m._NV.REPORT if not r_[2]["ok"])
         log(f"🔎 나레이션 검증: {len(m._NV.REPORT)}문단 중 문제 {n_bad}개" + (f" → {os.path.basename(base)}_나레이션검증.txt 확인" if n_bad else " (모두 통과)"))
 
-    if bgm == getattr(m, "CHINA_STRINGS", ""):
+    if getattr(m, "is_china", lambda x: False)(bgm):
         s["chapter_hold"] = 4.2               # 챕터 제목 동안 나레이션을 쉬고 고쟁 연주
     r = m.make_renderer(title, story, s, narr)
     vdir = "영상구간"

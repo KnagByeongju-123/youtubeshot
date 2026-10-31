@@ -174,7 +174,8 @@ def find_font_lang(lang, bold=False):
 
 # 자체 합성 배경음 스타일 (아래 SOUND_STYLES 와 이름이 같아야 함)
 SOUND_STYLE_NAMES = ["노래 멜로디(오르골)", "잔잔한 패드", "슬픈 패드", "감성 오르골", "밝은 오르골", "긴장 펄스", "어두운 드론",
-                     "공포 심장박동", "비 오는 밤", "빗소리", "심해", "우주", "바람", "파도", "중국 현악(고쟁·얼후)"]
+                     "공포 심장박동", "비 오는 밤", "빗소리", "심해", "우주", "바람", "파도", "중국 현악(고쟁·얼후)",
+                     "중국 현악 · 상조(차분)", "중국 현악 · 각조(신비)", "중국 현악 · 치조(활기)", "중국 현악 · 우조(애잔)"]
 
 # 소재별 자동 배경음
 SOUND_BY_TOPIC = {
@@ -3041,12 +3042,35 @@ def draw_settings():
 CAST_PRESET_FILE = os.path.join(BASE, "등장인물", "등장인물.json")   # 미리 정해 둔 인물 (face = 확정한 캐릭터 시트 그림)
 
 
+def cast_base(name):
+    """'조조(청년기, 20~30대)' → '조조' (확정 시트·외모를 이름 앞부분으로 찾음)"""
+    return re.split(r"[(\[]", str(name or ""))[0].strip()
+
+
+def add_preset_cast(text, log=None):
+    """등장인물.json 에서 확정 시트(face)가 있고 글에 이름이 나오는 인물을 IMAGE_CAST 에 먼저 등록 → 그림 기획이 그 외모를 그대로 씀"""
+    try:
+        chars = json.load(open(CAST_PRESET_FILE, encoding="utf-8")).get("chars") or []
+    except Exception:
+        return
+    have = {cast_base(c.get("name")) for c in IMAGE_CAST.get("chars") or []}
+    add = []
+    for c in chars:
+        nm, face = str(c.get("name") or ""), str(c.get("face") or "")
+        face = face if not face or os.path.isabs(face) else os.path.join(BASE, face)
+        if nm and c.get("look") and face and os.path.exists(face) and nm in text and nm not in have:
+            add.append({"name": nm, "look": str(c["look"]), "look_ko": str(c.get("look_ko") or ""), "sheet": face})
+    if add:
+        IMAGE_CAST["chars"] = list(IMAGE_CAST.get("chars") or []) + add
+        (log or (lambda x: None))("  👤 확정 캐릭터 시트 사용: " + ", ".join(c["name"] for c in add))
+
+
 def make_cast_sheets(names, style, media_dir, log=None, cancel=None):
     """그림에 나오는 인물마다 캐릭터 시트(앞·옆·뒤 전신, 흰 배경)를 klein 으로 그려 {이름: 경로}.
     이미 있는 시트(IMAGE_CAST 의 sheet, 등장인물.json 의 face)는 그대로 씀 → 모든 컷·회차가 같은 얼굴·옷"""
     log = log or (lambda x: None)
     try:
-        preset = {c.get("name"): c for c in json.load(open(CAST_PRESET_FILE, encoding="utf-8")).get("chars") or []}
+        preset = {cast_base(c.get("name")): c for c in json.load(open(CAST_PRESET_FILE, encoding="utf-8")).get("chars") or []}
     except Exception:
         preset = {}
     out, jobs = {}, []
@@ -3054,7 +3078,7 @@ def make_cast_sheets(names, style, media_dir, log=None, cancel=None):
         nm = c.get("name")
         if not nm or nm not in names or not c.get("look"):
             continue
-        face = str((preset.get(nm) or {}).get("face") or "")
+        face = str((preset.get(cast_base(nm)) or {}).get("face") or "")
         face = face if os.path.isabs(face) else os.path.join(BASE, face) if face else ""
         if c.get("sheet") and os.path.exists(c["sheet"]):
             out[nm] = c["sheet"]
@@ -3254,6 +3278,7 @@ def make_ai_images(model, category, title, story, n, s, media_dir, log, cancel=N
     style = image_style_text(s)
     preset = str(s.get("image_style_preset", "") or "")
     log(f"🎨 그림 {n}장 기획 중... (스타일: {preset if preset in IMAGE_STYLES else '직접 입력'})")
+    add_preset_cast(story_text_only(story) + " " + str(title), log)   # 확정 시트가 있는 인물은 그 외모 그대로 (AI가 옷 색을 새로 짓지 않게)
     cast = cast_text()
     fact_img = cat_info(category)[0] and not doc_is_fiction(str(category))   # 규칙: 사실 콘텐츠의 AI 그림은 개념도·상상도로만 (유튜브_정책.py)
     plan = ask_script_json(model, fit_ratio(IMAGE_PLAN_SYSTEM + (_YP.FACT_IMAGE_RULE if fact_img else "")), f"화면: {ratio_ko()}\n콘텐츠 종류: {category}\n그림 수: {n}장\n그림 스타일(모든 그림 공통): {style or '사실적인 영화 장면'}"
@@ -3266,9 +3291,9 @@ def make_ai_images(model, category, title, story, n, s, media_dir, log, cancel=N
             cap_ = str(it.get("caption", "")).strip()
             it["caption"] = cap_ if cap_.startswith(_YP.AI_CAPTION) else (f"{_YP.AI_CAPTION} · {cap_}" if cap_ else _YP.AI_CAPTION)
     if plan.get("cast"):     # 기획이 새로 정한 인물 외모를 등록(이미 있는 인물은 그대로) → 이후 모든 그림·회차에 같은 얼굴·머리·수염·체형
-        have = {c.get("name") for c in IMAGE_CAST.get("chars") or []}
+        have = {cast_base(c.get("name")) for c in IMAGE_CAST.get("chars") or []}
         new = [{"name": str(x.get("name", "")), "look": str(x.get("look", "")), "look_ko": str(x.get("look_ko", ""))}
-               for x in plan["cast"] if isinstance(x, dict) and x.get("name") and x.get("look") and str(x.get("name")) not in have]
+               for x in plan["cast"] if isinstance(x, dict) and x.get("name") and x.get("look") and cast_base(x.get("name")) not in have]
         if new:
             IMAGE_CAST["chars"] = list(IMAGE_CAST.get("chars") or []) + new
             cast = cast_text()
@@ -7081,8 +7106,19 @@ def gen_melody_box(n, rng, melody, bpm=90):
     return _norm(pad + _norm(reverb(mel, rng, 2.8, 0.35)) * 0.85)
 
 
-CHINA_STRINGS = "중국 현악(고쟁·얼후)"   # 삼국지 편: 나레이션 아래 잔잔한 고쟁·얼후 + 챕터마다 고쟁 연주 (중국현악.py, 직접 합성)
+CHINA_STRINGS = "중국 현악(고쟁·얼후)"   # 삼국지 편: 나레이션 아래 잔잔한 고쟁·얼후 + 챕터마다 고쟁 연주 (중국현악.py, 직접 합성) = 궁조
+CHINA_MODE_STYLES = {CHINA_STRINGS: "궁조", "중국 현악 · 상조(차분)": "상조", "중국 현악 · 각조(신비)": "각조",
+                     "중국 현악 · 치조(활기)": "치조", "중국 현악 · 우조(애잔)": "우조"}   # 배경음 이름 → 음계 (사용자 결정 2026-10-31: 편마다 골라 씀)
 _CHINA_MOD = {}
+
+
+def is_china(style):
+    return str(style or "") in CHINA_MODE_STYLES
+
+
+def china_style(mode):
+    """음계 이름('우조' 등) → 배경음 이름. 모르면 궁조(기본 중국 현악)"""
+    return next((k for k, v in CHINA_MODE_STYLES.items() if v == str(mode or "").strip()), CHINA_STRINGS)
 
 
 def _china():
@@ -7110,7 +7146,8 @@ SOUND_STYLES = {
     "바람": gen_wind,
     "파도": gen_waves,
 }
-SOUND_STYLES[CHINA_STRINGS] = lambda n, r: _china().bed(n, r)
+for _k, _md in CHINA_MODE_STYLES.items():
+    SOUND_STYLES[_k] = (lambda md: lambda n, r: _china().bed(n, r, md))(_md)
 assert list(SOUND_STYLES) == SOUND_STYLE_NAMES
 CURRENT_MELODY = {"melody": "", "bpm": 90}   # 현재 대본의 노래 멜로디 (올드 팝송일 때 채워짐)
 
@@ -7290,14 +7327,14 @@ def build_audio(r, s, style):
             g = g * np.interp(t, [0, a, b, hit_t + 1.5, hit_t + 4.5, 1e9], [1, 1, 0.25, 0.25, 1, 1])
         if narr:   # 말하는 동안 음악을 낮춤 (더킹)
             g = g * duck_env(n, narr, r.duration, float(s.get("narr_duck", 0.35)))
-        if style == CHINA_STRINGS:     # 고쟁·얼후는 '거의 안 들림' 크기로는 묻혀서 조금 키움
+        if is_china(style):            # 고쟁·얼후는 '거의 안 들림' 크기로는 묻혀서 조금 키움
             g = g * max(1.0, 0.3 / max(0.01, float(s["bgm_volume"])))
         out += music * g[:, None].astype(np.float32)
-    if style == CHINA_STRINGS:         # 나레이션 사이(챕터 제목이 나오는 동안) 고쟁 한 소절
+    if is_china(style):                # 나레이션 사이(챕터 제목이 나오는 동안) 고쟁 한 소절 (같은 음계)
         rng_i = np.random.default_rng(len(getattr(r, "segs", [])))
         for sg in getattr(r, "segs", []):
             if sg.get("kind") == "chapter":
-                it = _china().interlude(rng_i)
+                it = _china().interlude(rng_i, mode=CHINA_MODE_STYLES[style])
                 it = it / (np.abs(it).max() + 1e-6) * 0.42
                 i0 = int((sg["t0"] + 0.15) * SR)
                 seg = it[: max(0, n - i0)]
