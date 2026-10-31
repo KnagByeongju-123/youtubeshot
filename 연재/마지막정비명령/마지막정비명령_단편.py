@@ -16,6 +16,10 @@ STYLE = ("Japanese anime style scene, TV anime screenshot, clean crisp line art,
          "realistic human proportions, natural colors, detailed anime background art")
 PARK = "an overgrown abandoned city park in a ruined futuristic city, cracked skyscrapers covered in vines in the background, old swings, a small carousel, stone benches and flower beds kept neat and clean"
 MEMORY = "shown as a translucent blue hologram memory projected in the air"
+NOT_PARK = {"c06", "c08", "c09", "c45"}        # 공원 밖 장면 (나머지는 모두 공원 야외 — 로봇 시트 때문에 공장·연구실 배경이 자꾸 나와서 장소를 꼭 적음)
+CROWD = {"c31", "c36", "c45"}                 # 다른 사람이 나와도 되는 장면 (수거단·피난 인파)
+PARK_SET = ("Setting: outdoors in the overgrown abandoned city park with trees, grass, flower beds, stone paths and old benches, "
+            "ruined skyscrapers far in the background. Not indoors, not a factory, no machines, no pipes, no monitors, no signs")
 
 # (컷번호, 나오는 인물, 그림 설명(영어), 화면 설명(한국어))
 CUTS = [
@@ -311,7 +315,10 @@ def main():
                           "refs": [os.path.join(HERE, chars[nm]["face"]) for nm in who if chars[nm].get("face")],
                           "prompt": f"{STYLE}, science fiction drama. "
                                     + (f"Characters: {looks}. Each person appears only once, exactly two arms and two legs, head and face turned the same direction as the body. " if looks else "No main characters. ")
-                                    + f"Scene: {desc}. Cinematic composition, full-bleed image, no border, no frame, no paper edges. No speech bubbles, no text, no letters."})
+                                    + ("The robot is exactly the slender white rusty humanoid robot from the reference sheet with a green scarf, not a different robot. " if "보리" in who else "")
+                                    + ("" if cid in CROWD else "No other people in the scene. ")
+                                    + f"Scene: {desc}. " + ("" if cid in NOT_PARK else PARK_SET + ". ")
+                                    + "Cinematic composition, full-bleed image, no border, no frame, no paper edges. No speech bubbles, no text, no letters."})
         os.makedirs(folder, exist_ok=True)
         json.dump({"items": items}, open(os.path.join(folder, "job.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
         print(len(items), "cuts")
