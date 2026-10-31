@@ -176,6 +176,14 @@ def find_font_lang(lang, bold=False):
 SOUND_STYLE_NAMES = ["노래 멜로디(오르골)", "잔잔한 패드", "슬픈 패드", "감성 오르골", "밝은 오르골", "긴장 펄스", "어두운 드론",
                      "공포 심장박동", "비 오는 밤", "빗소리", "심해", "우주", "바람", "파도", "중국 현악(고쟁·얼후)",
                      "중국 현악 · 상조(차분)", "중국 현악 · 각조(신비)", "중국 현악 · 치조(활기)", "중국 현악 · 우조(애잔)"]
+# 권역별 전통악기 배경음 (전통악기/<권역>.py, 직접 합성 · 진짜 역사 기록관용, 사용자 결정 2026-10-31): (권역 파일, 이름 앞부분, 음계들)
+TRAD_REGIONS = [("한국", "한국 전통(가야금·해금)", ["평조", "계면조"]),
+                ("일본", "일본 전통(고토·샤쿠하치)", ["미야코부시", "요음계"]),
+                ("중동", "중동 전통(우드·네이)", ["히자즈", "라스트", "바야티"]),
+                ("인도", "인도 전통(시타르·반수리)", ["야만", "바이라비", "카피"]),
+                ("몽골", "몽골 초원(마두금·후미)", ["초원장조", "초원단조"]),
+                ("중세유럽", "중세 유럽(류트·리코더)", ["도리안", "믹솔리디안", "에올리안"])]
+SOUND_STYLE_NAMES += [f"{pre} · {md}" for _, pre, mds in TRAD_REGIONS for md in mds]
 
 # 소재별 자동 배경음
 SOUND_BY_TOPIC = {
@@ -7109,11 +7117,40 @@ def gen_melody_box(n, rng, melody, bpm=90):
 CHINA_STRINGS = "중국 현악(고쟁·얼후)"   # 삼국지 편: 나레이션 아래 잔잔한 고쟁·얼후 + 챕터마다 고쟁 연주 (중국현악.py, 직접 합성) = 궁조
 CHINA_MODE_STYLES = {CHINA_STRINGS: "궁조", "중국 현악 · 상조(차분)": "상조", "중국 현악 · 각조(신비)": "각조",
                      "중국 현악 · 치조(활기)": "치조", "중국 현악 · 우조(애잔)": "우조"}   # 배경음 이름 → 음계 (사용자 결정 2026-10-31: 편마다 골라 씀)
+TRAD_STYLES = {k: ("중국", v) for k, v in CHINA_MODE_STYLES.items()}          # 배경음 이름 → (권역, 음계): 챕터마다 한 소절 연주하는 전통악기
+TRAD_STYLES.update({f"{pre} · {md}": (rg, md) for rg, pre, mds in TRAD_REGIONS for md in mds})
 _CHINA_MOD = {}
+_TRAD_MOD = {}
 
 
-def is_china(style):
-    return str(style or "") in CHINA_MODE_STYLES
+def is_trad(style):
+    return str(style or "") in TRAD_STYLES
+
+
+is_china = is_trad      # 예전 이름 (render_project·make_longdoc 호환)
+
+
+def _trad(region):
+    """전통악기/<권역>.py 의 REGION (interlude·bed). 중국은 중국현악.py 그대로"""
+    if region not in _TRAD_MOD:
+        spec_ = importlib.util.spec_from_file_location("trad_" + region, os.path.join(BASE, "전통악기", region + ".py"))
+        mod_ = importlib.util.module_from_spec(spec_)
+        spec_.loader.exec_module(mod_)
+        _TRAD_MOD[region] = mod_.REGION
+    return _TRAD_MOD[region]
+
+
+def trad_from_memo(memo):
+    """기획메모의 '배경음: 중동 히자즈' / '음계: 우조'(중국) → 배경음 이름. 없으면 ''"""
+    memo = str(memo or "")
+    m_ = re.search(r"배경음\s*[:：]\s*([^\s,.·]+)[\s·]*([^\s,.]+)?", memo)
+    if m_:
+        rg, md = m_.group(1), (m_.group(2) or "")
+        hit = [k for k, (r_, d_) in TRAD_STYLES.items() if rg in (r_, k.split(" ")[0]) and (not md or d_ == md)]
+        if hit:
+            return hit[0]
+    m_ = re.search(r"음계\s*[:：]\s*(궁조|상조|각조|치조|우조)", memo)
+    return china_style(m_.group(1)) if m_ else ""
 
 
 def china_style(mode):
@@ -7146,8 +7183,8 @@ SOUND_STYLES = {
     "바람": gen_wind,
     "파도": gen_waves,
 }
-for _k, _md in CHINA_MODE_STYLES.items():
-    SOUND_STYLES[_k] = (lambda md: lambda n, r: _china().bed(n, r, md))(_md)
+for _k, (_rg, _md) in TRAD_STYLES.items():
+    SOUND_STYLES[_k] = (lambda rg, md: lambda n, r: _trad(rg).bed(n, r, md))(_rg, _md)
 assert list(SOUND_STYLES) == SOUND_STYLE_NAMES
 CURRENT_MELODY = {"melody": "", "bpm": 90}   # 현재 대본의 노래 멜로디 (올드 팝송일 때 채워짐)
 
@@ -7327,14 +7364,14 @@ def build_audio(r, s, style):
             g = g * np.interp(t, [0, a, b, hit_t + 1.5, hit_t + 4.5, 1e9], [1, 1, 0.25, 0.25, 1, 1])
         if narr:   # 말하는 동안 음악을 낮춤 (더킹)
             g = g * duck_env(n, narr, r.duration, float(s.get("narr_duck", 0.35)))
-        if is_china(style):            # 고쟁·얼후는 '거의 안 들림' 크기로는 묻혀서 조금 키움
+        if is_trad(style):             # 전통악기(고쟁·얼후 등)는 '거의 안 들림' 크기로는 묻혀서 조금 키움
             g = g * max(1.0, 0.3 / max(0.01, float(s["bgm_volume"])))
         out += music * g[:, None].astype(np.float32)
-    if is_china(style):                # 나레이션 사이(챕터 제목이 나오는 동안) 고쟁 한 소절 (같은 음계)
+    if is_trad(style):                 # 나레이션 사이(챕터 제목이 나오는 동안) 전통악기 한 소절 (같은 음계)
         rng_i = np.random.default_rng(len(getattr(r, "segs", [])))
         for sg in getattr(r, "segs", []):
             if sg.get("kind") == "chapter":
-                it = _china().interlude(rng_i, mode=CHINA_MODE_STYLES[style])
+                it = _trad(TRAD_STYLES[style][0]).interlude(rng_i, mode=TRAD_STYLES[style][1])
                 it = it / (np.abs(it).max() + 1e-6) * 0.42
                 i0 = int((sg["t0"] + 0.15) * SR)
                 seg = it[: max(0, n - i0)]
