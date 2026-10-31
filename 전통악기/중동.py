@@ -15,3 +15,10 @@ REGION = K.Region(
            "라스트": ([0, 2, 3.5, 5, 7, 9, 10.5], 50, "당당하고 따뜻 (궁정·번영)"),
            "바야티": ([0, 1.5, 3, 5, 7, 8, 10], 50, "애잔하고 그윽 (몰락·순례)")},
     drum=True, gliss=False, tempo=0.36)
+
+
+WIND = K.Region(   # 관악: 네이(숨소리 많은 갈대 피리) + 주르나(겹서, 작게), 낮은 음은 우드, 다프 작게
+    "중동", "네이·주르나·다프",
+    lead=lambda f, d, rng, last: K.flute(f, d, breath=0.42, vib=0.01 if last else 0.006, slide=0.03, rng=rng),
+    sustain=lambda f, d, rng: K.reed(f, d, band=(700, 3500), bright=0.18, vib=0.01, vib_rate=5.5),
+    bass=REGION.lead, modes=REGION.modes, drum=True, legato=True, gliss=False, tempo=0.5)
