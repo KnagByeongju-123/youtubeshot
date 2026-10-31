@@ -1,0 +1,30 @@
+{
+ "items": [
+  {
+   "id": "aiimg_20261030_222233_11",
+   "prompt": "He Zhuo, Qing dynasty Chinese scholar in his 60s, no glasses, bare eyes, shaved forehead with a long grey braided queue, thin grey mustache and wispy grey beard, dark blue long gown with black jacket, sitting at a low desk reading a soft paper thread-bound book with a doubtful frown, plain light plastered wall behind him, a single candle, medium shot, no bookshelves, no spectacles. full-bleed image, no border, no frame, no paper edges, no text, no letters, no seal stamp. Style: traditional East Asian ink wash painting (sumi-e) with light color washes, expressive black ink brush lines, soft grey washes with muted natural colors, rice paper texture across the whole image, historically accurate costumes and architecture, no red seal stamp, no calligraphy., highly detailed",
+   "refs": [],
+   "width": 1024,
+   "height": 576,
+   "seed": 4041,
+   "steps": 4
+  },
+  {
+   "id": "sheet_조등",
+   "width": 1024,
+   "height": 576,
+   "seed": 7,
+   "refs": [],
+   "prompt": "Character design sheet, traditional East Asian ink wash painting with light color washes. The same character shown three times side by side on a plain white background: front view, side view, back view, full body, standing. Character: Chinese Eastern Han dynasty palace eunuch in his 60s, round soft beardless face, gentle narrow eyes with thin grey eyebrows, grey hair under a tall black court cap, no mustache or beard, plump short build, dark crimson court robe with black collar, completely clean-shaven, no mustache, no beard, smooth upper lip and chin. Consistent design in every view, no close-ups, no other people, no text"
+  },
+  {
+   "id": "sheet_하작",
+   "width": 1024,
+   "height": 576,
+   "seed": 7,
+   "refs": [],
+   "prompt": "Character design sheet, traditional East Asian ink wash painting with light color washes. The same character shown three times side by side on a plain white background: front view, side view, back view, full body, standing. Character: Chinese Qing dynasty scholar in his 60s, long narrow face, thoughtful eyes with sparse grey brows, shaved forehead with a long grey braided queue, no glasses, thin grey mustache and wispy grey beard, slim build, dark blue long gown with black jacket, no glasses, no spectacles, bare eyes. Consistent design in every view, no close-ups, no other people, no text"
+  }
+ ],
+ "fixes": []
+}

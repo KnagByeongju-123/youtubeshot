@@ -1,0 +1,23 @@
+{
+ "items": [
+  {
+   "id": "조등",
+   "prompt": "Character design sheet, Style: traditional East Asian ink wash painting (sumi-e) with light color washes, expressive black ink brush lines, soft grey washes with muted natural colors, rice paper texture across the whole image, historically accurate costumes and architecture, no red seal stamp, no calligraphy., highly detailed. The same character shown three times side by side on a plain white background: front view, side view, back view, full body, standing. Character: Chinese Eastern Han dynasty palace eunuch in his 60s, round soft completely clean-shaven face, no mustache, no beard, smooth chin and upper lip, gentle narrow eyes with thin grey eyebrows, grey hair under a tall black court cap, plump short build, dark crimson court robe with black collar. Consistent design in every view, no close-ups, no other people",
+   "refs": [],
+   "width": 1024,
+   "height": 576,
+   "seed": 7,
+   "steps": 4
+  },
+  {
+   "id": "하작",
+   "prompt": "Character design sheet, Style: traditional East Asian ink wash painting (sumi-e) with light color washes, expressive black ink brush lines, soft grey washes with muted natural colors, rice paper texture across the whole image, historically accurate costumes and architecture, no red seal stamp, no calligraphy., highly detailed. The same character shown three times side by side on a plain white background: front view, side view, back view, full body, standing. Character: Chinese Qing dynasty scholar in his 60s, long narrow face, no glasses, thoughtful eyes with sparse grey brows, shaved forehead with a long grey braided queue, thin grey mustache and wispy grey beard, slim build, dark blue long gown with black jacket. Consistent design in every view, no close-ups, no other people",
+   "refs": [],
+   "width": 1024,
+   "height": 576,
+   "seed": 7,
+   "steps": 4
+  }
+ ],
+ "fixes": []
+}

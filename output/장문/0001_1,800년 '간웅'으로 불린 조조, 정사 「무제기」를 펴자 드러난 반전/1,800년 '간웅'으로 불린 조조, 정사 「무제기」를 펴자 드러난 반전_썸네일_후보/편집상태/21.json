@@ -1,0 +1,32 @@
+{
+ "ver": 1,
+ "background": "/home/user/youtubeshot/output/장문/media/aiimg_20261030_222230_0.jpg",
+ "options": {
+  "size": [
+   1280,
+   720
+  ],
+  "title": "본문 속 [0번]\n'간웅'의 정체",
+  "subtitle": "정사 삼국지 무제기",
+  "theme": "화이트",
+  "align": "center",
+  "font_size": 86,
+  "text_y": 78,
+  "brightness": 85,
+  "darkness": 70,
+  "title_style": "그림자",
+  "overlay": "비네팅",
+  "frame": "없음",
+  "tag_position": "우측 상단",
+  "bg_blur": 2,
+  "bg_saturation": 70
+ },
+ "layers": [],
+ "design": "시네마틱",
+ "variant": 2,
+ "base": "/home/user/youtubeshot/output/장문/1,800년 '간웅'으로 불린 조조, 정사 「무제기」를 펴자 드러난 반전",
+ "video": "/home/user/youtubeshot/output/장문/1,800년 '간웅'으로 불린 조조, 정사 「무제기」를 펴자 드러난 반전.mp4",
+ "out": "/home/user/youtubeshot/output/장문/1,800년 '간웅'으로 불린 조조, 정사 「무제기」를 펴자 드러난 반전_썸네일_유튜브.jpg",
+ "opening": "/home/user/youtubeshot/output/장문/media/aiimg_20261031_000607_0.jpg",
+ "title": "1,800년 '간웅'으로 불린 조조, 정사 「무제기」를 펴자 드러난 반전은? 😱"
+}

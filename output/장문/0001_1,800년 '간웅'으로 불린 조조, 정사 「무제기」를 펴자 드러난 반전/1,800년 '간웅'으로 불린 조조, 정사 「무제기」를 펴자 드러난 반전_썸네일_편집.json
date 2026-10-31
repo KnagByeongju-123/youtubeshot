@@ -1,0 +1,67 @@
+{
+ "ver": 1,
+ "background": "/home/user/youtubeshot/output/장문/media/aiimg_20261031_000607_0.jpg",
+ "options": {
+  "size": [
+   1280,
+   720
+  ],
+  "title": "아무도 몰랐던\n1800년 [간웅]",
+  "subtitle": "정사 무제기의 반전",
+  "theme": "골드",
+  "align": "left",
+  "font_size": 86,
+  "text_y": 66,
+  "brightness": 85,
+  "darkness": 78,
+  "title_style": "그림자",
+  "overlay": "좌측 그라데이션",
+  "frame": "없음",
+  "tag_position": "좌측 상단",
+  "bg_blur": 0,
+  "bg_saturation": 80
+ },
+ "layers": [
+  {
+   "name": "주인공(누끼)",
+   "x": 0.74,
+   "y": 0.53,
+   "height": 0.92,
+   "rotation": 0.0,
+   "opacity": 100,
+   "shape": "원본",
+   "outline": false,
+   "shadow": true,
+   "remove_bg": false,
+   "visible": true,
+   "kind": "photo",
+   "ai_cutout": true,
+   "src": "/home/user/youtubeshot/output/장문/media/aiimg_20261031_000607_2.jpg",
+   "sticker": ""
+  },
+  {
+   "name": "물음표 배지",
+   "x": 0.86,
+   "y": 0.16,
+   "height": 0.2,
+   "rotation": -8,
+   "opacity": 100,
+   "shape": "원본",
+   "outline": false,
+   "shadow": true,
+   "remove_bg": false,
+   "visible": true,
+   "kind": "sticker",
+   "ai_cutout": false,
+   "src": "",
+   "sticker": "물음표 배지"
+  }
+ ],
+ "design": "미스터리 다큐",
+ "variant": 1,
+ "base": "/home/user/youtubeshot/output/장문/1,800년 '간웅'으로 불린 조조, 정사 「무제기」를 펴자 드러난 반전",
+ "video": "/home/user/youtubeshot/output/장문/1,800년 '간웅'으로 불린 조조, 정사 「무제기」를 펴자 드러난 반전.mp4",
+ "out": "/home/user/youtubeshot/output/장문/1,800년 '간웅'으로 불린 조조, 정사 「무제기」를 펴자 드러난 반전_썸네일_유튜브.jpg",
+ "opening": "/home/user/youtubeshot/output/장문/media/aiimg_20261031_000607_0.jpg",
+ "title": "1,800년 '간웅'으로 불린 조조, 정사 「무제기」를 펴자 드러난 반전은? 😱"
+}

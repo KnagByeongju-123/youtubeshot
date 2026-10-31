@@ -1,0 +1,50 @@
+{
+ "ver": 1,
+ "background": "/home/user/youtubeshot/output/장문/media/aiimg_20261030_222233_13.jpg",
+ "options": {
+  "size": [
+   1280,
+   720
+  ],
+  "title": "사실은 [영웅]?\n뒤집힌 조조",
+  "subtitle": "후한서의 반전",
+  "theme": "레드",
+  "align": "left",
+  "font_size": 86,
+  "text_y": 74,
+  "brightness": 85,
+  "darkness": 45,
+  "title_style": "박스 강조",
+  "overlay": "하단 그라데이션",
+  "frame": "테두리",
+  "tag_position": "좌측 상단",
+  "bg_blur": 0,
+  "bg_saturation": 100
+ },
+ "layers": [
+  {
+   "name": "증거 사진",
+   "x": 0.79,
+   "y": 0.32,
+   "height": 0.5,
+   "rotation": 0.0,
+   "opacity": 100,
+   "shape": "둥근 모서리",
+   "outline": true,
+   "shadow": true,
+   "remove_bg": false,
+   "visible": true,
+   "kind": "photo",
+   "ai_cutout": false,
+   "src": "/home/user/youtubeshot/output/장문/media/aiimg_20261030_222234_19.jpg",
+   "sticker": ""
+  }
+ ],
+ "design": "속보 뉴스",
+ "variant": 3,
+ "base": "/home/user/youtubeshot/output/장문/1,800년 '간웅'으로 불린 조조, 정사 「무제기」를 펴자 드러난 반전",
+ "video": "/home/user/youtubeshot/output/장문/1,800년 '간웅'으로 불린 조조, 정사 「무제기」를 펴자 드러난 반전.mp4",
+ "out": "/home/user/youtubeshot/output/장문/1,800년 '간웅'으로 불린 조조, 정사 「무제기」를 펴자 드러난 반전_썸네일_유튜브.jpg",
+ "opening": "/home/user/youtubeshot/output/장문/media/aiimg_20261031_000607_0.jpg",
+ "title": "1,800년 '간웅'으로 불린 조조, 정사 「무제기」를 펴자 드러난 반전은? 😱"
+}
