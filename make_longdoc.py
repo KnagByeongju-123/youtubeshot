@@ -682,6 +682,14 @@ def run_doc(m, app, c, gate):
     story, _ = m.hook_fix(app.model_var.get().strip(), story, log, gate, title=title)   # 규칙: 30초 후크 + 첫 5초 = 제목·썸네일 약속
     story, _ = m.retention_fix(app.model_var.get().strip(), story, title, log, gate)    # 규칙: 챕터 끝 예고 + 시리즈 한 줄 (1위 영상 분석)
     story, _ = m.polite_fix(app.model_var.get().strip(), story, log, gate)   # 규칙: 모든 나레이션은 존댓말 (자막·성우 함께)
+    try:                                       # 규칙: 긴 문장은 연결어미 뒤에 쉼표 → 성우가 숨 쉬듯 끊어 읽음 (나레이션_쉼표.py, Kiwi, 사용자 결정 2026-10-31)
+        _sp = importlib.util.spec_from_file_location("narr_comma", os.path.join(HERE, "나레이션_쉼표.py"))
+        _nc = importlib.util.module_from_spec(_sp)
+        _sp.loader.exec_module(_nc)
+        story, _ch = _nc.add_pauses(story)
+        log(f"✏ 나레이션 쉼표: {len(_ch)}문장에 쉼표를 넣음 (긴 문장 끊어 읽기)")
+    except Exception as e:
+        log("  ⚠ 나레이션 쉼표 건너뜀 (pip install kiwipiepy 필요): " + str(e)[:80])
     base = os.path.join(out_root, m.safe_name(title))
     app.title_var.set(title)
     app.set_story(story)
@@ -717,9 +725,11 @@ def run_doc(m, app, c, gate):
                 pass
     if HISTORY:                                # 역사 편: 입체 움직임(2.5D) 끔 — 그리는 효과와 겹치고 없는 게 나음 (사용자 결정 2026-10-30)
         s["img_depth"] = "off"
+        s["bgm_mul"] = 0.5                     # 배경음 50% (사용자 결정 2026-10-31, 나레이션 크기는 그대로)
         try:
             pj_ = json.load(open(base + "_프로젝트.json", encoding="utf-8"))
             pj_.setdefault("settings", {})["img_depth"] = "off"
+            pj_["settings"]["bgm_mul"] = 0.5
             m.atomic_write_text(base + "_프로젝트.json", json.dumps(pj_, ensure_ascii=False, indent=1))
         except Exception:
             pass

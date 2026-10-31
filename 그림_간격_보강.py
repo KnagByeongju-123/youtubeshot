@@ -1,7 +1,8 @@
 """그림 간격 맞추기 — 그림 한 장이 화면에 '최소'~'최대' 초 머물게 그림 자리를 다시 짜고, 모자란 자리는 새로 그림
 (규칙: 그림 한 장 5~15초 — 나레이션 동안 그림이 그려지는 효과로 볼거리를 줌, 사용자 결정 2026-10-30)
 
-  python -X utf8 그림_간격_보강.py <프로젝트.json> [--최소 5] [--최대 15] [--측정만 | --계획만]
+  python -X utf8 그림_간격_보강.py <프로젝트.json> [--최소 5] [--최대 15] [--측정만 | --계획만] [--문단]
+  --문단 : 나레이션 문단마다 그림 한 장 (사용자 결정 2026-10-31, 역사 편 기본)
   (화면 부품 때문에 서버에서는 xvfb-run -a 로 실행)
 
   1) 나레이션(이미 녹음한 캐시)으로 영상과 똑같이 시간을 재서 그림마다 화면에 나오는 시간을 구함
@@ -83,6 +84,20 @@ def make_slots(r, lo, hi, end_t):
     return slots
 
 
+def para_slots(r, end_t, hi=15.0):
+    """나레이션 문단마다 그림 한 장 (사용자 결정 2026-10-31: 장면 그림 수 = 나레이션 문단 수). 챕터 제목 시간은 앞 문단 그림에 붙임.
+    한 장이 hi(15)초를 넘는 문단은 그림을 나눔(두 장, 그래도 넘으면 더) — 사용자 결정 2026-10-31"""
+    texts = [(k, sg["t0"]) for k, sg in enumerate(r.segs) if sg["kind"] == "text"]
+    slots = []
+    for i, (k, t0) in enumerate(texts):
+        a_ = r.segs[0]["t0"] if i == 0 else t0
+        b_ = texts[i + 1][1] if i + 1 < len(texts) else end_t
+        n = max(1, int((b_ - a_ - 1e-6) // hi) + 1)
+        for j in range(n):
+            slots.append((k, a_ + (b_ - a_) * j / n, a_ + (b_ - a_) * (j + 1) / n))
+    return slots
+
+
 def assign(slots, img_t):
     """자리마다 이미 그린 그림을 순서를 지키며 배정 (시각 차이 합이 가장 작게, 너무 멀면 '새로 그림'=None)"""
     N, M = len(slots), len(img_t)
@@ -146,6 +161,12 @@ def main(a):
     runs = shown_runs(r)
     long_ = [x for x in runs if x[2] - x[1] > hi]
     short_ = [x for x in runs if x[2] - x[1] < lo]
+    if not runs:       # 그림이 하나도 없는 대본(나레이션만 먼저 만든 편): 자리를 모두 새로 그림
+        log(f"그림 0장 · 나레이션 {m.hms(end_t)} 전체에 그림 자리를 새로 짭니다")
+        if "--측정만" in a:
+            app.destroy()
+            return 0
+        runs = long_ = [(-1, 0.0, end_t)]
     durs = sorted(x[2] - x[1] for x in runs)
     log(f"화면에 나오는 그림 {len(runs)}번 (그림 파일 {len(r.images)}장) · 가장 김 {durs[-1]:.1f}초 · 가장 짧음 {durs[0]:.1f}초 · 중간 {durs[len(durs) // 2]:.1f}초"
         f" · {hi:g}초 넘음 {len(long_)}곳 · {lo:g}초 미만 {len(short_)}곳")
@@ -163,7 +184,7 @@ def main(a):
     img_t = [(p_[1] + p_[2]) / 2 for p_ in pieces]
     if len(img_t) != len(media_lines):
         raise SystemExit(f"그림 줄 {len(media_lines)}개와 화면 그림 {len(img_t)}개가 달라 멈춤 (불러오지 못한 그림이 있음)")
-    slots = make_slots(r, lo, hi, end_t)
+    slots = para_slots(r, end_t, hi) if "--문단" in a else make_slots(r, lo, hi, end_t)
     pick = assign(slots, img_t)
     used = {j for j in pick if j is not None}
     n_new = sum(1 for j in pick if j is None)
@@ -178,7 +199,9 @@ def main(a):
     for d_ in [os.path.join(os.path.dirname(proj), n) for n in os.listdir(os.path.dirname(proj)) if n.startswith("_작업_")]:
         p_ = os.path.join(d_, "대본.json")
         if os.path.exists(p_):
-            m.IMAGE_CAST["chars"] = list(json.load(open(p_, encoding="utf-8")).get("cast") or [])
+            sj_ = json.load(open(p_, encoding="utf-8"))
+            if str(sj_.get("title", "")).strip() == title:     # 작업 폴더가 여러 편이면 이 편 대본의 인물만
+                m.IMAGE_CAST["chars"] = list(sj_.get("cast") or [])
     media = os.path.join(s["out_dir"], "장문", "media")
     for ch in m.IMAGE_CAST.get("chars") or []:     # 이미 그린 캐릭터 시트를 그대로 (같은 얼굴·옷)
         sh = os.path.join(media, "_cast", m.safe_name(ch.get("name", ""))[:40] + ".png")
@@ -215,8 +238,17 @@ def main(a):
             if not groups or groups[-1][0] != ch:
                 groups.append((ch, []))
             groups[-1][1].append(i)
-    new_pic = {}
+    prog_p = proj[:-5] + "_그림진행.json"     # 챕터 묶음마다 저장 → 중간에 꺼져도(실행 시간 제한 등) 다시 돌리면 끝난 묶음은 건너뜀
+    try:
+        prog = json.load(open(prog_p, encoding="utf-8"))
+        new_pic = {int(k): v for k, v in prog.get("pics", {}).items()} if prog.get("n_slots") == len(slots) else {}
+    except Exception:
+        new_pic = {}
+    if new_pic:
+        log(f"♻ 이어서: 이미 그린 그림 {len(new_pic)}장은 건너뜀 ({os.path.basename(prog_p)})")
     for ch, ids in groups:
+        if all(i in new_pic for i in ids):
+            continue
         text = "\n\n".join(f"[그림 {n + 1}번] {text_during(slots[i][1], slots[i][2])}" for n, i in enumerate(ids))
         log(f"🖌 '{ch}' 새 그림 {len(ids)}장")
         got = m.make_ai_images(model, m.DOC_CATEGORY, f"{title} - {ch}",
@@ -226,6 +258,7 @@ def main(a):
             if n < len(got):
                 new_pic[i] = m.make_marker(got[n]["path"], got[n].get("caption"), got[n].get("credit"), got[n].get("page"))
         log(f"   {len(got)}/{len(ids)}장 완성")
+        m.atomic_write_text(prog_p, json.dumps({"n_slots": len(slots), "pics": new_pic}, ensure_ascii=False, indent=1))
 
     # ---- 새 대본: 그림 줄을 모두 빼고 자리마다 다시 넣음 ----
     before = {}
