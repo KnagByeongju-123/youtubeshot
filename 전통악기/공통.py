@@ -7,6 +7,7 @@
   - reed   : 겹서(리드) 악기 (피리·주르나·셰나이·숌) — 좁은 펄스파 + 콧소리 띠
   - drone  : 계속 울리는 바탕음 (탄푸라·후미·허디거디)
   - frame_drum : 손으로 치는 틀북 (다프 등), 아주 작게
+  - gong·big_drum·bell·jingles : 막을 여는 타악 (징·대라, 북·다이코·팀파니, 교회 종·놋쇠 종, 쇠방울) → Region(opener=...)
 REGION = 현악(뜯는 현이 주인공), WIND = 관악(피리가 주인공) — 권역 파일마다 둘 다
 Region(...).interlude(rng, sec, mode) : 챕터 제목 동안 한 소절 (훑기 → 짧은 가락 → 으뜸음으로 끝)
 Region(...).bed(n, rng, mode)        : 나레이션 아래 잔잔한 배경
@@ -142,6 +143,65 @@ def frame_drum(dur=0.6, low=True, rng=None):
     return (y / (np.abs(y).max() + 1e-6)).astype(np.float32)
 
 
+def gong(f0=110, dur=6.0, bend=-0.03, rng=None):
+    """큰 징·대라 한 번: 조화롭지 않은 배음들이 따로따로 사라지고, 울림이 일렁이며 음이 살짝 휨(bend: +는 올라감(한국 징), -는 내려감(중국 대라))"""
+    rng = rng or np.random.default_rng()
+    n = int(dur * SR)
+    t = np.arange(n) / SR
+    glide = 1 + bend * (1 - np.exp(-t / 0.8))
+    y = np.zeros(n)
+    for r, a, dec in [(1.0, 1.0, 4.0), (1.52, 0.6, 2.8), (2.03, 0.5, 2.2), (2.76, 0.35, 1.6), (3.4, 0.25, 1.2), (4.1, 0.2, 0.9), (5.3, 0.12, 0.6)]:
+        ph = np.cumsum(2 * np.pi * f0 * r * glide / SR) + rng.random() * 6.28
+        y += a * np.sin(ph) * np.exp(-t / dec) * (1 + 0.25 * np.sin(2 * np.pi * (0.7 + rng.random()) * t))
+    hit = rng.standard_normal(n) * np.exp(-t / 0.015) * 0.6               # 채가 닿는 소리
+    y = (y + hit) * np.clip(t / 0.004, 0, 1) * np.clip((dur - t) / 0.8, 0, 1)
+    return (y / (np.abs(y).max() + 1e-6)).astype(np.float32)
+
+
+def big_drum(f0=70, dur=2.2, rng=None):
+    """큰 북 한 번 (북·다이코·팀파니·둠): 쿵 하고 음이 떨어지며 길게 울림"""
+    from scipy.signal import butter, lfilter
+    rng = rng or np.random.default_rng()
+    n = int(dur * SR)
+    t = np.arange(n) / SR
+    f = f0 * (1 + 0.6 * np.exp(-t / 0.05))
+    body = np.sin(np.cumsum(2 * np.pi * f / SR)) * np.exp(-t / (dur * 0.35))
+    skin = lfilter(*butter(2, [150 / (SR / 2), 1200 / (SR / 2)], "band"), rng.standard_normal(n)) * np.exp(-t / 0.06) * 0.8
+    y = body + skin
+    return (y / (np.abs(y).max() + 1e-6)).astype(np.float32)
+
+
+def bell(f0=220, dur=6.0, rng=None):
+    """종 한 번 (교회 종·놋쇠 종): 맑은 배음(낮은 울림·단3도 섞임)이 길게"""
+    rng = rng or np.random.default_rng()
+    n = int(dur * SR)
+    t = np.arange(n) / SR
+    y = np.zeros(n)
+    for r, a, dec in [(0.5, 0.6, 4.5), (1.0, 1.0, 3.0), (1.19, 0.5, 2.2), (1.5, 0.35, 1.8), (2.0, 0.45, 1.4), (2.5, 0.2, 0.9), (3.0, 0.15, 0.7)]:
+        y += a * np.sin(2 * np.pi * f0 * r * t + rng.random() * 6.28) * np.exp(-t / dec)
+    y = y * np.clip(t / 0.002, 0, 1) * np.clip((dur - t) / 0.6, 0, 1)
+    return (y / (np.abs(y).max() + 1e-6)).astype(np.float32)
+
+
+def jingles(dur=1.2, rng=None):
+    """쇠방울 흔들기 (몽골 샤먼 방울 등)"""
+    from scipy.signal import butter, lfilter
+    rng = rng or np.random.default_rng()
+    n = int(dur * SR)
+    t = np.arange(n) / SR
+    y = lfilter(*butter(2, [4000 / (SR / 2), 9000 / (SR / 2)], "band"), rng.standard_normal(n))
+    y = y * (0.5 + 0.5 * np.sin(2 * np.pi * 9 * t) ** 2) * np.exp(-t / 0.5)
+    return (y / (np.abs(y).max() + 1e-6)).astype(np.float32)
+
+
+def opener(hits, rng, sec=6.5):
+    """막을 여는 타악 한 묶음: hits = [(소리 함수, 시작 초, 크기, 좌우)] → 스테레오"""
+    buf = np.zeros((int(sec * SR), 2), np.float32)
+    for fn, t0, g, pan in hits:
+        place(buf, fn(rng), t0, g, pan)
+    return buf
+
+
 def place_mono(buf, snd, t0, gain):
     i0 = int(t0 * SR)
     if i0 >= len(buf):
@@ -173,11 +233,13 @@ class Region:
     """한 권역의 악기 짝과 음계들. lead(f, dur, rng, last) = 뜯는 주 악기, sustain(f, dur, rng) = 길게 끄는 악기,
     modes = {이름: (음 간격, 으뜸음 MIDI, 느낌)}, drone_kind = None/'pluck'/'bowed'/'throat', drum = 틀북을 아주 작게"""
 
-    def __init__(self, name, instruments, lead, sustain, modes, drone_kind=None, drum=False, gliss=True, tempo=0.42, bass=None, legato=False):
-        """bass: 낮은 음을 맡는 악기(없으면 lead), legato: 관악처럼 음을 길게 이어 붙여 노래하듯 (가락 음 길이 늘림)"""
+    def __init__(self, name, instruments, lead, sustain, modes, drone_kind=None, drum=False, gliss=True, tempo=0.42, bass=None, legato=False,
+                 opener=None):
+        """bass: 낮은 음을 맡는 악기(없으면 lead), legato: 관악처럼 음을 길게 이어 붙여 노래하듯 (가락 음 길이 늘림),
+        opener: 막이 열릴 때(챕터 제목) 먼저 울리는 타악 (rng → 스테레오, 징·큰 북·종). 그 뒤 OPEN_DELAY 초 쉬고 한 소절"""
         self.name, self.instruments, self.lead, self.sustain = name, instruments, lead, sustain
         self.modes, self.drone_kind, self.drum, self.gliss, self.tempo = modes, drone_kind, drum, gliss, tempo
-        self.bass, self.legato = bass or lead, legato
+        self.bass, self.legato, self.opener = bass or lead, legato, opener
 
     def mode_of(self, mode):
         pen, root, _ = self.modes.get(str(mode or "").strip(), next(iter(self.modes.values())))
@@ -187,7 +249,12 @@ class Region:
     def notes(pen, root, lo, hi):
         return [o * 12 + p + root for o in range(-3, 5) for p in pen if lo <= o * 12 + p + root <= hi]
 
-    def interlude(self, rng, sec=4.0, mode=None):
+    def interlude(self, rng, sec=4.0, mode=None, percussion=True):
+        """챕터 제목 동안 한 소절. percussion: 타악(opener)으로 막을 열고 시작"""
+        body = self._phrase(rng, sec, mode)
+        return with_opener(body, self.opener(rng) if (percussion and self.opener) else None)
+
+    def _phrase(self, rng, sec=4.0, mode=None):
         pen, root = self.mode_of(mode)
         buf = np.zeros((int((sec + 2.5) * SR), 2), np.float32)
         t = 0.0
@@ -247,6 +314,20 @@ class Region:
         rng = np.random.default_rng(seed)
         it = self.interlude(rng, mode=mode)
         return np.concatenate([it, self.bed(int(max(5, sec - len(it) / SR) * SR), rng, mode)])
+
+
+OPEN_DELAY = 0.9          # 타악이 울리고 가락이 들어오기까지 (초)
+
+
+def with_opener(body, op):
+    """타악 묶음(op) 위에 한 소절(body)을 OPEN_DELAY 뒤에 얹음. op 가 없으면 body 그대로"""
+    if op is None:
+        return body
+    i0 = int(OPEN_DELAY * SR)
+    out = np.zeros((max(len(op), i0 + len(body)), 2), np.float32)
+    out[: len(op)] += op / (np.abs(op).max() + 1e-6) * 0.9
+    out[i0:i0 + len(body)] += body / (np.abs(body).max() + 1e-6) * 0.75
+    return out
 
 
 def write_wav(path, x):

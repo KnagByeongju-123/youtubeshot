@@ -6,6 +6,10 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import 공통 as K  # noqa: E402
 
 
+def OPENER(rng):   # 막을 여는 타악 (챕터 제목 때)
+    return K.opener([(lambda r: K.bell(196, 6.0, r), 0.0, 0.85, 0.0), (lambda r: K.big_drum(62, 2.2, r), 0.0, 0.6, -0.2)], rng)
+
+
 REGION = K.Region(
     "중세유럽", "류트·리코더·허디거디",
     lead=lambda f, d, rng, last: K.pluck(f, d, damp=0.993, bright=0.4, rng=rng),
@@ -13,11 +17,11 @@ REGION = K.Region(
     modes={"도리안": ([0, 2, 3, 5, 7, 9, 10], 50, "엄숙하고 담담 (수도원·연대기)"),
            "믹솔리디안": ([0, 2, 4, 5, 7, 9, 10], 50, "밝고 소박 (장터·축제)"),
            "에올리안": ([0, 2, 3, 5, 7, 8, 10], 50, "어둡고 슬픔 (전쟁·흑사병)")},
-    drone_kind="bowed", gliss=False, tempo=0.45)
+    drone_kind="bowed", gliss=False, tempo=0.45, opener=OPENER)
 
 
 WIND = K.Region(   # 관악: 리코더(맑은 세로피리) + 숌(겹서, 오보에 조상), 낮은 음은 류트, 허디거디풍 바탕음
     "중세유럽", "리코더·숌·허디거디",
     lead=lambda f, d, rng, last: K.flute(f, d, breath=0.06, vib=0.004 if last else 0.002, rng=rng),
     sustain=lambda f, d, rng: K.reed(f, d, band=(400, 2500), bright=0.3, vib=0.003),
-    bass=REGION.lead, modes=REGION.modes, drone_kind="bowed", legato=True, gliss=False, tempo=0.5)
+    bass=REGION.lead, modes=REGION.modes, drone_kind="bowed", legato=True, gliss=False, tempo=0.5, opener=OPENER)

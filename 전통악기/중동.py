@@ -7,6 +7,10 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import 공통 as K  # noqa: E402
 
 
+def OPENER(rng):   # 막을 여는 타악 (챕터 제목 때)
+    return K.opener([(lambda r: K.big_drum(60, 2.2, r), 0.0, 1.0, 0.0), (lambda r: K.frame_drum(0.5, False, r), 0.3, 0.4, 0.3), (lambda r: K.frame_drum(0.6, True, r), 0.55, 0.5, -0.2)], rng)
+
+
 REGION = K.Region(
     "중동", "우드·네이·다프",
     lead=lambda f, d, rng, last: K.pluck(f, d, damp=0.993, bright=0.45, bend=0.025 if last else 0.0, buzz=0.1, rng=rng),
@@ -14,11 +18,11 @@ REGION = K.Region(
     modes={"히자즈": ([0, 1, 4, 5, 7, 8, 10], 50, "이국적이고 긴장 (사막·제국·음모)"),
            "라스트": ([0, 2, 3.5, 5, 7, 9, 10.5], 50, "당당하고 따뜻 (궁정·번영)"),
            "바야티": ([0, 1.5, 3, 5, 7, 8, 10], 50, "애잔하고 그윽 (몰락·순례)")},
-    drum=True, gliss=False, tempo=0.36)
+    drum=True, gliss=False, tempo=0.36, opener=OPENER)
 
 
 WIND = K.Region(   # 관악: 네이(숨소리 많은 갈대 피리) + 주르나(겹서, 작게), 낮은 음은 우드, 다프 작게
     "중동", "네이·주르나·다프",
     lead=lambda f, d, rng, last: K.flute(f, d, breath=0.42, vib=0.01 if last else 0.006, slide=0.03, rng=rng),
     sustain=lambda f, d, rng: K.reed(f, d, band=(700, 3500), bright=0.18, vib=0.01, vib_rate=5.5),
-    bass=REGION.lead, modes=REGION.modes, drum=True, legato=True, gliss=False, tempo=0.5)
+    bass=REGION.lead, modes=REGION.modes, drum=True, legato=True, gliss=False, tempo=0.5, opener=OPENER)
