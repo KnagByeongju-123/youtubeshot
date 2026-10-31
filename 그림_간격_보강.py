@@ -84,14 +84,17 @@ def make_slots(r, lo, hi, end_t):
     return slots
 
 
-def para_slots(r, end_t):
-    """나레이션 문단마다 그림 한 장 (사용자 결정 2026-10-31: 장면 그림 수 = 나레이션 문단 수). 챕터 제목 시간은 앞 문단 그림에 붙임"""
+def para_slots(r, end_t, hi=15.0):
+    """나레이션 문단마다 그림 한 장 (사용자 결정 2026-10-31: 장면 그림 수 = 나레이션 문단 수). 챕터 제목 시간은 앞 문단 그림에 붙임.
+    한 장이 hi(15)초를 넘는 문단은 그림을 나눔(두 장, 그래도 넘으면 더) — 사용자 결정 2026-10-31"""
     texts = [(k, sg["t0"]) for k, sg in enumerate(r.segs) if sg["kind"] == "text"]
     slots = []
     for i, (k, t0) in enumerate(texts):
         a_ = r.segs[0]["t0"] if i == 0 else t0
         b_ = texts[i + 1][1] if i + 1 < len(texts) else end_t
-        slots.append((k, a_, b_))
+        n = max(1, int((b_ - a_ - 1e-6) // hi) + 1)
+        for j in range(n):
+            slots.append((k, a_ + (b_ - a_) * j / n, a_ + (b_ - a_) * (j + 1) / n))
     return slots
 
 
@@ -181,7 +184,7 @@ def main(a):
     img_t = [(p_[1] + p_[2]) / 2 for p_ in pieces]
     if len(img_t) != len(media_lines):
         raise SystemExit(f"그림 줄 {len(media_lines)}개와 화면 그림 {len(img_t)}개가 달라 멈춤 (불러오지 못한 그림이 있음)")
-    slots = para_slots(r, end_t) if "--문단" in a else make_slots(r, lo, hi, end_t)
+    slots = para_slots(r, end_t, hi) if "--문단" in a else make_slots(r, lo, hi, end_t)
     pick = assign(slots, img_t)
     used = {j for j in pick if j is not None}
     n_new = sum(1 for j in pick if j is None)
