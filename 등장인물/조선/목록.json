@@ -1,43 +1,280 @@
 {
  "_설명": "조선 캐릭터 시트 모음 (사용자 결정 2026-10-31: 수묵 담채 통일, 지금 주제에 안 써도 미리 갖춰 둠). kind: person=사람(앞·옆·뒤 전신) / animal=동물(옆·앞·뒤 전신) / spirit=귀신·요괴(사람처럼). 그린 시트는 이 폴더 <name>.png, 확인 뒤 등장인물.json 에 face 로 등록",
  "chars": [
-  {"name": "까치호랑이", "kind": "animal", "group": "민화 동물", "look": "Korean folk painting style tiger (kkachi horangi) from Joseon minhwa, big round staring eyes, comical friendly grin, bold black stripes on orange-yellow fur, long curling tail, large paws", "look_ko": "민화 까치호랑이, 동그랗게 부릅뜬 눈, 익살스러운 웃음, 굵은 검은 줄무늬, 말린 긴 꼬리"},
-  {"name": "까치", "kind": "animal", "group": "민화 동물", "look": "Korean magpie bird, glossy black head and back, white belly and white wing patches, long black tail with blue-green sheen", "look_ko": "까치, 검은 머리·등, 흰 배와 날개 무늬, 청록빛 도는 긴 꼬리"},
-  {"name": "학", "kind": "animal", "group": "민화 동물", "look": "red-crowned crane, white body, black neck and black tail feathers, red patch on top of head, long thin legs, elegant posture", "look_ko": "두루미(학), 흰 몸, 검은 목·꼬리깃, 머리 위 붉은 점, 긴 다리"},
-  {"name": "사슴", "kind": "animal", "group": "민화 동물", "look": "spotted sika deer stag from Korean longevity paintings, light brown coat with white spots, branching antlers, gentle eyes", "look_ko": "십장생 꽃사슴 수컷, 흰 점박이 연갈색 털, 갈라진 뿔, 순한 눈"},
-  {"name": "거북", "kind": "animal", "group": "민화 동물", "look": "old turtle from Korean longevity paintings, dark green hexagon-patterned shell, wrinkled head, long flowing water-grass trailing from the shell", "look_ko": "십장생 거북, 육각무늬 짙은 녹색 등딱지, 주름진 머리, 등딱지 뒤로 흐르는 물풀(녹모)"},
-  {"name": "잉어", "kind": "animal", "group": "민화 동물", "look": "big carp fish leaping, golden-orange scales, long whiskers, flowing fins and tail", "look_ko": "뛰어오르는 잉어, 금빛 주황 비늘, 긴 수염, 너울거리는 지느러미"},
-  {"name": "수탉", "kind": "animal", "group": "민화 동물", "look": "proud Korean rooster, red comb and wattles, golden-brown neck feathers, dark green-black curved tail feathers", "look_ko": "수탉, 붉은 볏, 금갈색 목털, 검푸른 휜 꼬리깃"},
-  {"name": "해태", "kind": "animal", "group": "민화 동물", "look": "Haetae, Korean mythical lion-like guardian beast, curly mane, scale-covered body, single small horn on forehead, bell on the neck, fierce but loyal face", "look_ko": "해태, 곱슬 갈기, 비늘 덮인 몸, 이마에 작은 뿔 하나, 목에 방울, 사납지만 충직한 얼굴"},
-  {"name": "청룡", "kind": "animal", "group": "민화 동물", "look": "Korean blue-green dragon, long serpentine body with scales, deer-like antlers, long whiskers, four legs with sharp claws, flaming pearl nearby", "look_ko": "청룡, 비늘 덮인 긴 뱀 몸, 사슴뿔, 긴 수염, 날카로운 발톱의 네 발, 여의주"},
-  {"name": "삽살개", "kind": "animal", "group": "민화 동물", "look": "Korean Sapsali dog, shaggy long grey-brown fur covering the eyes, medium size, friendly", "look_ko": "삽살개, 눈을 덮는 긴 회갈색 털, 중간 크기, 순한 개"},
-  {"name": "황소", "kind": "animal", "group": "민화 동물", "look": "Korean native brown ox (hanu), golden-brown coat, short curved horns, nose ring with rope, strong body", "look_ko": "누렁 한우 황소, 짧게 휜 뿔, 코뚜레와 고삐, 튼튼한 몸"},
-  {"name": "조랑말", "kind": "animal", "group": "민화 동물", "look": "small Korean pony (Jeju horse), chestnut brown coat, short legs, thick mane, simple saddle and bridle", "look_ko": "조랑말(제주마), 밤색 털, 짧은 다리, 숱 많은 갈기, 소박한 안장·굴레"},
-  {"name": "서당 훈장", "kind": "person", "group": "풍속도 인물", "look": "Joseon village schoolteacher (hunjang), man in his 60s, thin grey beard, black jeongjagwan cap, plain white robe (dopo), holding a thin switch stick and a book", "look_ko": "서당 훈장, 60대, 가는 흰 수염, 검은 정자관, 흰 도포, 회초리와 책"},
-  {"name": "서당 아이", "kind": "person", "group": "풍속도 인물", "look": "Joseon village boy about 10 years old, long single braid down the back (unmarried style), plain white jeogori and baji, bare feet or straw sandals, mischievous face", "look_ko": "서당 아이, 열 살 무렵 남자아이, 등 뒤로 늘인 떠꺼머리 댕기, 흰 저고리·바지, 짚신, 장난스러운 얼굴"},
-  {"name": "댕기머리 소녀", "kind": "person", "group": "풍속도 인물", "look": "Joseon girl about 12 years old, single long braid with a red ribbon (daenggi), yellow jeogori and red skirt, straw sandals, shy smile", "look_ko": "댕기머리 소녀, 열두 살 무렵, 붉은 댕기 땋은 머리, 노랑 저고리·다홍 치마, 수줍은 웃음"},
-  {"name": "선비", "kind": "person", "group": "풍속도 인물", "look": "Joseon scholar (seonbi), man in his 30s, neat black beard, wide-brimmed black horsehair hat (gat) with chin strings, flowing white robe (dopo) with a thin black sash, holding a folding fan", "look_ko": "선비, 30대, 단정한 검은 수염, 검은 갓, 흰 도포에 가는 세조대, 쥘부채"},
-  {"name": "양반 노인", "kind": "person", "group": "풍속도 인물", "look": "elderly Joseon nobleman (yangban), man in his 70s, long white beard, black gat hat, light jade-green robe, holding a long smoking pipe, dignified", "look_ko": "양반 노인, 70대, 긴 흰 수염, 검은 갓, 옥색 도포, 긴 담뱃대, 점잖음"},
-  {"name": "씨름꾼", "kind": "person", "group": "풍속도 인물", "look": "Joseon ssireum wrestler, muscular man in his 20s, topknot with headband, bare upper body, rolled-up white baji trousers with a cloth thigh band (satba), barefoot", "look_ko": "씨름꾼, 20대 근육질, 상투에 머리띠, 웃통 벗고 걷어 올린 흰 바지에 샅바, 맨발"},
-  {"name": "엿장수", "kind": "person", "group": "풍속도 인물", "look": "Joseon street taffy seller, cheerful man in his 40s, straw hat, plain grey-white clothes, wooden tray of taffy hung from the neck, large iron scissors in hand", "look_ko": "엿장수, 40대 웃는 얼굴, 패랭이, 회백색 옷, 목에 건 엿판, 큰 엿가위"},
-  {"name": "대장장이", "kind": "person", "group": "풍속도 인물", "look": "Joseon blacksmith, strong man in his 40s, soot-stained face, headband, sleeveless short jacket, leather apron, holding a hammer and tongs", "look_ko": "대장장이, 40대 건장함, 검댕 묻은 얼굴, 머리띠, 소매 없는 짧은 저고리, 가죽 앞치마, 망치·집게"},
-  {"name": "빨래하는 아낙", "kind": "person", "group": "풍속도 인물", "look": "Joseon washerwoman in her 20s, hair in a bun with a plain hairpin, short white jeogori and rolled-up indigo skirt, sleeves rolled, wooden laundry paddle in hand", "look_ko": "빨래하는 아낙, 20대, 쪽진 머리, 짧은 흰 저고리, 걷어 올린 쪽빛 치마, 빨랫방망이"},
-  {"name": "기생", "kind": "person", "group": "풍속도 인물", "look": "Joseon gisaeng entertainer, woman in her 20s, large elegant braided hairstyle (gache) with ornaments, short light-colored jeogori with purple ribbon, full flowing jade-green skirt, holding a fan", "look_ko": "기생, 20대, 장식 꽂은 큰 가체머리, 자주 고름 짧은 저고리, 풍성한 옥색 치마, 부채"},
-  {"name": "농부", "kind": "person", "group": "풍속도 인물", "look": "Joseon farmer, sun-tanned man in his 40s, straw rain hat on the back, plain rough hemp clothes with rolled trousers, straw sandals, carrying a hoe on the shoulder", "look_ko": "농부, 40대 그을린 얼굴, 등에 멘 삿갓, 거친 삼베옷, 걷어 올린 바지, 짚신, 어깨에 괭이"},
-  {"name": "보부상", "kind": "person", "group": "풍속도 인물", "look": "Joseon traveling peddler (bobusang), man in his 30s, black straw hat (paeraengi) with cotton tufts on the sides, plain clothes with leg wraps, wooden A-frame carrier (jige) loaded with goods on his back, walking stick", "look_ko": "보부상, 30대, 양옆에 목화솜 단 패랭이, 행전 찬 무명옷, 짐 실은 지게, 지팡이"},
-  {"name": "포졸", "kind": "person", "group": "풍속도 인물", "look": "Joseon police constable (pojol), man in his 30s, black felt hat (beongeoji) with red tassel, dark blue vest over a light jacket, red waist sash, holding a long wooden club or a red-black rope", "look_ko": "포졸, 30대, 붉은 술 단 검은 벙거지, 밝은 저고리 위 남색 쾌자, 붉은 허리띠, 육모방망이"},
-  {"name": "조선 장수", "kind": "person", "group": "풍속도 인물", "look": "Joseon military commander, man in his 40s, stern face, black beard, round iron helmet with red tassel, long red-and-black padded armor coat with metal studs (dujeong-gap), bow case and sword at the waist, black boots", "look_ko": "조선 장수, 40대 엄한 얼굴, 검은 수염, 붉은 술 단 둥근 투구, 쇠못 박은 붉은·검은 두정갑, 허리에 활집·칼, 검은 목화"},
-  {"name": "궁녀", "kind": "person", "group": "풍속도 인물", "look": "Joseon palace maid (gungnyeo), woman in her 20s, hair in a neat low braid bun, light green jeogori and deep blue skirt, modest, hands folded", "look_ko": "궁녀, 20대, 단정히 땋아 올린 머리, 연두 저고리·남색 치마, 공손히 모은 손"},
-  {"name": "내시", "kind": "person", "group": "풍속도 인물", "look": "Joseon palace eunuch (naesi), beardless man in his 40s, black official gauze hat (samo), dark blue-green official robe with round collar, mild careful face", "look_ko": "내시, 수염 없는 40대, 검은 사모, 짙은 청록 단령, 조심스러운 얼굴"},
-  {"name": "의원", "kind": "person", "group": "풍속도 인물", "look": "Joseon village doctor (uiwon), man in his 50s, small grey beard, black gat hat, light grey robe, carrying a wooden medicine box with small drawers", "look_ko": "의원, 50대, 짧은 흰 수염, 검은 갓, 연회색 도포, 작은 서랍 달린 약상자"},
-  {"name": "스님", "kind": "person", "group": "풍속도 인물", "look": "Joseon Buddhist monk, shaved head, man in his 40s, grey robe with brown kasaya over one shoulder, wooden prayer beads, straw hat (satgat) on the back", "look_ko": "스님, 40대 민머리, 회색 장삼에 한쪽 어깨 갈색 가사, 염주, 등에 삿갓"},
-  {"name": "무당", "kind": "person", "group": "풍속도 인물", "look": "Joseon shaman (mudang), woman in her 40s, red-and-blue layered ritual robe with long sleeves, black hat with feathers or red ribbons, holding a fan and a bunch of brass bells", "look_ko": "무당, 40대 여자, 붉은·푸른 겹 무복, 깃·붉은 끈 단 검은 갓, 부채와 방울"},
-  {"name": "나루 사공", "kind": "person", "group": "풍속도 인물", "look": "Joseon ferryman, wiry man in his 50s, straw rain cape and conical straw hat, rolled trousers, barefoot, holding a long wooden pole oar", "look_ko": "나루 사공, 50대 마른 몸, 도롱이와 삿갓, 걷어 올린 바지, 맨발, 긴 삿대"},
-  {"name": "저승사자", "kind": "spirit", "group": "귀신·요괴", "look": "Korean grim reaper (jeoseung saja) from folklore, tall thin man with pale white face and dark lips, wide-brimmed black gat hat, long black robe (dopo), holding a scroll list of names, eerie calm", "look_ko": "저승사자, 키 크고 마른 남자, 창백한 흰 얼굴·검은 입술, 검은 갓, 검은 도포, 이름 적힌 두루마리, 섬뜩하게 차분함"},
-  {"name": "처녀귀신", "kind": "spirit", "group": "귀신·요괴", "look": "Korean maiden ghost (cheonyeo gwisin), young woman with very long loose black hair covering part of her pale face, plain white mourning dress (sobok), feet fading into mist", "look_ko": "처녀귀신, 얼굴을 반쯤 가린 긴 풀어 헤친 검은 머리, 창백한 얼굴, 흰 소복, 안개로 흐려지는 발"},
-  {"name": "도깨비", "kind": "spirit", "group": "귀신·요괴", "look": "Korean dokkaebi goblin from Joseon folktales, big burly hairy body, wild messy hair, big grinning mouth, mischievous playful face, no horns, wearing a small black cap (gamtu) and ragged short clothes, holding a magic wooden club (dokkaebi bangmangi)", "look_ko": "도깨비(조선 민담식), 털 많은 큰 덩치, 헝클어진 머리, 크게 웃는 입, 장난꾸러기 얼굴, 뿔 없음(뿔은 일본 오니 영향), 감투, 해진 옷, 도깨비방망이"},
-  {"name": "구미호", "kind": "spirit", "group": "귀신·요괴", "look": "Korean nine-tailed fox (gumiho) from folklore, elegant white fox with nine fluffy tails, glowing golden eyes, sly look", "look_ko": "구미호, 아홉 개의 풍성한 꼬리를 단 흰 여우, 빛나는 금빛 눈, 교활한 눈매"},
-  {"name": "산신령", "kind": "spirit", "group": "귀신·요괴", "look": "Korean mountain spirit (sansillyeong), very old man with long white hair and long white beard, gentle wise face, flowing white robe, gnarled wooden staff", "look_ko": "산신령, 긴 흰 머리·흰 수염 노인, 인자한 얼굴, 흰 도포, 구불구불한 지팡이"},
-  {"name": "염라대왕", "kind": "spirit", "group": "귀신·요괴", "look": "Yeomra, king of the underworld in Korean folklore, stern bearded man, black official crown with a flat top board, red judge robe with dragon patterns, holding a writing brush and a register book", "look_ko": "염라대왕, 수염 난 엄한 얼굴, 판 얹은 검은 관, 용무늬 붉은 관복, 붓과 명부"}
+  {
+   "name": "까치호랑이",
+   "kind": "animal",
+   "group": "민화 동물",
+   "look": "Korean folk painting style tiger (kkachi horangi) from Joseon minhwa, big round staring eyes, comical friendly grin, bold black stripes on orange-yellow fur, long curling tail, large paws",
+   "look_ko": "민화 까치호랑이, 동그랗게 부릅뜬 눈, 익살스러운 웃음, 굵은 검은 줄무늬, 말린 긴 꼬리"
+  },
+  {
+   "name": "까치",
+   "kind": "animal",
+   "group": "민화 동물",
+   "look": "Korean magpie bird, glossy black head and back, white belly and white wing patches, long black tail with blue-green sheen",
+   "look_ko": "까치, 검은 머리·등, 흰 배와 날개 무늬, 청록빛 도는 긴 꼬리"
+  },
+  {
+   "name": "학",
+   "kind": "animal",
+   "group": "민화 동물",
+   "look": "red-crowned crane, white body, black neck and black tail feathers, red patch on top of head, long thin legs, elegant posture",
+   "look_ko": "두루미(학), 흰 몸, 검은 목·꼬리깃, 머리 위 붉은 점, 긴 다리"
+  },
+  {
+   "name": "사슴",
+   "kind": "animal",
+   "group": "민화 동물",
+   "look": "spotted sika deer stag from Korean longevity paintings, light brown coat with white spots, branching antlers, gentle eyes",
+   "look_ko": "십장생 꽃사슴 수컷, 흰 점박이 연갈색 털, 갈라진 뿔, 순한 눈"
+  },
+  {
+   "name": "거북",
+   "kind": "animal",
+   "group": "민화 동물",
+   "look": "old turtle from Korean longevity paintings, dark green hexagon-patterned shell, wrinkled head, long flowing water-grass trailing from the shell",
+   "look_ko": "십장생 거북, 육각무늬 짙은 녹색 등딱지, 주름진 머리, 등딱지 뒤로 흐르는 물풀(녹모)"
+  },
+  {
+   "name": "잉어",
+   "kind": "animal",
+   "group": "민화 동물",
+   "look": "big carp fish leaping, golden-orange scales, long whiskers, flowing fins and tail",
+   "look_ko": "뛰어오르는 잉어, 금빛 주황 비늘, 긴 수염, 너울거리는 지느러미"
+  },
+  {
+   "name": "수탉",
+   "kind": "animal",
+   "group": "민화 동물",
+   "look": "proud Korean rooster, red comb and wattles, golden-brown neck feathers, dark green-black curved tail feathers",
+   "look_ko": "수탉, 붉은 볏, 금갈색 목털, 검푸른 휜 꼬리깃"
+  },
+  {
+   "name": "해태",
+   "kind": "animal",
+   "group": "민화 동물",
+   "look": "Haetae, Korean mythical lion-like guardian beast, curly mane, scale-covered body, single small horn on forehead, bell on the neck, fierce but loyal face",
+   "look_ko": "해태, 곱슬 갈기, 비늘 덮인 몸, 이마에 작은 뿔 하나, 목에 방울, 사납지만 충직한 얼굴"
+  },
+  {
+   "name": "청룡",
+   "kind": "animal",
+   "group": "민화 동물",
+   "look": "Korean blue-green dragon, long serpentine body with scales, deer-like antlers, long whiskers, four legs with sharp claws, flaming pearl nearby",
+   "look_ko": "청룡, 비늘 덮인 긴 뱀 몸, 사슴뿔, 긴 수염, 날카로운 발톱의 네 발, 여의주"
+  },
+  {
+   "name": "삽살개",
+   "kind": "animal",
+   "group": "민화 동물",
+   "look": "Korean Sapsali dog, shaggy long grey-brown fur covering the eyes, medium size, friendly",
+   "look_ko": "삽살개, 눈을 덮는 긴 회갈색 털, 중간 크기, 순한 개"
+  },
+  {
+   "name": "황소",
+   "kind": "animal",
+   "group": "민화 동물",
+   "look": "Korean native brown ox (hanu), golden-brown coat, short curved horns, nose ring with rope, strong body",
+   "look_ko": "누렁 한우 황소, 짧게 휜 뿔, 코뚜레와 고삐, 튼튼한 몸"
+  },
+  {
+   "name": "조랑말",
+   "kind": "animal",
+   "group": "민화 동물",
+   "look": "small Korean pony (Jeju horse), chestnut brown coat, short legs, thick mane, simple saddle and bridle",
+   "look_ko": "조랑말(제주마), 밤색 털, 짧은 다리, 숱 많은 갈기, 소박한 안장·굴레"
+  },
+  {
+   "name": "서당 훈장",
+   "kind": "person",
+   "group": "풍속도 인물",
+   "look": "Joseon village schoolteacher (hunjang), man in his 60s, thin grey beard, black jeongjagwan cap, plain white robe (dopo), holding a thin switch stick and a book",
+   "look_ko": "서당 훈장, 60대, 가는 흰 수염, 검은 정자관, 흰 도포, 회초리와 책"
+  },
+  {
+   "name": "서당 아이",
+   "kind": "person",
+   "group": "풍속도 인물",
+   "look": "Joseon village boy about 10 years old, long single braid down the back (unmarried style), plain white jeogori and baji, bare feet or straw sandals, mischievous face",
+   "look_ko": "서당 아이, 열 살 무렵 남자아이, 등 뒤로 늘인 떠꺼머리 댕기, 흰 저고리·바지, 짚신, 장난스러운 얼굴"
+  },
+  {
+   "name": "댕기머리 소녀",
+   "kind": "person",
+   "group": "풍속도 인물",
+   "look": "Joseon girl about 12 years old, single long braid with a red ribbon (daenggi), yellow jeogori and red skirt, straw sandals, shy smile",
+   "look_ko": "댕기머리 소녀, 열두 살 무렵, 붉은 댕기 땋은 머리, 노랑 저고리·다홍 치마, 수줍은 웃음"
+  },
+  {
+   "name": "선비",
+   "kind": "person",
+   "group": "풍속도 인물",
+   "look": "Joseon scholar (seonbi), man in his 30s, neat black beard, wide-brimmed black horsehair hat (gat) with chin strings, flowing white robe (dopo) with a thin black sash, holding a folding fan",
+   "look_ko": "선비, 30대, 단정한 검은 수염, 검은 갓, 흰 도포에 가는 세조대, 쥘부채"
+  },
+  {
+   "name": "양반 노인",
+   "kind": "person",
+   "group": "풍속도 인물",
+   "look": "elderly Joseon nobleman (yangban), man in his 70s, long white beard, black gat hat, light jade-green robe, holding a long smoking pipe, dignified",
+   "look_ko": "양반 노인, 70대, 긴 흰 수염, 검은 갓, 옥색 도포, 긴 담뱃대, 점잖음"
+  },
+  {
+   "name": "씨름꾼",
+   "kind": "person",
+   "group": "풍속도 인물",
+   "look": "Joseon ssireum wrestler, muscular man in his 20s, topknot with headband, bare upper body, rolled-up white baji trousers with a cloth thigh band (satba), barefoot",
+   "look_ko": "씨름꾼, 20대 근육질, 상투에 머리띠, 웃통 벗고 걷어 올린 흰 바지에 샅바, 맨발"
+  },
+  {
+   "name": "엿장수",
+   "kind": "person",
+   "group": "풍속도 인물",
+   "look": "Joseon street taffy seller, cheerful man in his 40s, straw hat, plain grey-white clothes, wooden tray of taffy hung from the neck, large iron scissors in hand",
+   "look_ko": "엿장수, 40대 웃는 얼굴, 패랭이, 회백색 옷, 목에 건 엿판, 큰 엿가위"
+  },
+  {
+   "name": "대장장이",
+   "kind": "person",
+   "group": "풍속도 인물",
+   "look": "Joseon blacksmith, strong man in his 40s, soot-stained face, headband, sleeveless short jacket, leather apron, holding a hammer and tongs",
+   "look_ko": "대장장이, 40대 건장함, 검댕 묻은 얼굴, 머리띠, 소매 없는 짧은 저고리, 가죽 앞치마, 망치·집게"
+  },
+  {
+   "name": "빨래하는 아낙",
+   "kind": "person",
+   "group": "풍속도 인물",
+   "look": "Joseon washerwoman in her 20s, hair in a bun with a plain hairpin, short white jeogori and rolled-up indigo skirt, sleeves rolled, wooden laundry paddle in hand",
+   "look_ko": "빨래하는 아낙, 20대, 쪽진 머리, 짧은 흰 저고리, 걷어 올린 쪽빛 치마, 빨랫방망이"
+  },
+  {
+   "name": "기생",
+   "kind": "person",
+   "group": "풍속도 인물",
+   "look": "Joseon gisaeng entertainer, woman in her 20s, large elegant braided hairstyle (gache) with ornaments, short light-colored jeogori with purple ribbon, full flowing jade-green skirt, holding a fan",
+   "look_ko": "기생, 20대, 장식 꽂은 큰 가체머리, 자주 고름 짧은 저고리, 풍성한 옥색 치마, 부채"
+  },
+  {
+   "name": "농부",
+   "kind": "person",
+   "group": "풍속도 인물",
+   "look": "Joseon farmer, sun-tanned man in his 40s, straw rain hat on the back, plain rough hemp clothes with rolled trousers, straw sandals, carrying a hoe on the shoulder",
+   "look_ko": "농부, 40대 그을린 얼굴, 등에 멘 삿갓, 거친 삼베옷, 걷어 올린 바지, 짚신, 어깨에 괭이"
+  },
+  {
+   "name": "보부상",
+   "kind": "person",
+   "group": "풍속도 인물",
+   "look": "Joseon traveling peddler (bobusang), man in his 30s, black straw hat (paeraengi) with cotton tufts on the sides, plain clothes with leg wraps, wooden A-frame carrier (jige) loaded with goods on his back, walking stick",
+   "look_ko": "보부상, 30대, 양옆에 목화솜 단 패랭이, 행전 찬 무명옷, 짐 실은 지게, 지팡이"
+  },
+  {
+   "name": "포졸",
+   "kind": "person",
+   "group": "풍속도 인물",
+   "look": "Joseon police constable (pojol), man in his 30s, black felt hat (beongeoji) with red tassel, dark blue vest over a light jacket, red waist sash, holding a long wooden club or a red-black rope",
+   "look_ko": "포졸, 30대, 붉은 술 단 검은 벙거지, 밝은 저고리 위 남색 쾌자, 붉은 허리띠, 육모방망이"
+  },
+  {
+   "name": "조선 장수",
+   "kind": "person",
+   "group": "풍속도 인물",
+   "look": "Joseon military commander, man in his 40s, stern face, black beard, round iron helmet with red tassel, long red-and-black padded armor coat with metal studs (dujeong-gap), bow case and sword at the waist, black boots",
+   "look_ko": "조선 장수, 40대 엄한 얼굴, 검은 수염, 붉은 술 단 둥근 투구, 쇠못 박은 붉은·검은 두정갑, 허리에 활집·칼, 검은 목화",
+   "refs": [
+    "등장인물/조선/_기준/무관.png"
+   ]
+  },
+  {
+   "name": "궁녀",
+   "kind": "person",
+   "group": "풍속도 인물",
+   "look": "Joseon palace maid (gungnyeo), woman in her 20s, hair in a neat low braid bun, light green jeogori and deep blue skirt, modest, hands folded",
+   "look_ko": "궁녀, 20대, 단정히 땋아 올린 머리, 연두 저고리·남색 치마, 공손히 모은 손",
+   "refs": [
+    "등장인물/조선/_기준/상궁.png"
+   ]
+  },
+  {
+   "name": "내시",
+   "kind": "person",
+   "group": "풍속도 인물",
+   "look": "Joseon palace eunuch (naesi), beardless man in his 40s, black official gauze hat (samo), dark blue-green official robe with round collar, mild careful face",
+   "look_ko": "내시, 수염 없는 40대, 검은 사모, 짙은 청록 단령, 조심스러운 얼굴",
+   "refs": [
+    "등장인물/조선/_기준/내관.png"
+   ]
+  },
+  {
+   "name": "의원",
+   "kind": "person",
+   "group": "풍속도 인물",
+   "look": "Joseon village doctor (uiwon), man in his 50s, small grey beard, black gat hat, light grey robe, carrying a wooden medicine box with small drawers",
+   "look_ko": "의원, 50대, 짧은 흰 수염, 검은 갓, 연회색 도포, 작은 서랍 달린 약상자"
+  },
+  {
+   "name": "스님",
+   "kind": "person",
+   "group": "풍속도 인물",
+   "look": "Joseon Buddhist monk, shaved head, man in his 40s, grey robe with brown kasaya over one shoulder, wooden prayer beads, straw hat (satgat) on the back",
+   "look_ko": "스님, 40대 민머리, 회색 장삼에 한쪽 어깨 갈색 가사, 염주, 등에 삿갓"
+  },
+  {
+   "name": "무당",
+   "kind": "person",
+   "group": "풍속도 인물",
+   "look": "Joseon shaman (mudang), woman in her 40s, red-and-blue layered ritual robe with long sleeves, black hat with feathers or red ribbons, holding a fan and a bunch of brass bells",
+   "look_ko": "무당, 40대 여자, 붉은·푸른 겹 무복, 깃·붉은 끈 단 검은 갓, 부채와 방울"
+  },
+  {
+   "name": "나루 사공",
+   "kind": "person",
+   "group": "풍속도 인물",
+   "look": "Joseon ferryman, wiry man in his 50s, straw rain cape and conical straw hat, rolled trousers, barefoot, holding a long wooden pole oar",
+   "look_ko": "나루 사공, 50대 마른 몸, 도롱이와 삿갓, 걷어 올린 바지, 맨발, 긴 삿대"
+  },
+  {
+   "name": "저승사자",
+   "kind": "spirit",
+   "group": "귀신·요괴",
+   "look": "Korean grim reaper (jeoseung saja) from folklore, tall thin man with pale white face and dark lips, wide-brimmed black gat hat, long black robe (dopo), holding a scroll list of names, eerie calm",
+   "look_ko": "저승사자, 키 크고 마른 남자, 창백한 흰 얼굴·검은 입술, 검은 갓, 검은 도포, 이름 적힌 두루마리, 섬뜩하게 차분함"
+  },
+  {
+   "name": "처녀귀신",
+   "kind": "spirit",
+   "group": "귀신·요괴",
+   "look": "Korean maiden ghost (cheonyeo gwisin), young woman with very long loose black hair covering part of her pale face, plain white mourning dress (sobok), feet fading into mist",
+   "look_ko": "처녀귀신, 얼굴을 반쯤 가린 긴 풀어 헤친 검은 머리, 창백한 얼굴, 흰 소복, 안개로 흐려지는 발"
+  },
+  {
+   "name": "도깨비",
+   "kind": "spirit",
+   "group": "귀신·요괴",
+   "look": "Korean dokkaebi goblin from Joseon folktales, big burly hairy body, wild messy hair, big grinning mouth, mischievous playful face, no horns, wearing a small black cap (gamtu) and ragged short clothes, holding a magic wooden club (dokkaebi bangmangi)",
+   "look_ko": "도깨비(조선 민담식), 털 많은 큰 덩치, 헝클어진 머리, 크게 웃는 입, 장난꾸러기 얼굴, 뿔 없음(뿔은 일본 오니 영향), 감투, 해진 옷, 도깨비방망이"
+  },
+  {
+   "name": "구미호",
+   "kind": "spirit",
+   "group": "귀신·요괴",
+   "look": "Korean nine-tailed fox (gumiho) from folklore, elegant white fox with nine fluffy tails, glowing golden eyes, sly look",
+   "look_ko": "구미호, 아홉 개의 풍성한 꼬리를 단 흰 여우, 빛나는 금빛 눈, 교활한 눈매"
+  },
+  {
+   "name": "산신령",
+   "kind": "spirit",
+   "group": "귀신·요괴",
+   "look": "Korean mountain spirit (sansillyeong), very old man with long white hair and long white beard, gentle wise face, flowing white robe, gnarled wooden staff",
+   "look_ko": "산신령, 긴 흰 머리·흰 수염 노인, 인자한 얼굴, 흰 도포, 구불구불한 지팡이"
+  },
+  {
+   "name": "염라대왕",
+   "kind": "spirit",
+   "group": "귀신·요괴",
+   "look": "Yeomra, king of the underworld in Korean folklore, stern bearded man, black official crown with a flat top board, red judge robe with dragon patterns, holding a writing brush and a register book",
+   "look_ko": "염라대왕, 수염 난 엄한 얼굴, 판 얹은 검은 관, 용무늬 붉은 관복, 붓과 명부"
+  }
  ]
 }

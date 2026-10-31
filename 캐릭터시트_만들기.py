@@ -1,6 +1,7 @@
 """캐릭터 시트 모음 그리기 — 목록.json 의 인물·동물·귀신마다 시트(세 방향 전신, 흰 배경)를 klein 으로 그려 목록 폴더에 <name>.png
 python 캐릭터시트_만들기.py <목록.json> [--스타일 "역사 수묵 담채"] [--이름 까치호랑이,도깨비] [--다시]
   - kind: person·spirit = 앞·옆·뒤 / animal = 옆·앞·뒤 (네 발 동물은 옆모습이 알아보기 쉬움)
+  - 항목에 "refs": ["등장인물/조선/_기준/문관.png"] 를 넣으면 그 그림의 옷차림(관모·옷·흉배·띠·신)을 그대로, "color" 로 옷 색만 바꿈
   - 이미 있는 그림은 건너뜀 (--다시 면 새로). 한 장 약 2분 (AMX 서버)
   - 확인한 시트는 등장인물/등장인물.json 에 {name, look, look_ko, face} 로 등록하면 모든 편에서 같은 모습"""
 import json
@@ -37,7 +38,10 @@ KO_COSTUME = {
     "jeogui": "jeogui = the queen's deep red ceremonial robe covered in rows of small pheasant roundels, with round dragon badges",
     "eoyeomeori": "eoyeomeori = a huge wide braided wig worn on top of the head like a round black cushion, decorated with hairpins",
     "myeonryugwan": "myeonryugwan = a black crown with a flat rectangular board on top, strings of beads hanging in front of the face",
-    "cheopji": "cheopji = a small ornament (phoenix or frog shape) placed at the hair parting on the forehead",
+    "okdae": "okdae = the king's jade belt: a stiff red frame with white carved jade plaques, hanging loosely around the waist",
+    "heukhwa": "heukhwa = black ankle-high boots with a thick white sole and a slightly upturned rounded toe",
+    "jeollip": "jeollip = a black wide-brimmed felt hat with a red tassel and feathers on top, worn by soldiers",
+    "cheopji": "cheopji = a small ornament (dragon or phoenix for the queen, frog for lower court ranks) placed at the hair parting on the forehead",
     "skirt": "the skirt (chima) is very full and tied high at the chest, falling to the floor",
     "straw sandals": "jipsin = woven straw shoes covering the toes and heels (not flip-flops)",
     "manggeon": "manggeon = a thin black horsehair headband around the forehead with the hair tied in a topknot on top",
@@ -61,13 +65,16 @@ for c in json.load(open(lst, encoding="utf-8"))["chars"]:
     if (only and c["name"] not in only) or (os.path.exists(dst) and "--다시" not in a):
         continue
     kind = c.get("kind", "person")
-    refs = [os.path.join(HERE, v) for k, v in KO_REFS.items() if re.search(r"\b" + k + r"\b", c["look"].lower())]
+    outfit = [os.path.join(HERE, r_) for r_ in (c.get("refs") or []) if os.path.exists(os.path.join(HERE, r_))]   # 옷차림 기준 그림 (등장인물/조선/_기준/왕·왕비·문관·상궁·내관·무관)
+    refs = outfit or [os.path.join(HERE, v) for k, v in KO_REFS.items() if re.search(r"\b" + k + r"\b", c["look"].lower())]
     jobs.append({"id": f"s{len(jobs)}", "name": c["name"], "dst": dst, "look": c["look"], "refs": refs, "width": 1024, "height": 576, "seed": int(c.get("seed", 7)),
                  "prompt": f"Character design sheet, {style}. The same {'animal' if kind == 'animal' else 'character'} shown three times side by side "
                            f"on a plain white background: {VIEWS.get(kind, VIEWS['person'])}. {'Animal' if kind == 'animal' else 'Character'}: {explain(c['look'])}. "
                            + ("Exactly four legs and one tail. " if kind == "animal" and "nine" not in c["look"] and "fish" not in c["look"] and "bird" not in c["look"] and "crane" not in c["look"] and "rooster" not in c["look"] and "dragon" not in c["look"] else "")
                            + ("Exactly two arms and two legs. " if kind != "animal" else "")
-                           + ("The black cap must have exactly the shape shown in the reference image (front, side, back), drawn in the same ink wash style. " if refs else "")
+                           + ("Dress the character in exactly the same costume as the person in the reference image: the same hat shape, robe cut, collar, badges, belt, shoes and colors"
+                              + (f" (robe color: {c['color']})" if c.get("color") else "") + ". Face, age, beard and body follow the description, not the reference. " if outfit else
+                              "The black cap must have exactly the shape shown in the reference image (front, side, back), drawn in the same ink wash style. " if refs else "")
                            + "Consistent design in every view, no close-ups, no other people or animals, no text, no red seal stamp"})
 print(f"그릴 시트 {len(jobs)}장: " + ", ".join(j["name"] for j in jobs), flush=True)
 if jobs:
