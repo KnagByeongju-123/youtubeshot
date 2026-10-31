@@ -692,17 +692,18 @@ def run_doc(m, app, c, gate):
     ch_ = m._YP.vary_settings(s, title, log)     # 규칙: 영상마다 강조색·자막 효과·배경음을 다르게 (유튜브 '대량 생산 콘텐츠' 정책)
     if not str(c.get("배경음") or "").strip() or str(c.get("배경음")).startswith("자동"):
         c["배경음"] = ch_["bgm_style"]
-    if HISTORY and any(w_ in (str(c.get("주제", "")) + str(c.get("기획메모", "")) + title) for w_ in SAMGUK_WORDS):
-        md_ = re.search(r"음계\s*[:：]\s*(궁조|상조|각조|치조|우조)", str(c.get("기획메모", "")))   # 주제목록 메모의 '음계: 우조' (없으면 궁조)
-        c["배경음"] = m.china_style(md_.group(1) if md_ else "궁조")   # 삼국지 편: 고쟁·얼후 (사용자 결정 2026-10-30, 실록 편은 그대로)
-        log(f"🎵 배경음: {c['배경음']} · 챕터마다 고쟁 연주")
+    trad_ = m.trad_from_memo(c.get("기획메모", "")) if HISTORY else ""   # 주제목록 메모의 '배경음: 중동 히자즈' / '음계: 우조'
+    samguk_ = HISTORY and any(w_ in (str(c.get("주제", "")) + str(c.get("기획메모", "")) + title) for w_ in SAMGUK_WORDS)
+    if trad_ or samguk_:
+        c["배경음"] = trad_ or m.CHINA_STRINGS   # 삼국지 편은 메모가 없으면 고쟁·얼후 궁조 (사용자 결정 2026-10-30, 실록 편은 메모가 있을 때만)
+        log(f"🎵 배경음: {c['배경음']} · 챕터마다 전통악기 한 소절")
         try:                                   # 프로젝트에도 저장 (다시 만들 때 같은 배경음)
             pj_ = json.load(open(base + "_프로젝트.json", encoding="utf-8"))
             pj_.setdefault("settings", {})["bgm_style"] = c["배경음"]
             m.atomic_write_text(base + "_프로젝트.json", json.dumps(pj_, ensure_ascii=False, indent=1))
         except Exception:
             pass
-    if m.is_china(c["배경음"]):
+    if m.is_trad(c["배경음"]):
         s["chapter_hold"] = 4.2               # 챕터 제목 동안 나레이션을 쉬고 고쟁 연주
     if HISTORY:                                # 역사 편: 입체 움직임(2.5D) 끔 — 그리는 효과와 겹치고 없는 게 나음 (사용자 결정 2026-10-30)
         s["img_depth"] = "off"
