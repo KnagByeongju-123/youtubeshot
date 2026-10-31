@@ -10,7 +10,7 @@ python 나레이션_겹침검사.py <영상.mp4> <회차.py 또는 대본.txt> [
        ('하늘나라→하늘라라', '닿을→다을')
   - 갑자기 빨라진 곳도 찾음: 쉼과 쉼 사이 한 마디씩 1초당 글자 수를 재서 영상 전체 마디의 중간값보다 25% 넘게 빠른 마디 (대사는 인물마다 빠르기가 달라 뺌)
   - --고치기 <프로젝트.json> : 겹친 문장(과 그 문단)의 녹음 캐시를 output/tts_cache 에서 지움 → render_project 를 다시 돌리면 그 문장만 새로 녹음.
-    빨라진 문장은 다시 녹음해도 또 빨라서(짧은 문장) 그 녹음을 보통 빠르기로 늘림(목소리 높이 그대로)
+    빨라진 문장도 다시 녹음만 함 (늘리면 소리가 늘어져 들려서 속도는 조절하지 않음, 사용자 결정 2026-10-31)
     (Supertonic 은 매번 조금씩 다르게 읽어서 보통 한 번에 고쳐짐. 다시 만든 영상도 검사해서 '겹침 없음'이 나올 때까지, 최대 3번)
   - 결과: '분:초 [겹친 글자] 대본: <문장> | 들림: <받아 적은 글>'
 (내부용) python 나레이션_겹침검사.py --지우기 <목록.json> <프로젝트.json>  ← .supertonic_venv 로 실행, 캐시 이름 계산·삭제"""
@@ -209,10 +209,7 @@ def delete_caches(items, project):
             voices.add(("supertonic:" + v["code"], float(v.get("rate", 0) or 0)))
     pitch, steps = float(st.get("narr_pitch", 0) or 0), int(st.get("st_steps", 5) or 5)
     cache = os.path.join(HERE, "output", "tts_cache")
-    fast = [it for it in items if it.get("speed")]
-    items = [it for it in items if not it.get("speed")]
-    if fast:
-        slow_down(m, fast, st, cache, pitch, steps)
+    # 빨라진 문장도 늘리지 않고 다시 녹음만 함 (사용자 결정 2026-10-31: 늘린 소리는 늘어져 들려서 나레이션 속도는 조절하지 않음. slow_down 은 쓰지 않음)
     texts = set()
     for it in items:
         for t in (it["sentence"], it["paragraph"]):
