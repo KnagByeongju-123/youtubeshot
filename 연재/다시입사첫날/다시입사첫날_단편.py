@@ -752,7 +752,7 @@ EXTRA = [
     ("c015", "c015a", [], "close-up of a thin pale elderly woman's hand holding a young man's hand on a white hospital blanket, IV tube, dim light", "맞잡은 두 손", "도윤은 엄마의 손에 이마를"),
     ("c016", "c016a", ["도윤"], f"the young man {OLD}, screaming at the stormy sky with clenched fists on a rooftop in heavy rain, lightning behind", "하늘을 향한 외침", "\"한 번만. 딱 한 번만"),
     ("c018", "c018a", [], "view of a small old bedroom ceiling with faded floral wallpaper and an old lamp, soft morning sunlight, no people", "익숙한 천장", "익숙한 천장"),
-    ("c020", "c020a", ["도윤"], f"close-up of the young man {TSHIRT}, pinching his own cheek hard in a small bathroom, wincing, eyes wide", "볼을 꼬집어 보는 도윤", "도윤은 자기 뺨을"),
+    ("c020", "c020a", ["도윤"], f"close-up of the young man {TSHIRT}, pinching his own cheek hard in a small bathroom, wincing, eyes wide", "볼을 꼬집어 보는 도윤", "도윤은 자기 볼을"),
     ("c021", "c021a", [], "close-up of a bubbling earthenware pot of Korean soybean paste stew on a gas stove in a cozy kitchen, steam rising, morning light", "보글보글 끓는 된장찌개", "\"우리 아들, 첫 출근인데"),
     ("c023", "c023a", ["도윤"], "the young man in a navy suit walking down a quiet residential alley in the morning, looking back up at an old apartment window with a determined face", "다짐하며 집을 나서는 도윤", "도윤은 속으로 다짐했습니다"),
     ("c024", "c024a", ["도윤"], "back view of the young man in a navy suit walking confidently through a big glass corporate lobby toward the elevators, morning light", "로비를 걸어가는 도윤", "하지만 그 안으로 걸어 들어가는"),
