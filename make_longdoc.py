@@ -44,7 +44,6 @@ DEFAULT = {
     "문단_최대_글자": 120,          # 나레이션 먼저일 때 이보다 긴 문단은 문장 끝에서 나눔 (약 15초) → 그림이 문단이 바뀔 때 바뀌어 박자가 맞음
     "그림_사용자점검": True,        # 사용자 결정 2026-10-31: 그림을 다 그리면 40장씩 모음(_그림점검_N.jpg)을 만들고 멈춤 → 점검 뒤 같은 명령에 --점검완료 를 붙여 이어서
     "나레이션_성우": "M4",          # 사용자 결정 2026-10-31: 남자 성우 4 (Supertonic M4). '성우_프리셋'을 적으면 그것이 우선
-    "나레이션_쉼표": True,          # 사용자 결정 2026-10-31: 녹음 전에 나레이션_쉼표.py(Kiwi 형태소 분석)로 숨 쉴 자리에 쉼표 (빨리 읽기·몰아 읽기 줄임)
     "자막": "보임",                 # 보임(기본, 사용자 결정 2026-10-31: 자막은 그대로) / 숨김(나레이션만)
     "자막_스타일": "자동",            # 자동(소재에 맞춰) 또는 프로그램의 '인기 롱폼 스타일' 이름 그대로
     "끝나면": "그대로",              # 연속 제작이 끝난 뒤: 그대로 / 절전 / 끄기  (시작할 때 물어봄)
@@ -660,7 +659,8 @@ def run_doc(m, app, c, gate):
                     app.vars[k_].set(str(v_))
     LONG_FIX = {"narration": "on", "layout": "자막형(큰 제목+사진+자막)", "img_fill": "전체 화면(글자가 사진 위에)",   # 장문 화면 규칙 (CLAUDE.md):
                 "img_motion": "영상처럼(확대·이동·전환)", "head_show": "안 보임(제목 카드만)", "head_pos": "숨김",   # 새 서버의 프로그램 기본값(쇼츠 세로 등)을 쓰지 않게
-                "sub_split": "한 줄씩(문장·쉼표로 나눠 차례로)", "img_label": "off", "fps": "24", "sub_hide": "off"}
+                "sub_split": "한 줄씩(문장·쉼표로 나눠 차례로)", "img_label": "off", "fps": "24", "sub_hide": "off",
+                "narr_rate": "0", "narr_tone_m": "-1.5"}   # 나레이션: 정상 속도·톤 반음 1.5 낮게 (CLAUDE.md 2장)
     for k_, v_ in LONG_FIX.items():
         if k_ in app.vars:
             app.vars[k_].set(v_)
@@ -740,16 +740,15 @@ def run_doc(m, app, c, gate):
         story, _ = m.hook_fix(app.model_var.get().strip(), story, log, gate, title=title)   # 규칙: 30초 후크 + 첫 5초 = 제목·썸네일 약속
         story, _ = m.retention_fix(app.model_var.get().strip(), story, title, log, gate)    # 규칙: 챕터 끝 예고 + 시리즈 한 줄 (1위 영상 분석)
         story, _ = m.polite_fix(app.model_var.get().strip(), story, log, gate)   # 규칙: 모든 나레이션은 존댓말 (자막·성우 함께)
-    if c.get("나레이션_쉼표", True):
-        try:
-            spec_ = importlib.util.spec_from_file_location("narr_comma", os.path.join(HERE, "나레이션_쉼표.py"))
-            nc_ = importlib.util.module_from_spec(spec_)
-            spec_.loader.exec_module(nc_)
-            story, ch_c = nc_.comma_story(story)
-            if ch_c:
-                log(f"✒ 나레이션 쉼표: {len(ch_c)}문단에 숨 쉴 자리 쉼표 (Kiwi 형태소 분석)")
-        except Exception as e:
-            log("  나레이션 쉼표 건너뜀: " + str(e).splitlines()[0][:80])
+    try:                                       # 규칙: 긴 문장은 연결어미 뒤에 쉼표 → 성우가 숨 쉬듯 끊어 읽음 (나레이션_쉼표.py, Kiwi, 사용자 결정 2026-10-31)
+        _sp = importlib.util.spec_from_file_location("narr_comma", os.path.join(HERE, "나레이션_쉼표.py"))
+        _nc = importlib.util.module_from_spec(_sp)
+        _sp.loader.exec_module(_nc)
+        story, _ch = _nc.add_pauses(story)
+        if _ch:
+            log(f"✏ 나레이션 쉼표: {len(_ch)}문장에 쉼표를 넣음 (긴 문장 끊어 읽기)")
+    except Exception as e:
+        log("  ⚠ 나레이션 쉼표 건너뜀 (pip install kiwipiepy 필요): " + str(e)[:80])
     defer = m.DEFER_DRAW["on"] and not any(m.parse_media(x) for x in story.split("\n"))   # 아직 그림 없는 대본 → 나레이션 뒤에 그림
     if defer:
         n0 = len([x for x in story.split("\n") if x.strip()])
@@ -792,9 +791,11 @@ def run_doc(m, app, c, gate):
                 pass
     if HISTORY:                                # 역사 편: 입체 움직임(2.5D) 끔 — 그리는 효과와 겹치고 없는 게 나음 (사용자 결정 2026-10-30)
         s["img_depth"] = "off"
+        s["bgm_mul"] = 0.5                     # 배경음 50% (사용자 결정 2026-10-31, 나레이션 크기는 그대로)
         try:
             pj_ = json.load(open(base + "_프로젝트.json", encoding="utf-8"))
             pj_.setdefault("settings", {})["img_depth"] = "off"
+            pj_["settings"]["bgm_mul"] = 0.5
             m.atomic_write_text(base + "_프로젝트.json", json.dumps(pj_, ensure_ascii=False, indent=1))
         except Exception:
             pass
@@ -824,7 +825,7 @@ def run_doc(m, app, c, gate):
         m.atomic_write_text(base + "_프로젝트.json", json.dumps(pj_, ensure_ascii=False, indent=1))
         for tool in ("그림_간격_보강.py", "인물영역_만들기.py"):
             log(f"🖌 {tool} 실행 중...")
-            rc = subprocess.call([sys.executable, "-X", "utf8", "-u", os.path.join(HERE, tool), base + "_프로젝트.json"], cwd=HERE)
+            rc = subprocess.call([sys.executable, "-X", "utf8", "-u", os.path.join(HERE, tool), base + "_프로젝트.json"] + (["--문단"] if HISTORY and tool.startswith("그림_간격") else []), cwd=HERE)
             if rc:
                 raise SystemExit(f"{tool} 실패 (코드 {rc}) - 같은 명령으로 다시 실행하면 이어서 합니다")
         story = json.load(open(base + "_프로젝트.json", encoding="utf-8"))["story"]
@@ -838,8 +839,8 @@ def run_doc(m, app, c, gate):
         m.atomic_write_text(review_ok, time.strftime("%Y-%m-%d %H:%M"))
     if c.get("그림_사용자점검", True) and m.photo_credits(story) and not os.path.exists(review_ok):
         import subprocess
-        subprocess.call([sys.executable, "-X", "utf8", os.path.join(HERE, "그림_모음.py"), base + "_프로젝트.json"], cwd=HERE)
-        log("⏸ 그림 점검: 프로젝트 폴더의 _그림점검_N.jpg (40장씩) 를 사용자에게 보내 점검받은 뒤, 고칠 그림을 고치고 같은 명령에 --점검완료 를 붙여 이어서 (영상 합치기)")
+        subprocess.call([sys.executable, "-X", "utf8", os.path.join(HERE, "그림_점검표.py"), base + "_프로젝트.json"], cwd=HERE)
+        log("⏸ 그림 점검: 프output/점검/<이름>_점검_N.jpg (40칸씩) 를 사용자에게 보내 점검받은 뒤, 고칠 그림을 고치고 같은 명령에 --점검완료 를 붙여 이어서 (영상 합치기)")
         raise SystemExit(0)
     if "--영상제외" in sys.argv:            # 대본·나레이션·그림까지 이 서버에서 → 영상(합치기)은 다른 서버 (같은 명령을 --영상제외 없이 다시 실행하면 이어서)
         log("⏸ --영상제외: 대본·나레이션·그림까지 끝. output/장문 을 다른 서버로 옮겨 --영상제외 없이 같은 명령으로 이어서 하세요")

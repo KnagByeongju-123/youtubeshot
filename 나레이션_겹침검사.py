@@ -8,9 +8,9 @@ python 나레이션_겹침검사.py <영상.mp4> <회차.py 또는 대본.txt> [
     3) 받아 적은 조각과 가장 비슷한 대본 문장을 찾아, 그 문장에 원래 같은 길이의 반복(무럭무럭·불쑥불쑥·타닥타닥)이 있으면 흉내말로 보고 넘김
     4) 대본 문장과 한 글자씩 맞춰 봐서 반복 자리에 글자가 '더 들어갔을' 때만 겹침 ('것만→것만만'). 글자 수가 같으면 발음 차이로 봄
        ('하늘나라→하늘라라', '닿을→다을')
-  - 갑자기 빨라진 곳도 찾음: 쉼과 쉼 사이 한 마디씩 1초당 글자 수를 재서 영상 전체 마디의 중간값보다 25% 넘게 빠른 마디 (대사는 인물마다 빠르기가 달라 뺌)
+  - (--빠르기 를 붙일 때만, 기본은 겹침만 — 사용자 결정 2026-10-31) 갑자기 빨라진 곳도 찾음: 쉼과 쉼 사이 한 마디씩 1초당 글자 수를 재서 영상 전체 마디의 중간값보다 25% 넘게 빠른 마디 (대사는 인물마다 빠르기가 달라 뺌)
   - --고치기 <프로젝트.json> : 겹친 문장(과 그 문단)의 녹음 캐시를 output/tts_cache 에서 지움 → render_project 를 다시 돌리면 그 문장만 새로 녹음.
-    빨라진 문장은 다시 녹음해도 또 빨라서(짧은 문장) 그 녹음을 보통 빠르기로 늘림(목소리 높이 그대로)
+    빨라진 문장도 다시 녹음만 함 (늘리면 소리가 늘어져 들려서 속도는 조절하지 않음, 사용자 결정 2026-10-31)
     (Supertonic 은 매번 조금씩 다르게 읽어서 보통 한 번에 고쳐짐. 다시 만든 영상도 검사해서 '겹침 없음'이 나올 때까지, 최대 3번)
   - 결과: '분:초 [겹친 글자] 대본: <문장> | 들림: <받아 적은 글>'
 (내부용) python 나레이션_겹침검사.py --지우기 <목록.json> <프로젝트.json>  ← .supertonic_venv 로 실행, 캐시 이름 계산·삭제"""
@@ -209,24 +209,7 @@ def delete_caches(items, project):
             voices.add(("supertonic:" + v["code"], float(v.get("rate", 0) or 0)))
     pitch, steps = float(st.get("narr_pitch", 0) or 0), int(st.get("st_steps", 5) or 5)
     cache = os.path.join(HERE, "output", "tts_cache")
-    # 빨라진 문장도 겹친 문장처럼 녹음을 지워 자연스럽게 다시 녹음 (사용자 결정 2026-10-31: 나레이션 속도를 억지로 늘리지 않음 → slow_down 쓰지 않음)
-    fast = [it for it in items if it.get("speed")]
-    if fast:                                              # 빨라진 문장은 쉼표를 넣어 성우가 자연스럽게 한 번 쉬게 (나레이션_쉼표.py, Kiwi)
-        spec_ = importlib.util.spec_from_file_location("narr_comma", os.path.join(HERE, "나레이션_쉼표.py"))
-        nc_ = importlib.util.module_from_spec(spec_)
-        spec_.loader.exec_module(nc_)
-        story, n_c = proj.get("story", ""), 0
-        for it in fast:
-            new, k = nc_.comma_sentence(it["sentence"], short=True)
-            if k and it["sentence"] in story:
-                story = story.replace(it["sentence"], new, 1)
-                print(f"  쉼표: {new}")
-                n_c += 1
-        if n_c:
-            proj["story"] = story
-            tmp = project + ".tmp"
-            json.dump(proj, open(tmp, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
-            os.replace(tmp, project)
+    # 빨라진 문장도 늘리지 않고 다시 녹음만 함 (사용자 결정 2026-10-31: 늘린 소리는 늘어져 들려서 나레이션 속도는 조절하지 않음. slow_down 은 쓰지 않음)
     texts = set()
     for it in items:
         for t in (it["sentence"], it["paragraph"]):
@@ -282,8 +265,10 @@ def main(a):
         return 2
     video, script = a[0], a[1]
     items = detect(video, script)
+    if "--빠르기" not in a:     # 규칙(사용자 결정 2026-10-31): 겹침만 검사. 빨라진 곳은 --빠르기 를 붙일 때만
+        items = [it for it in items if not it.get("speed")]
     lines = [f"{int(f['t'] // 60)}:{int(f['t'] % 60):02d} [{f['dd']}] 대본: {f['sentence']} | 들림: {f['heard']}" for f in items]
-    msg = "\n".join(lines) if lines else "겹침·빨라진 곳 없음"
+    msg = "\n".join(lines) if lines else ("겹침·빨라진 곳 없음" if "--빠르기" in a else "겹침 없음")
     print(msg)
     if "--결과" in a:
         open(a[a.index("--결과") + 1], "w", encoding="utf-8").write(msg + "\n")

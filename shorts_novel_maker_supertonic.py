@@ -145,7 +145,7 @@ def find_font(bold=False):
     return ""
 
 
-DEFAULT_VOICE = "Supertonic M2 (남성, 무료 로컬) [supertonic:M2]"   # 성우를 따로 정하지 않으면 이 목소리 (기본 = 남자 성우 2)
+DEFAULT_VOICE = "Supertonic M4 (남성, 무료 로컬) [supertonic:M4]"   # 성우를 따로 정하지 않으면 이 목소리 (기본 = 남자 성우 4, 사용자 결정 2026-10-31: 발음 비교에서 또렷함)
 TTS_VOICES = {   # 마이크로소프트 온라인(Edge) 음성은 쓰지 않음. 옛 설정에 적힌 Edge 이름은 voice_code 가 DEFAULT_VOICE 로 바꿈
     "윈도우 내장 음성": "sapi",
 }
@@ -570,7 +570,8 @@ FIELDS = [
     ("나레이션", "st_emotion_map", "문단별 지정(예: 2=슬픔,4=놀람)", "str", ""),
     ("나레이션", "st_steps", "로컬 성우 품질(5~12)", "int", 5),
     ("나레이션", "narr_tone_f", "여자 성우 톤(반음, 0=원래 목소리 · 올리면 약간 울림)", "float", 0.0),
-    ("나레이션", "narr_tone_m", "남자 성우 톤(반음, 0=원래 목소리)", "float", 0.0),
+    ("나레이션", "narr_commas", "긴 문장 쉼표 넣어 끊어 읽기(Kiwi)", "choice:on,off", "on"),   # 규칙(사용자 결정 2026-10-31): 모든 나레이션 녹음 전에
+    ("나레이션", "narr_tone_m", "남자 성우 톤(반음, 0=원래 목소리)", "float", -1.5),   # 기본 = 반음 1.5 낮게 (사용자 결정 2026-10-31, 남자 성우 4와 함께)
     ("나레이션", "narr_bright_f", "여자 목소리 밝게(고음 강조 · 약간 울림)", "choice:on,off", "off"),
     ("나레이션", "narr_breath_cut", "말 시작 숨소리('쓰읍') 지우기", "choice:on,off", "on"),
     ("나레이션", "narr_replace", "읽기 바꾸기(성우만, 쉼표로: LOT=로트, PIN=핀)", "str",
@@ -997,8 +998,9 @@ PACKAGE_SYSTEM = """너는 구독자 100만 유튜브 쇼츠 채널 운영 전�
 - 설명: 4~7줄. 첫 줄은 영상 첫 문장급 훅(검색·미리보기에 보이는 부분), 이어서 상황 2~3줄(결말 금지), "끝까지 보면…" 류 한 줄, 시청자에게 묻는 질문 한 줄 + 👇 댓글 유도.
   허구 이야기면 끝에 "※ 이 영상은 창작된 이야기(픽션)입니다." 사실 기반이면 끝에 "※ 출처는 아래에 정리했습니다."
 - 해시태그 8~12개: 허구면 #쇼츠 #썰 #단편소설, 명화면 #명화 #미술 #그림이야기 #화가, 옛 노래면 #올드팝 #팝송 #노래비화 #명곡, 실화·과학이면 #쇼츠 #실화 #미스터리 #과학 #상식 등 종류와 소재 포함, 띄어쓰기로 구분
+- keywords: 유튜브 태그 칸에 넣을 검색어 12~20개를 쉼표로 (# 없이, 해시태그와 따로)
 - 고정댓글: 시청자에게 결말에 대한 의견을 묻는 한 줄 질문
-반드시 JSON만 출력: {"titles": ["..."], "description": "...", "hashtags": "#... #...", "pinned_comment": "..."}"""
+반드시 JSON만 출력: {"titles": ["..."], "description": "...", "hashtags": "#... #...", "keywords": "...", "pinned_comment": "..."}"""
 
 IDEA_SYSTEM = """너는 한국 유튜브 쇼츠 채널 기획자다. (허구 썰, 기이한 실화, 과학 사실, 자연현상 모두 다룬다)
 조회수가 잘 나오는 소재(공감, 궁금증, 반전, 감동, 소름, 놀라움)를 골라
@@ -7824,6 +7826,31 @@ def no_vietnamese(t, orig=""):
     return " ".join(w for w in t.split() if not VI_RE.search(w))
 
 
+_COMMA = {"mod": None, "err": ""}
+
+
+def narr_commas(t):
+    """규칙(사용자 결정 2026-10-31): 성우가 읽기 전에 긴 문장(쉼표 없이 25자 이상) 연결어미 뒤에 쉼표 (나레이션_쉼표.py · 오픈소스 Kiwi).
+    장문·쇼츠·연재·render_project 모두 이 길을 지나감. 설정 narr_commas: off 면 끔(이미 확인받은 예전 녹음을 그대로 둘 때). kiwipiepy 가 없으면 그냥 넘어감"""
+    if str(TTS_CFG.get("commas", "on")) == "off" or not re.search(r"[가-힣]", t):
+        return t
+    if _COMMA["mod"] is None and not _COMMA["err"]:
+        try:
+            sp = importlib.util.spec_from_file_location("narr_comma", os.path.join(BASE, "나레이션_쉼표.py"))
+            mod = importlib.util.module_from_spec(sp)
+            sp.loader.exec_module(mod)
+            mod.kiwi()
+            _COMMA["mod"] = mod
+        except Exception as e:
+            _COMMA["err"] = str(e)[:120]
+    if _COMMA["mod"] is None:
+        return t
+    try:
+        return _COMMA["mod"].add_pauses(t)[0]
+    except Exception:
+        return t
+
+
 def tts_clean(text):
     """읽기 좋게 정리: ♪, 따옴표, 챕터 표시 제거 + 한국어 문장의 숫자는 한글 읽기로"""
     t = text.strip()
@@ -7839,6 +7866,7 @@ def tts_clean(text):
     if t.startswith("## "):
         t = t[3:]
     t = t.lstrip("♪").strip()
+    t = narr_commas(t)                   # 긴 문장은 연결어미 뒤 쉼표 → 숨 쉬듯 끊어 읽기 (Kiwi, 따옴표를 지우기 전에)
     t = re.sub(r"[\"“”'‘’]", "", t)
     if re.search(r"[가-힣]", t):
         t = read_korean(t)               # 건→껀, 전화번호, 사번, 숫자 → 한글 읽기 (한국어_읽기.py)
@@ -8187,7 +8215,7 @@ def tts_supertonic(text, voice, rate_pct, out_wav, steps=5, mood="차분"):
             raise
 
 
-TTS_CFG = {"style": "", "openai_key": "", "gemini_key": "", "openai_tts_model": "", "gemini_tts_model": "",
+TTS_CFG = {"commas": "on", "style": "", "openai_key": "", "gemini_key": "", "openai_tts_model": "", "gemini_tts_model": "",
            "tone_f": 0, "tone_m": 0, "bright_f": "off", "breath_cut": "off", "replace": []}
 
 
@@ -8213,7 +8241,7 @@ def set_tts_cfg(s):
                    gemini_key=(s.get("gemini_key") or os.environ.get("GEMINI_API_KEY", "")).strip(),
                    openai_tts_model=str(s.get("openai_tts_model", "")).strip(),
                    gemini_tts_model=str(s.get("gemini_tts_model", "")).strip(),
-                   tone_f=s.get("narr_tone_f", 0), tone_m=s.get("narr_tone_m", 0),
+                   tone_f=s.get("narr_tone_f", 0), tone_m=s.get("narr_tone_m", 0), commas=str(s.get("narr_commas", "on")),
                    bright_f=str(s.get("narr_bright_f", "off")), breath_cut=str(s.get("narr_breath_cut", "off")),
                    replace=parse_replace(s.get("narr_replace", "")))
 

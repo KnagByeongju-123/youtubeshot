@@ -76,7 +76,7 @@ def main():
     model_dir, job_path, out_dir = sys.argv[1], sys.argv[2], sys.argv[3]
     job = json.load(open(job_path, encoding="utf-8"))
     items, fixes = job.get("items") or [], job.get("fixes") or []
-    max_area = int(job.get("ref_max_area") or 115000)
+    max_area = int(job.get("ref_max_area") or os.environ.get("KLEIN_REF_MAX_AREA") or 115000)   # 옷차림 기준 그림(조선 기본 시트)은 크게: 캐릭터시트_만들기 가 300000
     os.makedirs(out_dir, exist_ok=True)
     import torch
     from PIL import Image, ImageDraw, ImageFilter
