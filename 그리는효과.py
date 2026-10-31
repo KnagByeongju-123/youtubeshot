@@ -1,10 +1,11 @@
 """그리는 효과 — 그림이 붓으로 그려지듯 나타남 (흰 바탕 → 배경 먹선 → 배경 색칠 → 인물 먹선 → 인물 색칠)
 
+인물은 굵은 붓이 위에서 아래로 한 획씩(지그재그) 지나가며 드러남 (brush_fields, 사용자 결정 2026-10-31: 한꺼번에 나타나지 않게)
 영상 프로그램(shorts_novel_maker_supertonic.py)이 그림이 처음 나타날 때 이 효과를 씀:
   그림 옆에 <그림>.인물.json 이 있으면 켜짐 (인물영역_만들기.py 가 만듦). <그림>.인물.png = 인물 윤곽(흰색)
   인물이 없으면(상자 없음) 배경 전체가 먹선 → 색칠 두 단계로
 
-혼자 시험: python -X utf8 그리는효과.py <그림> <인물 마스크.png 또는 '-'> <결과.mp4> [--초 10] [--fps 24]
+혼자 시험: python -X utf8 그리는효과.py <그림> <인물 마스크.png 또는 '-'> <결과.mp4> [--초 10] [--fps 24] [--붓없이]
   - 효과 길이는 영상 안에서는 그림이 머무는 시간의 65% (3~7.5초), 나머지는 완성 그림
 """
 import sys
@@ -55,6 +56,37 @@ def fields(w, h, seed=0):
     return _FIELDS[key]
 
 
+def brush_fields(M, seed=0):
+    """인물 자리를 굵은 붓 획으로 칠해 나가는 순서 (먹선용, 색칠용) — 각각 0~1 (작을수록 먼저). 인물이 없으면 None
+    획: 인물 상자를 위에서 아래로 4~10줄, 줄마다 왼→오·오→왼 번갈아(지그재그), 획 경계는 일렁이고 획 머리는 마른 붓처럼 갈라짐"""
+    h, w = M.shape
+    ys, xs = np.nonzero(M > 0.1)
+    if len(ys) < 50:
+        return None
+    x0, x1, y0, y1 = xs.min(), xs.max() + 1, ys.min(), ys.max() + 1
+    yy, xx = np.mgrid[0:h, 0:w].astype(np.float32)
+    out = []
+    for kind in range(2):
+        rng = np.random.default_rng(seed * 7 + kind * 101 + 5)
+        sw = max(24.0, w / (13 if kind == 0 else 10))                         # 붓 폭 (색칠 붓이 더 굵음)
+        R = int(np.clip(round((y1 - y0) / sw), 3, 10))
+        sw = (y1 - y0) / R
+        wob = cv2.resize(rng.random((6, 10)).astype(np.float32), (w, h), interpolation=cv2.INTER_CUBIC)
+        tilt = rng.uniform(-0.12, 0.12) + (0.18 if kind else 0.0)              # 색칠 획은 조금 비스듬히
+        edge = cv2.GaussianBlur(rng.random((h, w)).astype(np.float32), (0, 0), max(2.0, w / 260))   # 획 가장자리 붓 자국
+        edge = (edge - edge.min()) / (edge.max() - edge.min() + 1e-6)
+        yv = yy + (wob - 0.5) * sw * 0.7 + (edge - 0.5) * sw * 0.9 + tilt * (xx - (x0 + x1) / 2)
+        k = np.clip(np.floor((yv - y0) / sw), 0, R - 1)
+        u = np.clip((xx - x0) / max(1, x1 - x0), 0, 1)
+        u = np.where(k % 2 == (kind % 2), u, 1 - u)                            # 지그재그
+        bristle = cv2.GaussianBlur(rng.random((h, w)).astype(np.float32), (0, 0), sigmaX=w / 40, sigmaY=1.2)
+        bristle = (bristle - bristle.min()) / (bristle.max() - bristle.min() + 1e-6)
+        u = np.clip(u + (bristle - 0.5) * 0.22, 0, 1)                          # 마른 붓 결
+        f = (k + u * 0.88) / R
+        out.append(np.clip(f, 0, 1).astype(np.float32))
+    return out
+
+
 def empty_plate(full, M, with_fog=False):
     """인물 자리를 둘레 배경색으로 메우고 강하게 흐리게(blur) — 경계도 넓게 번져서 인물 자리가 안개처럼 자연스럽게 비어 보임
     (사용자 결정: 하얗게 비운 구멍보다 흐림 효과처럼)"""
@@ -91,17 +123,18 @@ def _reveal(f, p, soft=0.06):
     return np.clip((p * (1 + soft) - f) / soft, 0, 1)
 
 
-def frame(full, plate, M, prog, seed=0, fog=None):
+def frame(full, plate, M, prog, seed=0, fog=None, brush=None):
     """그리는 중인 한 장면. full·plate: (h, w, 3) uint8, M: (h, w) 0~1 인물(없으면 None), prog: 0~1 (1 이면 완성 그림)
     인물이 있으면 배경 선 30% → 배경 색 25% → 인물 선 22% → 인물 색 23%, 없으면 선 50% → 색 50%
-    fog: 인물 둘레 안개 범위(empty_plate(with_fog=True)) — 인물 색칠 때 이 범위까지 함께 원래 그림으로 (안개 테두리가 갑자기 바뀌지 않게)"""
+    fog: 인물 둘레 안개 범위(empty_plate(with_fog=True)) — 인물 색칠 때 이 범위까지 함께 원래 그림으로 (안개 테두리가 갑자기 바뀌지 않게)
+    brush: brush_fields() 결과(같은 화면 크기로 맞춘 것) — 있으면 인물을 붓 획 순서로 드러냄"""
     if prog >= 1:
         return full
     h, w = full.shape[:2]
     f_bl, f_bc, f_pl, f_pc = fields(w, h, seed)
     full_f, bg = full.astype(np.float32), plate.astype(np.float32)
     person = M is not None and float(M.max()) > 0.5
-    T = [0.30, 0.25, 0.22, 0.23] if person else [0.5, 0.5, 0, 0]
+    T = ([0.24, 0.20, 0.25, 0.31] if brush is not None else [0.30, 0.25, 0.22, 0.23]) if person else [0.5, 0.5, 0, 0]
     ed = np.cumsum([0] + T)
     p = [ease((prog - ed[k]) / T[k]) if T[k] else 0.0 for k in range(4)]
     bl = ink_lines(bg)[..., None]
@@ -112,11 +145,13 @@ def frame(full, plate, M, prog, seed=0, fog=None):
     if person:
         Mm = M[..., None]
         pl = ink_lines(full_f)[..., None]
-        rp = _reveal(f_pl, p[2]) * Mm
+        if brush is not None:                                           # 붓 획 순서 (획 머리는 또렷하게)
+            f_pl, f_pc = brush[0][..., None], brush[1][..., None]
+        rp = _reveal(f_pl, p[2], 0.025 if brush is not None else 0.06) * Mm
         k_ = 0.55 * rp * (1 - p[3])
         img = img * (1 - k_) + PAPER * k_
         img = img * (1 - pl * rp) + INK * (pl * rp)                     # 3) 인물 먹선
-        cp = _reveal(f_pc, p[3], 0.15) * (np.maximum(Mm, fog[..., None]) if fog is not None else Mm)
+        cp = _reveal(f_pc, p[3], 0.03 if brush is not None else 0.15) * (np.maximum(Mm, fog[..., None]) if fog is not None else Mm)
         img = img * (1 - cp) + full_f * cp                              # 4) 인물 색
     return np.clip(img, 0, 255).astype(np.uint8)
 
@@ -131,12 +166,13 @@ def main(a):
     full = cv2.resize(cv2.imread(a[0], cv2.IMREAD_COLOR), (W, H), interpolation=cv2.INTER_LANCZOS4)[..., ::-1].copy()
     M = soft_mask(cv2.resize(cv2.imread(a[1], cv2.IMREAD_GRAYSCALE), (W, H))) if a[1] != "-" else None
     plate, fog = empty_plate(full, M if M is not None else np.zeros((H, W), np.float32), with_fog=True)
+    brush = brush_fields(M) if M is not None and "--붓없이" not in a else None
     E = min(7.5, max(3.0, sec * 0.65))
     import imageio_ffmpeg
     wr = imageio_ffmpeg.write_frames(a[2], (W, H), fps=fps, codec="libx264", quality=8, macro_block_size=8)
     wr.send(None)
     for i in range(int(sec * fps)):
-        wr.send(np.ascontiguousarray(frame(full, plate, M, i / fps / E, fog=fog)))
+        wr.send(np.ascontiguousarray(frame(full, plate, M, i / fps / E, fog=fog, brush=brush)))
     wr.close()
     print("OK", a[2])
     return 0

@@ -12,18 +12,25 @@ _cs = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(_cs)
 
 
+def OPENER(rng):   # 막을 여는 타악 (챕터 제목 때): 대라(큰 징, 음이 살짝 내려감) + 북
+    return K.opener([(lambda r: K.gong(130, 6.0, bend=-0.05, rng=r), 0.0, 1.0, 0.0), (lambda r: K.big_drum(68, 2.0, r), 0.0, 0.6, -0.2)], rng)
+
+
 class _China:
     name, instruments = "중국", "고쟁·얼후"
     modes = _cs.MODES
 
-    def interlude(self, rng, sec=4.0, mode=None):
-        return _cs.interlude(rng, sec, mode or "궁조")
+    def interlude(self, rng, sec=4.0, mode=None, percussion=True):
+        return K.with_opener(_cs.interlude(rng, sec, mode or "궁조"), OPENER(rng) if percussion else None)
 
     def bed(self, n, rng, mode=None):
         return _cs.bed(n, rng, mode or "궁조")
 
     def sample(self, mode, sec=30, seed=11):
-        return _cs.sample(mode, sec, seed)
+        import numpy as np
+        rng = np.random.default_rng(seed)
+        it = self.interlude(rng, mode=mode)
+        return np.concatenate([it, _cs.bed(int(max(5, sec - len(it) / K.SR) * K.SR), rng, mode)])
 
 
 REGION = _China()
@@ -33,4 +40,4 @@ WIND = K.Region(
     lead=lambda f, d, rng, last: K.flute(f, d, breath=0.14, vib=0.01 if last else 0.006, slide=0.03, membrane=0.06, rng=rng),
     sustain=lambda f, d, rng: K.flute(f * 0.5, d, breath=0.3, vib=0.004, rng=rng),
     bass=lambda f, d, rng, last: _cs.guzheng(f, d, rng=rng),
-    modes=_cs.MODES, legato=True, gliss=False, tempo=0.55)
+    modes=_cs.MODES, legato=True, gliss=False, tempo=0.55, opener=OPENER)
