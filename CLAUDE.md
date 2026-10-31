@@ -109,6 +109,8 @@
   · 갓(양반·선비, 밖에서): "Joseon gat: a black wide flat round brim with a tall narrow cylindrical crown, made of see-through horsehair, tied under the chin with black strings, the sangtu topknot visible through the crown" — 서양 중절모·삿갓처럼 둥근 테 아님
   · 사모(관리, 관복 입을 때): 'hat' 이라는 말을 쓰지 않음 → "black brimless two-tiered samo cap with two flat oval wings sticking out to the left and right" (갓과 섞이지 않게: 관복+사모, 도포+갓)
   · 익선관(왕): "black brimless two-tiered cap with two cicada-wing shaped wings standing upright at the back"
+  **모자 시트(확정, 사용자 결정 2026-10-31)**: `등장인물/조선/_관모/모자시트.png` (익선관·사모·갓·상투 앞/옆/뒤). 장면 그림에는 그 인물 모자의 앞모습
+  `_관모/<익선관|사모|갓|상투>_앞.png` 를 refs 로 함께 넣음 (왕=익선관, 관복 관리=사모, 도포 양반=갓, 백성 남자=상투)
   시트 따로 그리기는 `캐릭터시트_만들기.py` (조선 옷 사전 KO_COSTUME + 관모 기준 그림, 그림 모델은 사모·익선관·단령 같은 이름을 몰라 중국·일본 옷으로 그림)
 - 캐릭터 시트(역사 채널): 자동 제작이 인물마다 시트를 그리지만, 여러 편에 나오는 인물(관우·조조·유비·여포 등)은 사용자가 확인한 시트를
   `등장인물/` + `등장인물.json` 의 face 에 저장해 모든 편에서 같은 얼굴로
