@@ -569,6 +569,7 @@ FIELDS = [
     ("나레이션", "st_emotion_map", "문단별 지정(예: 2=슬픔,4=놀람)", "str", ""),
     ("나레이션", "st_steps", "로컬 성우 품질(5~12)", "int", 5),
     ("나레이션", "narr_tone_f", "여자 성우 톤(반음, 0=원래 목소리 · 올리면 약간 울림)", "float", 0.0),
+    ("나레이션", "narr_commas", "긴 문장 쉼표 넣어 끊어 읽기(Kiwi)", "choice:on,off", "on"),   # 규칙(사용자 결정 2026-10-31): 모든 나레이션 녹음 전에
     ("나레이션", "narr_tone_m", "남자 성우 톤(반음, 0=원래 목소리)", "float", -1.5),   # 기본 = 반음 1.5 낮게 (사용자 결정 2026-10-31, 남자 성우 4와 함께)
     ("나레이션", "narr_bright_f", "여자 목소리 밝게(고음 강조 · 약간 울림)", "choice:on,off", "off"),
     ("나레이션", "narr_breath_cut", "말 시작 숨소리('쓰읍') 지우기", "choice:on,off", "on"),
@@ -7818,6 +7819,31 @@ def no_vietnamese(t, orig=""):
     return " ".join(w for w in t.split() if not VI_RE.search(w))
 
 
+_COMMA = {"mod": None, "err": ""}
+
+
+def narr_commas(t):
+    """규칙(사용자 결정 2026-10-31): 성우가 읽기 전에 긴 문장(쉼표 없이 25자 이상) 연결어미 뒤에 쉼표 (나레이션_쉼표.py · 오픈소스 Kiwi).
+    장문·쇼츠·연재·render_project 모두 이 길을 지나감. 설정 narr_commas: off 면 끔(이미 확인받은 예전 녹음을 그대로 둘 때). kiwipiepy 가 없으면 그냥 넘어감"""
+    if str(TTS_CFG.get("commas", "on")) == "off" or not re.search(r"[가-힣]", t):
+        return t
+    if _COMMA["mod"] is None and not _COMMA["err"]:
+        try:
+            sp = importlib.util.spec_from_file_location("narr_comma", os.path.join(BASE, "나레이션_쉼표.py"))
+            mod = importlib.util.module_from_spec(sp)
+            sp.loader.exec_module(mod)
+            mod.kiwi()
+            _COMMA["mod"] = mod
+        except Exception as e:
+            _COMMA["err"] = str(e)[:120]
+    if _COMMA["mod"] is None:
+        return t
+    try:
+        return _COMMA["mod"].add_pauses(t)[0]
+    except Exception:
+        return t
+
+
 def tts_clean(text):
     """읽기 좋게 정리: ♪, 따옴표, 챕터 표시 제거 + 한국어 문장의 숫자는 한글 읽기로"""
     t = text.strip()
@@ -7833,6 +7859,7 @@ def tts_clean(text):
     if t.startswith("## "):
         t = t[3:]
     t = t.lstrip("♪").strip()
+    t = narr_commas(t)                   # 긴 문장은 연결어미 뒤 쉼표 → 숨 쉬듯 끊어 읽기 (Kiwi, 따옴표를 지우기 전에)
     t = re.sub(r"[\"“”'‘’]", "", t)
     if re.search(r"[가-힣]", t):
         t = read_korean(t)               # 건→껀, 전화번호, 사번, 숫자 → 한글 읽기 (한국어_읽기.py)
@@ -8181,7 +8208,7 @@ def tts_supertonic(text, voice, rate_pct, out_wav, steps=5, mood="차분"):
             raise
 
 
-TTS_CFG = {"style": "", "openai_key": "", "gemini_key": "", "openai_tts_model": "", "gemini_tts_model": "",
+TTS_CFG = {"commas": "on", "style": "", "openai_key": "", "gemini_key": "", "openai_tts_model": "", "gemini_tts_model": "",
            "tone_f": 0, "tone_m": 0, "bright_f": "off", "breath_cut": "off", "replace": []}
 
 
@@ -8207,7 +8234,7 @@ def set_tts_cfg(s):
                    gemini_key=(s.get("gemini_key") or os.environ.get("GEMINI_API_KEY", "")).strip(),
                    openai_tts_model=str(s.get("openai_tts_model", "")).strip(),
                    gemini_tts_model=str(s.get("gemini_tts_model", "")).strip(),
-                   tone_f=s.get("narr_tone_f", 0), tone_m=s.get("narr_tone_m", 0),
+                   tone_f=s.get("narr_tone_f", 0), tone_m=s.get("narr_tone_m", 0), commas=str(s.get("narr_commas", "on")),
                    bright_f=str(s.get("narr_bright_f", "off")), breath_cut=str(s.get("narr_breath_cut", "off")),
                    replace=parse_replace(s.get("narr_replace", "")))
 

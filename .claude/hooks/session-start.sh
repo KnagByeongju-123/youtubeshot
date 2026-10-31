@@ -29,10 +29,10 @@ fi
 # 2) 파이썬 실행 환경 (프로그램이 성우 담당으로 .supertonic_venv/bin/python 을 찾음)
 VENV=.supertonic_venv
 [ -x "$VENV/bin/python" ] || python3.12 -m venv "$VENV"
-if ! "$VENV/bin/python" -c "import supertonic, numpy, PIL, cv2, imageio_ffmpeg, rembg, faster_whisper, huggingface_hub" 2>/dev/null; then
+if ! "$VENV/bin/python" -c "import supertonic, numpy, PIL, cv2, imageio_ffmpeg, rembg, faster_whisper, huggingface_hub, kiwipiepy" 2>/dev/null; then
   "$VENV/bin/python" -m pip install -q --disable-pip-version-check --upgrade pip
   "$VENV/bin/python" -m pip install -q --disable-pip-version-check \
-    numpy pillow supertonic opencv-python-headless imageio-ffmpeg "rembg[cpu]" faster-whisper huggingface_hub
+    numpy pillow supertonic opencv-python-headless imageio-ffmpeg "rembg[cpu]" faster-whisper huggingface_hub kiwipiepy   # kiwipiepy: 나레이션 쉼표(나레이션_쉼표.py)
 fi
 
 # 3) 목소리 모델 (huggingface 가 잠깐 막으면(429) 기다렸다 다시)
