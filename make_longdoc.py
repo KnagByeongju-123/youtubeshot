@@ -656,7 +656,7 @@ def run_doc(m, app, c, gate):
                 if k_ in app.vars:
                     app.vars[k_].set(str(v_))
     LONG_FIX = {"narration": "on", "layout": "자막형(큰 제목+사진+자막)", "img_fill": "전체 화면(글자가 사진 위에)",   # 장문 화면 규칙 (CLAUDE.md):
-                "img_motion": "영상처럼(확대·이동·전환)", "head_show": "안 보임(제목 카드만)",                   # 새 서버의 프로그램 기본값(쇼츠 세로 등)을 쓰지 않게
+                "img_motion": "영상처럼(확대·이동·전환)", "head_show": "안 보임(제목 카드만)", "head_pos": "숨김",   # 새 서버의 프로그램 기본값(쇼츠 세로 등)을 쓰지 않게
                 "sub_split": "한 줄씩(문장·쉼표로 나눠 차례로)", "img_label": "off"}
     for k_, v_ in LONG_FIX.items():
         if k_ in app.vars:

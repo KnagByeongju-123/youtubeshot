@@ -59,6 +59,9 @@ def main(a):
             st[k] = cur.get(k, m.DEFAULTS.get(k, ""))
     c["settings"] = st
     app.apply_cfg(c)
+    for k_, v_ in st.items():                  # 프로젝트에 적힌 값이 이김 (자막 스타일 묶음이 위 제목·제목 위치 등을 기본값으로 되돌리지 않게)
+        if k_ in app.vars and k_ != "format" and k_ not in m.SECRET_KEYS and k_ not in m.KEEP_KEYS:
+            app.vars[k_].set(str(v_))
     n_dlg = m.set_dialog_voices(c.get("dialogue") or [], c.get("cast") or [])   # 인물 대사는 그 인물 목소리로 (프로젝트 dialogue + cast 의 voice)
     if n_dlg:
         log(f"🎭 인물별 대사 목소리 {n_dlg}줄: " + ", ".join(sorted({v['who'] for v in m.DIALOG_VOICES.values()})))
