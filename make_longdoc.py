@@ -40,7 +40,9 @@ DEFAULT = {
     "연속_편수": 5,
     "연속_소재": [],
     "제목_표시": "왼쪽 위 작게",      # 위 가운데 / 왼쪽 위 작게 / 숨김  (10분 다큐는 큰 제목이 화면을 가려 작게)
-    "자막": "숨김",                 # 숨김(나레이션만, 사용자 결정 2026-10-31: 그림·나레이션 중심, 자막이 그림을 가림) / 보임
+    "나레이션_먼저": True,          # 사용자 결정 2026-10-31: 대본 → 나레이션(문단마다 시간 기록) → 그 시간에 맞춰 그림 → 배경음·자막과 합치기 (그림 스타일일 때)
+    "문단_최대_글자": 120,          # 나레이션 먼저일 때 이보다 긴 문단은 문장 끝에서 나눔 (약 15초) → 그림이 문단이 바뀔 때 바뀌어 박자가 맞음
+    "자막": "보임",                 # 보임(기본, 사용자 결정 2026-10-31: 자막은 그대로) / 숨김(나레이션만)
     "자막_스타일": "자동",            # 자동(소재에 맞춰) 또는 프로그램의 '인기 롱폼 스타일' 이름 그대로
     "끝나면": "그대로",              # 연속 제작이 끝난 뒤: 그대로 / 절전 / 끄기  (시작할 때 물어봄)
     "claude_path": "",             # Claude Code 실행 파일 경로 (자동으로 못 찾을 때만 적음, 예: C:\\Users\\이름\\.local\\bin\\claude.exe)
@@ -504,6 +506,41 @@ def after_batch(mode):
         subprocess.run(["shutdown", "/h"])
 
 
+def split_long_paras(m, story, max_chars):
+    """긴 나레이션 문단을 문장 끝에서 비슷한 길이로 나눔 (그림은 문단이 바뀔 때 바뀌므로 한 문단 = 한 박자, 그림 한 장 5~15초)"""
+    out = []
+    for p in story.split("\n"):
+        s_ = p.strip()
+        if len(s_) <= max_chars or s_.startswith(("[", "#", "♪")) or m.parse_media(s_):
+            out.append(p)
+            continue
+        sents, cur, i = [], "", 0
+        while i < len(s_):
+            cur += s_[i]
+            if s_[i] in ".?!…":
+                while i + 1 < len(s_) and s_[i + 1] in "\"'”’」』)":
+                    i += 1
+                    cur += s_[i]
+                if i + 1 >= len(s_) or s_[i + 1] == " ":
+                    sents.append(cur.strip())
+                    cur = ""
+            i += 1
+        if cur.strip():
+            sents.append(cur.strip())
+        if len(sents) < 2:
+            out.append(p)
+            continue
+        n = -(-len(s_) // max_chars)
+        goal = len(s_) / n
+        grp = [""]
+        for se in sents:
+            if grp[-1] and len(grp[-1]) + len(se) / 2 > goal * len(grp) - sum(len(g_) for g_ in grp[:-1]) and len(grp) < n:
+                grp.append("")
+            grp[-1] = (grp[-1] + " " + se).strip()
+        out += [g_ for g_ in grp if g_]
+    return "\n\n".join(x for x in out if x.strip()) if any(len(x) > max_chars for x in story.split("\n")) else story
+
+
 def run_music(m, app, c, gate, preset, minutes):
     """명상·수면 음악 영상 한 편: 프로그램이 음악을 작곡 → 분위기에 맞는 무료 사진(없으면 색 배경) 위에 2.5D 움직임·입자 효과·제목 → MP4·썸네일·업로드 문구"""
     if preset not in m.MUSIC_PRESETS:
@@ -638,7 +675,10 @@ def run_doc(m, app, c, gate):
             log("대본: 이미 완성됨 → " + res["title"])
         except Exception:
             log("대본 파일이 깨져 있어 진행 기록에서 다시 합칩니다")
+    m.DEFER_DRAW["on"] = bool(c.get("나레이션_먼저", True)) and bool(m.draw_settings())   # 그림은 나레이션 시간에 맞춰 나중에
     if res is None:
+        if m.DEFER_DRAW["on"]:
+            log("🎙 나레이션 먼저: 대본 → 나레이션(문단 시간 기록) → 그 시간에 맞춰 그림 → 배경음·자막과 합치기")
         res = app.generate_longdoc(model, c["주제"], c["소재"], c["길이_분"], log, research=c["웹조사"], autophoto=c["챕터별_사진"],
                                    reference=str(c.get("기획메모") or ""), media_dir=os.path.join(out_root, "media"),
                                    state_path=os.path.join(work, "대본_진행.json"), gate=gate)
@@ -680,9 +720,19 @@ def run_doc(m, app, c, gate):
     if dropped:
         story = "\n".join(keep)
         log(f"깨진 사진 {dropped}장을 빼고 진행합니다")
-    story, _ = m.hook_fix(app.model_var.get().strip(), story, log, gate, title=title)   # 규칙: 30초 후크 + 첫 5초 = 제목·썸네일 약속
-    story, _ = m.retention_fix(app.model_var.get().strip(), story, title, log, gate)    # 규칙: 챕터 끝 예고 + 시리즈 한 줄 (1위 영상 분석)
-    story, _ = m.polite_fix(app.model_var.get().strip(), story, log, gate)   # 규칙: 모든 나레이션은 존댓말 (자막·성우 함께)
+    if res.get("story_drawn"):              # 나레이션 먼저 흐름에서 이미 다듬고 그림까지 넣은 대본 → 그대로 (다듬기를 두 번 하지 않게)
+        story = res["story_drawn"]
+    else:
+        story, _ = m.hook_fix(app.model_var.get().strip(), story, log, gate, title=title)   # 규칙: 30초 후크 + 첫 5초 = 제목·썸네일 약속
+        story, _ = m.retention_fix(app.model_var.get().strip(), story, title, log, gate)    # 규칙: 챕터 끝 예고 + 시리즈 한 줄 (1위 영상 분석)
+        story, _ = m.polite_fix(app.model_var.get().strip(), story, log, gate)   # 규칙: 모든 나레이션은 존댓말 (자막·성우 함께)
+    defer = m.DEFER_DRAW["on"] and not any(m.parse_media(x) for x in story.split("\n"))   # 아직 그림 없는 대본 → 나레이션 뒤에 그림
+    if defer:
+        n0 = len([x for x in story.split("\n") if x.strip()])
+        story = split_long_paras(m, story, int(c.get("문단_최대_글자") or 120))
+        n1 = len([x for x in story.split("\n") if x.strip()])
+        if n1 != n0:
+            log(f"✂ 긴 문단을 문장 끝에서 나눔: {n0} → {n1}줄 (그림이 문단마다 바뀌어 박자가 맞게)")
     base = os.path.join(out_root, m.safe_name(title))
     app.title_var.set(title)
     app.set_story(story)
@@ -725,7 +775,7 @@ def run_doc(m, app, c, gate):
         except Exception:
             pass
 
-    s["sub_hide"] = "off" if str(c.get("자막", "숨김")).strip() == "보임" else "on"   # 장문(실화·역사) 자막 없이 나레이션만 (사용자 결정 2026-10-31)
+    s["sub_hide"] = "on" if str(c.get("자막", "보임")).strip() == "숨김" else "off"   # 장문 자막: 기본 보임 (장문_설정.json 의 자막=숨김 이면 나레이션만)
     try:
         pj_ = json.load(open(base + "_프로젝트.json", encoding="utf-8"))
         pj_.setdefault("settings", {})["sub_hide"] = s["sub_hide"]
@@ -733,16 +783,35 @@ def run_doc(m, app, c, gate):
     except Exception:
         pass
 
-    if "--영상제외" in sys.argv:            # 대본·그림만 이 서버에서 → 나레이션·영상은 다른 서버 (같은 명령을 --영상제외 없이 다시 실행하면 여기서부터)
-        log("⏸ --영상제외: 대본·그림·설정까지 끝. output/장문 을 다른 서버로 옮겨 --영상제외 없이 같은 명령으로 이어서 하세요")
-        raise SystemExit(0)
-
     # 2) 나레이션 (문단마다 저장 → 이어서)
     log("🎙 나레이션 만드는 중... (이미 만든 문단은 건너뜀)")
     if hasattr(m, "ensure_depth_maps") and str(s.get("img_depth", "off")) == "on":
         m.ensure_depth_maps(m.story_photo_paths(story), log)
     narr = app.narration_for(story, s, lambda x: None, gate)
     log(f"나레이션 완성: {len(narr)}문단 · {sum(d for _, _, d in narr) / 60:.1f}분")
+    if defer and "--그림제외" in sys.argv:   # 대본·나레이션만 이 서버에서 (그림이 느린 서버) → 그림·영상은 다른 서버에서 같은 명령으로 이어서
+        log("⏸ --그림제외: 대본·나레이션까지 끝. output/장문 을 그림이 빠른 서버로 옮겨 --그림제외 없이 같은 명령으로 이어서 하세요")
+        raise SystemExit(0)
+    if defer:   # 3) 그림: 나레이션 문단 시간에 맞춰 (한 장 5~15초, 문단이 바뀔 때 바뀜) → 인물 영역(그리는 효과)
+        import subprocess
+        pj_ = json.load(open(base + "_프로젝트.json", encoding="utf-8"))
+        pj_["story"] = story
+        pj_["settings"] = {k: v for k, v in dict(pj_.get("settings") or {}, **s).items() if k not in m.SECRET_KEYS}   # 이 편 설정 그대로 (fps·제목·배경음 등)
+        m.atomic_write_text(base + "_프로젝트.json", json.dumps(pj_, ensure_ascii=False, indent=1))
+        for tool in ("그림_간격_보강.py", "인물영역_만들기.py"):
+            log(f"🖌 {tool} 실행 중...")
+            rc = subprocess.call([sys.executable, "-X", "utf8", "-u", os.path.join(HERE, tool), base + "_프로젝트.json"], cwd=HERE)
+            if rc:
+                raise SystemExit(f"{tool} 실패 (코드 {rc}) - 같은 명령으로 다시 실행하면 이어서 합니다")
+        story = json.load(open(base + "_프로젝트.json", encoding="utf-8"))["story"]
+        app.set_story(story)
+        res["story_drawn"] = story                                    # 다시 실행하면 다듬기·그림 단계는 건너뜀
+        m.atomic_write_text(script_json, json.dumps(res, ensure_ascii=False, indent=1))
+        narr = app.narration_for(story, s, lambda x: None, gate)     # 문단은 그대로 → 녹음 캐시 그대로
+        log(f"그림 완성: {len(m.photo_credits(story))}장 (나레이션 문단 시간에 맞춤)")
+    if "--영상제외" in sys.argv:            # 대본·나레이션·그림까지 이 서버에서 → 영상(합치기)은 다른 서버 (같은 명령을 --영상제외 없이 다시 실행하면 이어서)
+        log("⏸ --영상제외: 대본·나레이션·그림까지 끝. output/장문 을 다른 서버로 옮겨 --영상제외 없이 같은 명령으로 이어서 하세요")
+        raise SystemExit(0)
 
     # 3) 영상 (5분 구간마다 저장 → 이어서)
     r = m.make_renderer(title, story, s, narr)

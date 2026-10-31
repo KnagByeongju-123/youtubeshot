@@ -3049,6 +3049,9 @@ IMG_SOURCE_PRESET = {"그림: 애니(웹툰)": "웹툰", "그림: 애니+수채�
 IMG_SOURCE = {"mode": IMG_SOURCE_WEB}
 
 
+DEFER_DRAW = {"on": False}   # 장문 '나레이션 먼저': 대본 단계에서는 그림을 그리지 않음 → 나레이션 문단 시간에 맞춰 나중에 그림 (make_longdoc, 사용자 결정 2026-10-31)
+
+
 def draw_settings():
     """이미지 고르기가 '그림: …'이면 그 스타일로 이 PC에서 그리는 설정(dict), 웹 사진이거나 그림 모델이 없으면 None"""
     p = IMG_SOURCE_PRESET.get(IMG_SOURCE.get("mode"))
@@ -15106,7 +15109,9 @@ class App(tk.Tk):
                 notes.append(f"{i + 1}장: {d['notes']}")
             draw_s = draw_settings()
             use_sd = bool(draw_s) or fiction and sd_ready() and str((SCRIPT_ENGINE.get("s") or {}).get("fiction_image", "")).startswith("로컬")
-            if autophoto and use_sd:   # 이야기(또는 그림 고르기): 이 PC에서 그림을 그려 넣음 (무료)
+            if autophoto and use_sd and DEFER_DRAW["on"]:
+                pass                    # 그림은 나레이션을 만든 뒤 문단 시간에 맞춰 (그림_간격_보강)
+            elif autophoto and use_sd:   # 이야기(또는 그림 고르기): 이 PC에서 그림을 그려 넣음 (무료)
                 stop()
                 n_ph = doc_photo_target(st)
                 log(f"  🖌 {unit} {i + 1} 그림 {n_ph}장 그리는 중 (로컬 · 한 장 1~3분)...")
@@ -15135,6 +15140,8 @@ class App(tk.Tk):
             save_state()
             log(f"  {unit} {i + 1} 완성: {len(story_text_only(st)):,}자")
         opening = st8.get("opening_ph") or doc_clean(o.get("opening", ""))
+        if DEFER_DRAW["on"] and "opening_ph" not in st8 and (draw_settings() or fiction and sd_ready() and str((SCRIPT_ENGINE.get("s") or {}).get("fiction_image", "")).startswith("로컬")):
+            st8["opening_ph"] = opening          # 오프닝 그림도 나레이션 뒤에
         if autophoto and "opening_ph" not in st8 and (draw_settings() or fiction and sd_ready() and str((SCRIPT_ENGINE.get("s") or {}).get("fiction_image", "")).startswith("로컬")):
             stop()
             n_ph = max(2, doc_photo_target(opening))

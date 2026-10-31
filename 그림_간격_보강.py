@@ -130,6 +130,7 @@ def main(a):
     c = json.load(open(proj, encoding="utf-8"))
     cur = app.get_settings()
     st = dict(c.get("settings") or {})
+    orig_st = dict(st)                      # 저장할 때 그대로 되돌릴 프로젝트 설정 (fps·위 제목 등이 프로그램 기본값으로 바뀌지 않게)
     for k in m.KEEP_KEYS:
         if not str(st.get(k, "")).strip() or k in m.SECRET_KEYS:
             st[k] = cur.get(k, m.DEFAULTS.get(k, ""))
@@ -147,9 +148,12 @@ def main(a):
     long_ = [x for x in runs if x[2] - x[1] > hi]
     short_ = [x for x in runs if x[2] - x[1] < lo]
     durs = sorted(x[2] - x[1] for x in runs)
-    log(f"화면에 나오는 그림 {len(runs)}번 (그림 파일 {len(r.images)}장) · 가장 김 {durs[-1]:.1f}초 · 가장 짧음 {durs[0]:.1f}초 · 중간 {durs[len(durs) // 2]:.1f}초"
-        f" · {hi:g}초 넘음 {len(long_)}곳 · {lo:g}초 미만 {len(short_)}곳")
-    if "--측정만" in a or not (long_ or short_):
+    if durs:
+        log(f"화면에 나오는 그림 {len(runs)}번 (그림 파일 {len(r.images)}장) · 가장 김 {durs[-1]:.1f}초 · 가장 짧음 {durs[0]:.1f}초 · 중간 {durs[len(durs) // 2]:.1f}초"
+            f" · {hi:g}초 넘음 {len(long_)}곳 · {lo:g}초 미만 {len(short_)}곳")
+    else:                                   # 나레이션 먼저 만든 대본(그림 없음): 문단 시간에 맞춰 모든 자리를 새로 그림
+        log("그림이 아직 없음 → 나레이션 문단 시간에 맞춰 모든 그림 자리를 새로 그림")
+    if "--측정만" in a or not (long_ or short_ or not durs):
         for im_, t0, t1 in long_ + short_:
             log(f"   {m.hms(t0)} 그림 {im_ + 1}: {t1 - t0:.1f}초")
         app.destroy()
@@ -247,7 +251,7 @@ def main(a):
         m.atomic_write_text(proj[:-5] + "_뺀그림.txt", "\n".join(dropped))
     app.set_story("\n\n".join(out))
     d_ = app.project_dict()
-    d_["settings"] = {k: v for k, v in d_["settings"].items() if k not in m.SECRET_KEYS}
+    d_["settings"] = {k: v for k, v in dict(d_["settings"], **orig_st).items() if k not in m.SECRET_KEYS}
     m.atomic_write_text(proj, json.dumps(d_, ensure_ascii=False, indent=1))
     log(f"✅ 그림 자리 {len(slots)}개로 저장 (새 그림 {len(new_pic)}장, 뺀 그림 {len(dropped)}장 → _뺀그림.txt) · 처음 것: {os.path.basename(bak)}")
     app.destroy()
