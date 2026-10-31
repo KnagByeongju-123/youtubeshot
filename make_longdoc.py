@@ -42,6 +42,7 @@ DEFAULT = {
     "제목_표시": "왼쪽 위 작게",      # 위 가운데 / 왼쪽 위 작게 / 숨김  (10분 다큐는 큰 제목이 화면을 가려 작게)
     "나레이션_먼저": True,          # 사용자 결정 2026-10-31: 대본 → 나레이션(문단마다 시간 기록) → 그 시간에 맞춰 그림 → 배경음·자막과 합치기 (그림 스타일일 때)
     "문단_최대_글자": 120,          # 나레이션 먼저일 때 이보다 긴 문단은 문장 끝에서 나눔 (약 15초) → 그림이 문단이 바뀔 때 바뀌어 박자가 맞음
+    "그림_사용자점검": True,        # 사용자 결정 2026-10-31: 그림을 다 그리면 40장씩 모음(_그림점검_N.jpg)을 만들고 멈춤 → 점검 뒤 같은 명령에 --점검완료 를 붙여 이어서
     "자막": "보임",                 # 보임(기본, 사용자 결정 2026-10-31: 자막은 그대로) / 숨김(나레이션만)
     "자막_스타일": "자동",            # 자동(소재에 맞춰) 또는 프로그램의 '인기 롱폼 스타일' 이름 그대로
     "끝나면": "그대로",              # 연속 제작이 끝난 뒤: 그대로 / 절전 / 끄기  (시작할 때 물어봄)
@@ -817,6 +818,14 @@ def run_doc(m, app, c, gate):
         m.atomic_write_text(script_json, json.dumps(res, ensure_ascii=False, indent=1))
         narr = app.narration_for(story, s, lambda x: None, gate)     # 문단은 그대로 → 녹음 캐시 그대로
         log(f"그림 완성: {len(m.photo_credits(story))}장 (나레이션 문단 시간에 맞춤)")
+    review_ok = os.path.join(work, "그림점검_완료.txt")
+    if "--점검완료" in sys.argv and not os.path.exists(review_ok):
+        m.atomic_write_text(review_ok, time.strftime("%Y-%m-%d %H:%M"))
+    if c.get("그림_사용자점검", True) and m.photo_credits(story) and not os.path.exists(review_ok):
+        import subprocess
+        subprocess.call([sys.executable, "-X", "utf8", os.path.join(HERE, "그림_모음.py"), base + "_프로젝트.json"], cwd=HERE)
+        log("⏸ 그림 점검: 프로젝트 폴더의 _그림점검_N.jpg (40장씩) 를 사용자에게 보내 점검받은 뒤, 고칠 그림을 고치고 같은 명령에 --점검완료 를 붙여 이어서 (영상 합치기)")
+        raise SystemExit(0)
     if "--영상제외" in sys.argv:            # 대본·나레이션·그림까지 이 서버에서 → 영상(합치기)은 다른 서버 (같은 명령을 --영상제외 없이 다시 실행하면 이어서)
         log("⏸ --영상제외: 대본·나레이션·그림까지 끝. output/장문 을 다른 서버로 옮겨 --영상제외 없이 같은 명령으로 이어서 하세요")
         raise SystemExit(0)
