@@ -2,6 +2,7 @@
 (규칙: 그림 한 장 5~15초 — 나레이션 동안 그림이 그려지는 효과로 볼거리를 줌, 사용자 결정 2026-10-30)
 
   python -X utf8 그림_간격_보강.py <프로젝트.json> [--최소 5] [--최대 15] [--측정만 | --계획만] [--문단]
+  --묶음 10 : 한 번에 그리는 묶음 크기(기본 10장)   --한묶음 : 한 묶음만 그리고 멈춤(검토 뒤 다시 돌리면 다음 묶음)
   --문단 : 나레이션 문단마다 그림 한 장 (사용자 결정 2026-10-31, 역사 편 기본)
   (화면 부품 때문에 서버에서는 xvfb-run -a 로 실행)
 
@@ -243,6 +244,8 @@ def main(a):
             if not groups or groups[-1][0] != ch:
                 groups.append((ch, []))
             groups[-1][1].append(i)
+    per = int(a[a.index("--묶음") + 1]) if "--묶음" in a else 10   # 규칙(사용자 결정 2026-10-31): 10장씩 그리고 그때마다 검토 → 챕터를 10장 묶음으로 나눔
+    groups = [(ch if len(ids) <= per else f"{ch} ({k // per + 1})", ids[k:k + per]) for ch, ids in groups for k in range(0, len(ids), per)]
     prog_p = proj[:-5] + "_그림진행.json"     # 챕터 묶음마다 저장 → 중간에 꺼져도(실행 시간 제한 등) 다시 돌리면 끝난 묶음은 건너뜀
     try:
         prog = json.load(open(prog_p, encoding="utf-8"))
@@ -264,6 +267,10 @@ def main(a):
                 new_pic[i] = m.make_marker(got[n]["path"], got[n].get("caption"), got[n].get("credit"), got[n].get("page"))
         log(f"   {len(got)}/{len(ids)}장 완성")
         m.atomic_write_text(prog_p, json.dumps({"n_slots": len(slots), "pics": new_pic}, ensure_ascii=False, indent=1))
+        if "--한묶음" in a and not all(all(i in new_pic for i in ids_) for _, ids_ in groups):
+            log(f"⏸ 한 묶음({len(ids)}장) 완성 — 검토 뒤 같은 명령으로 다시 돌리면 다음 묶음 ({sum(1 for i in new_pic)}/{len(slots)}장)")
+            app.destroy()
+            return 0
 
     # ---- 새 대본: 그림 줄을 모두 빼고 자리마다 다시 넣음 ----
     before = {}
