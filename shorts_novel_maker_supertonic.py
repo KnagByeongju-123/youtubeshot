@@ -183,7 +183,15 @@ TRAD_REGIONS = [("한국", "한국 전통(가야금·해금)", ["평조", "계�
                 ("인도", "인도 전통(시타르·반수리)", ["야만", "바이라비", "카피"]),
                 ("몽골", "몽골 초원(마두금·후미)", ["초원장조", "초원단조"]),
                 ("중세유럽", "중세 유럽(류트·리코더)", ["도리안", "믹솔리디안", "에올리안"])]
-SOUND_STYLE_NAMES += [f"{pre} · {md}" for _, pre, mds in TRAD_REGIONS for md in mds]
+# 관악(피리가 주인공) 버전: 전통악기/<권역>.py 의 WIND (사용자 결정 2026-10-31)
+TRAD_WIND = [("중국", "중국 관악(디즈·샤오)", ["궁조", "상조", "각조", "치조", "우조"]),
+             ("한국", "한국 관악(대금·피리)", ["평조", "계면조"]),
+             ("일본", "일본 관악(샤쿠하치)", ["미야코부시", "요음계"]),
+             ("중동", "중동 관악(네이·주르나)", ["히자즈", "라스트", "바야티"]),
+             ("인도", "인도 관악(반수리·셰나이)", ["야만", "바이라비", "카피"]),
+             ("몽골", "몽골 관악(림베·후미)", ["초원장조", "초원단조"]),
+             ("중세유럽", "중세 유럽 관악(리코더·숌)", ["도리안", "믹솔리디안", "에올리안"])]
+SOUND_STYLE_NAMES += [f"{pre} · {md}" for _, pre, mds in TRAD_REGIONS + TRAD_WIND for md in mds]
 
 # 소재별 자동 배경음
 SOUND_BY_TOPIC = {
@@ -7117,8 +7125,9 @@ def gen_melody_box(n, rng, melody, bpm=90):
 CHINA_STRINGS = "중국 현악(고쟁·얼후)"   # 삼국지 편: 나레이션 아래 잔잔한 고쟁·얼후 + 챕터마다 고쟁 연주 (중국현악.py, 직접 합성) = 궁조
 CHINA_MODE_STYLES = {CHINA_STRINGS: "궁조", "중국 현악 · 상조(차분)": "상조", "중국 현악 · 각조(신비)": "각조",
                      "중국 현악 · 치조(활기)": "치조", "중국 현악 · 우조(애잔)": "우조"}   # 배경음 이름 → 음계 (사용자 결정 2026-10-31: 편마다 골라 씀)
-TRAD_STYLES = {k: ("중국", v) for k, v in CHINA_MODE_STYLES.items()}          # 배경음 이름 → (권역, 음계): 챕터마다 한 소절 연주하는 전통악기
-TRAD_STYLES.update({f"{pre} · {md}": (rg, md) for rg, pre, mds in TRAD_REGIONS for md in mds})
+TRAD_STYLES = {k: ("중국", v, "현악") for k, v in CHINA_MODE_STYLES.items()}   # 배경음 이름 → (권역, 음계, 현악|관악): 챕터마다 한 소절 연주하는 전통악기
+TRAD_STYLES.update({f"{pre} · {md}": (rg, md, "현악") for rg, pre, mds in TRAD_REGIONS for md in mds})
+TRAD_STYLES.update({f"{pre} · {md}": (rg, md, "관악") for rg, pre, mds in TRAD_WIND for md in mds})
 _CHINA_MOD = {}
 _TRAD_MOD = {}
 
@@ -7130,23 +7139,23 @@ def is_trad(style):
 is_china = is_trad      # 예전 이름 (render_project·make_longdoc 호환)
 
 
-def _trad(region):
-    """전통악기/<권역>.py 의 REGION (interlude·bed). 중국은 중국현악.py 그대로"""
+def _trad(region, kind="현악"):
+    """전통악기/<권역>.py 의 REGION(현악) 또는 WIND(관악) (interlude·bed). 중국 현악은 중국현악.py 그대로"""
     if region not in _TRAD_MOD:
         spec_ = importlib.util.spec_from_file_location("trad_" + region, os.path.join(BASE, "전통악기", region + ".py"))
         mod_ = importlib.util.module_from_spec(spec_)
         spec_.loader.exec_module(mod_)
-        _TRAD_MOD[region] = mod_.REGION
-    return _TRAD_MOD[region]
+        _TRAD_MOD[region] = mod_
+    return _TRAD_MOD[region].WIND if kind == "관악" else _TRAD_MOD[region].REGION
 
 
 def trad_from_memo(memo):
-    """기획메모의 '배경음: 중동 히자즈' / '음계: 우조'(중국) → 배경음 이름. 없으면 ''"""
+    """기획메모의 '배경음: 중동 히자즈' / '배경음: 한국 관악 계면조' / '음계: 우조'(중국) → 배경음 이름. 없으면 ''"""
     memo = str(memo or "")
-    m_ = re.search(r"배경음\s*[:：]\s*([^\s,.·]+)[\s·]*([^\s,.]+)?", memo)
+    m_ = re.search(r"배경음\s*[:：]\s*([^\s,.·]+)[\s·]*(관악|현악)?[\s·]*([^\s,.]+)?", memo)
     if m_:
-        rg, md = m_.group(1), (m_.group(2) or "")
-        hit = [k for k, (r_, d_) in TRAD_STYLES.items() if rg in (r_, k.split(" ")[0]) and (not md or d_ == md)]
+        rg, kd, md = m_.group(1), (m_.group(2) or "현악"), (m_.group(3) or "")
+        hit = [k for k, (r_, d_, k_) in TRAD_STYLES.items() if rg in (r_, k.split(" ")[0]) and k_ == kd and (not md or d_ == md)]
         if hit:
             return hit[0]
     m_ = re.search(r"음계\s*[:：]\s*(궁조|상조|각조|치조|우조)", memo)
@@ -7183,8 +7192,8 @@ SOUND_STYLES = {
     "바람": gen_wind,
     "파도": gen_waves,
 }
-for _k, (_rg, _md) in TRAD_STYLES.items():
-    SOUND_STYLES[_k] = (lambda rg, md: lambda n, r: _trad(rg).bed(n, r, md))(_rg, _md)
+for _k, (_rg, _md, _kd) in TRAD_STYLES.items():
+    SOUND_STYLES[_k] = (lambda rg, md, kd: lambda n, r: _trad(rg, kd).bed(n, r, md))(_rg, _md, _kd)
 assert list(SOUND_STYLES) == SOUND_STYLE_NAMES
 CURRENT_MELODY = {"melody": "", "bpm": 90}   # 현재 대본의 노래 멜로디 (올드 팝송일 때 채워짐)
 
@@ -7371,7 +7380,8 @@ def build_audio(r, s, style):
         rng_i = np.random.default_rng(len(getattr(r, "segs", [])))
         for sg in getattr(r, "segs", []):
             if sg.get("kind") == "chapter":
-                it = _trad(TRAD_STYLES[style][0]).interlude(rng_i, mode=TRAD_STYLES[style][1])
+                rg_, md_, kd_ = TRAD_STYLES[style]
+                it = _trad(rg_, kd_).interlude(rng_i, mode=md_)
                 it = it / (np.abs(it).max() + 1e-6) * 0.42
                 i0 = int((sg["t0"] + 0.15) * SR)
                 seg = it[: max(0, n - i0)]

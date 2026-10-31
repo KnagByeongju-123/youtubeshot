@@ -14,3 +14,10 @@ REGION = K.Region(
            "바이라비": ([0, 1, 4, 5, 7, 8, 11], 50, "엄숙하고 깊음 (새벽·종교)"),
            "카피": ([0, 2, 3, 5, 7, 9, 10], 50, "부드럽고 그리움 (사랑·민중)")},
     drone_kind="pluck", gliss=False, tempo=0.5)
+
+
+WIND = K.Region(   # 관악: 반수리(대나무 피리, 미끄러지는 음) + 셰나이(겹서), 낮은 음은 시타르, 탄푸라 바탕음
+    "인도", "반수리·셰나이·탄푸라",
+    lead=lambda f, d, rng, last: K.flute(f, d, breath=0.22, vib=0.012 if last else 0.007, slide=0.06, rng=rng),
+    sustain=lambda f, d, rng: K.reed(f, d, band=(600, 3200), bright=0.2, vib=0.015, vib_rate=6.0, slide=0.03),
+    bass=REGION.lead, modes=REGION.modes, drone_kind="pluck", legato=True, gliss=False, tempo=0.6)

@@ -13,3 +13,9 @@ REGION = K.Region(
     modes={"초원장조": ([0, 2, 4, 7, 9], 47, "넓고 웅장 (초원·기마·제국)"),
            "초원단조": ([0, 3, 5, 7, 10], 47, "쓸쓸하고 아득 (원정·이별)")},
     drone_kind="throat", gliss=False, tempo=0.55)
+
+
+WIND = K.Region(   # 관악: 림베(가로피리, 긴 숨) + 마두금, 낮은 음은 톱쇼르, 후미 바탕음
+    "몽골", "림베·마두금·후미",
+    lead=lambda f, d, rng, last: K.flute(f, d, breath=0.25, vib=0.009, slide=0.02, rng=rng),
+    sustain=REGION.sustain, bass=REGION.lead, modes=REGION.modes, drone_kind="throat", legato=True, gliss=False, tempo=0.7)
