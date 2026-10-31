@@ -209,10 +209,7 @@ def delete_caches(items, project):
             voices.add(("supertonic:" + v["code"], float(v.get("rate", 0) or 0)))
     pitch, steps = float(st.get("narr_pitch", 0) or 0), int(st.get("st_steps", 5) or 5)
     cache = os.path.join(HERE, "output", "tts_cache")
-    fast = [it for it in items if it.get("speed")]
-    items = [it for it in items if not it.get("speed")]
-    if fast:
-        slow_down(m, fast, st, cache, pitch, steps)
+    # 빨라진 문장도 겹친 문장처럼 녹음을 지워 자연스럽게 다시 녹음 (사용자 결정 2026-10-31: 나레이션 속도를 억지로 늘리지 않음 → slow_down 쓰지 않음)
     texts = set()
     for it in items:
         for t in (it["sentence"], it["paragraph"]):
