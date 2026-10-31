@@ -10875,9 +10875,36 @@ def ppt_tag_split(t):
     return re.sub(r"\s*(\[\s*(?:다음|클릭|전체|확대\s*[:：][^\]]*|효과\s*[:：][^\]]*|쉼\s*[:：][^\]]*)\s*\])\s*", r"\n\n\1\n\n", str(t or ""))
 
 
+SFX_DIR = os.path.join(BASE, "효과음")   # 녹음된 무료 효과음 (CC0, 효과음/출처.txt): [효과:전투시작] [효과:뿔나팔] [효과:진군북] [효과:함성] …
+_SFX_FILE_CACHE = {}
+
+
+def sfx_file(kind):
+    """효과음/<이름>.mp3(.wav/.ogg) 가 있으면 그 소리 (모노, SR). 없으면 None"""
+    k = str(kind).strip()
+    if k in _SFX_FILE_CACHE:
+        return _SFX_FILE_CACHE[k]
+    path = next((os.path.join(SFX_DIR, k + e) for e in (".mp3", ".wav", ".ogg") if os.path.exists(os.path.join(SFX_DIR, k + e))), None)
+    y = None
+    if path:
+        try:
+            raw = subprocess.run([get_ffmpeg(), "-v", "error", "-i", path, "-f", "f32le", "-ac", "1", "-ar", str(SR), "-"],
+                                 capture_output=True, check=True).stdout
+            y = np.frombuffer(raw, np.float32).copy()
+            y = y / (np.abs(y).max() + 1e-6) * 0.9
+        except Exception:
+            y = None
+    _SFX_FILE_CACHE[k] = y
+    return y
+
+
 def sfx_sound(kind):
-    """발표 영상 효과음 (프로그램이 직접 만듦): 알림(띵동) · 정답(딩동댕) · 땡(오답) · 휙 · 박수 · 두둥"""
+    """발표 영상 효과음 (프로그램이 직접 만듦): 알림(띵동) · 정답(딩동댕) · 땡(오답) · 휙 · 박수 · 두둥
+    효과음/<이름>.mp3 가 있으면 그 녹음을 씀 (전투시작·뿔나팔·진군북·함성 등)"""
     k = str(kind)
+    f_ = sfx_file(k)
+    if f_ is not None:
+        return f_
     tt = lambda d: np.arange(int(d * SR), dtype=np.float32) / SR
 
     def tone(fq, d, decay=6.0, harm=(1.0, 0.35, 0.12)):
