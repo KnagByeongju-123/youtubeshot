@@ -7,7 +7,7 @@
   - reed   : 겹서(리드) 악기 (피리·주르나·셰나이·숌) — 좁은 펄스파 + 콧소리 띠
   - drone  : 계속 울리는 바탕음 (탄푸라·후미·허디거디)
   - frame_drum : 손으로 치는 틀북 (다프 등), 아주 작게
-  - gong·big_drum·bell·jingles : 막을 여는 타악 (징·대라, 북·다이코·팀파니, 교회 종·놋쇠 종, 쇠방울) → Region(opener=...)
+  - gong·big_drum : 막을 여는 타악 — perc('징'|'북'|'연속북') 하나만 (섞으면 탁해서, 사용자 결정 2026-10-31) → Region(opener=...)
 REGION = 현악(뜯는 현이 주인공), WIND = 관악(피리가 주인공) — 권역 파일마다 둘 다
 Region(...).interlude(rng, sec, mode) : 챕터 제목 동안 한 소절 (훑기 → 짧은 가락 → 으뜸음으로 끝)
 Region(...).bed(n, rng, mode)        : 나레이션 아래 잔잔한 배경
@@ -150,11 +150,10 @@ def gong(f0=110, dur=6.0, bend=-0.03, rng=None):
     t = np.arange(n) / SR
     glide = 1 + bend * (1 - np.exp(-t / 0.8))
     y = np.zeros(n)
-    for r, a, dec in [(1.0, 1.0, 4.0), (1.52, 0.6, 2.8), (2.03, 0.5, 2.2), (2.76, 0.35, 1.6), (3.4, 0.25, 1.2), (4.1, 0.2, 0.9), (5.3, 0.12, 0.6)]:
+    for r, a, dec in [(1.0, 1.0, 4.5), (1.52, 0.35, 2.6), (2.03, 0.22, 1.8), (2.76, 0.1, 1.2)]:   # 맑게: 높은 배음은 조금만 (사용자: 탁하지 않게)
         ph = np.cumsum(2 * np.pi * f0 * r * glide / SR) + rng.random() * 6.28
-        y += a * np.sin(ph) * np.exp(-t / dec) * (1 + 0.25 * np.sin(2 * np.pi * (0.7 + rng.random()) * t))
-    hit = rng.standard_normal(n) * np.exp(-t / 0.015) * 0.6               # 채가 닿는 소리
-    y = (y + hit) * np.clip(t / 0.004, 0, 1) * np.clip((dur - t) / 0.8, 0, 1)
+        y += a * np.sin(ph) * np.exp(-t / dec) * (1 + 0.15 * np.sin(2 * np.pi * (0.6 + 0.4 * rng.random()) * t))
+    y = y * np.clip(t / 0.012, 0, 1) * np.clip((dur - t) / 0.8, 0, 1)        # 부드러운 채(솜방망이)
     return (y / (np.abs(y).max() + 1e-6)).astype(np.float32)
 
 
@@ -164,9 +163,10 @@ def big_drum(f0=70, dur=2.2, rng=None):
     rng = rng or np.random.default_rng()
     n = int(dur * SR)
     t = np.arange(n) / SR
-    f = f0 * (1 + 0.6 * np.exp(-t / 0.05))
-    body = np.sin(np.cumsum(2 * np.pi * f / SR)) * np.exp(-t / (dur * 0.35))
-    skin = lfilter(*butter(2, [150 / (SR / 2), 1200 / (SR / 2)], "band"), rng.standard_normal(n)) * np.exp(-t / 0.06) * 0.8
+    f = f0 * (1 + 0.5 * np.exp(-t / 0.04))
+    ph = np.cumsum(2 * np.pi * f / SR)
+    body = (np.sin(ph) + 0.25 * np.sin(1.5 * ph)) * np.exp(-t / (dur * 0.3))
+    skin = lfilter(*butter(2, 400 / (SR / 2)), rng.standard_normal(n)) * np.exp(-t / 0.02) * 0.15   # 가죽 소리는 아주 조금 (탁하지 않게)
     y = body + skin
     return (y / (np.abs(y).max() + 1e-6)).astype(np.float32)
 
@@ -250,8 +250,10 @@ class Region:
         return [o * 12 + p + root for o in range(-3, 5) for p in pen if lo <= o * 12 + p + root <= hi]
 
     def interlude(self, rng, sec=4.0, mode=None, percussion=True):
-        """챕터 제목 동안 한 소절. percussion: 타악(opener)으로 막을 열고 시작"""
+        """챕터 제목 동안 한 소절. percussion: True = 권역 기본 타악(opener), '징'·'북'·'연속북' = 그 타악, False = 없음"""
         body = self._phrase(rng, sec, mode)
+        if isinstance(percussion, str) and percussion in PERC_KINDS:
+            return with_opener(body, perc(percussion, rng))
         return with_opener(body, self.opener(rng) if (percussion and self.opener) else None)
 
     def _phrase(self, rng, sec=4.0, mode=None):
@@ -317,13 +319,32 @@ class Region:
 
 
 OPEN_DELAY = 0.9          # 타악이 울리고 가락이 들어오기까지 (초)
+PERC_KINDS = ["징", "북", "연속북"]   # 막을 여는 타악 (사용자 결정 2026-10-31: 섞지 말고 하나만, 긴장감용 연속 북)
+
+
+def perc(kind, rng, f0=None):
+    """막을 여는 타악 하나 → (스테레오, 가락이 들어올 때까지 초).
+    징: 맑은 징 한 번 / 북: 큰 북 한 번 / 연속북: 점점 빨라지고 커지는 북 굴림 끝에 큰 북 (긴장감)"""
+    if kind == "징":
+        return opener([(lambda r: gong(f0 or 110, 6.0, bend=0.02, rng=r), 0.0, 1.0, 0.0)], rng), OPEN_DELAY
+    if kind == "북":
+        return opener([(lambda r: big_drum(f0 or 62, 2.6, r), 0.0, 1.0, 0.0)], rng), OPEN_DELAY
+    hits, t, gap = [], 0.0, 0.34                 # 연속북: 간격 0.34초 → 0.07초, 크기 0.25 → 0.8
+    while t < 2.3:
+        g = 0.25 + 0.55 * (t / 2.3)
+        hits.append((lambda r: big_drum(f0 or 70, 0.7, r), t, g, (-0.15 if len(hits) % 2 else 0.15)))
+        t += gap
+        gap = max(0.07, gap * 0.86)
+    hits.append((lambda r: big_drum((f0 or 70) * 0.85, 3.0, r), 2.45, 1.0, 0.0))
+    return opener(hits, rng, sec=6.0), 2.6
 
 
 def with_opener(body, op):
-    """타악 묶음(op) 위에 한 소절(body)을 OPEN_DELAY 뒤에 얹음. op 가 없으면 body 그대로"""
+    """타악(op = 스테레오 또는 (스테레오, 가락 시작 초)) 위에 한 소절(body)을 얹음. op 가 없으면 body 그대로"""
     if op is None:
         return body
-    i0 = int(OPEN_DELAY * SR)
+    op, delay = op if isinstance(op, tuple) else (op, OPEN_DELAY)
+    i0 = int(delay * SR)
     out = np.zeros((max(len(op), i0 + len(body)), 2), np.float32)
     out[: len(op)] += op / (np.abs(op).max() + 1e-6) * 0.9
     out[i0:i0 + len(body)] += body / (np.abs(body).max() + 1e-6) * 0.75

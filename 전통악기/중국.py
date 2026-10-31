@@ -12,8 +12,8 @@ _cs = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(_cs)
 
 
-def OPENER(rng):   # 막을 여는 타악 (챕터 제목 때): 대라(큰 징, 음이 살짝 내려감) + 북
-    return K.opener([(lambda r: K.gong(130, 6.0, bend=-0.05, rng=r), 0.0, 1.0, 0.0), (lambda r: K.big_drum(68, 2.0, r), 0.0, 0.6, -0.2)], rng)
+def OPENER(rng):   # 막을 여는 타악 (챕터 제목 때): 징 또는 북 하나: 대라(큰 징, 음이 살짝 내려감) + 북
+    return K.perc("징", rng, 130)
 
 
 class _China:
@@ -21,7 +21,8 @@ class _China:
     modes = _cs.MODES
 
     def interlude(self, rng, sec=4.0, mode=None, percussion=True):
-        return K.with_opener(_cs.interlude(rng, sec, mode or "궁조"), OPENER(rng) if percussion else None)
+        op = K.perc(percussion, rng) if isinstance(percussion, str) and percussion in K.PERC_KINDS else (OPENER(rng) if percussion else None)
+        return K.with_opener(_cs.interlude(rng, sec, mode or "궁조"), op)
 
     def bed(self, n, rng, mode=None):
         return _cs.bed(n, rng, mode or "궁조")

@@ -1,4 +1,4 @@
-"""권역별 전통악기 배경음 샘플(30초 mp3)을 만듦 → 역사/배경음샘플/<권역>/<현악|관악>/<번호>_<음계>_<느낌>.mp3 (+ <권역>/타악/막열기.mp3)
+"""권역별 전통악기 배경음 샘플(30초 mp3)을 만듦 → 역사/배경음샘플/<권역>/<현악|관악>/<번호>_<음계>_<느낌>.mp3 (+ 타악/1_징·2_북·3_연속북.mp3)
 사용: python -X utf8 전통악기/샘플만들기.py [권역 ...]   (권역을 안 쓰면 전부)"""
 import importlib.util
 import os
@@ -28,16 +28,17 @@ def ffmpeg():
 def main(names):
     sys.path.insert(0, HERE)
     import 공통 as K
-    for rg in names or REGIONS:
-        kinds, opener = load(rg)
-        d = os.path.join(OUT, rg, "타악")                      # 막을 여는 타악만 (챕터 제목 때 맨 먼저)
-        os.makedirs(d, exist_ok=True)
-        import numpy as np
-        wp = os.path.join(d, "막열기.wav")
-        K.write_wav(wp, opener(np.random.default_rng(3)))
+    import numpy as np
+    d = os.path.join(OUT, "타악")                               # 막을 여는 타악 (권역 공통): 징·북·연속북
+    os.makedirs(d, exist_ok=True)
+    for i, kind in enumerate(K.PERC_KINDS, 1):
+        wp = os.path.join(d, f"{i}_{kind}.wav")
+        K.write_wav(wp, K.perc(kind, np.random.default_rng(3))[0])
         subprocess.run([ffmpeg(), "-y", "-loglevel", "error", "-i", wp, "-b:a", "160k", wp[:-4] + ".mp3"], check=True)
         os.remove(wp)
         print("OK", os.path.relpath(wp[:-4] + ".mp3", os.path.dirname(HERE)))
+    for rg in names or REGIONS:
+        kinds, opener = load(rg)
         for kind, R in kinds.items():
             d = os.path.join(OUT, rg, kind)
             os.makedirs(d, exist_ok=True)

@@ -6,8 +6,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import 공통 as K  # noqa: E402
 
 
-def OPENER(rng):   # 막을 여는 타악 (챕터 제목 때)
-    return K.opener([(lambda r: K.bell(196, 6.0, r), 0.0, 0.85, 0.0), (lambda r: K.big_drum(62, 2.2, r), 0.0, 0.6, -0.2)], rng)
+def OPENER(rng):   # 막을 여는 타악 (챕터 제목 때): 징 또는 북 하나
+    return K.perc("북", rng, 62)
 
 
 REGION = K.Region(

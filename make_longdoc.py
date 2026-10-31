@@ -705,6 +705,16 @@ def run_doc(m, app, c, gate):
             pass
     if m.is_trad(c["배경음"]):
         s["chapter_hold"] = 4.2               # 챕터 제목 동안 나레이션을 쉬고 고쟁 연주
+        pc_ = re.search(r"타악\s*[:：]\s*(징|북|연속북|없음)", str(c.get("기획메모", "")))   # 주제목록 메모의 '타악: 연속북' (없으면 권역 기본)
+        if pc_:
+            s["chapter_perc"] = "off" if pc_.group(1) == "없음" else pc_.group(1)
+            log(f"🥁 챕터 시작 타악: {pc_.group(1)}")
+            try:
+                pj_ = json.load(open(base + "_프로젝트.json", encoding="utf-8"))
+                pj_.setdefault("settings", {})["chapter_perc"] = s["chapter_perc"]
+                m.atomic_write_text(base + "_프로젝트.json", json.dumps(pj_, ensure_ascii=False, indent=1))
+            except Exception:
+                pass
     if HISTORY:                                # 역사 편: 입체 움직임(2.5D) 끔 — 그리는 효과와 겹치고 없는 게 나음 (사용자 결정 2026-10-30)
         s["img_depth"] = "off"
         try:

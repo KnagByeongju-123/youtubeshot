@@ -1,4 +1,4 @@
-"""그리는 효과 — 그림이 붓으로 그려지듯 나타남 (흰 바탕 → 배경 먹선 → 배경 색칠 → 인물 먹선 → 인물 색칠)
+"""그리는 효과 — 그림이 붓으로 그려지듯 나타남 (흰 종이 → 배경·인물 먹선 → 배경 색칠 → 인물 색칠(붓 획))
 
 인물은 굵은 붓이 위에서 아래로 한 획씩(지그재그) 지나가며 드러남 (brush_fields, 사용자 결정 2026-10-31: 한꺼번에 나타나지 않게)
 영상 프로그램(shorts_novel_maker_supertonic.py)이 그림이 처음 나타날 때 이 효과를 씀:
@@ -88,22 +88,22 @@ def brush_fields(M, seed=0):
 
 
 def empty_plate(full, M, with_fog=False):
-    """인물 자리를 둘레 배경색으로 메우고 강하게 흐리게(blur) — 경계도 넓게 번져서 인물 자리가 안개처럼 자연스럽게 비어 보임
-    (사용자 결정: 하얗게 비운 구멍보다 흐림 효과처럼)"""
+    """인물 자리를 둘레 배경으로 자연스럽게 이어 메움 (흐림·안개 없이, 사용자 결정 2026-10-31)
+    배경 결을 그대로 이어 그리고(inpaint), 경계는 좁고 부드럽게 섞어서 인물이 드러날 때 하얀 테두리·뿌연 자국이 남지 않게"""
     h, w = M.shape
     hole = (M > 0.05).astype(np.uint8) * 255
     if not hole.any():
         return (full.astype(np.uint8), np.zeros((h, w), np.float32)) if with_fog else full.astype(np.uint8)
-    small = cv2.resize(full.astype(np.uint8), (w // 4, h // 4))
-    hs = cv2.dilate(cv2.resize(hole, (w // 4, h // 4)), cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * (w // 160) + 1, 2 * (w // 160) + 1)))
-    fill = cv2.inpaint(small, hs, 15, cv2.INPAINT_TELEA)
-    fill = cv2.GaussianBlur(fill.astype(np.float32), (0, 0), max(4, w / 120))          # 둘레 색을 흐리게 번진 배경
+    k = 2 if max(h, w) > 1200 else 1                                                   # 큰 그림은 절반 크기로 메운 뒤 키움 (빠르게)
+    small = cv2.resize(full.astype(np.uint8), (w // k, h // k))
+    r = max(3, int(w / 240))                                                           # 인물 윤곽선(먹선)까지 덮을 만큼만 넓힘
+    hs = cv2.dilate(cv2.resize(hole, (w // k, h // k)), cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * (r // k) + 1, 2 * (r // k) + 1)))
+    fill = cv2.inpaint(small, hs, 7, cv2.INPAINT_TELEA).astype(np.float32)
     fill = cv2.resize(fill, (w, h), interpolation=cv2.INTER_CUBIC)
-    plate = fill * 0.85 + PAPER * 0.15
-    r = max(5, int(w / 110))                                                           # 인물 윤곽선(먹선)·빠진 투구 끝까지 완전히 덮고
-    Mf = cv2.dilate(M.astype(np.float32), cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (4 * r + 1, 4 * r + 1)))
-    Mf = cv2.GaussianBlur(Mf, (0, 0), r / 2)[..., None]                                # 그 바깥에서 넓게 번지게 (안개처럼)
-    out = (full.astype(np.float32) * (1 - Mf) + plate * Mf).astype(np.uint8)
+    fill = cv2.GaussianBlur(fill, (0, 0), 1.2)                                         # 메운 자리의 줄무늬만 살짝 정리 (흐림 아님)
+    Mf = cv2.dilate(M.astype(np.float32), cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * r + 1, 2 * r + 1)))
+    Mf = cv2.GaussianBlur(Mf, (0, 0), r * 0.8)[..., None]                              # 좁고 부드러운 경계
+    out = (full.astype(np.float32) * (1 - Mf) + fill * Mf).astype(np.uint8)
     return (out, Mf[..., 0]) if with_fog else out
 
 
@@ -124,35 +124,40 @@ def _reveal(f, p, soft=0.06):
 
 
 def frame(full, plate, M, prog, seed=0, fog=None, brush=None):
-    """그리는 중인 한 장면. full·plate: (h, w, 3) uint8, M: (h, w) 0~1 인물(없으면 None), prog: 0~1 (1 이면 완성 그림)
-    인물이 있으면 배경 선 30% → 배경 색 25% → 인물 선 22% → 인물 색 23%, 없으면 선 50% → 색 50%
-    fog: 인물 둘레 안개 범위(empty_plate(with_fog=True)) — 인물 색칠 때 이 범위까지 함께 원래 그림으로 (안개 테두리가 갑자기 바뀌지 않게)
-    brush: brush_fields() 결과(같은 화면 크기로 맞춘 것) — 있으면 인물을 붓 획 순서로 드러냄"""
+    """그리는 중인 한 장면. full: (h, w, 3) uint8 원래 그림, M: (h, w) 0~1 인물(없으면 None), prog: 0~1 (1 이면 완성 그림)
+    순서 (사용자 결정 2026-10-31: 인물 자리가 비거나 흐려 보이지 않게, 실제 수묵화처럼)
+      인물 있음: 1) 흰 종이에 배경·인물 먹선 (인물 선은 붓 획 순서) 30% → 2) 배경 색 28% (인물은 먹선 스케치 그대로) → 3) 인물 색 (붓 획) 42%
+      인물 없음: 먹선 50% → 색 50%
+    plate·fog 는 예전 호환용 (fog 가 있으면 인물 경계를 그 범위로 부드럽게)"""
     if prog >= 1:
         return full
     h, w = full.shape[:2]
     f_bl, f_bc, f_pl, f_pc = fields(w, h, seed)
-    full_f, bg = full.astype(np.float32), plate.astype(np.float32)
+    full_f = full.astype(np.float32)
     person = M is not None and float(M.max()) > 0.5
-    T = ([0.24, 0.20, 0.25, 0.31] if brush is not None else [0.30, 0.25, 0.22, 0.23]) if person else [0.5, 0.5, 0, 0]
+    T = [0.30, 0.28, 0.42] if person else [0.5, 0.5, 0.0]
     ed = np.cumsum([0] + T)
-    p = [ease((prog - ed[k]) / T[k]) if T[k] else 0.0 for k in range(4)]
-    bl = ink_lines(bg)[..., None]
-    rb = _reveal(f_bl, p[0])
-    img = PAPER * (1 - bl * rb) + INK * (bl * rb)                       # 1) 배경 먹선
-    cb = _reveal(f_bc, p[1], 0.15)
-    img = img * (1 - cb) + bg * cb                                      # 2) 배경 색
+    p = [ease((prog - ed[k]) / T[k]) if T[k] else 0.0 for k in range(3)]
+    lines = ink_lines(full_f)[..., None]
     if person:
-        Mm = M[..., None]
-        pl = ink_lines(full_f)[..., None]
-        if brush is not None:                                           # 붓 획 순서 (획 머리는 또렷하게)
+        Mm = np.clip(M, 0, 1)[..., None]
+        edge = np.clip(fog, 0, 1)[..., None] if fog is not None else Mm               # 인물 경계 (좁고 부드럽게)
+        if brush is not None:
             f_pl, f_pc = brush[0][..., None], brush[1][..., None]
-        rp = _reveal(f_pl, p[2], 0.025 if brush is not None else 0.06) * Mm
-        k_ = 0.55 * rp * (1 - p[3])
-        img = img * (1 - k_) + PAPER * k_
-        img = img * (1 - pl * rp) + INK * (pl * rp)                     # 3) 인물 먹선
-        cp = _reveal(f_pc, p[3], 0.03 if brush is not None else 0.15) * (np.maximum(Mm, fog[..., None]) if fog is not None else Mm)
-        img = img * (1 - cp) + full_f * cp                              # 4) 인물 색
+        rl = _reveal(f_bl, p[0]) * (1 - Mm) + _reveal(f_pl, p[0], 0.025 if brush is not None else 0.06) * Mm
+    else:
+        edge = np.zeros((h, w, 1), np.float32)
+        rl = _reveal(f_bl, p[0])
+    sketch = PAPER * (1 - lines * rl) + INK * (lines * rl)                       # 1) 먹선 (배경 + 인물)
+    if person:                                                                    # 인물 자리 종이에 아주 옅은 바탕색 (하얀 실루엣이 아니게)
+        tint = cv2.GaussianBlur(full_f, (0, 0), 8)
+        sketch = sketch * (1 - 0.18 * edge * rl) + (tint * (1 - lines) + INK * lines) * (0.18 * edge * rl)
+    core = np.clip((Mm - 0.5) * 2.5, 0, 1) if person else edge                       # 배경 색은 인물 윤곽선 바로 앞까지 (하얀 띠가 남지 않게)
+    cb = _reveal(f_bc, p[1], 0.15) * (1 - core)
+    img = sketch * (1 - cb) + full_f * cb                                         # 2) 배경 색 (인물은 스케치로 남음)
+    if person:
+        cp = _reveal(f_pc, p[2], 0.03 if brush is not None else 0.15) * edge
+        img = img * (1 - cp) + full_f * cp                                        # 3) 인물 색 (붓 획)
     return np.clip(img, 0, 255).astype(np.uint8)
 
 
