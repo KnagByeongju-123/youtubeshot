@@ -599,6 +599,7 @@ FIELDS = [
     ("소리", "bgm_mode", "배경음", "choice:자동생성,파일,없음", "자동생성"),
     ("소리", "bgm_style", "배경음 스타일", "choice:" + ",".join(["자동(소재별)"] + SOUND_STYLE_NAMES), "자동(소재별)"),
     ("소리", "bgm_volume", "배경음 볼륨(0~2, 0.03=거의 안 들림)", "float", 0.03),
+    ("소리", "bgm_mul", "배경음 배율(전통악기 포함, 0.5=절반, 나레이션은 그대로)", "float", 1.0),
     ("소리", "chapter_perc", "전통악기 배경음: 챕터 시작 타악 (on=권역 기본 징 또는 북, 연속북=긴장감, 진군북=출정·전투, 난타)", "choice:on,징,북,연속북,진군북,난타,off", "off"),   # 기본 끔 (사용자 결정 2026-10-31: 잘 안 들림)
     ("소리", "reveal_hit", "반전 효과음", "choice:on,off", "on"),
     ("소리", "hit_sound", "반전 효과음 종류", "choice:자동(코미디=두둥탁),쿵(반전),두둥탁(개그 드럼),띠링(밝은 종)", "자동(코미디=두둥탁)"),
@@ -7405,6 +7406,7 @@ def build_audio(r, s, style):
             g = g * duck_env(n, narr, r.duration, float(s.get("narr_duck", 0.35)))
         if is_trad(style):             # 전통악기(고쟁·얼후 등)는 '거의 안 들림' 크기로는 묻혀서 조금 키움
             g = g * max(1.0, 0.3 / max(0.01, float(s["bgm_volume"])))
+        g = g * float(s.get("bgm_mul", 1.0) or 1.0)   # 배경음 배율 (사용자 결정 2026-10-31: 역사 편 0.5 = 50% 작게, 나레이션 크기는 그대로)
         out += music * g[:, None].astype(np.float32)
     if is_trad(style):                 # 나레이션 사이(챕터 제목이 나오는 동안) 전통악기 한 소절 (같은 음계)
         rng_i = np.random.default_rng(len(getattr(r, "segs", [])))
@@ -7413,7 +7415,7 @@ def build_audio(r, s, style):
                 rg_, md_, kd_ = TRAD_STYLES[style]     # 새 막(챕터)이 열릴 때 징·큰 북·종을 먼저 (chapter_perc: off 면 끔, 사용자 결정 2026-10-31)
                 pc_ = str(s.get("chapter_perc", "off"))
                 it = _trad(rg_, kd_).interlude(rng_i, mode=md_, percussion=False if pc_ == "off" else (pc_ if pc_ in ("징", "북", "연속북", "진군북", "난타") else True))
-                it = it / (np.abs(it).max() + 1e-6) * 0.42
+                it = it / (np.abs(it).max() + 1e-6) * 0.42 * float(s.get("bgm_mul", 1.0) or 1.0)
                 i0 = int((sg["t0"] + 0.15) * SR)
                 seg = it[: max(0, n - i0)]
                 out[i0:i0 + len(seg)] += seg

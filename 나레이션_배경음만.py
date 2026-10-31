@@ -24,6 +24,8 @@ app.update()
 s = app.get_settings()
 s.update(pj.get("settings", {}))
 s["narration"] = "on"
+if "--배경음배율" in sys.argv:      # 배율을 직접 주면 프로젝트의 bgm_mul 은 쓰지 않음 (두 번 줄지 않게)
+    s["bgm_mul"] = 1.0
 story, title = pj.get("story", ""), pj.get("title", "")
 style = s.get("bgm_style")
 if m.is_trad(style):

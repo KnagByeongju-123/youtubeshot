@@ -717,9 +717,11 @@ def run_doc(m, app, c, gate):
                 pass
     if HISTORY:                                # 역사 편: 입체 움직임(2.5D) 끔 — 그리는 효과와 겹치고 없는 게 나음 (사용자 결정 2026-10-30)
         s["img_depth"] = "off"
+        s["bgm_mul"] = 0.5                     # 배경음 50% (사용자 결정 2026-10-31, 나레이션 크기는 그대로)
         try:
             pj_ = json.load(open(base + "_프로젝트.json", encoding="utf-8"))
             pj_.setdefault("settings", {})["img_depth"] = "off"
+            pj_["settings"]["bgm_mul"] = 0.5
             m.atomic_write_text(base + "_프로젝트.json", json.dumps(pj_, ensure_ascii=False, indent=1))
         except Exception:
             pass
