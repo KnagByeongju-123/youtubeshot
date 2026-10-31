@@ -136,9 +136,11 @@ def main(a):
             st[k] = cur.get(k, m.DEFAULTS.get(k, ""))
     c["settings"] = st
     app.apply_cfg(c)
+    app.update()                               # 자막 스타일·색 묶음이 늦게(after_idle) 적용되는 것을 먼저 끝냄
     for k_, v_ in orig_st.items():             # 프로젝트에 적힌 값이 이김 (자막 스타일 묶음이 기본값으로 되돌리지 않게)
-        if k_ in app.vars and k_ != "format" and k_ not in m.SECRET_KEYS and k_ not in m.KEEP_KEYS:
-            app.vars[k_].set(str(v_))
+        if k_ in app.vars and k_ not in ("format", "style_preset", "color_preset") and k_ not in m.SECRET_KEYS and k_ not in m.KEEP_KEYS:
+            app.vars[k_].set(str(v_))      # 묶음 이름은 다시 쓰지 않음 (쓰면 묶음이 또 적용돼 위 제목 등이 되돌아감)
+    app.update()
     app.update()
     s = app.get_settings()
     m.set_tts_cfg(s)
