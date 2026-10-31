@@ -1,7 +1,8 @@
 """그림 간격 맞추기 — 그림 한 장이 화면에 '최소'~'최대' 초 머물게 그림 자리를 다시 짜고, 모자란 자리는 새로 그림
 (규칙: 그림 한 장 5~15초 — 나레이션 동안 그림이 그려지는 효과로 볼거리를 줌, 사용자 결정 2026-10-30)
 
-  python -X utf8 그림_간격_보강.py <프로젝트.json> [--최소 5] [--최대 15] [--측정만 | --계획만]
+  python -X utf8 그림_간격_보강.py <프로젝트.json> [--최소 5] [--최대 15] [--측정만 | --계획만] [--문단]
+  --문단 : 나레이션 문단마다 그림 한 장 (사용자 결정 2026-10-31, 역사 편 기본)
   (화면 부품 때문에 서버에서는 xvfb-run -a 로 실행)
 
   1) 나레이션(이미 녹음한 캐시)으로 영상과 똑같이 시간을 재서 그림마다 화면에 나오는 시간을 구함
@@ -80,6 +81,17 @@ def make_slots(r, lo, hi, end_t):
         if not nxt:
             break
         k_cur, t_cur = nxt
+    return slots
+
+
+def para_slots(r, end_t):
+    """나레이션 문단마다 그림 한 장 (사용자 결정 2026-10-31: 장면 그림 수 = 나레이션 문단 수). 챕터 제목 시간은 앞 문단 그림에 붙임"""
+    texts = [(k, sg["t0"]) for k, sg in enumerate(r.segs) if sg["kind"] == "text"]
+    slots = []
+    for i, (k, t0) in enumerate(texts):
+        a_ = r.segs[0]["t0"] if i == 0 else t0
+        b_ = texts[i + 1][1] if i + 1 < len(texts) else end_t
+        slots.append((k, a_, b_))
     return slots
 
 
@@ -169,7 +181,7 @@ def main(a):
     img_t = [(p_[1] + p_[2]) / 2 for p_ in pieces]
     if len(img_t) != len(media_lines):
         raise SystemExit(f"그림 줄 {len(media_lines)}개와 화면 그림 {len(img_t)}개가 달라 멈춤 (불러오지 못한 그림이 있음)")
-    slots = make_slots(r, lo, hi, end_t)
+    slots = para_slots(r, end_t) if "--문단" in a else make_slots(r, lo, hi, end_t)
     pick = assign(slots, img_t)
     used = {j for j in pick if j is not None}
     n_new = sum(1 for j in pick if j is None)
