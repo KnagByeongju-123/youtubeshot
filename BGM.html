@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>세계 전통풍 연주곡 제작소 v2</title>
+<style>
+:root{color-scheme:dark;--bg:#0b1020;--panel:#182137;--stroke:#31415c;--gold:#f8ca74;--text:#f4f5fa;--muted:#b6c3d9}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(ellipse at top,#263b56,#0b1020 70%);font-family:system-ui,'Noto Sans KR',sans-serif;color:var(--text);min-height:100vh}
+.shell{max-width:1080px;margin:auto;padding:32px 18px 60px}
+header{margin-bottom:25px}header .eyebrow{font-size:13px;letter-spacing:.16em;color:var(--gold)}
+h1{margin:8px 0;font-size:clamp(29px,5vw,46px)}p{color:var(--muted);line-height:1.6}
+main{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.panel{background:rgba(24,33,55,.92);border:1px solid var(--stroke);border-radius:19px;padding:22px;box-shadow:0 15px 40px #0002}
+.full{grid-column:1/-1}h2{font-size:18px;margin:0 0 17px}
+label{display:block;color:#dce5f5;font-size:14px;font-weight:650;margin:14px 0 8px}
+.regions{display:grid;grid-template-columns:repeat(6,1fr);gap:8px}
+.region{border:1px solid #40536d;background:#202c43;border-radius:11px;padding:11px 4px;color:#e8eef9;cursor:pointer;font-size:14px}
+.region[aria-pressed="true"]{border-color:var(--gold);color:#171b22;background:var(--gold);font-weight:800}
+.fieldgrid{display:grid;grid-template-columns:1fr 1fr;gap:0 15px}
+select,input[type=number]{width:100%;border:1px solid #435570;background:#0d1729;color:white;border-radius:10px;padding:11px;font:inherit}
+input[type=range]{width:100%;accent-color:var(--gold)}
+.hint{font-size:12px;color:#aab9ce;margin:8px 0}
+.actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:20px}
+button{font:inherit}
+button.action{border:1px solid #4a607e;border-radius:11px;padding:12px 17px;color:#fff;background:#283b56;cursor:pointer;font-weight:700}
+button.primary{background:#f8ca74;color:#172035;border-color:#f8ca74}
+button.action:disabled{opacity:.48;cursor:not-allowed}
+.note{font-size:13px;color:#c6d0e1;margin:14px 0 0}
+.visual{height:114px;border:1px solid #344a66;border-radius:12px;background:linear-gradient(180deg,#101c31,#15223a);display:flex;align-items:end;gap:3px;padding:14px 10px;overflow:hidden}
+.bar{flex:1;min-width:2px;background:linear-gradient(0deg,#cf9957,#f7dba3);height:8%;border-radius:2px;opacity:.7;transition:height .08s}
+.status{color:#f8ca74;min-height:24px;margin:16px 0 10px;font-weight:650}
+.meta{color:#b9c7dc;font-size:13px;line-height:1.7}
+.foot{border-top:1px solid #33435a;margin-top:25px;padding-top:15px;font-size:13px;color:#afbdd2}
+.score{font-family:ui-monospace,monospace;font-size:12px;color:#9fb3d1;white-space:pre-wrap;word-break:break-all;margin-top:10px;max-height:90px;overflow:auto}
+@media(max-width:820px){.regions{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:720px){main{grid-template-columns:1fr}.full{grid-column:1}.fieldgrid{grid-template-columns:1fr}.regions{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body><div class="shell">
+<header><div class="eyebrow">WORLD INSTRUMENTAL STUDIO · v2</div><h1>🌙 세계 전통풍 연주곡 제작소</h1>
+<p>12개 지역의 전통 음악에서 영감을 받은 <b>새로운 독주·합주곡</b>을 만듭니다. 실제 연주처럼 악구(기–승–전–결) 단위로 숨을 쉬고, 음을 밀어 올리는 시김새·요성(떨림)·퇴성(끝음 떨어뜨림)이 들어가며, 공간 울림(잔향)과 스테레오로 WAV 저장됩니다.</p></header>
+<main>
+<section class="panel full"><h2>1. 음악 지역 선택</h2><div class="regions" id="regions"></div><p id="regionInfo" class="hint"></p></section>
+
+<section class="panel"><h2>2. 곡 구성</h2>
+<label for="instrument">대표 악기 음색</label><select id="instrument"></select>
+<div class="fieldgrid">
+<div><label for="mood">분위기</label><select id="mood"><option value="sad">구슬프고 애절하게</option><option value="calm">고요하고 명상적으로</option><option value="hope">따뜻하고 서정적으로</option><option value="lively">경쾌하고 신나게</option></select></div>
+<div><label for="duration">연주 길이</label><select id="duration"><option value="45">45초</option><option value="60">1분</option><option value="120">2분</option><option value="180">3분</option><option value="300">5분</option></select></div>
+<div><label for="tempo">빠르기 <span id="tempoValue">66</span> BPM</label><input type="range" min="44" max="150" value="66" id="tempo"></div>
+<div><label for="seed">작곡 번호 (변주)</label><input type="number" id="seed" min="1" max="999999" value="2026"></div>
+<div><label for="expr">시김새·떨림 정도 <span id="exprValue">60</span>%</label><input type="range" min="0" max="100" value="60" id="expr"></div>
+<div><label for="reverb">공간 울림</label><select id="reverb"><option value="0.25">작은 방</option><option value="0.5" selected>마루·사랑방</option><option value="0.85">큰 홀</option><option value="0">울림 없음</option></select></div>
+</div>
+<label for="rhythm">리듬 · 장르</label><select id="rhythm">
+<option value="auto">자동 (지역 기본 — 가벼운 타악)</option>
+<option value="gutgeori">국악 · 굿거리장단 (12/8, 징·북·장구·꽹과리)</option>
+<option value="semachi">국악 · 세마치장단 (9/8, 아리랑풍 3박)</option>
+<option value="jajinmori">국악 · 자진모리장단 (12/8, 빠르고 힘찬)</option>
+<option value="trot">트로트 (쿵짝 2박, 뽕짝)</option>
+<option value="ballad">발라드 (느린 8비트)</option>
+<option value="dance">댄스 (네 박 킥 + 오프비트 하이햇)</option>
+<option value="country">컨트리 (붐-칙 베이스 + 스트럼)</option>
+<option value="waltz">왈츠 (3박, 쿵 짝 짝)</option>
+<option value="bossa">보사노바 (당김음 기타)</option>
+<option value="reggae">레게 (3박 강세 원드롭 + 스캥크)</option>
+<option value="swing">재즈 스윙 (라이드 + 워킹 베이스)</option></select>
+<p class="hint" id="rhythmHint">리듬을 고르면 어울리는 빠르기·박자가 자동으로 맞춰지고, 반주 설정과 관계없이 그 장르의 장구/드럼과 저음이 들어갑니다.</p>
+<label for="mode">곡 구성 방식</label><select id="mode"><option value="melody">선율형 — 전통 음계 위의 자유로운 독주 (참고곡 형태)</option><option value="chord">코드 진행형 — 기타처럼 C→F→G→C 화음이 바뀌며 곡이 완성</option></select>
+<div id="melodyBox">
+<label for="accompaniment">반주</label><select id="accompaniment"><option value="solo">독주 (멜로디만) — 참고곡과 같은 형태</option><option value="drone">저음 지속음(드론)만</option><option value="pluck">저음 드론 + 뜯는 현 반주</option><option value="full">드론 + 뜯는 현 + 가벼운 타악</option></select>
+</div>
+<div id="chordBox" hidden>
+<label for="progression">코드 진행</label><select id="progression">
+<option value="C F G C">C - F - G - C (기본 3화음)</option>
+<option value="C F D C">C - F - D - C</option>
+<option value="C Am F G">C - Am - F - G (서정적)</option>
+<option value="C G Am F">C - G - Am - F (대중적)</option>
+<option value="Am F C G">Am - F - C - G (애절)</option>
+<option value="Am G F E">Am - G - F - E (안달루시아·플라멩코풍)</option>
+<option value="Dm G C Am">Dm - G - C - Am</option>
+<option value="Em C G D">Em - C - G - D</option>
+<option value="C Em F G">C - Em - F - G</option>
+<option value="Am Dm E7 Am">Am - Dm - E7 - Am</option>
+<option value="C F C G C F G C">C - F - C - G - C - F - G - C (8마디)</option>
+<option value="custom">직접 입력…</option></select>
+<input type="text" id="customChords" placeholder="예: C F G7 C  /  Am Dm E7 Am  (띄어쓰기로 구분, m·7·maj7·dim·sus4 가능)" style="width:100%;border:1px solid #435570;background:#0d1729;color:#fff;border-radius:10px;padding:11px;font:inherit;margin-top:8px" hidden>
+<div class="fieldgrid">
+<div><label for="barsPerChord">코드 하나의 길이</label><select id="barsPerChord"><option value="1">1마디</option><option value="2">2마디</option><option value="0.5">반 마디 (빠른 전환)</option></select></div>
+<div><label for="chordStyle">코드 반주 방식</label><select id="chordStyle"><option value="arp">아르페지오 (한 음씩 분산)</option><option value="strum">스트럼 (한 번에 긁기)</option><option value="arpbass">아르페지오 + 저음 + 타악</option><option value="strumbass">스트럼 + 저음 + 타악</option><option value="none">반주 없음 (코드 따라가는 멜로디만)</option></select></div>
+<div><label for="chordInst">코드 반주 악기</label><select id="chordInst"><option value="auto">자동 (지역의 뜯는 악기)</option><option value="guitar">어쿠스틱 기타풍</option><option value="flamenco">플라멩코 기타풍</option><option value="gayageum">가야금풍</option><option value="koto">고토풍</option><option value="oud">우드풍</option><option value="harp">하프풍</option><option value="kora">코라풍</option><option value="pipa">비파풍</option></select></div>
+<div><label for="beatsPerBar">박자</label><select id="beatsPerBar"><option value="4">4박자 (기타 스트럼 기본)</option><option value="3">3박자 (왈츠·세마치 느낌)</option><option value="6">6/8박자 (굿거리 느낌)</option></select></div>
+</div>
+<p class="hint">첫 코드가 으뜸화음(조성)이 됩니다. 멜로디는 마디 첫 박에 코드 구성음을 짚고, 사이사이 경과음으로 이어지며, 마지막은 첫 코드로 돌아와 길게 끝납니다.</p>
+</div>
+<p class="hint">실제 악기 녹음 샘플 없이, 참고곡에서 측정한 배음 비율·소리 시작 속도·여운 길이·떨림 속도를 신시사이저에 적용합니다.</p></section>
+
+<section class="panel"><h2>3. 생성 · 감상 · 저장</h2>
+<div class="visual" id="visual" aria-hidden="true"></div>
+<div class="status" id="status" role="status">준비 완료 — '새 곡 만들기'를 누르세요.</div>
+<div class="meta" id="trackInfo">현재 생성된 곡이 없습니다.</div>
+<div class="score" id="score"></div>
+<div class="actions"><button class="action primary" id="generate">✨ 새 곡 만들기</button><button class="action" id="play" disabled>▶ 재생</button><button class="action" id="stop" disabled>■ 정지</button><button class="action" id="download" disabled>⬇ WAV 다운로드</button></div>
+<p class="note">WAV는 무압축 오디오(44.1kHz, 16비트, 스테레오)로 생성되며 끝부분은 자연스럽게 페이드아웃됩니다. 긴 곡은 기기에 따라 저장에 몇 초 걸릴 수 있습니다.</p></section>
+
+<section class="panel full"><h2>사용 방법 및 유튜브 안내</h2>
+<p><b>①</b> 지역, 악기, 분위기, 길이를 고릅니다. <b>②</b> 새 곡 만들기를 누르면 악구 단위로 새 선율이 생성됩니다. <b>③</b> 재생으로 확인한 후 WAV를 저장합니다. 작곡 번호를 바꾸면 전혀 다른 멜로디가 나옵니다. 같은 번호·같은 설정이면 언제나 같은 곡이 나오므로, 마음에 드는 번호를 기록해 두세요.</p>
+<p class="note">이 프로그램은 공용 음원이나 유명 곡을 삽입하지 않고 브라우저가 합성한 소리와 절차적으로 생성한 음표만 사용합니다. 결과물은 개인 영상 및 수익 창출 영상의 배경음악으로 사용할 수 있도록 설계되었습니다. 다만 플랫폼의 저작권 자동 감지, 유사 멜로디 오탐, 수익 창출 승인 여부까지 보장하지는 않습니다. 각 지역 전통 음악의 분위기를 간략히 표현한 창작 도구이며 실제 전통 연주를 완벽히 재현하지는 않습니다.</p></section>
+</main><div class="foot">오프라인 실행 가능 · 외부 라이브러리 없음 · HTML 한 파일로 작동 · 스테레오 WAV 다운로드</div></div>
+
+<script>
+'use strict';
+const $=id=>document.getElementById(id);
+
+/* ───────────────────────── 1. 악기 음색 설정 ─────────────────────────
+   참고곡 측정값 기준. harm = 배음 크기(기본음=1), attack = 소리가 커지는 시간(초),
+   release = 소리가 사라지는 시간, breath = 숨소리/마찰 잡음 비율,
+   vibRate = 떨림 속도(Hz), vibDepth = 떨림 폭(반음), vibDelay = 음 길이 중 떨림이 시작되는 비율,
+   family: wind(관악) bow(찰현) pluck(발현) metal(금속 타악) reed(겹서/백파이프) */
+const W=(o)=>Object.assign({family:'wind',harm:[1,.3,.15,.11,.03],attack:.09,release:.2,breath:.05,breathHz:2600,vibRate:4.8,vibDepth:.18,vibDelay:.4,slide:.3,cutoff:5000},o);
+const B=(o)=>Object.assign({family:'bow',harm:[1,.63,.2,.19,.26,.08,.04],attack:.16,release:.25,breath:.03,breathHz:3500,vibRate:5.2,vibDepth:.22,vibDelay:.3,slide:.5,cutoff:4500},o);
+const P=(o)=>Object.assign({family:'pluck',harm:[1,.9,.55,.25,.12,.06],attack:.006,decay:.45,release:.12,breath:.5,breathHz:3000,vibRate:0,vibDepth:0,vibDelay:1,slide:0,cutoff:6500},o);
+const M=(o)=>Object.assign({family:'metal',harm:[1,.5,.3,.18],ratios:[1,2.76,5.4,8.9],attack:.004,decay:1.2,release:.3,breath:.3,breathHz:5000,vibRate:0,vibDepth:0,vibDelay:1,slide:0,cutoff:9000},o);
+const R=(o)=>Object.assign({family:'reed',harm:[1,.55,.5,.3,.22,.12,.06],attack:.05,release:.12,breath:.04,breathHz:3000,vibRate:5.5,vibDepth:.15,vibDelay:.45,slide:.2,cutoff:5500},o);
+const profiles={
+ // 한국
+ daegeum:W({harm:[1,.3,.15,.11,.02],attack:.12,breath:.08,breathHz:2200,vibRate:4.6,vibDepth:.24,vibDelay:.35,drop:.35}),
+ danso:W({harm:[1,.12,.05,.02],attack:.07,breath:.06,breathHz:3200,vibRate:4.4,vibDepth:.16,drop:.25}),
+ piri:R({harm:[1,.6,.45,.3,.2,.1],attack:.06,breath:.03,vibRate:5.2,vibDepth:.28,vibDelay:.3,drop:.4}),
+ taepyeongso:R({harm:[1,.8,.7,.5,.35,.2,.1],attack:.035,breath:.02,cutoff:7000,vibRate:5.8,vibDepth:.25,drop:.3}),
+ gayageum:P({harm:[1,.85,.5,.22,.1,.05],decay:.5,cutoff:5200,bend:.6}),
+ haegeum:B({harm:[1,.7,.25,.2,.3,.1],attack:.14,vibRate:5,vibDepth:.3,drop:.4}),
+ // 중국
+ dizi:W({harm:[1,.31,.19,.11,.02],attack:.05,breath:.05,breathHz:3000,vibRate:5.3,vibDepth:.22,vibDelay:.3}),
+ xiao:W({harm:[1,.15,.06,.03],attack:.13,release:.3,breath:.07,breathHz:2400,vibRate:4.2,vibDepth:.15}),
+ erhu:B({harm:[1,.63,.13,.19,.26,.06,.04],attack:.15,vibRate:5.6,vibDepth:.25,vibDelay:.25}),
+ pipa:P({harm:[1,1.2,.8,.4,.2,.1],decay:.35,cutoff:7000}),
+ guzheng:P({harm:[1,.8,.45,.2,.1],decay:.6,cutoff:5500,bend:.5}),
+ // 일본
+ shakuhachi:W({harm:[1,.05,.06,.02,.02],attack:.17,release:.3,breath:.14,breathHz:2000,vibRate:3.9,vibDepth:.2,vibDelay:.45,slide:.45}),
+ shinobue:W({harm:[1,.29,.14,.05],attack:.045,breath:.06,breathHz:3400,vibRate:5.1,vibDepth:.18}),
+ koto:P({harm:[1,.9,.55,.25,.1],decay:.42,cutoff:6000,bend:.5}),
+ shamisen:P({harm:[1,1.1,.9,.5,.3,.15],decay:.3,cutoff:7500,breath:.9}),
+ // 중동
+ ney:W({harm:[1,.33,.14,.12,.02],attack:.12,release:.3,breath:.12,breathHz:2300,vibRate:4.3,vibDepth:.2,slide:.4}),
+ oud:P({harm:[1,1.61,1.11,.07,.05,.02,.06],decay:.5,cutoff:4200}),
+ qanun:P({harm:[1,.7,.5,.3,.15],decay:.55,cutoff:7000}),
+ kamancheh:B({harm:[1,.6,.3,.2,.2,.08],attack:.14,vibRate:5.4,vibDepth:.24}),
+ // 인도
+ bansuri:W({harm:[1,.25,.1,.05],attack:.1,breath:.07,breathHz:2600,vibRate:4.5,vibDepth:.2,slide:.6}),
+ sitar:P({harm:[1,1.3,1.0,.7,.5,.35,.2],decay:.9,cutoff:8000,buzz:.25,bend:.6}),
+ sarangi:B({harm:[1,.8,.4,.3,.3,.15],attack:.12,vibRate:5,vibDepth:.26,slide:.7}),
+ santoor:M({harm:[1,.7,.4,.2],ratios:[1,2,3.01,4.02],decay:.9,cutoff:7000}),
+ // 인도네시아
+ gender:M({harm:[1,.5,.3,.15],ratios:[1,2.76,5.4,8.9],decay:1.4,cutoff:8000}),
+ suling:W({harm:[1,.2,.08,.03],attack:.08,breath:.09,breathHz:3000,vibRate:4.6,vibDepth:.22,slide:.5}),
+ bonang:M({harm:[1,.4,.25],ratios:[1,2.4,4.7],decay:.9,cutoff:6000}),
+ gambang:M({harm:[1,.3,.1],ratios:[1,3.9,9.2],decay:.25,cutoff:5000}),
+ // 아일랜드
+ whistle:W({harm:[1,.22,.1,.03],attack:.04,breath:.06,breathHz:3800,vibRate:5.4,vibDepth:.15,vibDelay:.5}),
+ fiddle:B({harm:[1,.65,.3,.25,.22,.1,.05],attack:.09,vibRate:5.6,vibDepth:.2}),
+ uilleann:R({harm:[1,.7,.55,.45,.3,.2,.1,.05],attack:.04,breath:.02,vibRate:0,vibDepth:0,drone:true}),
+ harp:P({harm:[1,.6,.35,.15,.06],decay:.9,cutoff:5000}),
+ // 안데스
+ quena:W({harm:[1,.28,.14,.08,.03],attack:.07,breath:.12,breathHz:2800,vibRate:5,vibDepth:.22}),
+ zamponia:W({harm:[1,.15,.05],attack:.09,breath:.22,breathHz:2000,vibRate:4.4,vibDepth:.15}),
+ charango:P({harm:[1,1.0,.7,.4,.2],decay:.3,cutoff:8000}),
+ // 서아프리카
+ kora:P({harm:[1,.7,.45,.25,.1],decay:.8,cutoff:6500}),
+ kalimba:M({harm:[1,.3,.1],ratios:[1,5.1,11.3],decay:.7,cutoff:5000}),
+ balafon:M({harm:[1,.35,.15],ratios:[1,3.3,7.1],decay:.3,cutoff:4500}),
+ fulaflute:W({harm:[1,.35,.2,.1],attack:.06,breath:.15,breathHz:2600,vibRate:5,vibDepth:.2}),
+ // 몽골
+ morinkhuur:B({harm:[1,.75,.35,.3,.3,.15,.08],attack:.18,release:.3,vibRate:4.6,vibDepth:.28,vibDelay:.3,slide:.6}),
+ limbe:W({harm:[1,.3,.15,.08],attack:.08,breath:.07,breathHz:2800,vibRate:5,vibDepth:.22}),
+ tovshuur:P({harm:[1,1.0,.6,.3,.15],decay:.35,cutoff:5500}),
+ // 스페인
+ flamenco:P({harm:[1,.9,.6,.35,.2,.1],decay:.5,cutoff:6500}),
+ bandurria:P({harm:[1,1.1,.8,.5,.3],decay:.3,cutoff:8500}),
+ spflute:W({harm:[1,.3,.15,.08],attack:.07,breath:.06,breathHz:3000,vibRate:5.2,vibDepth:.2}),
+ // 발칸
+ kaval:W({harm:[1,.2,.1,.05],attack:.11,breath:.16,breathHz:2200,vibRate:4.5,vibDepth:.2,slide:.4}),
+ bouzouki:P({harm:[1,1.2,.9,.6,.4,.2],decay:.4,cutoff:9000,chorus:true}),
+ gaida:R({harm:[1,.6,.5,.4,.3,.2,.1],attack:.05,breath:.02,vibRate:0,vibDepth:0,drone:true}),
+ // 코드 반주용
+ guitar:P({harm:[1,.8,.5,.3,.15,.08,.04],decay:.9,cutoff:5500,breath:.35}),
+ // 반주용 공용
+ accBass:P({harm:[1,.5,.25,.1],decay:1.1,cutoff:1800,breath:.1}),
+ accDrum:{family:'drum'},
+ accDrone:{family:'drone',harm:[1,.5,.3,.2,.1]}
+};
+
+/* ───────────────────────── 2. 지역별 음계·악기·연주 스타일 ─────────────────────────
+   scale: 으뜸음(0)으로부터 반음 간격, base: 으뜸음 MIDI 번호 (62 = 레).
+   style: 선율 성격 — step(한 칸 이동 비율) ornament(시김새 빈도) longNote(긴 음 선호) meter(한 악구 박 수) */
+const presets={
+ korea:{flag:'🇰🇷',name:'한국',info:'레·파·솔·라·도 5음(계면조 느낌) · 요성(떨림)·퇴성(끝음 떨어뜨림)·시김새 · 긴 호흡의 독주',scale:[0,3,5,7,10],base:62,
+  instruments:[['daegeum','대금풍 (깊은 대나무 피리)'],['danso','단소풍 (맑은 세로 피리)'],['piri','피리풍 (겹서)'],['taepyeongso','태평소풍 (강한 관악)'],['gayageum','가야금풍 (뜯는 현악)'],['haegeum','해금풍 (찰현악기)']],
+  style:{step:.78,ornament:.3,longNote:.35,meter:12,drop:.3}},
+ china:{flag:'🇨🇳',name:'중국',info:'레·미·솔·라·도 5음 · 미끄러지듯 이어지는 선율 · 디즈·얼후·비파',scale:[0,2,5,7,10],base:62,
+  instruments:[['dizi','디즈풍 (가로 피리)'],['xiao','샤오풍 (세로 피리)'],['erhu','얼후풍 (찰현악기)'],['pipa','비파풍 (뜯는 현악)'],['guzheng','고쟁풍 (뜯는 현악)']],
+  style:{step:.72,ornament:.28,longNote:.3,meter:8}},
+ japan:{flag:'🇯🇵',name:'일본',info:'레·미♭·솔·라·도 인(陰)음계 · 여백과 숨소리 · 샤쿠하치·고토·샤미센',scale:[0,1,5,7,10],base:62,
+  instruments:[['shakuhachi','샤쿠하치풍 (대나무 피리)'],['shinobue','시노부에풍 (가로 피리)'],['koto','고토풍 (뜯는 현악)'],['shamisen','샤미센풍 (뜯는 현악)']],
+  style:{step:.7,ornament:.25,longNote:.45,meter:8,rest:.5}},
+ middleeast:{flag:'🌙',name:'중동',info:'히자즈 음계(레·미♭·파♯·솔·라·시♭·도) · 장식음 많은 선율 · 네이·우드·카눈',scale:[0,1,4,5,7,8,10],base:62,
+  instruments:[['ney','네이풍 (갈대 피리)'],['oud','우드풍 (뜯는 현악)'],['qanun','카눈풍 (뜯는 현악)'],['kamancheh','카만체풍 (찰현악기)']],
+  style:{step:.8,ornament:.45,longNote:.3,meter:8}},
+ india:{flag:'🇮🇳',name:'인도',info:'카피 라가 느낌의 7음 · 드론 위에서 미끄러지는 선율(미인드) · 반수리·시타르·사랑기',scale:[0,2,3,5,7,9,10],base:60,
+  instruments:[['bansuri','반수리풍 (대나무 피리)'],['sitar','시타르풍 (뜯는 현악)'],['sarangi','사랑기풍 (찰현악기)'],['santoor','산투르풍 (채로 치는 현악)']],
+  style:{step:.8,ornament:.5,longNote:.3,meter:16,droneDefault:true}},
+ indonesia:{flag:'🇮🇩',name:'인도네시아',info:'펠로그 음계 느낌 5음 · 가믈란 금속 타악의 긴 여운 · 겐데르·술링·보낭',scale:[0,1,3,7,8],base:62,
+  instruments:[['gender','겐데르풍 (금속 건반)'],['suling','술링풍 (대나무 피리)'],['bonang','보낭풍 (솥 모양 징)'],['gambang','감방풍 (나무 건반)']],
+  style:{step:.7,ornament:.15,longNote:.25,meter:8,even:true}},
+ ireland:{flag:'🇮🇪',name:'아일랜드',info:'도리안 선법 · 민요풍의 반복 악구 · 틴 휘슬·피들·일리언 파이프·하프',scale:[0,2,3,5,7,9,10],base:62,
+  instruments:[['whistle','틴 휘슬풍 (금속 피리)'],['fiddle','피들풍 (바이올린)'],['uilleann','일리언 파이프풍 (백파이프)'],['harp','켈틱 하프풍']],
+  style:{step:.65,ornament:.35,longNote:.2,meter:8,repeat:.6}},
+ andes:{flag:'🏔️',name:'안데스',info:'미 단조 5음 · 높은 산바람 같은 숨소리 · 케나·삼포냐·차랑고',scale:[0,3,5,7,10],base:64,
+  instruments:[['quena','케나풍 (세로 피리)'],['zamponia','삼포냐풍 (팬파이프)'],['charango','차랑고풍 (작은 현악)']],
+  style:{step:.7,ornament:.2,longNote:.3,meter:8}},
+ westafrica:{flag:'🌍',name:'서아프리카',info:'7음 장조풍 · 순환하는 뜯는 패턴 · 코라·칼림바·발라폰·풀라 피리',scale:[0,2,4,5,7,9,11],base:60,
+  instruments:[['kora','코라풍 (하프류 현악)'],['kalimba','칼림바풍 (엄지 피아노)'],['balafon','발라폰풍 (나무 실로폰)'],['fulaflute','풀라 피리풍']],
+  style:{step:.6,ornament:.15,longNote:.15,meter:12,even:true,repeat:.5}},
+ mongolia:{flag:'🇲🇳',name:'몽골',info:'솔 장조 5음 · 초원의 긴 노래(우르틴 두) 느낌 · 마두금·림베·톱슈르',scale:[0,2,4,7,9],base:55,
+  instruments:[['morinkhuur','마두금풍 (말머리 찰현악기)'],['limbe','림베풍 (가로 피리)'],['tovshuur','톱슈르풍 (뜯는 현악)']],
+  style:{step:.65,ornament:.4,longNote:.5,meter:12,drop:.2}},
+ spain:{flag:'🇪🇸',name:'스페인',info:'프리지안 도미넌트(미·파·솔♯·라·시·도·레) · 플라멩코 기타 · 안달루시아 선율',scale:[0,1,4,5,7,8,10],base:64,
+  instruments:[['flamenco','플라멩코 기타풍'],['bandurria','반두리아풍 (작은 현악)'],['spflute','스페인 피리풍']],
+  style:{step:.75,ornament:.35,longNote:.25,meter:12}},
+ balkan:{flag:'🌄',name:'발칸',info:'집시 단음계(레·미·파·솔♯·라·시♭·도♯) · 카발·부주키·가이다',scale:[0,2,3,6,7,8,11],base:62,
+  instruments:[['kaval','카발풍 (긴 피리)'],['bouzouki','부주키풍 (뜯는 현악)'],['gaida','가이다풍 (백파이프)']],
+  style:{step:.75,ornament:.4,longNote:.25,meter:7}}
+};
+
+/* ───────────────────────── 3. 화면 요소 ───────────────────────── */
+let region='korea',song=null,ctx=null,active=[],playTimer=null,playSession=0,analyser=null;
+const bars=Array.from({length:42},()=>{let d=document.createElement('span');d.className='bar';$('visual').append(d);return d});
+$('regions').innerHTML=Object.entries(presets).map(([k,p])=>`<button class="region" data-region="${k}" aria-pressed="${k===region}">${p.flag} ${p.name}</button>`).join('');
+function selectRegion(r){stop();region=r;document.querySelectorAll('.region').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.region===r)));const p=presets[r];$('instrument').innerHTML=p.instruments.map(([v,n])=>`<option value="${v}">${n}</option>`).join('');$('regionInfo').textContent=p.info;clearSong();}
+function clearSong(){song=null;$('play').disabled=true;$('download').disabled=true;$('stop').disabled=true;$('trackInfo').textContent='현재 생성된 곡이 없습니다.';$('score').textContent='';$('status').textContent='설정을 선택한 후 새 곡을 만드세요.';}
+document.querySelectorAll('.region').forEach(b=>b.addEventListener('click',()=>selectRegion(b.dataset.region)));
+$('tempo').addEventListener('input',()=>{$('tempoValue').textContent=$('tempo').value});
+$('expr').addEventListener('input',()=>{$('exprValue').textContent=$('expr').value});
+function syncMode(){const chord=$('mode').value==='chord';$('melodyBox').hidden=chord;$('chordBox').hidden=!chord;$('customChords').hidden=$('progression').value!=='custom';}
+$('mode').addEventListener('change',()=>{syncMode();clearSong()});$('progression').addEventListener('change',syncMode);syncMode();
+
+/* 같은 번호면 항상 같은 난수가 나오는 난수 생성기 */
+function rng(seed){let a=seed>>>0;return()=>{a+=0x6D2B79F5;let t=a;t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);return((t^(t>>>14))>>>0)/4294967296}}
+const pick=(r,arr,weights)=>{let s=weights.reduce((a,b)=>a+b,0),x=r()*s;for(let i=0;i<arr.length;i++){x-=weights[i];if(x<=0)return arr[i]}return arr[arr.length-1]};
+
+/* ───────────────────────── 4. 작곡 (악구 단위) ─────────────────────────
+   실제 연주곡처럼: 긴 첫 음으로 시작 → 아치형으로 오르내림 → 악구 끝은 긴 음 + 숨 쉬는 쉼 →
+   세 번째 악구(전)에서 가장 높이 올라갔다가 → 마지막 악구는 으뜸음으로 돌아와 길게 끝냄.
+   첫 악구의 선율은 나중 악구에서 변주되어 다시 나와 '곡'다운 통일감을 만듭니다. */
+function buildSong(){
+ stop();
+ if($('mode').value==='chord'){if(!buildChordSong()){const msg=$('status').textContent;clearSong();$('status').textContent=msg}return}
+ const p=presets[region],st=p.style,seed=Math.max(1,Math.floor(Number($('seed').value)||1));
+ const r=rng(seed*7919+Object.keys(presets).indexOf(region)*109321);
+ const tempo=+$('tempo').value,seconds=+$('duration').value,beat=60/tempo,mood=$('mood').value;
+ const expr=+$('expr').value/100,instrument=$('instrument').value,pro=profiles[instrument];
+ const scale=p.scale,N=scale.length;
+ const isPluck=pro.family==='pluck'||pro.family==='metal';
+ const pitch=d=>{const oct=Math.floor(d/N),slot=((d%N)+N)%N;return p.base+scale[slot]+12*oct};
+
+ // 분위기별 조정값
+ // high/low = 선율이 오갈 수 있는 음계 칸 범위 (참고곡: 으뜸음 아래 한 칸 ~ 한 옥타브 위)
+ const moodCfg={sad:{restP:.12,longMul:1.3,high:N,low:-1,orn:1.1},calm:{restP:.18,longMul:1.5,high:N-1,low:-1,orn:.8},hope:{restP:.1,longMul:1.1,high:N+1,low:-1,orn:1},lively:{restP:.05,longMul:.75,high:N+2,low:0,orn:1.2}}[mood];
+ const restProb=moodCfg.restP+(st.rest||0)*.1;
+ const ornP=st.ornament*moodCfg.orn*expr;
+
+ // 한 악구 만들기: 시작음 → 목표(정점) → 끝음 으로 가는 랜덤워크
+ function makePhrase(startDeg,peakDeg,endDeg,beats,motif){
+  const notes=[];let d=startDeg,t=0;
+  const durChoices=isPluck||mood==='lively'?[.5,1,1,1.5,2]:[.5,1,1,1.5,2,3];
+  const durW=[st.longNote<.3?1.4:.6,2,1.5,1,st.longNote*3,st.longNote*2*moodCfg.longMul];
+  if(st.even){durChoices.splice(0,durChoices.length,.5,.5,1,1,2);durW.splice(0,durW.length,2,2,2,1,.5)}
+  let first=true,mi=0;
+  while(t<beats-.01){
+   let dur;
+   if(first){dur=pick(r,[1.5,2,3],[1,2,1]);first=false}
+   else dur=pick(r,durChoices,durW);
+   const remain=beats-t;
+   if(remain-dur<1&&remain-dur>0)dur=remain;  // 악구 끝은 긴 음으로 마무리
+   dur=Math.min(dur,remain);
+   // 음높이: 동기(motif)가 있으면 변주해서 따라가고, 없으면 목표를 향한 랜덤워크
+   if(motif&&mi<motif.length&&r()<.7){d=motif[mi]+(r()<.25?(r()<.5?1:-1):0)}
+   else{
+    const target=t<beats*.55?peakDeg:endDeg;
+    const dir=target>d?1:target<d?-1:0;
+    const x=r();
+    let move=x<st.step?(r()<.72?dir||(r()<.5?1:-1):(r()<.5?1:-1)):x<st.step+.12?0:(dir||1)*2;
+    if(x>.96)move=(dir||1)*3;
+    d+=move;
+   }
+   d=Math.max(moodCfg.low,Math.min(moodCfg.high,d));
+   if(beats-t-dur<.01)d=endDeg;  // 악구의 마지막 음은 지정된 끝음
+   mi++;
+   const rest=r()<restProb&&t>0&&beats-t-dur>1;
+   notes.push({deg:d,beats:dur,rest});
+   t+=dur;
+  }
+  return notes;
+ }
+
+ const rhM=rhythms[$('rhythm').value];
+ const phraseBeats=rhM?rhM.bpb*4:st.meter;   // 리듬을 고르면 악구 = 4마디
+ const events=[];let time=0,phraseIdx=0,motif=null;
+ const breath=isPluck?.15:.3;   // 악구 사이 숨 쉬는 시간(박)
+ const phraseSec=phraseBeats*beat+breath*beat;
+ const degs=[];
+ while(time<seconds-2){
+  const isLast=time+phraseSec*1.6>=seconds;          // 남은 시간이 악구 하나 반 미만이면 마지막 악구
+  const pos=Math.min(1,time/Math.max(1,seconds-phraseSec));   // 0=시작, 1=끝
+  // 기-승-전-결: 정점 높이가 곡 중후반에서 가장 높아짐
+  const climax=Math.sin(pos*Math.PI*.9)*(moodCfg.high-2)+1;
+  let startDeg=phraseIdx===0?pick(r,[0,2,3,N],[3,2,2,1]):Math.max(moodCfg.low,degs[degs.length-1]+pick(r,[-1,0,1],[1,2,1]));
+  let peakDeg=Math.min(moodCfg.high,Math.round(climax+r()*1.5));
+  let endDeg=isLast?0:pick(r,[0,N-1,N-2,N],[3,2,1,1]);
+  if(isLast)startDeg=Math.min(startDeg,N);
+  const useMotif=motif&&(phraseIdx%2===0||r()<(st.repeat||.3));
+  // 마지막 악구는 남은 시간에 맞춰 길이를 조절 (최소 4박)
+  const thisBeats=isLast?Math.max(4,Math.min(phraseBeats*1.5,Math.floor((seconds-time-.5)/beat))):phraseBeats;
+  const notes=makePhrase(startDeg,peakDeg,endDeg,thisBeats,useMotif?motif:null);
+  if(isLast){time=addNotes(notes);phraseIdx++;break}
+  time=addNotes(notes);time+=breath*beat*(1+r()*.6);phraseIdx++;
+ }
+ function addNotes(notes){
+  const startIdx=phraseIdx;
+  if(phraseIdx===0)motif=notes.map(n=>n.deg);
+  for(const n of notes){
+   const dur=n.beats*beat;
+   if(time+dur>seconds-.5)break;
+   if(!n.rest){
+    const long=dur>beat*1.9;
+    const ev={time,dur:dur*(long?.96:.9),midi:pitch(n.deg),deg:n.deg,
+     velocity:.55+r()*.2+(n.deg>=N?.08:0),
+     grace:r()<ornP*.6?(r()<.6?1:-1):0,                     // 시김새(장식음) 방향
+     slide:(pro.slide||0)*expr*(r()<.5?1:0),                 // 음을 밀어 올림
+     vib:(pro.vibDepth||0)*(.6+r()*.8)*expr,                 // 떨림 폭
+     drop:long&&r()<(pro.drop||0)*expr?1:0,                  // 퇴성: 끝에서 음 떨어뜨림
+     bend:isPluck&&pro.bend&&long&&r()<pro.bend*expr?1:0     // 농현: 뜯은 뒤 음 눌러 올리기
+    };
+    events.push(ev);degs.push(n.deg);
+   }
+   time+=dur;
+  }
+  return time;
+ }
+ // 마지막 음을 길게 늘여 자연스러운 마무리
+ if(events.length){const last=events[events.length-1];last.dur=Math.max(last.dur,Math.min(seconds-last.time-.3,beat*4));last.drop=0;last.vib=(pro.vibDepth||0)*expr}
+
+ let acc=$('accompaniment').value;
+ song={events,region,instrument,mood,seconds,tempo,beat,seed,acc,reverb:+$('reverb').value,expr,base:p.base,scale,meter:phraseBeats,isPluck,rhythm:$('rhythm').value};
+ $('play').disabled=false;$('download').disabled=false;$('stop').disabled=false;
+ $('status').textContent='곡 생성 완료! 재생하거나 WAV로 저장하세요.';
+ $('trackInfo').textContent=`${p.name} · ${$('instrument').selectedOptions[0].text}${rhM?' · '+rhM.name+' 리듬':''} · ${tempo} BPM · ${seconds}초 · ${phraseIdx}개 악구 · 음 ${events.length}개 · 작곡 번호 ${seed}`;
+ const names=['도','도♯','레','미♭','미','파','파♯','솔','솔♯','라','시♭','시'];
+ $('score').textContent='선율: '+events.slice(0,60).map(e=>names[e.midi%12]+(e.midi>=p.base+12?'↑':e.midi<p.base?'↓':'')).join(' ')+(events.length>60?' …':'');
+}
+
+
+/* ───────────────────────── 4-B. 코드 진행형 작곡 ─────────────────────────
+   기타 반주처럼 C → F → G → C 식으로 화음이 마디마다 바뀌고,
+   멜로디는 마디 첫 박에 그 코드의 구성음(도·미·솔 등)을 짚은 뒤 사이사이 음계의 경과음으로 이어집니다.
+   반주는 코드 구성음을 아르페지오(한 음씩) 또는 스트럼(한 번에)으로 연주합니다. */
+const NOTE_NUM={C:0,D:2,E:4,F:5,G:7,A:9,B:11};
+const CHORD_TYPES={'':[0,4,7],'M':[0,4,7],'maj':[0,4,7],'m':[0,3,7],'min':[0,3,7],'7':[0,4,7,10],'m7':[0,3,7,10],'maj7':[0,4,7,11],'M7':[0,4,7,11],'dim':[0,3,6],'sus4':[0,5,7],'sus2':[0,2,7],'aug':[0,4,8],'6':[0,4,7,9],'m6':[0,3,7,9]};
+function parseChord(txt){
+ const m=/^([A-Ga-g])([#b♯♭]?)(.*)$/.exec(txt.trim());if(!m)return null;
+ let root=NOTE_NUM[m[1].toUpperCase()];if(m[2]==='#'||m[2]==='♯')root+=1;if(m[2]==='b'||m[2]==='♭')root-=1;root=(root+12)%12;
+ const type=m[3];if(!(type in CHORD_TYPES))return null;
+ return {name:m[1].toUpperCase()+(m[2]||'')+type,root,intervals:CHORD_TYPES[type],minor:/^(m|min|m7|m6|dim)$/.test(type)};
+}
+function buildChordSong(){
+ const p=presets[region],seed=Math.max(1,Math.floor(Number($('seed').value)||1));
+ const r=rng(seed*7919+Object.keys(presets).indexOf(region)*109321+77);
+ const tempo=+$('tempo').value,seconds=+$('duration').value,beat=60/tempo,mood=$('mood').value;
+ const expr=+$('expr').value/100,instrument=$('instrument').value,pro=profiles[instrument];
+ const isPluck=pro.family==='pluck'||pro.family==='metal';
+ // 코드 진행 읽기
+ const txt=$('progression').value==='custom'?$('customChords').value:$('progression').value;
+ const chords=txt.split(/[\s,|\-–>→]+/).filter(Boolean).map(parseChord);
+ if(!chords.length||chords.some(c=>!c)){$('status').textContent='코드 이름을 읽을 수 없습니다. 예: C F G7 Am Dm E7 (띄어쓰기로 구분)';return false}
+ const rh=rhythms[$('rhythm').value];
+ const beatsPerBar=rh?rh.bpb:+$('beatsPerBar').value,barsPerChord=+$('barsPerChord').value,chordBeats=beatsPerBar*barsPerChord;
+ // 조성: 첫 코드가 으뜸화음. 단조 코드면 자연단음계, 아니면 장음계 (경과음으로 쓰이는 음들)
+ const key=chords[0].root,minor=chords[0].minor;
+ const keyScale=minor?[0,2,3,5,7,8,10]:[0,2,4,5,7,9,11];
+ // 멜로디 음역: 참고곡처럼 한 옥타브 조금 넘게 (조성 으뜸음 기준 60 근처부터)
+ const lowMidi=60+((key-0+12)%12>6?key-12:key)+ (mood==='lively'?2:0);
+ const highMidi=lowMidi+16;
+ const moodCfg={sad:{restP:.1,durs:[.5,1,1.5,2,3],w:[1,3,1.5,2,1]},calm:{restP:.16,durs:[1,1.5,2,3,4],w:[2,1.5,2,1,.6]},hope:{restP:.08,durs:[.5,1,1.5,2],w:[2,3,1.5,1.5]},lively:{restP:.04,durs:[.5,.5,1,1.5,2],w:[3,2,3,1,.6]}}[mood];
+ if(rh&&rh.melodyDurs){moodCfg.durs=rh.melodyDurs[0];moodCfg.w=rh.melodyDurs[1]}   // 장르에 맞는 멜로디 음 길이 분포
+ const ornP=p.style.ornament*expr;
+ // 코드 타임라인 (마지막은 첫 코드로 돌아와 길게)
+ const timeline=[];let t=0,ci=0;
+ while(t<seconds-chordBeats*beat*1.2){const c=chords[ci%chords.length];timeline.push({time:t,dur:chordBeats*beat,chord:c,idx:ci});t+=chordBeats*beat;ci++}
+ timeline.push({time:t,dur:seconds-t-.2,chord:chords[0],idx:ci,final:true});
+ // 멜로디 생성: 코드마다 — 첫 음은 코드 구성음, 이후 음계 위를 한 칸씩 이동 (코드 구성음 선호)
+ const events=[];let prev=lowMidi+ (minor?7:4)+ (r()<.5?0:3);
+ const inScale=m=>keyScale.includes(((m-key)%12+12)%12);
+ const basePool=[];for(let m=lowMidi;m<=highMidi;m++)if(inScale(m))basePool.push(m);
+ const nearest=(cands,m)=>cands.reduce((a,b)=>Math.abs(b-m)<Math.abs(a-m)?b:a);
+ for(const seg of timeline){
+  const chordTones=[];for(let m=lowMidi;m<=highMidi;m++)if(seg.chord.intervals.includes(((m-seg.chord.root)%12+12)%12))chordTones.push(m);
+  const pool=[...new Set([...basePool,...chordTones])].sort((a,b)=>a-b);   // 음계 + 코드 구성음(E7의 솔♯ 등 음계 밖 음 포함)
+  const segEnd=seg.time+seg.dur;let tt=seg.time,first=true,count=0;
+  if(seg.final){ // 마지막: 으뜸화음 구성음 하나를 길게
+   const m=nearest(chordTones,prev);events.push({time:tt,dur:Math.max(1.5,seg.dur),midi:m,velocity:.62,grace:r()<ornP?-1:0,slide:(pro.slide||0)*expr*.5,vib:(pro.vibDepth||0)*expr,drop:0,bend:0});break}
+  while(tt<segEnd-.05){
+   let dur=pick(r,moodCfg.durs,moodCfg.w)*beat;
+   const remain=segEnd-tt;if(remain-dur<beat*.45)dur=remain;dur=Math.min(dur,remain);
+   let m;
+   if(first||r()<.45){ // 강박·주요 위치: 코드 구성음 중 가까운 것 (가끔 한 칸 건너뜀)
+    let cands=chordTones.filter(x=>Math.abs(x-prev)<=7);
+    const moving=cands.filter(x=>x!==prev);if(moving.length&&r()<.75)cands=moving;   // 같은 음 반복은 가끔만
+    m=cands.length?(r()<.65?nearest(cands,prev):cands[Math.floor(r()*cands.length)]):nearest(chordTones,prev);
+   }else{ // 경과음: 음계에서 위/아래 한 칸
+    const i=pool.indexOf(nearest(pool,prev));const step=(prev>=highMidi-2?-1:prev<=lowMidi+1?1:(r()<.5?-1:1));m=pool[Math.max(0,Math.min(pool.length-1,i+step))];   // 음역 끝에서는 되돌아옴
+   }
+   // 마디 끝(코드 바뀌기 직전)이 길면 코드 구성음으로
+   if(segEnd-tt-dur<.01&&dur>beat*1.2)m=nearest(chordTones,m);
+   const rest=!first&&r()<moodCfg.restP&&dur<beat*1.6;
+   if(!rest){
+    const long=dur>beat*1.9;
+    events.push({time:tt,dur:dur*(long?.96:.88),midi:m,velocity:.55+r()*.2+(first?.06:0),
+     grace:r()<ornP*.6?(r()<.6?1:-1):0,slide:(pro.slide||0)*expr*(r()<.4?1:0),vib:(pro.vibDepth||0)*(.6+r()*.8)*expr,
+     drop:long&&r()<(pro.drop||0)*expr?1:0,bend:isPluck&&pro.bend&&long&&r()<pro.bend*expr?1:0});
+    prev=m;
+   }
+   tt+=dur;first=false;count++;
+  }
+ }
+ // 반주 악기 결정
+ let accInst=$('chordInst').value;
+ if(accInst==='auto'){const pl=p.instruments.find(([v])=>profiles[v].family==='pluck');accInst=pl?pl[0]:'guitar'}
+ song={events,region,instrument,mood,seconds,tempo,beat,seed,acc:'solo',reverb:+$('reverb').value,expr,base:p.base,scale:keyScale,keyRoot:key,meter:beatsPerBar,isPluck,
+  chords:timeline,beatsPerBar,chordStyle:$('chordStyle').value,chordInst:accInst,mode:'chord',rhythm:$('rhythm').value};
+ $('play').disabled=false;$('download').disabled=false;$('stop').disabled=false;
+ $('status').textContent='곡 생성 완료! 재생하거나 WAV로 저장하세요.';
+ $('trackInfo').textContent=`${p.name} · ${$('instrument').selectedOptions[0].text} · 코드 진행 ${chords.map(c=>c.name).join('-')}${rh?' · '+rh.name+' 리듬':''} · ${tempo} BPM · ${beatsPerBar}박자 · ${seconds}초 · ${timeline.length}개 코드 구간 · 음 ${events.length}개 · 작곡 번호 ${seed}`;
+ const names=['도','도♯','레','미♭','미','파','파♯','솔','솔♯','라','시♭','시'];
+ let out='';for(const seg of timeline.slice(0,12)){const ns=events.filter(e=>e.time>=seg.time&&e.time<seg.time+seg.dur).map(e=>names[e.midi%12]).join(' ');out+=`[${seg.chord.name}] ${ns}  `}
+ $('score').textContent=out+(timeline.length>12?'…':'');
+ return true;
+}
+/* 코드 반주 배치 (아르페지오 / 스트럼 / 저음 / 타악) */
+function renderChordAcc(ac,bus,start,s,nodes){
+ if(s.chordStyle==='none')return;
+ const pro=profiles[s.chordInst]||profiles.guitar,beat=s.beat,bpb=s.beatsPerBar;
+ const withBass=/bass/.test(s.chordStyle),strum=/strum/.test(s.chordStyle);
+ for(const seg of s.chords){
+  const root=48+seg.chord.root-(seg.chord.root>7?12:0);     // 저음 쪽 으뜸음 (C3 근처)
+  const voicing=[root,...seg.chord.intervals.slice(1).map(i=>root+i),root+12,root+12+seg.chord.intervals[1]];   // 기타 운지처럼 5~6음
+  const segEnd=start+seg.time+seg.dur;
+  if(seg.final){ // 마지막 코드는 한 번 울리고 여운
+   voicing.forEach((m,i)=>nodes.push(...playNote(ac,bus,start+seg.time+i*.03,{dur:Math.min(3,seg.dur),midi:m,velocity:.5,slide:0,vib:0,drop:0,bend:0},Object.assign({},pro,{decay:2.2}),.55)));
+   if(withBass)nodes.push(...playNote(ac,bus,start+seg.time,{dur:3,midi:root-12,velocity:.5,slide:0,vib:0,drop:0,bend:0},Object.assign({},profiles.accBass,{decay:2.5}),.6));
+   continue;
+  }
+  const bars=Math.round(seg.dur/(beat*bpb)*2)/2;
+  for(let b=0;b<bars;b+=1){
+   const barStart=start+seg.time+b*beat*bpb;
+   if(barStart>=segEnd-.01)break;
+   if(strum){
+    // 스트럼: 4박 = 쿵(다운) 쿵 짝(다운+업) ; 3박 = 쿵 짝 짝 ; 6/8 = 쿵 - 짝 쿵 - 짝
+    const hits=bpb===4?[[0,1,.5],[1,1,.3],[2,1,.45],[2.5,-1,.25],[3,1,.3],[3.5,-1,.25]]:bpb===3?[[0,1,.5],[1,-1,.3],[2,-1,.3]]:[[0,1,.5],[1.5,-1,.3],[3,1,.4],[4.5,-1,.3]];
+    for(const [pos,dir,vel] of hits){const t=barStart+pos*beat;if(t>=segEnd-.02)break;const order=dir>0?voicing:[...voicing].reverse();
+     order.forEach((m,i)=>nodes.push(...playNote(ac,bus,t+i*.012,{dur:Math.min(beat*1.2,segEnd-t),midi:m,velocity:vel,slide:0,vib:0,drop:0,bend:0},pro,vel*.85)))}
+   }else{
+    // 아르페지오: 8분음표로 저음→중음→고음→중음 순환
+    const pattern=bpb===3?[0,1,2,3,2,1]:bpb===6?[0,1,2,3,4,3,0,2,1,3,2,1]:[0,1,2,3,4,3,2,1];
+    const sub=bpb===6?beat/2:beat/2;const n=bpb===6?12:bpb*2;
+    for(let i=0;i<n;i++){const t=barStart+i*sub;if(t>=segEnd-.02)break;const m=voicing[pattern[i%pattern.length]%voicing.length];
+     nodes.push(...playNote(ac,bus,t,{dur:Math.min(sub*2.2,segEnd-t),midi:m,velocity:i===0?.62:.42+(i%2?0:.08),slide:0,vib:0,drop:0,bend:0},pro,i===0?.6:.45))}
+   }
+   if(withBass){
+    const fifth=seg.chord.intervals.includes(7)?7:seg.chord.intervals[1];
+    const bassHits=bpb===4?[[0,0],[2,fifth]]:bpb===3?[[0,0]]:[[0,0],[3,fifth]];
+    for(const [pos,iv] of bassHits){const t=barStart+pos*beat;if(t>=segEnd-.02)break;nodes.push(...playNote(ac,bus,t,{dur:beat*1.6,midi:root-12+iv,velocity:.5,slide:0,vib:0,drop:0,bend:0},profiles.accBass,.6))}
+    const dr=bpb===4?[[0,1],[1,0],[2,1],[3,0]]:bpb===3?[[0,1],[1,0],[2,0]]:[[0,1],[1,0],[2,0],[3,1],[4,0],[5,0]];
+    for(const [pos,low] of dr){const t=barStart+pos*beat;if(t>=segEnd-.02)break;nodes.push(...drumHit(ac,bus,t,!!low,low?.3:.14))}
+   }
+  }
+ }
+}
+
+
+/* ───────────────────────── 4-C. 리듬 · 장르 패턴 ─────────────────────────
+   bpb = 한 마디 박 수, tempo = 추천 빠르기
+   drums: [박 위치, 소리 종류, 세기]  (위치는 0부터, 0.5 = 반박, 0.33 = 셋잇단 한 칸)
+   bass : [박 위치, 음정]  (r=으뜸음, 5=5도, 3=3도, r8=한 옥타브 위 으뜸음, 6=6도, 7=7도)
+   comp : 코드 반주 — strum:[박 위치, 방향(1 다운/-1 업), 세기] 또는 arp:[코드 음 순서], arpSub(분할)
+   soundKit: 'janggu'면 장구 소리(궁·덕), 아니면 드럼(킥·스네어·하이햇) */
+const rhythms={
+ gutgeori:{name:'굿거리',bpb:4,tempo:62,kit:'janggu',swing:true,
+  drums:[[0,'jing',.5],[0,'buk',.8],[2,'buk',.65],   // 징은 장단 첫 박, 북은 강박
+   [0,'kung',.9],[0,'deok',.5],[.67,'deok',.35],[1,'kung',.55],[1.67,'deok',.3],[2,'kung',.85],[2.67,'deok',.35],[3,'kung',.5],[3.33,'deok',.28],[3.67,'deok',.28],   // 장구: 덩 기덕 쿵 더러러러
+   [0,'kkwaeng',.45],[.67,'kkwaeng',.25],[1.33,'kkwaeng',.25],[2,'kkwaeng',.4],[2.67,'kkwaeng',.25],[3.33,'kkwaeng',.25]],   // 꽹과리: 갱 지갱 갱 지갱
+  bass:[[0,'r'],[2,'5']],comp:{arp:[0,2,1,3,2,1,0,2,1,3,2,1],arpSub:1/3},melodyDurs:[[.67,1,1.33,2,3],[1,3,1,2,1]]},
+ semachi:{name:'세마치',bpb:3,tempo:88,kit:'janggu',swing:true,
+  drums:[[0,'jing',.45],[0,'buk',.8],[2,'buk',.5],[0,'kung',.9],[0,'deok',.5],[1,'kung',.6],[2,'deok',.45],[2.33,'kung',.5],[2.67,'deok',.4],[0,'kkwaeng',.4],[1,'kkwaeng',.25],[2,'kkwaeng',.3],[2.67,'kkwaeng',.22]],   // 덩 덩 덕쿵덕
+  bass:[[0,'r'],[2,'5']],comp:{arp:[0,2,1,3,2,1,0,1,3],arpSub:1/3},melodyDurs:[[.67,1,1.33,2],[1,3,1,2]]},
+ jajinmori:{name:'자진모리',bpb:4,tempo:128,kit:'janggu',swing:true,
+  drums:[[0,'jing',.45],[0,'buk',.9],[2,'buk',.7],[3,'buk',.5],[0,'kung',.95],[0,'deok',.6],[.67,'deok',.4],[1,'kung',.6],[1.67,'deok',.4],[2,'kung',.9],[2.33,'deok',.35],[2.67,'deok',.35],[3,'kung',.6],[3.67,'deok',.4],
+   [0,'kkwaeng',.45],[.67,'kkwaeng',.3],[1,'kkwaeng',.3],[1.67,'kkwaeng',.3],[2,'kkwaeng',.45],[2.67,'kkwaeng',.3],[3,'kkwaeng',.3],[3.67,'kkwaeng',.3]],   // 덩 덕 쿵덕 쿵 덕쿵덕
+  bass:[[0,'r'],[2,'5'],[3.33,'r']],comp:{arp:[0,2,3,1,2,3,0,2,3,1,2,3],arpSub:1/3},melodyDurs:[[.67,1,1.33,2],[2,3,1,1]]},
+ trot:{name:'트로트',bpb:4,tempo:124,kit:'drums',
+  drums:[[0,'kick',.9],[1,'snare',.8],[2,'kick',.8],[3,'snare',.8],[0,'hat',.3],[.5,'hat',.25],[1,'hat',.3],[1.5,'hat',.25],[2,'hat',.3],[2.5,'hat',.25],[3,'hat',.3],[3.5,'hat',.25]],
+  bass:[[0,'r'],[2,'5']],comp:{strum:[[1,-1,.45],[3,-1,.45]]},melodyDurs:[[.5,.5,1,1,1.5,2],[3,2,3,2,1,.6]]},
+ ballad:{name:'발라드',bpb:4,tempo:68,kit:'drums',
+  drums:[[0,'kick',.8],[2.5,'kick',.6],[1,'snare',.55],[3,'snare',.55],[0,'hat',.22],[.5,'hat',.18],[1,'hat',.22],[1.5,'hat',.18],[2,'hat',.22],[2.5,'hat',.18],[3,'hat',.22],[3.5,'hat',.18]],
+  bass:[[0,'r'],[1.5,'r'],[2.5,'5'],[3.5,'3']],comp:{arp:[0,2,3,4,3,2,1,2],arpSub:.5},melodyDurs:[[1,1.5,2,3,4],[3,2,2,1,.5]]},
+ dance:{name:'댄스',bpb:4,tempo:126,kit:'drums',
+  drums:[[0,'kick',1],[1,'kick',1],[2,'kick',1],[3,'kick',1],[1,'clap',.8],[3,'clap',.8],[.5,'ohat',.4],[1.5,'ohat',.4],[2.5,'ohat',.4],[3.5,'ohat',.4]],
+  bass:[[0,'r'],[.5,'r8'],[1,'r'],[1.5,'r8'],[2,'r'],[2.5,'r8'],[3,'r'],[3.5,'r8']],comp:{strum:[[.5,-1,.4],[1.5,-1,.4],[2.5,-1,.4],[3.5,-1,.4]]},melodyDurs:[[.5,.5,1,1,2],[3,3,3,1,.5]]},
+ country:{name:'컨트리',bpb:4,tempo:112,kit:'drums',
+  drums:[[0,'kick',.85],[2,'kick',.85],[1,'snare',.7],[3,'snare',.7],[0,'hat',.25],[.5,'hat',.2],[1,'hat',.25],[1.5,'hat',.2],[2,'hat',.25],[2.5,'hat',.2],[3,'hat',.25],[3.5,'hat',.2]],
+  bass:[[0,'r'],[2,'5']],comp:{strum:[[0,1,.5],[1,-1,.35],[1.5,-1,.25],[2,1,.5],[3,-1,.35],[3.5,-1,.25]]},melodyDurs:[[.5,.5,1,1,1.5,2],[2,2,3,2,1,.8]]},
+ waltz:{name:'왈츠',bpb:3,tempo:104,kit:'drums',
+  drums:[[0,'kick',.85],[1,'rim',.45],[2,'rim',.45],[1,'hat',.2],[2,'hat',.2]],
+  bass:[[0,'r']],comp:{strum:[[1,-1,.42],[2,-1,.42]]},melodyDurs:[[1,1,2,3],[3,2,2,1]]},
+ bossa:{name:'보사노바',bpb:4,tempo:118,kit:'drums',
+  drums:[[0,'kick',.7],[1.5,'kick',.5],[2,'kick',.7],[3.5,'kick',.5],[0,'rim',.4],[1.5,'rim',.4],[3,'rim',.4],[0,'hat',.2],[.5,'hat',.2],[1,'hat',.2],[1.5,'hat',.2],[2,'hat',.2],[2.5,'hat',.2],[3,'hat',.2],[3.5,'hat',.2]],
+  bass:[[0,'r'],[1.5,'5'],[2,'r'],[3.5,'5']],comp:{strum:[[0,1,.38],[1.5,1,.34],[2.5,1,.34],[3.5,1,.3]]},melodyDurs:[[.5,1,1,1.5,2,3],[2,3,2,2,1,.6]]},
+ reggae:{name:'레게',bpb:4,tempo:80,kit:'drums',
+  drums:[[2,'kick',.9],[2,'rim',.7],[0,'hat',.28],[.5,'hat',.22],[1,'hat',.28],[1.5,'hat',.22],[2,'hat',.28],[2.5,'hat',.22],[3,'hat',.28],[3.5,'ohat',.3]],
+  bass:[[0,'r'],[1.5,'5'],[2.5,'r'],[3,'3']],comp:{strum:[[1,-1,.5],[3,-1,.5]]},melodyDurs:[[.5,1,1,1.5,2],[2,3,2,1,1]]},
+ swing:{name:'재즈 스윙',bpb:4,tempo:140,kit:'drums',swing:true,
+  drums:[[0,'ride',.5],[1,'ride',.5],[1.67,'ride',.35],[2,'ride',.5],[3,'ride',.5],[3.67,'ride',.35],[1,'hat',.3],[3,'hat',.3],[0,'kick',.3],[2,'kick',.3]],
+  bass:[[0,'r'],[1,'3'],[2,'5'],[3,'6']],comp:{strum:[[1,1,.3],[2.67,1,.28],[3,1,.3]]},melodyDurs:[[.5,.67,1,1.5,2],[2,2,3,1,1]]}
+};
+$('rhythm').addEventListener('change',()=>{const rh=rhythms[$('rhythm').value];if(rh){$('tempo').value=rh.tempo;$('tempoValue').textContent=rh.tempo;$('beatsPerBar').value=String(rh.bpb);}clearSong()});
+
+/* 타악 소리 모음 (킥·스네어·하이햇·림·클랩·라이드 / 장구 궁·덕) */
+function percNow(ac,dest,when,type,vol){
+ const nodes=[];const osc=(f0,f1,dec,v,wave='sine')=>{const o=ac.createOscillator(),g=ac.createGain();o.type=wave;o.frequency.setValueAtTime(f0,when);if(f1!==f0)o.frequency.exponentialRampToValueAtTime(f1,when+dec*.4);g.gain.setValueAtTime(v,when);g.gain.exponentialRampToValueAtTime(.0001,when+dec);o.connect(g);g.connect(dest);o.start(when);o.stop(when+dec+.05);nodes.push(o)};
+ const noise=(type,freq,q,dec,v,delay=0)=>{const n=ac.createBufferSource();n.buffer=noiseBuffer(ac);const f=ac.createBiquadFilter();f.type=type;f.frequency.value=freq;f.Q.value=q;const g=ac.createGain();g.gain.setValueAtTime(.0001,when+delay);g.gain.linearRampToValueAtTime(v,when+delay+.003);g.gain.exponentialRampToValueAtTime(.0001,when+delay+dec);n.connect(f);f.connect(g);g.connect(dest);n.start(when+delay);n.stop(when+delay+dec+.05);nodes.push(n)};
+ switch(type){
+  case 'kick':osc(160,48,.32,vol);noise('lowpass',600,.7,.04,vol*.5);break;
+  case 'snare':osc(190,150,.12,vol*.5);noise('bandpass',2600,.8,.16,vol*.9);noise('highpass',5000,.7,.1,vol*.4);break;
+  case 'hat':noise('highpass',7500,.8,.045,vol*.8);break;
+  case 'ohat':noise('highpass',6500,.8,.18,vol*.7);break;
+  case 'ride':noise('bandpass',5200,1.5,.4,vol*.45);osc(3400,3400,.3,vol*.12,'triangle');break;
+  case 'rim':noise('bandpass',2400,3,.03,vol*.9);osc(820,820,.03,vol*.5,'square');break;
+  case 'clap':noise('bandpass',1500,1.2,.05,vol*.7);noise('bandpass',1600,1.2,.05,vol*.6,.015);noise('bandpass',1400,1,.2,vol*.8,.03);break;
+  // ── 국악 타악 (참고 녹음 측정값 기준) ──
+  case 'buk':osc(110,88,.24,vol*1.3);noise('lowpass',300,.7,.025,vol*.5);break;                      // 북: 93Hz 저음, 0.22초 여운
+  case 'kung':osc(175,128,.2,vol*1.1);osc(95,80,.14,vol*.35);noise('lowpass',900,.7,.02,vol*.35);break;   // 장구 궁편: 173Hz 몸통 + 낮은 울림
+  case 'deok':noise('bandpass',3800,1.4,.05,vol*.95);noise('highpass',7000,.7,.03,vol*.45);osc(173,160,.09,vol*.4,'triangle');break;  // 장구 채편: 3.6~9kHz 채 소리 + 짧은 몸통
+  case 'jing':{const t0=when;[[160,1],[240,.42],[327,.48],[460,.37],[587,.23],[813,.24]].forEach(([f,v],i)=>{const o=ac.createOscillator(),g=ac.createGain();o.frequency.value=f*(1+(i%2?.002:-.002));g.gain.setValueAtTime(.0001,t0);g.gain.linearRampToValueAtTime(vol*v*.5,t0+.04+i*.01);g.gain.exponentialRampToValueAtTime(vol*v*.3,t0+.5);g.gain.exponentialRampToValueAtTime(.0001,t0+2.4-i*.15);o.connect(g);g.connect(dest);o.start(t0);o.stop(t0+2.5);nodes.push(o)});noise('lowpass',700,.7,.03,vol*.25);break}   // 징: 비정수 배음, 2.4초 울림
+  case 'kkwaeng':{const t0=when;[[640,1],[927,.64],[1320,.5],[1740,.42],[2347,.29],[3040,.31]].forEach(([f,v],i)=>{const o=ac.createOscillator(),g=ac.createGain();o.frequency.value=f;g.gain.setValueAtTime(vol*v*.35,t0);g.gain.exponentialRampToValueAtTime(.0001,t0+1.1-i*.12);o.connect(g);g.connect(dest);o.start(t0);o.stop(t0+1.2);nodes.push(o)});noise('bandpass',3000,1.2,.025,vol*.5);break}   // 꽹과리: 640Hz 기음, 밝은 금속음 1.2초
+  case 'shaker':noise('highpass',5000,.7,.06,vol*.5);break;
+  default:osc(150,55,.3,vol);
+ }
+ return nodes;
+}
+function perc(ac,dest,when,type,vol){if(ac.__defer){ac.__defer.push({when,fn:()=>percNow(ac,dest,when,type,vol)});return []}return percNow(ac,dest,when,type,vol)}
+
+/* 장르 반주 배치: segments = [{time,dur,root(낮은 으뜸음 MIDI),intervals}] — 코드 진행형은 코드마다, 선율형은 곡 전체 하나 */
+function renderGenreBacking(ac,bus,start,s,rh,segments,compOn,compPro){
+ const beat=s.beat,bpb=rh.bpb,barLen=beat*bpb;
+ const ivMap=(iv,intervals)=>{const third=intervals[1]??4,fifth=intervals.includes(7)?7:(intervals[2]??7);switch(iv){case 'r':return 0;case 'r8':return 12;case '3':return third;case '5':return fifth;case '6':return 9;case '7':return intervals.includes(10)?10:11;default:return 0}};
+ const swingPos=pos=>{if(!rh.swing)return pos;const f=pos-Math.floor(pos);if(Math.abs(f-.5)<.01)return Math.floor(pos)+.67;return pos};   // 스윙: 반박을 셋잇단 뒤쪽으로
+ for(const seg of segments){
+  const segEnd=start+seg.time+seg.dur;
+  if(seg.final){ // 마지막: 한 번 울리고 끝
+   const t=start+seg.time;if(rh.kit==='janggu'){perc(ac,bus,t,'jing',.6);perc(ac,bus,t,'buk',.9);perc(ac,bus,t,'kung',.8)}else{perc(ac,bus,t,'kick',.9);perc(ac,bus,t,'ride',.4)}
+   playNote(ac,bus,t,{dur:3,midi:seg.root-12,velocity:.5,slide:0,vib:0,drop:0,bend:0},Object.assign({},profiles.accBass,{decay:2.5}),.6);
+   if(compOn){const v=[seg.root,...seg.intervals.slice(1).map(i=>seg.root+i),seg.root+12];v.forEach((m,i)=>playNote(ac,bus,t+i*.03,{dur:3,midi:m,velocity:.5,slide:0,vib:0,drop:0,bend:0},Object.assign({},compPro,{decay:2.2}),.5))}
+   continue;
+  }
+  for(let bt=start+seg.time;bt<segEnd-.02;bt+=barLen){
+   const lastBar=bt+barLen>=segEnd-.02;
+   for(const [pos,type,vel] of rh.drums){const t=bt+swingPos(pos)*beat;if(t>=segEnd-.02)break;perc(ac,bus,t,type,vel*(rh.kit==='janggu'?.55:.42))}
+   for(const [pos,iv] of rh.bass){const t=bt+swingPos(pos)*beat;if(t>=segEnd-.02)break;playNote(ac,bus,t,{dur:beat*(rh.bass.length>2?.9:1.6),midi:seg.root-12+ivMap(iv,seg.intervals),velocity:.5,slide:0,vib:0,drop:0,bend:0},profiles.accBass,.62)}
+   if(!compOn)continue;
+   const voicing=[seg.root,...seg.intervals.slice(1).map(i=>seg.root+i),seg.root+12,seg.root+12+seg.intervals[1]];
+   if(rh.comp.strum){for(const [pos,dir,vel] of rh.comp.strum){const t=bt+swingPos(pos)*beat;if(t>=segEnd-.02)break;const order=dir>0?voicing:[...voicing].reverse();order.forEach((m,i)=>playNote(ac,bus,t+i*.011,{dur:Math.min(beat*.9,segEnd-t),midi:m,velocity:vel,slide:0,vib:0,drop:0,bend:0},compPro,vel*.8))}}
+   else if(rh.comp.arp){const sub=rh.comp.arpSub*beat,n=Math.round(barLen/sub);for(let i=0;i<n;i++){const t=bt+i*sub;if(t>=segEnd-.02)break;const m=voicing[rh.comp.arp[i%rh.comp.arp.length]%voicing.length];playNote(ac,bus,t,{dur:Math.min(sub*2.2,segEnd-t),midi:m,velocity:i===0?.6:.42,slide:0,vib:0,drop:0,bend:0},compPro,i===0?.55:.42)}}
+  }
+ }
+}
+
+/* ───────────────────────── 5. 소리 합성 ───────────────────────── */
+let noiseCache=new WeakMap();
+function noiseBuffer(ac){if(noiseCache.has(ac))return noiseCache.get(ac);const b=ac.createBuffer(1,ac.sampleRate*2,ac.sampleRate),d=b.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;noiseCache.set(ac,b);return b}
+const midiHz=m=>440*Math.pow(2,(m-69)/12);
+
+/* 실시간 재생용 지연 생성: 휴대폰 부담을 줄이기 위해 음을 1초 앞서서만 만들어 울립니다 */
+function playNote(ac,dest,when,e,pro,vol){if(ac.__defer){ac.__defer.push({when,fn:()=>playNoteNow(ac,dest,when,e,pro,vol)});return []}return playNoteNow(ac,dest,when,e,pro,vol)}
+function drumHit(ac,dest,when,low,vol){return perc(ac,dest,when,low?'kick':'rim',vol*2.2)}
+/* 음 하나 연주. e = {time,dur,midi,velocity,grace,slide,vib,drop,bend} */
+function playNoteNow(ac,dest,when,e,pro,vol){
+ const nodes=[];
+ const dur=Math.max(.08,e.dur),f=midiHz(e.midi);
+ const fam=pro.family;
+ const attack=Math.min(pro.attack,dur*.4);
+ const release=fam==='pluck'||fam==='metal'?pro.release:Math.min(pro.release,Math.max(.05,dur*.3));
+ const amp=ac.createGain();amp.connect(dest);
+ // 음량 곡선: 관악·찰현은 올라갔다가 유지 후 사라짐, 발현·금속은 바로 치고 지수적으로 사라짐
+ const g=amp.gain;g.setValueAtTime(.0001,when);
+ if(fam==='pluck'||fam==='metal'){
+  const tc=pro.decay*.55;                                       // 여운 시간 상수 (참고곡: 0.27초 만에 절반)
+  g.linearRampToValueAtTime(vol,when+pro.attack);
+  g.setTargetAtTime(vol*.001,when+pro.attack,tc);
+  const atEnd=Math.max(.0001,vol*Math.exp(-(dur-pro.attack)/tc));
+  g.setValueAtTime(atEnd,when+dur);
+  g.exponentialRampToValueAtTime(.0001,when+dur+release+tc);
+ }else{
+  g.linearRampToValueAtTime(vol*.85,when+attack);
+  g.linearRampToValueAtTime(vol,when+attack+Math.min(.25,dur*.3));   // 서서히 부풀어 오름
+  const sustainEnd=Math.max(when+attack,when+dur-release);
+  g.setValueAtTime(vol,sustainEnd);
+  g.exponentialRampToValueAtTime(.0001,when+dur);
+ }
+ // 밝기 필터 (발현악기는 뜯은 직후 밝다가 어두워짐)
+ const lp=ac.createBiquadFilter();lp.type='lowpass';lp.Q.value=.5;lp.frequency.setValueAtTime(pro.cutoff||5000,when);
+ if(fam==='pluck'||fam==='metal'){lp.frequency.setValueAtTime(pro.cutoff*1.6,when);lp.frequency.exponentialRampToValueAtTime(pro.cutoff*.45,when+Math.min(.6,dur))}
+ lp.connect(amp);
+ // 배음 오실레이터들
+ const harm=pro.harm,ratios=pro.ratios||harm.map((_,i)=>i+1),sum=harm.reduce((a,b)=>a+b,0);
+ const oscs=[];
+ for(let h=0;h<harm.length;h++){
+  const o=ac.createOscillator(),og=ac.createGain();o.type='sine';o.frequency.value=f*ratios[h];
+  const level=harm[h]/sum;
+  if(fam==='pluck'||fam==='metal'){og.gain.setValueAtTime(level,when);og.gain.setTargetAtTime(level*.05,when+pro.attack,pro.decay*.55/(1+h*.7))}   // 높은 배음이 먼저 사라짐
+  else og.gain.value=level;
+  if(pro.chorus&&h<3){o.detune.value=(h%2?1:-1)*6}
+  o.connect(og);og.connect(lp);o.start(when);o.stop(when+dur+release+(pro.decay||0)+.05);oscs.push(o);nodes.push(o);
+ }
+ // 음높이 표현 — 밀어 올림(slide), 떨림(vib), 퇴성(drop), 농현(bend) : detune(센트 단위)
+ const cents=f0=>f0;
+ oscs.forEach(o=>{
+  const d=o.detune;
+  let base=pro.chorus?o.detune.value:0;
+  if(e.slide){d.setValueAtTime(base-e.slide*180,when);d.linearRampToValueAtTime(base,when+Math.min(.14,dur*.3))}
+  else d.setValueAtTime(base,when);
+  if(e.bend){const t0=when+.12;d.setValueAtTime(base,t0);d.linearRampToValueAtTime(base+140,t0+Math.min(.35,dur*.4));d.linearRampToValueAtTime(base+100,when+Math.min(dur,1.2))}
+  if(e.drop){const t0=when+dur*.82;d.setValueAtTime(base,t0);d.linearRampToValueAtTime(base-130,when+dur)}
+ });
+ if(e.vib>0&&pro.vibRate>0&&dur>.3){
+  const lfo=ac.createOscillator(),lg=ac.createGain();lfo.frequency.value=pro.vibRate*(0.9+Math.random()*.2);
+  const start=when+dur*pro.vibDelay;lg.gain.setValueAtTime(0,when);lg.gain.setValueAtTime(0,start);lg.gain.linearRampToValueAtTime(e.vib*100,Math.min(when+dur,start+.5));   // 떨림이 점점 커짐(요성)
+  lfo.connect(lg);oscs.forEach(o=>lg.connect(o.detune));lfo.start(when);lfo.stop(when+dur+release+(pro.decay||0)+.05);nodes.push(lfo);
+ }
+ // 숨소리 / 뜯는 소리 (필터 통과 잡음)
+ if(pro.breath>0){
+  const n=ac.createBufferSource();n.buffer=noiseBuffer(ac);n.loop=true;n.playbackRate.value=.8+Math.random()*.4;
+  const bp=ac.createBiquadFilter();bp.type='bandpass';bp.Q.value=fam==='pluck'||fam==='metal'?2:1.2;
+  bp.frequency.value=fam==='pluck'||fam==='metal'?Math.min(9000,f*3):pro.breathHz;
+  const ng=ac.createGain();const b=pro.breath*vol;
+  if(fam==='pluck'||fam==='metal'){ng.gain.setValueAtTime(b*.18,when);ng.gain.exponentialRampToValueAtTime(.0001,when+.02)}   // 뜯는 순간의 짧은 잡음 (작게)
+  else{ng.gain.setValueAtTime(.0001,when);ng.gain.linearRampToValueAtTime(b*1.4,when+attack*.6);ng.gain.exponentialRampToValueAtTime(Math.max(.0001,b*.45),when+attack+.15);ng.gain.setValueAtTime(Math.max(.0001,b*.45),when+dur-release);ng.gain.exponentialRampToValueAtTime(.0001,when+dur)}
+  n.connect(bp);bp.connect(ng);ng.connect(dest);n.start(when);n.stop(when+dur+.05);nodes.push(n);
+ }
+ // 시타르 특유의 '지잉' 소리
+ if(pro.buzz){const o=ac.createOscillator(),bg=ac.createGain();o.type='sawtooth';o.frequency.value=f;bg.gain.setValueAtTime(vol*pro.buzz*.3,when);bg.gain.setTargetAtTime(.0001,when,pro.decay/3);const hp=ac.createBiquadFilter();hp.type='highpass';hp.frequency.value=f*3;o.connect(hp);hp.connect(bg);bg.connect(dest);o.start(when);o.stop(when+dur+.1);nodes.push(o)}
+ return nodes;
+}
+
+/* 타악 한 번 (낮은 북 / 높은 채) */
+function drumHitNow(ac,dest,when,low,vol){
+ const nodes=[];
+ const o=ac.createOscillator(),g=ac.createGain();o.frequency.setValueAtTime(low?150:420,when);o.frequency.exponentialRampToValueAtTime(low?55:180,when+.12);
+ g.gain.setValueAtTime(vol,when);g.gain.exponentialRampToValueAtTime(.0001,when+(low?.35:.12));o.connect(g);g.connect(dest);o.start(when);o.stop(when+.4);nodes.push(o);
+ const n=ac.createBufferSource();n.buffer=noiseBuffer(ac);const bp=ac.createBiquadFilter();bp.type=low?'lowpass':'bandpass';bp.frequency.value=low?500:3500;const ng=ac.createGain();ng.gain.setValueAtTime(vol*(low?.5:.9),when);ng.gain.exponentialRampToValueAtTime(.0001,when+(low?.08:.06));n.connect(bp);bp.connect(ng);ng.connect(dest);n.start(when);n.stop(when+.15);nodes.push(n);
+ return nodes;
+}
+
+/* 잔향(울림) 만들기: 점점 작아지는 잡음 = 공간의 메아리 */
+function makeReverb(ac,size){
+ const len=Math.floor(ac.sampleRate*(.8+size*2.6)),b=ac.createBuffer(2,len,ac.sampleRate);
+ for(let c=0;c<2;c++){const d=b.getChannelData(c);for(let i=0;i<len;i++){const t=i/len;d[i]=(Math.random()*2-1)*Math.pow(1-t,2.2+c*.15)*(i<ac.sampleRate*.01?.4:1)}}
+ const cv=ac.createConvolver();cv.buffer=b;return cv;
+}
+
+/* 곡 전체 배치 */
+function renderScore(ac,s,start){
+ const nodes=[];
+ const master=ac.createGain();master.gain.value=.8;
+ // 끝부분 페이드아웃 (2.5초)
+ master.gain.setValueAtTime(.8,start+Math.max(0,s.seconds-2.6));master.gain.linearRampToValueAtTime(.0001,start+s.seconds+.2);
+ const comp=ac.createDynamicsCompressor();comp.threshold.value=-10;comp.ratio.value=4;comp.knee.value=12;comp.attack.value=.005;comp.release.value=.2;
+ const dry=ac.createGain(),wet=ac.createGain();
+ dry.gain.value=1-s.reverb*.45;wet.gain.value=s.reverb*.9;
+ // 소프트 리미터: 음량이 1.0을 넘어 찌그러지지 않도록 부드럽게 눌러 줌
+ const limiter=ac.createWaveShaper();{const n=2048,c=new Float32Array(n);for(let i=0;i<n;i++){const x=i*2/(n-1)-1;c[i]=Math.tanh(x*1.4)/Math.tanh(1.4)}limiter.curve=c;limiter.oversample='2x'}
+ const sum=ac.createGain();sum.gain.value=.85;
+ master.connect(comp);comp.connect(dry);dry.connect(sum);
+ if(s.reverb>0){const rv=makeReverb(ac,s.reverb);comp.connect(rv);rv.connect(wet);wet.connect(sum)}
+ sum.connect(limiter);limiter.connect(ac.destination);
+ if(analyser&&ac===ctx)limiter.connect(analyser);
+ // 멜로디를 살짝 왼쪽/오른쪽에 두어 입체감
+ const melPan=ac.createStereoPanner?ac.createStereoPanner():null;
+ const melBus=ac.createGain();melBus.gain.value=1;
+ if(melPan){melPan.pan.value=-.12;melBus.connect(melPan);melPan.connect(master)}else melBus.connect(master);
+ const pro=profiles[s.instrument];
+ for(const e of s.events){
+  const vol=e.velocity*(pro.family==='pluck'||pro.family==='metal'?1.7:1.05);
+  // 시김새: 본음 직전 짧은 장식음(위 또는 아래 이웃음)
+  if(e.grace&&e.dur>.3){
+   let gmidi;
+   if(e.deg===undefined){gmidi=e.midi+e.grace;const root=s.keyRoot||0;while(!s.scale.includes(((gmidi-root)%12+12)%12))gmidi+=e.grace}   // 코드 진행형: 조성 음계의 이웃음
+   else{const gi=s.scale.length,deg=e.deg+e.grace;const oct=Math.floor(deg/gi),slot=((deg%gi)+gi)%gi;gmidi=s.base+s.scale[slot]+12*oct}const gl=Math.min(.09,e.dur*.2);
+   nodes.push(...playNote(ac,melBus,start+e.time,{time:e.time,dur:gl,midi:gmidi,velocity:e.velocity,slide:0,vib:0,drop:0,bend:0},pro,vol*.7));
+   nodes.push(...playNote(ac,melBus,start+e.time+gl,Object.assign({},e,{dur:e.dur-gl,grace:0}),pro,vol));
+  }else nodes.push(...playNote(ac,melBus,start+e.time,e,pro,vol));
+ }
+ const rh=rhythms[s.rhythm];
+ // 코드 반주
+ if(s.mode==='chord'){const cb=ac.createGain();cb.gain.value=.55;const cp=ac.createStereoPanner?ac.createStereoPanner():null;if(cp){cp.pan.value=.2;cb.connect(cp);cp.connect(master)}else cb.connect(master);
+  if(rh){ // 장르 리듬: 코드마다 장구/드럼 + 베이스 + 장르 패턴의 코드 반주
+   const segs=s.chords.map(seg=>({time:seg.time,dur:seg.dur,final:seg.final,root:48+seg.chord.root-(seg.chord.root>7?12:0),intervals:seg.chord.intervals}));
+   const compPro=profiles[s.chordInst]||profiles.guitar;
+   const style=s.chordStyle;const rhUse=style.startsWith('arp')&&rh.comp.strum?Object.assign({},rh,{comp:{arp:[0,1,2,3,4,3,2,1],arpSub:.5}}):rh;
+   renderGenreBacking(ac,cb,start,s,rhUse,segs,style!=='none',compPro);
+  }else renderChordAcc(ac,cb,start,s,nodes)}
+ // 선율형 + 장르 리듬: 곡 전체를 으뜸화음 한 구간으로 보고 장단/드럼 + 베이스 (+ 반주 선택 시 코드)
+ if(s.mode!=='chord'&&rh){
+  const gb=ac.createGain();gb.gain.value=.55;const gp=ac.createStereoPanner?ac.createStereoPanner():null;if(gp){gp.pan.value=.18;gb.connect(gp);gp.connect(master)}else gb.connect(master);
+  const sc=s.scale;const third=sc.includes(3)?3:sc.includes(4)?4:sc.includes(5)?5:2;const fifth=sc.includes(7)?7:sc.includes(8)?8:sc.includes(6)?6:5;
+  const root=s.base-12;const compOn=s.acc==='pluck'||s.acc==='full';
+  const pl=presets[s.region].instruments.find(([v])=>profiles[v].family==='pluck');
+  const body=Math.max(1,s.seconds-3.2);
+  renderGenreBacking(ac,gb,start,s,rh,[{time:0,dur:body,root,intervals:[0,third,fifth]},{time:body,dur:s.seconds-body,final:true,root,intervals:[0,third,fifth]}],compOn,profiles[pl?pl[0]:'guitar']);
+ }
+ // 반주 (기존 방식: 리듬 '자동'일 때)
+ if(s.acc!=='solo'){
+  const accBus=ac.createGain();accBus.gain.value=1;
+  const accPan=ac.createStereoPanner?ac.createStereoPanner():null;
+  if(accPan){accPan.pan.value=.18;accBus.connect(accPan);accPan.connect(master)}else accBus.connect(master);
+  const root=s.base-24,fifth=s.scale.includes(7)?7:(s.scale.includes(5)?5:0);
+  // 드론: 으뜸음 + 5도 지속음, 아주 느리게 숨 쉬듯
+  for(let t=0;t<s.seconds-.5;t+=s.beat*8){
+   const d=Math.min(s.beat*8.3,s.seconds-t-.3);
+   nodes.push(...playNote(ac,accBus,start+t,{time:t,dur:d,midi:root,velocity:.5,slide:0,vib:.05,drop:0,bend:0},{family:'wind',harm:[1,.5,.3,.2,.1],attack:.9,release:1.2,breath:0,vibRate:.3,vibDepth:.05,vibDelay:.2,cutoff:1200},.13));
+   if(fifth)nodes.push(...playNote(ac,accBus,start+t,{time:t,dur:d,midi:root+fifth+12,velocity:.5,slide:0,vib:.05,drop:0,bend:0},{family:'wind',harm:[1,.4,.2,.1],attack:1.1,release:1.2,breath:0,vibRate:.25,vibDepth:.05,vibDelay:.2,cutoff:1400},.07));
+  }
+  if((s.acc==='pluck'||s.acc==='full')&&!rh){
+   // 뜯는 저음 반주: 악구 박자에 맞춰 으뜸음-5도-옥타브를 순환
+   const pat=[0,fifth,12,fifth,0,12,fifth,0];
+   const step=s.meter%3===0?s.beat*1.5:s.beat*2;
+   let k=0;for(let t=s.beat*.5;t<s.seconds-2;t+=step,k++){
+    const m=root+12+pat[k%pat.length];
+    nodes.push(...playNote(ac,accBus,start+t,{time:t,dur:step*.95,midi:m,velocity:.5,slide:0,vib:0,drop:0,bend:0},profiles.accBass,.45));
+   }
+  }
+  if(s.acc==='full'&&!rh){
+   // 가벼운 타악: 3박 계열(한국·몽골·스페인 등)과 2박 계열을 구분
+   const triple=s.meter%3===0;
+   const pattern=triple?[1,0,0,2,0,2,1,0,0,2,0,0]:[1,0,2,0,1,0,2,2];
+   const sub=s.beat/2;
+   for(let t=0,i=0;t<s.seconds-2.5;t+=sub,i++){
+    const hit=pattern[i%pattern.length];if(!hit)continue;
+    nodes.push(...drumHit(ac,accBus,start+t,hit===1,hit===1?.4:.18));
+   }
+  }
+ }
+ return nodes;
+}
+
+/* ───────────────────────── 6. 재생 · 정지 · 저장 ───────────────────────── */
+async function play(){
+ if(!song)return;stop();
+ try{
+  const AC=window.AudioContext||window.webkitAudioContext;if(!AC)throw Error('Web Audio를 지원하지 않는 브라우저입니다.');
+  ctx=new AC();await ctx.resume();
+  analyser=ctx.createAnalyser();analyser.fftSize=128;const data=new Uint8Array(analyser.frequencyBinCount);
+  const session=++playSession;
+  ctx.__defer=[];renderScore(ctx,song,ctx.currentTime+.15);
+  const queue=ctx.__defer.sort((a,b)=>a.when-b.when);ctx.__defer=null;   // 시간순 정렬 후, 아래에서 1초씩 앞서 생성
+  const startT=performance.now(),ac=ctx;
+  $('status').textContent='▶ 재생 중…';$('play').disabled=true;
+  playTimer=setInterval(()=>{if(session!==playSession)return;
+   while(queue.length&&queue[0].when<ac.currentTime+1.0){queue.shift().fn()}
+   const el=(performance.now()-startT)/1000;analyser.getByteFrequencyData(data);bars.forEach((b,i)=>{const v=data[Math.min(data.length-1,Math.floor(i*data.length/bars.length*.6))]/255;b.style.height=(8+v*88)+'%'});$('status').textContent=`▶ 재생 중… ${Math.floor(el)} / ${song.seconds}초`;if(el>=song.seconds+.6)stop()},80);
+ }catch(e){$('status').textContent='재생 실패: '+e.message;stopAudio()}
+}
+function stopAudio(){++playSession;clearInterval(playTimer);playTimer=null;active.forEach(o=>{try{o.stop()}catch(e){}});active=[];if(ctx){const old=ctx;ctx=null;old.close().catch(()=>{})}analyser=null;bars.forEach(b=>b.style.height='8%')}
+function stop(){const was=!!ctx;stopAudio();if(song){$('play').disabled=false;$('stop').disabled=false;if(was)$('status').textContent='■ 재생 정지'}}
+
+function encodeWav(buffer){
+ const ch=buffer.numberOfChannels,len=buffer.length,sr=buffer.sampleRate,ab=new ArrayBuffer(44+len*ch*2),v=new DataView(ab);
+ const txt=(off,t)=>{for(let i=0;i<t.length;i++)v.setUint8(off+i,t.charCodeAt(i))};
+ txt(0,'RIFF');v.setUint32(4,36+len*ch*2,true);txt(8,'WAVE');txt(12,'fmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,ch,true);v.setUint32(24,sr,true);v.setUint32(28,sr*ch*2,true);v.setUint16(32,ch*2,true);v.setUint16(34,16,true);txt(36,'data');v.setUint32(40,len*ch*2,true);
+ const chans=[];for(let c=0;c<ch;c++)chans.push(buffer.getChannelData(c));
+ let off=44;for(let i=0;i<len;i++)for(let c=0;c<ch;c++){const s=Math.max(-1,Math.min(1,chans[c][i]));v.setInt16(off,s<0?s*32768:s*32767,true);off+=2}
+ return new Blob([ab],{type:'audio/wav'});
+}
+async function download(){
+ if(!song)return;const s=song;$('download').disabled=true;$('status').textContent='WAV 파일을 합성하고 있습니다…';
+ try{
+  const sr=44100,offline=new OfflineAudioContext(2,Math.ceil((s.seconds+1.5)*sr),sr);
+  renderScore(offline,s,0);
+  const result=await offline.startRendering();
+  const blob=encodeWav(result),url=URL.createObjectURL(blob),a=document.createElement('a');
+  a.href=url;a.download=`${s.region}_${s.instrument}_${s.mood}_${s.seconds}s_${s.seed}.wav`;document.body.append(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),20000);$('status').textContent='✓ WAV 파일 저장 요청 완료!';
+ }catch(e){$('status').textContent='WAV 저장 실패: '+e.message}finally{$('download').disabled=false}
+}
+$('generate').addEventListener('click',buildSong);$('play').addEventListener('click',play);$('stop').addEventListener('click',stop);$('download').addEventListener('click',download);
+selectRegion('korea');
+</script></body></html>

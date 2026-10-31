@@ -145,11 +145,16 @@ def main(a):
     c = json.load(open(proj, encoding="utf-8"))
     cur = app.get_settings()
     st = dict(c.get("settings") or {})
+    orig_st = dict(st)                      # 저장할 때 그대로 되돌릴 프로젝트 설정 (fps·위 제목 등이 프로그램 기본값으로 바뀌지 않게)
     for k in m.KEEP_KEYS:
         if not str(st.get(k, "")).strip() or k in m.SECRET_KEYS:
             st[k] = cur.get(k, m.DEFAULTS.get(k, ""))
     c["settings"] = st
     app.apply_cfg(c)
+    app.update()                               # 자막 스타일·색 묶음이 늦게(after_idle) 적용되는 것을 먼저 끝냄
+    for k_, v_ in orig_st.items():             # 프로젝트에 적힌 값이 이김 (묶음 이름은 다시 쓰지 않음 — 쓰면 묶음이 또 적용돼 위 제목 등이 되돌아감)
+        if k_ in app.vars and k_ not in ("format", "style_preset", "color_preset") and k_ not in m.SECRET_KEYS and k_ not in m.KEEP_KEYS:
+            app.vars[k_].set(str(v_))
     app.update()
     s = app.get_settings()
     m.set_tts_cfg(s)
@@ -280,7 +285,7 @@ def main(a):
         m.atomic_write_text(proj[:-5] + "_뺀그림.txt", "\n".join(dropped))
     app.set_story("\n\n".join(out))
     d_ = app.project_dict()
-    d_["settings"] = {k: v for k, v in d_["settings"].items() if k not in m.SECRET_KEYS}
+    d_["settings"] = {k: v for k, v in dict(d_["settings"], **orig_st).items() if k not in m.SECRET_KEYS}
     m.atomic_write_text(proj, json.dumps(d_, ensure_ascii=False, indent=1))
     log(f"✅ 그림 자리 {len(slots)}개로 저장 (새 그림 {len(new_pic)}장, 뺀 그림 {len(dropped)}장 → _뺀그림.txt) · 처음 것: {os.path.basename(bak)}")
     app.destroy()

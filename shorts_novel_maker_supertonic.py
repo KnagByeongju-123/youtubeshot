@@ -300,7 +300,8 @@ IMAGE_STYLES = {
     "파스텔 감성 일러스트": "soft pastel Korean emotional illustration, delicate thin warm-brown pencil line art, light transparent watercolor and colored-pencil coloring, low saturation pastel palette (peach, mint, cream), hazy warm sunlight glow, airy dreamy atmosphere, gentle rosy cheeks, simple cute faces, nostalgic summer mood, paper texture",
     "애니 일러스트(요즘)": "modern Japanese anime illustration, high-quality light novel cover art, large detailed glossy eyes with layered highlights, soft blush on cheeks, very fine detailed flowing hair strands with soft shading, clean thin line art, soft cel shading with gentle gradients, dreamy shallow depth of field with bokeh light particles, soft diffused lighting, delicate pastel color grading",
     "옛날 만화책(세피아 펜화)": "vintage 1970s-80s printed comic book illustration, bold black ink pen line art with fine cross-hatching, muted sepia and earth-tone coloring, visible halftone dot texture, aged yellowed paper, slightly faded old print look",
-    "역사 수묵 담채": "traditional East Asian ink wash painting (sumi-e) with light color washes, expressive black ink brush lines, soft grey washes with muted natural colors, rice paper texture across the whole image, historically accurate costumes and architecture, no red seal stamp, no calligraphy",   # 역사 채널(진짜 역사 기록관) 기본 그림 (사용자 결정 2026-10-30). 도장·글귀가 잘 끼어들어 금지 말을 붙임
+    "역사 수묵 담채": "traditional East Asian ink wash painting (sumi-e) with light color washes, expressive black ink brush lines, soft grey washes with muted natural colors, rice paper texture across the whole image, historically accurate costumes and architecture, ancient props only: writings as bamboo-slip scrolls or silk scrolls, bronze oil lamp dishes or candles, low wooden tables, paper lattice windows, no hardcover books, no glass lamps, no pens, no modern furniture, no red seal stamp, no calligraphy",   # 역사 채널(진짜 역사 기록관) 기본 그림 (사용자 결정 2026-10-30). 도장·글귀가 잘 끼어들어 금지 말을 붙임
+    "근대 수묵 담채": "traditional East Asian ink wash painting (sumi-e) with light color washes, expressive black ink brush lines, soft grey washes with muted natural colors, rice paper texture across the whole image, 1920s Korea under Japanese rule: Gyeongseong (Seoul) streets, hanok houses with tiled or thatched roofs, rickshaws, streetcars, Korean hanbok mixed with early Western suits and hats, period-accurate, no modern objects, no red seal stamp, no calligraphy, no text",   # 고전 단편 낭독(드림노트, 1920~30년대 한국 소설) 그림 (사용자 결정 2026-10-31)
     "크라프트지 손그림(귀여운 낙서)": "naive childlike hand-drawn illustration on recycled brown kraft paper, flat opaque gouache shapes, black marker outlines, simple dot eyes, rosy pink cheeks, tiny smile, striped and dotted clothes, crayon texture, whimsical folk art doodle, muted pink, blue, yellow, white and black palette, paper texture visible",
     "실루엣(노을 그림자)": "silhouette art, figures and objects as solid pure black silhouettes with crisp clean edges, no facial details, against a glowing gradient sunset sky in orange, pink and purple, layered paper-cut landscape, minimalist, high contrast, cinematic",
     "색칠공부 밑그림(선만)": "coloring book page, clean bold black outlines only on pure white background, no color, no shading, no gray, simple closed shapes easy to color in, cute friendly characters, line art, printable coloring sheet",
@@ -534,6 +535,7 @@ FIELDS = [
     ("자막형", "sub_max_chars", "자막 한 번에 글자 수", "int", 28),
     ("자막형", "img_motion", "사진 움직임", "choice:영상처럼(확대·이동·전환),천천히 확대만,없음", "영상처럼(확대·이동·전환)"),
     ("자막형", "img_label", "사진 제목 표시(오른쪽 위)", "choice:on,off", "on"),
+    ("자막형", "sub_hide", "자막 숨김(나레이션만 · 장문 기본 on)", "choice:off,on", "off"),
     ("자막형", "img_motion_amt", "사진 움직임 세기", "choice:은은하게,크게(예전)", "은은하게"),
     ("자막형", "motion_count", "모션: 숫자 카운트업(통계 수치가 올라감)", "choice:on,off", "off"),
     ("자막형", "motion_chart", "모션: 그래프 성장(% 수치 막대·게이지)", "choice:on,off", "off"),
@@ -580,7 +582,7 @@ FIELDS = [
     ("나레이션", "narr_style", "연기 지시(ChatGPT·Gemini 음성)", "str", "차분하고 또렷한 다큐멘터리 내레이터처럼. 반전 부분은 긴장감 있게."),
     ("나레이션", "openai_tts_model", "ChatGPT 음성 모델", "str", "gpt-4o-mini-tts"),
     ("나레이션", "gemini_tts_model", "Gemini 음성 모델", "str", "gemini-2.5-flash-preview-tts"),
-    ("나레이션", "narr_rate", "말 속도(%, -30~+40)", "float", 5),
+    ("나레이션", "narr_rate", "말 속도(%, -30~+40)", "float", 0),   # 기본 = 정상 속도 (사용자 결정 2026-10-31, 남자 성우 4·톤 -1.5 와 함께)
     ("나레이션", "narr_volume", "나레이션 볼륨(0~2)", "float", 1.0),
     ("나레이션", "narr_gap", "문단 사이 쉼(초)", "float", 0.5),
     ("나레이션", "narr_photo_pause", "사진 보는 시간(초)", "float", 1.5),
@@ -2915,10 +2917,13 @@ IMAGE_CHECK_SYSTEM = """너는 만화·일러스트 검수자다. 그림 파일�
 - 팔·다리: 인물마다 팔과 다리를 하나씩 센다. 한 사람에게 팔 3개 이상·다리 3개 이상(넘어지거나 앉은 자세에서 특히 확인, 옷자락·장화가 다리처럼 하나 더 붙은 것도),
   팔다리가 엉켜 몇 개인지 셀 수 없음 → 탈락 (fix 에 "exactly two arms and two legs, simple clear pose" 처럼)
 - 같은 인물이 한 그림에 두 번 나옴(복제)
+- 얼굴 방향이 몸과 안 맞음: 몸은 옆·뒤를 향하는데 얼굴만 정면으로 돌아감(목이 90도 넘게 비틀림), 걷는 방향과 반대로 얼굴이 돌아감 → 탈락 (fix 에 "head and face turned the same direction as the body, face in profile" 처럼)
 - 얼굴·눈이 심하게 일그러짐, 인물이 두 겹으로 겹침, 몸이 기형(목·어깨·허리가 꺾임)
 - 주요 소품 모양이 망가짐: 기타·악기(몸통이 찌그러짐, 목이 휘거나 두 개, 줄·사운드홀이 엉망), 우산·의자·책상·자전거·카세트·전화기 등이 녹아내리거나
   부서지거나 공중에 떠 있음, 사람이 들고 있어야 할 물건이 손 없이 떠 있음
 - 글자·워터마크가 보임, 위아래·양옆에 흰 띠·검은 띠(액자 테두리)가 생김
+- 옛날(역사) 장면인데 시대에 안 맞는 물건: 양장본·딱딱한 표지의 서양식 책·공책, 유리 램프·호롱(유리 갓)·전구·전등 스위치, 만년필·연필·돋보기,
+  서양식 사무용 책상·등받이 의자, 유리 끼운 창, 현대 서점·이젤·사진 같은 배경 → 탈락 (fix 에 "bamboo-slip scrolls instead of books, bronze oil lamp dish, low wooden table, paper lattice window" 처럼)
 배경의 사소한 왜곡, 작고 흐린 먼 배경 소품은 통과.
 탈락이면 fix 에 다시 그릴 때 프롬프트에 덧붙일 영어 지시를 쓴다(예: "hands out of frame, close-up on face" / "remove the guitar, guitar case closed against the wall instead" / "full-bleed image, no border").
 반드시 JSON만 출력: {"images": [{"k": 1, "ok": true, "problem": "", "fix": ""}, {"k": 2, "ok": false, "problem": "오른손 손가락 6개", "fix": "hands hidden in pockets, upper body shot"}]}"""
@@ -3040,6 +3045,7 @@ IMG_SOURCE_PRESET = {"그림: 애니(웹툰)": "웹툰", "그림: 애니+수채�
                      "그림: 애니 일러스트": "애니 일러스트(요즘)",
                      "그림: 옛날 만화책": "옛날 만화책(세피아 펜화)",
                      "그림: 역사 수묵 담채": "역사 수묵 담채",   # 역사 채널 기본
+                     "그림: 근대 수묵 담채": "근대 수묵 담채",   # 고전 단편 낭독(1920~30년대 한국)
                      "그림: 크라프트지 낙서": "크라프트지 손그림(귀여운 낙서)", "그림: 실루엣": "실루엣(노을 그림자)",
                      "그림: 색칠공부 밑그림": "색칠공부 밑그림(선만)", "그림: 동화 난쟁이 마을": "동화 난쟁이 마을",
                      "그림: 연필 윤곽 스케치": "연필 윤곽 스케치", "그림: 필터 색연필": "필터: 색연필", "그림: 필터 목탄": "필터: 목탄 스케치",
@@ -3048,6 +3054,9 @@ IMG_SOURCE_PRESET = {"그림: 애니(웹툰)": "웹툰", "그림: 애니+수채�
                      "그림: 유화 보조": "유화(붓터치)", "그림: 유화 화사": "유화(화사한 색)", "그림: 우키요에 보조": "우키요에 목판화", "그림: 펜화 보조": "펜화 판화",
                      "그림: 크레용 보조": "크레용 그림", "그림: 모네 보조": "모네 인상주의", "그림: 잉크 보조": "잉크 스케치"}
 IMG_SOURCE = {"mode": IMG_SOURCE_WEB}
+
+
+DEFER_DRAW = {"on": False}   # 장문 '나레이션 먼저': 대본 단계에서는 그림을 그리지 않음 → 나레이션 문단 시간에 맞춰 나중에 그림 (make_longdoc, 사용자 결정 2026-10-31)
 
 
 def draw_settings():
@@ -3195,6 +3204,7 @@ def zip_image_files(zip_path, out_dir):
 IMAGE_STYLES_KO = {   # Claude·Gemini 에 한국어로 줄 화풍 설명
     "인상주의 유화": "인상주의 유화, 유화 질감이 보이는 그림, 선명하게 쪼갠 색, 분위기 있는 빛.",
     "잉크 스케치": "자유로운 잉크 스케치, 손으로 그린 표현적인 잉크 선, 간결하고 즉흥적.",
+    "근대 수묵 담채": "먹선과 옅은 색을 올린 동양 수묵 담채화, 화선지 질감, 1920~30년대 경성(일제강점기)의 거리·한옥·인력거·전차, 한복과 초기 양복. 지금 물건·낙관·글귀는 넣지 않음.",
     "역사 수묵 담채": "먹선과 옅은 색을 올린 동양 수묵 담채화, 화선지 질감, 시대에 맞는 옷과 건물. 낙관(붉은 도장)·글귀는 넣지 않음.",
     "모네 인상주의": "모네풍 인상주의 그림, 점점이 흩어진 붓질, 부드러운 빛, 야외 장면.",
     "크레용 그림": "아이가 그린 크레용 그림, 왁스 크레용 질감, 밝고 단순한 색.",
@@ -15160,7 +15170,9 @@ class App(tk.Tk):
                 notes.append(f"{i + 1}장: {d['notes']}")
             draw_s = draw_settings()
             use_sd = bool(draw_s) or fiction and sd_ready() and str((SCRIPT_ENGINE.get("s") or {}).get("fiction_image", "")).startswith("로컬")
-            if autophoto and use_sd:   # 이야기(또는 그림 고르기): 이 PC에서 그림을 그려 넣음 (무료)
+            if autophoto and use_sd and DEFER_DRAW["on"]:
+                pass                    # 그림은 나레이션을 만든 뒤 문단 시간에 맞춰 (그림_간격_보강)
+            elif autophoto and use_sd:   # 이야기(또는 그림 고르기): 이 PC에서 그림을 그려 넣음 (무료)
                 stop()
                 n_ph = doc_photo_target(st)
                 log(f"  🖌 {unit} {i + 1} 그림 {n_ph}장 그리는 중 (로컬 · 한 장 1~3분)...")
@@ -15189,6 +15201,8 @@ class App(tk.Tk):
             save_state()
             log(f"  {unit} {i + 1} 완성: {len(story_text_only(st)):,}자")
         opening = st8.get("opening_ph") or doc_clean(o.get("opening", ""))
+        if DEFER_DRAW["on"] and "opening_ph" not in st8 and (draw_settings() or fiction and sd_ready() and str((SCRIPT_ENGINE.get("s") or {}).get("fiction_image", "")).startswith("로컬")):
+            st8["opening_ph"] = opening          # 오프닝 그림도 나레이션 뒤에
         if autophoto and "opening_ph" not in st8 and (draw_settings() or fiction and sd_ready() and str((SCRIPT_ENGINE.get("s") or {}).get("fiction_image", "")).startswith("로컬")):
             stop()
             n_ph = max(2, doc_photo_target(opening))
