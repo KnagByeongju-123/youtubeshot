@@ -1,0 +1,8 @@
+{"chars":[
+ {"name":"태종","kind":"person","refs":["등장인물/조선/기본_왕.png"],"look":"Joseon king Taejong in 1411, strong-built man in his mid 40s, stern commanding face, thick black beard and mustache, wearing the bright crimson-red royal robe"},
+ {"name":"이우","kind":"person","refs":["등장인물/조선/기본_사대부.png"],"look":"former Joseon official Yi U, man in his 50s, proud mocking face, thin grey-streaked beard, wearing a pale sky-blue long overcoat with a thin black sash"},
+ {"name":"관찰사","kind":"person","refs":["등장인물/조선/기본_문관.png"],"color":"blue-green","look":"Joseon provincial governor, man in his 50s, worried tired face, short black beard, wearing the deep blue-green official robe"},
+ {"name":"코끼리 사육 하인","kind":"person","refs":["등장인물/조선/기본_농민.png"],"look":"Joseon low-ranking stable servant, man in his 30s, simple honest face, hair in a topknot under a cloth headband, rough off-white hemp clothes with rolled sleeves, straw shoes, no hat"},
+ {"name":"일본 사신","kind":"person","refs":[],"look":"Japanese envoy of the Muromachi period around 1411, man in his 40s, dignified face, black lacquered tall eboshi hat, dark blue hitatare formal robe with wide sleeves and long hakama trousers, holding a folded fan"},
+ {"name":"코끼리","kind":"animal","refs":[],"look":"Asian elephant, adult male, grey wrinkled skin, small rounded ears, short tusks, long trunk, gentle but sad eyes, slightly thin body"}
+]}
