@@ -78,6 +78,8 @@ for c in json.load(open(lst, encoding="utf-8"))["chars"]:
                            + "Consistent design in every view, no close-ups, no other people or animals, no text, no red seal stamp"})
 print(f"그릴 시트 {len(jobs)}장: " + ", ".join(j["name"] for j in jobs), flush=True)
 if jobs:
+    if any(j.get("refs") for j in jobs):      # 옷차림 기준 그림은 크게 넣어야 흉배·무늬가 살아남 (klein 기본 115000 → 300000)
+        os.environ["KLEIN_REF_MAX_AREA"] = "300000"
     got = m.sd_generate(jobs, os.path.join(out_dir, "_sd"), print, None)
     for j in jobs:
         if got.get(j["id"]):
