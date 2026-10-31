@@ -7398,11 +7398,16 @@ def build_audio(r, s, style):
         seg = clip[: max(0, n - i0)]
         if len(seg):
             out[i0:i0 + len(seg)] += seg[:, None] * vol if seg.ndim == 1 else seg * vol
+    sfx_duck = None
     for st, kind in sfx:                       # 발표 연출 효과음 ([효과:알림] 등)
         snd = sfx_sound(kind) * (0.55 * max(0.0, float(s.get("hit_volume", 0.6) or 0.6)) / 0.6)
         i0 = int(st * SR)
         seg = snd[: max(0, n - i0)]
         if len(seg):
+            if sfx_file(kind) is not None and narr:   # 녹음 효과음(전투시작 등)은 나레이션이 나오면 작아짐 (말소리를 덮지 않게)
+                if sfx_duck is None:
+                    sfx_duck = duck_env(n, narr, r.duration, 0.22).astype(np.float32)
+                seg = seg * sfx_duck[i0:i0 + len(seg), None]
             out[i0:i0 + len(seg)] += seg
     if hit_t:
         kind = str(s.get("hit_sound", "자동"))
@@ -10880,7 +10885,7 @@ _SFX_FILE_CACHE = {}
 
 
 def sfx_file(kind):
-    """효과음/<이름>.mp3(.wav/.ogg) 가 있으면 그 소리 (모노, SR). 없으면 None"""
+    """효과음/<이름>.mp3(.wav/.ogg) 가 있으면 그 소리 (스테레오 (n, 2), SR). 없으면 None"""
     k = str(kind).strip()
     if k in _SFX_FILE_CACHE:
         return _SFX_FILE_CACHE[k]
@@ -10888,9 +10893,9 @@ def sfx_file(kind):
     y = None
     if path:
         try:
-            raw = subprocess.run([get_ffmpeg(), "-v", "error", "-i", path, "-f", "f32le", "-ac", "1", "-ar", str(SR), "-"],
+            raw = subprocess.run([get_ffmpeg(), "-v", "error", "-i", path, "-f", "f32le", "-ac", "2", "-ar", str(SR), "-"],
                                  capture_output=True, check=True).stdout
-            y = np.frombuffer(raw, np.float32).copy()
+            y = np.frombuffer(raw, np.float32).copy().reshape(-1, 2)          # 스테레오 그대로 (영상 소리와 같은 모양)
             y = y / (np.abs(y).max() + 1e-6) * 0.9
         except Exception:
             y = None
