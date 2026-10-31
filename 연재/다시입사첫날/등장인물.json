@@ -1,0 +1,48 @@
+{
+  "_설명": "《다시, 입사 첫날》 등장인물. look = 그림 모델에 넣는 영어 묘사(모든 컷에 그대로), outfit = 평소 옷차림(컷마다 바꿀 수 있음), look_ko = 한국어 설명, face = 확정한 캐릭터 시트(이 폴더 기준 경로). 나레이션 한 명이 대사까지 읽어 voice 없음",
+  "style": "일본 애니풍",
+  "chars": [
+    {
+      "name": "도윤",
+      "look": "young Korean man aged 22, slim average build, kind but determined face with sharp calm eyes, short neat black hair with side-parted bangs",
+      "outfit": "wearing a slightly loose navy new-employee suit, white shirt, plain dark blue tie, black shoes, company ID badge on a lanyard",
+      "look_ko": "주인공 한도윤. 회귀 뒤 22살 신입사원(속은 32살). 마른 보통 체격, 순하지만 눈빛이 차분하고 날카로움, 옆가르마 짧은 검은 머리, 조금 큰 남색 신입 정장·남색 넥타이·사원증",
+      "face": "캐릭터시트/도윤.png"
+    },
+    {
+      "name": "박 과장",
+      "look": "Korean man around forty, tall and heavy-set with a slight belly, oily slicked-back black hair, thick eyebrows, smug fake smile hiding cold greedy eyes, gold wristwatch",
+      "outfit": "wearing an expensive dark gray three-piece suit, purple silk tie, shiny brown leather shoes",
+      "look_ko": "악역 박상철. 2016년엔 과장(40살), 원래 미래엔 부장. 크고 배 나온 체격, 기름 바른 올백 머리, 굵은 눈썹, 가짜 웃음과 차갑고 욕심 많은 눈, 금시계, 비싼 회색 쓰리피스 정장·보라색 넥타이",
+      "face": "캐릭터시트/박_과장.png"
+    },
+    {
+      "name": "준혁",
+      "look": "young Korean man aged 23, tall lanky build, friendly face with nervous eyes, slightly messy wavy brown hair, thin metal-framed glasses",
+      "outfit": "wearing a cheap black new-employee suit, white shirt, red tie slightly crooked, company ID badge on a lanyard",
+      "look_ko": "입사 동기 이준혁. 원래 미래엔 도윤을 배신한 동기(아버지 빚으로 박 과장에게 약점 잡힘). 키 크고 호리호리, 친근하지만 불안한 눈, 흐트러진 갈색 웨이브 머리, 얇은 금속테 안경, 싼 검은 정장·삐뚤어진 빨간 넥타이",
+      "face": "캐릭터시트/준혁.png"
+    },
+    {
+      "name": "유나",
+      "look": "young Korean woman aged 27, slender, intelligent calm face, straight black hair in a neat low bun with a few strands framing her face, small pearl earrings",
+      "outfit": "wearing a light beige blazer over a white blouse, black slim pants, low black heels, company ID badge on a lanyard",
+      "look_ko": "감사팀 선배 서유나. 원래 미래에 박 과장 비리를 캐다 좌천된 사람. 날씬, 똑똑하고 차분한 얼굴, 낮게 묶은 단정한 검은 머리, 작은 진주 귀걸이, 베이지 재킷·흰 블라우스·검은 바지",
+      "face": "캐릭터시트/유나.png"
+    },
+    {
+      "name": "최 전무",
+      "look": "dignified Korean man in his early sixties, medium build, upright posture, short neat silver-gray hair, stern but fair face with deep wrinkles, black-rimmed glasses",
+      "outfit": "wearing a dark navy suit, white shirt, dark red tie, black shoes",
+      "look_ko": "공정한 임원 최 전무(60대 초반). 꼿꼿한 자세, 단정한 은회색 머리, 엄하지만 공정한 얼굴, 검은테 안경, 남색 정장·짙은 빨간 넥타이",
+      "face": "캐릭터시트/최_전무.png"
+    },
+    {
+      "name": "엄마",
+      "look": "Korean woman in her late fifties, small slim build, gentle tired face with soft smile lines, shoulder-length black hair with gray streaks tied loosely back",
+      "outfit": "wearing a lavender knit cardigan over a cream blouse, long brown skirt, simple flat shoes",
+      "look_ko": "도윤의 엄마(50대 후반). 작고 마른 몸, 지쳤지만 다정한 얼굴, 흰머리 섞인 어깨 길이 머리를 느슨하게 묶음, 연보라 카디건·크림 블라우스·긴 갈색 치마. 원래 미래엔 병을 늦게 발견해 쓰러짐",
+      "face": "캐릭터시트/엄마.png"
+    }
+  ]
+}
