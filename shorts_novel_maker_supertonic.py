@@ -570,7 +570,7 @@ FIELDS = [
     ("나레이션", "st_emotion_map", "문단별 지정(예: 2=슬픔,4=놀람)", "str", ""),
     ("나레이션", "st_steps", "로컬 성우 품질(5~12)", "int", 5),
     ("나레이션", "narr_tone_f", "여자 성우 톤(반음, 0=원래 목소리 · 올리면 약간 울림)", "float", 0.0),
-    ("나레이션", "narr_tone_m", "남자 성우 톤(반음, 0=원래 목소리)", "float", -0.5),   # 기본 = 남자 성우 4 를 반음 0.5 낮게 (사용자 결정 2026-10-31)
+    ("나레이션", "narr_tone_m", "남자 성우 톤(반음, 0=원래 목소리)", "float", -1.5),   # 기본 = 남자 성우 4 를 반음 1.5 낮게 (사용자 결정 2026-10-31, 수면 다큐 성우처럼 낮고 차분하게)
     ("나레이션", "narr_bright_f", "여자 목소리 밝게(고음 강조 · 약간 울림)", "choice:on,off", "off"),
     ("나레이션", "narr_breath_cut", "말 시작 숨소리('쓰읍') 지우기", "choice:on,off", "on"),
     ("나레이션", "narr_replace", "읽기 바꾸기(성우만, 쉼표로: LOT=로트, PIN=핀)", "str",
@@ -580,7 +580,7 @@ FIELDS = [
     ("나레이션", "narr_style", "연기 지시(ChatGPT·Gemini 음성)", "str", "차분하고 또렷한 다큐멘터리 내레이터처럼. 반전 부분은 긴장감 있게."),
     ("나레이션", "openai_tts_model", "ChatGPT 음성 모델", "str", "gpt-4o-mini-tts"),
     ("나레이션", "gemini_tts_model", "Gemini 음성 모델", "str", "gemini-2.5-flash-preview-tts"),
-    ("나레이션", "narr_rate", "말 속도(%, -30~+40)", "float", 5),
+    ("나레이션", "narr_rate", "말 속도(%, -30~+40)", "float", 0),   # 기본 = 정상 속도 (사용자 결정 2026-10-31, 예전 +5)
     ("나레이션", "narr_volume", "나레이션 볼륨(0~2)", "float", 1.0),
     ("나레이션", "narr_gap", "문단 사이 쉼(초)", "float", 0.5),
     ("나레이션", "narr_photo_pause", "사진 보는 시간(초)", "float", 1.5),
@@ -8310,7 +8310,7 @@ def apply_voice_preset(s, name, log=None):
             log(f"⚠ 성우 프리셋 '{name}' 이(가) 없어요 (성우_프리셋.json) → 기본 성우로 진행")
         return False
     s["narr_voice"] = p.get("voice") or s.get("narr_voice")
-    s["narr_rate"] = str(p.get("rate", s.get("narr_rate", 5)))
+    s["narr_rate"] = str(p.get("rate", s.get("narr_rate", 0)))
     s["narr_tone_f" if is_female_voice(s["narr_voice"]) else "narr_tone_m"] = float(p.get("tone", 0) or 0)
     s["st_emotion"] = p.get("emotion") or s.get("st_emotion", "자동(문단별)")
     s["narr_gap"] = str(p.get("gap", s.get("narr_gap", 0.5)))
