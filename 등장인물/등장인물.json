@@ -96,6 +96,18 @@
       "look": "Chinese Eastern Han dynasty (c. 200 AD) stout general, full black beard, black iron helmet, black lamellar armor, brown cloak",
       "look_ko": "다부진 체격, 덥수룩한 검은 수염, 검은 투구·검은 비늘갑옷, 갈색 망토",
       "face": "등장인물/삼국지/화웅.png"
+    },
+    {
+      "name": "조비",
+      "look": "Chinese Eastern Han dynasty man in his 30s, Cao Pi, long oval face, calm dark eyes with straight brows, black hair in a topknot under a small black crown cap with a green jade pin, short neat black mustache and short beard, tall slim build, deep purple long robe with gold trim at collar and sleeves, black sash",
+      "look_ko": "30대, 긴 갸름한 얼굴, 차분한 눈, 초록 옥비녀 꽂은 검은 관, 단정한 콧수염·짧은 턱수염, 금테 두른 보라색 도포, 검은 띠",
+      "face": "등장인물/삼국지/조비.png"
+    },
+    {
+      "name": "조식",
+      "look": "Chinese Eastern Han dynasty young man in his mid 20s, Cao Zhi the poet, fine gentle face, completely clean-shaven, no mustache, no beard, black hair in a neat topknot with a white jade hairpin, slim build, pale ivory long scholar robe with light blue sash",
+      "look_ko": "20대 중반 시인, 고운 얼굴, 수염 없음, 흰 옥비녀 상투, 마른 체격, 상아색 학자 도포에 하늘색 띠",
+      "face": "등장인물/삼국지/조식.png"
     }
   ]
 }
