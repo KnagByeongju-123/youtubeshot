@@ -174,7 +174,24 @@ def find_font_lang(lang, bold=False):
 
 # 자체 합성 배경음 스타일 (아래 SOUND_STYLES 와 이름이 같아야 함)
 SOUND_STYLE_NAMES = ["노래 멜로디(오르골)", "잔잔한 패드", "슬픈 패드", "감성 오르골", "밝은 오르골", "긴장 펄스", "어두운 드론",
-                     "공포 심장박동", "비 오는 밤", "빗소리", "심해", "우주", "바람", "파도"]
+                     "공포 심장박동", "비 오는 밤", "빗소리", "심해", "우주", "바람", "파도", "중국 현악(고쟁·얼후)",
+                     "중국 현악 · 상조(차분)", "중국 현악 · 각조(신비)", "중국 현악 · 치조(활기)", "중국 현악 · 우조(애잔)"]
+# 권역별 전통악기 배경음 (전통악기/<권역>.py, 직접 합성 · 진짜 역사 기록관용, 사용자 결정 2026-10-31): (권역 파일, 이름 앞부분, 음계들)
+TRAD_REGIONS = [("한국", "한국 전통(가야금·해금)", ["평조", "계면조"]),
+                ("일본", "일본 전통(고토·샤쿠하치)", ["미야코부시", "요음계"]),
+                ("중동", "중동 전통(우드·네이)", ["히자즈", "라스트", "바야티"]),
+                ("인도", "인도 전통(시타르·반수리)", ["야만", "바이라비", "카피"]),
+                ("몽골", "몽골 초원(마두금·후미)", ["초원장조", "초원단조"]),
+                ("중세유럽", "중세 유럽(류트·리코더)", ["도리안", "믹솔리디안", "에올리안"])]
+# 관악(피리가 주인공) 버전: 전통악기/<권역>.py 의 WIND (사용자 결정 2026-10-31)
+TRAD_WIND = [("중국", "중국 관악(디즈·샤오)", ["궁조", "상조", "각조", "치조", "우조"]),
+             ("한국", "한국 관악(대금·피리)", ["평조", "계면조"]),
+             ("일본", "일본 관악(샤쿠하치)", ["미야코부시", "요음계"]),
+             ("중동", "중동 관악(네이·주르나)", ["히자즈", "라스트", "바야티"]),
+             ("인도", "인도 관악(반수리·셰나이)", ["야만", "바이라비", "카피"]),
+             ("몽골", "몽골 관악(림베·후미)", ["초원장조", "초원단조"]),
+             ("중세유럽", "중세 유럽 관악(리코더·숌)", ["도리안", "믹솔리디안", "에올리안"])]
+SOUND_STYLE_NAMES += [f"{pre} · {md}" for _, pre, mds in TRAD_REGIONS + TRAD_WIND for md in mds]
 
 # 소재별 자동 배경음
 SOUND_BY_TOPIC = {
@@ -283,6 +300,7 @@ IMAGE_STYLES = {
     "파스텔 감성 일러스트": "soft pastel Korean emotional illustration, delicate thin warm-brown pencil line art, light transparent watercolor and colored-pencil coloring, low saturation pastel palette (peach, mint, cream), hazy warm sunlight glow, airy dreamy atmosphere, gentle rosy cheeks, simple cute faces, nostalgic summer mood, paper texture",
     "애니 일러스트(요즘)": "modern Japanese anime illustration, high-quality light novel cover art, large detailed glossy eyes with layered highlights, soft blush on cheeks, very fine detailed flowing hair strands with soft shading, clean thin line art, soft cel shading with gentle gradients, dreamy shallow depth of field with bokeh light particles, soft diffused lighting, delicate pastel color grading",
     "옛날 만화책(세피아 펜화)": "vintage 1970s-80s printed comic book illustration, bold black ink pen line art with fine cross-hatching, muted sepia and earth-tone coloring, visible halftone dot texture, aged yellowed paper, slightly faded old print look",
+    "역사 수묵 담채": "traditional East Asian ink wash painting (sumi-e) with light color washes, expressive black ink brush lines, soft grey washes with muted natural colors, rice paper texture across the whole image, historically accurate costumes and architecture, no red seal stamp, no calligraphy",   # 역사 채널(진짜 역사 기록관) 기본 그림 (사용자 결정 2026-10-30). 도장·글귀가 잘 끼어들어 금지 말을 붙임
     "크라프트지 손그림(귀여운 낙서)": "naive childlike hand-drawn illustration on recycled brown kraft paper, flat opaque gouache shapes, black marker outlines, simple dot eyes, rosy pink cheeks, tiny smile, striped and dotted clothes, crayon texture, whimsical folk art doodle, muted pink, blue, yellow, white and black palette, paper texture visible",
     "실루엣(노을 그림자)": "silhouette art, figures and objects as solid pure black silhouettes with crisp clean edges, no facial details, against a glowing gradient sunset sky in orange, pink and purple, layered paper-cut landscape, minimalist, high contrast, cinematic",
     "색칠공부 밑그림(선만)": "coloring book page, clean bold black outlines only on pure white background, no color, no shading, no gray, simple closed shapes easy to color in, cute friendly characters, line art, printable coloring sheet",
@@ -581,6 +599,7 @@ FIELDS = [
     ("소리", "bgm_mode", "배경음", "choice:자동생성,파일,없음", "자동생성"),
     ("소리", "bgm_style", "배경음 스타일", "choice:" + ",".join(["자동(소재별)"] + SOUND_STYLE_NAMES), "자동(소재별)"),
     ("소리", "bgm_volume", "배경음 볼륨(0~2, 0.03=거의 안 들림)", "float", 0.03),
+    ("소리", "chapter_perc", "전통악기 배경음: 챕터 시작 타악 (on=권역 기본 징 또는 북, 연속북=긴장감, 진군북=출정·전투, 난타)", "choice:on,징,북,연속북,진군북,난타,off", "off"),   # 기본 끔 (사용자 결정 2026-10-31: 잘 안 들림)
     ("소리", "reveal_hit", "반전 효과음", "choice:on,off", "on"),
     ("소리", "hit_sound", "반전 효과음 종류", "choice:자동(코미디=두둥탁),쿵(반전),두둥탁(개그 드럼),띠링(밝은 종)", "자동(코미디=두둥탁)"),
     ("소리", "hit_volume", "효과음 볼륨(0~2)", "float", 0.6),
@@ -791,6 +810,21 @@ FACT_RULES = """[사실 기반 콘텐츠 규칙 - 반드시 지킬 것]
 - 마지막에 댓글을 부르는 짧은 질문 1줄 (예: "당신이라면 어떻게 했을까?")
 - sources 에는 이 내용이 실린 대표 출처(기관, 논문, 유명 매체, 백과사전 항목명)를 2~4개 적는다. URL은 적지 않는다.
 - confidence 는 전체 내용의 확신도(high/medium/low), notes 에는 확인이 필요한 부분을 적는다."""
+
+# 채널 인기 공식: 우리 채널에서 잘 된 실화 다큐의 제목·썸네일에서 뽑은 우선순위 (제목·썸네일을 만드는 모든 AI 주문서에 들어감).
+# 중괄호를 쓰지 않음 (DOC_OUTLINE_SYSTEM 이 .format 으로 채워지므로)
+HIT_RULE = """[채널 인기 공식 - 실화·과학·역사 다큐의 제목·썸네일 우선순위]
+우리 채널에서 잘 된 영상: '1,700년 잠든 쿠샨 문자, 2026년 새로 밝혀진 해독의 반전은 😱' / '4천 년 동안 아무도 못 읽던 문자, 은잔에 새긴 왕의 이름이 풀어낸 선형 엘람 문자'.
+잘 된 이유: 큰 숫자에 놀라 누르고, '아무도 못 했다'에 궁금해지고, '풀렸다'는 약속 때문에 끝까지 본다(클릭률·시청 지속률이 함께 오름).
+아래를 위에서부터 순서대로 최대한 담는다(위일수록 중요):
+1. 큰 숫자: 얼마나 오래·많이 ('1,700년', '4천 년 동안'). 출처에 있는 숫자만 쓴다.
+2. '아무도 못 했다': '아무도 못 읽던', '잠든', '풀리지 않던'. 오래 막혀 있던 수수께끼임을 보여 준다.
+3. 풀림의 약속: '풀어낸', '해독의 반전은', '새로 밝혀진'. 답이 영상 안에 있다고 약속하되 답 자체는 말하지 않는다.
+   가설 단계면 '풀렸을까?', 미해결이면 '아직 못 푼 이유'로 쓴다(사실보다 앞서 단정 금지).
+4. 손에 잡히는 단서 하나: '은잔에 새긴 왕의 이름'처럼 눈에 그려지는 물건·장면. '새 연구', '과학자들' 같은 막연한 말 대신.
+5. 최신성: '2026년 새로 밝혀진', '최근'. 실제 발표 시점일 때만 쓴다.
+썸네일: 큰 글자는 1+2 ('아무도 못 읽은 / 1700년 문자'), 사진은 그 단서(유물·비문·장소) 실물을 크게.
+지어낸 숫자·결말·단서는 인기 공식보다 사실 규칙이 우선이다."""
 
 FACT_SYSTEM = """너는 한국 유튜브 쇼츠에서 조회수 잘 나오는 '기이한 실화·과학·자연현상' 채널의 전문 작가다.
 영상은 글이 위로 천천히 스크롤되는 형식이고, 시청자는 소리 없이 글만 읽는다.
@@ -1043,6 +1077,7 @@ CATEGORIES[DOC_CATEGORY] = (True, {
     "[실화] 불가능에 도전한 사람들": ("실제 기록에 남은 탐험·도전(최초의 횡단·등정·잠수·비행). 왜 아무도 못 했나 → 준비와 실패 → 결정적 고비 → 해낸 순간과 그 대가. 이미 아주 유명한 사례는 덜 알려진 각도로.", "네온 시티"),
     "[실화] 과학이 밝혀낸 미스터리": ("오랫동안 풀리지 않던 수수께끼를 최근 과학 연구(네이처·사이언스 등 동료 심사 논문)가 풀어내거나 새로 설명한 이야기. AI든 실험이든 관측이든 가리지 않는다. 구성: 무엇이 오래 수수께끼였나 → 왜 아무도 못 풀었나 → 결정적 단서와 방법 → 밝혀진 답 → 아직 남은 의문. 반드시 웹 조사로 논문·기관·연도를 확인하고, '확인된 사실'과 '아직 검증 중인 가설'을 분명히 나눈다. '완전히 끝났다' 같은 단정·과장은 하지 않는다.", "시네마 다크"),
     "[실화] 최근 밝혀진 과학 발견": ("최근 1~3개월 사이에 동료 심사 논문(네이처·사이언스 등)이나 연구기관 발표로 새로 밝혀진 과학 사실. 수수께끼가 아니어도 된다: 첫 증거, 가장 오래된 기록, 새로 발견된 생물·천체, 상식을 뒤집은 결과. 구성: 발표 날짜·저널·연구팀으로 신선함을 바로 알림 → 이전까지 우리가 알던 것 → 무엇을 어떻게 발견했나 → 왜 중요한가 → 아직 확인이 필요한 부분과 반론. 반드시 웹 조사로 발표 날짜·저널·기관을 확인하고 제목이나 오프닝에 '2026년 ○월' 같은 시점을 넣는다. 막 나온 연구는 바뀔 수 있으니 '밝혀졌다'로 단정하지 말고 검증 단계(후속 연구·반론)를 분명히 밝힌다.", "네온 시티"),
+    "[실화] 기록으로 보는 진짜 역사": ("드라마·소설로 알려진 역사 장면을 실제 기록(조선왕조실록, 진수의 정사 『삼국지』 등)과 맞대어 보는 이야기. 구성: 모두가 아는 장면(사극·연의) → 기록을 펴 보면(실록은 '○○ ○년 ○월 ○일 기사', 정사는 '「○○전」'처럼 어디에 적혔는지 밝힘) → 그 한 줄이 뜻하는 것 → 왜 이야기가 바뀌었나(후대 소설·야사·드라마) → 아직 남은 의문. 반드시 웹 조사로 기록의 날짜·권·편을 확인하고, 기록·소설(연의)·드라마·야사·학자의 해석을 '실록에는', '소설에서는', '전해지는 이야기로는', '~라는 해석이 있다'로 분명히 나눈다. 정사 본문과 배송지의 주석(다른 책을 인용한 것)도 구분한다. 한국어 번역문을 길게 그대로 옮기지 말고 자기 말로 풀어 쓰며, 직접 인용은 한두 문장에 출처를 붙인다. 실제 인물을 깎아내리거나 미화하지 않고, 논쟁이 있는 평가는 양쪽을 함께 소개한다.", "시네마 다크"),
 })
 for _t, _snd in (("우주의 비밀", "우주"), ("양자물리·현실의 본질", "우주"), ("과학자의 생각법", "잔잔한 패드"),
                  ("인류의 기원과 진화", "바람"), ("고대 문명 미스터리", "어두운 드론"), ("역사를 바꾼 결정적 순간", "잔잔한 패드"),
@@ -1065,7 +1100,8 @@ for _t, _snd in (("세계의 축제", "밝은 오르골"), ("신기한 풍속과
 for _t, _snd in (("[실화] 극한 생존기", "바람"), ("[실화] 미제 사건의 기록", "어두운 드론"), ("[실화] 사라진 사람과 배·비행기", "심해"),
                  ("[실화] 믿기 힘든 우연", "밝은 오르골"), ("[실화] 희대의 사기와 범죄", "긴장 펄스"), ("[실화] 평범한 사람의 위대한 순간", "잔잔한 패드"),
                  ("[실화] 재난에서 살아남은 날", "어두운 드론"), ("[실화] 불가능에 도전한 사람들", "바람"),
-                 ("[실화] 과학이 밝혀낸 미스터리", "어두운 드론"), ("[실화] 최근 밝혀진 과학 발견", "우주")):
+                 ("[실화] 과학이 밝혀낸 미스터리", "어두운 드론"), ("[실화] 최근 밝혀진 과학 발견", "우주"),
+                 ("[실화] 기록으로 보는 진짜 역사", "잔잔한 패드")):
     SOUND_BY_TOPIC.setdefault(_t, _snd)
 
 # 장문 '이야기'(허구) 소재: 유튜브 장편 낭독·오디오드라마로 인기 있는 장르 (소재 이름 앞 [이야기])
@@ -1222,10 +1258,10 @@ DOC_PHOTO_SPARE = 3   # 글과 안 맞아 빠지거나 내려받기 실패할 �
 
 
 def doc_photo_target(text, sec=None):
-    """장문 한 덩어리(챕터·오프닝)에 넣을 사진 수: 나레이션 sec 초마다 한 장 (3~16장)"""
+    """장문 한 덩어리(챕터·오프닝)에 넣을 사진 수: 나레이션 sec 초마다 한 장 (최소 3장, 챕터마다 상한 없음 — 사용자 결정 2026-10-30)"""
     chars = len(story_text_only(text or ""))
     per = DOC_CHARS_PER_MIN * (sec or DOC_PHOTO_SEC) / 60
-    return max(3, min(16, round(chars / max(1, per))))
+    return max(3, round(chars / max(1, per)))
 
 
 DOC_STYLE = """[장문 다큐 나레이션 문체 - 반드시 지킬 것]
@@ -1245,11 +1281,14 @@ DOC_OUTLINE_SYSTEM = """너는 구독자 100만 유튜브 지식 다큐 채널�
   챕터들은 쉬운 질문 → 점점 깊은 질문 → 가장 충격적인 질문 순서로, 서로 겹치지 않게. 마지막 챕터는 전체를 정리하는 결론 챕터.
   [최우선: 최신 정보] 조사 자료의 recent(최근 소식)를 이 영상의 중심으로 삼는다. 오프닝의 첫 훅은 가장 최근의 놀라운 발견으로, 챕터의 절반 이상은 최신 연구·발견을 중심으로 구성하고, 옛 이야기는 '예전에는 이렇게 알았지만'처럼 최신 내용을 돋보이게 하는 배경으로 쓴다. 마지막 챕터에는 '지금 이 순간 과학이 어디까지 왔고 무엇이 아직 미확정인지'를 넣는다.
   title 에도 최신성이 드러나면 좋다(예: '2026년 새로 밝혀진', '최근 발견된').
+  실화·과학·역사 다큐면 title 은 아래 [채널 인기 공식]의 우선순위를 따른다.
 - closing: 마무리 나레이션 3~6문단(약 {close_chars}자). 핵심을 한 문장으로 되짚고, 시청자에게 생각할 질문 하나, 채널 이야기는 꼭 필요할 때만 가볍게 한마디('구독과 좋아요 부탁드립니다' 같은 정해진 문장 금지).
 
 """ + DOC_STYLE + """
 
 """ + FACT_RULES + """
+
+""" + HIT_RULE + """
 
 반드시 JSON만 출력: {{"title": "", "opening": "", "chapters": [{{"title": "", "points": [""], "chars": 1500}}], "closing": "", "sources": ["출처1"], "notes": "확인 필요한 부분"}}"""
 
@@ -1282,7 +1321,8 @@ DOC_PACKAGE_SYSTEM = """너는 구독자 100만 유튜브 지식 다큐 채널 �
 - 해시태그 12~16개: #과학다큐 #지식 같은 큰 태그 + 주제 키워드, 띄어쓰기로 구분
 - keywords: 유튜브 태그 칸에 넣을 검색어 12~20개를 쉼표로
 - 고정댓글: 영상의 큰 질문에 대한 시청자 생각을 묻는 한 줄
-반드시 JSON만 출력: {"titles": ["..."], "description": "...", "hashtags": "#... #...", "keywords": "...", "pinned_comment": "..."}"""
+- 실화·과학·역사 다큐면 제목 후보 첫 번째(가장 추천)는 아래 [채널 인기 공식]을 1~5번 순서대로 가장 많이 담은 것으로 한다.
+반드시 JSON만 출력: {"titles": ["..."], "description": "...", "hashtags": "#... #...", "keywords": "...", "pinned_comment": "..."}""" + "\n\n" + HIT_RULE
 
 
 def doc_clean(text):
@@ -2998,6 +3038,7 @@ IMG_SOURCE_PRESET = {"그림: 애니(웹툰)": "웹툰", "그림: 애니+수채�
                      "그림: 파스텔 감성": "파스텔 감성 일러스트",
                      "그림: 애니 일러스트": "애니 일러스트(요즘)",
                      "그림: 옛날 만화책": "옛날 만화책(세피아 펜화)",
+                     "그림: 역사 수묵 담채": "역사 수묵 담채",   # 역사 채널 기본
                      "그림: 크라프트지 낙서": "크라프트지 손그림(귀여운 낙서)", "그림: 실루엣": "실루엣(노을 그림자)",
                      "그림: 색칠공부 밑그림": "색칠공부 밑그림(선만)", "그림: 동화 난쟁이 마을": "동화 난쟁이 마을",
                      "그림: 연필 윤곽 스케치": "연필 윤곽 스케치", "그림: 필터 색연필": "필터: 색연필", "그림: 필터 목탄": "필터: 목탄 스케치",
@@ -3019,12 +3060,35 @@ def draw_settings():
 CAST_PRESET_FILE = os.path.join(BASE, "등장인물", "등장인물.json")   # 미리 정해 둔 인물 (face = 확정한 캐릭터 시트 그림)
 
 
+def cast_base(name):
+    """'조조(청년기, 20~30대)' → '조조' (확정 시트·외모를 이름 앞부분으로 찾음)"""
+    return re.split(r"[(\[]", str(name or ""))[0].strip()
+
+
+def add_preset_cast(text, log=None):
+    """등장인물.json 에서 확정 시트(face)가 있고 글에 이름이 나오는 인물을 IMAGE_CAST 에 먼저 등록 → 그림 기획이 그 외모를 그대로 씀"""
+    try:
+        chars = json.load(open(CAST_PRESET_FILE, encoding="utf-8")).get("chars") or []
+    except Exception:
+        return
+    have = {cast_base(c.get("name")) for c in IMAGE_CAST.get("chars") or []}
+    add = []
+    for c in chars:
+        nm, face = str(c.get("name") or ""), str(c.get("face") or "")
+        face = face if not face or os.path.isabs(face) else os.path.join(BASE, face)
+        if nm and c.get("look") and face and os.path.exists(face) and nm in text and nm not in have:
+            add.append({"name": nm, "look": str(c["look"]), "look_ko": str(c.get("look_ko") or ""), "sheet": face})
+    if add:
+        IMAGE_CAST["chars"] = list(IMAGE_CAST.get("chars") or []) + add
+        (log or (lambda x: None))("  👤 확정 캐릭터 시트 사용: " + ", ".join(c["name"] for c in add))
+
+
 def make_cast_sheets(names, style, media_dir, log=None, cancel=None):
     """그림에 나오는 인물마다 캐릭터 시트(앞·옆·뒤 전신, 흰 배경)를 klein 으로 그려 {이름: 경로}.
     이미 있는 시트(IMAGE_CAST 의 sheet, 등장인물.json 의 face)는 그대로 씀 → 모든 컷·회차가 같은 얼굴·옷"""
     log = log or (lambda x: None)
     try:
-        preset = {c.get("name"): c for c in json.load(open(CAST_PRESET_FILE, encoding="utf-8")).get("chars") or []}
+        preset = {cast_base(c.get("name")): c for c in json.load(open(CAST_PRESET_FILE, encoding="utf-8")).get("chars") or []}
     except Exception:
         preset = {}
     out, jobs = {}, []
@@ -3032,7 +3096,7 @@ def make_cast_sheets(names, style, media_dir, log=None, cancel=None):
         nm = c.get("name")
         if not nm or nm not in names or not c.get("look"):
             continue
-        face = str((preset.get(nm) or {}).get("face") or "")
+        face = str((preset.get(cast_base(nm)) or {}).get("face") or "")
         face = face if os.path.isabs(face) else os.path.join(BASE, face) if face else ""
         if c.get("sheet") and os.path.exists(c["sheet"]):
             out[nm] = c["sheet"]
@@ -3130,6 +3194,7 @@ def zip_image_files(zip_path, out_dir):
 IMAGE_STYLES_KO = {   # Claude·Gemini 에 한국어로 줄 화풍 설명
     "인상주의 유화": "인상주의 유화, 유화 질감이 보이는 그림, 선명하게 쪼갠 색, 분위기 있는 빛.",
     "잉크 스케치": "자유로운 잉크 스케치, 손으로 그린 표현적인 잉크 선, 간결하고 즉흥적.",
+    "역사 수묵 담채": "먹선과 옅은 색을 올린 동양 수묵 담채화, 화선지 질감, 시대에 맞는 옷과 건물. 낙관(붉은 도장)·글귀는 넣지 않음.",
     "모네 인상주의": "모네풍 인상주의 그림, 점점이 흩어진 붓질, 부드러운 빛, 야외 장면.",
     "크레용 그림": "아이가 그린 크레용 그림, 왁스 크레용 질감, 밝고 단순한 색.",
     "펜화 판화": "검은 펜 판화, 교차 빗금으로 명암을 낸 가는 선, 강한 대비, 흑백.",
@@ -3231,6 +3296,7 @@ def make_ai_images(model, category, title, story, n, s, media_dir, log, cancel=N
     style = image_style_text(s)
     preset = str(s.get("image_style_preset", "") or "")
     log(f"🎨 그림 {n}장 기획 중... (스타일: {preset if preset in IMAGE_STYLES else '직접 입력'})")
+    add_preset_cast(story_text_only(story) + " " + str(title), log)   # 확정 시트가 있는 인물은 그 외모 그대로 (AI가 옷 색을 새로 짓지 않게)
     cast = cast_text()
     fact_img = cat_info(category)[0] and not doc_is_fiction(str(category))   # 규칙: 사실 콘텐츠의 AI 그림은 개념도·상상도로만 (유튜브_정책.py)
     plan = ask_script_json(model, fit_ratio(IMAGE_PLAN_SYSTEM + (_YP.FACT_IMAGE_RULE if fact_img else "")), f"화면: {ratio_ko()}\n콘텐츠 종류: {category}\n그림 수: {n}장\n그림 스타일(모든 그림 공통): {style or '사실적인 영화 장면'}"
@@ -3243,9 +3309,9 @@ def make_ai_images(model, category, title, story, n, s, media_dir, log, cancel=N
             cap_ = str(it.get("caption", "")).strip()
             it["caption"] = cap_ if cap_.startswith(_YP.AI_CAPTION) else (f"{_YP.AI_CAPTION} · {cap_}" if cap_ else _YP.AI_CAPTION)
     if plan.get("cast"):     # 기획이 새로 정한 인물 외모를 등록(이미 있는 인물은 그대로) → 이후 모든 그림·회차에 같은 얼굴·머리·수염·체형
-        have = {c.get("name") for c in IMAGE_CAST.get("chars") or []}
+        have = {cast_base(c.get("name")) for c in IMAGE_CAST.get("chars") or []}
         new = [{"name": str(x.get("name", "")), "look": str(x.get("look", "")), "look_ko": str(x.get("look_ko", ""))}
-               for x in plan["cast"] if isinstance(x, dict) and x.get("name") and x.get("look") and str(x.get("name")) not in have]
+               for x in plan["cast"] if isinstance(x, dict) and x.get("name") and x.get("look") and cast_base(x.get("name")) not in have]
         if new:
             IMAGE_CAST["chars"] = list(IMAGE_CAST.get("chars") or []) + new
             cast = cast_text()
@@ -3460,8 +3526,8 @@ def _split_inline_ph(text):
 
 
 def place_photos(story, photos):
-    """본문의 [사진N] 자리표시를 실제 사진 줄로 바꾸고, 자리표시가 없는 사진은 알맞은 곳에 끼움 (최대 5장)"""
-    photos = list(photos or [])[:20]
+    """본문의 [사진N] 자리표시를 실제 사진 줄로 바꾸고, 자리표시가 없는 사진은 알맞은 곳에 끼움 (장 수 제한 없음)"""
+    photos = list(photos or [])
     paras = split_paras(_split_inline_ph(story))
     used = set()
     for i, p in enumerate(paras):
@@ -3668,7 +3734,8 @@ THUMB_SYSTEM = """너는 구독자 100만 유튜브 채널의 썸네일 디자�
   "오려 붙이기(누끼 + 큰 글자)" 사람·동물·물건 하나가 또렷한 사진 / "콜라주 3장(사선 분할)" 여러 장면을 한눈에 / "원형 컷 2장" 두 증거를 나란히 / "폴라로이드 콜라주" 기록·추적형 이야기
   (어떤 스타일을 고르든 프로그램이 나머지 스타일로도 후보를 모두 만들어 사람이 고를 수 있게 함)
 세 시안은 서로 다른 각도(궁금증형 / 숫자·사실형 / 감정형)로, 사진과 스타일도 가능하면 서로 다르게.
-반드시 JSON만 출력: {"variants": [{"big": "...", "big2": "...", "emph": "...", "small": "...", "mood": "...", "photo": 1, "photos": [2, 5], "style": "...", "prompt": "..."}]}"""
+콘텐츠가 실화·과학·역사 다큐면 첫 시안은 아래 [채널 인기 공식]대로 (big 에 '아무도 못' 같은 말, big2 에 큰 숫자 + 대상, photo 는 단서 실물).
+반드시 JSON만 출력: {"variants": [{"big": "...", "big2": "...", "emph": "...", "small": "...", "mood": "...", "photo": 1, "photos": [2, 5], "style": "...", "prompt": "..."}]}""" + "\n\n" + HIT_RULE
 
 THUMB_PICK_SYSTEM = """너는 유튜브 썸네일 A/B 테스트 전문가다. 후보 썸네일 이미지들을 Read 로 직접 열어 보고, 영상 내용에 맞으면서 가장 클릭을 부를 것을 하나 고른다.
 기준: (1) 작은 화면(휴대폰 피드)에서도 글자가 한눈에 읽히는가 (2) 사진이 내용과 맞고 핵심 피사체(특히 사람 얼굴)가 글자에 가려지지 않았는가 - 얼굴을 글자가 덮으면 크게 감점 (3) 궁금증·감정이 바로 전해지는가
@@ -5133,7 +5200,7 @@ class SubtitleRenderer:
         self.hs, self.he = s["hold_start"], s["hold_end"]
         # 문단 → 구간
         self.images, segs, idx, cur_img = [], [], 0, -1
-        imcache, pend = {}, []
+        imcache, pend, stack = {}, [], []     # stack: 문단 앞에 연달아 놓인 그림들 → 그 문단 시간을 나눠 차례로 보여줌 (안 그러면 마지막 한 장만 보임)
         paras_for_narr = narration_paras(story)
         for para in story.replace("\r", "").split("\n"):
             para = para.strip()
@@ -5148,11 +5215,13 @@ class SubtitleRenderer:
                     self.images.append((im, med[1]))
                     self.img_paths = getattr(self, "img_paths", []) + [resolve_media(med[0]) or med[0]]
                     cur_img = len(self.images) - 1
+                    stack.append(cur_img)
                 continue
             hm = HOLD_RE.match(para)
             if hm:                                 # [쉼:2.5] 말 없이 화면만 (몽타주)
-                segs.append({"i": None, "kind": "hold", "text": "", "img": cur_img, "dur": max(0.5, float(hm.group(1))), "sfx": pend})
-                pend = []
+                segs.append({"i": None, "kind": "hold", "text": "", "img": cur_img, "dur": max(0.5, float(hm.group(1))), "sfx": pend,
+                             "imgs": stack or None})
+                pend, stack = [], []
                 continue
             fm = SFX_RE.match(para)
             if fm:                                 # [효과:알림] 다음 문단 시작에 효과음
@@ -5168,9 +5237,10 @@ class SubtitleRenderer:
             d = durs.get(idx)
             if d is None:
                 d = max(1.6, len(tts_clean(text)) * spc + 0.6)
-            d = (max(d, 1.0) + 1.0) if kind == "chapter" else d + gap   # 챕터 제목: 읽지 않고 약 2초 보여줌
-            segs.append({"i": idx, "kind": kind, "text": text, "img": cur_img, "dur": d, "sfx": pend})
-            pend = []
+            d = max((max(d, 1.0) + 1.0), float(s.get("chapter_hold") or 0)) if kind == "chapter" else d + gap   # 챕터 제목: 읽지 않고 약 2초 보여줌 (chapter_hold: 그 사이 음악 연주 시간)
+            segs.append({"i": idx, "kind": kind, "text": text, "img": cur_img, "dur": d, "sfx": pend,
+                         "imgs": stack or None})
+            pend, stack = [], []
             idx += 1
         if self.images:   # 첫 사진이 나오기 전 문단들도 첫 사진을 보여줌 (빈 화면 방지)
             for sg in segs:
@@ -5685,6 +5755,35 @@ class SubtitleRenderer:
         st[img_idx] = (z1, x1, y1)
         return (z0, z1, x0, x1, y0, y1), up
 
+    def _img_pieces(self, end_t):
+        """[(그림 번호, 시작, 끝)]: 그림 줄이 나온 문단부터 다음 그림 줄이 나오는 문단 전까지가 그 그림들의 시간.
+        그림이 여러 장 연달아 있으면 그 시간을 똑같이 나눠 차례로 (예전엔 마지막 한 장만 보여서 그림 한 장이 10~20초씩 머물렀음)"""
+        if getattr(self, "_pieces_end", None) == end_t:
+            return self._pieces
+        out, grp = [], None
+        for k, sg in enumerate(self.segs):
+            if sg["img"] < 0:
+                continue
+            if grp is None or sg.get("imgs"):
+                if grp:
+                    out.append((grp[0], grp[1], sg["t0"]))
+                grp = (sg.get("imgs") or [sg["img"]], sg["t0"])
+        if grp:
+            out.append((grp[0], grp[1], end_t))
+        pieces = []
+        for imgs, t0, t1 in out:
+            for j, im_ in enumerate(imgs):
+                pieces.append((im_, t0 + (t1 - t0) * j / len(imgs), t0 + (t1 - t0) * (j + 1) / len(imgs)))
+        self._pieces, self._pieces_end = pieces, end_t
+        return pieces
+
+    def _img_at(self, sg, t):
+        """그 시각에 보이는 그림 번호 (그림이 여러 장 연달아 있으면 나눈 차례대로)"""
+        for im_, t0, t1 in self._img_pieces(self.duration):
+            if t0 <= t < t1:
+                return im_
+        return sg["img"]
+
     def _make_shots(self):
         """문단·사진에 맞춰 장면 목록 만들기. 영상처럼 모드: 문단마다(긴 문단은 나눠서) 다른 움직임으로 컷"""
         mode = str(self.s.get("img_motion", "영상처럼"))
@@ -5701,38 +5800,33 @@ class SubtitleRenderer:
             rng = np.random.default_rng(len(self.images) * 131 + len(self.segs))
             last = -1
             up = False
-            for k, sg in enumerate(self.segs):
-                if sg["img"] < 0:
-                    continue
-                t0 = sg["t0"] if shots else 0.0
-                t1 = self.segs[k + 1]["t0"] if k + 1 < len(self.segs) else end_t
+            for img_, t0, t1 in self._img_pieces(end_t):
+                if not shots:
+                    t0 = 0.0
                 n = max(1, int(np.ceil((t1 - t0) / mx)))
                 for j in range(n):
                     a, b = t0 + (t1 - t0) * j / n, t0 + (t1 - t0) * (j + 1) / n
-                    same = bool(shots) and shots[-1]["img"] == sg["img"]
+                    same = bool(shots) and shots[-1]["img"] == img_
                     if same and shots[-1]["t1"] - shots[-1]["t0"] < 1.2:
                         shots[-1]["t1"] = b          # 너무 짧은 장면은 앞 장면에 붙임
                         continue
                     if big_motion:                   # '크게(예전)': 장면마다 다른 움직임을 무작위로
-                        ms = self._motion_set(sg["img"])
+                        ms = self._motion_set(img_)
                         m = int(rng.integers(len(ms)))
                         if m == last and len(ms) > 1:
                             m = (m + 1 + int(rng.integers(len(ms) - 1))) % len(ms)
                         last = m
                         mt = ms[m]
                     else:                            # 기본(은은하게): 같은 사진이면 앞 장면에서 이어서 서서히 확대 → 서서히 축소·이동
-                        mt, up = self._gentle_chain(sg["img"], first=not same, up=up, rng=rng)
-                    shots.append({"img": sg["img"], "t0": a, "t1": b, "m": mt, "first": not same})
+                        mt, up = self._gentle_chain(img_, first=not same, up=up, rng=rng)
+                    shots.append({"img": img_, "t0": a, "t1": b, "m": mt, "first": not same})
         else:   # 사진이 바뀔 때만 장면 전환
-            for k, sg in enumerate(self.segs):
-                if sg["img"] < 0:
-                    continue
-                t1 = self.segs[k + 1]["t0"] if k + 1 < len(self.segs) else end_t
-                if shots and shots[-1]["img"] == sg["img"]:
+            for img_, t0_, t1 in self._img_pieces(end_t):
+                if shots and shots[-1]["img"] == img_:
                     shots[-1]["t1"] = t1
                 else:
                     zm = (1.0, 1.12, 0, 0, 0, 0) if mode.startswith("천천히") else (1.06, 1.06, 0, 0, 0, 0)
-                    shots.append({"img": sg["img"], "t0": sg["t0"] if shots else 0.0, "t1": t1, "m": zm})
+                    shots.append({"img": img_, "t0": t0_ if shots else 0.0, "t1": t1, "m": zm})
         if shots:
             shots[-1]["t1"] = max(shots[-1]["t1"], end_t)
         return shots
@@ -5772,6 +5866,72 @@ class SubtitleRenderer:
         return self._img_cache[idx]
 
     def _shot_crop(self, sh, t):
+        """장면 sh 의 t 시점 사진 (움직임 적용) + 그림이 처음 나타날 때 그리는 효과 (그림 옆에 <그림>.인물.json 이 있으면)"""
+        self._last_rect = None
+        crop, mask = self._shot_crop_raw(sh, t)
+        if getattr(self, "slide", False) or self._last_rect is None:
+            return crop, mask
+        fx = self._draw_fx_at(sh["img"], t)
+        if fx is None:
+            return crop, mask
+        prog, data = fx
+        bw, bh = crop.size
+        plate = np.asarray(extent_resize(data["plate"], (bw, bh), self._last_rect))
+        M = np.asarray(extent_resize(data["mask"], (bw, bh), self._last_rect), np.float32) / 255 if data["mask"] is not None else None
+        fog = np.asarray(extent_resize(data["fog"], (bw, bh), self._last_rect), np.float32) / 255 if data.get("fog") is not None else None
+        brush = ([np.asarray(extent_resize(b_, (bw, bh), self._last_rect), np.float32) / 255 for b_ in data["brush"]]
+                 if data.get("brush") else None)       # 인물을 붓 획 순서로 드러냄 (사용자 결정 2026-10-31)
+        out = _drawfx().frame(np.asarray(crop.convert("RGB")), plate, M, prog, seed=sh["img"], fog=fog, brush=brush)
+        return Image.fromarray(out).convert(crop.mode), mask
+
+    def _draw_fx_at(self, idx, t):
+        """그 그림이 나타난 지 얼마나 됐는지 → (그리는 진행 0~1, 효과 자료) 또는 None (효과 없음·다 그림)
+        효과 길이 = 그림이 머무는 시간의 65% (3~7.5초), 나머지는 완성 그림"""
+        paths = getattr(self, "img_paths", [])
+        if idx >= len(paths) or not os.path.exists(paths[idx] + ".인물.json"):
+            return None
+        piece = next(((a_, b_) for im_, a_, b_ in self._img_pieces(self.duration) if im_ == idx and t < b_), None)
+        if piece is None:
+            return None
+        a_, b_ = piece
+        E = min(7.5, max(3.0, 0.65 * (b_ - a_)))
+        prog = (t - a_) / E
+        if prog >= 1:
+            return None
+        cache = self.__dict__.setdefault("_fx_data", {})
+        if idx not in cache:
+            fx_ = _drawfx()
+            big = self._img_src(idx)[0].convert("RGB")
+            full = np.asarray(big)
+            M = None
+            try:
+                info = json.load(open(paths[idx] + ".인물.json", encoding="utf-8"))
+                if info.get("boxes") and os.path.exists(paths[idx] + ".인물.png"):
+                    mk = Image.open(paths[idx] + ".인물.png").convert("L").resize(big.size, Image.BILINEAR)
+                    M = fx_.soft_mask(np.asarray(mk))
+            except Exception:
+                M = None
+            plate, fog = fx_.empty_plate(full, M if M is not None else np.zeros(full.shape[:2], np.float32), with_fog=True)
+            if len(cache) >= 4:
+                cache.pop(next(iter(cache)))
+            br_ = fx_.brush_fields(M, seed=idx) if (M is not None and hasattr(fx_, "brush_fields")) else None
+            cache[idx] = {"plate": Image.fromarray(plate), "mask": Image.fromarray((M * 255).astype(np.uint8)) if M is not None else None,
+                          "fog": Image.fromarray((fog * 255).astype(np.uint8)) if M is not None else None,
+                          "brush": [Image.fromarray((b_ * 255).astype(np.uint8)) for b_ in br_] if br_ else None}
+        return max(0.0, prog), cache[idx]
+
+    @property
+    def fx_sig(self):
+        """그리는 효과 자료(인물 영역 파일)가 바뀌면 영상 구간 캐시도 새로 그리게"""
+        sig = []
+        for p_ in getattr(self, "img_paths", []):
+            try:
+                sig.append(str(int(os.path.getmtime(p_ + ".인물.json"))))
+            except OSError:
+                sig.append("-")
+        return hashlib.md5(",".join(sig).encode()).hexdigest()[:12] if any(x != "-" for x in sig) else ""
+
+    def _shot_crop_raw(self, sh, t):
         """장면 sh 의 t 시점 사진 (움직임 적용)"""
         x0, y0, x1, y1 = self.img_box
         bw, bh = x1 - x0, y1 - y0
@@ -5826,6 +5986,7 @@ class SubtitleRenderer:
         cx = big.width / 2 + (ax + (bx - ax) * p) * sx
         cy = big.height / 2 + (ay + (by - ay) * p) * sy
         l, tp = cx - cw / 2, cy - ch / 2
+        self._last_rect = (l, tp, l + cw, tp + ch)
         dbig = self._depth_for(sh["img"], big.size) if (getattr(self, "depth_on", False) and z < 1.22) else None   # 확대(줌)된 장면은 2.5D 안 함 (가장자리 겹침이 더 잘 보임)
         if dbig is None:
             return extent_resize(big, (bw, bh), (l, tp, l + cw, tp + ch)), mask
@@ -6199,7 +6360,7 @@ class SubtitleRenderer:
             if sg["img"] >= 0 and self.images:
                 canvas = self._paint_images(canvas, t)
                 if str(self.s.get("img_label", "on")) == "on":      # 규칙: 사진이 나올 때 오른쪽 위에 사진 제목
-                    lab = self._img_label(sg["img"], t)
+                    lab = self._img_label(self._img_at(sg, t), t)
                     if lab is not None:
                         canvas.alpha_composite(lab[0], lab[1])
             if getattr(self, "overlay", None) is not None:      # 시네마 띠·뉴스 띠·가운데 자막용 어둡게
@@ -6367,7 +6528,7 @@ _DEPTH_CACHE = {}
 _DEPTH_WARNED = set()
 _GRID_CACHE = {}
 DEPTH_AMP = {"약하게": (0.007, 0.003), "보통": (0.022, 0.010), "강하게": (0.035, 0.016)}   # 약하게는 아주 은은하게(기본)
-RENDER_VER = "2026-10-17b"   # 그리는 방식이 바뀌면 올림 → 장문 영상 구간 캐시를 새로 그림   # (가로, 세로) 최대 밀림 = 화면 크기 비율
+RENDER_VER = "2026-10-31a"   # 그리는 방식이 바뀌면 올림 → 장문 영상 구간 캐시를 새로 그림   # (가로, 세로) 최대 밀림 = 화면 크기 비율
 
 
 def depth_key(path):
@@ -6508,6 +6669,19 @@ def img_np(img):
         except Exception:
             pass
     return arr
+
+
+_DRAWFX_MOD = {}
+
+
+def _drawfx():
+    """그리는효과.py (그림이 그려지듯 나타나는 효과) 를 한 번만 불러옴"""
+    if "m" not in _DRAWFX_MOD:
+        spec_ = importlib.util.spec_from_file_location("drawfx", os.path.join(BASE, "그리는효과.py"))
+        mod_ = importlib.util.module_from_spec(spec_)
+        spec_.loader.exec_module(mod_)
+        _DRAWFX_MOD["m"] = mod_
+    return _DRAWFX_MOD["m"]
 
 
 def extent_resize(img, size, box):
@@ -6954,6 +7128,60 @@ def gen_melody_box(n, rng, melody, bpm=90):
     return _norm(pad + _norm(reverb(mel, rng, 2.8, 0.35)) * 0.85)
 
 
+CHINA_STRINGS = "중국 현악(고쟁·얼후)"   # 삼국지 편: 나레이션 아래 잔잔한 고쟁·얼후 + 챕터마다 고쟁 연주 (중국현악.py, 직접 합성) = 궁조
+CHINA_MODE_STYLES = {CHINA_STRINGS: "궁조", "중국 현악 · 상조(차분)": "상조", "중국 현악 · 각조(신비)": "각조",
+                     "중국 현악 · 치조(활기)": "치조", "중국 현악 · 우조(애잔)": "우조"}   # 배경음 이름 → 음계 (사용자 결정 2026-10-31: 편마다 골라 씀)
+TRAD_STYLES = {k: ("중국", v, "현악") for k, v in CHINA_MODE_STYLES.items()}   # 배경음 이름 → (권역, 음계, 현악|관악): 챕터마다 한 소절 연주하는 전통악기
+TRAD_STYLES.update({f"{pre} · {md}": (rg, md, "현악") for rg, pre, mds in TRAD_REGIONS for md in mds})
+TRAD_STYLES.update({f"{pre} · {md}": (rg, md, "관악") for rg, pre, mds in TRAD_WIND for md in mds})
+_CHINA_MOD = {}
+_TRAD_MOD = {}
+
+
+def is_trad(style):
+    return str(style or "") in TRAD_STYLES
+
+
+is_china = is_trad      # 예전 이름 (render_project·make_longdoc 호환)
+
+
+def _trad(region, kind="현악"):
+    """전통악기/<권역>.py 의 REGION(현악) 또는 WIND(관악) (interlude·bed). 중국 현악은 중국현악.py 그대로"""
+    if region not in _TRAD_MOD:
+        spec_ = importlib.util.spec_from_file_location("trad_" + region, os.path.join(BASE, "전통악기", region + ".py"))
+        mod_ = importlib.util.module_from_spec(spec_)
+        spec_.loader.exec_module(mod_)
+        _TRAD_MOD[region] = mod_
+    return _TRAD_MOD[region].WIND if kind == "관악" else _TRAD_MOD[region].REGION
+
+
+def trad_from_memo(memo):
+    """기획메모의 '배경음: 중동 히자즈' / '배경음: 한국 관악 계면조' / '음계: 우조'(중국) → 배경음 이름. 없으면 ''"""
+    memo = str(memo or "")
+    m_ = re.search(r"배경음\s*[:：]\s*([^\s,.·]+)[\s·]*(관악|현악)?[\s·]*([^\s,.]+)?", memo)
+    if m_:
+        rg, kd, md = m_.group(1), (m_.group(2) or "현악"), (m_.group(3) or "")
+        hit = [k for k, (r_, d_, k_) in TRAD_STYLES.items() if rg in (r_, k.split(" ")[0]) and k_ == kd and (not md or d_ == md)]
+        if hit:
+            return hit[0]
+    m_ = re.search(r"음계\s*[:：]\s*(궁조|상조|각조|치조|우조)", memo)
+    return china_style(m_.group(1)) if m_ else ""
+
+
+def china_style(mode):
+    """음계 이름('우조' 등) → 배경음 이름. 모르면 궁조(기본 중국 현악)"""
+    return next((k for k, v in CHINA_MODE_STYLES.items() if v == str(mode or "").strip()), CHINA_STRINGS)
+
+
+def _china():
+    if "m" not in _CHINA_MOD:
+        spec_ = importlib.util.spec_from_file_location("china_strings", os.path.join(BASE, "중국현악.py"))
+        mod_ = importlib.util.module_from_spec(spec_)
+        spec_.loader.exec_module(mod_)
+        _CHINA_MOD["m"] = mod_
+    return _CHINA_MOD["m"]
+
+
 SOUND_STYLES = {
     "노래 멜로디(오르골)": lambda n, r: gen_melody_box(n, r, CURRENT_MELODY.get("melody", ""), CURRENT_MELODY.get("bpm", 90)),
     "잔잔한 패드": lambda n, r: gen_pad(n, r, "warm"),
@@ -6970,6 +7198,8 @@ SOUND_STYLES = {
     "바람": gen_wind,
     "파도": gen_waves,
 }
+for _k, (_rg, _md, _kd) in TRAD_STYLES.items():
+    SOUND_STYLES[_k] = (lambda rg, md, kd: lambda n, r: _trad(rg, kd).bed(n, r, md))(_rg, _md, _kd)
 assert list(SOUND_STYLES) == SOUND_STYLE_NAMES
 CURRENT_MELODY = {"melody": "", "bpm": 90}   # 현재 대본의 노래 멜로디 (올드 팝송일 때 채워짐)
 
@@ -7149,7 +7379,20 @@ def build_audio(r, s, style):
             g = g * np.interp(t, [0, a, b, hit_t + 1.5, hit_t + 4.5, 1e9], [1, 1, 0.25, 0.25, 1, 1])
         if narr:   # 말하는 동안 음악을 낮춤 (더킹)
             g = g * duck_env(n, narr, r.duration, float(s.get("narr_duck", 0.35)))
+        if is_trad(style):             # 전통악기(고쟁·얼후 등)는 '거의 안 들림' 크기로는 묻혀서 조금 키움
+            g = g * max(1.0, 0.3 / max(0.01, float(s["bgm_volume"])))
         out += music * g[:, None].astype(np.float32)
+    if is_trad(style):                 # 나레이션 사이(챕터 제목이 나오는 동안) 전통악기 한 소절 (같은 음계)
+        rng_i = np.random.default_rng(len(getattr(r, "segs", [])))
+        for sg in getattr(r, "segs", []):
+            if sg.get("kind") == "chapter":
+                rg_, md_, kd_ = TRAD_STYLES[style]     # 새 막(챕터)이 열릴 때 징·큰 북·종을 먼저 (chapter_perc: off 면 끔, 사용자 결정 2026-10-31)
+                pc_ = str(s.get("chapter_perc", "off"))
+                it = _trad(rg_, kd_).interlude(rng_i, mode=md_, percussion=False if pc_ == "off" else (pc_ if pc_ in ("징", "북", "연속북", "진군북", "난타") else True))
+                it = it / (np.abs(it).max() + 1e-6) * 0.42
+                i0 = int((sg["t0"] + 0.15) * SR)
+                seg = it[: max(0, n - i0)]
+                out[i0:i0 + len(seg)] += seg
     for st, clip in narr:
         vol = max(0, float(s.get("narr_volume", 1.0)))
         i0 = int(st * SR)
@@ -10633,9 +10876,36 @@ def ppt_tag_split(t):
     return re.sub(r"\s*(\[\s*(?:다음|클릭|전체|확대\s*[:：][^\]]*|효과\s*[:：][^\]]*|쉼\s*[:：][^\]]*)\s*\])\s*", r"\n\n\1\n\n", str(t or ""))
 
 
+SFX_DIR = os.path.join(BASE, "효과음")   # 녹음된 무료 효과음 (CC0, 효과음/출처.txt): [효과:전투시작] [효과:뿔나팔] [효과:진군북] [효과:함성] …
+_SFX_FILE_CACHE = {}
+
+
+def sfx_file(kind):
+    """효과음/<이름>.mp3(.wav/.ogg) 가 있으면 그 소리 (모노, SR). 없으면 None"""
+    k = str(kind).strip()
+    if k in _SFX_FILE_CACHE:
+        return _SFX_FILE_CACHE[k]
+    path = next((os.path.join(SFX_DIR, k + e) for e in (".mp3", ".wav", ".ogg") if os.path.exists(os.path.join(SFX_DIR, k + e))), None)
+    y = None
+    if path:
+        try:
+            raw = subprocess.run([get_ffmpeg(), "-v", "error", "-i", path, "-f", "f32le", "-ac", "1", "-ar", str(SR), "-"],
+                                 capture_output=True, check=True).stdout
+            y = np.frombuffer(raw, np.float32).copy()
+            y = y / (np.abs(y).max() + 1e-6) * 0.9
+        except Exception:
+            y = None
+    _SFX_FILE_CACHE[k] = y
+    return y
+
+
 def sfx_sound(kind):
-    """발표 영상 효과음 (프로그램이 직접 만듦): 알림(띵동) · 정답(딩동댕) · 땡(오답) · 휙 · 박수 · 두둥"""
+    """발표 영상 효과음 (프로그램이 직접 만듦): 알림(띵동) · 정답(딩동댕) · 땡(오답) · 휙 · 박수 · 두둥
+    효과음/<이름>.mp3 가 있으면 그 녹음을 씀 (전투시작·뿔나팔·진군북·함성 등)"""
     k = str(kind)
+    f_ = sfx_file(k)
+    if f_ is not None:
+        return f_
     tt = lambda d: np.arange(int(d * SR), dtype=np.float32) / SR
 
     def tone(fq, d, decay=6.0, harm=(1.0, 0.35, 0.12)):

@@ -1,13 +1,101 @@
 {
   "_설명": "그림에 나올 인물 외모를 미리 정해 두는 곳. look = 그림 모델에 넣는 영어 묘사(모든 컷에 그대로), look_ko = 한국어 설명, face = 얼굴 기준 그림(있으면 얼굴 검수·수정에 씀)",
   "chars": [
-    {"name": "바다 할아버지",
-     "look": "old Korean fisherman in his 70s, short white hair, short white beard, wrinkled kind face, tanned skin, navy blue knit cap, faded yellow raincoat, brown rubber boots",
-     "look_ko": "70대 어부, 짧은 흰머리·흰 수염, 주름진 인자한 얼굴, 그을린 피부, 남색 털모자, 빛바랜 노란 우비, 갈색 장화",
-     "face": ""},
-    {"name": "하나",
-     "look": "8-year-old Korean girl, black hair in two short pigtails with red ribbons, round face, rosy cheeks, light blue dress, white cardigan",
-     "look_ko": "8살 손녀, 빨간 리본 단 짧은 양갈래 검은 머리, 동그란 얼굴, 발그레한 볼, 하늘색 원피스, 흰 카디건",
-     "face": ""}
+    {
+      "name": "바다 할아버지",
+      "look": "old Korean fisherman in his 70s, short white hair, short white beard, wrinkled kind face, tanned skin, navy blue knit cap, faded yellow raincoat, brown rubber boots",
+      "look_ko": "70대 어부, 짧은 흰머리·흰 수염, 주름진 인자한 얼굴, 그을린 피부, 남색 털모자, 빛바랜 노란 우비, 갈색 장화",
+      "face": ""
+    },
+    {
+      "name": "하나",
+      "look": "8-year-old Korean girl, black hair in two short pigtails with red ribbons, round face, rosy cheeks, light blue dress, white cardigan",
+      "look_ko": "8살 손녀, 빨간 리본 단 짧은 양갈래 검은 머리, 동그란 얼굴, 발그레한 볼, 하늘색 원피스, 흰 카디건",
+      "face": ""
+    },
+    {
+      "name": "조조",
+      "look": "Chinese Eastern Han dynasty (c. 200 AD) man in his 30s-40s, sharp narrow eyes, black hair in a small topknot, thin black mustache and small goatee, dark navy-blue long robe with wide sleeves, bronze-brown lamellar chest armor with shoulder plates, tan front apron panel, dark boots",
+      "look_ko": "30~40대, 날카로운 눈, 작은 상투, 가는 콧수염·작은 턱수염, 남색 도포 + 구릿빛 비늘 가슴갑옷·어깨갑옷, 황갈색 앞치마",
+      "face": "등장인물/삼국지/조조.png"
+    },
+    {
+      "name": "진수",
+      "look": "Chinese Eastern Han dynasty (c. 200 AD) scholar historian in his 50s, calm face, black hair in a topknot with small black cap, thin mustache and short goatee, teal-green long scholar robe with dark sash",
+      "look_ko": "50대 역사가, 차분한 얼굴, 상투에 작은 검은 관, 가는 콧수염·짧은 턱수염, 청록색 학자 도포",
+      "face": "등장인물/삼국지/진수.png"
+    },
+    {
+      "name": "배송지",
+      "look": "Chinese Eastern Han dynasty (c. 200 AD) scholar official in his 50s, square face, tall black official cap, grey mustache and long grey beard, mustard-yellow long robe with brown sash",
+      "look_ko": "50대 학자 관리, 각진 얼굴, 높은 검은 관모, 회색 수염, 겨자색 도포에 갈색 띠",
+      "face": "등장인물/삼국지/배송지.png"
+    },
+    {
+      "name": "관우",
+      "look": "Chinese Eastern Han dynasty (c. 200 AD) tall general, dark red face, long flowing black beard, green head wrap, dark green robe over dark scale armor",
+      "look_ko": "붉은 얼굴, 긴 검은 수염, 녹색 두건, 녹색 전포 + 검은 비늘갑옷",
+      "face": "등장인물/삼국지/관우.png"
+    },
+    {
+      "name": "나관중",
+      "look": "Chinese Eastern Han dynasty (c. 200 AD) elderly writer, thin grey beard, black cloth cap, plain light grey long robe",
+      "look_ko": "노년 작가, 성긴 회색 수염, 검은 천 모자, 연회색 도포",
+      "face": "등장인물/삼국지/나관중.png"
+    },
+    {
+      "name": "서영",
+      "look": "Chinese Eastern Han dynasty (c. 200 AD) general, dark iron helmet, black hooded cloak, grey scale armor, mustache and goatee",
+      "look_ko": "검은 투구, 검은 망토, 회색 비늘갑옷, 콧수염·턱수염",
+      "face": "등장인물/삼국지/서영.png"
+    },
+    {
+      "name": "손견",
+      "look": "Chinese Eastern Han dynasty (c. 200 AD) general in his 30s, red headscarf (red head wrap), short black beard, crimson robe under steel lamellar armor",
+      "look_ko": "붉은 두건, 짧은 검은 수염, 진홍 전포 + 강철 비늘갑옷",
+      "face": "등장인물/삼국지/손견.png"
+    },
+    {
+      "name": "여포",
+      "look": "Chinese Eastern Han dynasty (c. 200 AD) muscular warrior, silver helmet with long pheasant tail feather, silver scale armor, white trousers, short beard",
+      "look_ko": "근육질, 긴 꿩깃 은투구, 은빛 비늘갑옷, 흰 바지",
+      "face": "등장인물/삼국지/여포.png"
+    },
+    {
+      "name": "원술",
+      "look": "Chinese Eastern Han dynasty (c. 200 AD) nobleman, black topknot, mustache, purple long robe with gold trim",
+      "look_ko": "상투, 콧수염, 금테 두른 보라색 도포",
+      "face": "등장인물/삼국지/원술.png"
+    },
+    {
+      "name": "유비",
+      "look": "Chinese Eastern Han dynasty (c. 200 AD) man in his 30s, short beard, brown head cloth, beige robe with brown leather armor",
+      "look_ko": "짧은 수염, 갈색 두건, 베이지 도포 + 갈색 가죽갑옷",
+      "face": "등장인물/삼국지/유비.png"
+    },
+    {
+      "name": "이야기꾼",
+      "look": "Chinese Eastern Han dynasty (c. 200 AD) old storyteller, white hair in a topknot, long white beard, navy-blue robe with yellow sash",
+      "look_ko": "흰 상투, 긴 흰 수염, 남색 도포에 노란 띠",
+      "face": "등장인물/삼국지/이야기꾼.png"
+    },
+    {
+      "name": "조무",
+      "look": "Chinese Eastern Han dynasty (c. 200 AD) young officer, clean-shaven, black topknot, brown leather armor, light green trousers",
+      "look_ko": "젊은 장교, 수염 없음, 상투, 갈색 가죽갑옷, 연두 바지",
+      "face": "등장인물/삼국지/조무.png"
+    },
+    {
+      "name": "호진",
+      "look": "Chinese Eastern Han dynasty (c. 200 AD) heavyset older general, grey beard, ornate gold helmet, gold patterned armor over dark maroon robe",
+      "look_ko": "덩치 큰 노장, 회색 수염, 금 투구, 금빛 갑옷 + 짙은 자주 전포",
+      "face": "등장인물/삼국지/호진.png"
+    },
+    {
+      "name": "화웅",
+      "look": "Chinese Eastern Han dynasty (c. 200 AD) stout general, full black beard, black iron helmet, black lamellar armor, brown cloak",
+      "look_ko": "다부진 체격, 덥수룩한 검은 수염, 검은 투구·검은 비늘갑옷, 갈색 망토",
+      "face": "등장인물/삼국지/화웅.png"
+    }
   ]
 }

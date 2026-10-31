@@ -67,6 +67,12 @@ DISCOVERY_SEARCHES = [
     "surprising", "overturns", "first ever", "never before seen", "solves", "resolves",
 ]
 
+# --mode 해독: 못 읽던 고대 문자·비문·암호·두루마리를 읽어 낸 이야기 (채널 인기 소재: 쿠샨 문자·선형 엘람 문자)
+DECIPHER_SEARCHES = [
+    "decipher", "undeciphered", "ancient script", "writing system", "inscription", "cipher",
+    "lost language", "cuneiform", "hieroglyph", "runic", "manuscript", "scroll", "tablet",
+]
+
 # 과학/고고학 뉴스 RSS ("발행처 세부" 형식: 같은 발행처의 여러 피드는 독립 보도로 세지 않음)
 NEWS_FEEDS = {
     "Phys.org 고고학": "https://phys.org/rss-feed/science-news/archaeology-fossils/",
@@ -109,6 +115,16 @@ DISCOVERY_PATTERNS = [   # --mode 발견 에서만 점수에 들어감
     (r"\bunexpected(?:ly)?\b|\bsurpris\w*", 3), (r"\bnever (?:before )?seen\b|\bunprecedented\b", 3),
     (r"\boverturn\w*|\brewrit\w*|\bchalleng(?:e|es|ed) (?:the )?(?:long-held|textbook|conventional)\b", 4),
 ]
+DECIPHER_PATTERNS = [   # --mode 해독 에서만 점수에 들어감. 이 신호가 없으면 해독 모드 후보에서 빠짐
+    (r"\b(?:un)?deciph\w*|\bdecod(?:e|es|ed|ing)\b|\bcrack(?:s|ed|ing)? the code\b", 6),
+    (r"\bscripts?\b|\bwriting system\b|\bglyphs?\b|\bhieroglyph\w*|\bcuneiform\b|\brun(?:es|ic)\b|\balphabet\w*", 5),
+    (r"\binscri\w*|\bcipher\w*|\bencrypt\w*|\bcoded (?:letter|message)s?\b|\blost language\b|\bunknown language\b", 5),
+    (r"\bmanuscripts?\b|\bscrolls?\b|\bpapyr\w*|\btablets?\b|\bcodex\b|\bletters?\b", 2),
+    (r"\bread (?:for the first time|at last)\b|\bfirst (?:words?|reading)\b|\btranslat\w*", 4),
+]
+HISTORY_WORDS = re.compile(   # 해독 모드: 옛날 이야기라는 표시 (ARCH_WORDS 와 함께 봄)
+    r"\b(?:centur(?:y|ies)|millenni\w*|historian\w*|histor(?:y|ic|ical)|king|queen|emperor|empire|dynast\w*|"
+    r"kingdom|war(?:time)?|renaissance|\d{1,2}(?:st|nd|rd|th)[- ]century|\d{3,4} (?:years|BC|BCE|AD|CE))\b", re.I)
 # 아직 풀리지 않았다는 표현 (해결 신호보다 우선해서 상태 판단)
 OPEN_PATTERNS = re.compile(
     r"\bun(?:solved|resolved|explained|answered|clear)\b|\bremains? (?:a )?(?:mystery|unknown|debated|elusive)\b|"
@@ -495,16 +511,20 @@ def evidence_status(g):
 def score_items(groups, days, focus, now=None, mode="미스터리"):
     now = now or datetime.now(timezone.utc)
     disc = mode == "발견"
+    deci = mode == "해독"
     out = []
     for it in groups:
         text = it["title"] + " " + it["summary"]
         m, mh = pattern_score(text, MYSTERY_PATTERNS)
         s, sh = pattern_score(NEG_SOLVE.sub(" ", text), SOLVED_PATTERNS)
         dv, dh = pattern_score(text, DISCOVERY_PATTERNS) if disc else (0, [])
+        dc, ch = pattern_score(text, DECIPHER_PATTERNS) if deci else (0, [])
+        if deci and (dc < 5 or not (count_hits(text, ARCH_WORDS) or HISTORY_WORDS.search(text))):
+            continue  # 해독 모드: 옛 문자·비문·암호 이야기만 (편지라는 말만 있는 기사, 'mRNA 해독' 같은 생물학 기사는 제외)
         arch = count_hits(text, ARCH_WORDS)
         strong = count_hits(text, ARCH_STRONG)
         tech = list(dict.fromkeys(TECH_WORDS[k] for k in TECH_WORDS if k in text.lower()))
-        if m == 0 and not (arch and s) and not dv:
+        if m == 0 and not (arch and s) and not dv and not dc:
             continue  # 미스터리 요소(발견 모드면 새 발견 신호도)가 없는 일반 연구는 제외
         if re.match(r"^[A-Z][a-z]+ [A-Z][a-z]+: ", it["title"]):
             continue  # "이름 성: ..." 형식의 인물 인터뷰/프로필 기사
@@ -514,7 +534,8 @@ def score_items(groups, days, focus, now=None, mode="미스터리"):
             tm, _ = pattern_score(it["title"], MYSTERY_PATTERNS)
             ts, _ = pattern_score(it["title"], SOLVED_PATTERNS)
             td = pattern_score(it["title"], DISCOVERY_PATTERNS)[0] if disc else 0
-            if m + dv < 4 or (tm < 2 and ts < 4 and td < 3) or JARGON.search(it["title"]) \
+            tc = pattern_score(it["title"], DECIPHER_PATTERNS)[0] if deci else 0
+            if m + dv + dc < 4 or (tm < 2 and ts < 4 and td < 3 and tc < 5) or JARGON.search(it["title"]) \
                     or len(JARGON.findall(text)) >= 3:
                 continue
         d = parse_date(it["date"]) if it["date"] else None
@@ -525,7 +546,7 @@ def score_items(groups, days, focus, now=None, mode="미스터리"):
         ev, ev_pts = evidence_status(it)
         age = (now - d).days if d else days
         score = (
-            m * 2.0 + s * 1.5 + dv * 2.0
+            m * 2.0 + s * 1.5 + dv * 2.0 + dc * 2.0
             + STATUS_BONUS[status]
             + (min(len(arch), 4) * (5 if focus == "고고학" else 3) if is_arch else 0)
             + min(len(tech), 3) * 2
@@ -535,7 +556,7 @@ def score_items(groups, days, focus, now=None, mode="미스터리"):
             + (it["coverage"] - 1) * 4                 # 서로 다른 발행처의 독립 보도
         )
         it.update({
-            "signals": ", ".join(mh + sh + dh), "arch": is_arch, "tech": ", ".join(tech),
+            "signals": ", ".join(mh + sh + dh + ch), "arch": is_arch, "tech": ", ".join(tech),
             "status": status, "evidence": ev, "base_score": round(score, 1),
             "field": "고고학/인류" if is_arch else guess_field(text),
         })
@@ -893,6 +914,17 @@ def span_phrase(text):
     return ""
 
 
+def hit_head(text, name):
+    """채널 인기 공식(큰 숫자 + '아무도 못') 제목 머리. 원문에 기간이 없으면 빈 문자열.
+    'N년간'(풀리지 않은 기간)만 '동안 아무도 못 푼'으로 쓰고, 'N년 전·N세기'(만들어진 때)는 나이로만 씀."""
+    span = span_phrase(text)
+    if span.endswith("년간"):
+        return f"{span[:-1]} 동안 아무도 못 푼 {name}"
+    if span:
+        return f"아무도 못 푼 {span} {name}"
+    return ""
+
+
 def template_titles(it):
     """규칙 기반 제목 틀. [소재] 자리에 한국어 소재명을 넣어 쓰면 됩니다.
     해결 상태에 맞는 표현만 쓰고, 원문에 없는 기간·기술은 넣지 않음."""
@@ -900,18 +932,22 @@ def template_titles(it):
     pre = f"{span} " if span else ""
     tech = it["tech"].split(", ")[0] if it["tech"] else ""
     st = it["status"]
+    head = hit_head(it["title"] + " " + it["summary"], "[소재]")   # 채널 인기 공식 틀을 맨 앞에
+    t = []
     if st == "해결 근거":
-        t = [f"{pre}풀리지 않던 [소재] 수수께끼, 마침내 답이 나왔다",
+        t = [f"{head}, 그 답을 풀어낸 단서"] if head else []
+        t += [f"{pre}풀리지 않던 [소재] 수수께끼, 마침내 답이 나왔다",
              f"[소재]의 정체, 과학이 밝혀낸 진실"]
         if tech:
             t.append(f"{tech}로 풀어낸 [소재]의 비밀")
     elif st == "가설 제안":
-        t = [f"{pre}[소재]의 수수께끼, 드디어 풀렸을까?",
+        t = [f"{head}, 드디어 풀렸을까?"] if head else []
+        t += [f"{pre}[소재]의 수수께끼, 드디어 풀렸을까?",
              f"[소재]에 대한 새로운 답, 과학자들이 내놓은 유력한 가설"]
         if tech:
             t.append(f"{tech}가 찾아낸 [소재]의 새 단서")
     elif st == "미해결":
-        t = [f"{pre}아직 아무도 풀지 못한 [소재]의 수수께끼",
+        t += [f"{pre}아직 아무도 풀지 못한 [소재]의 수수께끼",
              f"과학자들도 답을 모른다, [소재]에 남은 질문들"]
     else:
         t = [f"[소재], 과학자들이 새로 찾아낸 단서",
@@ -1094,8 +1130,9 @@ def main(argv=None):
     ap.add_argument("--pick", type=int, default=20, help="최종 선정 개수, 기본 20")
     ap.add_argument("--pool", type=int, default=45, help="유튜브로 확인할 후보 수 (pick 이상), 기본 45")
     ap.add_argument("--focus", default="고고학", help="가중치를 더 줄 분야 (기본: 고고학)")
-    ap.add_argument("--mode", default="미스터리", choices=["미스터리", "발견"],
-                    help="미스터리(기본): 풀린/안 풀린 수수께끼 · 발견: 수수께끼가 아니어도 새로 밝혀진 사실(첫 증거·가장 오래된·상식을 뒤집은 발견), 최신일수록 우대")
+    ap.add_argument("--mode", default="미스터리", choices=["미스터리", "발견", "해독"],
+                    help="미스터리(기본): 풀린/안 풀린 수수께끼 · 발견: 수수께끼가 아니어도 새로 밝혀진 사실(첫 증거·가장 오래된·상식을 뒤집은 발견), 최신일수록 우대"
+                         " · 해독: 못 읽던 고대 문자·비문·암호·두루마리를 읽어 낸 이야기만")
     ap.add_argument("--channel", default=CHANNEL_URL, help="중복 확인할 내 채널 주소")
     ap.add_argument("--no-youtube", action="store_true", help="유튜브 수요/경쟁 확인 생략")
     ap.add_argument("--no-translate", action="store_true", help="한국어 번역 생략")
@@ -1150,7 +1187,8 @@ def main(argv=None):
             checks["채널 영상 목록"] = f"저장본 사용 {len(channel)}개"
     else:
         now, days, focus, mode = datetime.now(timezone.utc), args.days, args.focus, args.mode
-        j_items, j_fail = collect_journals(days, args.mailto, DISCOVERY_SEARCHES if mode == "발견" else None)
+        j_items, j_fail = collect_journals(days, args.mailto,
+                                          {"발견": DISCOVERY_SEARCHES, "해독": DECIPHER_SEARCHES}.get(mode))
         n_items, n_fail = collect_news()
         items, yt_cache = j_items + n_items, {}
         tr_cache = load_json(TR_CACHE_FILE, {})
