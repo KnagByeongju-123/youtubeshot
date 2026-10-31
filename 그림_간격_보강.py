@@ -170,7 +170,11 @@ def main(a):
     sd = sorted(b - a_ for _, a_, b in slots)
     log(f"새 그림 자리 {len(slots)}개 (한 장 {sd[0]:.1f}~{sd[-1]:.1f}초) · 이미 그린 그림 {len(used)}장 다시 씀 · "
         f"빼는 그림 {len(media_lines) - len(used)}장 · 새로 그릴 그림 {n_new}장")
-    if "--계획만" in a:
+    if "--계획만" in a:                            # 자리마다 어떤 그림이 얼마나 옮겨 오는지 (내용이 어긋나지 않는지 사람이 확인)
+        for k_, (_, a_, b) in enumerate(slots):
+            j = pick[k_]
+            cap = (m.parse_media(media_lines[j]) or ("", ""))[1] if j is not None else ""
+            log(f"   {m.hms(a_)}~{m.hms(b)} " + (f"그림 {j + 1} ({img_t[j] - (a_ + b) / 2:+.0f}초) {str(cap)[:40]}" if j is not None else "★ 새로 그림"))
         app.destroy()
         return 0
 
