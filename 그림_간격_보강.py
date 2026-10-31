@@ -146,6 +146,12 @@ def main(a):
     runs = shown_runs(r)
     long_ = [x for x in runs if x[2] - x[1] > hi]
     short_ = [x for x in runs if x[2] - x[1] < lo]
+    if not runs:       # 그림이 하나도 없는 대본(나레이션만 먼저 만든 편): 자리를 모두 새로 그림
+        log(f"그림 0장 · 나레이션 {m.hms(end_t)} 전체에 그림 자리를 새로 짭니다")
+        if "--측정만" in a:
+            app.destroy()
+            return 0
+        runs = long_ = [(-1, 0.0, end_t)]
     durs = sorted(x[2] - x[1] for x in runs)
     log(f"화면에 나오는 그림 {len(runs)}번 (그림 파일 {len(r.images)}장) · 가장 김 {durs[-1]:.1f}초 · 가장 짧음 {durs[0]:.1f}초 · 중간 {durs[len(durs) // 2]:.1f}초"
         f" · {hi:g}초 넘음 {len(long_)}곳 · {lo:g}초 미만 {len(short_)}곳")
@@ -178,7 +184,9 @@ def main(a):
     for d_ in [os.path.join(os.path.dirname(proj), n) for n in os.listdir(os.path.dirname(proj)) if n.startswith("_작업_")]:
         p_ = os.path.join(d_, "대본.json")
         if os.path.exists(p_):
-            m.IMAGE_CAST["chars"] = list(json.load(open(p_, encoding="utf-8")).get("cast") or [])
+            sj_ = json.load(open(p_, encoding="utf-8"))
+            if str(sj_.get("title", "")).strip() == title:     # 작업 폴더가 여러 편이면 이 편 대본의 인물만
+                m.IMAGE_CAST["chars"] = list(sj_.get("cast") or [])
     media = os.path.join(s["out_dir"], "장문", "media")
     for ch in m.IMAGE_CAST.get("chars") or []:     # 이미 그린 캐릭터 시트를 그대로 (같은 얼굴·옷)
         sh = os.path.join(media, "_cast", m.safe_name(ch.get("name", ""))[:40] + ".png")
