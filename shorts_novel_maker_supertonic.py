@@ -3106,6 +3106,21 @@ def joseon_base(c):
     return p if base and os.path.exists(p) else ""
 
 
+SAMO_REF = os.path.join(BASE, "등장인물", "조선", "_관모", "사모_앞.png")   # 조선 관리 사모 모양 기준 (기본_내관 시트 앞모습 머리)
+
+
+def sheet_front(p):
+    """캐릭터 시트(앞·옆·뒤)에서 앞모습만 잘라 기준 그림으로 (옆·뒤 모습이 섞이면 사모가 갓처럼 그려짐). 잘린 그림은 <시트>_앞.png 로 저장해 다시 씀"""
+    try:
+        out = p[:-4] + "_앞.png"
+        if not os.path.exists(out) or os.path.getmtime(out) < os.path.getmtime(p):
+            im = Image.open(p).convert("RGB")
+            im.crop((0, 0, im.width // 3, im.height)).save(out)
+        return out
+    except Exception:
+        return p
+
+
 def make_cast_sheets(names, style, media_dir, log=None, cancel=None):
     """그림에 나오는 인물마다 캐릭터 시트(앞·옆·뒤 전신, 흰 배경)를 klein 으로 그려 {이름: 경로}.
     이미 있는 시트(IMAGE_CAST 의 sheet, 등장인물.json 의 face)는 그대로 씀 → 모든 컷·회차가 같은 얼굴·옷"""
@@ -3376,7 +3391,11 @@ def make_ai_images(model, category, title, story, n, s, media_dir, log, cancel=N
         if klein:   # 인물마다 캐릭터 시트를 먼저 그려 두고, 장면마다 나오는 인물의 시트를 기준 그림으로 → 모든 컷에서 같은 얼굴·옷
             sheets = make_cast_sheets([nm for it in items for nm in (it.get("cast_used") or [])], style, media_dir, log, cancel)
             for j, it in zip(jobs, items):
-                j["refs"] = [sheets[nm] for nm in dict.fromkeys(it.get("cast_used") or []) if nm in sheets][:4]
+                j["refs"] = [sheet_front(sheets[nm]) for nm in dict.fromkeys(it.get("cast_used") or []) if nm in sheets][:4]
+                if any(re.search(r"\bsamo\b", str(c.get("look", "")).lower()) for c in IMAGE_CAST.get("chars") or [] if c.get("name") in (it.get("cast_used") or [])):
+                    j["refs"].append(SAMO_REF)   # 관리 사모: 장면 그림에선 시트 옆·뒤 모습 때문에 갓처럼 나와서 앞모습만 + 사모 모양 기준 (2026-10-31 1편 검수)
+                    j["prompt"] = (j["prompt"].replace("gauze hat", "brimless cap") + " Every official's cap must look exactly like the cap in the last reference image: "
+                                   "no brim, two flat wings out to the sides. Officials face the viewer (front or three-quarter front view).")
             log("  🖌 그림 모델: FLUX.2 klein (캐릭터 시트 기준 · 인물 장면 한 장 약 2분, 풍경 약 40초)")
         else:
             log(f"  🖌 그림 모델: {'애니·만화(Counterfeit)' if model_ == 'anime' else '일러스트(Dreamshaper)'}" + (" + 수채화 보조" if lora_ else ""))
