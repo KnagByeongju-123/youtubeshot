@@ -44,6 +44,7 @@ DEFAULT = {
     "문단_최대_글자": 120,          # 나레이션 먼저일 때 이보다 긴 문단은 문장 끝에서 나눔 (약 15초) → 그림이 문단이 바뀔 때 바뀌어 박자가 맞음
     "그림_사용자점검": True,        # 사용자 결정 2026-10-31: 그림을 다 그리면 40장씩 모음(_그림점검_N.jpg)을 만들고 멈춤 → 점검 뒤 같은 명령에 --점검완료 를 붙여 이어서
     "나레이션_성우": "M4",          # 사용자 결정 2026-10-31: 남자 성우 4 (Supertonic M4). '성우_프리셋'을 적으면 그것이 우선
+    "나레이션_쉼표": True,          # 사용자 결정 2026-10-31: 녹음 전에 나레이션_쉼표.py(Kiwi 형태소 분석)로 숨 쉴 자리에 쉼표 (빨리 읽기·몰아 읽기 줄임)
     "자막": "보임",                 # 보임(기본, 사용자 결정 2026-10-31: 자막은 그대로) / 숨김(나레이션만)
     "자막_스타일": "자동",            # 자동(소재에 맞춰) 또는 프로그램의 '인기 롱폼 스타일' 이름 그대로
     "끝나면": "그대로",              # 연속 제작이 끝난 뒤: 그대로 / 절전 / 끄기  (시작할 때 물어봄)
@@ -739,6 +740,16 @@ def run_doc(m, app, c, gate):
         story, _ = m.hook_fix(app.model_var.get().strip(), story, log, gate, title=title)   # 규칙: 30초 후크 + 첫 5초 = 제목·썸네일 약속
         story, _ = m.retention_fix(app.model_var.get().strip(), story, title, log, gate)    # 규칙: 챕터 끝 예고 + 시리즈 한 줄 (1위 영상 분석)
         story, _ = m.polite_fix(app.model_var.get().strip(), story, log, gate)   # 규칙: 모든 나레이션은 존댓말 (자막·성우 함께)
+    if c.get("나레이션_쉼표", True):
+        try:
+            spec_ = importlib.util.spec_from_file_location("narr_comma", os.path.join(HERE, "나레이션_쉼표.py"))
+            nc_ = importlib.util.module_from_spec(spec_)
+            spec_.loader.exec_module(nc_)
+            story, ch_c = nc_.comma_story(story)
+            if ch_c:
+                log(f"✒ 나레이션 쉼표: {len(ch_c)}문단에 숨 쉴 자리 쉼표 (Kiwi 형태소 분석)")
+        except Exception as e:
+            log("  나레이션 쉼표 건너뜀: " + str(e).splitlines()[0][:80])
     defer = m.DEFER_DRAW["on"] and not any(m.parse_media(x) for x in story.split("\n"))   # 아직 그림 없는 대본 → 나레이션 뒤에 그림
     if defer:
         n0 = len([x for x in story.split("\n") if x.strip()])

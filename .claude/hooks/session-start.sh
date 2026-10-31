@@ -34,6 +34,8 @@ if ! "$VENV/bin/python" -c "import supertonic, numpy, PIL, cv2, imageio_ffmpeg, 
   "$VENV/bin/python" -m pip install -q --disable-pip-version-check \
     numpy pillow supertonic opencv-python-headless imageio-ffmpeg "rembg[cpu]" faster-whisper huggingface_hub
 fi
+# 나레이션 쉼표 넣기(나레이션_쉼표.py)용 한국어 형태소 분석기 Kiwi (kiwipiepy, LGPL-3.0)
+"$VENV/bin/python" -c "import kiwipiepy" 2>/dev/null || "$VENV/bin/python" -m pip install -q --disable-pip-version-check kiwipiepy || true
 
 # 3) 목소리 모델 (huggingface 가 잠깐 막으면(429) 기다렸다 다시)
 if [ ! -d supertonic_assets/onnx ] || [ ! -f supertonic_assets/voice_styles/M2.json ]; then

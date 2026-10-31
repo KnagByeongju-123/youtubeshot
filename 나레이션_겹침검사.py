@@ -210,6 +210,23 @@ def delete_caches(items, project):
     pitch, steps = float(st.get("narr_pitch", 0) or 0), int(st.get("st_steps", 5) or 5)
     cache = os.path.join(HERE, "output", "tts_cache")
     # 빨라진 문장도 겹친 문장처럼 녹음을 지워 자연스럽게 다시 녹음 (사용자 결정 2026-10-31: 나레이션 속도를 억지로 늘리지 않음 → slow_down 쓰지 않음)
+    fast = [it for it in items if it.get("speed")]
+    if fast:                                              # 빨라진 문장은 쉼표를 넣어 성우가 자연스럽게 한 번 쉬게 (나레이션_쉼표.py, Kiwi)
+        spec_ = importlib.util.spec_from_file_location("narr_comma", os.path.join(HERE, "나레이션_쉼표.py"))
+        nc_ = importlib.util.module_from_spec(spec_)
+        spec_.loader.exec_module(nc_)
+        story, n_c = proj.get("story", ""), 0
+        for it in fast:
+            new, k = nc_.comma_sentence(it["sentence"], short=True)
+            if k and it["sentence"] in story:
+                story = story.replace(it["sentence"], new, 1)
+                print(f"  쉼표: {new}")
+                n_c += 1
+        if n_c:
+            proj["story"] = story
+            tmp = project + ".tmp"
+            json.dump(proj, open(tmp, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+            os.replace(tmp, project)
     texts = set()
     for it in items:
         for t in (it["sentence"], it["paragraph"]):
