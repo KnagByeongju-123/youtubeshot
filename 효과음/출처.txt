@@ -1,0 +1,20 @@
+효과음 출처 (진짜 역사 기록관용 · 녹음된 무료 효과음, 사용자 결정 2026-10-31)
+모두 CC0(퍼블릭 도메인) — 상업 이용 가능, 출처 표기 의무 없음 (설명란에 감사 표시를 적어도 좋음)
+
+뿔나팔.mp3 / 뿔나팔_길게.mp3
+  "Their Coming (generic horn sound)" — stumpystrust, OpenGameArt, CC0 1.0
+  https://opengameart.org/content/their-coming-generic-horn-sound
+진군북.mp3
+  "Horde War Drums loop" — William Hector, OpenGameArt, CC0 1.0
+  https://opengameart.org/content/horde-war-drums-loop
+함성.mp3
+  "Crowd Shouting/Speaking Ambience" — starninjas, OpenGameArt, CC0 1.0
+  https://opengameart.org/content/crowd-shoutingspeaking-ambience
+전투시작.mp3
+  위 세 소리를 섞음 (뿔나팔 → 1.5초 뒤 진군북 → 3.5초 뒤 함성)
+
+원본/ : 받은 그대로 (gong.wav 는 CC-BY 3.0 dklon "Gonk Gong" — 0.7초로 짧아 아직 안 씀, 쓰면 설명란에 출처 필수)
+아직 못 구한 것: 큰 징(길게 울리는), 심벌즈 — 위키미디어 공용(CC0·퍼블릭 도메인 녹음이 많음)이 이 서버에서 요청 제한(429)으로 막혀 다음 세션에서
+
+쓰는 법: 대본에서 그 장면 문단 바로 앞에 한 줄로  [효과:전투시작]  ([효과:뿔나팔] [효과:진군북] [효과:함성] [효과:뿔나팔_길게])
+         효과음 폴더에 <이름>.mp3 를 넣으면 [효과:<이름>] 으로 바로 쓸 수 있음

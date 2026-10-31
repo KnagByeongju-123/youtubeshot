@@ -179,8 +179,12 @@ def thumb_copies(item, name):
     pre = f"{span} " if span else ""
     if st == "해결 근거":
         c = [f"{name}\n마침내 풀렸다", f"{pre}풀리지 않던\n{name}의 답", f"{name}\n과학이 밝힌 정체"]
+        if span:   # 채널 인기 공식: 큰 글자 = '아무도 못' + 큰 숫자 (첫 안으로)
+            c = [f"아무도 못 푼\n{span.removesuffix('간')} {name}"] + c[1:]
     elif st == "가설 제안":
         c = [f"{name}\n드디어 풀렸을까?", f"{name}\n유력한 답이 나왔을까?", f"{name}\n새로 찾은 단서"]
+        if span:
+            c = [f"아무도 못 푼\n{span.removesuffix('간')} {name}"] + c[1:]
     elif st == "미해결":
         c = [f"{name}\n아직 아무도 모른다", f"{pre}풀리지 않은\n{name}의 수수께끼", f"{name}\n남은 질문들"]
     else:

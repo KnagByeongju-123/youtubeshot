@@ -6,6 +6,7 @@ indus, script          # 100년간 아무도 못 읽은 인더스 문자
 indus valley, decipher
 kushan                 # 1,700년 잠든 쿠샨 문자
 bactrian, script
+elamite                # 4천 년 동안 못 읽던 선형 엘람 문자
 hadal                  # 수심 9,533m 바닥의 '마을'
 kuril-kamchatka
 trench, chemosynthe
