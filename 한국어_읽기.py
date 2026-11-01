@@ -151,8 +151,8 @@ def ko_numbers(text):
              "자 회", "자회담", "자 대", "자대면", "자간", "자택", "자동"))   # 3자 회담·3자 대면은 '삼자'
         if 1 <= n <= 99 and counter and not (after.startswith("시간") and n >= 20):
             return ko_native(n)
-        if n >= 100 and n % 10 and counter and not after.startswith(("시", "번", "배")):
-            return ko_sino(n - n % 10) + ko_native(n % 10)   # 341곳 → 삼백사십한 곳 (끝자리만 고유어, 끝자리 0이면 아래에서 한자어)
+        # 100 넘는 세는 말은 한자어로 끝까지: 117개 → 백십칠 개, 341곳 → 삼백사십일 곳
+        # (예전엔 끝자리만 고유어 '백십일곱 개'로 읽어 두 셈법이 섞여 들렸음, 폼페이 찬장 편 2026-11-01)
         if n == 4 and after.startswith("번") and not after.startswith(("번째", "번이나", "번만", "번씩", "번도", "번을", "번 더")):
             return "네"          # '사 번'은 '사번(사원번호)'처럼 들림 → 네 번
         if (n % 10 == 4 and after.startswith("일") and not after.startswith(("일본", "일반", "일단", "일정", "일상", "일종", "일으", "일어", "일자", "일하"))
@@ -183,8 +183,8 @@ def geon_kkeon(t):
     t = re.sub(r"(?<![\d.,])([1-9]\d?)\s?건" + _GEON_FOLLOW, lambda m_: ko_native(int(m_.group(1))) + " 껀", t)   # 1~99건 → 한 껀 … 스물아홉 껀 … 아흔아홉 껀
     def big_(m_):
         n = int(m_.group(1).replace(",", ""))
-        return (ko_sino(n - n % 10) + ko_native(n % 10) if n % 10 else ko_sino(n)) + " 껀"
-    t = re.sub(r"(?<![\d.])(\d{1,3}(?:,\d{3})+|[1-9]\d{2,})\s?건" + _GEON_FOLLOW, big_, t)   # 447건 → 사백사십일곱 껀
+        return ko_sino(n) + " 껀"
+    t = re.sub(r"(?<![\d.])(\d{1,3}(?:,\d{3})+|[1-9]\d{2,})\s?건" + _GEON_FOLLOW, big_, t)   # 447건 → 사백사십칠 껀
     t = re.sub(r"(\d)\s?건" + _GEON_FOLLOW, r"\1 껀", t)
     t = re.sub(r"(?<![가-힣])(" + _GEON_NATIVE + r")\s+건" + _GEON_FOLLOW, r"\1 껀", t)
     return re.sub(r"(?<![가-힣])(" + _GEON_WORD + r")\s?건" + _GEON_FOLLOW, r"\1 껀", t)
