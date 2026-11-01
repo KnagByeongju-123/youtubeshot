@@ -43,6 +43,8 @@ def script_paragraphs(path):
         m = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(m)
         text = m.STORY
+    elif path.endswith(".json"):                       # 프로젝트 파일이면 대본(story)만 (예전엔 JSON 글자 전체를 한 문단으로 읽어 맞춰 보기가 엉터리였음, 2026-11-01)
+        text = json.load(open(path, encoding="utf-8")).get("story", "")
     else:
         text = open(path, encoding="utf-8").read()
     return [p.strip() for p in re.split(r"\n\s*\n", text)
@@ -63,9 +65,15 @@ def chunks(a):
     fr = int(0.02 * SR)
     n = len(a) // fr
     rms = np.sqrt((a[:n * fr].reshape(n, fr) ** 2).mean(1))
-    quiet = rms < max(1e-4, np.percentile(rms, 95) * 0.03)
+    quiet = rms < max(1e-4, np.percentile(rms, 95) * 0.03, np.percentile(rms, 15) * 1.3)   # 배경음이 깔려 완전한 쉼이 없어도(bgm_peak, 2026-11-01) 말 사이를 쉼으로
     out, start, k = [], 0, 0
     while k < n:
+        if (k - start) * 0.02 >= 15:                        # 쉼을 못 찾아도 15초가 되면 가장 조용한 곳에서 끊음 (한 조각이 몇 분이 되면 메모리가 넘침)
+            lo = start + int(10 / 0.02)
+            cut = lo + int(np.argmin(rms[lo:k + 1]))
+            out.append((start * 0.02, cut * 0.02))
+            start = k = cut + 1
+            continue
         if quiet[k]:
             j = k
             while j < n and quiet[j]:
