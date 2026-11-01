@@ -26,7 +26,7 @@ VIEWS = {"animal": "side view, front view, back view, full body, standing on all
          "spirit": "front view, side view, back view, full body, standing"}
 # 그림 모델은 한국 옷 이름을 몰라 중국·일본 옷으로 그림 → 이름이 나오면 모양을 풀어 쓴 설명을 붙임 (2026-10-31 첫 시트에서 사모가 고깔, 단령이 여밈 옷으로 나옴)
 KO_COSTUME = {
-    "ikseongwan": "the king's ikseongwan cap = a black two-tiered cap (low front part, higher back part, no brim) with two cicada-wing shaped wings at the back standing UPRIGHT toward the sky",
+    "ikseongwan": "the king's ikseongwan cap = a black two-tiered cap (low rounded front part, higher back part with two small rounded lobes on top, no brim) with two flat semi-transparent black gauze wings sticking straight out to the LEFT and RIGHT from the back of the cap, clearly visible in the front view and the back view",
     "samo": "samo = a black two-tiered gauze official cap (low front part, higher back part, no brim) with two thin flat oval wings attached at the back that stick straight out to the LEFT and RIGHT like ears, clearly visible in the front view and the back view",
     "gonryongpo": "gonryongpo = the king's deep crimson-red robe (daehong: rich dark red like red wine, not orange, not pink) with a ROUND neckline, round gold badges of a five-clawed dragon on the chest, the back and both shoulders, a stiff jade belt hanging loosely around the waist, black boots",
     "dallyeong": "dallyeong = an official robe with a ROUND neckline (not a crossed collar), wide sleeves, a square embroidered rank badge (hyungbae) on the chest and back showing cranes for civil officials or a tiger for military officials, never letters, a stiff belt hanging loosely",
@@ -50,7 +50,7 @@ KO_COSTUME = {
     "jeongjagwan": "jeongjagwan = a tall black stepped horsehair cap shaped like the Chinese character for well (jeong)",
     "beongeoji": "beongeoji = a black felt hat with a wide round brim and a red tassel on top",
 }
-KO_REFS = {"samo": "등장인물/조선/_관모/samo.png", "ikseongwan": "등장인물/조선/_관모/ikseongwan.png"}   # 말로는 모양을 못 따라 해서(사모가 야구모자·갓처럼) 모양 기준 그림을 함께 넣음
+KO_REFS = {"samo": "등장인물/조선/_관모/samo.png", }   # 익선관 모양 그림(ikseongwan.png)은 날개가 위로만 서 있어 틀림 → 뺌 (사용자 결정 2026-11-01: 뒷면처럼 날개가 옆으로, 앞에서도 보임)   # 말로는 모양을 못 따라 해서(사모가 야구모자·갓처럼) 모양 기준 그림을 함께 넣음
 OUTFIT_STYLE = ("traditional East Asian ink wash painting with light color washes: expressive black ink brush outlines, "
                 "rich clear colors applied as transparent watercolor washes, rice paper texture")   # 조선 기본 시트 12명과 같은 그림체
 KO_HEAD = "Korean Joseon dynasty costume (hanbok) - NOT Chinese hanfu, NOT Japanese kimono. "
