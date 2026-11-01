@@ -11,7 +11,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 TITLE = "사건의 지평선 너머, 마지막 인간"
 
 STYLE = ("Fantasy concept art illustration, hand-drawn ink pen lines with soft watercolor washes, painterly, "
-         "muted violet, teal and amber palette, glowing crystals, detailed environment")
+         "muted violet, teal and amber palette, detailed environment")   # 수정(crystal)은 블랙홀 안 장소 문구에만 (우주·조종실에 수정이 나와서)
 # 장소 (그림마다 꼭 적음 — CLAUDE.md 6장 단편 그림 주문 요령)
 VALLEY = ("Setting: a crystal valley inside a black hole, purple and teal glowing crystal clusters on dark rocks, "
           "a violet sky full of swirling distorted galaxies, a huge glowing white vortex (the singularity core) far above")
@@ -23,12 +23,12 @@ FOREST = ("Setting: the time-frozen planet, a forest of pale glowing teal trees 
           "soft light, floating motes that do not move, the violet galaxy sky above")
 BORDER = ("Setting: the time-frozen planet where a sharp glowing line divides a frozen teal forest on one side from a golden sand desert "
           "with half-buried ancient ruins on the other side, violet galaxy sky")
-SPACE = "Setting: outer space near a giant black hole with a bright orange accretion disk swirling around a perfect black sphere"
+SPACE = "Setting: empty outer space with stars near a giant black hole with a bright orange accretion disk swirling around a perfect black sphere, no ground, no rocks, no crystals"
 
 # (컷번호, 나오는 인물, 그림 설명(영어), 화면 설명(한국어), 장소)
 CUTS = [
     ("c01", [], "a giant black hole in deep space, a glowing orange ring of matter spinning around a perfect black sphere, a tiny white exploration spaceship approaching it", "블랙홀로 다가가는 탐사선", SPACE),
-    ("c02", ["서하"], "inside a cramped spaceship cockpit, the woman astronaut at a control panel looking out the window at the black hole, red warning lights", "탐사선 새벽호의 서하", ""),
+    ("c02", ["서하"], "inside a cramped metal spaceship cockpit, the woman astronaut at a control panel looking out the single front window at the black hole in space, red warning lights", "탐사선 새벽호의 서하", "Setting: a spaceship cockpit with metal walls, screens and buttons only, no crystals, no plants, the window shows only black space and the black hole"),
     ("c03", [], "the small white spaceship being stretched and pulled into the black sphere, streaks of light bending around it", "사건의 지평선", SPACE),
     ("c04", ["서하"], "the woman astronaut floating unconscious in the dark, surrounded by bending streams of starlight, falling", "빛이 휘어지는 어둠", "Setting: a dark tunnel of bending starlight inside a black hole"),
     ("c05", ["서하"], "the woman astronaut lying on dark rocks among glowing crystals, slowly opening her eyes, her cracked helmet beside her", "눈을 뜬 서하", VALLEY),
