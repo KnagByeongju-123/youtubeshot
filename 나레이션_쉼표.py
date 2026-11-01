@@ -96,7 +96,7 @@ def boundary_commas(s):
         quoted = (" ".join(out).count('"') % 2 == 1) or (" ".join(out).count("“") > " ".join(out).count("”"))
         tag = ends.get(pos + len(w), "")
         pos += len(w) + 1
-        modifier = tag in ("MM", "ETM", "NR", "SN", "XPN") or len(a) <= 1
+        modifier = tag in ("MM", "ETM", "NR", "SN", "XPN", "MAG") or len(a) <= 1   # 부사 뒤(가장, 잘)도 끊지 않음: 쉼표 뒤가 빨라짐 (2026-11-01)
         if a and b and w[-1:] not in ",.!?…" and not quoted and not modifier and same_sound(a[-1], b[0]):
             out[-1] = w + ","
             hits.append(f"{a} {b}")

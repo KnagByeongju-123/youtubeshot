@@ -158,6 +158,8 @@ def ko_numbers(text):
         if (n % 10 == 4 and after.startswith("일") and not after.startswith(("일본", "일반", "일단", "일정", "일상", "일종", "일으", "일어", "일자", "일하"))
                 and not (after.startswith("일부") and not after.startswith("일부터"))):
             return ko_sino(n) + " "   # 4일 → '사 일' (붙여 쓰면 성우가 '싸일'로 읽음)
+        if 1000 <= n <= 2999 and after.startswith("년"):                 # 2015년 → '이천십오 년' (붙이면 높낮이가 흔들림, 사용자 지적 2026-11-01)
+            return ko_sino(n) + " "
         if n >= 1 and after.startswith("번째"):
             return "첫" if n == 1 else ko_native(n) if n <= 99 else ko_sino(n)
         if len(num) > 16:                                               # 너무 긴 숫자(전화번호 등)는 한 자리씩

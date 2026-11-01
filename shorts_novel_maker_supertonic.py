@@ -7955,6 +7955,7 @@ def tts_clean(text):
     t = t.lstrip("♪").strip()
     t = narr_commas(t)                   # 긴 문장은 연결어미 뒤 쉼표 → 숨 쉬듯 끊어 읽기 (Kiwi, 따옴표를 지우기 전에)
     t = re.sub(r"[\"“”'‘’]", "", t)
+    t = re.sub(r"(까요|나요|ㄹ까|을까|일까)\?", r"\1.", t)   # 묻는 끝말은 소리만 마침표로: 끝을 올리며 빨라짐 (사용자 지적 2026-11-01)
     if re.search(r"[가-힣]", t):
         t = read_korean(t)               # 건→껀, 전화번호, 사번, 숫자 → 한글 읽기 (한국어_읽기.py)
     t = re.sub(r"\s+", " ", t)
