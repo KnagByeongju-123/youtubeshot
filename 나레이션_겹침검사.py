@@ -166,6 +166,13 @@ def missing_spots(heard_all, sents, ratio=0.45, min_len=6):
         if first_t[k] is not None:
             last_t = first_t[k]
         if n >= min_len and hit[k] / n < ratio:
+            # 전체 맞춤이 어긋났을 수 있음 → 그 자리 앞뒤 조각(±3)에서 문장만 따로 맞춰 봐서 들렸으면 넘김
+            ci = max([i for i, (t0, _) in enumerate(heard_all) if t0 <= last_t] or [0])
+            near = "".join(hangul(x) for _, x in heard_all[max(0, ci - 2):ci + 4])
+            sh = hangul(s_)
+            loc = sum(b_.size for b_ in difflib.SequenceMatcher(None, sh, near, autojunk=False).get_matching_blocks())
+            if loc / n >= ratio:
+                continue
             out.append({"t": last_t, "dd": f"빠짐 {hit[k]}/{n}자 들림", "missing": True, "sentence": s_, "paragraph": par, "heard": ""})
     return out
 
