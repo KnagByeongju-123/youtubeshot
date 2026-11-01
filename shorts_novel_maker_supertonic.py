@@ -302,6 +302,8 @@ IMAGE_STYLES = {
     "옛날 만화책(세피아 펜화)": "vintage 1970s-80s printed comic book illustration, bold black ink pen line art with fine cross-hatching, muted sepia and earth-tone coloring, visible halftone dot texture, aged yellowed paper, slightly faded old print look",
     "역사 수묵 담채": "traditional East Asian ink wash painting (sumi-e) with light color washes, expressive black ink brush lines, soft grey washes with muted natural colors, rice paper texture across the whole image, historically accurate costumes and architecture, ancient props only: writings as bamboo-slip scrolls or silk scrolls, bronze oil lamp dishes or candles, low wooden tables, paper lattice windows, no hardcover books, no glass lamps, no pens, no modern furniture, no red seal stamp, no calligraphy",   # 역사 채널(진짜 역사 기록관) 기본 그림 (사용자 결정 2026-10-30). 도장·글귀가 잘 끼어들어 금지 말을 붙임
     "근대 수묵 담채": "traditional East Asian ink wash painting (sumi-e) with light color washes, expressive black ink brush lines, soft grey washes with muted natural colors, rice paper texture across the whole image, 1920s Korea under Japanese rule: Gyeongseong (Seoul) streets, hanok houses with tiled or thatched roofs, rickshaws, streetcars, Korean hanbok mixed with early Western suits and hats, period-accurate, no modern objects, no red seal stamp, no calligraphy, no text",   # 고전 단편 낭독(드림노트, 1920~30년대 한국 소설) 그림 (사용자 결정 2026-10-31)
+    "역사 수묵 담채": "traditional East Asian ink wash painting (sumi-e) with light color washes, expressive black ink brush lines, soft grey washes with muted natural colors, rice paper texture across the whole image, historically accurate costumes and architecture, no red seal stamp, no calligraphy",   # 역사 채널(진짜 역사 기록관) 기본 그림 (사용자 결정 2026-10-30). 도장·글귀가 잘 끼어들어 금지 말을 붙임
+    "조선 수묵 담채(선명)": "traditional East Asian ink wash painting with light color washes: expressive black ink brush outlines, rich clear colors applied as transparent watercolor washes, rice paper texture, historically accurate Joseon Korean costumes and architecture, no red seal stamp, no calligraphy",   # 조선 편 (사용자 결정 2026-10-31): 조선 인물 풀세트와 같은 선명한 색 — '차분한 색' 문구가 옷 색을 회색으로 빼 버려서
     "크라프트지 손그림(귀여운 낙서)": "naive childlike hand-drawn illustration on recycled brown kraft paper, flat opaque gouache shapes, black marker outlines, simple dot eyes, rosy pink cheeks, tiny smile, striped and dotted clothes, crayon texture, whimsical folk art doodle, muted pink, blue, yellow, white and black palette, paper texture visible",
     "실루엣(노을 그림자)": "silhouette art, figures and objects as solid pure black silhouettes with crisp clean edges, no facial details, against a glowing gradient sunset sky in orange, pink and purple, layered paper-cut landscape, minimalist, high contrast, cinematic",
     "색칠공부 밑그림(선만)": "coloring book page, clean bold black outlines only on pure white background, no color, no shading, no gray, simple closed shapes easy to color in, cute friendly characters, line art, printable coloring sheet",
@@ -602,6 +604,7 @@ FIELDS = [
     ("소리", "bgm_mode", "배경음", "choice:자동생성,파일,없음", "자동생성"),
     ("소리", "bgm_style", "배경음 스타일", "choice:" + ",".join(["자동(소재별)"] + SOUND_STYLE_NAMES), "자동(소재별)"),
     ("소리", "bgm_volume", "배경음 볼륨(0~2, 0.03=거의 안 들림)", "float", 0.03),
+    ("소리", "bgm_mul", "배경음 배율(전통악기 포함, 0.5=절반, 나레이션은 그대로)", "float", 1.0),
     ("소리", "chapter_perc", "전통악기 배경음: 챕터 시작 타악 (on=권역 기본 징 또는 북, 연속북=긴장감, 진군북=출정·전투, 난타)", "choice:on,징,북,연속북,진군북,난타,off", "off"),   # 기본 끔 (사용자 결정 2026-10-31: 잘 안 들림)
     ("소리", "reveal_hit", "반전 효과음", "choice:on,off", "on"),
     ("소리", "hit_sound", "반전 효과음 종류", "choice:자동(코미디=두둥탁),쿵(반전),두둥탁(개그 드럼),띠링(밝은 종)", "자동(코미디=두둥탁)"),
@@ -2694,7 +2697,8 @@ IMAGE_PLAN_SYSTEM = """너는 유튜브 쇼츠 영상의 아트 디렉터다. �
 - [등장인물 외모]가 주어졌으면 그 외모를 그대로 쓰고, 거기 없는 새 인물이 그림에 나오면 그 인물만 cast 에 추가한다.
   주어지지 않았으면 그림에 나오는 인물마다 cast 를 먼저 정한다: name(본문의 이름), look(영어 25~40단어: 나이·성별·얼굴형(둥근/갸름한/각진)·눈과 눈썹·머리 길이와 색·머리 스타일(가르마·앞머리·묶음·곱슬 등)·안경 유무와 테 모양·색·수염(없음/콧수염/턱수염/구레나룻·색)·체형과 키·대표 옷차림(색까지).
   인물끼리 겹치지 않게. 회상 등으로 나이가 다르면 "이름(시기, 나이)"로 따로), look_ko(한국어 요약). 새 인물이 없으면 cast 는 [].
-반드시 JSON만 출력: {"cast": [{"name": "...", "look": "...", "look_ko": "..."}], "images": [{"after": "...", "prompt": "...", "caption": "...", "chars": ["이름"]}]}"""
+조선 시대 인물이면 cast 마다 "base" 에 옷차림이 가장 가까운 조선 기본 인물 하나를 적음 (왕·왕비·문관·상궁·내관·무관·사대부·상인·백정·기생·농민·아낙네, 조선이 아니면 빈칸) → 그 기본 캐릭터 시트의 옷차림 그대로 그림.
+반드시 JSON만 출력: {"cast": [{"name": "...", "look": "...", "look_ko": "...", "base": "..."}], "images": [{"after": "...", "prompt": "...", "caption": "...", "chars": ["이름"]}]}"""
 
 
 _IMG_OK = {}
@@ -3046,6 +3050,7 @@ IMG_SOURCE_PRESET = {"그림: 애니(웹툰)": "웹툰", "그림: 애니+수채�
                      "그림: 옛날 만화책": "옛날 만화책(세피아 펜화)",
                      "그림: 역사 수묵 담채": "역사 수묵 담채",   # 역사 채널 기본
                      "그림: 근대 수묵 담채": "근대 수묵 담채",   # 고전 단편 낭독(1920~30년대 한국)
+                     "그림: 조선 수묵 담채": "조선 수묵 담채(선명)",   # 조선 편 (조선 인물 풀세트와 같은 그림체)
                      "그림: 크라프트지 낙서": "크라프트지 손그림(귀여운 낙서)", "그림: 실루엣": "실루엣(노을 그림자)",
                      "그림: 색칠공부 밑그림": "색칠공부 밑그림(선만)", "그림: 동화 난쟁이 마을": "동화 난쟁이 마을",
                      "그림: 연필 윤곽 스케치": "연필 윤곽 스케치", "그림: 필터 색연필": "필터: 색연필", "그림: 필터 목탄": "필터: 목탄 스케치",
@@ -3093,6 +3098,74 @@ def add_preset_cast(text, log=None):
         (log or (lambda x: None))("  👤 확정 캐릭터 시트 사용: " + ", ".join(c["name"] for c in add))
 
 
+JOSEON_BASE_DIR = os.path.join(BASE, "등장인물", "조선")   # 조선 기본 캐릭터 시트 12명 (기본_<역할>.png, 수묵 담채 앞·옆·뒤, 사용자 결정 2026-10-31: 영상의 조선 인물은 이 세트 기준)
+JOSEON_BASE_WORDS = [("왕비", ["queen", "왕비", "중전", "왕후"]), ("왕", ["king", "임금", "왕 "]), ("상궁", ["court lady", "palace maid", "상궁", "궁녀", "nain"]),
+                     ("내관", ["eunuch", "내관", "내시"]), ("무관", ["general", "military", "soldier", "commander", "무관", "장수", "군사", "포졸"]),
+                     ("문관", ["official", "minister", "councillor", "문관", "정승", "판서", "관리"]), ("기생", ["gisaeng", "기생"]),
+                     ("백정", ["butcher", "백정"]), ("상인", ["merchant", "peddler", "상인", "보부상"]), ("사대부", ["yangban", "seonbi", "scholar", "nobleman", "선비", "양반", "사대부"]),
+                     ("아낙네", ["townswoman", "common woman", "peasant woman", "아낙", "여인"]), ("농민", ["farmer", "peasant", "townsman", "commoner", "농민", "백성", "농부"])]
+
+
+def joseon_base(c):
+    """조선 인물이면 옷차림 기준이 될 기본 시트 경로 (cast 의 base 칸, 없으면 외모 설명의 낱말로 짐작). 아니면 ''"""
+    look = (str(c.get("look", "")) + " " + str(c.get("look_ko", ""))).lower()
+    base = str(c.get("base") or "").strip()
+    if not base:
+        if "joseon" not in look and "조선" not in look:
+            return ""
+        base = next((b for b, ws in JOSEON_BASE_WORDS if any(w in look for w in ws)), "")
+    p = os.path.join(JOSEON_BASE_DIR, f"기본_{base}.png")
+    return p if base and os.path.exists(p) else ""
+
+
+SAMO_REF = os.path.join(BASE, "등장인물", "조선", "_관모", "사모_앞.png")
+HAT_DIR = os.path.join(BASE, "등장인물", "조선", "_관모")   # 모자 시트(모자시트.png)에서 자른 앞모습: 익선관·사모·갓·상투·전립·삿갓·에보시
+
+
+def hat_ref(c):
+    """인물 외모 설명에서 쓰는 조선 모자 → 그 모자 앞모습 그림 경로 (없으면 '')"""
+    look = (str(c.get("look", "")) + " " + str(c.get("base", ""))).lower()
+    for words, name in ((("ikseongwan", "왕"), "익선관"), (("samo", "문관", "내관"), "사모"), (("jeollip", "무관"), "전립"),
+                        (("eboshi",), "에보시"), (("gat:", "gat ", "사대부"), "갓"), (("conical straw", "삿갓"), "삿갓")):
+        if any(w in look for w in words):
+            p = os.path.join(HAT_DIR, name + "_앞.png")
+            return p if os.path.exists(p) else ""
+    return ""
+
+
+def person_with_hat(front, c):
+    """시트 앞모습 + 그 사람 모자를 한 장으로 붙임 (모자를 인물과 합친 기준 그림, 사용자 제안 2026-11-01). 모자가 없으면 앞모습 그대로"""
+    hp = hat_ref(c)
+    if not hp:
+        return front
+    try:
+        out = front[:-4] + "_모자.png"
+        if not os.path.exists(out) or os.path.getmtime(out) < max(os.path.getmtime(front), os.path.getmtime(hp)):
+            a = Image.open(front).convert("RGB")
+            h = Image.open(hp).convert("RGB")
+            h = h.crop((0, 0, h.width, int(h.height * 0.45)))     # 모자만 (다른 사람 얼굴·옷이 섞이지 않게)
+            h = h.resize((int(h.width * a.height / 2 / h.height), a.height // 2))
+            im = Image.new("RGB", (a.width + h.width, a.height), "white")
+            im.paste(a, (0, 0))
+            im.paste(h, (a.width, 0))
+            im.save(out)
+        return out
+    except Exception:
+        return front   # 조선 관리 사모 모양 기준 (기본_내관 시트 앞모습 머리)
+
+
+def sheet_front(p):
+    """캐릭터 시트(앞·옆·뒤)에서 앞모습만 잘라 기준 그림으로 (옆·뒤 모습이 섞이면 사모가 갓처럼 그려짐). 잘린 그림은 <시트>_앞.png 로 저장해 다시 씀"""
+    try:
+        out = p[:-4] + "_앞.png"
+        if not os.path.exists(out) or os.path.getmtime(out) < os.path.getmtime(p):
+            im = Image.open(p).convert("RGB")
+            im.crop((0, 0, im.width // 3, im.height)).save(out)
+        return out
+    except Exception:
+        return p
+
+
 def make_cast_sheets(names, style, media_dir, log=None, cancel=None):
     """그림에 나오는 인물마다 캐릭터 시트(앞·옆·뒤 전신, 흰 배경)를 klein 으로 그려 {이름: 경로}.
     이미 있는 시트(IMAGE_CAST 의 sheet, 등장인물.json 의 face)는 그대로 씀 → 모든 컷·회차가 같은 얼굴·옷"""
@@ -3113,10 +3186,13 @@ def make_cast_sheets(names, style, media_dir, log=None, cancel=None):
         elif face and os.path.exists(face):
             out[nm] = c["sheet"] = face
         else:
-            jobs.append({"id": f"sheet{len(jobs)}", "name": nm, "width": 1024, "height": 576, "seed": 7,
+            base_ = joseon_base(c)
+            jobs.append({"id": f"sheet{len(jobs)}", "name": nm, "width": 1024, "height": 576, "seed": 7, "refs": [base_] if base_ else [],
                          "prompt": f"Character design sheet, {style or 'illustration'}. The same character shown three times side by side on a plain white "
                                    f"background: front view, side view, back view, full body, standing. Character: {c['look']}. "
-                                   "Consistent design in every view, no close-ups, no other people"})
+                                   "Consistent design in every view, no close-ups, no other people"
+                                   + (". Dress the character in exactly the same costume as the reference character sheet (same hat or hairstyle, robe cut, collar, badges, belt, shoes and colors); "
+                                      "face, age, beard and body follow the description" if base_ else "")})
     if jobs:
         log(f"  👤 캐릭터 시트 {len(jobs)}명 그리는 중 (모든 컷에서 같은 얼굴·옷으로 그리는 기준): " + ", ".join(j["name"] for j in jobs))
         got = sd_generate(jobs, os.path.join(media_dir, "_sd"), log, cancel)
@@ -3169,7 +3245,8 @@ GEMINI_PROMPT_SYSTEM = """너는 유튜브 영상의 아트 디렉터다. 사용
 - [등장인물 외모]가 주어지지 않았으면 cast 를 먼저 정한다: 주요 인물마다 name(한국어 이름, 회상 등으로 나이가 달라지면 "이름(1979년, 20세)"처럼 시기별로 따로),
   look(영어 쉼표 나열 25~45단어: 나이·성별·얼굴형(둥근/갸름한/각진)·눈과 눈썹·머리 길이와 색·머리 스타일(가르마·앞머리·묶음·곱슬 등)·안경 유무와 테 모양·색·수염(없음/콧수염/턱수염/구레나룻·색)·체형과 키·대표 옷차림(색까지). 인물끼리 겹치지 않게), look_ko(한국어 요약). 주어졌으면 cast 는 [].
 - ko: 15자 이내 한국어 장면 설명
-반드시 JSON만 출력: {"cast": [{"name": "...", "look": "...", "look_ko": "..."}], "prompts": [{"para": 문단번호, "ko": "...", "prompt": "...", "chars": ["이름"]}]}"""
+조선 시대 인물이면 cast 마다 "base" 에 옷차림이 가장 가까운 조선 기본 인물 하나를 적음 (왕·왕비·문관·상궁·내관·무관·사대부·상인·백정·기생·농민·아낙네, 조선이 아니면 빈칸) → 그 기본 캐릭터 시트의 옷차림 그대로 그림.
+반드시 JSON만 출력: {"cast": [{"name": "...", "look": "...", "look_ko": "...", "base": "..."}], "prompts": [{"para": 문단번호, "ko": "...", "prompt": "...", "chars": ["이름"]}]}"""
 
 
 def zip_image_files(zip_path, out_dir):
@@ -3206,6 +3283,7 @@ IMAGE_STYLES_KO = {   # Claude·Gemini 에 한국어로 줄 화풍 설명
     "잉크 스케치": "자유로운 잉크 스케치, 손으로 그린 표현적인 잉크 선, 간결하고 즉흥적.",
     "근대 수묵 담채": "먹선과 옅은 색을 올린 동양 수묵 담채화, 화선지 질감, 1920~30년대 경성(일제강점기)의 거리·한옥·인력거·전차, 한복과 초기 양복. 지금 물건·낙관·글귀는 넣지 않음.",
     "역사 수묵 담채": "먹선과 옅은 색을 올린 동양 수묵 담채화, 화선지 질감, 시대에 맞는 옷과 건물. 낙관(붉은 도장)·글귀는 넣지 않음.",
+    "조선 수묵 담채(선명)": "먹선에 맑고 선명한 수채 색을 올린 수묵 담채화, 화선지 질감, 조선 시대 옷과 건물(조선 인물 풀세트 기준). 낙관·글귀는 넣지 않음.",
     "모네 인상주의": "모네풍 인상주의 그림, 점점이 흩어진 붓질, 부드러운 빛, 야외 장면.",
     "크레용 그림": "아이가 그린 크레용 그림, 왁스 크레용 질감, 밝고 단순한 색.",
     "펜화 판화": "검은 펜 판화, 교차 빗금으로 명암을 낸 가는 선, 강한 대비, 흑백.",
@@ -3321,7 +3399,7 @@ def make_ai_images(model, category, title, story, n, s, media_dir, log, cancel=N
             it["caption"] = cap_ if cap_.startswith(_YP.AI_CAPTION) else (f"{_YP.AI_CAPTION} · {cap_}" if cap_ else _YP.AI_CAPTION)
     if plan.get("cast"):     # 기획이 새로 정한 인물 외모를 등록(이미 있는 인물은 그대로) → 이후 모든 그림·회차에 같은 얼굴·머리·수염·체형
         have = {cast_base(c.get("name")) for c in IMAGE_CAST.get("chars") or []}
-        new = [{"name": str(x.get("name", "")), "look": str(x.get("look", "")), "look_ko": str(x.get("look_ko", ""))}
+        new = [{"name": str(x.get("name", "")), "look": str(x.get("look", "")), "look_ko": str(x.get("look_ko", "")), "base": str(x.get("base", "") or "")}
                for x in plan["cast"] if isinstance(x, dict) and x.get("name") and x.get("look") and cast_base(x.get("name")) not in have]
         if new:
             IMAGE_CAST["chars"] = list(IMAGE_CAST.get("chars") or []) + new
@@ -3359,7 +3437,13 @@ def make_ai_images(model, category, title, story, n, s, media_dir, log, cancel=N
         if klein:   # 인물마다 캐릭터 시트를 먼저 그려 두고, 장면마다 나오는 인물의 시트를 기준 그림으로 → 모든 컷에서 같은 얼굴·옷
             sheets = make_cast_sheets([nm for it in items for nm in (it.get("cast_used") or [])], style, media_dir, log, cancel)
             for j, it in zip(jobs, items):
-                j["refs"] = [sheets[nm] for nm in dict.fromkeys(it.get("cast_used") or []) if nm in sheets][:4]
+                cast_ = {c.get("name"): c for c in IMAGE_CAST.get("chars") or []}
+                j["refs"] = [person_with_hat(sheet_front(sheets[nm]), cast_.get(nm) or {}) for nm in dict.fromkeys(it.get("cast_used") or []) if nm in sheets][:4]
+                if any(hat_ref(cast_.get(nm) or {}) for nm in it.get("cast_used") or []):
+                    # 모자는 인물과 한 몸으로 (사용자 제안 2026-11-01): 시트 앞모습 옆에 그 사람 모자를 붙인 한 장을 기준 그림으로 → 모자가 따로 놀지 않음
+                    j["prompt"] = (j["prompt"].replace("gauze hat", "brimless cap") + " Each person and the cap shown next to him in his reference image are one: "
+                                   "he always wears exactly that cap, same shape from every angle (samo: no brim, two flat wings out to the sides; "
+                                   "ikseongwan: two small round wings standing upright at the back). People face the viewer (front or three-quarter front view).")
             log("  🖌 그림 모델: FLUX.2 klein (캐릭터 시트 기준 · 인물 장면 한 장 약 2분, 풍경 약 40초)")
         else:
             log(f"  🖌 그림 모델: {'애니·만화(Counterfeit)' if model_ == 'anime' else '일러스트(Dreamshaper)'}" + (" + 수채화 보조" if lora_ else ""))
@@ -7392,6 +7476,7 @@ def build_audio(r, s, style):
             g = g * duck_env(n, narr, r.duration, float(s.get("narr_duck", 0.35)))
         if is_trad(style):             # 전통악기(고쟁·얼후 등)는 '거의 안 들림' 크기로는 묻혀서 조금 키움
             g = g * max(1.0, 0.3 / max(0.01, float(s["bgm_volume"])))
+        g = g * float(s.get("bgm_mul", 1.0) or 1.0)   # 배경음 배율 (사용자 결정 2026-10-31: 역사 편 0.5 = 50% 작게, 나레이션 크기는 그대로)
         out += music * g[:, None].astype(np.float32)
     if is_trad(style):                 # 나레이션 사이(챕터 제목이 나오는 동안) 전통악기 한 소절 (같은 음계)
         rng_i = np.random.default_rng(len(getattr(r, "segs", [])))
@@ -7400,7 +7485,7 @@ def build_audio(r, s, style):
                 rg_, md_, kd_ = TRAD_STYLES[style]     # 새 막(챕터)이 열릴 때 징·큰 북·종을 먼저 (chapter_perc: off 면 끔, 사용자 결정 2026-10-31)
                 pc_ = str(s.get("chapter_perc", "off"))
                 it = _trad(rg_, kd_).interlude(rng_i, mode=md_, percussion=False if pc_ == "off" else (pc_ if pc_ in ("징", "북", "연속북", "진군북", "난타") else True))
-                it = it / (np.abs(it).max() + 1e-6) * 0.42
+                it = it / (np.abs(it).max() + 1e-6) * 0.42 * float(s.get("bgm_mul", 1.0) or 1.0)
                 i0 = int((sg["t0"] + 0.15) * SR)
                 seg = it[: max(0, n - i0)]
                 out[i0:i0 + len(seg)] += seg
