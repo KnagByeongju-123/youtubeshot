@@ -817,7 +817,7 @@ def run_doc(m, app, c, gate):
     log(f"나레이션 완성: {len(narr)}문단 · {sum(d for _, _, d in narr) / 60:.1f}분")
     narr_checked = False
     sdpy_ = os.path.join(HERE, ".sd_venv", "Scripts" if os.name == "nt" else "bin", "python.exe" if os.name == "nt" else "python")
-    if os.path.exists(sdpy_) and "--받아쓰기없음" not in sys.argv:
+    if os.path.exists(sdpy_):     # 필수 (사용자 결정 2026-11-01: 받아쓰기 검사는 빼지 않음)
         # 규칙(사용자 결정 2026-11-01): 영상이 아니라 **나레이션만 담긴 소리(배경음 없음)**로 먼저 받아쓰기 검사(말더듬·빠진 말) → 걸린 문장만 다시 녹음 → 그다음 그림·영상
         # (영상은 배경음이 깔려 쉼이 없고 받아쓰기도 틀리기 쉬움, 영상을 몇 번씩 다시 만들 일도 없어짐)
         import subprocess
@@ -844,6 +844,13 @@ def run_doc(m, app, c, gate):
             else:
                 log("⚠ 3번 다시 녹음해도 걸린 문장이 남음 → " + base + "_받아쓰기검사.txt 를 보고 대본 낱말을 바꿈 (CLAUDE.md 2장)")
         log("🎧 나레이션만 담긴 소리: " + only_ + " (사용자에게 보낼 때는 나레이션_배경음만.py 로 배경음을 넣은 mp3)")
+    # 2단계: 말더듬·빠짐 검사 뒤 받아쓰기 검사(Whisper — 대본과 다르게 읽은 낱말: 'SNS'·'문화광광부' 같은 것) 결과를 남기고 알림 (필수, 사용자 결정 2026-11-01)
+    if getattr(m, "_NV", None) is not None:
+        if m._NV.REPORT:
+            m.atomic_write_text(base + "_나레이션검증.txt", m._NV.report_text(title))
+        n_bad = sum(1 for r_ in m._NV.REPORT if not r_[2]["ok"])
+        log(f"🔎 받아쓰기 검사(Whisper): {len(m._NV.REPORT)}문단 중 다르게 읽은 문단 {n_bad}개"
+            + (f" → {os.path.basename(base)}_나레이션검증.txt 를 보고 읽기사전·대본을 고쳐 그 문단만 다시 녹음" if n_bad else " (모두 통과)"))
     if defer and "--그림제외" in sys.argv:   # 대본·나레이션만 이 서버에서 (그림이 느린 서버) → 그림·영상은 다른 서버에서 같은 명령으로 이어서
         log("⏸ --그림제외: 대본·나레이션까지 끝. output/장문 을 그림이 빠른 서버로 옮겨 --그림제외 없이 같은 명령으로 이어서 하세요")
         raise SystemExit(0)
