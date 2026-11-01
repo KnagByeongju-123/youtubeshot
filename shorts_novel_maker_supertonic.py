@@ -537,6 +537,7 @@ FIELDS = [
     ("자막형", "sub_max_chars", "자막 한 번에 글자 수", "int", 28),
     ("자막형", "img_motion", "사진 움직임", "choice:영상처럼(확대·이동·전환),천천히 확대만,없음", "영상처럼(확대·이동·전환)"),
     ("자막형", "img_label", "사진 제목 표시(오른쪽 위)", "choice:on,off", "on"),
+    ("자막형", "img_credit", "사진 출처 표시(오른쪽 아래, 작게)", "choice:on,off", "on"),   # 사용자 결정 2026-11-01: 실제 사진은 화면에 작가·라이선스 (CC BY 조건). AI 그림은 표시 안 함
     ("자막형", "sub_hide", "자막 숨김(나레이션만 · 장문 기본 on)", "choice:off,on", "off"),
     ("자막형", "img_motion_amt", "사진 움직임 세기", "choice:은은하게,크게(예전)", "은은하게"),
     ("자막형", "motion_count", "모션: 숫자 카운트업(통계 수치가 올라감)", "choice:on,off", "off"),
@@ -5307,6 +5308,7 @@ class SubtitleRenderer:
                 im = imcache[med[0]]
                 if im is not None:
                     self.images.append((im, med[1]))
+                    self.img_credits = getattr(self, "img_credits", []) + [med[2]]
                     self.img_paths = getattr(self, "img_paths", []) + [resolve_media(med[0]) or med[0]]
                     cur_img = len(self.images) - 1
                     stack.append(cur_img)
@@ -6432,6 +6434,42 @@ class SubtitleRenderer:
         im.putalpha(im.getchannel("A").point(lambda a: int(a * k)))
         return im, lab[1]
 
+    def _img_credit(self, idx, t):
+        """사진 출처 (오른쪽 아래, 작고 흐린 글자 + 옅은 그림자). AI 그림·출처 없는 사진은 None. 사진이 바뀔 때 0.4초 동안 서서히"""
+        creds = getattr(self, "img_credits", [])
+        if not (0 <= idx < len(creds)):
+            return None
+        cache = self.__dict__.setdefault("_cred_cache", {})
+        if idx not in cache:
+            c = re.sub(r"\s+", " ", str(creds[idx] or "")).strip(" ·-")
+            if not c or "AI 생성" in c or "원작 부분 확대" in c:
+                cache[idx] = None
+            else:
+                fs = max(14, int(min(W, H) * 0.019))
+                f_ = load_font(self.s.get("sub_font_path") or self.s.get("font_path"), fs)
+                txt = "사진: " + c
+                while f_.getlength(txt) > W * 0.42 and len(txt) > 8:
+                    txt = txt[:-2] + "…"
+                tw, th = int(f_.getlength(txt)) + 14, int(fs * 1.5)
+                im = Image.new("RGBA", (tw, th), (0, 0, 0, 0))
+                d = ImageDraw.Draw(im)
+                d.rounded_rectangle([0, 0, tw - 1, th - 1], radius=int(fs * 0.4), fill=(0, 0, 0, 90))
+                d.text((8, 3), txt, font=f_, fill=(0, 0, 0, 150))
+                d.text((7, 2), txt, font=f_, fill=(255, 255, 255, 215))
+                cache[idx] = (im, (W - tw - int(W * 0.012), H - th - int(H * 0.008)))
+        lab = cache[idx]
+        if lab is None:
+            return None
+        starts = self.__dict__.setdefault("_lab_start", {})
+        if idx not in starts:
+            starts[idx] = min((sg_["t0"] for sg_ in self.segs if sg_.get("img") == idx), default=0.0)
+        k = smoothstep((t - starts[idx]) / 0.4)
+        if k >= 0.999:
+            return lab
+        im = lab[0].copy()
+        im.putalpha(im.getchannel("A").point(lambda a: int(a * k)))
+        return im, lab[1]
+
     def _compose_pil(self, t):
         sg0 = self.seg_at(t)
         if (t >= self.intro and (self.full or self.s.get("img_bg", "on") == "on") and self.shots
@@ -6457,6 +6495,10 @@ class SubtitleRenderer:
                     lab = self._img_label(self._img_at(sg, t), t)
                     if lab is not None:
                         canvas.alpha_composite(lab[0], lab[1])
+                if str(self.s.get("img_credit", "on")) == "on":     # 규칙: 실제 사진은 오른쪽 아래에 작게 출처 (사용자 결정 2026-11-01)
+                    cr = self._img_credit(self._img_at(sg, t), t)
+                    if cr is not None:
+                        canvas.alpha_composite(cr[0], cr[1])
             if getattr(self, "overlay", None) is not None:      # 시네마 띠·뉴스 띠·가운데 자막용 어둡게
                 canvas.alpha_composite(self.overlay)
             if not str(self.s.get("head_show", "보임")).startswith("안"):
@@ -6622,7 +6664,7 @@ _DEPTH_CACHE = {}
 _DEPTH_WARNED = set()
 _GRID_CACHE = {}
 DEPTH_AMP = {"약하게": (0.007, 0.003), "보통": (0.022, 0.010), "강하게": (0.035, 0.016)}   # 약하게는 아주 은은하게(기본)
-RENDER_VER = "2026-10-31a"   # 그리는 방식이 바뀌면 올림 → 장문 영상 구간 캐시를 새로 그림   # (가로, 세로) 최대 밀림 = 화면 크기 비율
+RENDER_VER = "2026-11-01a"   # 그리는 방식이 바뀌면 올림 → 장문 영상 구간 캐시를 새로 그림   # (가로, 세로) 최대 밀림 = 화면 크기 비율
 
 
 def depth_key(path):
