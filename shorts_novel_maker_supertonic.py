@@ -6435,7 +6435,7 @@ class SubtitleRenderer:
         return im, lab[1]
 
     def _img_credit(self, idx, t):
-        """사진 출처 (오른쪽 위, 작은 글자 + 옅은 어두운 띠). AI 그림·출처 없는 사진은 None. 사진이 바뀔 때 0.4초 동안 서서히"""
+        """사진 출처 (오른쪽 위, 검은 바탕 상자 + 흰 글자). AI 그림·출처 없는 사진은 None. 사진이 바뀔 때 0.4초 동안 서서히"""
         creds = getattr(self, "img_credits", [])
         if not (0 <= idx < len(creds)):
             return None
@@ -6450,12 +6450,11 @@ class SubtitleRenderer:
                 txt = "사진: " + c
                 while f_.getlength(txt) > W * 0.42 and len(txt) > 8:
                     txt = txt[:-2] + "…"
-                tw, th = int(f_.getlength(txt)) + 14, int(fs * 1.5)
+                tw, th = int(f_.getlength(txt)) + 18, int(fs * 1.55)
                 im = Image.new("RGBA", (tw, th), (0, 0, 0, 0))
                 d = ImageDraw.Draw(im)
-                d.rounded_rectangle([0, 0, tw - 1, th - 1], radius=int(fs * 0.4), fill=(0, 0, 0, 90))
-                d.text((8, 3), txt, font=f_, fill=(0, 0, 0, 150))
-                d.text((7, 2), txt, font=f_, fill=(255, 255, 255, 215))
+                d.rounded_rectangle([0, 0, tw - 1, th - 1], radius=int(fs * 0.35), fill=(0, 0, 0, 215))   # 검은 바탕 + 흰 글자 (사용자 결정 2026-11-01)
+                d.text((9, int(fs * 0.22)), txt, font=f_, fill=(255, 255, 255, 255))
                 cache[idx] = (im, (W - tw - int(W * 0.015), int(H * 0.02)))   # 오른쪽 위 (사용자 결정 2026-11-01)
         lab = cache[idx]
         if lab is None:
