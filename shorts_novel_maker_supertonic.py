@@ -4562,6 +4562,8 @@ def _thumb_circle(v, s, photo_im, size, fp):
     _thumb_tag(out, small, fp, h * (0.042 if port else 0.07), m, int(h * 0.07), "#E53935", "#FFFFFF", 2.5)
     d = ImageDraw.Draw(out)
     _thumb_lines(d, lines, emph, f_, m, y0, (w - 2 * m) if port else int(w * 0.5), "#FFE135", "#FF3B3B", "center" if port else "left")
+    if not v.get("arrow", s.get("thumb_arrow", "off") == "on"):   # 화살표는 기본 끔: 글자→원 방향이 사진 속 지점과 안 맞음 (사용자 지적 2026-11-01)
+        return out.convert("RGB")
     ax0, ay0 = (w // 2 + int(w * 0.12), y0 - int(h * 0.02)) if port else (m + int(w * 0.46), y0 + lh // 2)   # 화살표: 글자 → 원
     ax1, ay1 = (cx + int(r * 0.6), cy + r + int(h * 0.01)) if port else (cx - r - int(w * 0.01), cy + int(r * 0.4))
     d.line([(ax0, ay0), (ax1, ay1)], fill=(229, 57, 53, 255), width=lw)
