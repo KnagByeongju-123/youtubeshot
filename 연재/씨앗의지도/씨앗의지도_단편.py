@@ -359,7 +359,7 @@ def main():
                              "img_motion": "영상처럼(확대·이동·전환)", "fps": "24", "img_depth": "off",
                              "head_show": "안 보임(제목 카드만)", "head_pos": "숨김", "sub_split": "한 줄씩(문장·쉼표로 나눠 차례로)",
                              "img_label": "off", "sub_hide": "off", "bgm_mode": "자동생성", "bgm_style": "감성 오르골",
-                             "narr_voice": "Supertonic M4 (남성, 무료 로컬) [supertonic:M4]", "narr_rate": "0", "narr_tone_m": -1.5}}
+                             "narr_voice": "Supertonic M1 (남성, 무료 로컬) [supertonic:M1]", "narr_rate": "0", "narr_tone_m": -1.5}}
         out = os.path.join(HERE, "씨앗의지도_단편.json")
         json.dump(proj, open(out, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
         print(out, len(story), "chars")
