@@ -605,6 +605,7 @@ FIELDS = [
     ("소리", "bgm_mode", "배경음", "choice:자동생성,파일,없음", "자동생성"),
     ("소리", "bgm_style", "배경음 스타일", "choice:" + ",".join(["자동(소재별)"] + SOUND_STYLE_NAMES), "자동(소재별)"),
     ("소리", "bgm_volume", "배경음 볼륨(0~2, 0.03=거의 안 들림)", "float", 0.03),
+    ("소리", "bgm_peak", "배경음 최고 크기(0~1, 기본 0.35 = 나레이션과 함께 들리는 크기, 0=예전 방식)", "float", 0.35),
     ("소리", "bgm_mul", "배경음 배율(전통악기 포함, 0.5=절반, 나레이션은 그대로)", "float", 1.0),
     ("소리", "chapter_perc", "전통악기 배경음: 챕터 시작 타악 (on=권역 기본 징 또는 북, 연속북=긴장감, 진군북=출정·전투, 난타)", "choice:on,징,북,연속북,진군북,난타,off", "off"),   # 기본 끔 (사용자 결정 2026-10-31: 잘 안 들림)
     ("소리", "reveal_hit", "반전 효과음", "choice:on,off", "on"),
@@ -7422,6 +7423,27 @@ def make_music(s, style, n):
     return None
 
 
+BGM_STYLE_MUL = {"감성 오르골": 0.5, "밝은 오르골": 0.5, "노래 멜로디(오르골)": 0.5, "파도": 0.5}   # 사용자 결정 2026-11-01: 오르골·파도는 패드의 절반
+
+
+def bgm_level(music, s, style):
+    """배경음 크기 맞추기. bgm_peak > 0 (기본 0.35, 사용자 결정 2026-11-01: 예전 기본은 거의 안 들렸음)이면
+    아주 낮은 소리(70Hz 아래)·아주 높은 소리(8kHz 위)를 살짝 깎고 최고 크기를 bgm_peak 로 (억지로 키우는 처리 없음 — 찢어지게 들렸음).
+    오르골·파도는 그 절반(BGM_STYLE_MUL). bgm_peak 가 0 이면 예전 방식(loudness_fit × bgm_volume)"""
+    pk = float(s.get("bgm_peak", 0.35) or 0)
+    if pk <= 0:
+        return loudness_fit(music) * max(0, s["bgm_volume"])
+    m2 = music if music.ndim == 2 else music[:, None]
+    m2 = np.stack([band(m2[:, c], lo=70, hi=8000) for c in range(m2.shape[1])], 1)
+    m2 = m2 / (float(np.abs(m2).max()) + 1e-6) * pk * BGM_STYLE_MUL.get(style, 1.0)
+    return (m2 if music.ndim == 2 else m2[:, 0]).astype(np.float32)
+
+
+def bgm_duck(s):
+    """말할 때 배경음 배율 — bgm_peak 방식은 패드 크기가 나레이션과 함께 나와도 되는 크기라 조금만(0.85) 낮춤"""
+    return 0.85 if float(s.get("bgm_peak", 0.35) or 0) > 0 else float(s.get("narr_duck", 0.35))
+
+
 def loudness_fit(music, target=0.16):
     """작은 스피커가 실제로 내는 대역(250Hz~6kHz) 크기로 음량을 맞춤 (저음이 많아도 비슷하게 들리게)"""
     mono = music.mean(1) if music.ndim == 2 else music
@@ -7506,7 +7528,7 @@ def build_audio(r, s, style):
     out = np.zeros((n, 2), np.float32)
     t = np.arange(n, dtype=np.float32) / SR
     if music is not None:
-        music = loudness_fit(music) * max(0, s["bgm_volume"])
+        music = bgm_level(music, s, style)
         if long_:
             music = loop_xfade(music.astype(np.float32), n)
         g = np.minimum(1, t / 1.5) * np.clip((r.duration - t) / 2.5, 0, 1)
@@ -7515,8 +7537,8 @@ def build_audio(r, s, style):
             b = max(a + 0.01, hit_t - 0.1)
             g = g * np.interp(t, [0, a, b, hit_t + 1.5, hit_t + 4.5, 1e9], [1, 1, 0.25, 0.25, 1, 1])
         if narr:   # 말하는 동안 음악을 낮춤 (더킹)
-            g = g * duck_env(n, narr, r.duration, float(s.get("narr_duck", 0.35)))
-        if is_trad(style):             # 전통악기(고쟁·얼후 등)는 '거의 안 들림' 크기로는 묻혀서 조금 키움
+            g = g * duck_env(n, narr, r.duration, bgm_duck(s))
+        if is_trad(style) and float(s.get("bgm_peak", 0.35) or 0) <= 0:   # 전통악기(고쟁·얼후 등)는 '거의 안 들림' 크기로는 묻혀서 조금 키움
             g = g * max(1.0, 0.3 / max(0.01, float(s["bgm_volume"])))
         g = g * float(s.get("bgm_mul", 1.0) or 1.0)   # 배경음 배율 (사용자 결정 2026-10-31: 역사 편 0.5 = 50% 작게, 나레이션 크기는 그대로)
         out += music * g[:, None].astype(np.float32)
@@ -9377,12 +9399,12 @@ def merge_parts_with_fx(parts, out, s, kind, log=None, cancel=None, work_dir=Non
             long_ = n > LONG_MUSIC_SEC * 1.2 * SR
             music = make_music(s, bgm_style or "잔잔한 패드", min(n, LONG_MUSIC_SEC * SR) if long_ else n)
             if music is not None:
-                music = loudness_fit(music) * max(0, s["bgm_volume"])
+                music = bgm_level(music, s, bgm_style or "잔잔한 패드")
                 if long_:
                     music = loop_xfade(music.astype(np.float32), n)
                 t = np.arange(n, dtype=np.float32) / SR
                 g = np.minimum(1, t / 1.5) * np.clip((total - t) / 2.5, 0, 1)
-                g = g * duck_env_from_audio(narr, n, total, float(s.get("narr_duck", 0.35)))
+                g = g * duck_env_from_audio(narr, n, total, bgm_duck(s))
                 mixed += music[:n] * g[:, None].astype(np.float32)
                 del music, g, t
         del narr
