@@ -47,8 +47,16 @@ def script_paragraphs(path):
         text = json.load(open(path, encoding="utf-8")).get("story", "")
     else:
         text = open(path, encoding="utf-8").read()
-    return [p.strip() for p in re.split(r"\n\s*\n", text)
+    pars = [p.strip() for p in re.split(r"\n\s*\n", text)
             if p.strip() and not re.match(r"^(\{c\d+\}|\[사진:|#)", p.strip())]
+    try:          # 숫자는 성우가 읽는 대로 한글로 ('10월 2일' → '시월 이 일') — 안 바꾸면 숫자 자리가 '끼어든 글자'로 잘못 걸림 (2026-11-01)
+        spec_ = importlib.util.spec_from_file_location("ko_read", os.path.join(HERE, "한국어_읽기.py"))
+        kr_ = importlib.util.module_from_spec(spec_)
+        spec_.loader.exec_module(kr_)
+        pars = [kr_.read_korean(p) for p in pars]
+    except Exception:
+        pass
+    return pars
 
 
 def sentences(par):
