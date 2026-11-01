@@ -3128,7 +3128,7 @@ def hat_ref(c):
     for words, name in ((("ikseongwan", "왕"), "익선관"), (("samo", "문관", "내관"), "사모"), (("jeollip", "무관"), "전립"),
                         (("eboshi",), "에보시"), (("gat:", "gat ", "사대부"), "갓"), (("conical straw", "삿갓"), "삿갓")):
         if any(w in look for w in words):
-            p = os.path.join(HAT_DIR, name + "_앞.png")
+            p = os.path.join(HAT_DIR, name + "_모자만.png")    # 모자 시트에서 모자만 잘라 낸 것 (앞·옆·뒤, 얼굴·옷 없이 — 사용자 제안 2026-11-01)
             return p if os.path.exists(p) else ""
     return ""
 
@@ -3143,11 +3143,10 @@ def person_with_hat(front, c):
         if not os.path.exists(out) or os.path.getmtime(out) < max(os.path.getmtime(front), os.path.getmtime(hp)):
             a = Image.open(front).convert("RGB")
             h = Image.open(hp).convert("RGB")
-            h = h.crop((0, 0, h.width, int(h.height * 0.45)))     # 모자만 (다른 사람 얼굴·옷이 섞이지 않게)
-            h = h.resize((int(h.width * a.height / 2 / h.height), a.height // 2))
-            im = Image.new("RGB", (a.width + h.width, a.height), "white")
-            im.paste(a, (0, 0))
-            im.paste(h, (a.width, 0))
+            h = h.resize((a.width, max(1, int(h.height * a.width / h.width))))     # 모자만 띠(앞·옆·뒤)를 시트 앞모습 위에 얹음
+            im = Image.new("RGB", (a.width, a.height + h.height), "white")
+            im.paste(h, (0, 0))
+            im.paste(a, (0, h.height))
             im.save(out)
         return out
     except Exception:
@@ -3441,7 +3440,7 @@ def make_ai_images(model, category, title, story, n, s, media_dir, log, cancel=N
                 j["refs"] = [person_with_hat(sheet_front(sheets[nm]), cast_.get(nm) or {}) for nm in dict.fromkeys(it.get("cast_used") or []) if nm in sheets][:4]
                 if any(hat_ref(cast_.get(nm) or {}) for nm in it.get("cast_used") or []):
                     # 모자는 인물과 한 몸으로 (사용자 제안 2026-11-01): 시트 앞모습 옆에 그 사람 모자를 붙인 한 장을 기준 그림으로 → 모자가 따로 놀지 않음
-                    j["prompt"] = (j["prompt"].replace("gauze hat", "brimless cap") + " Each person and the cap shown next to him in his reference image are one: "
+                    j["prompt"] = (j["prompt"].replace("gauze hat", "brimless cap") + " Each person and the cap shown above him in his reference image are one: "
                                    "he always wears exactly that cap, same shape from every angle (samo: no brim, two flat wings out to the sides; "
                                    "ikseongwan: two small round wings standing upright at the back). People face the viewer (front or three-quarter front view).")
             log("  🖌 그림 모델: FLUX.2 klein (캐릭터 시트 기준 · 인물 장면 한 장 약 2분, 풍경 약 40초)")
