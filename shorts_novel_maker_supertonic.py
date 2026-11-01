@@ -537,7 +537,7 @@ FIELDS = [
     ("자막형", "sub_max_chars", "자막 한 번에 글자 수", "int", 28),
     ("자막형", "img_motion", "사진 움직임", "choice:영상처럼(확대·이동·전환),천천히 확대만,없음", "영상처럼(확대·이동·전환)"),
     ("자막형", "img_label", "사진 제목 표시(오른쪽 위)", "choice:on,off", "on"),
-    ("자막형", "img_credit", "사진 출처 표시(오른쪽 위, 작게)", "choice:on,off", "on"),   # 사용자 결정 2026-11-01: 실제 사진은 화면에 작가·라이선스 (CC BY 조건). AI 그림은 표시 안 함
+    ("자막형", "img_credit", "사진 출처 표시(오른쪽 아래, 작게)", "choice:on,off", "on"),   # 사용자 결정 2026-11-01: 실제 사진은 화면에 작가·라이선스 (CC BY 조건). AI 그림은 표시 안 함
     ("자막형", "sub_hide", "자막 숨김(나레이션만 · 장문 기본 on)", "choice:off,on", "off"),
     ("자막형", "img_motion_amt", "사진 움직임 세기", "choice:은은하게,크게(예전)", "은은하게"),
     ("자막형", "motion_count", "모션: 숫자 카운트업(통계 수치가 올라감)", "choice:on,off", "off"),
@@ -6435,7 +6435,7 @@ class SubtitleRenderer:
         return im, lab[1]
 
     def _img_credit(self, idx, t):
-        """사진 출처 (오른쪽 위, 검은 바탕 상자 + 흰 글자). AI 그림·출처 없는 사진은 None. 사진이 바뀔 때 0.4초 동안 서서히"""
+        """사진 출처 (오른쪽 아래, 검은 바탕 상자 + 흰 글자). AI 그림·출처 없는 사진은 None. 사진이 바뀔 때 0.4초 동안 서서히"""
         creds = getattr(self, "img_credits", [])
         if not (0 <= idx < len(creds)):
             return None
@@ -6455,7 +6455,7 @@ class SubtitleRenderer:
                 d = ImageDraw.Draw(im)
                 d.rounded_rectangle([0, 0, tw - 1, th - 1], radius=int(fs * 0.35), fill=(0, 0, 0, 215))   # 검은 바탕 + 흰 글자 (사용자 결정 2026-11-01)
                 d.text((9, int(fs * 0.22)), txt, font=f_, fill=(255, 255, 255, 255))
-                cache[idx] = (im, (W - tw - int(W * 0.015), int(H * 0.02)))   # 오른쪽 위 (사용자 결정 2026-11-01)
+                cache[idx] = (im, (W - tw - int(W * 0.012), H - th - int(H * 0.012)))   # 오른쪽 아래 (사용자 결정 2026-11-01, 위는 사진 설명 상자)
         lab = cache[idx]
         if lab is None:
             return None
@@ -6494,7 +6494,7 @@ class SubtitleRenderer:
                     lab = self._img_label(self._img_at(sg, t), t)
                     if lab is not None:
                         canvas.alpha_composite(lab[0], lab[1])
-                if str(self.s.get("img_credit", "on")) == "on":     # 규칙: 실제 사진은 오른쪽 위에 작게 출처 (사용자 결정 2026-11-01)
+                if str(self.s.get("img_credit", "on")) == "on":     # 규칙: 실제 사진은 오른쪽 아래에 작게 출처 (사용자 결정 2026-11-01)
                     cr = self._img_credit(self._img_at(sg, t), t)
                     if cr is not None:
                         canvas.alpha_composite(cr[0], cr[1])
