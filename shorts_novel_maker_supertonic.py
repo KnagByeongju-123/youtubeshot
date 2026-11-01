@@ -606,6 +606,7 @@ FIELDS = [
     ("소리", "bgm_style", "배경음 스타일", "choice:" + ",".join(["자동(소재별)"] + SOUND_STYLE_NAMES), "자동(소재별)"),
     ("소리", "bgm_volume", "배경음 볼륨(0~2, 0.03=거의 안 들림)", "float", 0.03),
     ("소리", "bgm_peak", "배경음 최고 크기(0~1, 기본 0.35 = 나레이션과 함께 들리는 크기, 0=예전 방식)", "float", 0.35),
+    ("소리", "bgm_air", "어두운 드론의 바람 같은 숨소리 층(off=뺌)", "choice:on,off", "on"),
     ("소리", "bgm_mul", "배경음 배율(전통악기 포함, 0.5=절반, 나레이션은 그대로)", "float", 1.0),
     ("소리", "chapter_perc", "전통악기 배경음: 챕터 시작 타악 (on=권역 기본 징 또는 북, 연속북=긴장감, 진군북=출정·전투, 난타)", "choice:on,징,북,연속북,진군북,난타,off", "off"),   # 기본 끔 (사용자 결정 2026-10-31: 잘 안 들림)
     ("소리", "reveal_hit", "반전 효과음", "choice:on,off", "on"),
@@ -7011,9 +7012,10 @@ def gen_drone(n, rng):
         a = amp * smooth_lfo(n, 5, rng, 0.3, 1.0)
         for c, det in enumerate((0.998, 1.003)):
             st[:, c] += a * np.sin(2 * np.pi * 55 * mul * det * t + rng.uniform(0, 6.28))
-    air = smooth_lfo(n, 7, rng, 0.4, 1.0)
-    for c in range(2):
-        st[:, c] += _norm(band(colored_noise(n, rng, 1.0), lo=500, hi=2500)) * air * 0.12
+    if BGM_AIR:   # 설정 bgm_air: off 면 이 바람 같은 숨소리 층을 뺌 (사용자 결정 2026-11-01, 폼페이 찬장 편: 바람소리 삭제)
+        air = smooth_lfo(n, 7, rng, 0.4, 1.0)
+        for c in range(2):
+            st[:, c] += _norm(band(colored_noise(n, rng, 1.0), lo=500, hi=2500)) * air * 0.12
     return _norm(reverb(st, rng, 4.0, 0.4))
 
 
@@ -7413,8 +7415,13 @@ def resolve_style(s, topic):
     return st
 
 
+BGM_AIR = True   # 어두운 드론의 '바람 같은 숨소리' 층 (설정 bgm_air)
+
+
 def make_music(s, style, n):
     """배경음(음악)만 만들기 - 효과음·페이드 없음"""
+    global BGM_AIR
+    BGM_AIR = str(s.get("bgm_air", "on")) != "off"
     rng = np.random.default_rng(None if s["bgm_seed"] == 0 else s["bgm_seed"])
     if s["bgm_mode"] == "자동생성":
         return SOUND_STYLES.get(style, SOUND_STYLES["잔잔한 패드"])(n, rng)
