@@ -3442,7 +3442,7 @@ def make_ai_images(model, category, title, story, n, s, media_dir, log, cancel=N
                     # 모자는 인물과 한 몸으로 (사용자 제안 2026-11-01): 시트 앞모습 옆에 그 사람 모자를 붙인 한 장을 기준 그림으로 → 모자가 따로 놀지 않음
                     j["prompt"] = (j["prompt"].replace("gauze hat", "brimless cap") + " Each person and the cap shown above him in his reference image are one: "
                                    "he always wears exactly that cap, same shape from every angle (samo: a two-tiered cap with two flat oval wings out to the sides; "
-                                   "ikseongwan: two small rounded lobes on top and two flat see-through black wings sticking out to the left and right from the back, visible from the front too). People face the viewer (front or three-quarter front view).")
+                                   "ikseongwan: exactly the cap of the king in his reference image). People face the viewer (front or three-quarter front view).")
             log("  🖌 그림 모델: FLUX.2 klein (캐릭터 시트 기준 · 인물 장면 한 장 약 2분, 풍경 약 40초)")
         else:
             log(f"  🖌 그림 모델: {'애니·만화(Counterfeit)' if model_ == 'anime' else '일러스트(Dreamshaper)'}" + (" + 수채화 보조" if lora_ else ""))
