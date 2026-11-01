@@ -316,7 +316,7 @@ def main():
                 young = "젊은" in desc or "회상" in desc and "30여 년 전" in desc
                 desc_ = desc + "".join(f" / {nm}: " + ("시트의 얼굴을 30년 젊게 — 40대, 짧은 검은 머리, 주름 적음, 같은 남색 정비복" if nm == "정호" and young else chars[nm]['look_ko']) for nm in who)
                 f.write(f"{cid} | {','.join(who) or '-'} | {desc_}\n")
-        subprocess.run([sys.executable, os.path.join(ROOT, "그림_세트요청서.py"), lst, arg, "--시트폴더", "연재/아버지의정비일지/캐릭터시트"], check=True)
+        subprocess.run([sys.executable, os.path.join(ROOT, "그림_세트요청서.py"), lst, arg, "--시트폴더", "연재/아버지의정비일지/캐릭터시트", "--화풍", "애니"], check=True)  # 사용자 결정 2026-11-01: 일본 애니 스타일
     elif cmd == "project":
         story = STORY
         for cid, _, _, cap in CUTS:
