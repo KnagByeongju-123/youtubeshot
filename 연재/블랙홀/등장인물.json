@@ -28,6 +28,13 @@
    "look_ko": "공중에 떠다니는 빛해파리족, 반투명한 푸른 머리, 작은 눈 여러 개, 빛나는 긴 촉수",
    "outfit": "no clothes, tiny glowing spores floating around it",
    "face": "캐릭터시트/빛해파리.png"
+  },
+  {
+   "name": "한도윤",
+   "look": "an old Korean man in his late 70s, the former ship captain, long white hair tied back, a short white beard, a kind deeply wrinkled face, calm wise eyes, slightly bent but sturdy",
+   "look_ko": "70대 후반 노인이 된 함장, 묶은 흰 머리·흰 수염, 주름진 다정한 얼굴",
+   "outfit": "a very old faded patched white and navy space suit with orange stripes on the shoulders, a cloak woven from pale leaves over his shoulders, a wooden walking staff",
+   "face": "캐릭터시트/한도윤.png"
   }
  ]
 }
