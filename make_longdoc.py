@@ -815,6 +815,35 @@ def run_doc(m, app, c, gate):
         m.ensure_depth_maps(m.story_photo_paths(story), log)
     narr = app.narration_for(story, s, lambda x: None, gate)
     log(f"나레이션 완성: {len(narr)}문단 · {sum(d for _, _, d in narr) / 60:.1f}분")
+    narr_checked = False
+    sdpy_ = os.path.join(HERE, ".sd_venv", "Scripts" if os.name == "nt" else "bin", "python.exe" if os.name == "nt" else "python")
+    if os.path.exists(sdpy_) and "--받아쓰기없음" not in sys.argv:
+        # 규칙(사용자 결정 2026-11-01): 영상이 아니라 **나레이션만 담긴 소리(배경음 없음)**로 먼저 받아쓰기 검사(말더듬·빠진 말) → 걸린 문장만 다시 녹음 → 그다음 그림·영상
+        # (영상은 배경음이 깔려 쉼이 없고 받아쓰기도 틀리기 쉬움, 영상을 몇 번씩 다시 만들 일도 없어짐)
+        import subprocess
+        try:
+            pj_ = json.load(open(base + "_프로젝트.json", encoding="utf-8"))
+            pj_["story"] = story
+            pj_["settings"] = {k: v for k, v in dict(pj_.get("settings") or {}, **s).items() if k not in m.SECRET_KEYS}
+            m.atomic_write_text(base + "_프로젝트.json", json.dumps(pj_, ensure_ascii=False, indent=1))
+        except Exception:
+            pass
+        only_ = base + "_나레이션만.mp3"
+        for try_ in range(3):
+            log(f"🎧 나레이션만(배경음 없이) 받아쓰기 검사 {try_ + 1}/3 (말더듬·빠진 말)...")
+            subprocess.call([sys.executable, "-X", "utf8", os.path.join(HERE, "나레이션_배경음만.py"), base + "_프로젝트.json", only_, "--배경음배율", "0"], cwd=HERE)
+            rc_ = subprocess.call([sdpy_, "-X", "utf8", os.path.join(HERE, "나레이션_겹침검사.py"), only_, base + "_프로젝트.json",
+                                   "--결과", base + "_받아쓰기검사.txt"] + (["--고치기", base + "_프로젝트.json"] if try_ < 2 else []), cwd=HERE)
+            if rc_ != 1:
+                log("✅ 받아쓰기 검사(나레이션만): 말더듬·빠짐 없음" if rc_ == 0 else "⚠ 받아쓰기 검사를 못 함")
+                narr_checked = rc_ == 0
+                break
+            if try_ < 2:
+                log("   걸린 문장만 다시 녹음...")
+                narr = app.narration_for(story, s, lambda x: None, gate)
+            else:
+                log("⚠ 3번 다시 녹음해도 걸린 문장이 남음 → " + base + "_받아쓰기검사.txt 를 보고 대본 낱말을 바꿈 (CLAUDE.md 2장)")
+        log("🎧 나레이션만 담긴 소리: " + only_ + " (사용자에게 보낼 때는 나레이션_배경음만.py 로 배경음을 넣은 mp3)")
     if defer and "--그림제외" in sys.argv:   # 대본·나레이션만 이 서버에서 (그림이 느린 서버) → 그림·영상은 다른 서버에서 같은 명령으로 이어서
         log("⏸ --그림제외: 대본·나레이션까지 끝. output/장문 을 그림이 빠른 서버로 옮겨 --그림제외 없이 같은 명령으로 이어서 하세요")
         raise SystemExit(0)
@@ -870,7 +899,7 @@ def run_doc(m, app, c, gate):
         f.write("\n".join(f"{m.hms(t)} {n}" for t, n in [(0, "오프닝")] + ch))
     log("MP4 완성: " + base + ".mp4")
     sdpy = os.path.join(HERE, ".sd_venv", "Scripts" if os.name == "nt" else "bin", "python.exe" if os.name == "nt" else "python")
-    if os.path.exists(sdpy) and "--받아쓰기없음" not in sys.argv:   # 규칙(사용자 결정 2026-11-01): 성우 목소리는 받아쓰기로 확인 — 겹침 + 빠진 말
+    if os.path.exists(sdpy) and "--받아쓰기없음" not in sys.argv and not narr_checked:   # 나레이션만으로 이미 검사했으면 영상으로는 다시 하지 않음 (2026-11-01)
         import subprocess
         log("🎧 나레이션 받아쓰기 검사(겹침·빠진 말)...")
         sp_ = os.path.join(work, "_받아쓰기_대본.txt")
