@@ -138,16 +138,21 @@ def fast_spots(sylls, sents, ratio=1.25, gap=0.3, min_syl=8):
     return out
 
 
+def soft(t):
+    """받침을 뗀 글자(초성+중성)로 — 받아쓰기가 받침을 자주 틀려서('줌→중', '모를→몰을') 빠진 말 검사는 받침 없이 맞춤"""
+    return "".join(chr(0xAC00 + (ord(c) - 0xAC00) // 28 * 28) for c in hangul(t))
+
+
 def missing_spots(heard_all, sents, ratio=0.45, min_len=6):
-    """빠진 문장: 받아 적은 글 전체와 대본 전체를 한 글자씩 맞춰, 문장 글자 중 들린 비율이 ratio 미만인 문장"""
+    """빠진 문장: 받아 적은 글 전체와 대본 전체를 한 글자씩(받침 빼고) 맞춰, 문장 글자 중 들린 비율이 ratio 미만인 문장"""
     ref, owner = "", []
     for k, (_, s_) in enumerate(sents):
-        sh = hangul(s_)
+        sh = soft(s_)
         ref += sh
         owner += [k] * len(sh)
     hyp, tpos = "", []
     for t0, text in heard_all:
-        h = hangul(text)
+        h = soft(text)
         hyp += h
         tpos += [t0] * len(h)
     if not ref or not hyp:
@@ -168,8 +173,8 @@ def missing_spots(heard_all, sents, ratio=0.45, min_len=6):
         if n >= min_len and hit[k] / n < ratio:
             # 전체 맞춤이 어긋났을 수 있음 → 그 자리 앞뒤 조각(±3)에서 문장만 따로 맞춰 봐서 들렸으면 넘김
             ci = max([i for i, (t0, _) in enumerate(heard_all) if t0 <= last_t] or [0])
-            near = "".join(hangul(x) for _, x in heard_all[max(0, ci - 2):ci + 4])
-            sh = hangul(s_)
+            near = "".join(soft(x) for _, x in heard_all[max(0, ci - 2):ci + 4])
+            sh = soft(s_)
             loc = sum(b_.size for b_ in difflib.SequenceMatcher(None, sh, near, autojunk=False).get_matching_blocks())
             if loc / n >= ratio:
                 continue
@@ -225,6 +230,7 @@ def detect(video, script):
                 found.append({"t": t0, "dd": dd, "sentence": ps[1], "paragraph": ps[0], "heard": text})
     try:
         json.dump(sylls, open(os.path.join(tempfile.gettempdir(), "겹침_글자시각.json"), "w", encoding="utf-8"), ensure_ascii=False)
+        json.dump(heard_all, open(os.path.join(tempfile.gettempdir(), "받아쓰기_조각.json"), "w", encoding="utf-8"), ensure_ascii=False)
     except OSError:
         pass
     found += fast_spots(sylls, sents)
