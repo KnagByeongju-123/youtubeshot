@@ -2,7 +2,7 @@
 python 연재/블랙홀/사건의지평선_단편.py job <저장폴더>   → 그림 주문서(klein_worker 용) job.json
 python 연재/블랙홀/사건의지평선_단편.py project <그림폴더> → 프로젝트 파일 연재/블랙홀/사건의지평선_단편.json
   영상은 render_project.py <프로젝트> --대본그대로 --길이고정 --형식고정
-나레이션 한 명(남자 성우 4 · 정상 속도 · 톤 -1.5)이 대사까지 모두 읽음. 세계관·종족은 기획.md, 참고 그림 참고그림/"""
+나레이션 한 명(남자 성우 1 · 정상 속도 · 톤 -1.5)이 대사까지 모두 읽음. 세계관·종족은 기획.md, 참고 그림 참고그림/"""
 import json
 import os
 import sys
@@ -359,7 +359,7 @@ def main():
                              "img_motion": "영상처럼(확대·이동·전환)", "fps": "24", "img_depth": "off",
                              "head_show": "안 보임(제목 카드만)", "head_pos": "숨김", "sub_split": "한 줄씩(문장·쉼표로 나눠 차례로)",
                              "img_label": "off", "sub_hide": "off", "bgm_mode": "자동생성", "bgm_style": "우주",
-                             "narr_voice": "Supertonic M4 (남성, 무료 로컬) [supertonic:M4]", "narr_rate": "0", "narr_tone_m": -1.5}}
+                             "narr_voice": "Supertonic M1 (남성, 무료 로컬) [supertonic:M1]", "narr_rate": "0", "narr_tone_m": -1.5}}
         out = os.path.join(HERE, "사건의지평선_단편.json")
         json.dump(proj, open(out, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
         print(out, len(story), "chars")
