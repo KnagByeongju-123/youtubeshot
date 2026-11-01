@@ -77,6 +77,9 @@ def chunks(a):
                 start = k
             k = j
         else:
+            if (k - start) * 0.02 >= 20:     # 배경음이 깔려 쉼을 못 찾아도 20초에서 자름 (한 조각이 몇 분이 되면 메모리가 넘쳐 꺼졌음, 2026-11-01)
+                out.append((start * 0.02, k * 0.02))
+                start = k
             k += 1
     if n - start > 10:
         out.append((start * 0.02, n * 0.02))
