@@ -869,6 +869,18 @@ def run_doc(m, app, c, gate):
     with open(base + "_타임스탬프.txt", "w", encoding="utf-8") as f:
         f.write("\n".join(f"{m.hms(t)} {n}" for t, n in [(0, "오프닝")] + ch))
     log("MP4 완성: " + base + ".mp4")
+    sdpy = os.path.join(HERE, ".sd_venv", "Scripts" if os.name == "nt" else "bin", "python.exe" if os.name == "nt" else "python")
+    if os.path.exists(sdpy) and "--받아쓰기없음" not in sys.argv:   # 규칙(사용자 결정 2026-11-01): 성우 목소리는 받아쓰기로 확인 — 겹침 + 빠진 말
+        import subprocess
+        log("🎧 나레이션 받아쓰기 검사(겹침·빠진 말)...")
+        sp_ = os.path.join(work, "_받아쓰기_대본.txt")
+        m.atomic_write_text(sp_, story)
+        rc_ = subprocess.call([sdpy, "-X", "utf8", os.path.join(HERE, "나레이션_겹침검사.py"), base + ".mp4", sp_, "--결과", base + "_받아쓰기검사.txt"], cwd=HERE)
+        if rc_ == 1:
+            log("⚠ 받아쓰기 검사에서 걸린 문장이 있음 → " + base + "_받아쓰기검사.txt 확인 후 "
+                "'나레이션_겹침검사.py <영상> <대본> --고치기 <프로젝트.json>' → render_project 로 다시 (CLAUDE.md 2장)")
+        elif rc_ == 0:
+            log("✅ 받아쓰기 검사: 겹침·빠짐 없음")
 
     # 4) 업로드 문구 + 설명란 완성본 + 유튜브 썸네일
     log("📝 업로드 문구·설명란·유튜브 썸네일 만드는 중...")

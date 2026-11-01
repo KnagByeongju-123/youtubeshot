@@ -12,7 +12,9 @@ python 나레이션_겹침검사.py <영상.mp4> <회차.py 또는 대본.txt> [
   - --고치기 <프로젝트.json> : 겹친 문장(과 그 문단)의 녹음 캐시를 output/tts_cache 에서 지움 → render_project 를 다시 돌리면 그 문장만 새로 녹음.
     빨라진 문장도 다시 녹음만 함 (늘리면 소리가 늘어져 들려서 속도는 조절하지 않음, 사용자 결정 2026-10-31)
     (Supertonic 은 매번 조금씩 다르게 읽어서 보통 한 번에 고쳐짐. 다시 만든 영상도 검사해서 '겹침 없음'이 나올 때까지, 최대 3번)
-  - 결과: '분:초 [겹친 글자] 대본: <문장> | 들림: <받아 적은 글>'
+  - 빠진 말 검사(기본으로 함, 사용자 결정 2026-11-01: 성우 M1이 짧은 문장을 빼먹은 적이 있음): 받아 적은 글 전체를 대본 전체와 한 글자씩 맞춰 봐서
+    대본 문장 글자의 45% 미만만 들린 문장(한글 6자 이상)을 '빠짐'으로 → --고치기 면 그 문장도 다시 녹음. 끄려면 --빠짐끔
+  - 결과: '분:초 [겹친 글자 또는 빠짐] 대본: <문장> | 들림: <받아 적은 글>'
 (내부용) python 나레이션_겹침검사.py --지우기 <목록.json> <프로젝트.json>  ← .supertonic_venv 로 실행, 캐시 이름 계산·삭제"""
 import difflib
 import importlib.util
@@ -136,6 +138,38 @@ def fast_spots(sylls, sents, ratio=1.25, gap=0.3, min_syl=8):
     return out
 
 
+def missing_spots(heard_all, sents, ratio=0.45, min_len=6):
+    """빠진 문장: 받아 적은 글 전체와 대본 전체를 한 글자씩 맞춰, 문장 글자 중 들린 비율이 ratio 미만인 문장"""
+    ref, owner = "", []
+    for k, (_, s_) in enumerate(sents):
+        sh = hangul(s_)
+        ref += sh
+        owner += [k] * len(sh)
+    hyp, tpos = "", []
+    for t0, text in heard_all:
+        h = hangul(text)
+        hyp += h
+        tpos += [t0] * len(h)
+    if not ref or not hyp:
+        return []
+    hit = [0] * len(sents)
+    first_t = [None] * len(sents)
+    for b in difflib.SequenceMatcher(None, ref, hyp, autojunk=False).get_matching_blocks():
+        for j in range(b.size):
+            k = owner[b.a + j]
+            hit[k] += 1
+            if first_t[k] is None:
+                first_t[k] = tpos[b.b + j]
+    out, last_t = [], 0.0
+    for k, (par, s_) in enumerate(sents):
+        n = len(hangul(s_))
+        if first_t[k] is not None:
+            last_t = first_t[k]
+        if n >= min_len and hit[k] / n < ratio:
+            out.append({"t": last_t, "dd": f"빠짐 {hit[k]}/{n}자 들림", "missing": True, "sentence": s_, "paragraph": par, "heard": ""})
+    return out
+
+
 def detect(video, script):
     import numpy as np
     import torch
@@ -148,7 +182,7 @@ def detect(video, script):
     torch.set_num_threads(max(1, os.cpu_count() or 4))
     p = AutoProcessor.from_pretrained(MODEL)
     m = AutoModelForCTC.from_pretrained(MODEL).eval()
-    found, sylls = [], []          # sylls: (글자, 시각초) - 말 빠르기 재기용
+    found, sylls, heard_all = [], [], []          # sylls: (글자, 시각초) - 말 빠르기 재기용, heard_all: (시작초, 받아 적은 글)
     blank = p.tokenizer.pad_token_id
     for t0, t1 in chunks(a):
         off = max(0, t0 - 0.15)
@@ -157,6 +191,7 @@ def detect(video, script):
             ids = m(**p(x, sampling_rate=SR, return_tensors="pt")).logits.argmax(-1)
         text = p.batch_decode(ids)[0]
         h = hangul(text)
+        heard_all.append((t0, text))
         seq = ids[0].tolist()
         step = len(x) / SR / max(1, len(seq))       # 한 칸(약 0.02초)
         prev = None
@@ -186,6 +221,7 @@ def detect(video, script):
     except OSError:
         pass
     found += fast_spots(sylls, sents)
+    found += missing_spots(heard_all, sents)
     uniq, seen = [], set()
     for f in found:
         if f["sentence"] not in seen:
@@ -267,8 +303,10 @@ def main(a):
     items = detect(video, script)
     if "--빠르기" not in a:     # 규칙(사용자 결정 2026-10-31): 겹침만 검사. 빨라진 곳은 --빠르기 를 붙일 때만
         items = [it for it in items if not it.get("speed")]
+    if "--빠짐끔" in a:
+        items = [it for it in items if not it.get("missing")]
     lines = [f"{int(f['t'] // 60)}:{int(f['t'] % 60):02d} [{f['dd']}] 대본: {f['sentence']} | 들림: {f['heard']}" for f in items]
-    msg = "\n".join(lines) if lines else ("겹침·빨라진 곳 없음" if "--빠르기" in a else "겹침 없음")
+    msg = "\n".join(lines) if lines else ("겹침·빠짐·빨라진 곳 없음" if "--빠르기" in a else "겹침·빠짐 없음")
     print(msg)
     if "--결과" in a:
         open(a[a.index("--결과") + 1], "w", encoding="utf-8").write(msg + "\n")
