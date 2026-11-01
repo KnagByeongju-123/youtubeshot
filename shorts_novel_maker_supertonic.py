@@ -6445,17 +6445,17 @@ class SubtitleRenderer:
             if not c or "AI 생성" in c or "원작 부분 확대" in c:
                 cache[idx] = None
             else:
-                fs = max(14, int(min(W, H) * 0.019))
+                fs = max(13, int(min(W, H) * 0.016))
                 f_ = load_font(self.s.get("sub_font_path") or self.s.get("font_path"), fs)
                 txt = "사진: " + c
-                while f_.getlength(txt) > W * 0.42 and len(txt) > 8:
+                while f_.getlength(txt) > W * 0.26 and len(txt) > 8:   # 자막(가운데)과 겹치지 않게 오른쪽 26% 안에서 (사용자 결정 2026-11-01)
                     txt = txt[:-2] + "…"
                 tw, th = int(f_.getlength(txt)) + 18, int(fs * 1.55)
                 im = Image.new("RGBA", (tw, th), (0, 0, 0, 0))
                 d = ImageDraw.Draw(im)
                 d.rounded_rectangle([0, 0, tw - 1, th - 1], radius=int(fs * 0.35), fill=(0, 0, 0, 215))   # 검은 바탕 + 흰 글자 (사용자 결정 2026-11-01)
                 d.text((9, int(fs * 0.22)), txt, font=f_, fill=(255, 255, 255, 255))
-                cache[idx] = (im, (W - tw - int(W * 0.012), H - th - int(H * 0.012)))   # 오른쪽 아래 (사용자 결정 2026-11-01, 위는 사진 설명 상자)
+                cache[idx] = (im, (W - tw - int(W * 0.008), H - th - int(H * 0.006)))   # 맨 아래 가장자리: 자막 줄보다 아래   # 오른쪽 아래 (사용자 결정 2026-11-01, 위는 사진 설명 상자)
         lab = cache[idx]
         if lab is None:
             return None
