@@ -44,7 +44,7 @@ CUTS = [
     ("c15", ["고르"], "the stone golem pointing one huge stone finger up at the glowing vortex in the sky", "핵의 포효", ARCH),
     ("c16", [], "far away, the singularity vortex flashing brighter, a ring of white light pulsing outward across the violet sky", "다가오는 중력 폭풍", ARCH),
     ("c17", ["서하", "고르"], "the stone golem and the small astronaut walking together onto a narrow stone path along the curve of a floating rock arch", "아치를 건너는 길", ARCH),
-    ("c18", ["서하"], "the astronaut walking upside down along the inner curve of the ring-shaped arch, her hair floating, amazed face", "거꾸로 걷는 길", ARCH),
+    ("c18", ["서하"], "wide shot from far away: a small astronaut standing upright with both boots on the inside surface at the top of a huge stone ring arch, upside down compared to the viewer, her hair hanging toward the sky, exactly two legs and two boots, simple standing pose", "거꾸로 걷는 길", ARCH),
     ("c19", ["빛해파리"], "a large glowing jellyfish creature floating down from above the arch, its tentacles shining blue and pink", "빛해파리족", ARCH),
     ("c20", ["서하", "빛해파리"], "the glowing jellyfish creature circling around the astronaut, light patterns rippling across its bell", "빛으로 하는 말", ARCH),
     ("c21", ["서하", "빛해파리"], "the jellyfish creature gently touching the astronaut's helmet with one glowing tentacle, a vision of light flowing between them", "빛해파리의 경고", ARCH),
