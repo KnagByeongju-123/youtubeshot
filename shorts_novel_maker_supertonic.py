@@ -145,7 +145,7 @@ def find_font(bold=False):
     return ""
 
 
-DEFAULT_VOICE = "Supertonic M1 (남성, 무료 로컬) [supertonic:M1]"   # 성우를 따로 정하지 않으면 이 목소리 (기본 = 남자 성우 1, 사용자 결정 2026-11-01)
+DEFAULT_VOICE = "Supertonic M1 (남성, 무료 로컬) [supertonic:M1]"   # 성우를 따로 정하지 않으면 이 목소리 (기본 = 남자 성우 1, 톤 -1.5, 사용자 결정 2026-11-01: '창' 발음 샘플 비교에서 M1 선택. 예전 M4)
 TTS_VOICES = {   # 마이크로소프트 온라인(Edge) 음성은 쓰지 않음. 옛 설정에 적힌 Edge 이름은 voice_code 가 DEFAULT_VOICE 로 바꿈
     "윈도우 내장 음성": "sapi",
 }
@@ -575,7 +575,7 @@ FIELDS = [
     ("나레이션", "st_steps", "로컬 성우 품질(5~12)", "int", 5),
     ("나레이션", "narr_tone_f", "여자 성우 톤(반음, 0=원래 목소리 · 올리면 약간 울림)", "float", 0.0),
     ("나레이션", "narr_commas", "긴 문장 쉼표 넣어 끊어 읽기(Kiwi)", "choice:on,off", "on"),   # 규칙(사용자 결정 2026-10-31): 모든 나레이션 녹음 전에
-    ("나레이션", "narr_tone_m", "남자 성우 톤(반음, 0=원래 목소리)", "float", -1.5),   # 기본 = 반음 1.5 낮게 (사용자 결정 2026-10-31, 남자 성우 기본과 함께)
+    ("나레이션", "narr_tone_m", "남자 성우 톤(반음, 0=원래 목소리)", "float", -1.5),   # 기본 = 반음 1.5 낮게 (사용자 결정 2026-10-31, 남자 성우 4와 함께)
     ("나레이션", "narr_bright_f", "여자 목소리 밝게(고음 강조 · 약간 울림)", "choice:on,off", "off"),
     ("나레이션", "narr_breath_cut", "말 시작 숨소리('쓰읍') 지우기", "choice:on,off", "on"),
     ("나레이션", "narr_replace", "읽기 바꾸기(성우만, 쉼표로: LOT=로트, PIN=핀)", "str",
@@ -585,7 +585,7 @@ FIELDS = [
     ("나레이션", "narr_style", "연기 지시(ChatGPT·Gemini 음성)", "str", "차분하고 또렷한 다큐멘터리 내레이터처럼. 반전 부분은 긴장감 있게."),
     ("나레이션", "openai_tts_model", "ChatGPT 음성 모델", "str", "gpt-4o-mini-tts"),
     ("나레이션", "gemini_tts_model", "Gemini 음성 모델", "str", "gemini-2.5-flash-preview-tts"),
-    ("나레이션", "narr_rate", "말 속도(%, -30~+40)", "float", 0),   # 기본 = 정상 속도 (사용자 결정 2026-10-31, 남자 성우 기본·톤 -1.5 와 함께)
+    ("나레이션", "narr_rate", "말 속도(%, -30~+40)", "float", 0),   # 기본 = 정상 속도 (사용자 결정 2026-10-31, 남자 성우 4·톤 -1.5 와 함께)
     ("나레이션", "narr_volume", "나레이션 볼륨(0~2)", "float", 1.0),
     ("나레이션", "narr_gap", "문단 사이 쉼(초)", "float", 0.5),
     ("나레이션", "narr_photo_pause", "사진 보는 시간(초)", "float", 1.5),
@@ -4562,6 +4562,8 @@ def _thumb_circle(v, s, photo_im, size, fp):
     _thumb_tag(out, small, fp, h * (0.042 if port else 0.07), m, int(h * 0.07), "#E53935", "#FFFFFF", 2.5)
     d = ImageDraw.Draw(out)
     _thumb_lines(d, lines, emph, f_, m, y0, (w - 2 * m) if port else int(w * 0.5), "#FFE135", "#FF3B3B", "center" if port else "left")
+    if not v.get("arrow", s.get("thumb_arrow", "off") == "on"):   # 화살표는 기본 끔: 글자→원 방향이 사진 속 지점과 안 맞음 (사용자 지적 2026-11-01)
+        return out.convert("RGB")
     ax0, ay0 = (w // 2 + int(w * 0.12), y0 - int(h * 0.02)) if port else (m + int(w * 0.46), y0 + lh // 2)   # 화살표: 글자 → 원
     ax1, ay1 = (cx + int(r * 0.6), cy + r + int(h * 0.01)) if port else (cx - r - int(w * 0.01), cy + int(r * 0.4))
     d.line([(ax0, ay0), (ax1, ay1)], fill=(229, 57, 53, 255), width=lw)
