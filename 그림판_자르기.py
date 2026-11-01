@@ -3,6 +3,8 @@
   python -X utf8 그림판_자르기.py <그림판.png> <저장폴더> --칸 8x5 [--시작 1] [--이름 c] [--다시그리기 <주문서.json>]
   - --칸 가로x세로 (예: 8x5 = 40칸). 칸 사이 흰 줄·검은 줄(여백)은 자동으로 찾아 빼고 자름 (못 찾으면 똑같이 나눔)
   - 칸 순서: 왼쪽 위부터 오른쪽으로, 줄이 끝나면 다음 줄 → c01, c02 … (--시작 으로 번호 시작, --이름 으로 앞글자)
+  - 제미나이 그림 오른쪽 아래의 반투명 별 표시(워터마크, 그림판 가로·세로 약 88% 자리 = 마지막 칸 오른쪽 아래)는
+    마지막 칸을 klein fixes 로 그 자리만 다시 그려 지움 (--워터마크지우기 는 OpenCV 로 메우는 빠른 방법인데 번져 보여서 기본은 안 씀)
   - 자른 그림은 16:9 로 가운데 맞춰 1600×900 으로 키워 저장 (작은 칸은 흐릿함)
   - --다시그리기 <주문서.json>: 자른 칸을 '구도 기준 그림'으로 넣어 FLUX.2 klein 으로 1024×576 고화질로 다시 그리는 주문서를 만듦
       (장면 설명은 <저장폴더>/설명.txt 에 한 줄씩 'c01 설명' 으로 적어 두면 붙임, 캐릭터 시트는 --시트 경로1,경로2)
@@ -73,6 +75,26 @@ def fit169(im, w=1600, h=900):
     return im.resize((w, h), Image.LANCZOS)
 
 
+def remove_mark(im):
+    """제미나이 별 표시 지우기: 오른쪽 아래(가로·세로 88.3%) 둘레에서 주변보다 밝게 떠 있는 별 모양 픽셀만 찾아
+    (큰 원으로 지우면 번져 보임) 그 자리만 OpenCV inpaint 로 메움"""
+    import cv2
+    a = np.asarray(im)[:, :, ::-1].copy()
+    h, w = a.shape[:2]
+    cx, cy, r = int(w * 0.883), int(h * 0.883), int(w * 0.04)
+    y0, y1, x0, x1 = max(0, cy - r), min(h, cy + r), max(0, cx - r), min(w, cx + r)
+    g = cv2.cvtColor(a[y0:y1, x0:x1], cv2.COLOR_BGR2GRAY).astype(np.float32)
+    bg = cv2.medianBlur(g.astype(np.uint8), 31).astype(np.float32)
+    star = ((g - bg) > 6).astype(np.uint8) * 255
+    yy, xx = np.mgrid[y0:y1, x0:x1]
+    star[((yy - cy) ** 2 + (xx - cx) ** 2) > (w * 0.03) ** 2] = 0
+    star = cv2.dilate(star, np.ones((3, 3), np.uint8), iterations=2)
+    mask = np.zeros((h, w), np.uint8)
+    mask[y0:y1, x0:x1] = star
+    out = cv2.inpaint(a, mask, 3, cv2.INPAINT_NS)
+    return Image.fromarray(out[:, :, ::-1])
+
+
 def main(a):
     if len(a) < 2 or "--칸" not in a:
         print(__doc__)
@@ -83,6 +105,8 @@ def main(a):
     pre = a[a.index("--이름") + 1] if "--이름" in a else "c"
     os.makedirs(out, exist_ok=True)
     im = Image.open(src).convert("RGB")
+    if "--워터마크지우기" in a:
+        im = remove_mark(im)
     g = np.asarray(im.convert("L"), np.float32)
     H, W = g.shape
     colp = np.zeros(W, dtype=[("mean", "f4"), ("std", "f4")])
