@@ -659,7 +659,8 @@ def run_doc(m, app, c, gate):
                     app.vars[k_].set(str(v_))
     LONG_FIX = {"narration": "on", "layout": "자막형(큰 제목+사진+자막)", "img_fill": "전체 화면(글자가 사진 위에)",   # 장문 화면 규칙 (CLAUDE.md):
                 "img_motion": "영상처럼(확대·이동·전환)", "head_show": "안 보임(제목 카드만)", "head_pos": "숨김",   # 새 서버의 프로그램 기본값(쇼츠 세로 등)을 쓰지 않게
-                "sub_split": "한 줄씩(문장·쉼표로 나눠 차례로)", "img_label": "off", "fps": "24", "sub_hide": "off", "img_credit": "on", "head_pos": "숨김",
+                "sub_split": "한 줄씩(문장·쉼표로 나눠 차례로)", "img_label": "off" if HISTORY else "on", "fps": "24", "sub_hide": "off", "img_credit": "off",
+                # 실제 사진 장문 다큐(--역사 아님): 오른쪽 위에 사진 설명 상자(무엇·언제, 사용자 결정 2026-11-01 '이렇게'), 출처는 설명란. 역사(수묵 그림)는 상자 없음
                 "narr_rate": "0", "narr_tone_m": "-1.5"}   # 나레이션: 정상 속도·톤 반음 1.5 낮게 (CLAUDE.md 2장)
     for k_, v_ in LONG_FIX.items():
         if k_ in app.vars:
