@@ -69,6 +69,8 @@ fi
 KLEIN_GDRIVE_FOLDER="${KLEIN_GDRIVE_FOLDER:-1gbBT9DOVF0sVoyaUpNPBwP0FQaA9d_EE}"    # 내 드라이브/AI모델/FLUX2_klein_4B
 if [ ! -f models/FLUX2_klein_4B/transformer/diffusion_pytorch_model.safetensors ] && [ -n "$KLEIN_GDRIVE_FOLDER" ]; then
   "$SDV/bin/python" -m pip install -q --disable-pip-version-check gdown || true
+# 그림 자동 검수(그림_자동검수.py): 글자 위치 찾기 RapidOCR (Apache-2.0, 모델이 설치 파일 안에 있음)
+"$SDV/bin/python" -c "import rapidocr_onnxruntime" 2>/dev/null || "$SDV/bin/python" -m pip install -q --disable-pip-version-check rapidocr_onnxruntime || true
   "$SDV/bin/python" -m gdown "https://drive.google.com/drive/folders/$KLEIN_GDRIVE_FOLDER" -O models/FLUX2_klein_4B \
     || echo "구글 드라이브에서도 못 받음 (폴더 공유 설정 확인)" >&2
 fi
