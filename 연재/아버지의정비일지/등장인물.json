@@ -1,0 +1,32 @@
+{
+ "chars": [
+  {
+   "name": "수진",
+   "look": "a Korean woman aged 49, shoulder-length straight black hair tied loosely at the back with a few grey strands, tired dark eyes, thin face, slim",
+   "look_ko": "49살 여성, 어깨 길이 검은 머리를 뒤로 느슨하게 묶음(흰머리 몇 가닥), 피곤한 눈, 마른 얼굴",
+   "outfit": "a long charcoal-grey wool coat over a black turtleneck, black slacks, black flat shoes, a small black handbag",
+   "face": "캐릭터시트/수진.png"
+  },
+  {
+   "name": "정호",
+   "look": "a Korean man aged 74, short grey crew-cut hair, deep wrinkles, thick grey eyebrows, a stern quiet face, big rough hands, slightly bent back",
+   "look_ko": "74살 남성, 짧게 깎은 흰 머리, 깊은 주름, 굵은 눈썹, 무뚝뚝한 얼굴, 크고 거친 손, 살짝 굽은 등",
+   "outfit": "a faded navy-blue mechanic's work jacket with oil stains, grey work trousers, old brown work shoes, a white towel around his neck",
+   "face": "캐릭터시트/정호.png"
+  },
+  {
+   "name": "마루",
+   "look": "a small old home-care robot about 120 cm tall, a rounded cream-white body with soft grey joint panels and a thin orange stripe around the waist, a round head with a black screen face showing two simple glowing white dot eyes, two short arms with soft three-fingered hands, a wheeled round base instead of legs, scratches from long use",
+   "look_ko": "키 120cm 낡은 돌봄 로봇, 둥근 크림색 몸통에 회색 관절, 허리에 가는 주황 줄, 둥근 머리의 검은 화면에 흰 점 눈 두 개, 짧은 팔(세 손가락), 다리 대신 둥근 바퀴 받침",
+   "outfit": "no clothes",
+   "face": "캐릭터시트/마루.png"
+  },
+  {
+   "name": "어린수진",
+   "look": "an 8-year-old Korean girl, black hair in two short pigtails, round cheeks, bright eyes",
+   "look_ko": "8살 소녀, 짧은 양 갈래 검은 머리, 동그란 볼",
+   "outfit": "a light sky-blue dress, white socks, small red shoes",
+   "face": "캐릭터시트/어린수진.png"
+  }
+ ]
+}
