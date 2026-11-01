@@ -6,6 +6,7 @@ python 나레이션_겹침검사.py <영상.mp4> <회차.py 또는 대본.txt> [
     1) 소리를 쉼에서 15초 안쪽 조각으로 나눠 받아 적음
     2) 같은 글자 1~3자가 연달아 두 번 나오면(띄어쓰기 무시: '것만 만', '국국') 후보
     3) 받아 적은 조각과 가장 비슷한 대본 문장을 찾아, 그 문장에 원래 같은 길이의 반복(무럭무럭·불쑥불쑥·타닥타닥)이 있으면 흉내말로 보고 넘김
+    5) 글자 하나가 끼어든 말더듬('유적→유저적'): 대본 문장 안쪽에 끼어든 한 글자가 바로 앞·뒤 글자와 같은 소리(받침만 다름 포함)면 겹침 (2026-11-01)
     4) 대본 문장과 한 글자씩 맞춰 봐서 반복 자리에 글자가 '더 들어갔을' 때만 겹침 ('것만→것만만'). 글자 수가 같으면 발음 차이로 봄
        ('하늘나라→하늘라라', '닿을→다을')
   - (--빠르기 를 붙일 때만, 기본은 겹침만 — 사용자 결정 2026-10-31) 갑자기 빨라진 곳도 찾음: 쉼과 쉼 사이 한 마디씩 1초당 글자 수를 재서 영상 전체 마디의 중간값보다 25% 넘게 빠른 마디 (대사는 인물마다 빠르기가 달라 뺌)
@@ -92,6 +93,32 @@ def extra_syllables(ref, heard, i, n):
         if op == "insert" or (op == "replace" and (j2 - j1) > (i2 - i1)):
             return True
     return False
+
+
+def _cv(ch):
+    """한글 한 글자 → (초성, 중성). 아니면 None"""
+    c = ord(ch) - 0xAC00 if ch else -1
+    return (c // 588, (c % 588) // 28) if 0 <= c < 11172 else None
+
+
+def stutter_inserts(ref, heard):
+    """대본 문장 안쪽에 글자 하나가 끼어들었고, 그 글자가 바로 앞·뒤 대본 글자와 같은 소리(같은 글자 또는 받침만 다름)면 말더듬
+    ('유적→유저적', '국→구국'). 사용자 결정 2026-11-01: 같은 글자가 바로 두 번 나오는 것만 찾던 검사가 '유저적'을 놓쳤음"""
+    out = []
+    sm = difflib.SequenceMatcher(None, ref, heard, autojunk=False)
+    for op, i1, i2, j1, j2 in sm.get_opcodes():
+        if not (0 < i1 < len(ref)):                          # 문장 바깥(앞뒤 다른 문장)에 붙은 글은 보지 않음
+            continue
+        if op == "insert" and j2 - j1 == 1:
+            extra = heard[j1]
+        elif op == "replace" and (j2 - j1) == (i2 - i1) + 1:
+            extra = heard[j1]
+        else:
+            continue
+        nb = [ref[k] for k in (i1 - 1, i1) if 0 <= k < len(ref)]
+        if any(extra == c or (_cv(extra) and _cv(extra) == _cv(c)) for c in nb):
+            out.append(heard[max(0, j1 - 2):j2 + 2])
+    return out
 
 
 def best_sentence(h, sents):
@@ -228,6 +255,15 @@ def detect(video, script):
                 if not extra_syllables(sh, ctx, ctx.find(dd), len(dd)):   # 규칙 4: 대본보다 글자가 늘어난 자리여야 겹침
                     continue
                 found.append({"t": t0, "dd": dd, "sentence": ps[1], "paragraph": ps[0], "heard": text})
+        for par_, s_ in sents:                                 # 글자 하나 끼어든 말더듬 ('유적→유저적')
+            sh_ = hangul(s_)
+            if len(sh_) < 6 or difflib.SequenceMatcher(None, sh_, h, autojunk=False).find_longest_match(0, len(sh_), 0, len(h)).size < 5:
+                continue
+            sm_ = difflib.SequenceMatcher(None, sh_, h, autojunk=False)
+            if sum(b.size for b in sm_.get_matching_blocks()) / len(sh_) < 0.8:   # 이 조각에 그 문장이 거의 다 들어 있을 때만
+                continue
+            for ex in stutter_inserts(sh_, h):
+                found.append({"t": t0, "dd": "끼어듦 " + ex, "sentence": s_, "paragraph": par_, "heard": text})
     try:
         json.dump(sylls, open(os.path.join(tempfile.gettempdir(), "겹침_글자시각.json"), "w", encoding="utf-8"), ensure_ascii=False)
         json.dump(heard_all, open(os.path.join(tempfile.gettempdir(), "받아쓰기_조각.json"), "w", encoding="utf-8"), ensure_ascii=False)
