@@ -62,6 +62,7 @@ DEFAULT = {
                                # 수동(창): 영상이 끝나면 프로그램 후보 + 소재탐색 후보를 한 화면에 띄워 클릭으로 고름 (연속 제작 중엔 창을 띄우지 않고 '외부 자동'처럼)
                                # 나중에 고르려면: 썸네일_고르기.bat 에 <제목>_썸네일_후보 폴더를 끌어다 놓기
 }
+NO_NATURE_BGM = {"바람": "어두운 드론", "파도": "잔잔한 패드"}   # 사용자 결정 2026-11-03: 장문 배경음에 바람·파도 소리 제외 → 대신 쓸 소리
 MEDITATION_PRESETS = ["명상 · 싱잉볼", "싱잉볼 · 깊은 수면", "오르골 · 캐논", "싱잉볼 · 432Hz", "오르골 자장가 · 브람스", "싱잉볼 · 7 차크라",
                       "오르골 · 꿈속의 고향", "싱잉볼 · 528Hz", "오르골 · 어메이징 그레이스", "싱잉볼 · 노래하는 볼(문지르기)"]
 FUN_GENRES = ["[이야기] 코믹 일상 장편 썰", "[이야기] 조선 야담·기담", "[이야기] 감동 휴먼 드라마", "[이야기] 사연 낭독(가족·시댁·이혼)", "[이야기] 시니어 인생 사연"]
@@ -767,6 +768,10 @@ def run_doc(m, app, c, gate):
     ch_ = m._YP.vary_settings(s, title, log)     # 규칙: 영상마다 강조색·자막 효과·배경음을 다르게 (유튜브 '대량 생산 콘텐츠' 정책)
     if not str(c.get("배경음") or "").strip() or str(c.get("배경음")).startswith("자동"):
         c["배경음"] = ch_["bgm_style"]
+    if c.get("배경음") in NO_NATURE_BGM:          # 사용자 결정 2026-11-03: 배경음에 바람·파도 소리는 넣지 않음
+        c["배경음"] = NO_NATURE_BGM[c["배경음"]]
+    if s.get("bgm_style") in NO_NATURE_BGM:
+        s["bgm_style"] = NO_NATURE_BGM[s["bgm_style"]]
     trad_ = m.trad_from_memo(c.get("기획메모", ""))   # 주제목록 메모의 '배경음: 중동 히자즈' / '음계: 우조' (역사·실화 모두, 2026-11-03)
     samguk_ = HISTORY and any(w_ in (str(c.get("주제", "")) + str(c.get("기획메모", "")) + title) for w_ in SAMGUK_WORDS)
     if trad_ or samguk_:
