@@ -231,6 +231,7 @@ def detect(video, script):
     from transformers import AutoModelForCTC, AutoProcessor
     pars = script_paragraphs(script)
     sents = [(p, s) for p in pars for s in sentences(p)]
+    all_h = hangul(" ".join(s for _, s in sents))      # 대본 전체(한글만) - 규칙 3-1
     raw = subprocess.run(["ffmpeg", "-v", "error", "-i", video, "-vn", "-ac", "1", "-ar", str(SR), "-f", "f32le", "-"],
                          capture_output=True, check=True).stdout
     a = np.frombuffer(raw, np.float32)
@@ -267,6 +268,10 @@ def detect(video, script):
                 k_ = sents.index(ps)
                 near = hangul(" ".join(x[1] for x in sents[max(0, k_ - 1):k_ + 2]))   # 앞뒤 문장까지 (조각이 문장 경계에 걸침)
                 if doubles(sh, n) or dd in near:      # 규칙 3: 대본에 원래 같은 반복(흉내말 '줄줄이·무럭무럭')이 있음
+                    continue
+                # 규칙 3-1 (2026-11-03, '고고학'을 엉뚱한 문장에 맞춰 겹침으로 봄): 반복 + 앞이나 뒤 글자 하나가
+                # 대본 어딘가에 그대로 있으면 원래 낱말('고고학'·'다다음') → 넘김. 진짜 겹침('것만만')은 대본에 없음
+                if any(w_ in all_h for w_ in (h[max(0, i - 1):i + 2 * n], h[i:i + 2 * n + 1]) if len(w_) > 2 * n):
                     continue
                 if not extra_syllables(sh, ctx, ctx.find(dd), len(dd)):   # 규칙 4: 대본보다 글자가 늘어난 자리여야 겹침
                     continue
