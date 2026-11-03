@@ -1464,6 +1464,26 @@ PAPER_FIG_SYSTEM = """너는 유튜브 과학 다큐의 자료조사원이다. �
 반드시 JSON만 출력: {"photos": [{"after": "...", "url": "...", "caption": "...", "credit": "...", "page": "...", "license": "CC BY 4.0"}], "checked": ["논문 - 라이선스 확인 결과 한 줄"]}"""
 
 
+
+def strip_tail_outro(text):
+    """마지막 챕터 끝의 맺음 문단('이 채널은 …' 시리즈 문장, '여러분은 …?' 질문)을 뒤에서부터 뺌. 사진 줄은 남김"""
+    paras = [p for p in str(text).split("\n\n")]
+    while paras:
+        t = paras[-1].strip()
+        if not t or t.startswith("[사진"):
+            if t.startswith("[사진"):
+                break
+            paras.pop()
+            continue
+        if t.startswith("이 채널은") or (t.startswith("여러분은") and t.endswith("?")) or re.search(r"(이 채널은|구독)[^.]*\.?$", t) and len(t) < 120:
+            paras.pop()
+            continue
+        if t.endswith("?") and "여러분" in t:
+            paras.pop()
+            continue
+        break
+    return "\n\n".join(paras).rstrip()
+
 def doc_add_paper_figures(model, title, story, sources, media_dir, log, max_n=None):
     """규칙: 출처 논문이 오픈액세스(CC BY 등)이면 논문 그림을 1~2장 넣어 신뢰성을 높임. 이용 허락이 분명하지 않으면 넣지 않음.
     반환: (새 대본, 넣은 수)"""
@@ -15301,7 +15321,7 @@ class App(tk.Tk):
             log(f"✍ {unit} {i + 1}/{len(chapters)} '{c['title']}' 쓰는 중... (목표 {want[i]:,}자)")
             u = (base + f"\n\n[전체 제목] {title}\n\n[전체 구성]\n{toc}\n\n[지금 쓸 챕터] {i + 1}. {c['title']}"
                  + ((" (마지막 회차 - 결말. 구독 인사는 쓰지 않는다: 클로징이 따로 있음)" if fiction else
-                     " (마지막 챕터 - 전체 결론. 단, 구독 인사는 쓰지 않는다: 클로징이 따로 있음)") if last else "")
+                     " (마지막 챕터 - 내용의 결론까지만. 클로징이 따로 붙으므로 이 챕터에는 '이 채널은 …' 같은 시리즈·구독 문장, 시청자에게 묻는 마지막 질문, 처음 장면으로 돌아가는 맺음말을 쓰지 않는다)") if last else "")
                  + "\n다룰 내용: " + " / ".join(str(p) for p in (c.get("points") or []))
                  + (f"\n끝 장면(클리프행어): {c.get('cliffhanger')}" if c.get("cliffhanger") and not last else "")
                  + f"\n목표 글자 수: 약 {want[i]}자 (공백 포함)\n\n[앞 챕터 요약] {prev}"
@@ -15386,8 +15406,12 @@ class App(tk.Tk):
             st8["opening_ph"] = opening
             save_state()
         parts = [opening]
-        parts += [f"## {i + 1}. {t}\n\n{b}" for i, (t, b) in enumerate(bodies)]
-        parts.append(doc_clean(o.get("closing", "")))
+        closing_ = doc_clean(o.get("closing", ""))
+        bodies_ = list(bodies)
+        if bodies_ and closing_.strip():                  # 마지막 챕터가 맺음말까지 써 버리면 끝맺음이 두 번 나옴(2026-11-03 세 편 연속) → 챕터 끝 맺음 문단을 뺌
+            bodies_[-1] = (bodies_[-1][0], strip_tail_outro(bodies_[-1][1]))
+        parts += [f"## {i + 1}. {t}\n\n{b}" for i, (t, b) in enumerate(bodies_)]
+        parts.append(closing_)
         story = strip_placeholders("\n\n".join(p for p in parts if p.strip()))
         if autophoto and not fiction and sources and media_dir:     # 규칙: 출처 논문이 오픈액세스면 논문 그림 1~2장 (신뢰성)
             try:
