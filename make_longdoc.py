@@ -197,6 +197,31 @@ def load_seed_lineup(m):
     return out
 
 
+def music_from_memo(memo, log=print):
+    """주제 메모의 '배경음 곡: Echoes of Time v2' → 케빈 맥클라우드 곡(CC BY 4.0)을 받아 {path, credit}. 없으면 None
+    (사용자 결정 2026-11-03: 다음 편부터 합성 배경음 대신 저작권 걱정 없는 실제 음악. 곡은 실화/배경음샘플/케빈맥클라우드/ 에 받아 둠, 깃에 안 올림)"""
+    m_ = re.search(r"배경음\s*곡\s*[:：]\s*([^\n(]+)", str(memo or ""))
+    if not m_:
+        return None
+    title = m_.group(1).strip().strip("'\"「」")
+    folder = os.path.join(HERE, "실화", "배경음샘플", "케빈맥클라우드")
+    path = os.path.join(folder, title + ".mp3")
+    if not os.path.exists(path) or os.path.getsize(path) < 100000:
+        import urllib.request, urllib.parse
+        os.makedirs(folder, exist_ok=True)
+        url = "https://incompetech.com/music/royalty-free/mp3-royaltyfree/" + urllib.parse.quote(title) + ".mp3"
+        try:
+            data = urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"}), timeout=60).read()
+            if len(data) < 100000:
+                raise ValueError("파일이 너무 작음")
+            open(path, "wb").write(data)
+        except Exception as e:
+            log(f"  ⚠ 배경음 곡 '{title}' 을 받지 못해 합성 배경음을 씁니다: {str(e)[:80]}")
+            return None
+    credit = f'Music: "{title}" by Kevin MacLeod (incompetech.com) - Licensed under CC BY 4.0 - https://creativecommons.org/licenses/by/4.0/'
+    return {"title": title, "path": path, "credit": credit}
+
+
 def seed_memo(src):
     """주제 목록 3번째 칸 → (메모 글, 폴더). 폴더면 기획메모.md, 파일이면 내용, 아니면 글 그대로."""
     src = (src or "").strip()
@@ -780,6 +805,17 @@ def run_doc(m, app, c, gate):
         try:                                   # 프로젝트에도 저장 (다시 만들 때 같은 배경음)
             pj_ = json.load(open(base + "_프로젝트.json", encoding="utf-8"))
             pj_.setdefault("settings", {})["bgm_style"] = c["배경음"]
+            m.atomic_write_text(base + "_프로젝트.json", json.dumps(pj_, ensure_ascii=False, indent=1))
+        except Exception:
+            pass
+    song_ = None if (trad_ or samguk_) else music_from_memo(c.get("기획메모", ""), log)   # '배경음 곡: …' → 실제 음악 파일
+    if song_:
+        s["bgm_mode"], s["bgm_path"] = "파일", song_["path"]
+        res["sources"] = [x for x in (res.get("sources") or []) if "Kevin MacLeod" not in str(x)] + [song_["credit"]]   # 설명란 출처에 작곡가 (CC BY 조건)
+        log(f"🎵 배경음: {song_['title']} (Kevin MacLeod, CC BY 4.0) · 설명란에 출처 표시")
+        try:
+            pj_ = json.load(open(base + "_프로젝트.json", encoding="utf-8"))
+            pj_.setdefault("settings", {}).update(bgm_mode="파일", bgm_path=song_["path"])
             m.atomic_write_text(base + "_프로젝트.json", json.dumps(pj_, ensure_ascii=False, indent=1))
         except Exception:
             pass
