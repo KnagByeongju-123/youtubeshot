@@ -71,11 +71,18 @@ def fit_description(text, limit=DESC_MAX_BYTES):
     pi, pj = sec("🖼 사진 출처")
     first = min([x for x in (si, pi, tag_i) if x is not None] + [len(lines)])
     head = lines[:first]
+    music = []                                                                        # 🎵 음악(CC BY 출처)은 줄이지 않음 (2026-11-03)
+    if "🎵 음악" in head:
+        mi = head.index("🎵 음악")
+        mj = mi + 1
+        while mj < len(head) and head[mj].strip():
+            mj += 1
+        music, head = head[mi:mj], head[:mi] + head[mj:]
     srcs = lines[si + 1:sj] if si is not None else []
     creds = lines[pi + 1:pj] if pi is not None else []
 
     def build(h, s_, more_s, c_, more_c):
-        out = list(h)
+        out = list(h) + ([""] + music if music else [])
         if s_:
             out += ["", "📚 출처"] + s_ + ([f"외 {more_s}건 (업로드문구 파일 참고)"] if more_s else [])
         if c_ or more_c:

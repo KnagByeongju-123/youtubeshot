@@ -3862,8 +3862,11 @@ def description_text(pkg, story, portrait=False, max_sources=8):
     if "AI 생성 이미지" in (story or "") and _YP.AI_DESC_LINE not in head[0]:
         head.append(_YP.AI_DESC_LINE)          # 규칙: AI 그림이 있으면 '실제 사진 아님' (유튜브 합성 콘텐츠 정책)
     chap = (["", "00:00 오프닝"] + [f"{hms(t)} {n}" for t, n in pkg["chapters"]]) if pkg.get("chapters") else []
+    music = [str(x) for x in (pkg.get("sources") or []) if str(x).startswith("Music:")]   # 배경음 곡 출처(CC BY 조건) - 출처 수 제한에 잘리지 않게 따로 (2026-11-03)
     src, seen = [], set()
     for x in pkg.get("sources") or []:
+        if str(x).startswith("Music:"):
+            continue
         k = re.sub(r"\W+", "", str(x).split(" - ")[0].lower())[:40]
         if k and k not in seen:
             seen.add(k)
@@ -3876,6 +3879,8 @@ def description_text(pkg, story, portrait=False, max_sources=8):
 
     def build(src_, cred_, more_):
         ls = list(head) + chap
+        if music:
+            ls += ["", "🎵 음악"] + music
         if src_:
             ls += ["", "📚 출처"] + [f"- {x}" for x in src_]
         if cred_:
