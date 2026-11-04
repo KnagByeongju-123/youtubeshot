@@ -43,7 +43,9 @@ DEFAULT = {
     "나레이션_먼저": True,          # 사용자 결정 2026-10-31: 대본 → 나레이션(문단마다 시간 기록) → 그 시간에 맞춰 그림 → 배경음·자막과 합치기 (그림 스타일일 때)
     "문단_최대_글자": 120,          # 나레이션 먼저일 때 이보다 긴 문단은 문장 끝에서 나눔 (약 15초) → 그림이 문단이 바뀔 때 바뀌어 박자가 맞음
     "그림_사용자점검": True,        # 사용자 결정 2026-10-31: 그림을 다 그리면 40장씩 모음(_그림점검_N.jpg)을 만들고 멈춤 → 점검 뒤 같은 명령에 --점검완료 를 붙여 이어서
-    "나레이션_성우": "M1",          # 사용자 결정 2026-11-01: 남자 성우 1 (Supertonic M1, 예전 M4). '성우_프리셋'을 적으면 그것이 우선
+    "나레이션_성우": "M4",          # 사용자 결정 2026-11-04: 다큐 나레이션 = 남자 성우 4 (낮고 차분한 중년 남자, 샘플 '4번_톤-1_조금빠르게'). '성우_프리셋'을 적으면 그것이 우선
+    "나레이션_속도": -3,            # 말 속도 % (-3 = 3% 느리게)
+    "나레이션_톤": -1,              # 톤 반음 (-1 = 반음 1 낮게)
     "자막": "보임",                 # 보임(기본, 사용자 결정 2026-10-31: 자막은 그대로) / 숨김(나레이션만)
     "자막_스타일": "자동",            # 자동(소재에 맞춰) 또는 프로그램의 '인기 롱폼 스타일' 이름 그대로
     "끝나면": "그대로",              # 연속 제작이 끝난 뒤: 그대로 / 절전 / 끄기  (시작할 때 물어봄)
@@ -338,7 +340,10 @@ def ask_batch_plan(c):
 def main():
     if not os.path.exists(CFG):
         json.dump(DEFAULT, open(CFG, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
-    c = dict(DEFAULT, **json.load(open(CFG, encoding="utf-8")))
+    user_c = json.load(open(CFG, encoding="utf-8"))
+    if "나레이션_톤" not in user_c and str(user_c.get("나레이션_성우", "")).strip() == "M1":
+        user_c.pop("나레이션_성우")      # 예전 기본(M1)이 저장된 설정 파일 → 새 다큐 기본 성우(M4)로 (사용자 결정 2026-11-04)
+    c = dict(DEFAULT, **user_c)
     global CHANNEL_NOTE
     CHANNEL_NOTE = str(c.get("채널_소개") or DEFAULT["채널_소개"])
     if HISTORY:        # 역사 채널 모드: 기록으로 보는 진짜 역사만, 주제는 역사\주제목록.txt 부터
@@ -661,11 +666,11 @@ def run_doc(m, app, c, gate):
                 "img_motion": "영상처럼(확대·이동·전환)", "head_show": "안 보임(제목 카드만)", "head_pos": "숨김",   # 새 서버의 프로그램 기본값(쇼츠 세로 등)을 쓰지 않게
                 "sub_split": "한 줄씩(문장·쉼표로 나눠 차례로)", "img_label": "off" if HISTORY else "on", "fps": "24", "sub_hide": "off", "img_credit": "on",
                 # 실제 사진 장문 다큐(--역사 아님): 오른쪽 위 = 사진 설명 상자(무엇·언제), 오른쪽 아래 = 출처(검은 바탕·흰 글자) (사용자 결정 2026-11-01). AI 그림엔 출처 표시 안 됨
-                "narr_rate": "0", "narr_tone_m": "-1.5"}   # 나레이션: 정상 속도·톤 반음 1.5 낮게 (CLAUDE.md 2장)
+                "narr_rate": str(c.get("나레이션_속도", -3)), "narr_tone_m": str(c.get("나레이션_톤", -1))}   # 다큐 나레이션: M4·3% 느리게·톤 반음 1 낮게 (사용자 결정 2026-11-04)
     for k_, v_ in LONG_FIX.items():
         if k_ in app.vars:
             app.vars[k_].set(v_)
-    code_ = str(c.get("나레이션_성우") or "M1").strip()
+    code_ = str(c.get("나레이션_성우") or "M4").strip()
     if code_ and not str(c.get("성우_프리셋") or "").strip():
         app.vars["narr_voice"].set(f"Supertonic {code_} ({'남성' if code_[:1] == 'M' else '여성'}, 무료 로컬) [supertonic:{code_}]")
     app.vars["format"].set("롱폼 가로(1920×1080)")
