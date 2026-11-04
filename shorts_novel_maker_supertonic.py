@@ -4544,7 +4544,7 @@ def _thumb_mystery(v, s, photo_im, size, fp):
 
 
 def _thumb_circle(v, s, photo_im, size, fp):
-    """빨간 강조: 사진에 빨간 원 + 화살표, 노란 글자 (충격·반전)"""
+    """빨간 강조: 노란·빨간 큰 글자 (충격·반전). 빨간 원·화살표는 기본 끔(thumb_circle·thumb_arrow: on 일 때만) — 자리가 안 맞음"""
     w, h = size
     port = h > w
     lines, emph, small, mood = _vparts(v)
@@ -4559,8 +4559,9 @@ def _thumb_circle(v, s, photo_im, size, fp):
     m = int(w * 0.05)
     r = int(min(w, h) * (0.19 if port else 0.2))
     lw = max(8, min(w, h) // 70)
-    d.ellipse([cx - r - 3, cy - r - 3, cx + r + 3, cy + r + 3], outline=(255, 255, 255, 200), width=lw + 4)
-    d.ellipse([cx - r, cy - r, cx + r, cy + r], outline=(229, 57, 53, 255), width=lw)
+    if v.get("circle", s.get("thumb_circle", "off") == "on"):   # 빨간 원은 기본 끔: 원 자리가 사진 속 가리킬 곳과 안 맞음 (사용자 결정 2026-11-04)
+        d.ellipse([cx - r - 3, cy - r - 3, cx + r + 3, cy + r + 3], outline=(255, 255, 255, 200), width=lw + 4)
+        d.ellipse([cx - r, cy - r, cx + r, cy + r], outline=(229, 57, 53, 255), width=lw)
     f_ = _thumb_fit_font(fp, lines, (w - 2 * m) if port else int(w * 0.5), h * (0.105 if port else 0.17))
     lh = int(f_.size * 1.12)
     y0 = int(h * (0.90 if port else 0.86)) - lh * len(lines)
