@@ -15234,7 +15234,7 @@ class App(tk.Tk):
             if state_path:
                 os.makedirs(os.path.dirname(os.path.abspath(state_path)), exist_ok=True)
                 atomic_write_text(state_path, json.dumps(st8, ensure_ascii=False))   # 전원이 꺼져도 반쯤 쓴 파일이 안 남게
-        minutes = max(float(LONG_MIN_MIN), min(float(LONG_MAX_MIN), float(minutes)))   # 규칙: 롱폼은 10~15분
+        minutes = max(float(LONG_MIN_MIN), min(float(LONG_MAX_MIN) if not SLEEP_DOC.get("on") else 180.0, float(minutes)))   # 규칙: 롱폼은 10~15분 (수면판 모음은 3시간까지)
         total = int(minutes * DOC_CHARS_PER_MIN)
         open_c, close_c = max(350, int(total * 0.05)), max(300, int(total * 0.035))
         body_c = total - open_c - close_c
