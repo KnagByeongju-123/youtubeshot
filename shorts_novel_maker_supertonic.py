@@ -192,7 +192,7 @@ TRAD_WIND = [("중국", "중국 관악(디즈·샤오)", ["궁조", "상조", "�
              ("몽골", "몽골 관악(림베·후미)", ["초원장조", "초원단조"]),
              ("중세유럽", "중세 유럽 관악(리코더·숌)", ["도리안", "믹솔리디안", "에올리안"])]
 SOUND_STYLE_NAMES += [f"{pre} · {md}" for _, pre, mds in TRAD_REGIONS + TRAD_WIND for md in mds]
-SOUND_STYLE_NAMES += ["중동 선율(우드·네이·다르부카)"]   # 노래 가락이 이어지는 중동 악기 연주 (사용자 결정 2026-11-04, 전통악기/중동선율.py)
+SOUND_STYLE_NAMES += ["중동 선율(우드·네이·다르부카)", "한국 선율(가야금·해금·장구)"]   # 노래 가락이 이어지는 중동 악기 연주 (사용자 결정 2026-11-04, 전통악기/중동선율.py)
 
 # 소재별 자동 배경음
 SOUND_BY_TOPIC = {
@@ -7346,17 +7346,22 @@ for _k, (_rg, _md, _kd) in TRAD_STYLES.items():
     SOUND_STYLES[_k] = (lambda rg, md, kd: lambda n, r: _trad(rg, kd).bed(n, r, md))(_rg, _md, _kd)
 
 
-def _me_song(n, rng):
-    """중동 선율: 우드 가락 + 네이 + 다르부카 2/4 (전통악기/중동선율.py)"""
-    if "중동선율" not in _TRAD_MOD:
-        spec_ = importlib.util.spec_from_file_location("trad_중동선율", os.path.join(BASE, "전통악기", "중동선율.py"))
-        mod_ = importlib.util.module_from_spec(spec_)
-        spec_.loader.exec_module(mod_)
-        _TRAD_MOD["중동선율"] = mod_
-    return _TRAD_MOD["중동선율"].song(n, rng)
+MELODY_STYLES = {"중동 선율(우드·네이·다르부카)": "중동선율", "한국 선율(가야금·해금·장구)": "한국선율"}   # 가락이 이어지는 지역 악기 연주 (전통악기/<파일>.py 의 song)
 
 
-SOUND_STYLES["중동 선율(우드·네이·다르부카)"] = _me_song
+def _melody_song(fname):
+    def gen(n, rng):
+        if fname not in _TRAD_MOD:
+            spec_ = importlib.util.spec_from_file_location("trad_" + fname, os.path.join(BASE, "전통악기", fname + ".py"))
+            mod_ = importlib.util.module_from_spec(spec_)
+            spec_.loader.exec_module(mod_)
+            _TRAD_MOD[fname] = mod_
+        return _TRAD_MOD[fname].song(n, rng)
+    return gen
+
+
+for _k, _f in MELODY_STYLES.items():
+    SOUND_STYLES[_k] = _melody_song(_f)
 assert list(SOUND_STYLES) == SOUND_STYLE_NAMES
 CURRENT_MELODY = {"melody": "", "bpm": 90}   # 현재 대본의 노래 멜로디 (올드 팝송일 때 채워짐)
 
