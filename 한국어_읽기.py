@@ -149,6 +149,9 @@ def ko_numbers(text):
         counter = before != "제" and after.startswith(_KO_NATIVE_UNITS) and not after.startswith(
             ("시대", "시즌", "개월", "번째", "가지고", "달러", "개국", "배터", "배우", "시청", "장관", "장면", "장소", "장군", "통계", "곡선",
              "자 회", "자회담", "자 대", "자대면", "자간", "자택", "자동"))   # 3자 회담·3자 대면은 '삼자'
+        if counter and after.startswith("점") and (re.search(r"(점수|평점|별점|시험|성적|학점|득점|만점|평균|채점)", m_.string[max(0, m_.start() - 14):m_.start()])
+                                                  or re.match(r"점\s*(만점|짜리 성적)", after + m_.string[m_.end() + 3:m_.end() + 8])):
+            counter = False   # '점'이 점수일 때는 한자어 (시험 95점 → 구십오 점). 유물·작품 수량일 때만 고유어 (184점 → 백여든네 점, 사용자 결정 2026-11-04)
         if 1 <= n <= 99 and counter and not (after.startswith("시간") and n >= 20):
             return ko_native(n) + (" " if after.startswith("점") else "")   # 세 점 (붙이면 '세쩜'으로 읽음)
         if n >= 100 and n % 10 and counter and not after.startswith(("시", "번", "배")):
