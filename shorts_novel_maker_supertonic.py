@@ -821,6 +821,16 @@ FACT_RULES = """[사실 기반 콘텐츠 규칙 - 반드시 지킬 것]
 
 # 채널 인기 공식: 우리 채널에서 잘 된 실화 다큐의 제목·썸네일에서 뽑은 우선순위 (제목·썸네일을 만드는 모든 AI 주문서에 들어감).
 # 중괄호를 쓰지 않음 (DOC_OUTLINE_SYSTEM 이 .format 으로 채워지므로)
+SLEEP_DOC = {"on": False, "chapters": 0}   # 수면판(잠들기 전 듣는 잔잔한 모음, 2026-11-04): make_longdoc 이 주제 메모의 '수면판: on'·'챕터 수: N'으로 켬
+SLEEP_RULE = """
+
+[수면판 - 위 규칙보다 우선] 잠들기 전에 틀어 두는 잔잔한 다큐다.
+- 오프닝: 큰 훅·'끝까지 보시면'·놀람 표현·이모지 없이, 오늘 들려줄 이야기를 차분히 소개한다.
+- 챕터 끝: 다음 챕터를 예고하거나 궁금증을 일으키는 문장을 쓰지 않는다. 그 이야기를 조용히 마무리한다.
+- '충격·소름·경악·반전' 같은 자극적인 말과 감탄을 쓰지 않는다. 문장은 짧고 부드럽게, 한 문단에 생각 하나.
+- 사실 규칙은 그대로: 숫자·연구는 조사 자료 안에서만, 확실하지 않은 것은 '연구에 따라 다르다'로.
+"""
+
 HIT_RULE = """[채널 인기 공식 - 실화·과학·역사 다큐의 제목·썸네일 우선순위]
 우리 채널에서 잘 된 영상: '1,700년 잠든 쿠샨 문자, 2026년 새로 밝혀진 해독의 반전은 😱' / '4천 년 동안 아무도 못 읽던 문자, 은잔에 새긴 왕의 이름이 풀어낸 선형 엘람 문자'.
 잘 된 이유: 큰 숫자에 놀라 누르고, '아무도 못 했다'에 궁금해지고, '풀렸다'는 약속 때문에 끝까지 본다(클릭률·시청 지속률이 함께 오름).
@@ -15229,6 +15239,8 @@ class App(tk.Tk):
         open_c, close_c = max(350, int(total * 0.05)), max(300, int(total * 0.035))
         body_c = total - open_c - close_c
         n_ch = _YP.chapter_count(max(3, min(12, round(minutes / 5))), topic or genre)   # 규칙: 챕터 수도 주제마다 ±1 (형식 다양화)
+        if SLEEP_DOC.get("on") and SLEEP_DOC.get("chapters"):
+            n_ch = int(SLEEP_DOC["chapters"])      # 수면판: 기획한 장 수 그대로
         media_dir = media_dir or os.path.join(DEFAULTS["out_dir"], "media")
         topics = cat_info(DOC_CATEGORY)[1]
         formula = topics.get(genre, ("(사용자가 직접 정한 소재)", ""))[0]
@@ -15239,6 +15251,8 @@ class App(tk.Tk):
 
         fiction = doc_is_fiction(genre)   # [이야기] 소재: 창작 장편 낭독
         outline_sys, chapter_sys = (DOC_FICTION_OUTLINE_SYSTEM, DOC_FICTION_CHAPTER_SYSTEM) if fiction else (DOC_OUTLINE_SYSTEM, DOC_CHAPTER_SYSTEM)
+        if SLEEP_DOC.get("on"):
+            outline_sys, chapter_sys = outline_sys + SLEEP_RULE, chapter_sys + SLEEP_RULE
         unit = "회차" if fiction else "챕터"
         photo_cat = "허구 단편소설" if fiction else DOC_CATEGORY   # 이야기면 분위기 사진
         if fiction:

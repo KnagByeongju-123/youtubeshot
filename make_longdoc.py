@@ -716,6 +716,16 @@ def run_doc(m, app, c, gate):
             log("대본: 이미 완성됨 → " + res["title"])
         except Exception:
             log("대본 파일이 깨져 있어 진행 기록에서 다시 합칩니다")
+    memo_ = str(c.get("기획메모", ""))
+    m.SLEEP_DOC["on"] = bool(re.search(r"수면판\s*[:：]\s*(on|켬|예)", memo_))   # 주제 메모의 '수면판: on' (잠들기 전 모음, 2026-11-04)
+    mc_ = re.search(r"챕터\s*수\s*[:：]\s*(\d+)", memo_)
+    m.SLEEP_DOC["chapters"] = int(mc_.group(1)) if (m.SLEEP_DOC["on"] and mc_) else 0
+    ml_ = re.search(r"영상\s*길이\s*[:：]\s*(\d+)\s*분", memo_)      # 주제 메모의 '영상 길이: 60분' → 이 편만 길이 바꿈
+    if ml_:
+        c["길이_분"] = int(ml_.group(1))
+        log(f"⏱ 이 편 길이: {c['길이_분']}분 (주제 메모)")
+    if m.SLEEP_DOC["on"]:
+        log(f"🌙 수면판: 후크·챕터 끝 예고 없이 잔잔하게 · 챕터 {m.SLEEP_DOC['chapters'] or '자동'}개 · 배경음 작게 · 챕터 사이 쉼")
     m.DEFER_DRAW["on"] = bool(c.get("나레이션_먼저", True)) and bool(m.draw_settings())   # 그림은 나레이션 시간에 맞춰 나중에
     if res is None:
         if m.DEFER_DRAW["on"]:
@@ -764,8 +774,9 @@ def run_doc(m, app, c, gate):
     if res.get("story_drawn"):              # 나레이션 먼저 흐름에서 이미 다듬고 그림까지 넣은 대본 → 그대로 (다듬기를 두 번 하지 않게)
         story = res["story_drawn"]
     else:
-        story, _ = m.hook_fix(app.model_var.get().strip(), story, log, gate, title=title)   # 규칙: 30초 후크 + 첫 5초 = 제목·썸네일 약속
-        story, _ = m.retention_fix(app.model_var.get().strip(), story, title, log, gate)    # 규칙: 챕터 끝 예고 + 시리즈 한 줄 (1위 영상 분석)
+        if not m.SLEEP_DOC.get("on"):         # 수면판은 후크·챕터 끝 예고를 넣지 않음 (2026-11-04)
+            story, _ = m.hook_fix(app.model_var.get().strip(), story, log, gate, title=title)   # 규칙: 30초 후크 + 첫 5초 = 제목·썸네일 약속
+            story, _ = m.retention_fix(app.model_var.get().strip(), story, title, log, gate)    # 규칙: 챕터 끝 예고 + 시리즈 한 줄 (1위 영상 분석)
         story, _ = m.polite_fix(app.model_var.get().strip(), story, log, gate)   # 규칙: 모든 나레이션은 존댓말 (자막·성우 함께)
     try:                                       # 규칙: 긴 문장은 연결어미 뒤에 쉼표 → 성우가 숨 쉬듯 끊어 읽음 (나레이션_쉼표.py, Kiwi, 사용자 결정 2026-10-31)
         _sp = importlib.util.spec_from_file_location("narr_comma", os.path.join(HERE, "나레이션_쉼표.py"))
@@ -831,6 +842,15 @@ def run_doc(m, app, c, gate):
                 m.atomic_write_text(base + "_프로젝트.json", json.dumps(pj_, ensure_ascii=False, indent=1))
             except Exception:
                 pass
+    if m.SLEEP_DOC.get("on"):
+        s["bgm_mul"] = 0.6                     # 수면판: 배경음 조금 작게 (역사/수면다큐_참고.md)
+        s["chapter_hold"] = max(float(s.get("chapter_hold") or 0), 6.0)   # 챕터 사이 배경음만 흐르는 쉼
+        try:
+            pj_ = json.load(open(base + "_프로젝트.json", encoding="utf-8"))
+            pj_.setdefault("settings", {}).update(bgm_mul=0.6, chapter_hold=s["chapter_hold"])
+            m.atomic_write_text(base + "_프로젝트.json", json.dumps(pj_, ensure_ascii=False, indent=1))
+        except Exception:
+            pass
     if HISTORY:                                # 역사 편: 입체 움직임(2.5D) 끔 — 그리는 효과와 겹치고 없는 게 나음 (사용자 결정 2026-10-30)
         s["img_depth"] = "off"
         s["bgm_mul"] = 0.5                     # 배경음 50% (사용자 결정 2026-10-31, 나레이션 크기는 그대로)
