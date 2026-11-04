@@ -609,6 +609,7 @@ FIELDS = [
     ("소리", "bgm_peak", "배경음 최고 크기(0~1, 기본 0.35 = 나레이션과 함께 들리는 크기, 0=예전 방식)", "float", 0.35),
     ("소리", "bgm_air", "어두운 드론의 바람 같은 숨소리 층(off=뺌)", "choice:on,off", "on"),
     ("소리", "bgm_rel", "배경음 = 나레이션 음량의 몇 배(기본 0.35 = 35%, 0=예전 방식)", "float", 0.35),
+    ("소리", "bgm_rel_gap", "나레이션이 쉴 때 배경음 = 나레이션 음량의 몇 배(0=말할 때와 거의 같게)", "float", 0.0),
     ("소리", "bgm_mul", "배경음 배율(전통악기 포함, 0.5=절반, 나레이션은 그대로)", "float", 1.0),
     ("소리", "chapter_perc", "전통악기 배경음: 챕터 시작 타악 (on=권역 기본 징 또는 북, 연속북=긴장감, 진군북=출정·전투, 난타)", "choice:on,징,북,연속북,진군북,난타,off", "off"),   # 기본 끔 (사용자 결정 2026-10-31: 잘 안 들림)
     ("소리", "reveal_hit", "반전 효과음", "choice:on,off", "on"),
@@ -7487,7 +7488,12 @@ def bgm_level(music, s, style):
 
 
 def bgm_duck(s):
-    """말할 때 배경음 배율 — bgm_peak 방식은 패드 크기가 나레이션과 함께 나와도 되는 크기라 조금만(0.85) 낮춤"""
+    """말할 때 배경음 배율 — bgm_peak 방식은 패드 크기가 나레이션과 함께 나와도 되는 크기라 조금만(0.85) 낮춤.
+    bgm_rel_gap(쉴 때 배경음 = 나레이션의 몇 배)이 있으면 말할 때/쉴 때 = bgm_rel / bgm_rel_gap
+    (사용자 결정 2026-11-04 히타이트 편: 말할 때 10%, 쉴 때 25% → 0.4)"""
+    rel, gap = float(s.get("bgm_rel", 0.35) or 0), float(s.get("bgm_rel_gap", 0) or 0)
+    if rel > 0 and gap > 0:
+        return min(1.0, rel / gap)
     return 0.85 if float(s.get("bgm_peak", 0.35) or 0) > 0 else float(s.get("narr_duck", 0.35))
 
 
