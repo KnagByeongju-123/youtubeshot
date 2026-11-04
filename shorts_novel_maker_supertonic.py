@@ -145,7 +145,7 @@ def find_font(bold=False):
     return ""
 
 
-DEFAULT_VOICE = "Supertonic M4 (남성, 무료 로컬) [supertonic:M4]"   # 성우를 따로 정하지 않으면 이 목소리 (기본 = 남자 성우 4, 3% 느리게, 톤 -1 — 사용자 결정 2026-11-04: 낮고 차분한 중년 남자. 예전 M1 톤 -1.5)
+DEFAULT_VOICE = "Supertonic M2 (남성, 무료 로컬) [supertonic:M2]"   # 성우를 따로 정하지 않으면 이 목소리 (기본 = 남자 성우 2, 보통 빠르기, 톤 그대로 — 사용자 결정 2026-11-04. 예전 M1 톤 -1.5)
 TTS_VOICES = {   # 마이크로소프트 온라인(Edge) 음성은 쓰지 않음. 옛 설정에 적힌 Edge 이름은 voice_code 가 DEFAULT_VOICE 로 바꿈
     "윈도우 내장 음성": "sapi",
 }
@@ -575,7 +575,7 @@ FIELDS = [
     ("나레이션", "st_steps", "로컬 성우 품질(5~12)", "int", 5),
     ("나레이션", "narr_tone_f", "여자 성우 톤(반음, 0=원래 목소리 · 올리면 약간 울림)", "float", 0.0),
     ("나레이션", "narr_commas", "긴 문장 쉼표 넣어 끊어 읽기(Kiwi)", "choice:on,off", "on"),   # 규칙(사용자 결정 2026-10-31): 모든 나레이션 녹음 전에
-    ("나레이션", "narr_tone_m", "남자 성우 톤(반음, 0=원래 목소리)", "float", -1.0),   # 기본 = 반음 1 낮게 (사용자 결정 2026-11-04, 남자 성우 4와 함께)
+    ("나레이션", "narr_tone_m", "남자 성우 톤(반음, 0=원래 목소리)", "float", 0.0),   # 기본 = 원래 목소리 (사용자 결정 2026-11-04, 남자 성우 2와 함께)
     ("나레이션", "narr_bright_f", "여자 목소리 밝게(고음 강조 · 약간 울림)", "choice:on,off", "off"),
     ("나레이션", "narr_breath_cut", "말 시작 숨소리('쓰읍') 지우기", "choice:on,off", "on"),
     ("나레이션", "narr_replace", "읽기 바꾸기(성우만, 쉼표로: LOT=로트, PIN=핀)", "str",
@@ -585,7 +585,7 @@ FIELDS = [
     ("나레이션", "narr_style", "연기 지시(ChatGPT·Gemini 음성)", "str", "차분하고 또렷한 다큐멘터리 내레이터처럼. 반전 부분은 긴장감 있게."),
     ("나레이션", "openai_tts_model", "ChatGPT 음성 모델", "str", "gpt-4o-mini-tts"),
     ("나레이션", "gemini_tts_model", "Gemini 음성 모델", "str", "gemini-2.5-flash-preview-tts"),
-    ("나레이션", "narr_rate", "말 속도(%, -30~+40)", "float", -3),   # 기본 = 3% 느리게 (사용자 결정 2026-11-04, 남자 성우 4·톤 -1 과 함께)
+    ("나레이션", "narr_rate", "말 속도(%, -30~+40)", "float", 0),   # 기본 = 보통 빠르기 (사용자 결정 2026-11-04, 남자 성우 2와 함께)
     ("나레이션", "narr_volume", "나레이션 볼륨(0~2)", "float", 1.0),
     ("나레이션", "narr_gap", "문단 사이 쉼(초)", "float", 0.5),
     ("나레이션", "narr_photo_pause", "사진 보는 시간(초)", "float", 1.5),
@@ -12726,14 +12726,14 @@ class App(tk.Tk):
             st_ = best.get("settings")
             if isinstance(st_, dict):
                 st_["progress_bar"] = "off"
-        if best and not best.get("voice_m4_v1"):      # 기본 성우 M1 → M4 (3% 느리게·톤 -1, 사용자 결정 2026-11-04). 예전 기본(M1)이 저장된 설정만 한 번 바꿈
+        if best and not best.get("voice_m2_v1"):      # 기본 성우 → M2 (보통 빠르기·톤 그대로, 사용자 결정 2026-11-04). 예전 기본(M1·M4)이 저장된 설정만 한 번 바꿈
             st_ = best.get("settings")
-            if isinstance(st_, dict) and "supertonic:M1]" in str(st_.get("narr_voice", "")):
-                st_.update(narr_voice=DEFAULT_VOICE, narr_rate="-3", narr_tone_m=-1.0)
+            if isinstance(st_, dict) and any(f"supertonic:{v_}]" in str(st_.get("narr_voice", "")) for v_ in ("M1", "M4")):
+                st_.update(narr_voice=DEFAULT_VOICE, narr_rate="0", narr_tone_m=0.0)
         return best
 
     def project_dict(self):
-        return {"ver": 7, "voice_fx_v2": True, "voice_m4_v1": True, "progress_bar_v2": True, "doc_len_v2": True, "model": self.model_var.get(), "category": self.cat_var.get(), "topic": self.topic_var.get(), "genre": self.genre_var.get(),
+        return {"ver": 7, "voice_fx_v2": True, "voice_m2_v1": True, "progress_bar_v2": True, "doc_len_v2": True, "model": self.model_var.get(), "category": self.cat_var.get(), "topic": self.topic_var.get(), "genre": self.genre_var.get(),
                 "sources": getattr(self, "sources", []), "notes": getattr(self, "notes", ""),
                 "song": getattr(self, "song", None), "melody": getattr(self, "melody", ""), "bpm": getattr(self, "bpm", 90),
                 "artwork": getattr(self, "artwork", None),
