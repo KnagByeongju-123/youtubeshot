@@ -88,7 +88,7 @@ _KO_NATIVE_TENS = {1: "열", 2: "스물", 3: "서른", 4: "마흔", 5: "쉰", 6:
 _KO_NATIVE_UNITS = ("마리", "사람", "시간", "살", "시", "번", "권", "잔", "그루", "송이", "척", "달", "가지", "군데", "걸음",
                     "켤레", "곳", "쌍", "방울", "바퀴", "명", "개", "채", "벌", "줄", "알", "배",
                     "자리", "칸", "장", "통", "차례", "겹", "갈래", "마디", "모금", "포기", "자루", "그릇", "봉지", "덩이", "곡",
-                    "자")    # 글자 수: 27자 → 스물일곱 자, 341자 → 삼백사십한 자 (사용자 규칙, 2026-10-22)
+                    "자", "점")    # 글자 수: 27자 → 스물일곱 자, 341자 → 삼백마흔한 자 / 유물 수: 3점 → 세 점, 131점 → 백서른한 점 (사용자 결정 2026-11-04)
 _KO_UNIT_WORDS = [("㎢", "제곱킬로미터"), ("㎡", "제곱미터"), ("km²", "제곱킬로미터"), ("m²", "제곱미터"), ("km/h", "킬로미터"), ("km", "킬로미터"), ("cm", "센티미터"),
                   ("mm", "밀리미터"), ("kg", "킬로그램"), ("mg", "밀리그램"), ("ml", "밀리리터"), ("mL", "밀리리터"), ("°C", "도"),
                   ("℃", "도"), ("°", "도"), ("%", " 퍼센트"), ("hPa", "헥토파스칼"), ("bar", "바"), ("atm", "기압"), ("m", "미터"), ("g", "그램"), ("L", "리터")]
@@ -140,7 +140,7 @@ def ko_numbers(text):
         except ValueError:
             return m_.group(0)
         if frac:                                                        # 3.14 → 삼 점 일사
-            return ko_sino(n) + " 점 " + "".join(_KO_DIG[int(c)] for c in frac[1:])
+            return ko_sino(n) + " 점 " + "".join(_KO_DIG[int(c)] for c in frac[1:]) + (" " if after.startswith("점") else "")
         if n == 1 and after.startswith("만"):                             # 1만 → 만 (일만 X)
             return ""
         if after.startswith("월") and 1 <= n <= 12:                     # 6월 → 유월, 10월 → 시월
@@ -150,9 +150,11 @@ def ko_numbers(text):
             ("시대", "시즌", "개월", "번째", "가지고", "달러", "개국", "배터", "배우", "시청", "장관", "장면", "장소", "장군", "통계", "곡선",
              "자 회", "자회담", "자 대", "자대면", "자간", "자택", "자동"))   # 3자 회담·3자 대면은 '삼자'
         if 1 <= n <= 99 and counter and not (after.startswith("시간") and n >= 20):
-            return ko_native(n)
-        # 100 넘는 세는 말은 한자어로 끝까지: 117개 → 백십칠 개, 341곳 → 삼백사십일 곳
-        # (예전엔 끝자리만 고유어 '백십일곱 개'로 읽어 두 셈법이 섞여 들렸음, 폼페이 찬장 편 2026-11-01)
+            return ko_native(n) + (" " if after.startswith("점") else "")   # 세 점 (붙이면 '세쩜'으로 읽음)
+        if n >= 100 and n % 10 and counter and not after.startswith(("시", "번", "배")):
+            # 100 넘는 세는 말: 백 자리까지는 한자어, 끝 두 자리는 고유어 (사용자 결정 2026-11-04, 히타이트 편)
+            # 131점 → 백서른한 점, 184점 → 백여든네 점, 117개 → 백열일곱 개. 끝자리가 0 이면 한자어(120칸 → 백이십 칸, 사용자 결정 2026-11-01)
+            return ko_sino(n - n % 100) + ko_native(n % 100) + (" " if after.startswith("점") else "")
         if n == 4 and after.startswith("번") and not after.startswith(("번째", "번이나", "번만", "번씩", "번도", "번을", "번 더")):
             return "네"          # '사 번'은 '사번(사원번호)'처럼 들림 → 네 번
         if (n % 10 == 4 and after.startswith("일") and not after.startswith(("일본", "일반", "일단", "일정", "일상", "일종", "일으", "일어", "일자", "일하"))
@@ -166,7 +168,7 @@ def ko_numbers(text):
             return " ".join(_KO_DIG[int(c)] for c in num)
         if len(num) > 1 and num.startswith("0"):                       # 007 같은 번호
             return " ".join(_KO_DIG[int(c)] for c in num)
-        return ko_sino(n)
+        return ko_sino(n) + (" " if after.startswith("점") else "")   # 백 점 (붙이면 '백쩜')
     t = re.sub(r"(\d+)(\.\d+)?", one, t)
     t = t.replace("&", " 앤 ").replace("+", " 플러스 ").replace("×", " 곱하기 ").replace("=", " 는 ")
     t = re.sub(r"[·ㆍ/]", " ", t)
