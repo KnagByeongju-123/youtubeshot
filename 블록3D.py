@@ -84,8 +84,9 @@ class Camera:
         return np.stack([W * SS / 2 + s.focal * x / z, H * SS / 2 - s.focal * y / z], 1), z0
 
 
-def render(boxes, cam, bg=(150, 180, 205), sky=None):
-    """상자 목록 → PIL 그림"""
+def render(boxes, cam, bg=(150, 180, 205), sky=None, tex=0.0):
+    """상자 목록 → PIL 그림
+    tex: 0 이면 면을 한 색으로, >0 이면 면 안을 작은 칸(블록 1칸에 tex 칸)으로 나눠 칸마다 색을 살짝 다르게 (블록을 잘게 나눈 느낌)"""
     img = Image.new("RGB", (int(W * SS), int(H * SS)), tuple(int(c) for c in bg))
     dr = ImageDraw.Draw(img)
     if sky is not None:   # 위→아래 하늘 색
@@ -103,7 +104,8 @@ def render(boxes, cam, bg=(150, 180, 205), sky=None):
             if not cam.ortho and min(depth[i] for i in f) < 0.12:
                 continue                      # 카메라 뒤·바로 앞에 걸친 면은 안 그림 (화면 전체를 덮지 않게)
             p = v[list(f)]
-            n = np.cross(p[1] - p[0], p[3] - p[0])
+            ea, eb = p[1] - p[0], p[3] - p[0]
+            n = np.array([ea[1] * eb[2] - ea[2] * eb[1], ea[2] * eb[0] - ea[0] * eb[2], ea[0] * eb[1] - ea[1] * eb[0]])
             nn = np.linalg.norm(n)
             if nn < 1e-9:
                 continue
@@ -117,11 +119,33 @@ def render(boxes, cam, bg=(150, 180, 205), sky=None):
             else:
                 lum = 0.55 + 0.45 * max(0.0, float(np.dot(n, LIGHT)))
                 col = b.col * lum
-            polys.append((d, [tuple(scr[i]) for i in f], tuple(int(x) for x in np.clip(col, 0, 255)), b.edge))
+            sub = None
+            if tex and not b.emit and b.edge:
+                la, lb = float(np.linalg.norm(p[1] - p[0])), float(np.linalg.norm(p[3] - p[0]))
+                sa = float(np.linalg.norm(scr[f[1]] - scr[f[0]])); sb = float(np.linalg.norm(scr[f[3]] - scr[f[0]]))
+                na = int(max(1, min(round(la * tex), sa / (16 * SS))))   # 화면에서 16px 보다 작은 칸은 합침 (속도)
+                nb = int(max(1, min(round(lb * tex), sb / (16 * SS))))
+                if na * nb > 1:
+                    sub = (na, nb, [scr[i] for i in f], tuple(np.round(c, 1)))
+            polys.append((d, [tuple(scr[i]) for i in f], tuple(int(x) for x in np.clip(col, 0, 255)), b.edge, sub))
     polys.sort(key=lambda t: -t[0])
-    for d, pts, col, edge in polys:
+    for d, pts, col, edge, sub in polys:
         oc = tuple(int(x * 0.72) for x in col) if edge else None
-        dr.polygon(pts, fill=col, outline=oc)
+        if sub is None:
+            dr.polygon(pts, fill=col, outline=oc)
+            continue
+        na, nb, q, key = sub        # 면을 na×nb 칸으로 (네 꼭짓점 사이를 고르게 나눔, 한꺼번에 계산)
+        q0, q1, q2, q3 = [np.asarray(x, float) for x in q]
+        U, V = np.meshgrid(np.linspace(0, 1, na + 1), np.linspace(0, 1, nb + 1), indexing="ij")
+        U, V = U[..., None], V[..., None]
+        G = (q0 * (1 - U) * (1 - V) + q1 * U * (1 - V) + q2 * U * V + q3 * (1 - U) * V).tolist()
+        rng = np.random.default_rng(hash(key) % (2 ** 32))
+        cc = np.clip(np.array(col, float)[None, None, :] * (1 + (rng.random((na, nb, 1)) - 0.5) * 0.14), 0, 255).astype(int).tolist()
+        for i in range(na):
+            Gi, Gi1, ci = G[i], G[i + 1], cc[i]
+            for j in range(nb):
+                dr.polygon([tuple(Gi[j]), tuple(Gi1[j]), tuple(Gi1[j + 1]), tuple(Gi[j + 1])], fill=tuple(ci[j]))
+        dr.polygon(pts, outline=oc)
     return img.resize((W, H), Image.LANCZOS)
 
 

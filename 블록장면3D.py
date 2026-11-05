@@ -457,7 +457,7 @@ def build(scene, cast, t, dur=None):
     info = []
     for m_ in scene.get("extra", {}).get("moai", []):   # 장면에 더 둘 모아이 [x, z, 얼굴 방향, 크기, 누움]
         boxes += moai(m_[0], m_[1], yaw=m_[2], sc=m_[3], lying=len(m_) > 4 and m_[4])
-    if scene.get("set") == "walk":   # 줄 끝에 팀 사람들 (모아이 쪽 반대로 몸을 젖히고 당김)
+    if scene.get("set") in ("walk", "walk_dio"):   # 줄 끝에 팀 사람들 (모아이 쪽 반대로 몸을 젖히고 당김)
         ends, tilt = o["_ends"], o.get("_tilt", 0)
         for side, whos in o.get("teams", {}).items():
             e = ends[side]
@@ -514,8 +514,29 @@ def build(scene, cast, t, dur=None):
             ry = 14 - ((t * 18 + k * 1.37) % 16)
             boxes.append(Box((rx, ry, rz), (0.05, 0.7, 0.05), (200, 214, 228), emit=True, edge=False))
     cm = scene.get("cam", {"pos": [12, 6, 24], "look": [12, 3, 0]})
-    mv = np.array(cm.get("move", [0, 0, 0]), float) * (0.5 - 0.5 * math.cos(math.pi * pr))
-    cam = Camera(np.array(cm["pos"], float) + mv, np.array(cm["look"], float) + mv * cm.get("look_follow", 1.0), fov=cm.get("fov", 40))
+    ease = 0.5 - 0.5 * math.cos(math.pi * pr)
+    mv = np.array(cm.get("move", [0, 0, 0]), float) * ease
+    cpos, clook = np.array(cm.get("pos", [0, 6, 20]), float) + mv, np.array(cm.get("look", cm.get("target", [0, 3, 0])), float) + mv * cm.get("look_follow", 1.0)
+    if cm.get("mode") in ("orbit", "follow"):
+        # orbit: 대상 둘레를 a0→a1 도 돌며 촬영 / follow: 걷는 모아이(o["_mx"])를 따라가며 돌기
+        tgt = np.array(cm.get("target", clook), float)
+        if cm["mode"] == "follow" and "_mx" in o:
+            tgt = np.array([o["_mx"], tgt[1], o.get("mz", 0)], float)
+        ang = math.radians(cm.get("a0", 0) + (cm.get("a1", 40) - cm.get("a0", 0)) * ease)
+        rad = cm.get("r0", 20) + (cm.get("r1", cm.get("r0", 20)) - cm.get("r0", 20)) * ease
+        hgt = cm.get("h0", 6) + (cm.get("h1", cm.get("h0", 6)) - cm.get("h0", 6)) * ease   # 크레인: 높이가 바뀜
+        cpos = tgt + np.array([rad * math.sin(ang), hgt - tgt[1], rad * math.cos(ang)])
+        clook = tgt
+    if cm.get("hand"):   # 손에 든 카메라처럼 아주 약하게 흔들림
+        a_ = cm["hand"]
+        cpos = cpos + a_ * np.array([math.sin(t * 1.3), 0.6 * math.sin(t * 1.7 + 1), 0.5 * math.sin(t * 0.9 + 2)])
+    if cm.get("shake") and "_tilt" in o and o.get("walk", True):   # 모아이가 한 걸음 디딜 때마다 쿵
+        per = o.get("period", 2.4) / 2
+        dt_ = t % per
+        sh_ = cm["shake"] * math.exp(-dt_ * 7) * math.sin(dt_ * 45)
+        cpos = cpos + np.array([0, sh_, 0])
+        clook = clook + np.array([0, sh_ * 0.6, 0])
+    cam = Camera(cpos, clook, fov=cm.get("fov", 40))
     return {"boxes": boxes, "cam": cam, "mood": mood, "o": o, "fx": fx, "pr": pr, "chars": info}
 
 
@@ -524,13 +545,16 @@ def frame(scene, cast, t, dur=None):
     B_ = build(scene, cast, t, dur)
     boxes, cam, mood, o, fx, pr = B_["boxes"], B_["cam"], B_["mood"], B_["o"], B_["fx"], B_["pr"]
     md = MOOD.get(mood)
+    tex = scene.get("tex", 0.0)
     if md:
-        img = E.render(boxes, cam, sky=(md[0], md[1]))
+        img = E.render(boxes, cam, sky=(md[0], md[1]), tex=tex)
     elif mood == "plain":
         a, b = o.get("c1", (43, 58, 82)), o.get("c2", (122, 143, 168))
-        img = E.render(boxes, cam, sky=(b, a))
+        img = E.render(boxes, cam, sky=(b, a), tex=tex)
     else:
-        img = E.render(boxes, cam, bg=(40, 36, 34))
+        img = E.render(boxes, cam, bg=(40, 36, 34), tex=tex)
+    if scene.get("style") == "diorama":
+        img = diorama(img, scene.get("focus", 0.55))
     tint = md[4] if md else None
     if o.get("night"):
         tint = (20, 30, 80, 0.35)
@@ -547,6 +571,23 @@ def frame(scene, cast, t, dur=None):
     return img
 
 
+def diorama(img, focus=0.55):
+    """작은 모형 세상처럼: 위·아래를 살짝 흐리게(초점은 focus 높이의 가로 띠), 색을 조금 더 또렷하게, 가장자리를 살짝 어둡게"""
+    from PIL import ImageEnhance, ImageFilter
+    blur = img.filter(ImageFilter.GaussianBlur(4))
+    h = img.height
+    ys = np.arange(h) / h
+    m = np.clip((np.abs(ys - focus) - 0.18) / 0.3, 0, 1) ** 1.3
+    mask = Image.fromarray((np.repeat(m[:, None], img.width, 1) * 255).astype(np.uint8))
+    out = Image.composite(blur, img, mask)
+    out = ImageEnhance.Color(out).enhance(1.18)
+    out = ImageEnhance.Contrast(out).enhance(1.05)
+    xs = (np.arange(img.width) / img.width - 0.5) * 2
+    vig = 1 - 0.18 * np.clip(((ys - 0.5) * 2)[:, None] ** 2 + xs[None, :] ** 2 - 0.4, 0, 1)
+    arr = np.asarray(out).astype(np.float32) * vig[..., None]
+    return Image.fromarray(np.clip(arr, 0, 255).astype(np.uint8))
+
+
 def load(scene_path):
     scene = json.load(open(scene_path, encoding="utf-8"))
     cp = scene["cast"] if os.path.isabs(scene["cast"]) else os.path.join(os.path.dirname(scene_path), scene["cast"])
@@ -554,11 +595,6 @@ def load(scene_path):
     return scene, cast
 
 
-if __name__ == "__main__":
-    a = sys.argv[1:]
-    sc, cast = load(a[0])
-    t = float(a[a.index("--t") + 1]) if "--t" in a else 1.0
-    frame(sc, cast, t, sc.get("dur", 8)).save(a[1])
 
 
 # ═════════════════════ 모아이 편 (온 가족, 2026-11-05) ═════════════════════
@@ -744,8 +780,50 @@ def set_walk(t, p, o):
     base_set = o.get("base", "field")
     b, mood = (set_field if base_set == "field" else set_ahu)(t, p, o)
     mb, ends, mx, tilt = walking_moai(t, p, o)
-    o["_ends"], o["_tilt"] = ends, tilt
+    o["_ends"], o["_tilt"], o["_mx"] = ends, tilt, mx
     return b + mb, mood
 
 
 SETS.update({"rapanui": set_rapanui, "ahu": set_ahu, "field": set_field, "quarry": set_quarry, "walk": set_walk})
+
+
+
+def diorama_base(key, x0, x1, z0, z1, depth=5, water=None, road=False):
+    """디오라마 땅 조각: 네모나게 자른 땅 (위 풀, 옆으로 흙·돌 층이 보임). water=(x0,x1,z0,z1) 은 그 안을 물로"""
+    def build():
+        vx = Voxels()
+        for x in range(x0, x1):
+            for z in range(z0, z1):
+                wet = water and water[0] <= x < water[1] and water[2] <= z < water[3]
+                top = -1 if wet else 0
+                for y in range(-depth, top):
+                    col = ("#6f9a4e" if y == top - 1 else "#8a6141" if y >= -2 else "#6f6a62")
+                    if wet:
+                        col = "#c9b98f" if y == top - 1 else "#8a6141" if y >= -2 else "#6f6a62"   # 물 아래 모래
+                    vx.put(x, y, z, col, j=12)
+                if road and -1 <= z < 1 and not wet:
+                    vx.v.pop((x, -1, z), None)
+                    vx.put(x, -2, z, "#b8a888", j=8)
+        return vx.boxes()
+    b = list(_static(("diorama", key), build))
+    if water:
+        b.append(Box((water[0], -1.35, water[2]), (water[1] - water[0], 0.3, water[3] - water[2]), (70, 140, 190), emit=False, edge=False))
+    return b
+
+
+def set_walk_dio(t, p, o):
+    """디오라마풍 걷는 모아이: 네모난 땅 조각 위 (한쪽 끝은 바닷물)"""
+    b = diorama_base("walk", -30, 22, -16, 16, water=(-30, 22, -16, -11), road=o.get("road", False))
+    mb, ends, mx, tilt = walking_moai(t, p, o)
+    o["_ends"], o["_tilt"], o["_mx"] = ends, tilt, mx
+    return b + mb, o.get("mood", "diorama")
+
+
+SETS.update({"walk_dio": set_walk_dio})
+MOOD["diorama"] = ((206, 222, 232), (246, 238, 222), "#4f86a8", 1.0, None)   # 밝은 작업대 위 같은 하늘색 → 크림색 배경
+
+if __name__ == "__main__":
+    a = sys.argv[1:]
+    sc, cast = load(a[0])
+    t = float(a[a.index("--t") + 1]) if "--t" in a else 1.0
+    frame(sc, cast, t, sc.get("dur", 8)).save(a[1])
