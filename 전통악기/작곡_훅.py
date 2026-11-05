@@ -1,0 +1,141 @@
+"""우아하고 귀에 맴도는 '뜯는 현' 가락 — 나레이션 배경음용 약 60초 (사용자 요청 2026-11-05: 뜯음 풍 + 우아한·중독성 있는 멜로디)
+무작위가 아니라 손으로 지은 '훅(2~4마디 머리 가락)'을 A–A'–B–A' 형식으로: A 를 두 번 들려 귀에 남기고, B 에서 한 번 높이 올랐다가 A' 로 돌아와 으뜸음에 내려앉음.
+우아함: 긴 음 앞 꾸밈음(윗음에서 살짝 짚고 내려옴)·농현(줄 흔들기)·부드러운 펼친 화음, B 에서는 한 옥타브 아래 겹침.
+가락은 오음계 '칸'(0=으뜸음, 1·2·3·4, 5=한 옥타브 위 …)으로 적어서 어느 권역 악기·음계로도 연주 가능.
+사용: python -X utf8 전통악기/작곡_훅.py <결과 폴더> [훅이름[:권역:음계] ...]   예) 바람개비:한국:평조   (안 쓰면 훅마다 기본 악기)"""
+import os
+import subprocess
+import sys
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
+import numpy as np  # noqa: E402
+import 공통 as K  # noqa: E402
+from 작곡_배경음 import STYLE, _modes  # noqa: E402
+from 작곡_가락 import legato, BOW, PLUCK_NAME  # noqa: E402
+
+SR = K.SR
+
+# 훅: (bpm, 기본 권역, 기본 음계, 느낌, A, A', B) — 마디는 '|', 음은 '칸:박' (R = 쉼)
+HOOKS = {
+    "달빛물결": (70, "중국", "궁조", "잔잔한 물결처럼 오르내리다 높은 음에서 한 번 쉼",
+             "2:1 3:0.5 2:0.5 1:1 0:1 | 1:1.5 2:0.5 4:2 | 2:1 3:0.5 2:0.5 1:1 0:1 | 1:1 -1:1 0:2",
+             "2:1 3:0.5 2:0.5 1:1 0:1 | 1:1.5 2:0.5 4:1 5:1 | 4:1 3:0.5 2:0.5 1:1 2:1 | 1:1 -1:0.5 1:0.5 0:2",
+             "5:1.5 4:0.5 5:1 6:1 | 4:2 3:1 2:1 | 3:1.5 2:0.5 3:1 4:1 | 2:3 R:1"),
+    "꽃잎걸음": (72, "한국", "평조", "점음표로 사뿐사뿐 걷는 가락, 밝고 단정함",
+             "0:0.75 1:0.25 2:1 4:1 2:1 | 3:0.75 2:0.25 1:1 0:2 | 0:0.75 1:0.25 2:1 4:1 5:1 | 4:0.75 3:0.25 2:1 4:2",
+             "0:0.75 1:0.25 2:1 4:1 2:1 | 3:0.75 2:0.25 1:1 0:2 | 5:0.75 4:0.25 3:1 2:1 1:1 | 1:0.75 2:0.25 0:3",
+             "4:1 5:1 6:1.5 5:0.5 | 4:1 2:1 3:2 | 2:1 3:1 4:1.5 2:0.5 | 1:3 R:1"),
+    "산메아리": (68, "일본", "요음계", "높은 부름에 낮은 대답 — 메아리처럼 주고받음",
+             "4:1 4:0.5 5:0.5 4:2 | 2:1 2:0.5 3:0.5 2:2 | 1:1 2:1 4:1 2:1 | 1:2 0:2",
+             "4:1 4:0.5 5:0.5 4:2 | 6:1 5:0.5 4:0.5 5:2 | 4:1 2:1 1:1 2:1 | 0:4",
+             "5:1 6:1 7:1 6:1 | 5:2 4:2 | 3:1 4:1 5:1 4:1 | 2:2 1:2"),
+    "고요한연못": (66, "중세유럽", "믹솔리디안", "긴 음이 많은 아치 모양, 가장 우아하고 느긋함",
+              "0:1 2:1 4:2 | 5:1 4:1 2:2 | 3:1 2:1 1:1 2:1 | 4:4",
+              "0:1 2:1 4:2 | 5:1 6:1 5:2 | 4:1 2:1 1:1 -1:1 | 0:4",
+              "7:2 6:1 5:1 | 6:2 5:1 4:1 | 5:1 4:1 2:1 3:1 | 4:3 R:1"),
+    "바람개비": (70, "중국", "궁조", "세 음 머리 가락이 빙글빙글 되풀이 — 가장 중독성 있음",
+             "2:0.5 4:0.5 5:1 4:0.5 2:0.5 4:1 | 2:0.5 1:0.5 0:1 1:2 | 2:0.5 4:0.5 5:1 4:0.5 2:0.5 4:1 | 5:0.5 6:0.5 5:1 4:2",
+             "2:0.5 4:0.5 5:1 4:0.5 2:0.5 4:1 | 2:0.5 1:0.5 0:1 1:2 | 2:0.5 4:0.5 5:1 6:0.5 5:0.5 4:1 | 2:0.5 1:0.5 0:3",
+             "7:1 6:0.5 5:0.5 6:2 | 5:1 4:0.5 2:0.5 4:2 | 5:1 4:0.5 5:0.5 6:1 5:1 | 4:3 R:1"),
+}
+
+
+def pent(region, mode):
+    """권역 음계에서 오음계 다섯 음(으뜸음 기준 반음 수) 뽑기 — 일곱 음 음계는 0·2·4·7·9 에 가장 가까운 음"""
+    pen, root, _ = _modes(region)[mode]
+    if len(pen) <= 5:
+        return list(pen), root
+    return [min(pen, key=lambda p: abs(p - q)) for q in (0, 2, 4, 7, 9)], root
+
+
+def parse(text, five, tonic):
+    bars = []
+    for b in text.split("|"):
+        notes = []
+        for tok in b.split():
+            d, _, beat = tok.partition(":")
+            if d == "R":
+                notes.append((None, float(beat)))
+                continue
+            d = int(d)
+            notes.append((tonic + 12 * (d // 5) + five[d % 5], float(beat)))
+        bars.append(notes)
+    return bars
+
+
+def chord_root(bar, tonic):
+    """마디에서 가장 긴 음을 품는 화음 뿌리 (I · IV · V · vi)"""
+    m = max((x for x in bar if x[0] is not None), key=lambda x: x[1], default=(tonic, 1))[0]
+    pc = (m - tonic) % 12
+    for r, tones in ((0, {0, 4, 7, 2}), (7, {7, 11, 2}), (5, {5, 9, 0}), (9, {9, 0, 4})):
+        if pc in tones:
+            return tonic + r
+    return tonic
+
+
+def render(name, region=None, mode=None, seed=3):
+    bpm, rg0, md0, _, A, A2, B = HOOKS[name]
+    region, mode = region or rg0, mode or md0
+    five, root = pent(region, mode)
+    tonic = root + 12
+    rng = np.random.default_rng(seed)
+    beat = 60.0 / bpm
+    form = [("A", parse(A, five, tonic)), ("A'", parse(A2, five, tonic)), ("B", parse(B, five, tonic)), ("A''", parse(A2, five, tonic))]
+    total = sum(sum(b for _, b in bar) for _, bars in form for bar in bars) * beat
+    sec = total + 4.5
+    st = STYLE[region]
+    pluck = st["bass"] if region == "몽골" else st["lead"]
+    band, vr, vb, nas, _ = BOW[region]
+    buf = np.zeros((int((sec + 4) * SR), 2), np.float32)
+    t = 0.8
+    scale_all = sorted({tonic + 12 * o + p for o in (-2, -1, 0, 1, 2) for p in five})
+    for sname, bars in form:
+        for bar in bars:
+            bt0 = t
+            for m, b in bar:
+                d = b * beat
+                if m is not None:
+                    long_ = b >= 2
+                    if long_:                                   # 꾸밈음: 윗음을 살짝 짚고 내려옴
+                        up = min([s for s in scale_all if s > m] or [m])
+                        K.place(buf, pluck(K.hz(up), 0.6, rng, False), t - 0.09, 0.16, pan=0.12)
+                    K.place(buf, pluck(K.hz(m), max(1.6, d + 1.0), rng, long_), t, 0.42 if not long_ else 0.46, pan=0.12)
+                    if sname == "B":                            # B: 한 옥타브 아래 겹침 → 풍성하게
+                        K.place(buf, pluck(K.hz(m - 12), max(1.4, d + 0.8), rng, False), t + 0.012, 0.16, pan=-0.1)
+                    if sname == "A''" and long_:               # 마지막 A: 활 현이 긴 음을 아주 작게 받침
+                        K.place(buf, legato([(m - 12, d + 0.6)], band, vr, vb, nas), t + 0.05, 0.09, pan=-0.2)
+                t += d
+            r = chord_root(bar, tonic) - 12                     # 펼친 화음: 뿌리 – 5도 – 옥타브 – 5도 (8분음표, 작게)
+            f5 = min(scale_all, key=lambda s: abs(s - (r + 7)))
+            pat = [r - 12, f5 - 12, r, f5 - 12, r - 12, f5 - 12, r + 0, f5]
+            nb = int(round((t - bt0) / beat))
+            for q in range(nb * 2):
+                K.place(buf, pluck(K.hz(pat[q % len(pat)]), beat * 2.0, rng, False), bt0 + q * beat * 0.5, 0.19 if q == 0 else 0.10, pan=-0.2)
+    out = K.reverb(buf, rng, wet=0.36)[: int(sec * SR)]
+    f = int(3.5 * SR)
+    out[-f:] *= np.linspace(1, 0, f)[:, None] ** 1.5
+    out[: int(0.5 * SR)] *= np.linspace(0, 1, int(0.5 * SR))[:, None]
+    return out / (np.abs(out).max() + 1e-6) * 0.9, region, mode
+
+
+def main(a):
+    if not a:
+        print(__doc__)
+        return 2
+    out_dir = a[0]
+    picks = [x.split(":") for x in a[1:]] or [[k] for k in HOOKS]
+    os.makedirs(out_dir, exist_ok=True)
+    for i, p in enumerate(picks, 1):
+        name = p[0]
+        x, region, mode = render(name, p[1] if len(p) > 1 else None, p[2] if len(p) > 2 else None)
+        wp = os.path.join(out_dir, f"{i:02d}_{name}_{PLUCK_NAME[region]}_{mode}.wav")
+        K.write_wav(wp, x)
+        subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", wp, "-b:a", "192k", wp[:-4] + ".mp3"], check=True)
+        os.remove(wp)
+        print("OK", os.path.basename(wp[:-4] + ".mp3"), f"{len(x) / SR:.0f}초", "·", HOOKS[name][3])
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))
