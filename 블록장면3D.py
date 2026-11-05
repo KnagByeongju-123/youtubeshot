@@ -411,13 +411,15 @@ def pose3d(acts, t, seed):
     return p
 
 
-def frame(scene, cast, t, dur=None):
-    """장면의 t 초 그림 (PIL, 1920×1080)"""
+def build(scene, cast, t, dur=None):
+    """장면의 t 초 모습을 상자 목록·카메라로 (검수 프로그램 입체애니_검수.py 도 씀)
+    돌려줌: {"boxes", "cam", "mood", "o", "fx", "pr", "chars": [{"who", "pos": (x, y, z), "face", "acts", "i0", "i1", "talk"}]}"""
     dur = dur or scene.get("dur", 8.0)
     pr = min(1.0, max(0.0, t / max(0.1, dur)))
     o = scene.get("opt", {})
     boxes, mood = SETS[scene.get("set", "plain")](t, pr, o)
     boxes = list(boxes)
+    info = []
     for i, ch in enumerate(scene.get("chars", [])):
         c = {**cast[ch["who"]], **ch.get("over", {})}
         ax, az = ch.get("at", [0, 0])
@@ -435,12 +437,16 @@ def frame(scene, cast, t, dur=None):
             ch = {k_: v_ for k_, v_ in ch.items() if k_ != "y_to"}
         if ch.get("y_to") is not None:
             y = y + (ch["y_to"] - y) * min(1.0, pr * ch.get("speed", 1.0))
+        if scene.get("set") == "lantern" and o.get("land") and ax >= 8:   # 창밖 비탈: 그 자리 땅 높이에 (묻히거나 뜨지 않게)
+            y = -10 - (8 + int((ax - 8) // 4) * 4 - 8) * 0.18
         ps = pose3d(acts, t, i * 1.7 + 0.3)
         if "stir" in acts:
             ps["ladle"] = True
         if ch.get("hold"):
             ps["hold"] = ch["hold"]
+        i0 = len(boxes)
         boxes += person(c, (ax, y, az), face=face, pose=ps, scale=ch.get("scale", 1.0))
+        info.append({"who": ch["who"], "pos": (ax, y, az), "face": face, "acts": acts, "i0": i0, "i1": len(boxes), "scale": ch.get("scale", 1.0), "exit": ch.get("exit", False)})
     fx = scene.get("fx", [])
     if "rain" in fx:
         cp = scene["cam"]["pos"]
@@ -452,6 +458,13 @@ def frame(scene, cast, t, dur=None):
     cm = scene.get("cam", {"pos": [12, 6, 24], "look": [12, 3, 0]})
     mv = np.array(cm.get("move", [0, 0, 0]), float) * (0.5 - 0.5 * math.cos(math.pi * pr))
     cam = Camera(np.array(cm["pos"], float) + mv, np.array(cm["look"], float) + mv * cm.get("look_follow", 1.0), fov=cm.get("fov", 40))
+    return {"boxes": boxes, "cam": cam, "mood": mood, "o": o, "fx": fx, "pr": pr, "chars": info}
+
+
+def frame(scene, cast, t, dur=None):
+    """장면의 t 초 그림 (PIL, 1920×1080)"""
+    B_ = build(scene, cast, t, dur)
+    boxes, cam, mood, o, fx, pr = B_["boxes"], B_["cam"], B_["mood"], B_["o"], B_["fx"], B_["pr"]
     md = MOOD.get(mood)
     if md:
         img = E.render(boxes, cam, sky=(md[0], md[1]))

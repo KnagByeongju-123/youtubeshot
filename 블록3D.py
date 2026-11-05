@@ -330,10 +330,11 @@ def shade_hex(h, f):
 # ───────────────────────── 부엌 (1900년 등대 숙소) ─────────────────────────
 def kitchen(t):
     vx = Voxels()
-    X, Z, HH = 26, 14, 9
+    X, Z, HH = 26, 26, 9                                          # 방은 카메라 뒤(z 24)까지 (방 밖 빈 곳이 보이지 않게)
     vx.fill(0, X, -1, 0, 0, Z, "#8a6141", 14)                    # 나무 바닥
     vx.fill(0, X, 0, HH, -1, 0, "#c9bb98", 16)                   # 뒤 돌벽
     vx.fill(-1, 0, 0, HH, -1, Z, "#bfb08c", 16)                  # 왼쪽 벽
+    vx.fill(X, X + 1, 0, HH, -1, Z, "#bfb08c", 16)               # 오른쪽 벽
     for x in range(10, 16):                                       # 창문 (구멍 + 창틀)
         for y in range(3, 7):
             vx.v.pop((x, y, -1), None)
@@ -343,7 +344,7 @@ def kitchen(t):
     for y in range(2, 8):
         vx.put(9, y, -1, "#6b4a30", j=6)
         vx.put(16, y, -1, "#6b4a30", j=6)
-    vx.fill(-1, X, HH, HH + 1, -1, Z, "#5a4030", 10)            # 나무 천장
+    vx.fill(-1, X + 1, HH, HH + 1, -1, Z, "#5a4030", 10)        # 나무 천장
     for z in range(1, Z, 4):                                      # 천장 들보
         vx.fill(0, X, HH - 1, HH, z, z + 1, "#4a3424", 6)
     # 무쇠 난로 + 굴뚝
