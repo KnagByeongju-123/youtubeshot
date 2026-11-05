@@ -83,7 +83,13 @@ def main(a):
             app.apply_genre_profile(genre, quiet=True, sync=True)
         app.update()
     bgm = str((c.get("settings") or {}).get("bgm_style") or "").strip() or m.SOUND_BY_TOPIC.get(genre, "잔잔한 패드")   # 프로젝트에 정한 배경음 우선
-    app.vars["bgm_mode"].set("자동생성")
+    ps_ = c.get("settings") or {}
+    if ps_.get("bgm_mode") == "파일" and ps_.get("bgm_path") and os.path.exists(ps_["bgm_path"]):   # 실제 음악 곡(케빈 맥클라우드 등, CLAUDE.md 4장) — 합성음으로 바꾸지 않음
+        app.vars["bgm_mode"].set("파일")
+        app.vars["bgm_path"].set(ps_["bgm_path"])
+        bgm = "파일 " + os.path.basename(ps_["bgm_path"])
+    else:
+        app.vars["bgm_mode"].set("자동생성")
     try:
         bgm_vol = float(cfg.get("배경음_크기", 0.03))
     except (TypeError, ValueError):
@@ -113,7 +119,7 @@ def main(a):
     title, story = app.title_var.get().strip() or "제목 없음", app.get_story()
     if "--형식고정" not in a:    # 규칙: 영상마다 강조색·자막 효과·배경음을 다르게 (유튜브 '대량 생산 콘텐츠' 정책, 유튜브_정책.py)
         ch_ = m._YP.vary_settings(s, title, log)
-        if not bgm or bgm.startswith("자동"):
+        if (not bgm or bgm.startswith("자동")) and app.vars["bgm_mode"].get() != "파일":
             bgm = ch_["bgm_style"]
     out_root = os.path.join(s["out_dir"], "장문")
     suf = ("_" + a[a.index("--suffix") + 1]) if "--suffix" in a and a.index("--suffix") + 1 < len(a) else ""
