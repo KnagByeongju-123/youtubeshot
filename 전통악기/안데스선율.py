@@ -16,8 +16,8 @@ import 공통 as K  # noqa: E402
 
 SR = K.SR
 PENTA = [0, 3, 5, 7, 10]      # 라 단조 오음계 (라 도 레 미 솔)
-ROOT = 69                     # A4
-E8 = 60 / 60 / 2              # 와이노 2/4: 4분음표 60 → 8분음표 길이(초). 처음 84 → 주제가 무거워 느리게 (사용자 결정 2026-11-05)
+ROOT = 57                     # A3 — 한 옥타브 낮춰 어둡게 (사용자 결정 2026-11-05: 우울한 음정·박자로)
+E8 = 60 / 48 / 2              # 2/4: 4분음표 48 → 8분음표 길이(초). 84 → 60 → 48 (사용자 결정 2026-11-05: 주제가 무거워 느리고 우울하게)
 
 # 가락: (음 자리, 8분음표 개수) — 마디마다 4칸(2/4). 자리 0 = 라, 5 = 한 옥타브 위 라
 A1 = [(4, 1), (3, 1), (2, 2), (3, 1), (2, 1), (1, 2), (2, 1), (1, 1), (0, 1), (1, 1), (0, 4),
@@ -27,7 +27,7 @@ A2 = [(4, 1), (3, 1), (2, 2), (3, 1), (2, 1), (1, 2), (2, 1), (1, 1), (0, 1), (1
 B1 = [(5, 2), (6, 2), (5, 1), (4, 1), (3, 2), (4, 1), (3, 1), (2, 2), (3, 4),
       (2, 2), (3, 2), (4, 1), (3, 1), (2, 2), (1, 1), (2, 1), (1, 1), (0, 1), (1, 4)]
 FORM = [A1, A2, B1, A1]
-CHORD = {0: [0, 7, 12, 15], 1: [3, 10, 15, 19], 2: [-4, 3, 8, 12], 4: [-2, 5, 10, 14]}   # 마디 화음(라 단조·도 장조·파 장조·솔 장조) 반음
+CHORD = {0: [0, 7, 12, 15], 1: [5, 12, 17, 20], 2: [-4, 3, 8, 12], 4: [-5, 2, 7, 10]}   # 마디 화음(라 단조·레 단조·파 장조·미 단조) 반음 — 밝은 장조를 줄여 우울하게
 
 
 def deg_midi(d):
@@ -36,13 +36,13 @@ def deg_midi(d):
 
 
 def quena(f, d, rng, accent=False):
-    return K.flute(f, d, breath=0.32, vib=0.01 if d > 0.5 else 0.004, vib_rate=5.5, slide=0.025 if accent else 0.0, rng=rng)
+    return K.flute(f, d, breath=0.38, vib=0.014 if d > 0.5 else 0.005, vib_rate=4.5, slide=0.03 if accent else 0.0, rng=rng)
 
 
 def charango(buf, t, chord, rng, gain=0.09):
-    """차랑고 긁기: 화음 네 줄을 빠르게 훑어 내림"""
+    """차랑고: 화음 네 줄을 한 줄씩 천천히 퉁김 (빠르게 긁으면 밝게 들려 우울한 분위기와 안 맞음)"""
     for i, st in enumerate(chord):
-        K.place(buf, K.pluck(K.hz(ROOT - 12 + st), 0.7, damp=0.99, bright=0.7, rng=rng), t + i * 0.012, gain, pan=0.3)
+        K.place(buf, K.pluck(K.hz(ROOT + st), 1.4, damp=0.993, bright=0.4, rng=rng), t + i * E8 * 0.5, gain, pan=0.3)
 
 
 def bars_of(mel):
@@ -54,11 +54,9 @@ def accompany(buf, t0, bars, rng, chords, gain=1.0):
     for b in range(bars):
         tb = t0 + b * 4 * E8
         ch = CHORD[chords[b % len(chords)]]
-        K.place(buf, K.frame_drum(0.6, True, rng), tb, 0.16 * gain, pan=-0.2)
-        K.place(buf, K.frame_drum(0.4, True, rng), tb + 3 * E8, 0.09 * gain, pan=-0.2)
-        K.place(buf, K.frame_drum(0.2, False, rng), tb + 2 * E8, 0.05 * gain, pan=-0.1)
-        charango(buf, tb + 1 * E8, ch, rng, 0.08 * gain)
-        charango(buf, tb + 3 * E8, ch, rng, 0.06 * gain)
+        if b % 2 == 0:   # 봄보는 두 마디에 한 번, 작게 (심장 소리처럼 낮게)
+            K.place(buf, K.frame_drum(0.8, True, rng), tb, 0.11 * gain, pan=-0.2)
+        charango(buf, tb, ch, rng, 0.07 * gain)
 
 
 def phrase(buf, t, mel, rng, second):
@@ -69,12 +67,12 @@ def phrase(buf, t, mel, rng, second):
         if second:
             K.place(buf, quena(K.hz(deg_midi(deg - 1)), d + 0.08, rng), t, 0.16, pan=-0.25)   # 두 번째 케나: 한 자리 아래
         t += d
-    accompany(buf, t0, bars_of(mel), rng, [0, 0, 1, 0, 4, 2, 4, 0])
+    accompany(buf, t0, bars_of(mel), rng, [0, 0, 1, 0, 2, 4, 1, 0])
     return t
 
 
 def rest_bars(buf, t, rng, bars=4):
-    accompany(buf, t, bars, rng, [0, 4, 2, 0], gain=0.8)
+    accompany(buf, t, bars, rng, [0, 1, 2, 0], gain=0.8)
     return t + bars * 4 * E8
 
 
