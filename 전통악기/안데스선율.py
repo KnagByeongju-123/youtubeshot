@@ -1,4 +1,4 @@
-"""안데스 선율 배경음 — 케나(갈대 피리)가 가락을 불고, 차랑고(작은 현악기)가 화음을 긁고, 봄보(큰북)가 와이노 장단(2/4)
+"""안데스 선율 배경음 — 현악 중심(사용자 결정 2026-11-05): 안데스 하프·기타처럼 뜯는 현이 가락, 둘째 바퀴부터 바이올린이 함께, 차랑고가 한 줄씩 화음, 봄보는 아주 작게. 처음엔 케나(피리) 가락이었음
 사용자 결정 2026-11-05 (잉카 미라 편): 배경음은 선율이 있는 연주로 (CLAUDE.md 4장) → 안데스·잉카 편 가락 배경음.
 라 단조 오음계(라 도 레 미 솔)로 새로 지은 가락 — 민요·유명 곡을 옮긴 것이 아님. 아이들이 산을 오르는 차분하고 애잔한 느낌.
 악기 소리는 공통.py 로 컴퓨터가 직접 합성 → 녹음 음원·편곡을 쓰지 않아 저작권 걱정 없음
@@ -17,7 +17,7 @@ import 공통 as K  # noqa: E402
 SR = K.SR
 PENTA = [0, 3, 5, 7, 10]      # 라 단조 오음계 (라 도 레 미 솔)
 ROOT = 57                     # A3 — 한 옥타브 낮춰 어둡게 (사용자 결정 2026-11-05: 우울한 음정·박자로)
-E8 = 60 / 48 / 2              # 2/4: 4분음표 48 → 8분음표 길이(초). 84 → 60 → 48 (사용자 결정 2026-11-05: 주제가 무거워 느리고 우울하게)
+E8 = 60 / 40 / 2              # 2/4: 4분음표 40 → 8분음표 길이(초). 84 → 60 → 48 → 40 (사용자 결정 2026-11-05: 우울하게, 현악기로, 더 느리게)
 
 # 가락: (음 자리, 8분음표 개수) — 마디마다 4칸(2/4). 자리 0 = 라, 5 = 한 옥타브 위 라
 A1 = [(4, 1), (3, 1), (2, 2), (3, 1), (2, 1), (1, 2), (2, 1), (1, 1), (0, 1), (1, 1), (0, 4),
@@ -36,7 +36,13 @@ def deg_midi(d):
 
 
 def quena(f, d, rng, accent=False):
-    return K.flute(f, d, breath=0.38, vib=0.014 if d > 0.5 else 0.005, vib_rate=4.5, slide=0.03 if accent else 0.0, rng=rng)
+    """가락 악기: 안데스 하프·기타처럼 뜯는 현 (사용자 결정 2026-11-05: 잉카는 현악기로). 긴 음은 줄을 살짝 흔듦"""
+    return K.pluck(f, max(1.6, d + 1.0), damp=0.996, bright=0.4, vib=0.008 if d > 0.6 else 0.0, bend=0.012 if accent else 0.0, rng=rng)
+
+
+def violin(f, d):
+    """되풀이 때 가락을 길게 받쳐 주는 바이올린(안데스 음악에서도 씀), 느리고 애잔하게"""
+    return K.bowed(f, d, band=(400, 3000), vib_rate=4.8, vib=0.012, attack=0.6, nasal=0.6)
 
 
 def charango(buf, t, chord, rng, gain=0.09):
@@ -54,8 +60,8 @@ def accompany(buf, t0, bars, rng, chords, gain=1.0):
     for b in range(bars):
         tb = t0 + b * 4 * E8
         ch = CHORD[chords[b % len(chords)]]
-        if b % 2 == 0:   # 봄보는 두 마디에 한 번, 작게 (심장 소리처럼 낮게)
-            K.place(buf, K.frame_drum(0.8, True, rng), tb, 0.11 * gain, pan=-0.2)
+        if b % 4 == 0:   # 봄보는 네 마디에 한 번, 아주 작게 (현악 중심)
+            K.place(buf, K.frame_drum(0.8, True, rng), tb, 0.07 * gain, pan=-0.2)
         charango(buf, tb, ch, rng, 0.07 * gain)
 
 
@@ -63,9 +69,12 @@ def phrase(buf, t, mel, rng, second):
     t0 = t
     for deg, k in mel:
         d = k * E8
-        K.place(buf, quena(K.hz(deg_midi(deg)), d + 0.08, rng, accent=k >= 2), t, 0.34, pan=0.1)
+        f = K.hz(deg_midi(deg))
+        K.place(buf, quena(f, d, rng, accent=k >= 2), t, 0.40, pan=0.1)
+        if k >= 2:      # 긴 음은 같은 음을 한 번 더 살며시 뜯음(트레몰로처럼)
+            K.place(buf, quena(f, d, rng), t + d * 0.5, 0.16, pan=0.1)
         if second:
-            K.place(buf, quena(K.hz(deg_midi(deg - 1)), d + 0.08, rng), t, 0.16, pan=-0.25)   # 두 번째 케나: 한 자리 아래
+            K.place(buf, violin(f, d + 0.3), t, 0.12, pan=-0.25)   # 둘째 바퀴: 바이올린이 가락을 함께
         t += d
     accompany(buf, t0, bars_of(mel), rng, [0, 0, 1, 0, 2, 4, 1, 0])
     return t
