@@ -1,0 +1,41 @@
+{
+ "engine": "3d",
+ "cast": "../등장인물_카툰.json",
+ "set": "rocks",
+ "opt": {
+  "mood": "day",
+  "island": true
+ },
+ "cam": {
+  "pos": [
+   3,
+   6.5,
+   17
+  ],
+  "look": [
+   8,
+   5,
+   -30
+  ],
+  "fov": 50,
+  "move": [
+   1,
+   0,
+   -2
+  ]
+ },
+ "chars": [
+  {
+   "who": "안내자 하람 (14)",
+   "at": [
+    5,
+    5.5
+   ],
+   "face": 180,
+   "act": [
+    "blink",
+    "breath"
+   ]
+  }
+ ]
+}

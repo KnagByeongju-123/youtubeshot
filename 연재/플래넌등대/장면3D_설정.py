@@ -54,6 +54,22 @@ S = {
  "c34": {"set": "wave", "cam": {"pos": [-10, 12, 44], "look": [2, 9, 0], "fov": 52}},
  "c35": {"set": "wave", "opt": {"silhouette": True}, "cam": {"pos": [19, 19, 9], "look": [5, 12.5, -0.5], "fov": 50, "move": [-2, 0, -1]}},
  "c36": {"set": "landing", "opt": {"mood": "storm", "bent": True, "wet": True}, "cam": {"pos": [-6, 9, 22], "look": [4, 3, 2], "fov": 48, "move": [2, -1, -2]}},
+ # ── 3구간 (4분~끝) ──
+ "c37": {"set": "lantern", "opt": {"mood": "storm", "light": "flicker"}, "cam": {"pos": [3.5, 3.6, 10], "look": [0.5, 2.0, 0], "fov": 48, "move": [-0.5, 0, -1]},
+         "chars": [ch(H, [1.5, 3.0], -20, ["blink", "shiver", "sit"])], "fx": ["rain"]},
+ "c38": {"set": "lantern", "opt": {"mood": "storm", "light": "flicker"}, "cam": {"pos": [3.8, 5.0, 9.5], "look": [0.8, 4.0, 0], "fov": 44, "move": [-0.4, 0, -1.2]},
+         "chars": [ch(H, [1.8, 3.0], -15, ["blink", "breath", "talk", "reach"], hold="#f1e6c8")], "fx": ["glow"]},
+ "c39": {"set": "lantern", "opt": {"mood": "night", "light": "dim"}, "cam": {"pos": [0, 5.0, 12], "look": [0, 3.8, 0], "fov": 46, "move": [0, 0, -2]},
+         "chars": [ch(H, [0, 3.5], 0, ["closed", "breath"])], "fx": ["glow"]},
+ "c40": {"set": "island", "opt": {"mood": "night", "lamp": "off", "ship": [-60, 30]}, "cam": {"pos": [0, 7, 40], "look": [6, 6, -10], "fov": 50}},
+ "c41": {"set": "rocks", "opt": {"mood": "day", "island": True}, "cam": {"pos": [3, 6.5, 17], "look": [8, 5, -30], "fov": 50, "move": [1, 0, -2]},
+         "chars": [ch(H, [5, 5.5], 180, LIVE)]},
+ "c46": {"set": "rocks", "opt": {"mood": "storm"}, "cam": {"pos": [6, 6, 20], "look": [6, 3, 3], "fov": 52},
+         "chars": [ch(A, [-6, 5], 90, ["run"], to=[20, 5], speed=1.0, exit=True)], "fx": ["rain", "past"]},
+ "c48": {"set": "hook", "opt": {"ruin": True, "hand": True}, "cam": {"pos": [6, 6.5, 8], "look": [6, 6.6, 0], "fov": 42, "move": [0, 0, -1]}},
+ "c50": {"set": "island", "opt": {"mood": "night", "present": True, "lamp": "beam"}, "cam": {"pos": [8, 9, 52], "look": [8, 9, -14], "fov": 40, "move": [0, 0, -3]}},
+ "c51": {"set": "rocks", "opt": {"mood": "dusk", "island": True}, "cam": {"pos": [-2, 6, 16], "look": [10, 3.5, 2], "fov": 50},
+         "chars": [ch(H, [2, 6], 100, ["walk"], to=[16, 4.5], speed=1.0)]},
 }
 
 if __name__ == "__main__":

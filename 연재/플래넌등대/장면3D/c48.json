@@ -1,0 +1,27 @@
+{
+ "engine": "3d",
+ "cast": "../등장인물_카툰.json",
+ "set": "hook",
+ "opt": {
+  "ruin": true,
+  "hand": true
+ },
+ "cam": {
+  "pos": [
+   6,
+   6.5,
+   8
+  ],
+  "look": [
+   6,
+   6.6,
+   0
+  ],
+  "fov": 42,
+  "move": [
+   0,
+   0,
+   -1
+  ]
+ }
+}

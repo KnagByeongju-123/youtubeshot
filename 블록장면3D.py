@@ -181,6 +181,27 @@ def set_hook(t, p, o):
         vx.fill(-2, 14, 0, 10, -1, 0, "#c9bb98", 16)
         vx.fill(-2, 14, -1, 0, -1, 6, "#8a6141", 14)
         return vx.boxes()
+    if o.get("ruin"):   # 지금의 숙소 터: 빛바랜 돌벽, 위는 무너져 하늘이 보임
+        def build_r():
+            vx = Voxels()
+            for x in range(-2, 14):
+                top = 10 - (abs(x - 3) % 4) - (3 if x > 8 else 0)
+                for y in range(0, top):
+                    vx.put(x, y, -1, "#9a9283", j=18)
+            vx.fill(-2, 14, -1, 0, -1, 6, "#6f6a62", 14)
+            return vx.boxes()
+        b = list(_static("hookruin", build_r))
+        b.append(Box((2, 7, 0), (8, 0.5, 0.6), "#5a4a3a"))
+        for k in range(3):
+            b.append(Box((3.2 + k * 2.6, 6.3, 0.2), (0.3, 0.8, 0.5), "#5a4636"))
+        if o.get("hand"):   # 위에서 내려온 손이 심지를 옷걸이 위에 올려놓음
+            q = min(1.0, p * 2.2)
+            y = 9.5 - 2.0 * q
+            b += [Box((5.5, y + 0.4, 0.5), (0.9, 2.0, 0.7), "#4e5b3a"), Box((5.55, y - 0.2, 0.55), (0.8, 0.65, 0.6), "#f6d3b3"),
+                  Box((5.35, y - 0.45, 0.55), (1.2, 0.25, 0.3), "#f1e6c8")]
+        elif o.get("wick"):
+            b.append(Box((5.35, 7.5, 0.55), (1.2, 0.25, 0.3), "#f1e6c8"))
+        return b, o.get("mood", "grey")
     b = list(_static("hookwall", build))
     b.append(Box((2, 7, 0), (8, 0.5, 0.6), "#6b4a30"))
     for k in range(3):
@@ -210,7 +231,19 @@ def set_rocks(t, p, o):
                 for y in range(-1, max(0, h)):
                     vx.put(x, y, z, "#4c4f52" if y < h - 1 else "#5a5d60", j=16)
         return vx.boxes()
-    return sea_tiles(t, mood, -40, 50, -40, 0, rough=1.6 if mood == "storm" else 1.0) + _static("rocks", build), mood
+    b = sea_tiles(t, mood, -40, 50, -40, 0, rough=1.6 if mood == "storm" else 1.0) + list(_static("rocks", build))
+    if o.get("island"):   # 먼바다의 섬 (섬 블록을 바다 저편으로 옮겨 놓음)
+        off = np.array(o.get("island_at", [0, 0, -46]), float)
+        def far():
+            return [Box(x.p + off, x.s, x.col, x.rots, x.emit, x.skip, x.edge) for x in island_vox()]
+        b += _static(("farisland", tuple(off)), far)
+        cx, cz, top = 8 + off[0], -14 + off[2], 8
+        if o.get("lamp", "beam") != "off":
+            b.append(Box((cx - 1, top + 10, cz - 2), (3, 1, 3), "#fff1a8", emit=True, edge=False))
+            if o.get("lamp", "beam") == "beam":
+                piv = np.array([cx, top + 10.5, cz - 0.5])
+                b.append(Box((cx + 1.6, top + 10.2, cz - 0.8), (60, 0.6, 0.6), (255, 244, 194), [(piv, "y", t * 40)], emit=True, edge=False))
+    return b, mood
 
 
 def rock_height(x, z):
@@ -408,6 +441,8 @@ def pose3d(acts, t, seed):
         p["walk_amp"] = 1.6
     if "shiver" in acts:
         p["bob"] = 0.015 * math.sin(t * 40)
+    if "sit" in acts:
+        p["sit"] = True
     return p
 
 

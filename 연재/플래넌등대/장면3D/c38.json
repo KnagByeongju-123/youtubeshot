@@ -1,0 +1,47 @@
+{
+ "engine": "3d",
+ "cast": "../등장인물_카툰.json",
+ "set": "lantern",
+ "opt": {
+  "mood": "storm",
+  "light": "flicker"
+ },
+ "cam": {
+  "pos": [
+   3.8,
+   5.0,
+   9.5
+  ],
+  "look": [
+   0.8,
+   4.0,
+   0
+  ],
+  "fov": 44,
+  "move": [
+   -0.4,
+   0,
+   -1.2
+  ]
+ },
+ "chars": [
+  {
+   "who": "안내자 하람 (14)",
+   "at": [
+    1.8,
+    3.0
+   ],
+   "face": -15,
+   "act": [
+    "blink",
+    "breath",
+    "talk",
+    "reach"
+   ],
+   "hold": "#f1e6c8"
+  }
+ ],
+ "fx": [
+  "glow"
+ ]
+}

@@ -174,6 +174,8 @@ def person(c, pos, face=0.0, pose=None, scale=1.0):
     aw = c["arm_w"] / 24 * 0.3 * scale
     x0, y0, z0 = pos
     bob = pose.get("bob", 0) + pose.get("breath", 0) * 4
+    if pose.get("sit"):   # 바닥에 주저앉음: 몸 전체를 내려 엉덩이가 바닥에 닿게 (다리는 아래에서 앞으로 뻗음)
+        bob -= k * 0.36 - 0.42
     out = []
 
     layer = {"b": 0.0}
@@ -189,7 +191,7 @@ def person(c, pos, face=0.0, pose=None, scale=1.0):
     for sg in (-1, 1):
         lx = -lw if sg < 0 else 0
         piv = np.array([x0 + lx + lw / 2, y0 + leg + bob, z0])
-        r = [(piv, "x", swing * sg)]
+        r = [(piv, "x", swing * sg)] if not pose.get("sit") else [(piv, "x", -86 + 6 * sg)]
         B((lx + 0.01, 0.16, -dep / 2 + 0.02), (lw - 0.02, leg - 0.16, dep - 0.04), c["bottom"], r)
         B((lx - 0.02, 0, -dep / 2 - 0.02), (lw + 0.0, 0.18, dep + 0.12), c["shoes"], r)
     # 코트 자락
