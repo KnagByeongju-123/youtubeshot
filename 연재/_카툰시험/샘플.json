@@ -1,0 +1,11 @@
+{"chars":[
+ {"name":"경비원 오만석 (67)","height":760,"head":0.2,"shoulder":92,"waist":88,"hip":70,"leg_w":36,"arm_w":30,
+  "skin":"#e8b48e","hair":"#d8d8d8","hair_style":"bald","top":"#2f4a6d","top_type":"uniform","bottom":"#2b3a52","shoes":"#1f1f1f",
+  "sig":"#e3b341","cap":"#2b3a52","eyes":"tired","brows":1.6,"mouth":"flat","wrinkles":true,"mustache":true},
+ {"name":"국밥집 순례 (62)","height":600,"head":0.25,"head_w":0.95,"shoulder":64,"waist":76,"hip":72,"leg_w":30,"arm_w":24,
+  "skin":"#f3c8a2","hair":"#6b3f2a","hair_style":"perm","top":"#f2e6c9","top_type":"shirt","bottom":"#5a4a6a","shoes":"#7a4a2a",
+  "sig":"#d63a2f","apron":true,"eyes":"smile","mouth":"smile","blush":true,"wrinkles":true},
+ {"name":"본부장 강태수 (48)","height":800,"head":0.18,"head_w":0.8,"shoulder":66,"waist":44,"hip":44,"leg_w":26,"arm_w":20,
+  "skin":"#f0cfb0","hair":"#1a1a1a","hair_style":"slick","top":"#2b2b30","top_type":"jacket","bottom":"#2b2b30","shoes":"#111111",
+  "sig":"#7b2cbf","tie":true,"glasses":true,"glasses_col":"#b8860b","eyes":"sharp","brows":1.2,"mouth":"smirk"}
+]}
