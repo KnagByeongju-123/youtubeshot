@@ -313,6 +313,11 @@ def person(c, pos, face=0.0, pose=None, scale=1.0):
         sc = c["sig"] or "#c0392b"
         B((-hwid * 0.42, sy - 0.12, -0.2), (hwid * 0.84, 0.16, 0.42), sc)
         B((hwid * 0.08, sy - 0.62, dep / 2 + 0.02), (0.16, 0.5, 0.06), shade_hex(sc, 0.85))
+    if c.get("flower"):   # 꽃 머리띠: 머리 둘레 띠 + 옆머리 위 꽃 한 송이
+        fc = c["flower"] if isinstance(c["flower"], str) else (c["sig"] or "#e85d75")
+        B((-hwid / 2 - 0.06, t - hs * 0.18, -hs / 2 - 0.06), (hwid + 0.12, hs * 0.08, hs + 0.12), "#3f8a4a")
+        B((hwid / 2 - 0.02, t - hs * 0.28, hs * 0.05), (0.14, hs * 0.26, hs * 0.26), fc)
+        B((hwid / 2 + 0.06, t - hs * 0.2, hs * 0.13), (0.1, hs * 0.1, hs * 0.1), "#f7d23e", edge=False)
     if c["glasses"]:
         for sg in (-1, 1):
             B((sg * ex - hs * 0.14, ey - hs * 0.1, fz + 0.02), (hs * 0.28, hs * 0.22, 0.01), c.get("glasses_col", "#26221f"), edge=False)
