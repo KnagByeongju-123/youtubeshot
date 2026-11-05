@@ -72,6 +72,16 @@ def ground_at(scene, x, z):
             gx = 8 + int((x - 8) // 4) * 4
             return -10 - (gx - 8) * 0.18
         return "sea"
+    if st == "quarry":
+        return S3.quarry_h(x, z)
+    if st in ("field", "walk"):
+        if o.get("road") and -1 <= z < 1:
+            return -0.5
+        if o.get("road") and -2 <= z < 2:
+            return -0.25
+        return 0
+    if st == "ahu":
+        return 2 if (-14 <= x < 14 and -6 <= z < -1) else 0
     if st == "landing":
         return 3 if x < 8 else 3 + (int(x) - 8) // 2
     return None

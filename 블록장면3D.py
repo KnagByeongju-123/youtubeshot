@@ -455,6 +455,27 @@ def build(scene, cast, t, dur=None):
     boxes, mood = SETS[scene.get("set", "plain")](t, pr, o)
     boxes = list(boxes)
     info = []
+    for m_ in scene.get("extra", {}).get("moai", []):   # 장면에 더 둘 모아이 [x, z, 얼굴 방향, 크기, 누움]
+        boxes += moai(m_[0], m_[1], yaw=m_[2], sc=m_[3], lying=len(m_) > 4 and m_[4])
+    if scene.get("set") == "walk":   # 줄 끝에 팀 사람들 (모아이 쪽 반대로 몸을 젖히고 당김)
+        ends, tilt = o["_ends"], o.get("_tilt", 0)
+        for side, whos in o.get("teams", {}).items():
+            e = ends[side]
+            away = e - np.array([o.get("start", -6) + (o.get("end", 6) - o.get("start", -6)) * (pr if o.get("walk", True) else 0), e[1], o.get("mz", 0)])
+            away[1] = 0
+            away = away / (np.linalg.norm(away) + 1e-9)
+            face = math.degrees(math.atan2(-away[0], -away[2]))   # 모아이를 마주 봄 (줄다리기)
+            pulling = (side == "left" and tilt > 2) or (side == "right" and tilt < -2) or side == "back"
+            for k, who in enumerate(whos):
+                pos = e + away * (0.9 + k * 1.5) + np.array([0.6 * (k % 2) - 0.3, 0, 0])
+                ps = pose3d(["blink", "breath", "talk" if o.get("sing") else "breath"], t, k * 1.3 + len(side))
+                ps["arm"] = 62 if pulling else 75             # 줄을 쥔 두 팔은 앞(모아이 쪽)으로, 당길 때 몸쪽으로 끌어당김
+                ps["arm2"] = ps["arm"]
+                ps["bob"] = -0.15 if pulling else 0.0         # 당길 때 몸을 낮춤
+                c = cast[who]
+                i0 = len(boxes)
+                boxes += person(c, (pos[0], 0, pos[2]), face=face, pose=ps)
+                info.append({"who": who, "pos": (pos[0], 0, pos[2]), "face": face, "acts": ["team"], "i0": i0, "i1": len(boxes), "scale": 1.0, "exit": False})
     for i, ch in enumerate(scene.get("chars", [])):
         c = {**cast[ch["who"]], **ch.get("over", {})}
         ax, az = ch.get("at", [0, 0])
@@ -468,7 +489,9 @@ def build(scene, cast, t, dur=None):
                 acts = [a for a in acts if a not in ("walk", "run")]
         y = ch.get("y")
         if y is None or (scene.get("set") == "stairs" and "y_to" in ch):
-            y = rock_height(int(ax), int(az)) if scene.get("set") == "rocks" else (stair_h(int(round(ax))) if scene.get("set") == "stairs" else 0)
+            st_ = scene.get("set")
+            y = (rock_height(int(ax), int(az)) if st_ == "rocks" else stair_h(int(round(ax))) if st_ == "stairs"
+                 else quarry_h(ax, az) if st_ == "quarry" else 0)
             ch = {k_: v_ for k_, v_ in ch.items() if k_ != "y_to"}
         if ch.get("y_to") is not None:
             y = y + (ch["y_to"] - y) * min(1.0, pr * ch.get("speed", 1.0))
@@ -536,3 +559,193 @@ if __name__ == "__main__":
     sc, cast = load(a[0])
     t = float(a[a.index("--t") + 1]) if "--t" in a else 1.0
     frame(sc, cast, t, sc.get("dur", 8)).save(a[1])
+
+
+# ═════════════════════ 모아이 편 (온 가족, 2026-11-05) ═════════════════════
+TUFF = "#8c8170"
+
+
+def rope(a, b, col="#c8a46a", w=0.09):
+    """두 점을 잇는 밧줄 (얇은 상자를 방향에 맞게 돌림)"""
+    a, b = np.array(a, float), np.array(b, float)
+    d = b - a
+    L = float(np.linalg.norm(d))
+    if L < 1e-6:
+        return []
+    hz = math.hypot(d[0], d[2])
+    el = math.degrees(math.atan2(d[1], hz))
+    yaw = math.degrees(math.atan2(-d[2], d[0]))
+    return [Box((a[0], a[1] - w / 2, a[2] - w / 2), (L, w, w), col, [(a, "z", el), (a, "y", yaw)], edge=False)]
+
+
+def moai(x, z, yaw=0.0, sc=1.0, tilt=0.0, lying=False, pukao=False, col=TUFF, unfinished=False):
+    """블록 모아이 (발 가운데 = x,z, 높이 약 8·sc). yaw = 얼굴 방향(0 = +z), tilt = 좌우로 기운 각도(+ = 왼쪽으로, 아래 모서리를 축으로)"""
+    parts = []
+    def P(px, py, pz, w, h, d, c=None):
+        parts.append(((px * sc, py * sc, pz * sc), (w * sc, h * sc, d * sc), c or col))
+    P(-1.2, 0, -0.8, 2.4, 3.6, 1.6)                 # 몸통
+    P(-1.1, 0.3, 0.8, 2.2, 1.6, 0.35)               # 둥근 배 (앞으로 볼록)
+    P(-1.05, 3.6, -0.75, 2.1, 3.2, 1.7)             # 머리 (앞으로 살짝)
+    P(-1.1, 5.9, -0.75, 2.2, 0.45, 2.05)            # 튀어나온 이마
+    P(-0.25, 4.3, 0.95, 0.5, 1.7, 0.45)             # 긴 코
+    P(-0.55, 3.9, 0.9, 1.1, 0.3, 0.25)              # 입술
+    P(-1.0, 3.5, 0.6, 2.0, 0.4, 0.4)                # 턱
+    for sg in (-1, 1):
+        P(sg * 1.05 - (0.25 if sg < 0 else 0), 3.9, -0.3, 0.25, 2.3, 0.6)      # 긴 귀
+        P(sg * 0.55 - 0.25, 5.2, 0.9, 0.5, 0.55, 0.12, "#4a443b")               # 이마 밑 그늘진 눈
+        P(sg * 0.75 - 0.2, 0.9, 0.85, 0.4, 0.25, 0.4)                            # 배 위 손 (손가락이 배꼽 쪽으로)
+        P(sg * 0.35 - 0.3 + (0.2 if sg < 0 else -0.1), 0.85, 1.12, 0.5, 0.15, 0.12)
+    if pukao:
+        P(-0.9, 6.8, -0.6, 1.8, 1.0, 1.6, "#9b4a35")   # 붉은 돌 모자 (푸카오)
+    out = []
+    base = np.array([x, 0, z], float)
+    for (p, s_, c) in parts:
+        jit = E.jitter(E.hexrgb(c), (round(p[0], 2), round(p[1], 2), x, z), 8)
+        rots = []
+        if lying:   # 등을 대고 누움 (얼굴이 하늘)
+            rots.append((base, "x", -90))
+        if tilt:
+            piv = base + np.array([(-1.2 if tilt > 0 else 1.2) * sc, 0, 0])
+            rots.append((piv, "z", tilt))
+        if yaw:
+            rots.append((base, "y", yaw))
+        out.append(Box(base + np.array(p), s_, jit if not unfinished else jit * 0.92, rots, skip=()))
+    return out
+
+
+def grass_field(key, x0=-40, x1=50, z0=-40, z1=30, h=lambda x, z: 0, step=2, col="#6f9a4e", side="#6f6a62"):
+    def build():
+        out = []
+        for x in range(x0, x1, step):
+            for z in range(z0, z1, step):
+                hh = h(x, z)
+                out.append(Box((x, hh - step, z), (step, step, step), E.jitter(E.hexrgb(col), (x, z), 14), skip=(5,)))
+        return out
+    return list(_static(key, build))
+
+
+def set_rapanui(t, p, o):
+    """섬 전체: 바다 한가운데 초록 섬, 화산 분화구(채석장), 바닷가의 작은 모아이 줄"""
+    mood = o.get("mood", "day")
+    def build():
+        vx = Voxels()
+        for x in range(-34, 36):
+            for z in range(-26, 26):
+                d = math.hypot(x / 32, z / 22)
+                if d > 1:
+                    continue
+                h = int(2 + 3 * (1 - d) + 2 * math.sin(x * 0.2) * math.cos(z * 0.25))
+                vd = math.hypot((x - 18) / 8, (z + 8) / 8)            # 화산 (라노 라라쿠, 돌 비탈)
+                if vd < 1:
+                    h += int(13 * (1 - vd))
+                    if vd < 0.35:
+                        h -= 3                                        # 분화구
+                for y in range(-1, max(1, h)):
+                    vx.put(x, y, z, ("#5f8a4a" if vd >= 0.75 else TUFF) if y == max(1, h) - 1 else "#6f6a62", j=12)
+        return vx.boxes()
+    sea = [x for x in sea_tiles(t, mood, -120, 120, -100, 80, step=6) if math.hypot((x.p[0] + 3) / 38, (x.p[2] + 3) / 28) > 1]
+    b = sea + list(_static("rapanui", build))
+    for k in range(7):   # 바닷가의 모아이 줄 (작게)
+        b += moai(-20 + k * 1.6, 15, yaw=180, sc=0.25, pukao=k % 2 == 0)
+    if o.get("road"):
+        for k in range(40):
+            q = k / 39
+            x, z = 18 - 38 * q, -8 + 23 * q + 3 * math.sin(q * 6)
+            b.append(Box((x, 3.05 + 2 * (1 - q), z), (1.2, 0.06, 1.2), "#b8a888", edge=False))
+    return b, mood
+
+
+def set_ahu(t, p, o):
+    """바닷가 돌 단(아후) 위에 바다를 등지고 선 모아이들"""
+    mood = o.get("mood", "day")
+    b = sea_tiles(t, mood, -80, 80, -80, -8, rough=0.8) + grass_field("ahu_grass", -60, 60, -8, 40)
+    def plat():
+        vx = Voxels()
+        vx.fill(-14, 14, 0, 2, -6, -1, "#7d776c", 12)
+        return vx.boxes()
+    b += list(_static("ahu", plat))
+    n = o.get("n", 7)
+    for k in range(n):
+        if o.get("missing") == k:
+            continue
+        b += moai(-12 + k * 4, -3.5, yaw=0, sc=o.get("sc", 0.9), pukao=k % 2 == 0)
+    for bb in b[-n * 20:]:
+        pass
+    return [x if x.p[1] >= 0 or x.s[0] > 3 else x for x in b], mood
+
+
+def set_field(t, p, o):
+    """나무 없는 풀밭 + 누워 있는(쓰러진) 모아이, 가운데 오목한 옛길(road)"""
+    mood = o.get("mood", "day")
+    road = o.get("road", False)
+    def h(x, z):
+        if road and -2 <= z < 2:
+            return -0.5 if -1 <= z < 1 else -0.25
+        return 0
+    b = sea_tiles(t, mood, -120, 120, -120, -40, step=6) + grass_field(("field", road), -60, 60, -40, 30, h=h, step=1 if road else 2)
+    if road:
+        for x in range(-60, 60, 1):
+            b.append(Box((x, -0.49, -1), (1, 0.02, 2), E.jitter(E.hexrgb("#b8a888"), (x, 9), 10), edge=False))
+    for (x, z, yw) in o.get("fallen", []):
+        b += [bx for bx in moai(x, z, yaw=yw, sc=0.8, lying=True)]
+    return b, mood
+
+
+def quarry_h(x, z):
+    """채석장 땅 높이 (블록 윗면)"""
+    return max(1, int((-math.floor(z)) * 0.55 + 1.5 * math.sin(math.floor(x) * 0.3)))
+
+
+def set_quarry(t, p, o):
+    """화산 채석장: 회갈색 돌 비탈에 깎다 만 모아이들이 누워 있음"""
+    mood = o.get("mood", "day")
+    def build():
+        vx = Voxels()
+        for x in range(-30, 30):
+            for z in range(-30, 12):
+                h = quarry_h(x, z)
+                for y in range(-1, h):
+                    top = y == h - 1
+                    vx.put(x, y, z, ("#5f8a4a" if (x * 5 + z * 3) % 4 == 0 or z > 4 else TUFF) if top else TUFF, j=14)
+        return vx.boxes()
+    b = sea_tiles(t, mood, -100, 100, 12, 80, step=6) + list(_static("quarry", build))
+    for (x, z) in o.get("carving", [(-12, -14), (6, -18), (16, -10)]):   # 비탈에 누운 깎는 중인 모아이
+        hh = quarry_h(x, z)
+        b += [Box(bx.p + np.array([0, hh + 0.1, 0]), bx.s, bx.col, [(np.array([x, hh + 0.1, z]), "x", -70)], skip=()) for bx in moai(x, z, sc=0.9, unfinished=True)]
+    return b, mood
+
+
+def walking_moai(t, p, o):
+    """걷는 모아이 + 줄 세 개 + 당기는 팀 (o: start, end, sc, teams, road)"""
+    x0, x1 = o.get("start", -6), o.get("end", 6)
+    z = o.get("mz", 0)
+    sc = o.get("msc", 0.9)
+    per = o.get("period", 2.4)          # 왼쪽·오른쪽 한 번씩 = 두 걸음
+    ph = 2 * math.pi * t / per
+    tilt = 9 * math.sin(ph)
+    q = p if o.get("walk", True) else 0.0
+    mx = x0 + (x1 - x0) * q
+    yaw = 90 + 7 * math.cos(ph)         # 걸음마다 살짝 돌아감 (+x 쪽을 봄)
+    b = moai(mx, z, yaw=yaw, sc=sc, tilt=tilt if o.get("walk", True) else 0)
+    head = np.array([mx, 6.0 * sc, z])
+    pulls = o.get("pulls", ("left", "right", "back"))
+    hand_y = 2.3                         # 사람 손 높이
+    ends = {"left": np.array([mx + 1.5 * sc, hand_y, z - 4.5 * sc]), "right": np.array([mx + 1.5 * sc, hand_y, z + 4.5 * sc]), "back": np.array([mx - 6 * sc, hand_y, z])}
+    cols = {"left": "#c0392b", "right": "#2f6fb0", "back": "#2f8a4f"}
+    for k_ in pulls:
+        tight = ((k_ == "left" and tilt > 2) or (k_ == "right" and tilt < -2) or k_ == "back")
+        e = ends[k_] + (np.array([0, 0.3, 0]) if not tight else 0)
+        b += rope(head + np.array([0, 0, -0.8 * sc if k_ == "left" else (0.8 * sc if k_ == "right" else 0)]), e, cols[k_] if o.get("team_rope_col") else "#c8a46a")
+    return b, ends, mx, tilt
+
+
+def set_walk(t, p, o):
+    """걷는 모아이 장면: 들판(또는 오목한 옛길·바닷가) 위 + 모아이 + 줄 (팀 사람들은 build 가 줄 끝에 세움)"""
+    base_set = o.get("base", "field")
+    b, mood = (set_field if base_set == "field" else set_ahu)(t, p, o)
+    mb, ends, mx, tilt = walking_moai(t, p, o)
+    o["_ends"], o["_tilt"] = ends, tilt
+    return b + mb, mood
+
+
+SETS.update({"rapanui": set_rapanui, "ahu": set_ahu, "field": set_field, "quarry": set_quarry, "walk": set_walk})
