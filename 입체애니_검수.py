@@ -136,6 +136,7 @@ def check_scene(path, outdir, times=(0.3, 4.0, 7.7), dur=8.0):
             who = ch["who"].split(" (")[0]
             if ch.get("exit") and t > dur * 0.6:   # 화면 밖으로 나가는 인물(장면 설정 "exit": true)은 끝부분 검사를 뺌
                 continue
+            team = "team" in ch["acts"]            # 줄을 선 팀 사람: 서로 가리고 화면 밖으로도 이어지는 게 정상 → 발 높이만 봄
             x, y, z = ch["pos"]
             g = ground_at(scene, x, z)
             if g == "sea":
@@ -151,6 +152,8 @@ def check_scene(path, outdir, times=(0.3, 4.0, 7.7), dur=8.0):
             nrm = np.linalg.norm(to_cam)
             if talking and nrm > 1e-6 and float(np.dot(fv, to_cam / nrm)) < -0.35:   # 옆얼굴(0 근처)까지는 괜찮음
                 probs.append(f"{cid} {t:.1f}초: {who} 가 말하는데 카메라에 등을 보임")
+            if team:
+                continue
             # 보이는 정도·크기·잘림 (이 인물만 분홍으로 칠해 그려 봄)
             seen = magenta_mask(E.render(recolor(B["boxes"], ch["i0"], ch["i1"]), B["cam"], bg=(0, 0, 0)))
             alone = magenta_mask(E.render(recolor(B["boxes"][ch["i0"]:ch["i1"]], 0, 10 ** 6), B["cam"], bg=(0, 0, 0)))

@@ -679,7 +679,9 @@ def set_rapanui(t, p, o):
                 for y in range(-1, max(1, h)):
                     vx.put(x, y, z, ("#5f8a4a" if vd >= 0.75 else TUFF) if y == max(1, h) - 1 else "#6f6a62", j=12)
         return vx.boxes()
-    sea = [x for x in sea_tiles(t, mood, -120, 120, -100, 80, step=6) if math.hypot((x.p[0] + 3) / 38, (x.p[2] + 3) / 28) > 1]
+    sea = sea_tiles(t, mood, -120, 120, -100, 80, step=6)
+    for x in sea:          # 바다는 언제나 섬보다 먼저(뒤에) 그림 — 큰 바다 조각이 섬 위로 덮이지 않게
+        x.bias = -8
     b = sea + list(_static("rapanui", build))
     for k in range(7):   # 바닷가의 모아이 줄 (작게)
         b += moai(-20 + k * 1.6, 15, yaw=180, sc=0.25, pukao=k % 2 == 0)

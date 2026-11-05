@@ -35,18 +35,18 @@ S_ = {
  "c10": {"set": "field", "cam": {"pos": [9, 2.2, 18], "look": [-1, 8, 0], "fov": 60}, "extra": {"moai": [[-1, -3, 0, 2.0]]}, "chars": [ch(H, [2.5, 4.5], 200, LIVE)]},
  "c11": {"set": "field", "cam": {"pos": [0, 7.5, 21], "look": [-2, 6.5, 0], "fov": 56}, "extra": {"moai": [[-8, -8, 20, 2.0]]},
          "chars": [ch(A, [-1.2, 1.5], 20, ["blink", "talk", "wave"]), ch(T, [1.6, 1.0], -30, ["blink", "breath", "talk"])]},
- "c12": {"set": "walk", "opt": {**WALK, "walk": False, "teams": TEAMS}, "cam": {"pos": [10, 14, 40], "look": [-10, 6, 0], "fov": 52}, "chars": [ch(T, [-7, 9.0], 150, ["blink", "talk", "point"])]},
- "c13": {"set": "walk", "opt": {**WALK, "walk": False, "pulls": ()}, "cam": {"pos": [-26, 8, 20], "look": [-12, 6, 0], "fov": 50}, "chars": [ch(T, [-11.5, 6.0], 200, ["blink", "talk", "point"])]},
+ "c12": {"set": "walk", "opt": {**WALK, "walk": False, "teams": TEAMS}, "cam": {"pos": [10, 14, 40], "look": [-10, 6, 0], "fov": 52}, "chars": [ch(T, [-7, 9.0], 40, ["blink", "talk", "point"])]},
+ "c13": {"set": "walk", "opt": {**WALK, "walk": False, "pulls": ()}, "cam": {"pos": [-26, 8, 20], "look": [-12, 6, 0], "fov": 50}, "chars": [ch(T, [-11.5, 6.0], -100, ["blink", "talk", "point"])]},
  "c14": {"set": "walk", "opt": {**WALK, "teams": TEAMS, "period": 3.2}, "cam": {"pos": [-4, 12, 40], "look": [-8, 6, 0], "fov": 52}},
  "c15": {"set": "walk", "opt": {**WALK, "teams": TEAMS, "period": 3.2}, "cam": {"pos": [-34, 12, 26], "look": [-6, 6, 0], "fov": 52}},
  "c16": {"set": "walk", "opt": {**WALK, "teams": TEAMS}, "cam": {"pos": [16, 8, 30], "look": [-6, 6, 0], "fov": 52},
-         "chars": [ch(H, [8, 12], 0, ["blink", "talk", "wave"]), ch(A, [10.5, 11], -10, ["blink", "talk", "wave"])]},
+         "chars": [ch(H, [-5, 16], 20, ["blink", "talk", "wave"]), ch(A, [-2.5, 15.5], 10, ["blink", "talk", "wave"])]},
  "c17": {"set": "walk", "opt": {**WALK, "teams": TEAMS, "sing": True}, "cam": {"pos": [20, 9, 12], "look": [-6, 6, -6], "fov": 54}},
  "c18": {"set": "walk", "opt": {**WALK, "teams": {"left": [H, R, R], "right": [Bl, Bl, Bl], "back": [G, G]}}, "cam": {"pos": [12, 6, 2], "look": [-6, 6, -10], "fov": 60}},
  "c19": {"set": "walk", "opt": {**WALK, "road": True, "teams": TEAMS, "start": -22, "end": -4}, "cam": {"pos": [-40, 12, 20], "look": [-12, 4, 0], "fov": 50, "move": [10, 0, 0]}},
  "c20": {"set": "ahu", "opt": {"mood": "dusk"}, "cam": {"pos": [2, 5, 20], "look": [0, 4, -3], "fov": 52, "move": [-2, 0, -2]},
          "chars": [ch(R, [-4, 5], 200), ch(Bl, [-1, 6], 180), ch(G, [3, 5.5], 160), ch(T, [6, 6], 200)]},
- "c21": {"set": "ahu", "opt": {"mood": "dusk"}, "cam": {"pos": [3, 4.4, 10], "look": [0, 3.3, 3], "fov": 46},
+ "c21": {"set": "ahu", "opt": {"mood": "dusk"}, "cam": {"pos": [1.5, 4.6, 13], "look": [0, 3.4, 3.6], "fov": 46},
          "chars": [ch(T, [-1.0, 3.5], 60, ["blink", "talk", "pat"]), ch(H, [0.9, 3.8], -70, LIVE)]},
  "c22": {"set": "ahu", "opt": {"mood": "dusk"}, "cam": {"pos": [0, 4.4, 12], "look": [0, 3.3, 3], "fov": 46},
          "chars": [ch(H, [0, 4], 0, ["blink", "talk"]), ch(A, [-2.4, 5], 40, ["blink", "wave"]), ch(T, [2.6, 4.6], -30, LIVE)], "fx": ["glow"]},
@@ -60,6 +60,47 @@ S_ = {
  "c30": {"set": "ahu", "opt": {"mood": "dusk"}, "cam": {"pos": [-14, 5, 14], "look": [4, 3, 2], "fov": 50},
          "chars": [ch(H, [-6, 6], 100, ["walk"], to=[12, 6], speed=1.0, exit=True)]},
 }
+
+
+# ── 카메라 움직임 (사용자 결정 2026-11-05: 블록은 원래 크기, 카메라는 역동적으로) ──
+# orbit = 대상 둘레를 a0→a1 도 돌기(r 거리, h 높이: 0→1 로 바뀌면 크레인), follow = 걷는 모아이를 따라 돌기, shake = 걸음마다 쿵, hand = 손 카메라
+def orbit(tx, ty, tz, a0, a1, r0, r1=None, h0=6, h1=None, fov=50, mode="orbit", shake=0, hand=0.1):
+    c = {"mode": mode, "target": [tx, ty, tz], "a0": a0, "a1": a1, "r0": r0, "r1": r1 if r1 is not None else r0,
+         "h0": h0, "h1": h1 if h1 is not None else h0, "fov": fov, "hand": hand}
+    if shake:
+        c["shake"] = shake
+    return c
+
+
+CAM = {
+ "c01": orbit(0, 2, 0, -25, 10, 115, 72, 46, 24, 40),
+ "c02": orbit(0, 4, -3, -35, 30, 24, 22, 5, 7, 50),
+ "c03": orbit(4, 2, 0, 5, 40, 62, 52, 46, 38, 46),
+ "c06": orbit(0, 5, -6, -15, 15, 24, 22, 6, 12, 52),
+ "c08": orbit(-2, 2, 4, 15, 50, 19, 17, 6, 8, 50),
+ "c09": orbit(-2, 8, -3, 30, 10, 24, 22, 3, 12, 52),
+ "c10": orbit(-1, 9, -3, 25, -20, 19, 17, 1.6, 3, 60),
+ "c12": orbit(-10, 5, 0, 10, 40, 44, 40, 14, 18, 52),
+ "c13": orbit(-12, 7, 0, -60, -30, 20, 18, 7, 8, 50),
+ "c14": orbit(0, 7, 0, -60, 20, 34, 28, 5, 12, 50, "follow", 0.35),
+ "c15": orbit(0, 7, 0, -140, -95, 36, 32, 8, 12, 52, "follow", 0.35),
+ "c16": orbit(0, 7, 0, 25, 60, 36, 34, 7, 9, 52, "follow", 0.3),
+ "c17": orbit(-6, 3, -9, 60, 100, 17, 16, 5, 6, 54, shake=0),
+ "c19": orbit(0, 6, 0, -95, -60, 32, 30, 9, 11, 50, "follow", 0.3),
+ "c20": orbit(0, 5, -3, -20, 20, 25, 23, 6, 7, 52),
+ "c23": orbit(0, 6, -3, 0, 0, 20, 19, 3, 9, 50),
+ "c24": orbit(-10, 3, 0, 20, 50, 25, 23, 8, 9, 52),
+ "c25": orbit(0, 4, 0, -50, 0, 26, 24, 6, 9, 52, "follow", 0.2),
+ "c26": orbit(-8, 1, 0, 0, 30, 36, 32, 12, 22, 56),
+ "c29": orbit(0, 7, 0, -10, 20, 38, 34, 6, 8, 50, "follow", 0.3),
+}
+for k_, c_ in CAM.items():
+    S_[k_]["cam"] = c_
+for k_ in ("c04", "c05", "c07", "c11", "c18", "c21", "c22", "c27", "c28", "c30"):   # 나머지는 손 카메라로 살짝
+    S_[k_]["cam"]["hand"] = 0.12 if k_ not in ("c05", "c28") else 0.04
+S_["c18"]["cam"]["shake"] = 0.3
+for k_ in S_:
+    S_[k_]["style"] = "diorama"    # 위아래 살짝 흐림·또렷한 색 (블록은 잘게 나누지 않음: tex 없음)
 
 if __name__ == "__main__":
     import importlib.util
