@@ -70,8 +70,9 @@ def bg_kitchen(t, cold=False, mood="storm", stopped=False):
     s += R(sx + 260 - 10, 0, 40, sy - 30, "#3d3d42", 5)
     fl = 0.0 if cold else 0.75 + 0.25 * math.sin(t * 17) * math.sin(t * 7.3)
     s += R(sx + 60, sy + 90, 180, 110, "#1a1a1a", 5, 'rx="8"')
-    s += K.P(f"M{sx + 80},{sy + 195} Q{sx + 110},{sy + 195 - 70 * fl} {sx + 150},{sy + 150} Q{sx + 175},{sy + 195 - 85 * fl} {sx + 220},{sy + 195} Z", "#f39c32", 3)
-    s += K.P(f"M{sx + 115},{sy + 195} Q{sx + 140},{sy + 195 - 40 * fl} {sx + 185},{sy + 195} Z", "#ffd76a", 0)
+    if not cold:
+        s += K.P(f"M{sx + 80},{sy + 195} Q{sx + 110},{sy + 195 - 70 * fl} {sx + 150},{sy + 150} Q{sx + 175},{sy + 195 - 85 * fl} {sx + 220},{sy + 195} Z", "#f39c32", 3)
+        s += K.P(f"M{sx + 115},{sy + 195} Q{sx + 140},{sy + 195 - 40 * fl} {sx + 185},{sy + 195} Z", "#ffd76a", 0)
     s += R(sx + 60, sy - 110, 170, 85, "#5a5f66", 5, 'rx="12"')
     for i in range(0 if cold else 3):   # 김
         ph = (t * 0.6 + i / 3) % 1
@@ -150,7 +151,7 @@ def lighthouse(x, base, h, lamp="on", t=0.0, ruin=False):
     return s
 
 
-def island(mood, t, lamp="on", present=False, ship=None, flare=False, fog=False, far=False):
+def island(mood, t, lamp="on", present=False, ship=None, flare=False, fog=False, far=False, p=0.0):
     s = sky(mood) + sea(mood, t)
     cx = 1100 if not far else 1250
     sc = 1.0 if not far else 0.6
@@ -159,17 +160,17 @@ def island(mood, t, lamp="on", present=False, ship=None, flare=False, fog=False,
     s += K.P(f"M{cx - 430 * sc},{660 - 260 * sc} L{cx - 250 * sc},{660 - 330 * sc} L{cx + 120 * sc},{660 - 350 * sc} L{cx + 380 * sc},{660 - 300 * sc} "
              f"L{cx + 360 * sc},{660 - 270 * sc} L{cx - 300 * sc},{660 - 290 * sc} Z", "#6f8a56" if mood != "night" else "#2d3d2f", 0)
     s += lighthouse(cx + 60 * sc, 660 - 345 * sc, 250 * sc, lamp if not present else "beam", t)
-    for k in range(4):   # 절벽 아래 흰 파도
-        xx = cx - 480 * sc + k * 300 * sc
-        a = 0.5 + 0.5 * math.sin(t * 1.7 + k * 1.3)
-        s += f'<ellipse cx="{xx:.0f}" cy="662" rx="{80 * sc + 30 * a:.0f}" ry="{10 + 8 * a:.0f}" fill="#ffffff" opacity="0.7"/>'
-    if ship:
-        sx = ship[0] + ship[1] * t
+    if ship:   # ship = [시작 x, 멈출 x]: 장면 앞 55% 동안 섬 쪽으로 다가와 멈춤
+        q = min(1.0, p / 0.55)
+        q = 0.5 - 0.5 * math.cos(math.pi * q)
+        sx = ship[0] + (ship[1] - ship[0]) * q
         s += boat(sx, 690, 0.8)
-    if flare:
-        ph = (t % 4.0) / 4.0
-        fy = 520 - 380 * min(1, ph * 1.6)
-        s += f'<circle cx="420" cy="{fy:.0f}" r="{10 + 30 * max(0, ph - 0.6):.0f}" fill="#ff5a3c" opacity="{0.9 * (1 - max(0, ph - 0.6) * 2.4):.2f}"/>'
+        if flare and p > 0.55:   # 배가 멈춘 뒤 그 배에서 조명탄을 쏘아 올림
+            ph = min(1.0, (p - 0.55) / 0.35)
+            fx_, fy = sx + 40 + 60 * ph, 610 - 470 * math.sin(ph * math.pi / 2)
+            s += f'<line x1="{sx + 40:.0f}" y1="610" x2="{fx_:.0f}" y2="{fy:.0f}" stroke="#ffb38a" stroke-width="3" opacity="0.5"/>'
+            s += f'<circle cx="{fx_:.0f}" cy="{fy:.0f}" r="{9 + 26 * ph:.0f}" fill="#ff5a3c" opacity="{0.95 - 0.3 * ph:.2f}"/>'
+            s += f'<circle cx="{fx_:.0f}" cy="{fy:.0f}" r="{40 + 90 * ph:.0f}" fill="#ff8a5c" opacity="{0.25 * (1 - ph) + 0.08:.2f}"/>'
     if fog or mood == "fog":
         s += f'<rect width="{W}" height="{H}" fill="#e6e9eb" opacity="0.35"/>'
     return s
@@ -185,7 +186,7 @@ def boat(x, y, sc=1.0):
 
 # ───────────────────────── 장소 배경 ─────────────────────────
 def bg_sea(t, p, o):
-    s = island(o.get("mood", "grey"), t, o.get("lamp", "on"), o.get("present", False), o.get("ship"), o.get("flare", False), far=o.get("far", False))
+    s = island(o.get("mood", "grey"), t, o.get("lamp", "on"), o.get("present", False), o.get("ship"), o.get("flare", False), far=o.get("far", False), p=p)
     if o.get("swell"):   # 먼바다 수평선이 부풀어 오름
         h = 30 + 170 * p
         s += K.P(f"M0,642 Q500,{642 - h * 0.3:.0f} 900,{642 - h:.0f} Q1300,{642 - h * 0.3:.0f} 1920,642 Z", "#3c4f6e", 4)
@@ -216,9 +217,6 @@ def bg_landing(t, p, o):
     s += f'<polyline points="{" ".join(pts)}" fill="none" stroke="#4a4a4f" stroke-width="12" stroke-linecap="round"/>'
     if o.get("flagpole", True):
         s += f'<line x1="300" y1="610" x2="300" y2="200" stroke="{OUT}" stroke-width="9"/>' + K.E(300, 196, 10, 10, "#c9a227", 4)
-    for k in range(3):
-        a = (t * 0.7 + k * 0.33) % 1
-        s += f'<ellipse cx="{200 + k * 650}" cy="{560 - 90 * math.sin(math.pi * a):.0f}" rx="{120 + 80 * a:.0f}" ry="{40 + 50 * a:.0f}" fill="#ffffff" opacity="{0.75 * (1 - a):.2f}"/>'
     if o.get("wet", False):
         s += f'<rect width="{W}" height="{H}" fill="#9fb4c4" opacity="0.12"/>'
     return s
@@ -317,10 +315,6 @@ def bg_rocks(t, p, o):
     s = sky(mood, 560) + sea(mood, t, 560, 1.8)
     s += K.P("M0,760 Q300,640 640,700 Q980,760 1300,660 Q1650,600 1920,700 L1920,1080 L0,1080 Z", "#4c4f52", 5)
     s += K.P("M0,860 Q500,780 900,840 Q1400,900 1920,820 L1920,1080 L0,1080 Z", "#3a3d40", 4)
-    for k in range(4):
-        a = (t * 0.6 + k * 0.27) % 1
-        x = 150 + k * 520
-        s += f'<ellipse cx="{x}" cy="{700 - 140 * math.sin(math.pi * a):.0f}" rx="{90 + 120 * a:.0f}" ry="{30 + 70 * a:.0f}" fill="#ffffff" opacity="{0.8 * (1 - a):.2f}"/>'
     return s
 
 
@@ -349,7 +343,7 @@ def bg_wave(t, p, o):
         a = (t * 0.8 + k / 14) % 1
         x = 1150 + 300 * math.cos(k * 2.1) * a
         y = 1080 - h - 200 * a + 40 * math.sin(k)
-        s += f'<circle cx="{x:.0f}" cy="{y:.0f}" r="{20 + 50 * a:.0f}" fill="#ffffff" opacity="{0.7 * (1 - a):.2f}"/>'
+        s += f'<line x1="{x:.0f}" y1="{y:.0f}" x2="{x + 60 * math.cos(k * 2.1):.0f}" y2="{y - 50 - 40 * a:.0f}" stroke="#ffffff" stroke-width="{10 - 6 * a:.1f}" stroke-linecap="round" opacity="{0.75 * (1 - a):.2f}"/>'
     if o.get("silhouette"):
         for k in range(3):
             x = 1440 + k * 60

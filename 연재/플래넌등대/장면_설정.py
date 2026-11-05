@@ -25,7 +25,7 @@ def close(who, x=960, view="front", act=None, sc=2.4, eye_y=470):
 
 S = {
  "c01": {"bg": "sea", "opt": {"mood": "storm", "lamp": "off"}, "chars": [], "fx": ["fade_in"]},
- "c02": {"bg": "sea", "opt": {"mood": "grey", "lamp": "off", "far": True, "ship": [-150, 40], "flare": True}, "chars": []},
+ "c02": {"bg": "sea", "opt": {"mood": "grey", "lamp": "off", "far": True, "ship": [-150, 560], "flare": True}, "chars": []},
  "c03": {"bg": "landing", "opt": {"mood": "grey"}, "chars": []},
  "c04": {"bg": "stairs", "chars": [ch(J, 1350, "left", ["run", "blink"], 0.75, y=1010, x_to=620, y_to=440, speed=1.1)]},
  "c05": {"bg": "kitchen", "opt": {"cold": True, "stopped": True, "mood": "grey"}, "chars": [ch(J, 1100, "front", ["blink", "shiver"])]},
@@ -63,7 +63,7 @@ S = {
  "c37": {"bg": "lantern", "opt": {"mood": "storm", "light": "flicker", "console": True}, "chars": [ch(H, 960, "front", ["blink", "shiver"], 0.95, y=1260)]},
  "c38": {"bg": "lantern", "opt": {"mood": "storm", "light": "flicker", "console": True}, "chars": [ch(H, 960, "front", ["blink", "breath", "talk"], 1.0, y=1200)], "fx": ["glow"]},
  "c39": {"bg": "lantern", "opt": {"mood": "night", "light": "dim"}, "chars": [ch(H, 960, "front", ["closed", "breath"], 1.0, y=1100, opacity=0.85)], "fx": ["glow"]},
- "c40": {"bg": "sea", "opt": {"mood": "night", "lamp": "off", "far": True, "ship": [-200, 30]}, "chars": []},
+ "c40": {"bg": "sea", "opt": {"mood": "night", "lamp": "off", "far": True, "ship": [-200, 900]}, "chars": []},
  "c41": {"bg": "sea", "opt": {"mood": "day", "present": True}, "chars": [ch(H, 380, "back", LIVE, 0.95, y=1120)]},
  "c42": {"bg": "ring", "chars": [ch(H, 1500, "left", ["blink", "breath"], 1.0, y=1100)]},
  "c43": {"bg": "crevice", "chars": []},

@@ -12,6 +12,9 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
 TITLE = "꺼진 등불 — 플래넌 섬의 마지막 밤"
 SCN = os.path.join(HERE, "장면")
+# 5분 시험판에 남기는 장면 (나머지 문단은 뺌)
+SHORT5 = ["c01", "c02", "c04", "c05", "c06", "c07", "c08", "c09", "c11", "c12", "c13", "c14", "c18", "c19", "c26", "c27",
+          "c30", "c31", "c32", "c33", "c34", "c36", "c37", "c38", "c39", "c40", "c41", "c46", "c48", "c50", "c51"]
 
 
 def read_script():
@@ -45,6 +48,19 @@ def main():
         out = os.path.join(HERE, "플래넌등대_단편.json")
         json.dump(proj, open(out, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
         print(out, len(story), "chars", len(cuts), "cuts")
+    elif cmd == "project5":   # 5분 시험판 (사용자 결정 2026-11-05): 문단을 빼기만 함 → 이미 녹음한 문장을 그대로 씀
+        full = json.load(open(os.path.join(HERE, "플래넌등대_단편.json"), encoding="utf-8"))
+        blocks = re.split(r"(?=\[사진: [^\]]*?/(c\d+)\.png)", full["story"])
+        keep, out_ = set(SHORT5), []
+        for b in blocks:
+            m = re.match(r"\[사진: [^\]]*?/(c\d+)\.png", b)
+            if m and m.group(1) in keep:
+                out_.append(b.strip())
+        proj = dict(full, story="\n\n".join(out_), title=TITLE, notes=full["notes"] + " — 5분 시험판")
+        out = os.path.join(HERE, "플래넌등대_5분.json")
+        json.dump(proj, open(out, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+        body = re.sub(r"\[사진:[^\]]*\]", "", proj["story"])
+        print(out, len(out_), "cuts", len(re.sub(r"\n+", "\n", body).strip()), "chars")
     elif cmd == "stills":
         import importlib.util
         import cairosvg
