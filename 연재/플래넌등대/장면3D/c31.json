@@ -1,0 +1,45 @@
+{
+ "engine": "3d",
+ "cast": "../등장인물_카툰.json",
+ "set": "lantern",
+ "opt": {
+  "mood": "dusk",
+  "light": "off"
+ },
+ "cam": {
+  "pos": [
+   2.0,
+   5.4,
+   6.0
+  ],
+  "look": [
+   2.0,
+   5.1,
+   0
+  ],
+  "fov": 40,
+  "move": [
+   0,
+   0,
+   -0.6
+  ]
+ },
+ "chars": [
+  {
+   "who": "임시 등대지기 도널드 맥아더 (28)",
+   "at": [
+    2.0,
+    1.0
+   ],
+   "face": 0,
+   "act": [
+    "blink",
+    "shiver",
+    "talk"
+   ],
+   "over": {
+    "skin": "#ead8cb"
+   }
+  }
+ ]
+}

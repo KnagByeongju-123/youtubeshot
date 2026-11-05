@@ -150,6 +150,24 @@ def set_kitchen(t, p, o):
     if o.get("bed"):    # 빈 침대 (오른쪽 벽 앞)
         b += [Box((6.2, 0, 0.6), (3.0, 1.0, 4.6), "#7a5232"), Box((6.3, 1.0, 0.7), (2.8, 0.4, 4.4), "#e9e1cf"),
               Box((6.5, 1.4, 0.8), (2.4, 0.3, 1.0), "#f4f1ea"), Box((6.1, 0, 0.3), (3.2, 2.4, 0.3), "#6b4a30")]
+    if o.get("door"):   # 왼쪽 벽의 문 (열리면 밖의 흐린 하늘빛)
+        b = [x for x in b if not (x.p[0] == -1 and 0 <= x.p[1] <= 4 and 8 <= x.p[2] <= 10)]
+        b += [Box((-1.05, 0, 7.8), (0.3, 5.2, 0.25), "#6b4a30"), Box((-1.05, 0, 11.0), (0.3, 5.2, 0.25), "#6b4a30"), Box((-1.05, 5.0, 7.8), (0.3, 0.3, 3.45), "#6b4a30")]
+        if o["door"] == "open":
+            b += [Box((-1.6, 0, 8.05), (0.1, 5.0, 2.95), (200, 210, 218), emit=True, edge=False),
+                  Box((-0.95, 0, 11.0), (0.15, 5.0, 2.9), "#7a5232", [(np.array([-0.95, 0, 11.0]), "y", 110)])]   # 문짝은 바깥쪽으로 열림
+        else:
+            b.append(Box((-1.0, 0, 8.05), (0.15, 5.0, 2.95), "#7a5232"))
+    if o.get("hook"):   # 문 옆 옷걸이 (+ 걸린 방수 외투)
+        b += [Box((-0.95, 5.6, 3.0), (0.3, 0.3, 3.2), "#6b4a30"), Box((-0.7, 5.2, 4.4), (0.3, 0.5, 0.2), "#3b3b3b")]
+        if o["hook"] == "coat":
+            sway = 2 * math.sin(t * 1.3)
+            pv = np.array([-0.5, 5.5, 4.5])
+            R_ = [(pv, "x", sway)]
+            b += [Box((-0.8, 1.6, 3.3), (0.6, 3.8, 2.4), "#3c4c66", R_), Box((-0.8, 4.5, 3.0), (0.6, 0.9, 3.0), "#3c4c66", R_),
+                  Box((-0.78, 2.3, 2.7), (0.55, 2.8, 0.5), "#33425a", R_), Box((-0.78, 2.3, 5.75), (0.55, 2.8, 0.5), "#33425a", R_)]
+            for k in range(3):
+                b.append(Box((-0.22, 4.2 - k * 0.9, 4.45), (0.05, 0.16, 0.16), "#c9b25a", R_, edge=False))
     if o.get("cold"):   # 꺼진 난로: 불꽃·김을 뺌 (emit 상자 중 주황·흰 것)
         b = [x for x in b if not (x.emit and (x.col[0] > x.col[2] + 20 or x.col.min() > 230))]   # 불꽃·수프·김 (따뜻한 색 빛) 빼기
     if o.get("stopped"):
@@ -208,7 +226,152 @@ def set_plain(t, p, o):
     return [], o.get("mood", "plain")
 
 
-SETS = {"island": set_island, "stairs": set_stairs, "kitchen": set_kitchen, "hook": set_hook, "rocks": set_rocks, "plain": set_plain}
+
+
+# ───────────────────────── 등대 꼭대기 렌즈실 ─────────────────────────
+def lens_boxes(t, p, light):
+    """가운데 받침 + 겹겹의 유리 렌즈(빛) + 돌아가는 빛줄기"""
+    dim = 1.0
+    if light == "dim":
+        dim = max(0.0, 1 - p * 1.1)
+    elif light == "flicker":
+        dim = 0.55 + 0.45 * abs(math.sin(t * 9)) * (0.5 + 0.5 * math.sin(t * 2.3))
+    elif light == "off":
+        dim = 0.0
+    b = [Box((-1.4, 0, -1.4), (2.8, 1.6, 2.8), "#6b4a30"), Box((-1.7, 1.6, -1.7), (3.4, 0.25, 3.4), "#b08d3a")]
+    glass = np.array([150, 200, 212], float)
+    glow = np.array([255, 241, 168], float)
+    for k in range(7):   # 아래·위로 갈수록 좁아지는 유리 고리 + 고리 사이 놋쇠 테
+        y = 1.85 + k * 0.55
+        w = 2.6 - abs(k - 3) * 0.35
+        col = glass * (1 - 0.85 * dim) + glow * 0.85 * dim
+        b.append(Box((-w / 2, y, -w / 2), (w, 0.44, w), np.clip(col, 0, 255), emit=dim > 0.05, edge=True))
+        b.append(Box((-w / 2 - 0.04, y + 0.44, -w / 2 - 0.04), (w + 0.08, 0.1, w + 0.08), "#b08d3a"))
+    b.append(Box((-0.9, 5.7, -0.9), (1.8, 0.5, 1.8), "#b08d3a"))   # 렌즈 꼭대기 놋쇠 뚜껑
+    if dim > 0.05:
+        b.append(Box((-0.5, 3.2, -0.5), (1.0, 1.0, 1.0), (255, 255, 235), emit=True, edge=False))
+        a = t * 35
+        piv = np.array([0, 3.7, 0])
+        b.append(Box((8.6, 3.45, -0.25), (60, 0.5 * dim + 0.1, 0.5), (255, 244, 194), [(piv, "y", a)], emit=True, edge=False))   # 빛줄기는 유리창 밖부터
+    return b
+
+
+def set_lantern(t, p, o):
+    mood = o.get("mood", "night")
+    def build():
+        vx = Voxels()
+        vx.fill(-8, 8, -1, 0, -8, 8, "#3a3b40", 8)              # 쇠 바닥
+        for x in range(-8, 8):                                   # 낮은 둘레 벽 (뒤·옆)
+            vx.put(x, 0, -8, "#2f3034", j=4)
+        for z in range(-8, 8):
+            vx.put(-8, 0, z, "#2f3034", j=4)
+            vx.put(7, 0, z, "#2f3034", j=4)
+        vx.fill(-8, 8, 8, 9, -8, 8, "#2a2b2f", 6)               # 지붕
+        return vx.boxes()
+    b = list(_static("lantern", build))
+    for (x, z) in [(-8, -8), (-2.7, -8), (2.6, -8), (7.7, -8), (-8, -2.7), (-8, 2.6), (7.7, -2.7), (7.7, 2.6), (-8, 7.7), (7.7, 7.7)]:
+        b.append(Box((x, 1, z), (0.3, 7, 0.3), "#24252a"))       # 유리창 틀 기둥
+    for y in (1.0, 7.6):
+        b += [Box((-8, y, -8), (16, 0.25, 0.25), "#24252a"), Box((-8, y, -8), (0.25, 0.25, 16), "#24252a"), Box((7.75, y, -8), (0.25, 0.25, 16), "#24252a")]
+    b += sea_tiles(t, mood, -160, 160, -160, 160, step=10)
+    for x in b[-1:]:
+        pass
+    sea = [x for x in b if x.s[0] == 10]
+    for x in sea:          # 바다는 저 아래 (등대 높이)
+        x.p[1] -= 30
+    if o.get("land"):      # 창밖 아래로 보이는 섬 비탈 (서쪽 +x 로 내려감)
+        for x in range(8, 70, 4):
+            for z in range(-24, 24, 4):
+                h = -10 - (x - 8) * 0.18
+                b.append(Box((x, h - 4, z), (4, 4, 4), E.jitter(E.hexrgb("#5f8a4a"), (x, z), 14), skip=(0, 2, 5)))
+        for x in range(8, 70, 2):
+            b.append(Box((x, -10 - (x - 8) * 0.18 + 0.02, -1), (2, 0.1, 2), "#9a9c9e", edge=False))   # 서쪽 선착장으로 가는 길
+    b += lens_boxes(t, p, o.get("light", "on"))
+    if o.get("wick"):      # 맥아더 손의 새 심지
+        pass
+    return b, mood
+
+
+def set_wave(t, p, o):
+    """서쪽 절벽에 부딪쳐 솟구치는 거대한 파도 (p 0→1: 솟아올라 덮침)"""
+    mood = "storm"
+    def build():
+        vx = Voxels()
+        for x in range(6, 40):
+            for z in range(-30, 30):
+                h = 10 + int(2 * math.sin(z * 0.5) + (x - 6) * 0.15)
+                for y in range(-1, h):
+                    vx.put(x, y, z, "#3f453c" if y < h - 1 else "#4f5a46", j=12)
+        return vx.boxes()
+    b = sea_tiles(t, mood, -80, 6, -60, 60, rough=2.2) + list(_static("wavecliff", build))
+    q = min(1.0, p * 1.15)
+    H = (22 * math.sin(math.pi * q) if q < 0.5 else 22 * (1 - 0.45 * (q - 0.5) / 0.5)) if not o.get("silhouette") else 18   # 솟았다가 절벽을 덮친 채로
+    front = -24 + 30 * min(1.0, q * 1.2)
+    col = E.hexrgb("#4f7d97")
+    for z in range(-14, 14, 2):
+        for k in range(8):   # 파도 앞면에서 뒤로 갈수록 낮아지는 물기둥
+            x = front - k * 3
+            hh = max(0.5, H * (1 - k / 8) * (0.85 + 0.15 * math.sin(z * 0.7 + t)))
+            b.append(Box((x, -1, z), (3, hh + 1, 2), np.clip(col * (0.9 + 0.08 * k), 0, 255), skip=(2, 5)))
+        b.append(Box((front - 1, H * (0.85 + 0.15 * math.sin(z * 0.7 + t)) - 0.5, z), (3.5, 1.2, 2), (235, 242, 246), edge=False))   # 흰 물마루
+    if q > 0.45 and not o.get("silhouette"):   # 절벽에 부딪쳐 튀는 물보라
+        for k in range(40):
+            a = ((t * 0.9 + k * 0.137) % 1)
+            sx = 5 - 8 * a * math.cos(k)
+            sy = 8 + 20 * a + 3 * math.sin(k * 3)
+            sz = -12 + (k * 7 % 24)
+            sz_ = 0.6 + 1.4 * (1 - a)
+            b.append(Box((sx, sy, sz), (sz_, sz_, sz_), (240, 246, 250), emit=True, edge=False))
+    if o.get("silhouette"):   # 바위 끝, 서로 팔을 붙잡은 세 사람의 그림자
+        for k in range(3):   # 절벽 끝에 선 세 사람 (얼굴 없는 검은 그림자, 사람 키 크기)
+            z0 = -1.8 + k * 1.5
+            zi = int(math.floor(z0 + 0.35))
+            top = 10 + int(2 * math.sin(zi * 0.5) + (7 - 6) * 0.15)   # 그 사람이 선 칸의 땅 높이 (떠 있지 않게)
+            b += [Box((7.2, top + 0.0, z0), (0.9, 2.2, 0.7), (14, 14, 18), edge=False), Box((7.25, top + 2.2, z0 + 0.05), (0.8, 0.8, 0.6), (14, 14, 18), edge=False),
+                  Box((7.3, top + 1.5, z0 + 0.6), (0.6, 0.25, 1.0), (14, 14, 18), edge=False)]   # 옆 사람 팔을 붙잡은 팔
+    return b, mood
+
+
+def set_landing(t, p, o):
+    """서쪽 선착장: 젖은 돌 계단·둑, 쇠 난간(bent 면 휘어짐), 거친 바다"""
+    mood = o.get("mood", "storm")
+    def build():
+        vx = Voxels()
+        for x in range(-4, 20):
+            for z in range(-6, 8):
+                h = 3 if x < 8 else 3 + (x - 8) // 2
+                for y in range(-1, min(h, 9)):
+                    vx.put(x, y, z, "#7b7e80" if y == h - 1 else "#5b5e60", j=12)
+        return vx.boxes()
+    b = sea_tiles(t, mood, -80, -4, -60, 40, rough=2.0) + list(_static("landing", build))
+    for k in range(6):
+        x = -2 + k * 2
+        lean = (k - 1) * 12 if o.get("bent") and k >= 2 else 0
+        piv = np.array([x, 3, 6.5])
+        b.append(Box((x, 3, 6.4), (0.25, 2.2, 0.25), "#3b3b3b", [(piv, "z", lean)]))
+        if k < 5:
+            ang = 0 if not (o.get("bent") and k >= 1) else -10 - k * 6
+            b.append(Box((x, 4.9, 6.45), (2.1, 0.18, 0.18), "#3b3b3b", [(np.array([x, 5.0, 6.5]), "z", ang)]))
+    if o.get("wet"):
+        for k in range(12):
+            b.append(Box((-3 + k * 1.7, 3.02, -5 + (k * 5 % 12)), (1.2, 0.03, 0.8), (150, 170, 185), emit=True, edge=False))   # 물웅덩이
+    return b, mood
+
+
+def set_island_swell(t, p, o):
+    b, mood = set_island(t, p, o)
+    if o.get("swell"):   # 먼바다 수평선이 부풀어 오름
+        h = 1 + 9 * p
+        sea_c = E.hexrgb(MOOD[mood][2])
+        for x in range(-70, 80, 2):   # 둥글게 이어진 물결 언덕 (가운데가 가장 높음, 양 끝은 활처럼 앞으로 휨)
+            hh = h * math.exp(-((x - 5) / 38) ** 2)
+            z = -72
+            b.append(Box((x, -1, z), (2.05, hh + 1, 8), sea_c * 1.05, skip=(2, 3, 5), edge=False))   # 한 색으로 이어진 물결 언덕
+    return b, mood
+
+
+SETS = {"island": set_island_swell, "stairs": set_stairs, "kitchen": set_kitchen, "hook": set_hook, "rocks": set_rocks, "plain": set_plain,
+        "lantern": set_lantern, "wave": set_wave, "landing": set_landing}
 
 
 # ───────────────────────── 움직임 ─────────────────────────

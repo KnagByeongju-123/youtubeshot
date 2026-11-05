@@ -79,8 +79,9 @@ class Camera:
         if s.ortho:
             k = H * SS / s.ortho
             return np.stack([W * SS / 2 + k * x, H * SS / 2 - k * y], 1), z
+        z0 = z
         z = np.maximum(z, 0.05)
-        return np.stack([W * SS / 2 + s.focal * x / z, H * SS / 2 - s.focal * y / z], 1), z
+        return np.stack([W * SS / 2 + s.focal * x / z, H * SS / 2 - s.focal * y / z], 1), z0
 
 
 def render(boxes, cam, bg=(150, 180, 205), sky=None):
@@ -99,6 +100,8 @@ def render(boxes, cam, bg=(150, 180, 205), sky=None):
         for fi, f in enumerate(FACES):
             if fi in b.skip:
                 continue
+            if not cam.ortho and min(depth[i] for i in f) < 0.12:
+                continue                      # 카메라 뒤·바로 앞에 걸친 면은 안 그림 (화면 전체를 덮지 않게)
             p = v[list(f)]
             n = np.cross(p[1] - p[0], p[3] - p[0])
             nn = np.linalg.norm(n)
@@ -268,8 +271,10 @@ def person(c, pos, face=0.0, pose=None, scale=1.0):
         top_h = hs * (0.24 if st != "perm" else 0.3)
         B((-hwid / 2 - 0.04, t - top_h + 0.06, -hs / 2 - 0.04), (hwid + 0.08, top_h, hs + 0.08), hc)
         back_h = hs * (0.9 if st in ("bob", "long") else 0.75)
+        if c["aviator"]:   # 비행 모자 밑 머리는 짧게 (뒷머리가 검은 덩어리로 얼굴을 덮지 않게)
+            back_h = hs * 0.45
         B((-hwid / 2 - 0.04, t - back_h, -hs / 2 - 0.04), (hwid + 0.08, back_h, 0.12), hc)
-        sl = hs * (0.8 if st in ("bob", "long") else 0.45)
+        sl = hs * (0.8 if st in ("bob", "long") else 0.45) * (0.6 if c["aviator"] else 1.0)
         for sg in (-1, 1):
             B((sg * hwid / 2 - (0.06 if sg < 0 else -0.02) - (0 if sg < 0 else 0.04), t - sl, -hs / 2 - 0.04), (0.08, sl, hs * (0.75 if st not in ("bob", "long") else 0.95)), hc)
         if st == "long":
@@ -297,7 +302,7 @@ def person(c, pos, face=0.0, pose=None, scale=1.0):
         ac = c["aviator"] if isinstance(c["aviator"], str) else "#8a5a32"
         B((-hwid / 2 - 0.06, t - hs * 0.22, -hs / 2 - 0.06), (hwid + 0.12, hs * 0.34, hs + 0.12), ac)
         for sg in (-1, 1):
-            B((sg * hwid / 2 - (0.08 if sg < 0 else 0) , hy + hs * 0.22, -hs * 0.24), (0.08, hs * 0.34, hs * 0.24), shade_hex(ac, 0.85))   # 귀 덮개 (귀 자리에 작게)
+            B((sg * hwid / 2 - (0.08 if sg < 0 else 0) , hy + hs * 0.5, -hs * 0.36), (0.08, hs * 0.3, hs * 0.3), ac)   # 귀 덮개 (모자에 붙은 위쪽 뒤편, 모자와 같은 색)
         B((-hwid / 2 - 0.08, t - hs * 0.08, -hs / 2 - 0.08), (hwid + 0.16, 0.07, hs + 0.16), "#3b3b3b")
         for sg in (-1, 1):
             B((sg * ex - hs * 0.13, t - hs * 0.12, hs / 2 + 0.06), (hs * 0.26, hs * 0.2, 0.06), "#c9a227")

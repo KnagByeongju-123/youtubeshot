@@ -1,0 +1,28 @@
+{
+ "engine": "3d",
+ "cast": "../등장인물_카툰.json",
+ "set": "landing",
+ "opt": {
+  "mood": "storm",
+  "bent": true,
+  "wet": true
+ },
+ "cam": {
+  "pos": [
+   -6,
+   9,
+   22
+  ],
+  "look": [
+   4,
+   3,
+   2
+  ],
+  "fov": 48,
+  "move": [
+   2,
+   -1,
+   -2
+  ]
+ }
+}

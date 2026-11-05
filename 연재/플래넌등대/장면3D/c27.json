@@ -1,0 +1,75 @@
+{
+ "engine": "3d",
+ "cast": "../등장인물_카툰.json",
+ "set": "kitchen",
+ "opt": {
+  "door": "open",
+  "hook": "empty"
+ },
+ "cam": {
+  "pos": [
+   11,
+   6.0,
+   13.5
+  ],
+  "look": [
+   3,
+   3.4,
+   7.5
+  ],
+  "fov": 58
+ },
+ "chars": [
+  {
+   "who": "등대장 제임스 두캣 (43)",
+   "at": [
+    1.6,
+    9.5
+   ],
+   "face": 60,
+   "act": [
+    "blink",
+    "breath",
+    "talk"
+   ],
+   "over": {
+    "top": "#2e3b4f",
+    "top_type": "jacket",
+    "coat_len": 0.62,
+    "shirt": "#3a3a3a",
+    "scarf": false
+   }
+  },
+  {
+   "who": "부등대지기 토머스 마셜 (40)",
+   "at": [
+    3.6,
+    8.0
+   ],
+   "face": 40,
+   "act": [
+    "blink",
+    "breath"
+   ],
+   "over": {
+    "top": "#2e3b4f",
+    "top_type": "jacket",
+    "coat_len": 0.62,
+    "shirt": "#3a3a3a",
+    "scarf": false
+   }
+  },
+  {
+   "who": "임시 등대지기 도널드 맥아더 (28)",
+   "at": [
+    8.0,
+    5.8
+   ],
+   "face": -60,
+   "act": [
+    "blink",
+    "breath"
+   ]
+  }
+ ]
+}
