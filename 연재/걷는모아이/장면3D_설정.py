@@ -100,7 +100,7 @@ for k_ in ("c04", "c05", "c07", "c11", "c18", "c21", "c22", "c27", "c28", "c30")
     S_[k_]["cam"]["hand"] = 0.12 if k_ not in ("c05", "c28") else 0.04
 S_["c18"]["cam"]["shake"] = 0.3
 for k_ in S_:
-    S_[k_]["style"] = "diorama"    # 위아래 살짝 흐림·또렷한 색 (블록은 잘게 나누지 않음: tex 없음)
+    S_[k_].pop("style", None)      # 흐림 효과는 쓰지 않음 (사용자 결정 2026-11-05: 느려짐), 블록도 잘게 나누지 않음
 
 if __name__ == "__main__":
     import importlib.util

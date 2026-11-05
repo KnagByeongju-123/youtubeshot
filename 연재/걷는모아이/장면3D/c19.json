@@ -41,6 +41,5 @@
   "fov": 50,
   "hand": 0.1,
   "shake": 0.3
- },
- "style": "diorama"
+ }
 }
