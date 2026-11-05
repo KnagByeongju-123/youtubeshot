@@ -1,0 +1,18 @@
+{"chars":[
+ {"name":"등대장 제임스 두캣 (43)","height":770,"head":0.2,"shoulder":84,"waist":76,"hip":64,"leg_w":34,"arm_w":28,
+  "skin":"#e9bf9c","hair":"#3a2a20","hair_style":"crew","beard":"#3a2a20","eyes":"tired","brows":1.7,"mouth":"flat","wrinkles":true,
+  "top":"#1f2d4a","top_type":"uniform","double":true,"shirt":"#f1ede2","bottom":"#1f2d4a","shoes":"#1a1a1a","cap":"#1f2d4a","sig":"#e3b341"},
+ {"name":"부등대지기 토머스 마셜 (40)","height":690,"head":0.22,"head_w":0.95,"shoulder":74,"waist":86,"hip":70,"leg_w":32,"arm_w":27,
+  "skin":"#f0c4a0","hair":"#b0552a","hair_style":"crew","mustache":true,"eyes":"smile","mouth":"smile","blush":true,"brows":1.3,
+  "top":"#e6dcc4","top_type":"shirt","bottom":"#4a3b2e","shoes":"#3a2a1c","scarf":true,"sig":"#2f7d4f"},
+ {"name":"임시 등대지기 도널드 맥아더 (28)","height":790,"head":0.2,"head_w":0.82,"shoulder":58,"waist":46,"hip":46,"leg_w":25,"arm_w":20,
+  "skin":"#f3d0b2","hair":"#2a1a14","hair_style":"bob","eyes":"anime","iris":"#2c4a6a","brows":1.2,"mouth":"frown",
+  "top":"#8fa3b8","top_type":"shirt","braces":true,"bottom":"#3a3a42","shoes":"#2a1e16","sig":"#a83232"},
+ {"name":"교대 등대지기 조지프 무어","height":720,"head":0.21,"shoulder":64,"waist":56,"hip":54,"leg_w":28,"arm_w":23,
+  "skin":"#f2cdb0","hair":"#7a5a3a","hair_style":"slick","eyes":"dot","mouth":"frown","brows":1.1,
+  "top":"#e8b923","top_type":"jacket","shirt":"#4a4a4a","coat_len":0.6,"bottom":"#2f2f35","shoes":"#1a1a1a","sig":"#e8b923"},
+ {"name":"안내자 하람 (14)","height":640,"head":0.25,"head_w":0.9,"shoulder":60,"waist":52,"hip":50,"leg_w":26,"arm_w":22,
+  "skin":"#f6d3b3","hair":"#1c1c24","hair_style":"spiky","eyes":"anime","iris":"#3a2a1a","brows":1.3,"mouth":"flat",
+  "top":"#4e5b3a","top_type":"jacket","shirt":"#e9e1cf","button":"#c9a227","coat_len":0.55,"bottom":"#3b3a40","shoes":"#6b3e22",
+  "sig":"#c0392b","scarf":true,"aviator":"#8a5a32"}
+]}

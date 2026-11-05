@@ -31,7 +31,7 @@ DEFAULT = {
     "sig": None,          # 대표 색 (넥타이·목도리·앞치마·모자 등 소품 색)
     "eyes": "dot", "brows": 1.0, "mouth": "flat",
     "wrinkles": False, "mustache": False, "glasses": False, "blush": False,
-    "cap": False, "aviator": False, "coat_len": 0, "tie": False, "apron": False, "scarf": False, "lanyard": False,
+    "cap": False, "aviator": False, "coat_len": 0, "beard": False, "braces": False, "double": False, "tie": False, "apron": False, "scarf": False, "lanyard": False,
 }
 
 
@@ -243,7 +243,8 @@ def hair_front(b, x, back=False):
             behind += P(f"M{x + sgn * hw * 1.02},{cy - hh * 0.1} Q{x + sgn * hw * 1.2},{cy + hh * 0.3} {x + sgn * hw * 0.95},{cy + hh * 0.48} "
                         f"L{x + sgn * hw * 0.5},{cy + hh * 0.45} Z", col)
         if back:
-            behind += P(f"M{x - hw * 1.1},{cy} L{x - hw * 1.0},{cy + hh * 0.5} L{x + hw * 1.0},{cy + hh * 0.5} L{x + hw * 1.1},{cy} Z", col)
+            front = P(f"M{x - hw * 1.08},{cy + hh * 0.1} C{x - hw * 1.14},{t - hh * 0.14} {x + hw * 1.14},{t - hh * 0.14} {x + hw * 1.08},{cy + hh * 0.1} "
+                      f"L{x + hw * 1.0},{cy + hh * 0.5} L{x - hw * 1.0},{cy + hh * 0.5} Z", col)
     if st == "bun":
         behind += E(x, t - hh * 0.02, hw * 0.38, hh * 0.15, col)
     if st == "long":
@@ -294,6 +295,12 @@ def face_front(b, x):
     # 코
     s += P(f"M{x - hw * 0.02},{cy + hh * 0.1} Q{x + hw * 0.1},{cy + hh * 0.2} {x - hw * 0.05},{cy + hh * 0.22}", "none", LW * 0.7)
     my = cy + hh * 0.31
+    if c["beard"]:
+        bc = c["beard"] if isinstance(c["beard"], str) else c["hair"]
+        s += P(f"M{x - hw * 0.98},{cy + hh * 0.02} Q{x - hw * 0.95},{cy + hh * 0.42} {x - hw * 0.45},{cy + hh * 0.58} Q{x},{cy + hh * 0.72} {x + hw * 0.45},{cy + hh * 0.58} "
+               f"Q{x + hw * 0.95},{cy + hh * 0.42} {x + hw * 0.98},{cy + hh * 0.02} Q{x + hw * 0.7},{cy + hh * 0.22} {x + hw * 0.35},{my - hh * 0.04} "
+               f"Q{x},{my - hh * 0.09} {x - hw * 0.35},{my - hh * 0.04} Q{x - hw * 0.7},{cy + hh * 0.22} {x - hw * 0.98},{cy + hh * 0.02} Z", bc)
+        s += E(x, my + hh * 0.005, hw * 0.2, hh * 0.045, c["skin"], 0)
     if c["mustache"]:
         s += P(f"M{x},{my - hh * 0.05} C{x - hw * 0.15},{my - hh * 0.09} {x - hw * 0.38},{my - hh * 0.06} {x - hw * 0.4},{my + hh * 0.01} "
                f"Q{x - hw * 0.2},{my - hh * 0.01} {x},{my - hh * 0.02} Q{x + hw * 0.2},{my - hh * 0.01} {x + hw * 0.4},{my + hh * 0.01} "
@@ -401,6 +408,18 @@ def view_front(c, back=False):
             s += P(f"M{x},{wy} q-22,-16 -28,4 q16,6 28,-4 q22,-16 28,4 q-16,6 -28,-4 Z", ac, 3)
             s += LINE(x - 4, wy + 4, x - 12, wy + 46, 7, ac) + LINE(x + 4, wy + 4, x + 12, wy + 46, 7, ac)
             s += LINE(x - hw * 0.5, b.sy + 8, x + hw * 0.5, b.sy + 8, 6, ac)
+    if c["braces"]:
+        bc = c["sig"] or "#a83232"
+        for sgn in (-1, 1):
+            if back:
+                s += LINE(x + sgn * c["shoulder"] * 0.45, b.sy + 2, x + sgn * 6, b.sy + 70, 7, bc) + LINE(x + sgn * 6, b.sy + 70, x + sgn * 10, b.hy - 4, 7, bc)
+            else:
+                s += LINE(x + sgn * c["shoulder"] * 0.45, b.sy + 2, x + sgn * c["waist"] * 0.4, b.hy - 4, 7, bc)
+                s += E(x + sgn * c["waist"] * 0.4, b.hy - 8, 5, 5, "#d9c27a", 2)
+    if c["double"] and not back:
+        for i in range(3):
+            for sgn in (-1, 1):
+                s += E(x + sgn * 16, b.sy + 70 + i * 34, 4.5, 4.5, c.get("button", "#d9c27a"), 2)
     if c["lanyard"] and not back:
         s += P(f"M{x - hw * 0.45},{b.sy} L{x - 6},{b.sy + 85} M{x + hw * 0.45},{b.sy} L{x + 6},{b.sy + 85}", "none", 5, f'stroke="{c["sig"] or "#2d6cdf"}"')
         s += f'<rect x="{x - 17:.1f}" y="{b.sy + 82:.1f}" width="34" height="44" rx="4" fill="#ffffff" stroke="{OUT}" stroke-width="3"/>'
@@ -504,6 +523,10 @@ def view_side(c):
         s += LINE(ex - hw * 0.15, ey, ex - hw * 0.24, ey + hh * 0.04, 2.5)
         s += P(f"M{x + hw * 0.55},{cy + hh * 0.2} q{-hw * 0.06},{hh * 0.08} 0,{hh * 0.14}", "none", 2.5)
     my = cy + hh * 0.31
+    if c["beard"]:
+        bc = c["beard"] if isinstance(c["beard"], str) else c["hair"]
+        s += P(f"M{x - hw * 0.25},{cy + hh * 0.05} Q{x - hw * 0.3},{cy + hh * 0.45} {x + hw * 0.2},{cy + hh * 0.62} Q{x + hw * 0.8},{cy + hh * 0.62} {x + hw * 0.92},{my - hh * 0.02} "
+               f"L{x + hw * 0.6},{my - hh * 0.05} Q{x + hw * 0.3},{cy + hh * 0.15} {x - hw * 0.25},{cy + hh * 0.05} Z", bc)
     if c["mustache"]:
         s += P(f"M{x + hw * 0.92},{my - hh * 0.05} Q{x + hw * 0.7},{my - hh * 0.08} {x + hw * 0.55},{my} Q{x + hw * 0.75},{my - hh * 0.01} {x + hw * 0.92},{my - hh * 0.02} Z",
                c["hair"] if c["hair_style"] != "bald" else "#9a9a9a", 3)
