@@ -1,0 +1,20 @@
+{
+ "cast": "../등장인물_카툰.json",
+ "bg": "rocks",
+ "opt": {
+  "mood": "dusk"
+ },
+ "chars": [
+  {
+   "who": "안내자 하람 (14)",
+   "x": 800,
+   "view": "right",
+   "act": [
+    "walk"
+   ],
+   "scale": 0.95,
+   "y": 1030,
+   "x_to": 1700
+  }
+ ]
+}

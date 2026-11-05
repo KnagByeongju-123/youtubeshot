@@ -1,0 +1,9 @@
+{
+ "cast": "../등장인물_카툰.json",
+ "bg": "hook",
+ "opt": {
+  "ruin": true,
+  "hand": true
+ },
+ "chars": []
+}

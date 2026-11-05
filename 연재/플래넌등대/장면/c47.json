@@ -1,0 +1,20 @@
+{
+ "cast": "../등장인물_카툰.json",
+ "bg": "hook",
+ "opt": {
+  "ruin": true
+ },
+ "chars": [
+  {
+   "who": "안내자 하람 (14)",
+   "x": 960,
+   "view": "back",
+   "act": [
+    "blink",
+    "breath"
+   ],
+   "scale": 1.1,
+   "y": 1250
+  }
+ ]
+}

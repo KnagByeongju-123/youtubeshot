@@ -52,7 +52,8 @@ def P(d, fill, sw=LW, extra=""):
 
 
 def E(cx, cy, rx, ry, fill, sw=LW, extra=""):
-    return f'<ellipse cx="{cx:.1f}" cy="{cy:.1f}" rx="{rx:.1f}" ry="{ry:.1f}" fill="{fill}" stroke="{OUT}" stroke-width="{sw}" {extra}/>'
+    st = "" if 'stroke="' in extra else f'stroke="{OUT}"'
+    return f'<ellipse cx="{cx:.1f}" cy="{cy:.1f}" rx="{rx:.1f}" ry="{ry:.1f}" fill="{fill}" {st} stroke-width="{sw}" {extra}/>'
 
 
 def LIMB(x1, y1, x2, y2, w, fill):

@@ -1,0 +1,34 @@
+{
+ "cast": "../등장인물_카툰.json",
+ "bg": "kitchen",
+ "opt": {
+  "table": true
+ },
+ "chars": [
+  {
+   "who": "부등대지기 토머스 마셜 (40)",
+   "x": 1450,
+   "view": "front",
+   "act": [
+    "blink",
+    "breath",
+    "talk",
+    "wave"
+   ],
+   "scale": 0.95,
+   "y": 1040
+  },
+  {
+   "who": "안내자 하람 (14)",
+   "x": 1120,
+   "view": "front",
+   "act": [
+    "blink",
+    "breath",
+    "talk"
+   ],
+   "scale": 0.95,
+   "y": 1050
+  }
+ ]
+}

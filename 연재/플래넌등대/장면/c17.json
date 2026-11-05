@@ -1,0 +1,31 @@
+{
+ "cast": "../등장인물_카툰.json",
+ "bg": "lantern",
+ "opt": {
+  "mood": "night"
+ },
+ "chars": [
+  {
+   "who": "임시 등대지기 도널드 맥아더 (28)",
+   "x": 1480,
+   "view": "left",
+   "act": [
+    "blink",
+    "breath"
+   ],
+   "scale": 0.85,
+   "y": 1060
+  },
+  {
+   "who": "안내자 하람 (14)",
+   "x": 470,
+   "view": "right",
+   "act": [
+    "blink",
+    "breath"
+   ],
+   "scale": 0.85,
+   "y": 1070
+  }
+ ]
+}

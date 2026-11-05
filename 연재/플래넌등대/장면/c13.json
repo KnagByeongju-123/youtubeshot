@@ -1,5 +1,44 @@
-{"bg":"kitchen","cast":"../등장인물_카툰.json","chars":[
- {"who":"부등대지기 토머스 마셜 (40)","x":640,"y":1010,"scale":0.9,"view":"left","act":["blink","breath","stir"]},
- {"who":"등대장 제임스 두캣 (43)","x":1700,"y":1040,"scale":0.95,"view":"front","act":["blink","breath"]},
- {"who":"안내자 하람 (14)","x":1320,"y":1050,"scale":0.95,"view":"front","act":["blink","breath","talk"]}
-]}
+{
+ "cast": "../등장인물_카툰.json",
+ "bg": "kitchen",
+ "opt": {
+  "table": true
+ },
+ "chars": [
+  {
+   "who": "부등대지기 토머스 마셜 (40)",
+   "x": 640,
+   "view": "left",
+   "act": [
+    "blink",
+    "breath",
+    "stir",
+    "talk"
+   ],
+   "scale": 0.9,
+   "y": 1010
+  },
+  {
+   "who": "등대장 제임스 두캣 (43)",
+   "x": 1700,
+   "view": "front",
+   "act": [
+    "blink",
+    "breath"
+   ],
+   "scale": 0.95,
+   "y": 1040
+  },
+  {
+   "who": "안내자 하람 (14)",
+   "x": 1320,
+   "view": "front",
+   "act": [
+    "blink",
+    "breath"
+   ],
+   "scale": 0.95,
+   "y": 1050
+  }
+ ]
+}

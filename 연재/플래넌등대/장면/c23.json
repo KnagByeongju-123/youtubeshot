@@ -1,0 +1,44 @@
+{
+ "cast": "../등장인물_카툰.json",
+ "bg": "kitchen",
+ "opt": {
+  "night": true
+ },
+ "chars": [
+  {
+   "who": "부등대지기 토머스 마셜 (40)",
+   "x": 620,
+   "view": "front",
+   "act": [
+    "blink",
+    "breath",
+    "talk",
+    "wipe"
+   ],
+   "scale": 0.9,
+   "y": 1010
+  },
+  {
+   "who": "등대장 제임스 두캣 (43)",
+   "x": 1150,
+   "view": "front",
+   "act": [
+    "blink",
+    "breath"
+   ],
+   "scale": 0.95,
+   "y": 1030
+  },
+  {
+   "who": "임시 등대지기 도널드 맥아더 (28)",
+   "x": 1600,
+   "view": "left",
+   "act": [
+    "blink",
+    "breath"
+   ],
+   "scale": 0.9,
+   "y": 1020
+  }
+ ]
+}

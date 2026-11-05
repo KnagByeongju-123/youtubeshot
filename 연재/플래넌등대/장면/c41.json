@@ -1,0 +1,21 @@
+{
+ "cast": "../등장인물_카툰.json",
+ "bg": "sea",
+ "opt": {
+  "mood": "day",
+  "present": true
+ },
+ "chars": [
+  {
+   "who": "안내자 하람 (14)",
+   "x": 380,
+   "view": "back",
+   "act": [
+    "blink",
+    "breath"
+   ],
+   "scale": 0.95,
+   "y": 1120
+  }
+ ]
+}

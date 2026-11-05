@@ -1,0 +1,24 @@
+{
+ "cast": "../등장인물_카툰.json",
+ "bg": "rocks",
+ "opt": {
+  "mood": "storm"
+ },
+ "chars": [
+  {
+   "who": "임시 등대지기 도널드 맥아더 (28)",
+   "x": 250,
+   "view": "right",
+   "act": [
+    "run"
+   ],
+   "scale": 0.95,
+   "y": 1030,
+   "x_to": 1750
+  }
+ ],
+ "fx": [
+  "rain",
+  "past"
+ ]
+}

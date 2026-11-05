@@ -1,0 +1,13 @@
+{
+ "cast": "../등장인물_카툰.json",
+ "bg": "sea",
+ "opt": {
+  "mood": "fog",
+  "lamp": "off",
+  "far": true
+ },
+ "chars": [],
+ "fx": [
+  "dark"
+ ]
+}

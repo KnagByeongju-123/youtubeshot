@@ -1,0 +1,34 @@
+{
+ "cast": "../등장인물_카툰.json",
+ "bg": "rocks",
+ "opt": {
+  "mood": "day"
+ },
+ "chars": [
+  {
+   "who": "부등대지기 토머스 마셜 (40)",
+   "x": 760,
+   "view": "right",
+   "act": [
+    "blink",
+    "breath",
+    "reach",
+    "talk"
+   ],
+   "scale": 0.9,
+   "y": 1030
+  },
+  {
+   "who": "안내자 하람 (14)",
+   "x": 1160,
+   "view": "left",
+   "act": [
+    "blink",
+    "breath",
+    "reach"
+   ],
+   "scale": 0.9,
+   "y": 1040
+  }
+ ]
+}

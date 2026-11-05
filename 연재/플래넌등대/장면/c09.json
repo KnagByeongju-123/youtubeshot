@@ -1,0 +1,22 @@
+{
+ "cast": "../등장인물_카툰.json",
+ "bg": "plain",
+ "opt": {
+  "c1": "#2b3a52",
+  "c2": "#7a8fa8"
+ },
+ "chars": [
+  {
+   "who": "안내자 하람 (14)",
+   "x": 960,
+   "view": "front",
+   "act": [
+    "blink",
+    "breath",
+    "talk"
+   ],
+   "scale": 2.4,
+   "y": 1795
+  }
+ ]
+}

@@ -1,0 +1,69 @@
+{
+ "cast": "../등장인물_카툰.json",
+ "bg": "lantern",
+ "opt": {
+  "mood": "dusk",
+  "light": "off",
+  "lx": 260
+ },
+ "chars": [
+  {
+   "who": "등대장 제임스 두캣 (43)",
+   "x": 1450,
+   "view": "right",
+   "act": [
+    "walk"
+   ],
+   "scale": 0.18,
+   "y": 760,
+   "x_to": 1800,
+   "over": {
+    "top": "#2e3b4f",
+    "top_type": "jacket",
+    "coat_len": 0.62,
+    "shirt": "#3a3a3a",
+    "scarf": false
+   }
+  },
+  {
+   "who": "부등대지기 토머스 마셜 (40)",
+   "x": 1400,
+   "view": "right",
+   "act": [
+    "walk"
+   ],
+   "scale": 0.17,
+   "y": 760,
+   "x_to": 1750,
+   "over": {
+    "top": "#2e3b4f",
+    "top_type": "jacket",
+    "coat_len": 0.62,
+    "shirt": "#3a3a3a",
+    "scarf": false
+   }
+  },
+  {
+   "who": "임시 등대지기 도널드 맥아더 (28)",
+   "x": 900,
+   "view": "right",
+   "act": [
+    "blink",
+    "breath"
+   ],
+   "scale": 0.9,
+   "y": 1060
+  },
+  {
+   "who": "안내자 하람 (14)",
+   "x": 560,
+   "view": "right",
+   "act": [
+    "blink",
+    "breath"
+   ],
+   "scale": 0.85,
+   "y": 1070
+  }
+ ]
+}

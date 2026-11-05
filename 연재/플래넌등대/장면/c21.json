@@ -1,0 +1,25 @@
+{
+ "cast": "../등장인물_카툰.json",
+ "bg": "lantern",
+ "opt": {
+  "mood": "day",
+  "light": "off",
+  "lx": 1080,
+  "wipe": true
+ },
+ "chars": [
+  {
+   "who": "등대장 제임스 두캣 (43)",
+   "x": 700,
+   "view": "right",
+   "act": [
+    "blink",
+    "breath",
+    "wipe",
+    "talk"
+   ],
+   "scale": 0.9,
+   "y": 1060
+  }
+ ]
+}

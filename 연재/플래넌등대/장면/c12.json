@@ -1,0 +1,36 @@
+{
+ "cast": "../등장인물_카툰.json",
+ "bg": "rocks",
+ "opt": {
+  "mood": "night"
+ },
+ "chars": [
+  {
+   "who": "안내자 하람 (14)",
+   "x": 650,
+   "view": "right",
+   "act": [
+    "blink",
+    "breath"
+   ],
+   "scale": 0.9,
+   "y": 1020
+  },
+  {
+   "who": "등대장 제임스 두캣 (43)",
+   "x": 1750,
+   "view": "left",
+   "act": [
+    "walk",
+    "blink",
+    "talk"
+   ],
+   "scale": 0.95,
+   "y": 1030,
+   "x_to": 1180
+  }
+ ],
+ "fx": [
+  "rain"
+ ]
+}

@@ -1,0 +1,22 @@
+{
+ "cast": "../등장인물_카툰.json",
+ "bg": "kitchen",
+ "opt": {
+  "cold": true,
+  "stopped": true,
+  "mood": "grey"
+ },
+ "chars": [
+  {
+   "who": "교대 등대지기 조지프 무어",
+   "x": 1100,
+   "view": "front",
+   "act": [
+    "blink",
+    "shiver"
+   ],
+   "scale": 0.9,
+   "y": 1000
+  }
+ ]
+}

@@ -1,0 +1,8 @@
+{
+ "cast": "../등장인물_카툰.json",
+ "bg": "wave",
+ "opt": {
+  "silhouette": true
+ },
+ "chars": []
+}

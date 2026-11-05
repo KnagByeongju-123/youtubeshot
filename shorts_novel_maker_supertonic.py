@@ -6028,7 +6028,21 @@ class SubtitleRenderer:
                 sig.append(str(int(os.path.getmtime(p_ + ".인물.json"))))
             except OSError:
                 sig.append("-")
+            if _cartoon_scene_path(p_):          # 움직이는 카툰 장면 설정이 바뀌어도 새로 그림
+                sig.append("k" + str(int(os.path.getmtime(_cartoon_scene_path(p_)))))
         return hashlib.md5(",".join(sig).encode()).hexdigest()[:12] if any(x != "-" for x in sig) else ""
+
+    def _cartoon_big(self, idx, t, big):
+        """그림 옆에 카툰 장면 설정(<그림 이름>.json, 카툰장면.py)이 있으면 그 장면을 t 시점 모습으로 그려 big 대신 씀
+        (사용자 결정 2026-11-05: 코드로 그린 카툰 인물이 장면 안에서 움직임 — 깜빡임·숨·말·걷기 등)"""
+        paths = getattr(self, "img_paths", [])
+        sp_ = _cartoon_scene_path(paths[idx]) if idx < len(paths) else None
+        if not sp_:
+            return big
+        piece = next(((a_, b_) for im_, a_, b_ in self._img_pieces(self.duration) if im_ == idx and t < b_), None)
+        lt = max(0.0, t - piece[0]) if piece else 0.0
+        im = _cartoon_frame(sp_, lt, (big.width, big.height), (piece[1] - piece[0]) if piece else None)
+        return im if im is not None else big
 
     def _shot_crop_raw(self, sh, t):
         """장면 sh 의 t 시점 사진 (움직임 적용)"""
@@ -6069,6 +6083,7 @@ class SubtitleRenderer:
                     self._img_cache.pop(next(iter(self._img_cache)))
                 self._img_cache[key] = z
             return self._img_cache[key], mask
+        big = self._cartoon_big(sh["img"], t, big)   # 움직이는 카툰 장면이면 이 순간의 그림
         z0, z1, ax, bx, ay, by = sh["m"]
         p = min(1.0, max(0.0, (t - sh["t0"]) / max(0.1, sh["t1"] - sh["t0"])))
         p = 0.5 - 0.5 * np.cos(np.pi * p)             # 부드럽게 시작·끝
@@ -6810,6 +6825,49 @@ def img_np(img):
 
 
 _DRAWFX_MOD = {}
+
+
+_CARTOON = {}
+
+
+def _cartoon_scene_path(img_path):
+    """장면/c13.png → 장면/c13.json (카툰 장면 설정: "cast"·"chars" 가 있을 때만)"""
+    if not img_path:
+        return None
+    key = ("p", img_path)
+    if key not in _CARTOON:
+        j = os.path.splitext(img_path)[0] + ".json"
+        ok = None
+        try:
+            if os.path.exists(j):
+                d = json.load(open(j, encoding="utf-8"))
+                ok = j if isinstance(d, dict) and "chars" in d and "cast" in d else None
+        except Exception:
+            ok = None
+        _CARTOON[key] = ok
+    return _CARTOON[key]
+
+
+def _cartoon_frame(scene_path, t, size, dur=None):
+    """카툰장면.py 로 장면을 t 초 모습으로 그려 size 크기 PIL 그림으로"""
+    try:
+        if "mod" not in _CARTOON:
+            spec_ = importlib.util.spec_from_file_location("kscene", os.path.join(BASE, "카툰장면.py"))
+            mod_ = importlib.util.module_from_spec(spec_)
+            spec_.loader.exec_module(mod_)
+            _CARTOON["mod"] = mod_
+        K_ = _CARTOON["mod"]
+        if ("s", scene_path) not in _CARTOON:
+            scene = json.load(open(scene_path, encoding="utf-8"))
+            cp = scene["cast"] if os.path.isabs(scene["cast"]) else os.path.join(os.path.dirname(scene_path), scene["cast"])
+            cast = {c["name"]: c for c in json.load(open(cp, encoding="utf-8"))["chars"]}
+            _CARTOON[("s", scene_path)] = (scene, cast)
+        scene, cast = _CARTOON[("s", scene_path)]
+        png = K_.cairosvg.svg2png(bytestring=K_.frame_svg(scene, cast, t, dur).encode(), output_width=size[0], output_height=size[1])
+        return Image.open(io.BytesIO(png)).convert("RGB")
+    except Exception as e:
+        print("카툰 장면 그리기 실패:", scene_path, e)
+        return None
 
 
 def _drawfx():

@@ -1,0 +1,17 @@
+{
+ "cast": "../등장인물_카툰.json",
+ "bg": "vortex",
+ "chars": [
+  {
+   "who": "안내자 하람 (14)",
+   "x": 960,
+   "view": "front",
+   "act": [
+    "closed",
+    "breath"
+   ],
+   "scale": 1.6,
+   "y": 1303
+  }
+ ]
+}

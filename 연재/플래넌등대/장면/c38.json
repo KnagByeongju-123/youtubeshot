@@ -1,0 +1,26 @@
+{
+ "cast": "../등장인물_카툰.json",
+ "bg": "lantern",
+ "opt": {
+  "mood": "storm",
+  "light": "flicker",
+  "console": true
+ },
+ "chars": [
+  {
+   "who": "안내자 하람 (14)",
+   "x": 960,
+   "view": "front",
+   "act": [
+    "blink",
+    "breath",
+    "talk"
+   ],
+   "scale": 1.0,
+   "y": 1200
+  }
+ ],
+ "fx": [
+  "glow"
+ ]
+}
