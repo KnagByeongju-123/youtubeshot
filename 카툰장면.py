@@ -282,6 +282,10 @@ def bg_lantern(t, p, o):
     """등대 꼭대기 렌즈실: 유리창 밖 바다, 가운데 커다란 계단식 유리 렌즈(빛이 돎)"""
     mood = o.get("mood", "night")
     s = sky(mood, 700) + sea(mood, t, 700)
+    if o.get("land"):   # 창밖 아래로 보이는 섬 비탈 (멀리 걷는 사람이 바다 위가 아니라 땅 위에 있게)
+        g = "#4f5a46" if mood not in ("night", "storm") else "#3a4436"
+        s += K.P("M0,690 Q500,660 900,700 Q1300,740 1920,720 L1920,880 L0,880 Z", g, 4)
+        s += K.P("M700,700 Q1100,760 1500,790 L1920,800", "none", 6, 'stroke="#8b8d8f" opacity="0.8"')   # 서쪽으로 내려가는 길
     for k in range(7):   # 유리창 틀
         x = k * 320
         s += f'<line x1="{x}" y1="0" x2="{x}" y2="1080" stroke="#2a2a2e" stroke-width="16"/>'
@@ -475,6 +479,7 @@ def pose_at(acts, t, seed):
 
 def frame_svg(scene, cast, t, dur=None):
     """장면의 t 초 모습 SVG. dur(장면 길이)를 알면 x_to(이동 끝 자리)·p(진행 0~1)에 씀"""
+    K.STYLE = scene.get("style", "cartoon")   # "block" = 블록 인형 모양 인물
     dur = dur or scene.get("dur", 8.0)
     pr = min(1.0, max(0.0, t / max(0.1, dur)))
     bg = scene.get("bg", "white")

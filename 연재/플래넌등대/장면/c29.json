@@ -4,7 +4,8 @@
  "opt": {
   "mood": "dusk",
   "light": "off",
-  "lx": 260
+  "lx": 260,
+  "land": true
  },
  "chars": [
   {
@@ -15,7 +16,7 @@
     "walk"
    ],
    "scale": 0.18,
-   "y": 760,
+   "y": 790,
    "x_to": 1800,
    "over": {
     "top": "#2e3b4f",
@@ -33,7 +34,7 @@
     "walk"
    ],
    "scale": 0.17,
-   "y": 760,
+   "y": 788,
    "x_to": 1750,
    "over": {
     "top": "#2e3b4f",

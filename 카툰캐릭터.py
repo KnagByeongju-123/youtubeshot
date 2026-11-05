@@ -641,11 +641,28 @@ def hair_side(b, x):
     return behind, front
 
 
+STYLE = "cartoon"   # "block" 이면 모든 인물을 블록 인형 모양으로 (블록캐릭터.py)
+
+
+def _block():
+    import importlib.util as _u
+    if "_BLK" not in globals():
+        sp = _u.spec_from_file_location("blk", os.path.join(os.path.dirname(os.path.abspath(__file__)), "블록캐릭터.py"))
+        m = _u.module_from_spec(sp)
+        sp.loader.exec_module(m)
+        globals()["_BLK"] = m
+    return globals()["_BLK"]
+
+
 def figure(c, view="front", pose=None):
     """장면용 인물 한 명 SVG 조각 (칸 400×900 기준, 발 = (200, 860)). view: front·back·right·left"""
     c = {**DEFAULT, **c}
     pose = pose or {}
-    if view == "front":
+    if c.get("style", STYLE) == "block":
+        V = _block().view_block
+        g = (V(c, "front", pose) if view == "front" else V(c, "back", pose) if view == "back" else V(c, "right", pose) if view == "right"
+             else f'<g transform="translate({VW},0) scale(-1,1)">{V(c, "right", pose)}</g>')
+    elif view == "front":
         g = view_front(c, pose=pose)
     elif view == "back":
         g = view_front(c, back=True, pose=pose)
@@ -661,21 +678,7 @@ def figure(c, view="front", pose=None):
 def svg_sheet(c, label=True):
     c = {**DEFAULT, **c}
     W = VW * 4
-    parts = [
-        view_front(c),
-        view_side(c),
-        f'<g transform="translate({VW * 2},0) scale(-1,1) translate({-VW * 2},0)">{view_side(c)}</g>',
-        view_front(c, back=True),
-    ]
-    g = ""
-    for i, p in enumerate(parts):
-        dx = 0 if i == 2 else VW * i
-        if i == 2:
-            # 왼쪽을 보는 옆모습: 칸 2 자리(800~1200)에 좌우를 뒤집어 그림
-            g += f'<g transform="translate({VW * 3},0) scale(-1,1)">{view_side(c)}</g>'
-            continue
-        g += f'<ellipse cx="{dx + VW / 2}" cy="{G}" rx="90" ry="12" fill="#000" opacity="0.08"/>' if i == 0 else ""
-        g += f'<g transform="translate({dx},0)">{p}</g>'
+    g = "".join(f'<g transform="translate({VW * i},0)">{figure(c, v)}</g>' for i, v in enumerate(("front", "right", "left", "back")))
     shadows = "".join(f'<ellipse cx="{VW * i + VW / 2}" cy="{G - 2}" rx="95" ry="13" fill="#000" opacity="0.09"/>' for i in range(4))
     lab = ""
     if label:
@@ -693,6 +696,8 @@ if __name__ == "__main__":
     data = json.load(open(a[0], encoding="utf-8"))
     out = a[1]
     only = set(a[a.index("--이름") + 1].split(",")) if "--이름" in a else None
+    if "--블록" in a:   # 블록 인형 모양으로
+        STYLE = "block"
     os.makedirs(out, exist_ok=True)
     made = []
     for ch in data["chars"]:
