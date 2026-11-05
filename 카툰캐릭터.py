@@ -31,7 +31,7 @@ DEFAULT = {
     "sig": None,          # 대표 색 (넥타이·목도리·앞치마·모자 등 소품 색)
     "eyes": "dot", "brows": 1.0, "mouth": "flat",
     "wrinkles": False, "mustache": False, "glasses": False, "blush": False,
-    "cap": False, "tie": False, "apron": False, "scarf": False, "lanyard": False,
+    "cap": False, "aviator": False, "coat_len": 0, "tie": False, "apron": False, "scarf": False, "lanyard": False,
 }
 
 
@@ -77,6 +77,90 @@ class Body:
         s.hy = s.sy + H * c["torso"]       # 엉덩이 높이
         s.handy = s.sy + H * 0.37          # 손 높이
         s.cx = VW / 2
+
+
+
+def anime_eye(px, ey, rx, ry, iris, side=False):
+    """레트로 애니 눈: 큰 흰자 + 진한 눈동자 + 반짝이 + 굵은 윗눈썹선"""
+    s = E(px, ey, rx, ry, "#ffffff", LW * 0.7)
+    ix = px + (rx * 0.35 if side else 0)
+    s += E(ix, ey + ry * 0.12, rx * (0.55 if side else 0.68), ry * 0.78, iris, 0)
+    s += E(ix, ey + ry * 0.18, rx * 0.3, ry * 0.4, "#111111", 0)
+    s += E(ix - rx * 0.22, ey - ry * 0.25, rx * 0.2, ry * 0.18, "#ffffff", 0)
+    s += E(ix + rx * 0.2, ey + ry * 0.4, rx * 0.09, ry * 0.08, "#ffffff", 0)
+    s += P(f"M{px - rx * 1.1},{ey - ry * 0.2} Q{px},{ey - ry * 1.35} {px + rx * 1.15},{ey - ry * 0.35}", "none", LW * 1.4)
+    return s
+
+
+def spikes(cx, cy, rx, ry, a0, a1, n, length, col, base=0.22):
+    """머리 둘레(타원)에 바깥으로 삐친 머리카락 송곳 n개 (각도 a0→a1, 도)"""
+    s = ""
+    for i in range(n):
+        a = math.radians(a0 + (a1 - a0) * (i + 0.5) / n)
+        da = math.radians((a1 - a0) / n) * base * 2.2
+        p1 = (cx + math.cos(a - da) * rx, cy + math.sin(a - da) * ry)
+        p2 = (cx + math.cos(a + da) * rx, cy + math.sin(a + da) * ry)
+        L = length * (0.8 + 0.4 * ((i * 37) % 5) / 4)
+        tip = (cx + math.cos(a + da * 0.6) * (rx + L), cy + math.sin(a + da * 0.6) * (ry + L))
+        s += P(f"M{p1[0]:.1f},{p1[1]:.1f} L{tip[0]:.1f},{tip[1]:.1f} L{p2[0]:.1f},{p2[1]:.1f} Z", col, LW * 0.8)
+    return s
+
+
+def fringe(x, t, hw, hh, col, n=5, depth=0.36):
+    """이마로 내려온 뾰족 앞머리"""
+    s = ""
+    for i in range(n):
+        x0 = x - hw * 0.95 + i * hw * 1.9 / n
+        x1 = x0 + hw * 1.9 / n
+        tx = x0 + (x1 - x0) * (0.3 if i < n / 2 else 0.7)
+        d = depth * (0.85 + 0.3 * ((i * 3) % 4) / 3)
+        s += P(f"M{x0 - 4:.1f},{t + hh * 0.12:.1f} L{tx:.1f},{t + hh * d:.1f} L{x1 + 4:.1f},{t + hh * 0.12:.1f} Z", col, LW * 0.8)
+    return s
+
+
+def aviator_front(b, x, back=False):
+    """가죽 비행 모자 + 귀 덮개 + 이마 위 고글"""
+    c, hw, hh, cy = b.c, b.hw, b.hh, b.hcy
+    t = cy - hh / 2
+    col = c["aviator"] if isinstance(c["aviator"], str) else "#8a5a32"
+    s = ""
+    for sgn in (-1, 1):   # 귀 덮개
+        s += P(f"M{x + sgn * hw * 0.8},{cy - hh * 0.15} Q{x + sgn * hw * 1.18},{cy - hh * 0.1} {x + sgn * hw * 1.12},{cy + hh * 0.22} "
+               f"Q{x + sgn * hw * 1.05},{cy + hh * 0.33} {x + sgn * hw * 0.86},{cy + hh * 0.3} Z", col)
+        s += LINE(x + sgn * hw * 1.0, cy + hh * 0.3, x + sgn * hw * 0.9, cy + hh * 0.5, 4, shade(col, 0.6))
+    s += P(f"M{x - hw * 1.08},{cy - hh * 0.02} C{x - hw * 1.12},{t - hh * 0.2} {x + hw * 1.12},{t - hh * 0.2} {x + hw * 1.08},{cy - hh * 0.02} "
+           f"Q{x},{t + hh * (0.2 if not back else 0.5)} {x - hw * 1.08},{cy - hh * 0.02} Z", col)
+    s += P(f"M{x - hw * 0.1},{t - hh * 0.05} Q{x},{t + hh * 0.1} {x + hw * 0.1},{t + hh * 0.22}", "none", 3, f'stroke="{shade(col, 0.6)}"')
+    by = t + hh * 0.13
+    s += P(f"M{x - hw * 1.06},{by + hh * 0.06} Q{x},{by - hh * 0.06} {x + hw * 1.06},{by + hh * 0.06}", "none", 11, f'stroke="{OUT}"')
+    s += P(f"M{x - hw * 1.06},{by + hh * 0.06} Q{x},{by - hh * 0.06} {x + hw * 1.06},{by + hh * 0.06}", "none", 6, 'stroke="#3b3b3b"')
+    if not back:
+        for sgn in (-1, 1):
+            gx = x + sgn * hw * 0.36
+            s += E(gx, by, hw * 0.3, hh * 0.1, "#c9a227", LW * 0.9)
+            s += E(gx, by, hw * 0.21, hh * 0.07, "#7fc8d8", 3)
+            s += E(gx - hw * 0.07, by - hh * 0.025, hw * 0.06, hh * 0.02, "#ffffff", 0)
+    return s
+
+
+def coat_skirt_front(b, x, back=False):
+    c = b.c
+    ky = b.hy + (G - b.hy) * c["coat_len"]
+    hp = max(c["hip"], c["waist"]) + 6
+    s = P(f"M{x - hp},{b.hy - 30} L{x + hp},{b.hy - 30} L{x + hp + 26},{ky} Q{x},{ky + 10} {x - hp - 26},{ky} Z", c["top"])
+    s += P(f"M{x + hp * 0.3},{b.hy - 20} L{x + hp + 22},{ky - 4} L{x + hp + 26},{ky} L{x + hp},{b.hy - 30} Z", "#000000", 0, 'opacity="0.14"')
+    if back:
+        s += LINE(x, b.hy + 20, x, ky + 4, 3.5)
+    else:
+        s += P(f"M{x - 4},{b.hy - 30} L{x - 16},{ky + 6} L{x + 16},{ky + 6} L{x + 4},{b.hy - 30} Z", shade(c["bottom"], 0.9), 3)
+    return s
+
+
+def coat_skirt_side(b, x, d, belly):
+    c = b.c
+    ky = b.hy + (G - b.hy) * c["coat_len"]
+    return P(f"M{x - d - 2},{b.hy - 30} L{x + d + belly * 0.5},{b.hy - 30} L{x + d + 22},{ky} L{x - d - 30},{ky + 4} Z", c["top"]) + \
+        LINE(x - d - 4, b.hy + 10, x - d - 22, ky, 3, shade(c["top"], 0.6))
 
 
 # ───────────────────────── 앞·뒤 ─────────────────────────
@@ -126,6 +210,19 @@ def hair_front(b, x, back=False):
                        f"Q{x + hw * 0.9},{cy + hh * 0.25} {x},{cy + hh * 0.3} Q{x - hw * 0.9},{cy + hh * 0.25} {x - hw * 0.98},{cy - hh * 0.05} Z", col, LW * 0.8)
         front += E(x - hw * 0.3, t + hh * 0.14, hw * 0.22, hh * 0.05, "#ffffff", 0, 'opacity="0.55"')  # 반짝
         return behind, front
+    if st == "spiky":   # 삐죽삐죽 머리 (레트로 애니 소년)
+        behind = spikes(x, cy - hh * 0.08, hw * 0.95, hh * 0.45, 150, 390, 9, hh * 0.22, col)
+        if back:
+            behind += spikes(x, cy + hh * 0.05, hw * 0.8, hh * 0.38, 40, 140, 4, hh * 0.15, col)
+            front = P(f"M{x - hw * 1.05},{cy + hh * 0.15} C{x - hw * 1.12},{t - hh * 0.14} {x + hw * 1.12},{t - hh * 0.14} {x + hw * 1.05},{cy + hh * 0.15} "
+                      f"L{x + hw * 0.6},{cy + hh * 0.42} L{x + hw * 0.3},{cy + hh * 0.3} L{x},{cy + hh * 0.45} L{x - hw * 0.3},{cy + hh * 0.3} L{x - hw * 0.6},{cy + hh * 0.42} Z", col)
+        else:
+            front = P(f"M{x - hw * 1.05},{cy + hh * 0.05} C{x - hw * 1.12},{t - hh * 0.14} {x + hw * 1.12},{t - hh * 0.14} {x + hw * 1.05},{cy + hh * 0.05} "
+                      f"L{x + hw * 0.9},{t + hh * 0.2} L{x - hw * 0.9},{t + hh * 0.2} Z", col)
+            front += fringe(x, t, hw, hh, col)
+            for sgn in (-1, 1):   # 구레나룻
+                front += P(f"M{x + sgn * hw * 1.05},{cy - hh * 0.12} L{x + sgn * hw * 1.0},{cy + hh * 0.2} L{x + sgn * hw * 0.86},{cy - hh * 0.05} Z", col, LW * 0.8)
+        return behind, front
     fr = {"crew": 0.18, "slick": 0.12, "bob": 0.3, "bun": 0.16, "long": 0.28}.get(st, 0.2)
     if back:
         front = P(f"M{x - hw * 1.04},{cy + hh * (0.1 if st != 'crew' else -0.05)} C{x - hw * 1.12},{t - hh * 0.12} {x + hw * 1.12},{t - hh * 0.12} "
@@ -161,7 +258,9 @@ def face_front(b, x):
     ex = hw * 0.38
     for sgn in (-1, 1):
         px = x + sgn * ex
-        if c["eyes"] == "dot":
+        if c["eyes"] == "anime":
+            s += anime_eye(px, ey, hw * 0.2, hh * 0.12, c.get("iris", "#5a3a22"))
+        elif c["eyes"] == "dot":
             s += E(px, ey, hw * 0.08, hh * 0.055, OUT, 0)
             s += E(px + hw * 0.03, ey - hh * 0.02, hw * 0.025, hw * 0.025, "#ffffff", 0)
         elif c["eyes"] == "smile":   # 웃는 눈 (반달)
@@ -173,8 +272,10 @@ def face_front(b, x):
             s += E(px, ey + hh * 0.008, hw * 0.05, hh * 0.025, OUT, 0)
         # 눈썹
         bw = LW * 1.1 * c["brows"]
-        by = ey - hh * 0.11
-        if c["eyes"] == "sharp":
+        by = ey - hh * (0.11 if c["eyes"] != "anime" else 0.2)
+        if c["eyes"] == "anime":
+            s += P(f"M{px - sgn * hw * 0.2},{by + hh * 0.03} L{px + sgn * hw * 0.22},{by - hh * 0.03} L{px + sgn * hw * 0.24},{by + hh * 0.0} L{px - sgn * hw * 0.18},{by + hh * 0.055} Z", OUT, 2)
+        elif c["eyes"] == "sharp":
             s += LINE(px - sgn * hw * 0.16, by - hh * 0.03, px + sgn * hw * 0.14, by + hh * 0.02, bw)
         elif c["eyes"] == "tired":
             s += LINE(px - sgn * hw * 0.15, by + hh * 0.02, px + sgn * hw * 0.14, by - hh * 0.02, bw)
@@ -241,6 +342,8 @@ def view_front(c, back=False):
     for sgn in (-1, 1):
         s += P(f"M{x + sgn * lx * 1.05 - c['leg_w'] * 0.75},{G - 6} Q{x + sgn * lx * 1.05 - c['leg_w'] * 0.75},{G - 30} {x + sgn * lx * 1.05},{G - 30} "
                f"Q{x + sgn * lx * 1.05 + c['leg_w'] * 0.8},{G - 30} {x + sgn * lx * 1.05 + c['leg_w'] * 0.8},{G - 6} Z", c["shoes"])
+    if c["coat_len"]:
+        s += coat_skirt_front(b, x, back)
     hb, hf = hair_front(b, x, back)
     if back:
         s += hb if c["hair_style"] != "long" else ""
@@ -320,6 +423,8 @@ def view_front(c, back=False):
             s += P(f"M{x + hw * 0.2},{b.sy + 10} L{x + hw * 0.45},{b.sy + 90} L{x + hw * 0.05},{b.sy + 92} Z", shade(sc, 0.85))
     if c["cap"]:
         s += cap_front(b, x, back)
+    if c["aviator"]:
+        s += aviator_front(b, x, back)
     return s
 
 
@@ -337,6 +442,8 @@ def view_side(c):
         sx = x + off * 0.6
         s += P(f"M{sx - c['leg_w'] * 0.7},{G - 6} Q{sx - c['leg_w'] * 0.7},{G - 30} {sx},{G - 30} Q{sx + c['leg_w'] * 0.6},{G - 30} "
                f"{sx + c['leg_w'] * 1.0},{G - 20} Q{sx + c['leg_w'] * 1.5},{G - 14} {sx + c['leg_w'] * 1.4},{G - 6} Z", shade(c["shoes"], 0.85 if off < 0 else 1))
+    if c["coat_len"]:
+        s += coat_skirt_side(b, x, d, belly)
     hb, hf = hair_side(b, x)
     s += hb
     s += LIMB(x - 4, b.sy - 30, x + 2, b.sy + 4, hw * 0.55, c["skin"])
@@ -379,7 +486,9 @@ def view_side(c):
     ex = x + hw * 0.55
     ey = cy + hh * 0.05
     e = c["eyes"]
-    if e == "dot":
+    if e == "anime":
+        s += anime_eye(ex + hw * 0.05, ey, hw * 0.12, hh * 0.12, c.get("iris", "#5a3a22"), side=True)
+    elif e == "dot":
         s += E(ex, ey, hw * 0.06, hh * 0.055, OUT, 0)
     elif e == "smile":
         s += P(f"M{ex - hw * 0.09},{ey + hh * 0.01} Q{ex},{ey - hh * 0.06} {ex + hw * 0.09},{ey + hh * 0.01}", "none", LW * 0.9)
@@ -388,6 +497,8 @@ def view_side(c):
     else:
         s += P(f"M{ex - hw * 0.08},{ey - hh * 0.01} Q{ex},{ey + hh * 0.04} {ex + hw * 0.09},{ey - hh * 0.01}", "none", LW * 0.9)
     bw = LW * 1.1 * c["brows"]
+    if e == "anime":
+        ey -= hh * 0.09
     s += LINE(ex - hw * 0.1, ey - hh * 0.11 + (hh * 0.02 if e == "sharp" else 0), ex + hw * 0.12, ey - hh * 0.12 - (hh * 0.02 if e == "sharp" else 0), bw)
     if c["wrinkles"]:
         s += LINE(ex - hw * 0.15, ey, ex - hw * 0.24, ey + hh * 0.04, 2.5)
@@ -411,6 +522,18 @@ def view_side(c):
     if c["blush"]:
         s += E(x + hw * 0.5, ey + hh * 0.13, hw * 0.12, hh * 0.04, "#f08a7a", 0, 'opacity="0.45"')
     s += hf
+    if c["aviator"]:
+        t = cy - hh / 2
+        col = c["aviator"] if isinstance(c["aviator"], str) else "#8a5a32"
+        s += P(f"M{x - hw * 0.35},{cy - hh * 0.12} Q{x - hw * 0.05},{cy - hh * 0.1} {x + hw * 0.05},{cy + hh * 0.2} "
+               f"Q{x - hw * 0.1},{cy + hh * 0.34} {x - hw * 0.35},{cy + hh * 0.3} Z", col)
+        s += LINE(x - hw * 0.1, cy + hh * 0.32, x + hw * 0.0, cy + hh * 0.5, 4, shade(col, 0.6))
+        s += P(f"M{x - hw * 1.02},{cy + hh * 0.02} C{x - hw * 1.1},{t - hh * 0.2} {x + hw * 0.95},{t - hh * 0.22} {x + hw * 0.98},{t + hh * 0.26} "
+               f"Q{x + hw * 0.3},{t + hh * 0.2} {x - hw * 0.2},{cy - hh * 0.1} Q{x - hw * 0.7},{cy - hh * 0.05} {x - hw * 1.02},{cy + hh * 0.02} Z", col)
+        by = t + hh * 0.14
+        s += LINE(x - hw * 1.0, by + hh * 0.08, x + hw * 0.92, by, 11, OUT) + LINE(x - hw * 1.0, by + hh * 0.08, x + hw * 0.92, by, 6, "#3b3b3b")
+        s += E(x + hw * 0.62, by - hh * 0.01, hw * 0.16, hh * 0.1, "#c9a227", LW * 0.9)
+        s += E(x + hw * 0.66, by - hh * 0.01, hw * 0.1, hh * 0.07, "#7fc8d8", 3)
     if c["cap"]:
         t = cy - hh / 2
         col = c["cap"] if isinstance(c["cap"], str) else c["sig"] or "#333a55"
@@ -438,6 +561,12 @@ def hair_side(b, x):
         front = P(f"M{x - hw * 0.92},{cy - hh * 0.15} Q{x - hw * 1.05},{cy + hh * 0.15} {x - hw * 0.7},{cy + hh * 0.3} "
                   f"Q{x - hw * 0.35},{cy + hh * 0.2} {x - hw * 0.3},{cy - hh * 0.05} Q{x - hw * 0.6},{cy - hh * 0.12} {x - hw * 0.92},{cy - hh * 0.15} Z", col, LW * 0.8)
         front += E(x + hw * 0.05, t + hh * 0.12, hw * 0.25, hh * 0.05, "#ffffff", 0, 'opacity="0.55"')
+        return behind, front
+    if st == "spiky":
+        behind = spikes(x - hw * 0.15, cy - hh * 0.05, hw * 0.85, hh * 0.45, 100, 280, 7, hh * 0.24, col)
+        front = P(f"M{x + hw * 0.85},{t + hh * 0.3} L{x + hw * 0.95},{t + hh * 0.08} C{x + hw * 0.6},{t - hh * 0.16} {x - hw * 0.5},{t - hh * 0.16} {x - hw * 0.98},{cy - hh * 0.05} "
+                  f"L{x - hw * 0.9},{cy + hh * 0.3} L{x - hw * 0.55},{cy + hh * 0.12} L{x - hw * 0.3},{cy + hh * 0.2} L{x - hw * 0.22},{cy - hh * 0.06} "
+                  f"L{x + hw * 0.25},{t + hh * 0.22} L{x + hw * 0.5},{t + hh * 0.36} L{x + hw * 0.6},{t + hh * 0.22} Z", col)
         return behind, front
     fy = {"crew": 0.2, "slick": 0.14, "bob": 0.26, "bun": 0.18, "long": 0.26}.get(st, 0.2)
     front = P(f"M{x + hw * 0.75},{t + hh * fy} C{x + hw * 0.9},{t - hh * 0.05} {x - hw * 0.4},{t - hh * 0.16} {x - hw * 0.95},{cy - hh * 0.1} "
