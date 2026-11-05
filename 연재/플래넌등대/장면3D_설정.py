@@ -21,9 +21,9 @@ S = {
  # ── 1구간 (0~2분) ──
  "c01": {"set": "island", "opt": {"mood": "storm", "lamp": "off"}, "cam": {"pos": [8, 10, 34], "look": [8, 7, -14], "fov": 44, "move": [-3, -1, -6]}, "fx": ["fade_in"]},
  "c02": {"set": "island", "opt": {"mood": "grey", "lamp": "off", "ship": [-34, -6], "flare": True}, "cam": {"pos": [-2, 7, 30], "look": [0, 6, -6], "fov": 52, "move": [2, 0, -2]}},
- "c04": {"set": "stairs", "opt": {"mood": "grey"}, "cam": {"pos": [4, 8, 22], "look": [8, 5, 0], "fov": 46, "move": [7, 3, 0]},
-         "chars": [ch(J, [2.5, 1.5], 90, ["run", "blink"], y=1, to=[17.5, 1.5], y_to=8.5, speed=1.1)]},
- "c05": {"set": "kitchen", "opt": {"cold": True, "stopped": True}, "cam": KCAM, "chars": [ch(J, [12, 7], 0, ["blink", "shiver"])]},
+ "c04": {"set": "stairs", "opt": {"mood": "grey"}, "cam": {"pos": [6, 9, 24], "look": [10, 6, 0], "fov": 48, "move": [10, 4, 0]},
+         "chars": [ch(J, [2.5, 1.5], 90, ["run", "blink"], to=[20.5, 1.5], y_to=0, speed=1.1)]},
+ "c05": {"set": "kitchen", "opt": {"cold": True, "stopped": True, "bed": True}, "cam": KCAM, "chars": [ch(J, [12, 7], 0, ["blink", "shiver"])]},
  "c06": {"set": "hook", "cam": {"pos": [6, 4.5, 11], "look": [6, 4.2, 0], "fov": 42, "move": [0, 0, -2]}},
  "c07": {"set": "island", "opt": {"mood": "fog", "lamp": "off"}, "cam": {"pos": [8, 9, 48], "look": [8, 8, -14], "fov": 40, "move": [0, 0, -4]}, "fx": ["dark"]},
  "c08": {"set": "rocks", "opt": {"mood": "day"}, "cam": {"pos": [5, 6, 19], "look": [5, 4, 4], "fov": 44, "move": [0, -0.5, -2]}, "chars": [ch(H, [5, 6], 0, ["blink", "breath", "talk"])]},
@@ -31,8 +31,8 @@ S = {
  "c11": {"set": "rocks", "opt": {"mood": "storm"}, "cam": {"pos": [2, 6, 17], "look": [5, 3, 3], "fov": 46, "move": [1, 0, -2]}, "chars": [ch(H, [5, 5], 55, ["blink", "breath", "shiver"])], "fx": ["rain"]},
  "c12": {"set": "rocks", "opt": {"mood": "night"}, "cam": {"pos": [7, 6, 20], "look": [7, 3, 4], "fov": 46},
          "chars": [ch(H, [3, 6], 80), ch(D, [15, 6], -90, ["walk", "blink", "talk"], to=[7, 6])], "fx": ["rain"]},
- "c13": {"set": "kitchen", "cam": KCAM, "chars": [ch(M, [7.4, 2.6], -90, ["blink", "breath", "stir", "talk"]), ch(D, [21.0, 5.6], -15), ch(H, [17.2, 5.4], 10)]},
- "c14": {"set": "kitchen", "cam": KCAM, "chars": [ch(A, [20.0, 5.6], -50, ["blink", "breath", "reach"]), ch(H, [16.6, 5.4], 40)]},
+ "c13": {"set": "kitchen", "cam": KCAM, "chars": [ch(M, [6.1, 2.9], -90, ["blink", "breath", "stir", "talk"]), ch(D, [21.0, 5.6], -15), ch(H, [17.2, 5.4], 10)]},
+ "c14": {"set": "kitchen", "cam": KCAM, "chars": [ch(A, [20.0, 5.6], -50, ["blink", "breath", "reach"], hold="#d8b27a"), ch(H, [16.6, 5.4], 40)]},
 }
 
 if __name__ == "__main__":

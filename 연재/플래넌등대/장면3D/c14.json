@@ -32,7 +32,8 @@
     "blink",
     "breath",
     "reach"
-   ]
+   ],
+   "hold": "#d8b27a"
   },
   {
    "who": "안내자 하람 (14)",

@@ -59,22 +59,29 @@ def island_vox(present=False):
             if d > 1.05:
                 continue
             h = int(1 + 7 * max(0.0, 1 - d) ** 0.6 + (1 if (x * 7 + z * 3) % 5 == 0 else 0))
+            if cx - 8 <= x <= cx + 3 and cz - 4 <= z <= cz + 2:   # 건물이 서는 꼭대기는 평평하게 (떠 보이지 않게)
+                h = 8
             for y in range(-1, h):
                 vx.put(x, y, z, "#6f6a62" if y < h - 1 else "#5f8a4a", j=14)
     top = 8
-    for y in range(top, top + 9):                                 # 등대 탑 (흰 블록 2×2)
-        for x in (cx, cx + 1):
-            for z in (cz - 1, cz):
+    for y in range(top, top + 9):                                 # 등대 탑 (흰 블록 3×3)
+        for x in (cx - 1, cx, cx + 1):
+            for z in (cz - 2, cz - 1, cz):
                 vx.put(x, y, z, "#f1efe8", j=6)
-    for x in range(cx - 1, cx + 3):
-        for z in range(cz - 2, cz + 2):
-            vx.put(x, top + 9, z, "#2f2f33", j=4)                 # 꼭대기 받침
+    for x in range(cx - 2, cx + 3):
+        for z in range(cz - 3, cz + 2):
+            vx.put(x, top + 9, z, "#2f2f33", j=4)                 # 꼭대기 받침(난간)
+    for x in range(cx - 1, cx + 2):
+        for z in range(cz - 2, cz + 1):
             vx.put(x, top + 11, z, "#2f2f33", j=4)                # 지붕
-    for x in range(cx - 7, cx - 2):                               # 숙소
+    vx.put(cx, top + 12, cz - 1, "#2f2f33", j=4)
+    for x in range(cx - 7, cx - 2):                               # 숙소 (땅에 붙음)
         for z in range(cz - 3, cz + 1):
-            for y in range(top - 1, top + 2):
+            for y in range(top, top + 3):
                 vx.put(x, y, z, "#e9e4d8", j=8)
-            vx.put(x, top + 2, z, "#5a5f66", j=6)
+            vx.put(x, top + 3, z, "#5a5f66", j=6)
+    for x in (cx - 6, cx - 4):                                    # 숙소 창문
+        vx.put(x, top + 1, cz + 1, "#3a4552", j=4)
     return vx.boxes()
 
 
@@ -84,7 +91,7 @@ def set_island(t, p, o):
     cx, cz, top = 8, -14, 8
     lamp = o.get("lamp", "on")
     on = lamp != "off"
-    b.append(Box((cx - 0.5, top + 10, cz - 1.5), (3, 1, 3), "#fff1a8" if on else "#3a4552", emit=on, edge=False))
+    b.append(Box((cx - 1, top + 10, cz - 2), (3, 1, 3), "#fff1a8" if on else "#3a4552", emit=on, edge=False))   # 등불 방 유리
     if lamp == "beam" or (on and mood in ("night", "dusk", "storm")):
         a = t * 40
         piv = np.array([cx + 1, top + 10.5, cz])
@@ -95,36 +102,54 @@ def set_island(t, p, o):
         q = 0.5 - 0.5 * math.cos(math.pi * q)
         sx = s0 + (s1 - s0) * q
         bob = 0.15 * math.sin(t * 1.6)
-        b += [Box((sx, -0.6 + bob, 4), (7, 1.4, 2.6), "#2e2b2a"), Box((sx + 1.5, 0.8 + bob, 4.4), (3.5, 1.4, 1.8), "#d9d2c3"),
+        b += [Box((sx, -0.6 + bob, 4), (7, 1.4, 2.6), "#2e2b2a"), Box((sx + 7, -0.3 + bob, 4.4), (1.2, 1.1, 1.8), "#2e2b2a"), Box((sx + 8.2, 0.0 + bob, 4.8), (0.8, 0.8, 1.0), "#2e2b2a"),
+              Box((sx + 1.5, 0.8 + bob, 4.4), (3.5, 1.4, 1.8), "#d9d2c3"), Box((sx + 2.0, 1.5 + bob, 6.21), (2.5, 0.4, 0.02), "#3a4552", edge=False),
               Box((sx + 2.6, 2.2 + bob, 4.9), (0.9, 2.2, 0.9), "#a83232"), Box((sx + 6, 0.8 + bob, 5.1), (0.2, 3.5, 0.2), "#2b2b2b")]
         if o.get("flare") and p > 0.55:
             ph = min(1.0, (p - 0.55) / 0.35)
-            fy = 1 + 16 * math.sin(ph * math.pi / 2)
+            fy = 1 + 11 * math.sin(ph * math.pi / 2)
             for k in range(6):   # 연기 꼬리
                 b.append(Box((sx + 3 + ph * 2 - k * 0.08, fy - k * 1.2 * ph, 5.0), (0.25, 0.25, 0.25), (255, 200, 170), emit=True, edge=False))
             b.append(Box((sx + 2.6 + ph * 2, fy, 4.8), (0.9 + ph, 0.9 + ph, 0.9 + ph), (255, 90, 60), emit=True, edge=False))
     return b, mood
 
 
+def stair_h(x):
+    """돌계단 언덕 높이: 2칸마다 한 계단씩 (x 1 → 1층, x 22 → 11층)"""
+    return max(1, min(12, 1 + (x - 1) // 2)) if x >= 1 else 0   # 23 이후는 꼭대기 평지
+
+
 def set_stairs(t, p, o):
     mood = o.get("mood", "grey")
     def build():
         vx = Voxels()
-        for x in range(-6, 30):
-            for z in range(-12, 4):
-                h = int(max(0, (x + 4) * 0.45))
-                for y in range(-1, min(h, 12)):
-                    vx.put(x, y, z, "#6f6a62" if y < h - 1 else "#5f8a4a", j=12)
-        for k in range(10):   # 돌계단 (왼쪽 아래 → 오른쪽 위)
-            for z in (1, 2):
-                vx.put(20 - k * 2, 9 - k + 0, z, "#9a9c9e", j=8)
-                vx.put(19 - k * 2, 9 - k + 0, z, "#9a9c9e", j=8)
+        for x in range(-6, 44):
+            for z in range(-16, 4):
+                h = stair_h(x)
+                path = 0 <= z <= 2 and 1 <= x <= 22
+                for y in range(-1, h):
+                    top_ = y == h - 1
+                    vx.put(x, y, z, ("#a3a5a7" if path else "#5f8a4a") if top_ else ("#8e9092" if path else "#6f6a62"), j=10)
+        for y in range(stair_h(24), stair_h(24) + 7):   # 언덕 위 등대
+            for x in (24, 25):
+                for z in (-3, -2):
+                    vx.put(x, y, z, "#f1efe8", j=6)
+        for x in (23, 24, 25, 26):
+            for z in (-4, -3, -2, -1):
+                vx.put(x, stair_h(24) + 7, z, "#2f2f33", j=4)
         return vx.boxes()
-    return sea_tiles(t, mood, -40, 10, -10, 40) + _static("stairs", build), mood
+    posts = []
+    for x in range(2, 23, 3):   # 돌길 옆 가는 쇠 난간 (기둥 + 가로대)
+        posts.append(Box((x + 0.4, stair_h(x), 3.1), (0.15, 1.3, 0.15), "#3b3b3b", edge=False))
+        posts.append(Box((x + 0.4, stair_h(x) + 1.15, 3.1), (3.36, 0.1, 0.1), "#3b3b3b", [(np.array([x + 0.4, stair_h(x) + 1.2, 3.15]), "z", 26.5)], edge=False))
+    return sea_tiles(t, mood, -40, 10, -10, 40) + _static("stairs", build) + posts, mood
 
 
 def set_kitchen(t, p, o):
     b = E.kitchen(t if not o.get("stopped") else 0.0)
+    if o.get("bed"):    # 빈 침대 (오른쪽 벽 앞)
+        b += [Box((6.2, 0, 0.6), (3.0, 1.0, 4.6), "#7a5232"), Box((6.3, 1.0, 0.7), (2.8, 0.4, 4.4), "#e9e1cf"),
+              Box((6.5, 1.4, 0.8), (2.4, 0.3, 1.0), "#f4f1ea"), Box((6.1, 0, 0.3), (3.2, 2.4, 0.3), "#6b4a30")]
     if o.get("cold"):   # 꺼진 난로: 불꽃·김을 뺌 (emit 상자 중 주황·흰 것)
         b = [x for x in b if not (x.emit and (x.col[0] > 200 and x.col[2] < 120 or x.col.min() > 230))]
     if o.get("stopped"):
@@ -145,8 +170,15 @@ def set_hook(t, p, o):
     if o.get("coat", True):
         sway = 3 * math.sin(t * 1.3)
         piv = np.array([5.95, 6.6, 0.4])
-        b += [Box((4.7, 1.6, 0.3), (2.5, 5.0, 0.7), "#2e3b4f", [(piv, "z", sway)]), Box((5.3, 5.6, 0.95), (1.3, 1.0, 0.1), "#26303f", [(piv, "z", sway)]),
-              Box((4.4, 3.8, 0.35), (0.5, 2.8, 0.6), "#26303f", [(piv, "z", sway)]), Box((7.0, 3.8, 0.35), (0.5, 2.8, 0.6), "#26303f", [(piv, "z", sway)])]
+        R_ = [(piv, "z", sway)]
+        b += [Box((4.75, 1.4, 0.3), (2.4, 4.6, 0.6), "#2e3b4f", R_),                       # 몸판
+              Box((4.4, 5.3, 0.3), (3.1, 0.8, 0.6), "#2e3b4f", R_),                         # 어깨
+              Box((4.1, 2.6, 0.32), (0.55, 3.2, 0.55), "#283447", R_), Box((7.35, 2.6, 0.32), (0.55, 3.2, 0.55), "#283447", R_),   # 늘어진 소매
+              Box((5.35, 5.5, 0.92), (0.6, 0.7, 0.06), "#1e2836", R_), Box((6.05, 5.5, 0.92), (0.6, 0.7, 0.06), "#1e2836", R_),   # 깃
+              Box((5.93, 1.5, 0.91), (0.06, 4.0, 0.03), "#1a2230", R_, edge=False)]                                           # 여밈선
+        for k in range(4):
+            b.append(Box((6.15, 4.6 - k * 0.9, 0.92), (0.16, 0.16, 0.05), "#c9b25a", R_, edge=False))                          # 단추
+        b.append(Box((5.85, 6.0, 0.4), (0.3, 0.5, 0.3), "#2e3b4f", R_))                                                        # 걸이 고리
     return b, "indoor"
 
 
@@ -194,8 +226,8 @@ def pose3d(acts, t, seed):
         p["talk"] = 0.8 + 0.2 * abs(math.sin(t * 6))
         p["arm"] = 60 + 20 * math.sin(t * 5)
         p["arm2"] = 60 + 20 * math.sin(t * 5 + 1)
-    if "stir" in acts:
-        p["arm"] = 70 + 12 * math.sin(t * 2 * math.pi / 1.4)
+    if "stir" in acts:   # 팔을 냄비 높이로 들고 국자를 휘휘
+        p["arm"] = 108 + 8 * math.sin(t * 2 * math.pi / 1.4)
     if "wave" in acts:
         p["arm_r"] = 150 + 18 * math.sin(t * 2 * math.pi / 0.6)
     if "point" in acts or "reach" in acts:
@@ -235,11 +267,17 @@ def frame(scene, cast, t, dur=None):
             if q >= 1.0:
                 acts = [a for a in acts if a not in ("walk", "run")]
         y = ch.get("y")
-        if y is None:
-            y = rock_height(int(ax), int(az)) if scene.get("set") == "rocks" else 0
+        if y is None or (scene.get("set") == "stairs" and "y_to" in ch):
+            y = rock_height(int(ax), int(az)) if scene.get("set") == "rocks" else (stair_h(int(round(ax))) if scene.get("set") == "stairs" else 0)
+            ch = {k_: v_ for k_, v_ in ch.items() if k_ != "y_to"}
         if ch.get("y_to") is not None:
             y = y + (ch["y_to"] - y) * min(1.0, pr * ch.get("speed", 1.0))
-        boxes += person(c, (ax, y, az), face=face, pose=pose3d(acts, t, i * 1.7 + 0.3), scale=ch.get("scale", 1.0))
+        ps = pose3d(acts, t, i * 1.7 + 0.3)
+        if "stir" in acts:
+            ps["ladle"] = True
+        if ch.get("hold"):
+            ps["hold"] = ch["hold"]
+        boxes += person(c, (ax, y, az), face=face, pose=ps, scale=ch.get("scale", 1.0))
     fx = scene.get("fx", [])
     if "rain" in fx:
         cp = scene["cam"]["pos"]

@@ -4,7 +4,8 @@
  "set": "kitchen",
  "opt": {
   "cold": true,
-  "stopped": true
+  "stopped": true,
+  "bed": true
  },
  "cam": {
   "pos": [

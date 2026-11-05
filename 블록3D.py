@@ -222,6 +222,12 @@ def person(c, pos, face=0.0, pose=None, scale=1.0):
         r = [(piv, "x", -(fwd) - swing * sg), (piv, "z", side * sg)]
         B((ax, sy - alen, -aw / 2), (aw, alen, aw), c["top"], r)
         B((ax + 0.01, sy - alen - aw * 0.9, -aw / 2 + 0.01), (aw - 0.02, aw * 0.9, aw - 0.02), c["skin"], r)
+        if sg > 0 and pose.get("ladle"):   # 국자: 손에서 아래로 긴 자루 + 끝의 오목한 머리
+            hp = np.array([x0 + ax + aw / 2, y0 + bob + sy - alen - aw * 0.5, z0])   # 손 자리: 국자를 팔과 직각으로 꺾어 냄비 안으로
+            lr = [(hp, "x", pose.get("ladle_deg", 95))] + r
+            B((ax + aw * 0.35, sy - alen - aw * 0.9 - 0.45, -0.04), (0.08, 0.55, 0.08), "#8a8f96", lr)   # 짧은 자루 (끝은 수프 속)
+        if sg > 0 and pose.get("hold"):    # 손에 든 물건 (빵 반쪽 등)
+            B((ax - 0.05, sy - alen - aw * 1.3, -aw * 0.9), (aw + 0.1, aw * 0.7, aw * 1.4), pose["hold"], r)
     # 목·머리
     hy = sy + 0.05
     B((-hwid * 0.2, sy - 0.05, -0.12), (hwid * 0.4, 0.12, 0.24), c["skin"])
@@ -244,8 +250,8 @@ def person(c, pos, face=0.0, pose=None, scale=1.0):
     if c["beard"]:
         bc = c["beard"] if isinstance(c["beard"], str) else c["hair"]
         B((-hwid / 2 - 0.02, hy - 0.04, fz - 0.06), (hwid + 0.04, hs * 0.36, 0.1), bc)
-        B((-hwid / 2 - 0.02, hy - 0.04, -hs / 2 - 0.02), (0.08, hs * 0.5, hs + 0.04), bc)
-        B((hwid / 2 - 0.06, hy - 0.04, -hs / 2 - 0.02), (0.08, hs * 0.5, hs + 0.04), bc)
+        B((-hwid / 2 - 0.02, hy - 0.04, -hs * 0.05), (0.08, hs * 0.42, hs * 0.57), bc)   # 옆 수염은 턱 앞쪽만
+        B((hwid / 2 - 0.06, hy - 0.04, -hs * 0.05), (0.08, hs * 0.42, hs * 0.57), bc)
     if c["mustache"]:
         B((-hs * 0.2, my + hs * 0.06, fz + 0.02), (hs * 0.4, hs * 0.07, 0.03), c["hair"] if c["hair_style"] != "bald" else "#9a9a9a", edge=False)
     talk = pose.get("talk", 0)
@@ -268,7 +274,7 @@ def person(c, pos, face=0.0, pose=None, scale=1.0):
             B((sg * hwid / 2 - (0.06 if sg < 0 else -0.02) - (0 if sg < 0 else 0.04), t - sl, -hs / 2 - 0.04), (0.08, sl, hs * (0.75 if st not in ("bob", "long") else 0.95)), hc)
         if st == "long":
             B((-hwid / 2 - 0.04, t - hs * 1.6, -hs / 2 - 0.06), (hwid + 0.08, hs * 0.8, 0.14), hc)
-        if st == "spiky":
+        if st == "spiky" and not c["aviator"]:
             for i in range(5):
                 for j in range(3):
                     px = -hwid / 2 + hwid * (i + 0.5) / 5 - 0.07
@@ -291,7 +297,7 @@ def person(c, pos, face=0.0, pose=None, scale=1.0):
         ac = c["aviator"] if isinstance(c["aviator"], str) else "#8a5a32"
         B((-hwid / 2 - 0.06, t - hs * 0.22, -hs / 2 - 0.06), (hwid + 0.12, hs * 0.34, hs + 0.12), ac)
         for sg in (-1, 1):
-            B((sg * hwid / 2 - (0.1 if sg < 0 else -0.02) - (0 if sg < 0 else 0.04), hy + hs * 0.15, -hs * 0.15), (0.1, hs * 0.45, hs * 0.35), ac)
+            B((sg * hwid / 2 - (0.08 if sg < 0 else 0) , hy + hs * 0.22, -hs * 0.24), (0.08, hs * 0.34, hs * 0.24), shade_hex(ac, 0.85))   # 귀 덮개 (귀 자리에 작게)
         B((-hwid / 2 - 0.08, t - hs * 0.08, -hs / 2 - 0.08), (hwid + 0.16, 0.07, hs + 0.16), "#3b3b3b")
         for sg in (-1, 1):
             B((sg * ex - hs * 0.13, t - hs * 0.12, hs / 2 + 0.06), (hs * 0.26, hs * 0.2, 0.06), "#c9a227")
@@ -359,11 +365,12 @@ def kitchen(t):
     bx.append(Box((2.1, 0.1, 3.0), (1.8, 0.5 + 0.9 * fl, 0.3), "#f39c32", emit=True, edge=False))
     bx.append(Box((2.5, 0.1, 3.1), (1.0, 0.3 + 0.5 * fl, 0.3), "#ffd76a", emit=True, edge=False))
     # 냄비 + 김
-    bx.append(Box((1.6, 3, 1.4), (1.6, 0.9, 1.4), "#5a5f66"))
+    bx.append(Box((3.2, 3, 2.2), (1.7, 0.9, 1.6), "#5a5f66"))   # 냄비: 난로 위 앞쪽 (마셜 손이 닿는 곳)
+    bx.append(Box((3.35, 3.85, 2.35), (1.4, 0.06, 1.3), "#c9b48a", emit=True, edge=False))   # 수프
     for i in range(3):
         ph = (t * 0.6 + i / 3) % 1
         sz = 0.25 + 0.3 * ph
-        bx.append(Box((2.2 + 0.2 * math.sin(t * 3 + i), 4.1 + ph * 2.2, 2.0), (sz, sz, sz), "#f4f6f8", emit=True, edge=False))
+        bx.append(Box((3.8 + 0.2 * math.sin(t * 3 + i), 4.1 + ph * 2.2, 2.8), (sz, sz, sz), "#f4f6f8", emit=True, edge=False))
     # 시계: 문자판 + 추
     bx.append(Box((20.15, 6.4, 1.0), (1.7, 1.4, 0.06), "#f6efdc"))
     pa = 25 * math.sin(t * math.pi * 2 / 1.6)
