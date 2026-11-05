@@ -9303,6 +9303,39 @@ def export_mp4_resumable(r, out, progress, cancel=None, audio=None, work_dir=Non
         m_ = re.search(r"Duration: (\d+):(\d+):([\d.]+)", p_.stderr or "")
         return bool(m_) and abs(int(m_.group(1)) * 3600 + int(m_.group(2)) * 60 + float(m_.group(3)) - want_sec) < 1.0
 
+    # 동시에 여러 구간 그리기 (사용자 결정 2026-11-05): 환경 변수 RENDER_PAR=N (리눅스) 이면 구간을 N개씩 따로 프로세스로 동시에 그림
+    par = int(os.environ.get("RENDER_PAR", "0") or 0)
+    todo = [(k, i0, i1) for k, (i0, i1) in enumerate(segs) if not seg_ok(os.path.join(work_dir, f"seg_{k:03d}.mp4"), (i1 - i0) / fps)]
+    if par > 1 and os.name == "posix" and len(todo) > 1:
+        log(f"  ⚡ 구간 {len(todo)}개를 {min(par, len(todo))}개씩 동시에 그립니다")
+        running = {}
+        q_ = list(todo)
+        while q_ or running:
+            while q_ and len(running) < par:
+                k, i0, i1 = q_.pop(0)
+                seg = os.path.join(work_dir, f"seg_{k:03d}.mp4")
+                log(f"  🎬 구간 {k + 1}/{len(segs)} ({hms(i0 / fps)}~{hms(i1 / fps)}) 그리는 중... (동시)")
+                pid = os.fork()
+                if pid == 0:   # 자식: 이 구간만 그리고 끝
+                    code = 1
+                    try:
+                        export_mp4(r, seg, lambda i, n: None, None, None, (i0 / fps, i1 / fps))
+                        mark_done(seg)
+                        code = 0
+                    except BaseException as e:
+                        print("구간 그리기 실패:", k, e, flush=True)
+                    os._exit(code)
+                running[pid] = k
+            pid, st_ = os.wait()
+            k = running.pop(pid, None)
+            if k is not None:
+                log(f"  ✔ 구간 {k + 1}/{len(segs)} 완성" if st_ == 0 else f"  ✖ 구간 {k + 1} 실패")
+                progress(sum(1 for kk in range(len(segs)) if is_done(os.path.join(work_dir, f"seg_{kk:03d}.mp4"))) * step, n_all)
+            if cancel is not None and cancel.is_set():
+                raise RuntimeError("취소됨")
+        bad = [k for k, i0, i1 in todo if not seg_ok(os.path.join(work_dir, f"seg_{k:03d}.mp4"), (i1 - i0) / fps)]
+        if bad:
+            raise RuntimeError(f"동시 그리기에서 구간 {[k + 1 for k in bad]} 이 실패")
     for k, (i0, i1) in enumerate(segs):
         seg = os.path.join(work_dir, f"seg_{k:03d}.mp4")
         if seg_ok(seg, (i1 - i0) / fps):
