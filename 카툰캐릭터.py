@@ -252,14 +252,18 @@ def hair_front(b, x, back=False):
     return behind, front
 
 
-def face_front(b, x):
+def face_front(b, x, pose=None):
+    pose = pose or {}
     c, hw, hh, cy = b.c, b.hw, b.hh, b.hcy
     s = ""
+    c = {**c, "eyes": "closed"} if pose.get("blink") else c
     ey = cy + hh * 0.05
     ex = hw * 0.38
     for sgn in (-1, 1):
         px = x + sgn * ex
-        if c["eyes"] == "anime":
+        if c["eyes"] == "closed":   # 눈 감음 (깜빡임)
+            s += P(f"M{px - hw * 0.13},{ey} Q{px},{ey + hh * 0.04} {px + hw * 0.13},{ey}", "none", LW * 0.9)
+        elif c["eyes"] == "anime":
             s += anime_eye(px, ey, hw * 0.2, hh * 0.12, c.get("iris", "#5a3a22"))
         elif c["eyes"] == "dot":
             s += E(px, ey, hw * 0.08, hh * 0.055, OUT, 0)
@@ -307,7 +311,10 @@ def face_front(b, x):
                f"C{x + hw * 0.38},{my - hh * 0.06} {x + hw * 0.15},{my - hh * 0.09} {x},{my - hh * 0.05} Z", c["hair"] if c["hair_style"] != "bald" else "#9a9a9a", 3)
         my += hh * 0.035
     m = c["mouth"]
-    if m == "smile":
+    if pose.get("talk", 0) > 0.15:   # 말하는 입 (열림 정도 0~1)
+        o = pose["talk"]
+        s += E(x, my + hh * 0.01, hw * (0.12 + 0.06 * o), hh * (0.02 + 0.05 * o), "#6b2a24", LW * 0.7)
+    elif m == "smile":
         s += P(f"M{x - hw * 0.22},{my - hh * 0.02} Q{x},{my + hh * 0.09} {x + hw * 0.22},{my - hh * 0.02} Q{x},{my + hh * 0.02} {x - hw * 0.22},{my - hh * 0.02} Z", "#8c3b32", 3)
     elif m == "frown":
         s += P(f"M{x - hw * 0.18},{my + hh * 0.03} Q{x},{my - hh * 0.04} {x + hw * 0.18},{my + hh * 0.03}", "none", LW * 0.8)
@@ -335,7 +342,8 @@ def cap_front(b, x, back=False):
     return s
 
 
-def view_front(c, back=False):
+def view_front(c, back=False, pose=None):
+    pose = pose or {}
     b = Body(c)
     x = b.cx
     s = ""
@@ -361,8 +369,15 @@ def view_front(c, back=False):
     for sgn in (-1, 1):
         ax = x + sgn * (c["shoulder"] - c["arm_w"] * 0.35)
         hx = x + sgn * (max(c["shoulder"], c["waist"]) + c["arm_w"] * 0.3)
-        arms += LIMB(ax, b.sy + 16, hx, b.handy - 8, c["arm_w"], c["top"])
-        arms += E(hx, b.handy + 4, c["arm_w"] * 0.55, c["arm_w"] * 0.62, c["skin"])
+        hy_ = b.handy - 8
+        ang = pose.get("arm_r" if sgn > 0 else "arm_l", 0)   # 팔 올림 각도(도, 바깥쪽으로)
+        if ang:
+            vx, vy = hx - ax, hy_ - (b.sy + 16)
+            r_ = -math.radians(ang) * sgn
+            vx, vy = vx * math.cos(r_) - vy * math.sin(r_), vx * math.sin(r_) + vy * math.cos(r_)
+            hx, hy_ = ax + vx, b.sy + 16 + vy
+        arms += LIMB(ax, b.sy + 16, hx, hy_, c["arm_w"], c["top"])
+        arms += E(hx, hy_ + 12, c["arm_w"] * 0.55, c["arm_w"] * 0.62, c["skin"])
     # 목
     s += LIMB(x, b.sy - 30, x, b.sy + 4, hw * 0.55, c["skin"])
     # 몸통
@@ -431,7 +446,7 @@ def view_front(c, back=False):
             s += E(x + sgn * hw * 0.98, b.hcy + hh * 0.06, hw * 0.16, hh * 0.1, c["skin"])
     s += E(x, b.hcy, hw, hh / 2, c["skin"])
     if not back:
-        s += face_front(b, x)
+        s += face_front(b, x, pose)
     if back and c["hair_style"] == "long":
         s += hb
     s += hf
@@ -448,8 +463,11 @@ def view_front(c, back=False):
 
 
 # ───────────────────────── 옆(오른쪽을 봄) ─────────────────────────
-def view_side(c):
+def view_side(c, pose=None):
+    pose = pose or {}
     b = Body(c)
+    wp = pose.get("walk")          # 걷기 위상(라디안), None 이면 서 있음
+    sw_ = math.sin(wp) if wp is not None else 0.0
     x = b.cx
     s = ""
     hw, hh = b.hw, b.hh
@@ -457,10 +475,14 @@ def view_side(c):
     belly = max(0, c["waist"] - c["shoulder"]) * 1.3
     # 다리 (뒤쪽 다리 조금 어둡게)
     for off, col in ((-8, shade(c["bottom"], 0.8)), (8, c["bottom"])):
-        s += LIMB(x + off * 0.6, b.hy - 14, x + off * 0.6, G - 22, c["leg_w"], col)
-        sx = x + off * 0.6
+        stride = (c["height"] * 0.07) * sw_ * (1 if off > 0 else -1)
+        lift = max(0.0, -sw_ if off > 0 else sw_) * 10 if wp is not None else 0
+        s += LIMB(x + off * 0.6, b.hy - 14, x + off * 0.6 + stride, G - 22 - lift, c["leg_w"], col)
+        sx = x + off * 0.6 + stride
+        G_ = G
+        s += f'<g transform="translate(0,{-lift:.1f})">'
         s += P(f"M{sx - c['leg_w'] * 0.7},{G - 6} Q{sx - c['leg_w'] * 0.7},{G - 30} {sx},{G - 30} Q{sx + c['leg_w'] * 0.6},{G - 30} "
-               f"{sx + c['leg_w'] * 1.0},{G - 20} Q{sx + c['leg_w'] * 1.5},{G - 14} {sx + c['leg_w'] * 1.4},{G - 6} Z", shade(c["shoes"], 0.85 if off < 0 else 1))
+               f"{sx + c['leg_w'] * 1.0},{G - 20} Q{sx + c['leg_w'] * 1.5},{G - 14} {sx + c['leg_w'] * 1.4},{G - 6} Z", shade(c["shoes"], 0.85 if off < 0 else 1)) + "</g>"
     if c["coat_len"]:
         s += coat_skirt_side(b, x, d, belly)
     hb, hf = hair_side(b, x)
@@ -492,9 +514,15 @@ def view_side(c):
         s += LINE(x + d - 4, sy + 2, x + d + belly * 0.4 + 4, sy + 82, 5, c["sig"] or "#2d6cdf")
         s += f'<rect x="{x + d + belly * 0.4 - 4:.1f}" y="{sy + 80:.1f}" width="10" height="42" rx="2" fill="#ffffff" stroke="{OUT}" stroke-width="3"/>'
     # 팔
-    hx = x + 6
-    s += LIMB(x - 4, sy + 18, hx, b.handy - 8, c["arm_w"], shade(c["top"], 0.92))
-    s += E(hx + 2, b.handy + 4, c["arm_w"] * 0.5, c["arm_w"] * 0.62, c["skin"])
+    hx = x + 6 - sw_ * c["height"] * 0.06
+    hy_ = b.handy - 8 - abs(sw_) * 6
+    ang = pose.get("arm", 0)       # 앞으로 팔 들기(도)
+    if ang:
+        L = math.hypot(hx - (x - 4), hy_ - (sy + 18))
+        r_ = math.radians(ang)
+        hx, hy_ = x - 4 + L * math.sin(r_), sy + 18 + L * math.cos(r_)
+    s += LIMB(x - 4, sy + 18, hx, hy_, c["arm_w"], shade(c["top"], 0.92))
+    s += E(hx + 2, hy_ + 12, c["arm_w"] * 0.5, c["arm_w"] * 0.62, c["skin"])
     # 머리
     cy = b.hcy
     s += E(x, cy, hw * 0.95, hh / 2, c["skin"])
@@ -504,8 +532,10 @@ def view_side(c):
     s += P(f"M{x - hw * 0.12},{cy + hh * 0.02} q{hw * 0.08},{hh * 0.04} 0,{hh * 0.08}", "none", 2.5)
     ex = x + hw * 0.55
     ey = cy + hh * 0.05
-    e = c["eyes"]
-    if e == "anime":
+    e = "closed" if pose.get("blink") else c["eyes"]
+    if e == "closed":
+        s += P(f"M{ex - hw * 0.09},{ey} Q{ex},{ey + hh * 0.035} {ex + hw * 0.09},{ey}", "none", LW * 0.9)
+    elif e == "anime":
         s += anime_eye(ex + hw * 0.05, ey, hw * 0.12, hh * 0.12, c.get("iris", "#5a3a22"), side=True)
     elif e == "dot":
         s += E(ex, ey, hw * 0.06, hh * 0.055, OUT, 0)
@@ -532,7 +562,10 @@ def view_side(c):
                c["hair"] if c["hair_style"] != "bald" else "#9a9a9a", 3)
         my += hh * 0.035
     m = c["mouth"]
-    if m == "smile":
+    if pose.get("talk", 0) > 0.15:
+        o = pose["talk"]
+        s += E(x + hw * 0.74, my + hh * 0.01, hw * (0.08 + 0.04 * o), hh * (0.02 + 0.05 * o), "#6b2a24", LW * 0.7)
+    elif m == "smile":
         s += P(f"M{x + hw * 0.62},{my - hh * 0.01} Q{x + hw * 0.75},{my + hh * 0.05} {x + hw * 0.87},{my - hh * 0.02}", "none", LW * 0.8)
     elif m == "frown":
         s += P(f"M{x + hw * 0.62},{my + hh * 0.02} Q{x + hw * 0.75},{my - hh * 0.02} {x + hw * 0.87},{my}", "none", LW * 0.8)
@@ -605,6 +638,23 @@ def hair_side(b, x):
     if st == "long":
         behind += P(f"M{x - hw * 0.95},{cy - hh * 0.2} L{x - hw * 1.1},{b.sy + 80} L{x - hw * 0.2},{b.sy + 80} L{x},{cy} Z", col)
     return behind, front
+
+
+def figure(c, view="front", pose=None):
+    """장면용 인물 한 명 SVG 조각 (칸 400×900 기준, 발 = (200, 860)). view: front·back·right·left"""
+    c = {**DEFAULT, **c}
+    pose = pose or {}
+    if view == "front":
+        g = view_front(c, pose=pose)
+    elif view == "back":
+        g = view_front(c, back=True, pose=pose)
+    elif view == "right":
+        g = view_side(c, pose)
+    else:
+        g = f'<g transform="translate({VW},0) scale(-1,1)">{view_side(c, pose)}</g>'
+    br = pose.get("breath", 0.0)   # 숨쉬기: 발을 기준으로 아주 살짝 늘었다 줄었다
+    bob = pose.get("bob", 0.0)
+    return f'<g transform="translate(0,{bob:.2f}) translate({VW / 2},{G}) scale(1,{1 + br:.4f}) translate({-VW / 2},{-G})">{g}</g>'
 
 
 def svg_sheet(c, label=True):
