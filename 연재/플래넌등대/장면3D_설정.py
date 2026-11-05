@@ -1,0 +1,59 @@
+"""플래넌 등대 편 — 입체 블록 장면 설정 → 장면3D/cNN.json + 멈춘 그림 cNN.png (블록장면3D.py)
+python 연재/플래넌등대/장면3D_설정.py   (아직 입체로 안 만든 장면은 영상에서 예전 카툰 장면을 씀)"""
+import json
+import os
+import sys
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.dirname(os.path.dirname(HERE))
+D, M, A, J, H = "등대장 제임스 두캣 (43)", "부등대지기 토머스 마셜 (40)", "임시 등대지기 도널드 맥아더 (28)", "교대 등대지기 조지프 무어", "안내자 하람 (14)"
+LIVE = ["blink", "breath"]
+KCAM = {"pos": [13, 8.0, 24], "look": [13, 3.6, 4], "fov": 44, "move": [0.6, -0.5, -1.8]}
+
+
+def ch(who, at, face=0, act=None, **k):
+    d = {"who": who, "at": at, "face": face, "act": act or LIVE}
+    d.update(k)
+    return d
+
+
+S = {
+ # ── 1구간 (0~2분) ──
+ "c01": {"set": "island", "opt": {"mood": "storm", "lamp": "off"}, "cam": {"pos": [8, 10, 34], "look": [8, 7, -14], "fov": 44, "move": [-3, -1, -6]}, "fx": ["fade_in"]},
+ "c02": {"set": "island", "opt": {"mood": "grey", "lamp": "off", "ship": [-34, -6], "flare": True}, "cam": {"pos": [-2, 7, 30], "look": [0, 6, -6], "fov": 52, "move": [2, 0, -2]}},
+ "c04": {"set": "stairs", "opt": {"mood": "grey"}, "cam": {"pos": [4, 8, 22], "look": [8, 5, 0], "fov": 46, "move": [7, 3, 0]},
+         "chars": [ch(J, [2.5, 1.5], 90, ["run", "blink"], y=1, to=[17.5, 1.5], y_to=8.5, speed=1.1)]},
+ "c05": {"set": "kitchen", "opt": {"cold": True, "stopped": True}, "cam": KCAM, "chars": [ch(J, [12, 7], 0, ["blink", "shiver"])]},
+ "c06": {"set": "hook", "cam": {"pos": [6, 4.5, 11], "look": [6, 4.2, 0], "fov": 42, "move": [0, 0, -2]}},
+ "c07": {"set": "island", "opt": {"mood": "fog", "lamp": "off"}, "cam": {"pos": [8, 9, 48], "look": [8, 8, -14], "fov": 40, "move": [0, 0, -4]}, "fx": ["dark"]},
+ "c08": {"set": "rocks", "opt": {"mood": "day"}, "cam": {"pos": [5, 6, 19], "look": [5, 4, 4], "fov": 44, "move": [0, -0.5, -2]}, "chars": [ch(H, [5, 6], 0, ["blink", "breath", "talk"])]},
+ "c09": {"set": "plain", "cam": {"pos": [0, 4.4, 5.2], "look": [0, 4.2, 0], "fov": 40, "move": [0, 0, -0.6]}, "chars": [ch(H, [0, 0], 0, ["blink", "breath", "talk"])]},
+ "c11": {"set": "rocks", "opt": {"mood": "storm"}, "cam": {"pos": [2, 6, 17], "look": [5, 3, 3], "fov": 46, "move": [1, 0, -2]}, "chars": [ch(H, [5, 5], 55, ["blink", "breath", "shiver"])], "fx": ["rain"]},
+ "c12": {"set": "rocks", "opt": {"mood": "night"}, "cam": {"pos": [7, 6, 20], "look": [7, 3, 4], "fov": 46},
+         "chars": [ch(H, [3, 6], 80), ch(D, [15, 6], -90, ["walk", "blink", "talk"], to=[7, 6])], "fx": ["rain"]},
+ "c13": {"set": "kitchen", "cam": KCAM, "chars": [ch(M, [7.4, 2.6], -90, ["blink", "breath", "stir", "talk"]), ch(D, [21.0, 5.6], -15), ch(H, [17.2, 5.4], 10)]},
+ "c14": {"set": "kitchen", "cam": KCAM, "chars": [ch(A, [20.0, 5.6], -50, ["blink", "breath", "reach"]), ch(H, [16.6, 5.4], 40)]},
+}
+
+if __name__ == "__main__":
+    sys.path.insert(0, ROOT)
+    import importlib.util
+    sp = importlib.util.spec_from_file_location("bs3", os.path.join(ROOT, "블록장면3D.py"))
+    B3 = importlib.util.module_from_spec(sp)
+    sp.loader.exec_module(B3)
+    d = os.path.join(HERE, "장면3D")
+    os.makedirs(d, exist_ok=True)
+    only = sys.argv[1].split(",") if len(sys.argv) > 1 else None
+    for cid, sc in S.items():
+        if only and cid not in only:
+            continue
+        sc = {"engine": "3d", "cast": "../등장인물_카툰.json", **sc}
+        p = os.path.join(d, cid + ".json")
+        old = open(p, encoding="utf-8").read() if os.path.exists(p) else None
+        new = json.dumps(sc, ensure_ascii=False, indent=1)
+        if old != new:   # 안 바뀐 장면은 파일 날짜를 그대로 (영상 구간 캐시 유지)
+            open(p, "w", encoding="utf-8").write(new)
+        scene, cast = B3.load(p)
+        B3.frame(scene, cast, 1.5, 8).save(os.path.join(d, cid + ".png"))
+        print(cid, end=" ", flush=True)
+    print("\n장면 저장")

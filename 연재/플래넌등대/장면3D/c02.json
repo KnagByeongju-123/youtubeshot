@@ -1,0 +1,32 @@
+{
+ "engine": "3d",
+ "cast": "../등장인물_카툰.json",
+ "set": "island",
+ "opt": {
+  "mood": "grey",
+  "lamp": "off",
+  "ship": [
+   -34,
+   -6
+  ],
+  "flare": true
+ },
+ "cam": {
+  "pos": [
+   -2,
+   7,
+   30
+  ],
+  "look": [
+   0,
+   6,
+   -6
+  ],
+  "fov": 52,
+  "move": [
+   2,
+   0,
+   -2
+  ]
+ }
+}

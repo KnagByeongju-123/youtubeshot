@@ -63,7 +63,8 @@ class Box:
 
 
 class Camera:
-    def __init__(s, pos, target, fov=40):
+    def __init__(s, pos, target, fov=40, ortho=None):
+        s.ortho = ortho            # 숫자면 원근 없는 평면 그림 (화면 높이에 들어갈 블록 수)
         s.pos = np.array(pos, float)
         f = np.array(target, float) - s.pos
         s.f = f / np.linalg.norm(f)
@@ -75,6 +76,9 @@ class Camera:
     def project(s, pts):
         v = pts - s.pos
         x, y, z = v @ s.r, v @ s.u, v @ s.f
+        if s.ortho:
+            k = H * SS / s.ortho
+            return np.stack([W * SS / 2 + k * x, H * SS / 2 - k * y], 1), z
         z = np.maximum(z, 0.05)
         return np.stack([W * SS / 2 + s.focal * x / z, H * SS / 2 - s.focal * y / z], 1), z
 
@@ -373,7 +377,7 @@ def kitchen(t):
     return bx
 
 
-def demo_kitchen(t, cast):
+def demo_kitchen(t, cast, flat=False):
     def pose_live(t, seed, extra=None):
         p = {"breath": 0.004 * math.sin(t * 2 * math.pi / 3.6 + seed), "blink": (t + seed) % 3.4 < 0.12}
         p.update(extra or {})
@@ -384,7 +388,10 @@ def demo_kitchen(t, cast):
     bx += person(D, (21.0, 0, 5.6), face=-15, pose=pose_live(t, 1.7))
     bx += person(Hm, (17.2, 0, 5.4), face=10, pose=pose_live(t, 2.9, {"talk": 0}))
     # 카메라: 앞쪽 위에서 비스듬히, 아주 천천히 다가감
-    cam = Camera((13 + 0.8 * math.sin(t * 0.2), 8.0 - 0.1 * t, 24 - 0.3 * t), (13, 3.6, 4), fov=44)
+    if flat:   # 평면 블록: 정면에서 똑바로, 원근 없이 (천천히 옆으로 흐름)
+        cam = Camera((12.2 + 0.12 * t, 4.5, 40), (12.2 + 0.12 * t, 4.5, 0), ortho=11.0)
+    else:
+        cam = Camera((13 + 0.8 * math.sin(t * 0.2), 8.0 - 0.1 * t, 24 - 0.3 * t), (13, 3.6, 4), fov=44)
     return render(bx, cam, bg=(40, 36, 34))
 
 
@@ -394,15 +401,16 @@ if __name__ == "__main__":
     HERE = os.path.dirname(os.path.abspath(__file__))
     cast = {c["name"]: c for c in json.load(open(os.path.join(HERE, "연재/플래넌등대/등장인물_카툰.json"), encoding="utf-8"))["chars"]}
     out = a[1]
+    flat = "--평면" in a
     if out.endswith(".png"):
-        demo_kitchen(float(a[a.index("--t") + 1]) if "--t" in a else 0.5, cast).save(out)
+        demo_kitchen(float(a[a.index("--t") + 1]) if "--t" in a else 0.5, cast, flat).save(out)
     else:
         sec = float(a[a.index("--초") + 1]) if "--초" in a else 6
         fps = 24
         ff = subprocess.Popen(["ffmpeg", "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{W}x{H}", "-r", str(fps), "-i", "-",
                                "-c:v", "libx264", "-pix_fmt", "yuv420p", "-crf", "20", out], stdin=subprocess.PIPE)
         for k in range(int(sec * fps)):
-            ff.stdin.write(demo_kitchen(k / fps, cast).tobytes())
+            ff.stdin.write(demo_kitchen(k / fps, cast, flat).tobytes())
         ff.stdin.close()
         ff.wait()
         print("만듦:", out)

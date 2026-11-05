@@ -61,6 +61,17 @@ def main():
         json.dump(proj, open(out, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
         body = re.sub(r"\[사진:[^\]]*\]", "", proj["story"])
         print(out, len(out_), "cuts", len(re.sub(r"\n+", "\n", body).strip()), "chars")
+    elif cmd == "project5_3d":   # 5분 시험판을 입체 블록 장면으로 (장면3D/cNN.png 가 있으면 그것, 없으면 예전 카툰 장면)
+        pj = json.load(open(os.path.join(HERE, "플래넌등대_5분.json"), encoding="utf-8"))
+        d3 = os.path.join(HERE, "장면3D")
+        def sub(m):
+            cid = m.group(1)
+            p3 = os.path.join(d3, cid + ".png")
+            return m.group(0).replace(os.path.join(SCN, cid + ".png"), p3) if os.path.exists(p3) else m.group(0)
+        pj["story"] = re.sub(r"\[사진: [^\]]*?/(c\d+)\.png[^\]]*\]", sub, pj["story"])
+        out = os.path.join(HERE, "플래넌등대_5분_3D.json")
+        json.dump(pj, open(out, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+        print(out, pj["story"].count("장면3D/"), "입체 장면")
     elif cmd == "stills":
         import importlib.util
         import cairosvg

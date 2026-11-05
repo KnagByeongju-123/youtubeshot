@@ -1,0 +1,41 @@
+{
+ "engine": "3d",
+ "cast": "../등장인물_카툰.json",
+ "set": "kitchen",
+ "opt": {
+  "cold": true,
+  "stopped": true
+ },
+ "cam": {
+  "pos": [
+   13,
+   8.0,
+   24
+  ],
+  "look": [
+   13,
+   3.6,
+   4
+  ],
+  "fov": 44,
+  "move": [
+   0.6,
+   -0.5,
+   -1.8
+  ]
+ },
+ "chars": [
+  {
+   "who": "교대 등대지기 조지프 무어",
+   "at": [
+    12,
+    7
+   ],
+   "face": 0,
+   "act": [
+    "blink",
+    "shiver"
+   ]
+  }
+ ]
+}

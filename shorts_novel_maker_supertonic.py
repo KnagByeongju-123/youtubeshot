@@ -6863,6 +6863,14 @@ def _cartoon_frame(scene_path, t, size, dur=None):
             cast = {c["name"]: c for c in json.load(open(cp, encoding="utf-8"))["chars"]}
             _CARTOON[("s", scene_path)] = (scene, cast)
         scene, cast = _CARTOON[("s", scene_path)]
+        if scene.get("engine") == "3d":   # 입체 블록 장면 (블록장면3D.py, 사용자 결정 2026-11-05)
+            if "mod3d" not in _CARTOON:
+                sp3 = importlib.util.spec_from_file_location("blk3d", os.path.join(BASE, "블록장면3D.py"))
+                m3 = importlib.util.module_from_spec(sp3)
+                sp3.loader.exec_module(m3)
+                _CARTOON["mod3d"] = m3
+            im = _CARTOON["mod3d"].frame(scene, cast, t, dur)
+            return im.resize(size, Image.BICUBIC) if im.size != tuple(size) else im
         png = K_.cairosvg.svg2png(bytestring=K_.frame_svg(scene, cast, t, dur).encode(), output_width=size[0], output_height=size[1])
         return Image.open(io.BytesIO(png)).convert("RGB")
     except Exception as e:
