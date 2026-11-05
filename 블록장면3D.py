@@ -151,7 +151,7 @@ def set_kitchen(t, p, o):
         b += [Box((6.2, 0, 0.6), (3.0, 1.0, 4.6), "#7a5232"), Box((6.3, 1.0, 0.7), (2.8, 0.4, 4.4), "#e9e1cf"),
               Box((6.5, 1.4, 0.8), (2.4, 0.3, 1.0), "#f4f1ea"), Box((6.1, 0, 0.3), (3.2, 2.4, 0.3), "#6b4a30")]
     if o.get("cold"):   # 꺼진 난로: 불꽃·김을 뺌 (emit 상자 중 주황·흰 것)
-        b = [x for x in b if not (x.emit and (x.col[0] > 200 and x.col[2] < 120 or x.col.min() > 230))]
+        b = [x for x in b if not (x.emit and (x.col[0] > x.col[2] + 20 or x.col.min() > 230))]   # 불꽃·수프·김 (따뜻한 색 빛) 빼기
     if o.get("stopped"):
         pass
     return b, o.get("mood", "indoor")
