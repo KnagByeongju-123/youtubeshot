@@ -9309,7 +9309,7 @@ def export_mp4_resumable(r, out, progress, cancel=None, audio=None, work_dir=Non
         export_mp4(r, seg, lambda i, n, k=k, a=i0: progress(a + i, n_all), cancel, None, (i0 / fps, i1 / fps))
         mark_done(seg)
     wav = os.path.join(work_dir, "audio.wav")
-    if audio is not None and not is_done(wav):
+    if audio is not None:   # 소리는 매번 새로 씀 (몇 초면 됨). 예전엔 .done 이 있으면 다시 썼는데, 배경음 가락·크기 코드만 바꿨을 때 예전 소리가 그대로 들어갔음 (2026-11-05 잉카 편)
         write_wav(wav, audio)
         mark_done(wav)
     lst = os.path.join(work_dir, "list.txt")
