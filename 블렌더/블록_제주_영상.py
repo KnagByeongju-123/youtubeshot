@@ -381,7 +381,26 @@ for (u, loc, look, lens) in CAM:
     cam.data.lens = lens
     cam.data.keyframe_insert("lens", frame=f)
 
-sc.render.engine = "BLENDER_EEVEE"
+ENGINE = argv[argv.index("--engine") + 1] if "--engine" in argv else "EEVEE"
+if ENGINE == "WORKBENCH":      # 빠른 단순 그리기: 빛·그림자 단순, 블록 색은 그대로 (블록영상.md)
+    sc.render.engine = "BLENDER_WORKBENCH"
+    sh = sc.display.shading
+    sh.light = "STUDIO"
+    sh.color_type = "VERTEX"
+    sh.show_shadows = True
+    sh.shadow_intensity = 0.45
+    sh.show_cavity = True
+    sh.cavity_type = "BOTH"
+    sh.show_specular_highlight = False
+    sc.display.render_aa = "8"
+    sc.display.shading.background_type = "WORLD" if False else sh.background_type
+    sc.world.color = (0.05, 0.07, 0.12)
+    sh.color_type = "MATERIAL"                  # 물을 비쳐 보이게 하려면 재료 색(투명도 포함)을 써야 함
+    for nm, mt in mats.items():
+        a_ = ALPHA.get(nm, 1.0)
+        c_ = COL[nm] if nm not in EMIT else (1.0, 0.55, 0.15)
+        mt.diffuse_color = (c_[0], c_[1], c_[2], a_)
+sc.render.engine = "BLENDER_EEVEE" if ENGINE == "EEVEE" else sc.render.engine
 sc.eevee.use_gtao = True
 sc.eevee.use_bloom = True
 sc.eevee.bloom_intensity = 0.04
