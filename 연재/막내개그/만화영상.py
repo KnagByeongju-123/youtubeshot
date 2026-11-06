@@ -33,6 +33,8 @@ def load(name, path):
 
 EP = load("ep", os.path.join(HERE, "1화_회식메뉴.py"))
 PEEP = load("peep", os.path.join(HERE, "오픈핍스_인물.py"))
+LORE = load("lore", os.path.join(HERE, "로렐라이_인물.py"))     # 사용자 결정 2026-11-06: 인물은 Lorelei(CC0) 흑백 선화
+STYLE = os.environ.get("MANHWA_STYLE", "lorelei")
 NARR = {"code": "M2", "rate": 0, "semis": 0}
 SR = 44100
 W, H, FPS = 1920, 1080, 24
@@ -117,16 +119,36 @@ def record(work):
 _PEEPS = {}
 
 
-def peep(name, face, size):
-    k = (name, face, size)
+def peep(name, face, size, talk=False, blink=False):
+    k = (name, face, size, talk, blink)
     if k not in _PEEPS:
-        raw = PEEP.get(name, face, 512)
+        raw = LORE.get(name, face, 512, talk=talk, blink=blink) if STYLE == "lorelei" else PEEP.get(name, face, 512)
         im = Image.open(io.BytesIO(raw)).convert("RGBA").resize((size, size), Image.LANCZOS)
         a = np.asarray(im).astype(np.float32)
         lum = a[..., :3] @ np.array([0.299, 0.587, 0.114])
-        g = np.where(lum < 90, INK, 255).astype(np.uint8)
+        g = np.where(lum < 110, INK, 255).astype(np.uint8)
         _PEEPS[k] = (Image.fromarray(g, "L"), Image.fromarray(a[..., 3].astype(np.uint8), "L"))
     return _PEEPS[k]
+
+
+def body(d, name, x, y, size):
+    """Lorelei 는 얼굴만 → 어깨·옷을 선으로 (목 아래). 부장님은 넥타이, 팀장님은 재킷 깃, 이대리는 셔츠 깃"""
+    cx, top = x + size * 0.5, y + size * 0.86
+    sw = size * 0.45
+    pts = [(cx - size * 0.13, top), (cx - sw, top + size * 0.28), (cx - sw - size * 0.06, H + 20), (cx + sw + size * 0.06, H + 20),
+           (cx + sw, top + size * 0.28), (cx + size * 0.13, top)]
+    d.polygon(pts, fill=255)
+    d.line(pts[:3], fill=INK, width=6)
+    d.line(pts[3:], fill=INK, width=6)
+    d.line([(cx - size * 0.13, top), (cx, top + size * 0.16), (cx + size * 0.13, top)], fill=INK, width=5)    # 깃
+    if name == "부장님":
+        d.polygon([(cx - 14, top + size * 0.16), (cx + 14, top + size * 0.16), (cx + 26, top + size * 0.62), (cx, top + size * 0.72), (cx - 26, top + size * 0.62)], fill=INK)
+    elif name == "팀장님":
+        for sgn in (-1, 1):
+            d.line([(cx + sgn * size * 0.13, top), (cx + sgn * size * 0.30, top + size * 0.55)], fill=INK, width=5)
+    elif name in ("이대리", "막내"):
+        for k in range(3):
+            d.ellipse((cx - 6, top + size * (0.25 + k * 0.14) - 6, cx + 6, top + size * (0.25 + k * 0.14) + 6), fill=INK)
 
 
 def tone(size, step=10, r=1.6):
@@ -248,17 +270,25 @@ def panel_frame(pid, tl, lines_here, t):
     speaking = [l for l in lines_here if l["t0"] <= t <= l["t1"]]
     cur_who = speaking[0]["who"] if speaking else None
     pos = {}
-    for name, face, slot in who:
+    for ni, (name, face, slot) in enumerate(who):
         x = SLOTS[n].get(slot, 640)
-        y = H - size + 40
+        lsize = int(size * 0.9) if STYLE == "lorelei" else size
+        x += (size - lsize) // 2
+        y = H - size + 40 if STYLE != "lorelei" else H - int(lsize * 1.42)
+        talk = blink = False
         if name == cur_who:
-            y -= int(10 * abs(math.sin((t - speaking[0]["t0"]) * 9)))      # 말할 때 들썩
-        g, a = peep(name, face, size)
+            y -= int(8 * abs(math.sin((t - speaking[0]["t0"]) * 9)))       # 말할 때 들썩
+            talk = int((t - speaking[0]["t0"]) / 0.13) % 2 == 1             # 입 열고 닫기
+        ph = (t + ni * 1.37) % 3.3                                          # 3초쯤마다 깜빡
+        blink = ph < 0.12
+        if STYLE == "lorelei":
+            body(d, name, x, y, lsize)
+        g, a = peep(name, face, lsize, talk=talk, blink=blink)
         flip = slot == "오른"
         if flip:
             g, a = g.transpose(Image.FLIP_LEFT_RIGHT), a.transpose(Image.FLIP_LEFT_RIGHT)
         c.paste(g, (x, y), a)
-        pos[name] = (x + size // 2, y + int(size * 0.22))
+        pos[name] = (x + lsize // 2, y + int(lsize * 0.15))
     # 소품·효과
     for kind in ("초밥", "파스타", "고기", "순댓국"):
         if kind in prop:
