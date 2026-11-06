@@ -35,7 +35,7 @@ RULES = """[입체 블록 장면 검수 규칙] — 장면마다 처음·가운�
   1. 발이 땅에 붙었는지: 떠 있음·땅(계단·바위)에 묻힘·바다 위를 걸음 (창밖 멀리 걷는 사람은 그 아래 땅이 있어야 함)
   2. 얼굴: 말하는 사람이 카메라에 뒤통수만 보이지 않는지, 얼굴을 가리는 조각(귀 덮개·수염·뒷머리 덩어리)이 없는지 — 말하기·웃기·가리키기도 같음, 왕·주인공(파라오 머리수건·"lead")은 걷는 때가 아니면 뒷모습만 보이지 않게 (사용자 지적 2026-11-06: 쿠푸 왕 뒷모습)
   3. 머리·모자: 모자 밖으로 삐져나온 머리 점, 이마의 검은 점, 수염이 머리 옆 전체를 덮지 않는지 (수염은 턱 앞쪽만)
-  4. 소품이 대본대로인지: 젓는 사람 손의 국자는 냄비 안, 건네는 빵은 손에, 걸린 외투·빈 침대처럼 대본에 나온 물건이 보이는지
+  4. 소품이 대본대로인지: 젓는 사람 손의 국자는 냄비 안, 건네는 빵은 손에, 걸린 외투·빈 침대처럼 대본에 나온 물건이 보이는지 미는 손바닥은 물체에 닿게, 물을 붓는 물줄기는 손에 든 그릇에서 나오게 (사용자 지적 2026-11-06)
   5. 크기: 멀리 있는 사람이 너무 작아 안 보이거나 창틀·기둥에 가리지 않는지
   6. 캐릭터 설정과 같은지: 옷 색·대표 색·모자·고글·멜빵 (방수 외투로 갈아입어도 모자 같은 상징은 남김)
  ■ 사물·배경
@@ -162,6 +162,15 @@ def check_scene(path, outdir, times=(0.3, 4.0, 7.7), dur=8.0):
                 probs.append(f"{cid} {t:.1f}초: {who} 가 말하는데 카메라에 등을 보임")
             elif ch.get("lead") and not any(a in ch["acts"] for a in ("run", "walk")) and nrm > 1e-6 and float(np.dot(fv, to_cam / nrm)) < -0.5:
                 probs.append(f"{cid} {t:.1f}초: {who} (주인공·왕) 뒷모습만 보임 — 얼굴이 보이게 돌림")   # 사용자 지적 2026-11-06: 쿠푸 왕 뒷모습
+            if "push" in ch["acts"]:   # 미는 손바닥이 물체에 닿는지 (사용자 지적 2026-11-06: 손이 돌 앞에서 멈춤)
+                mine = B["boxes"][ch["i0"]:ch["i1"]]
+                cs = [b.corners() for b in mine]
+                f_ = math.radians(ch["face"]); fw = np.array([math.sin(f_), 0, math.cos(f_)])
+                tip = max((v for c_ in cs for v in c_), key=lambda v: float(np.dot(v, fw)))   # 몸에서 가장 앞(손끝)
+                others = [b for k_, b in enumerate(B["boxes"]) if not (ch["i0"] <= k_ < ch["i1"]) and b.s.max() < 30]
+                gap = min((float(np.max(np.maximum(np.maximum(b.corners().min(0) - tip, tip - b.corners().max(0)), 0))) for b in others), default=9)
+                if gap > 0.08:
+                    probs.append(f"{cid} {t:.1f}초: {who} 가 미는데 손이 물체에 닿지 않음 ({gap:.2f} 떨어짐)")
             if team:
                 continue
             # 보이는 정도·크기·잘림 (이 인물만 분홍으로 칠해 그려 봄)

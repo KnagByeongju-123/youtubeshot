@@ -519,6 +519,16 @@ def build(scene, cast, t, dur=None):
             ps["hold"] = ch["hold"]
         i0 = len(boxes)
         boxes += person(c, (ax, y, az), face=face, pose=ps, scale=ch.get("scale", 1.0))
+        if o.get("pour") and ps.get("_hold_i") is not None:   # 물 줄기: 손에 든 항아리 입구에서 바로 땅으로 (사용자 지적 2026-11-06: 물과 손이 따로 있었음)
+            jar = boxes[i0 + ps["_hold_i"]].corners()
+            jx, jz = float(jar[:, 0].mean()), float(jar[:, 2].mean())
+            jy = float(jar[:, 1].min())
+            ln = max(0.3, jy - y)
+            boxes.append(Box((jx - 0.07, y, jz - 0.07), (0.14, ln, 0.14), (120, 190, 230), emit=True, edge=False))   # 이어진 물줄기
+            for k in range(4):   # 떨어지는 물방울 (반짝임)
+                q = (t * 2.5 + k / 4) % 1
+                boxes.append(Box((jx - 0.1, jy - q * ln, jz - 0.1), (0.2, 0.22, 0.2), (190, 230, 250), emit=True, edge=False))
+            boxes.append(Box((jx - 0.5, y + 0.01, jz - 0.5), (1.0, 0.03, 1.0), "#9c7a48", edge=False))   # 물에 젖은 자리
         info.append({"who": ch["who"], "pos": (ax, y, az), "face": face, "acts": acts, "i0": i0, "i1": len(boxes), "scale": ch.get("scale", 1.0), "exit": ch.get("exit", False), "lead": bool(ch.get("lead") or c.get("nemes") or c.get("lead"))})
     fx = scene.get("fx", [])
     if "rain" in fx:
@@ -970,10 +980,6 @@ def set_desert(t, p, o):
         if o.get("wet"):
             for k in range(6):   # 썰매 앞 젖은(진한) 모래 자국
                 b.append(Box((x + 2.5 + k * 1.2, 0.02, z - 1.4), (1.2, 0.03, 2.8), "#b8955a", edge=False))
-        if o.get("pour"):   # 물 줄기 (항아리에서 모래로)
-            for k in range(5):
-                q = (t * 2 + k / 5) % 1
-                b.append(Box((x + 3.0, 1.8 - q * 1.8, z - 0.2 + 0.1 * math.sin(k)), (0.12, 0.25, 0.12), (120, 190, 230), emit=True, edge=False))
     if o.get("ropes"):
         for (a_, b_) in o["ropes"]:
             sx = (o.get("sledges") or [[0, 0, 0, 0]])[0]

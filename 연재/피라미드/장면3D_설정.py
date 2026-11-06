@@ -52,7 +52,7 @@ S_ = {
          "cam": {"shots": [{"mode": "track", "who": T, "off": [6, 3, 8], "off1": [3, 3.2, 7], "aim": [0, 2.4, 0], "fov": 46}], "hand": 0.1}},   # 어깨 너머 → 반대쪽
  "c08": {"set": "desert", "opt": {**HALF, "sledges": [[0, 30, 0]]}, "chars": [ch(P, [-4, 33], 60, ["blink", "talk", "point"]), ch(T, [-6, 35], 40)],
          "cam": shots(dolly([-12, 4, 44], [-4, 4, 33], [-8, 5, 40], [0, 3, 30], 46))},
- "c09": {"set": "desert", "opt": {**HALF, "sledges": [[0, 30, 0]]}, "chars": [ch(T, [-3.4, 30], 90, ["push", "blink"])],
+ "c09": {"set": "desert", "opt": {**HALF, "sledges": [[0, 30, 0]]}, "chars": [ch(T, [-3.08, 30], 90, ["push", "blink"])],
          "cam": shots(dolly([-1, 3, 38], [-2.5, 2.5, 30], [-1.5, 2.8, 36], [-2.5, 2.6, 30], 44))},
  "c10": {"set": "desert", "opt": {**HALF}, "chars": [ch(T, [-1.4, 40], 20, ["blink", "talk", "flap"]), ch(P, [1.8, 40], -30, ["blink", "laugh"])],
          "cam": shots(dolly([0, 5, 50], [0, 4, 40], [0, 4.5, 47], [0, 4.2, 40], 46))},

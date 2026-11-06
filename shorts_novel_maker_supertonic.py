@@ -5389,7 +5389,7 @@ class SubtitleRenderer:
         if self.full:   # 사진이 화면 전체, 글자는 사진 위에 바로
             self.img_box = (0, 0, W, H)
             self.head_box = (m, int(H * 0.07), W - m, int(H * 0.24))
-            self.sub_box = (m, int(H * 0.72), W - m, int(H * 0.92)) if self.port else (m, int(H * 0.78), W - m, int(H * 0.96))
+            self.sub_box = (m, int(H * 0.72), W - m, int(H * 0.92)) if self.port else (m, int(H * 0.68), W - m, int(H * 0.86))   # 가로: 아래 14% 비움 — 재생기 아래 어두운 띠(재생 막대)에 자막이 가리지 않게 (사용자 지적 2026-11-06)
         elif self.port:
             self.head_box = (m, int(H * 0.06), W - m, int(H * 0.23))
             self.img_box = (m, int(H * 0.25), W - m, int(H * 0.74))

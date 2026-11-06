@@ -257,6 +257,7 @@ def person(c, pos, face=0.0, pose=None, scale=1.0):
             B((ax + aw * 0.35, sy - alen - aw * 0.9 - 0.45, -0.04), (0.08, 0.55, 0.08), "#8a8f96", lr)   # 짧은 자루 (끝은 수프 속)
         if sg > 0 and pose.get("hold"):    # 손에 든 물건 (빵 반쪽 등)
             B((ax - 0.05, sy - alen - aw * 1.3, -aw * 0.9), (aw + 0.1, aw * 0.7, aw * 1.4), pose["hold"], r)
+            pose["_hold_i"] = len(out) - 1   # 손에 든 물건 자리 (물 붓기 등에서 씀)
     # 목·머리
     hy = sy + 0.05
     B((-hwid * 0.2, sy - 0.05, -0.12), (hwid * 0.4, 0.12, 0.24), c["skin"])
