@@ -88,14 +88,14 @@ CUTS = [
     ("c51", [58], ["막내"], False, False, MEETING, "the curly-haired young man speaking sincerely with warm eyes, a soft glowing memory of side-dish shop owners behind him", "아깝다는 말"),
     ("c52", [59], ["막내"], True, True, MEETING, "wide shot of the quiet meeting room in warm light, everyone seated at the table listening to the curly-haired young man who stands and speaks, plain walls with no posters or pictures, the screen shows only simple bar charts", "편안한 조용함"),
     ("c53", [60], ["부장님"], True, False, MEETING, "the president clapping slowly with a smile, the department head beside him clapping a beat late awkwardly", "박수 치는 사장님과 부장님"),
-    ("c54", [61, 62, 63], ["이대리"], True, False, MEETING, "the president speaking firmly, in the foreground the pompadour man in a navy suit bowing his head in shame", "읽는 것부터 다시 배우게"),
+    ("c54", [61, 62, 63], ["이대리"], True, False, MEETING, "the elderly president standing upright with a stern face, pointing one finger and speaking firmly; in front of him the pompadour man in a navy suit bows his head low in shame with a pale frowning face. The president does not bow", "읽는 것부터 다시 배우게"),
     ("c55", [64], ["막내"], False, False, OFFICE + ", afternoon sunlight", "the curly-haired young man looking at a new blank name plate and a small potted flower on his desk, moved, smiling softly", "새 이름표"),
     ("c56", [65], ["이대리"], False, False, "a small office pantry with a coffee machine and a counter", "the pompadour man in a navy suit alone making coffee, ten paper cups lined up on the counter, sulky face", "탕비실의 이 대리"),
     ("c57", [66, 67], ["팀장님", "막내"], False, False, "an office building elevator lobby in the evening with polished floors", "the woman with a black bob and silver glasses talking to the curly-haired young man in front of the elevators, a small kind smile", "엘리베이터 앞의 팀장님"),
     ("c58", [68], ["막내", "팀장님"], False, False, "an office building elevator lobby in the evening with polished floors", "the curly-haired young man bowing deeply to the woman with a black bob and silver glasses", "고개 숙이는 지후"),
     ("c59", [69, 70], ["박사원"], False, True, "a crosswalk in front of a tall office building at sunset, city street", "the ponytail young woman in a beige cardigan running across the crosswalk waving her hand happily", "손 흔들며 뛰어오는 서아"),
-    ("c60", [71, 72], ["막내"], False, False, "a city street in front of an office building at sunset", "the curly-haired young man laughing brightly with his head held high, golden sunset light", "고개를 들고 웃는 지후"),
-    ("c61", [73], ["막내", "박사원"], False, True, "an evening city street with warm streetlights and small shops", "seen from behind, the curly-haired young man and the ponytail young woman walking side by side laughing down the street", "저녁 거리로 퍼지는 웃음"),
+    ("c60", [71, 72], ["막내"], False, False, "a city street in front of an office building at sunset", "medium shot of the curly-haired young man laughing brightly with his head held high, both hands relaxed at his sides, plenty of space above his head, golden sunset light", "고개를 들고 웃는 지후"),
+    ("c61", [73], ["막내", "박사원"], False, True, "an evening city street with warm streetlights and small shops", "both seen from behind: the curly-haired young man and the ponytail young woman walking side by side away from the camera down the street, she turns her face to him laughing; shop signs are plain colored boards with no writing", "저녁 거리로 퍼지는 웃음"),
 ]
 
 
