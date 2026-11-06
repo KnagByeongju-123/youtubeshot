@@ -2,8 +2,8 @@
 xvfb-run -a ../.blender_venv/bin/python 모아보기.py <결과.png> <이름> [이름 ...]  — 왼쪽부터 나란히, 크기는 실제 비율"""
 import math, os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import bpy, 블록, 사람, 바다생물
-M = {"서진": 사람.서진, "서진_젊은": lambda: 사람.서진(True), "하린": 사람.하린, "정우": 사람.정우, **바다생물.MODELS}
+import bpy, 블록, 사람, 바다생물, 인물_자전거
+M = {"서진": 사람.서진, "서진_젊은": lambda: 사람.서진(True), "하린": 사람.하린, "정우": 사람.정우, **바다생물.MODELS, **인물_자전거.MODELS}
 out, names = sys.argv[1], sys.argv[2:]
 sc = 블록.new_scene("#f4f4f2", 1600, 900)
 x = 0.0; depth = 0.0; lo_all = [1e9] * 3; hi_all = [-1e9] * 3
@@ -23,7 +23,7 @@ for n in names:
         lo_all[i] = min(lo_all[i], (x if i == 0 else lo[i])); hi_all[i] = max(hi_all[i], hi[i] - lo[i])
 cam = bpy.data.cameras.new("c"); cam.lens = 50; co = bpy.data.objects.new("c", cam); sc.collection.objects.link(co); sc.camera = co
 W = x; H = hi_all[2]
-d = max(W, depth * 0.9, H * 1.8) * 1.15
+d = max(W, depth * 0.9, H * 1.8) * 1.3
 co.location = (W / 2 + d * 0.35, -d, H * 0.5 + d * 0.32)
 tg = bpy.data.objects.new("t", None); sc.collection.objects.link(tg); tg.location = (W / 2 - W * 0.02, 0, H * 0.42)
 c = co.constraints.new("TRACK_TO"); c.target = tg

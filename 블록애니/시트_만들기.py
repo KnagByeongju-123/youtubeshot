@@ -15,6 +15,8 @@ def models():
     d = {"서진": 사람.서진, "서진_젊은": lambda: 사람.서진(True), "하린": 사람.하린, "정우": 사람.정우}
     if 바다생물:
         d.update(바다생물.MODELS)
+    import 인물_자전거
+    d.update(인물_자전거.MODELS)
     return d
 
 def main():
