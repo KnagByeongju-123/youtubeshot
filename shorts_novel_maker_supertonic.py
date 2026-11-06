@@ -6030,6 +6030,8 @@ class SubtitleRenderer:
                 sig.append("-")
             if _cartoon_scene_path(p_):          # 움직이는 카툰 장면 설정이 바뀌어도 새로 그림
                 sig.append("k" + str(int(os.path.getmtime(_cartoon_scene_path(p_)))))
+        if os.environ.get("BLOCK_RENDER") == "blender":   # Blender 로 그린 영상은 따로 (예전 그림 구간을 다시 쓰지 않게)
+            sig.append("blender" + os.environ.get("BL_SCALE", "50") + os.environ.get("BL_SAMPLES", "3"))
         return hashlib.md5(",".join(sig).encode()).hexdigest()[:12] if any(x != "-" for x in sig) else ""
 
     def _cartoon_big(self, idx, t, big):
@@ -6848,6 +6850,48 @@ def _cartoon_scene_path(img_path):
     return _CARTOON[key]
 
 
+_BLENDER = {}
+
+
+def _blender_frame(scene_path, t, dur):
+    """입체 블록 장면을 Blender(블록_블렌더.py 일꾼)로 그림 — BLOCK_RENDER=blender 일 때 (사용자 결정 2026-11-06).
+    영상 구간을 동시에 그리는 프로세스마다 일꾼 하나 (CPU 를 나눠 씀). 실패하면 None → 원래 블록 엔진으로"""
+    import subprocess, tempfile
+    pid = os.getpid()
+    w = _BLENDER.get(pid)
+    try:
+        if w is None or w.poll() is not None:
+            py = os.path.join(BASE, ".bl_venv", "bin", "python")
+            env = dict(os.environ)
+            par = max(1, int(os.environ.get("RENDER_PAR", "1") or 1))
+            env.setdefault("BL_THREADS", str(max(1, (os.cpu_count() or 2) // par)))
+            env.setdefault("BL_SCALE", "50")
+            w = subprocess.Popen([py, "-X", "utf8", os.path.join(BASE, "블록_블렌더.py"), "--일꾼", "--엔진", "cycles",
+                                  "--샘플", os.environ.get("BL_SAMPLES", "3")], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                                 stderr=subprocess.DEVNULL, text=True, env=env, cwd=BASE)
+            while True:
+                ln = w.stdout.readline()
+                if not ln or ln.strip() == "ready":
+                    break
+            _BLENDER[pid] = w
+        out = os.path.join(tempfile.gettempdir(), f"_bl_{pid}.png")
+        w.stdin.write(json.dumps({"scene": os.path.abspath(scene_path), "t": t, "dur": dur, "out": out}, ensure_ascii=False) + "\n")
+        w.stdin.flush()
+        while True:
+            ln = w.stdout.readline()
+            if not ln:
+                return None
+            ln = ln.strip()
+            if ln == "ok":
+                return Image.open(out).convert("RGB")
+            if ln.startswith("err"):
+                print("Blender 그리기 실패:", ln)
+                return None
+    except Exception as e:  # noqa
+        print("Blender 일꾼 실패:", e)
+        return None
+
+
 def _cartoon_frame(scene_path, t, size, dur=None):
     """카툰장면.py 로 장면을 t 초 모습으로 그려 size 크기 PIL 그림으로"""
     try:
@@ -6869,7 +6913,9 @@ def _cartoon_frame(scene_path, t, size, dur=None):
                 m3 = importlib.util.module_from_spec(sp3)
                 sp3.loader.exec_module(m3)
                 _CARTOON["mod3d"] = m3
-            im = _CARTOON["mod3d"].frame(scene, cast, t, dur)
+            im = _blender_frame(scene_path, t, dur) if os.environ.get("BLOCK_RENDER") == "blender" else None
+            if im is None:
+                im = _CARTOON["mod3d"].frame(scene, cast, t, dur)
             return im.resize(size, Image.BICUBIC) if im.size != tuple(size) else im
         png = K_.cairosvg.svg2png(bytestring=K_.frame_svg(scene, cast, t, dur).encode(), output_width=size[0], output_height=size[1])
         return Image.open(io.BytesIO(png)).convert("RGB")
