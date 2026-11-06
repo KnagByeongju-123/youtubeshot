@@ -47,6 +47,12 @@ if [ ! -d supertonic_assets/onnx ] || [ ! -f supertonic_assets/voice_styles/M2.j
   done
 fi
 
+# 3-1) 얼굴 찾기 모델 YuNet (OpenCV, Apache-2.0, 230KB) — 영상에서 세로 초상화를 얼굴 기준으로 자르고, 썸네일 글자가 얼굴을 안 가리게
+if [ ! -s models/face_detection_yunet_2023mar.onnx ]; then
+  mkdir -p models
+  curl -sSfL -o models/face_detection_yunet_2023mar.onnx "https://huggingface.co/opencv/face_detection_yunet/resolve/main/face_detection_yunet_2023mar.onnx" || rm -f models/face_detection_yunet_2023mar.onnx
+fi
+
 # 4) 만화·그림 장면을 그리는 FLUX.2 klein 4B (Apache 2.0, .sd_venv + models/FLUX2_klein_4B, 약 16GB · 처음 한 번 5~10분)
 #    캐릭터 시트를 기준 그림으로 넣으면 같은 인물 그대로, 부분 수정(손·얼굴)도 됨 → klein_worker.py
 #    (예전 SD1.5 모델은 저장 공간 때문에 클라우드에서는 받지 않음. PC 는 로컬그림_모델받기.bat 그대로)

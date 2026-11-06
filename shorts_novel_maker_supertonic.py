@@ -6035,6 +6035,26 @@ class SubtitleRenderer:
                 sig.append("-")
         return hashlib.md5(",".join(sig).encode()).hexdigest()[:12] if any(x != "-" for x in sig) else ""
 
+    def _img_focus(self, idx):
+        """사진에서 화면 가운데에 둘 곳 (0~1 비율). 얼굴(YuNet)이 있으면 가장 큰 얼굴 중심, 없으면 세로로 긴 사진은 위쪽 1/3, 나머지는 가운데.
+        설정 img_face_focus: off 면 예전처럼 늘 가운데"""
+        if self.s.get("img_face_focus", "on") == "off":
+            return 0.5, 0.5
+        cache = self.__dict__.setdefault("_focus_cache", {})
+        if idx not in cache:
+            im = self.images[idx][0]
+            fx, fy = 0.5, 0.5
+            x0, y0, x1, y1 = self.img_box
+            tall = im.height / max(1, im.width) > (y1 - y0) / max(1, x1 - x0) * 1.15
+            faces = [f for f in thumb_faces(im) if f[2] * f[3] >= 0.0015]   # 아주 작은 얼굴(군중 속)은 빼고
+            if faces:
+                x, y, w, h = faces[0]
+                fx, fy = x + w / 2, y + h / 2
+            elif tall:
+                fy = 0.33
+            cache[idx] = (fx, fy)
+        return cache[idx]
+
     def _shot_crop_raw(self, sh, t):
         """장면 sh 의 t 시점 사진 (움직임 적용)"""
         x0, y0, x1, y1 = self.img_box
@@ -6086,9 +6106,15 @@ class SubtitleRenderer:
         base = 1.32
         cw, ch = bw * base / z, bh * base / z         # big 안에서 잘라낼 크기
         cw, ch = min(cw, big.width), min(ch, big.height)
-        sx, sy = (big.width - cw) / 2, (big.height - ch) / 2
-        cx = big.width / 2 + (ax + (bx - ax) * p) * sx
-        cy = big.height / 2 + (ay + (by - ay) * p) * sy
+        # 얼굴 기준 자르기 (사용자 결정 2026-11-06, 나폴레옹 편: 세로 초상화가 몸통 가운데로 잘려 얼굴이 빠졌음)
+        #  → 사진에 얼굴이 있으면 가장 큰 얼굴이 화면 위쪽 38% 높이(가로는 가운데)에 오게, 얼굴이 없는 세로 사진은 위쪽 1/3 기준
+        fx, fy = self._img_focus(sh["img"])
+        ccx = min(max(fx * big.width, cw / 2), big.width - cw / 2)
+        ccy = min(max(fy * big.height + ch * (0.5 - 0.38), ch / 2), big.height - ch / 2)
+        sx = min(ccx - cw / 2, big.width - cw / 2 - ccx, (big.width - cw) / 2)
+        sy = min(ccy - ch / 2, big.height - ch / 2 - ccy, (big.height - ch) / 2)
+        cx = ccx + (ax + (bx - ax) * p) * sx
+        cy = ccy + (ay + (by - ay) * p) * sy
         l, tp = cx - cw / 2, cy - ch / 2
         self._last_rect = (l, tp, l + cw, tp + ch)
         dbig = self._depth_for(sh["img"], big.size) if (getattr(self, "depth_on", False) and z < 1.22) else None   # 확대(줌)된 장면은 2.5D 안 함 (가장자리 겹침이 더 잘 보임)
