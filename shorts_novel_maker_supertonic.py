@@ -6031,7 +6031,7 @@ class SubtitleRenderer:
             if _cartoon_scene_path(p_):          # 움직이는 카툰 장면 설정이 바뀌어도 새로 그림
                 sig.append("k" + str(int(os.path.getmtime(_cartoon_scene_path(p_)))))
         if os.environ.get("BLOCK_RENDER") == "blender":   # Blender 로 그린 영상은 따로 (예전 그림 구간을 다시 쓰지 않게)
-            sig.append("blender" + os.environ.get("BL_SCALE", "50") + os.environ.get("BL_SAMPLES", "3"))
+            sig.append("blender" + os.environ.get("BL_SCALE", "50") + os.environ.get("BL_SAMPLES", "3") + "p" + os.environ.get("BL_PIXEL", "0"))
         return hashlib.md5(",".join(sig).encode()).hexdigest()[:12] if any(x != "-" for x in sig) else ""
 
     def _cartoon_big(self, idx, t, big):
