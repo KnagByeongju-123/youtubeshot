@@ -82,10 +82,16 @@ for x in range(-1, 2):
         put(x + 3, y + 9, 1, "덮개돌")
         if x == 1:
             put(x + 3, y + 9, 2, "덮개돌")
-# 안쪽 벽의 두 줄 글씨 (붉은 띠, 글자 모양은 넣지 않음)
-for x in range(-2, 3):
-    put(x, 2, -3, "글씨") if x % 2 == 0 else None
-    put(x, 2, -4, "글씨") if x % 2 == 1 else None
+# 안쪽 벽(북쪽, y=2 면)에 붉은 물감으로 쓴 두 줄 글씨: 작은 조각(0.16칸)으로 획을 찍음 (실제 글자가 아닌 글씨 느낌)
+GLYPHS = {"|": [(0, 0), (0, 1), (0, 2)], "/": [(0, 0), (1, 1), (2, 2)], "\\": [(0, 2), (1, 1), (2, 0)], "^": [(0, 0), (1, 1), (2, 0)],
+          "ㅅ": [(1, 2), (0, 1), (2, 1), (0, 0), (2, 0)], "o": [(0, 0), (1, 0), (0, 1), (1, 1)], "+": [(1, 0), (0, 1), (1, 1), (2, 1), (1, 2)]}
+for zc in (-2.45, -3.0):
+    x = -2.6
+    while x < 3.4:
+        pts = GLYPHS[random.choice(list(GLYPHS))]
+        for gx, gz in pts:
+            small.append((x + gx * 0.16, 1.9, zc + gz * 0.16, 0.16, "글씨"))
+        x += 0.16 * (max(q[0] for q in pts) + 1) + 0.14
 # 안에 놓인 토기 (작은 블록 0.5): 항아리 2개, 검은 칠 그릇 1개, 천 덮개
 def jar(cx, cy, cz, b):
     for dz, rr in ((0, 0.5), (0.5, 1.0), (1.0, 1.0), (1.5, 0.5), (2.0, 0.5)):
@@ -227,6 +233,36 @@ for fc in rig.animation_data.action.fcurves:
     for k in fc.keyframe_points:
         k.interpolation = "LINEAR"
 
+# ── 두 번째 장면 '들어가기' (--shot dive): 한 바퀴가 끝난 자리에서 내려와 열린 덮개돌 틈으로 무덤 안에 들어가 글씨 벽을 봄 ──
+SHOT = argv[argv.index("--shot") + 1] if "--shot" in argv else "orbit"
+if SHOT == "dive":
+    rig.animation_data_clear()
+    cam.parent = None
+    cam.data.lens = 29
+    path = [(1, (38.5, 0.5, 25.0), (0.5, 0.5, -3.5)),               # 한 바퀴 끝 자리 (이어 붙이면 끊김 없음)
+            (int(FRAMES * 0.35), (17.0, 0.5, 13.0), (0.5, 0.5, -3.5)),
+            (int(FRAMES * 0.60), (4.0, 0.3, 4.0), (0.3, 0.5, -3.5)),
+            (int(FRAMES * 0.78), (0.2, -0.3, 0.6), (0.5, 1.4, -3.2)),  # 덮개돌이 빠진 틈 바로 위
+            (FRAMES, (-0.6, -0.85, -2.15), (1.4, 2.0, -2.9))]           # 무덤 안: 비스듬히 두 줄 글씨 벽과 토기
+    for f, loc, tg in path:
+        cam.location = loc
+        cam.keyframe_insert("location", frame=f)
+        target.location = tg
+        target.keyframe_insert("location", frame=f)
+    lens_keys = [(1, 29), (int(FRAMES * 0.6), 26), (FRAMES, 18)]       # 안에서는 넓게 보이도록 광각
+    for f, l in lens_keys:
+        cam.data.lens = l
+        cam.data.keyframe_insert("lens", frame=f)
+    cam.data.clip_start = 0.05
+    inner.data.energy = 45                                            # 가까이 가면 너무 밝지 않게
+    inner.location = (0.5, 0.0, -2.0)
+    torch = bpy.data.objects.new("손전등빛", bpy.data.lights.new("손전등빛", "POINT"))   # 카메라를 따라가는 은은한 빛
+    torch.data.energy = 25
+    torch.data.color = (1.0, 0.85, 0.65)
+    torch.data.shadow_soft_size = 0.6
+    torch.parent = cam
+    sc.collection.objects.link(torch)
+
 # 렌더 설정
 sc.render.resolution_x, sc.render.resolution_y = W, H
 sc.render.fps = 24
@@ -249,7 +285,7 @@ sc.render.filepath = os.path.join(OUT, "frame_")
 os.makedirs(OUT, exist_ok=True)
 print("블록 수", len(world), "작은 블록", len(small))
 if TEST:
-    for f in (1, FRAMES // 4, FRAMES // 2):
+    for f in ((1, FRAMES // 4, FRAMES // 2) if SHOT == "orbit" else (int(FRAMES * 0.6), int(FRAMES * 0.78), int(FRAMES * 0.9), FRAMES)):
         sc.frame_set(f)
         sc.render.filepath = os.path.join(OUT, f"test_{f:03d}.png")
         bpy.ops.render.render(write_still=True)
