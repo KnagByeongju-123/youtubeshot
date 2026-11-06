@@ -30,12 +30,12 @@ NOTE = "the notebook pages are covered in tiny neat handwriting that is too smal
 
 # (컷, 문단 번호들, 나오는 인물(시트), 사장님(안 씀), 다른 사람 나와도 됨, 장소, 장면(영어), 화면 설명)
 CUTS = [
-    ("c01", [1], ["경비원"], False, False, BOOTH + ", before dawn, dark blue sky outside, one desk lamp on", "the old security guard sitting at the desk under a desk lamp, opening a worn old notebook with a faded cover", "새벽 다섯 시 경비실"),
+    ("c01", [1], ["경비원"], False, False, BOOTH + ", before dawn, dark blue sky outside, one desk lamp on", "a single old security guard sitting alone at the desk under a desk lamp, opening a worn old notebook with a faded cover; he is the only person in the booth", "새벽 다섯 시 경비실"),
     ("c02", [2], [], False, False, "on the desk in the guard booth under a desk lamp", "close-up of a worn old notebook with a faded cardboard cover and bent corners, a ballpoint pen beside it, the cover writing is blurry and unreadable. No people", "장부라고 쓴 공책"),
     ("c03", [3], ["경비원"], False, False, BOOTH + ", early morning", "close-up of the old guard's wrinkled hand writing carefully in the open notebook with a ballpoint pen, " + NOTE, "이십 년 동안 적어 온 하루"),
     ("c04", [4, 5], ["경비원", "할머니"], False, False, "in front of the guard booth window at the apartment entrance, morning light", "the small hunched grandmother with a cane holding out a warm bottle of soy milk through the booth window, the old guard taking off his cap and bowing his head gratefully", "두유를 건네는 할머니"),
     ("c05", [6], ["경비원", "할머니"], False, False, COMPLEX + ", morning", "the old guard gently helping the hunched grandmother toward the building entrance, pointing to the elevator, she smiles", "할머니를 챙기는 만수 씨"),
-    ("c06", [7], ["경비원"], False, True, COMPLEX + ", sunny morning", "children with school backpacks waving and bowing to the old guard, residents carrying parcels and smiling, a warm peaceful neighborhood", "인사하는 주민들"),
+    ("c06", [7], ["경비원"], False, True, COMPLEX + ", sunny morning", "the old guard (only one guard in the whole image) standing by the path smiling and waving back at two children with school backpacks, a woman carrying a parcel smiles at him, a warm peaceful neighborhood", "인사하는 주민들"),
     ("c07", [8], ["대표"], False, False, COMPLEX + ", spring with cherry blossoms", "the heavy-set man in a green vest and gold glasses standing proudly in front of an apartment building, arms crossed, smug face", "새 입주자 대표 강태호"),
     ("c08", [9, 10], ["대표", "경비원"], False, False, BOOTH + ", an air conditioner on the wall", "the heavy-set man in a green vest pointing rudely at the air conditioner on the guard booth wall, the old guard standing stiffly beside the desk", "에어컨을 가리키는 대표"),
     ("c09", [11], ["경비원"], False, False, BOOTH + ", hot summer day, an empty spot on the wall where the air conditioner was removed", "the old guard sweating in the heat, wiping his forehead with a towel, a small electric fan blowing beside him", "선풍기 한 대로 버틴 여름"),
@@ -110,7 +110,7 @@ def main():
     if cmd == "job":
         only = set(sys.argv[3:])
         items = [{"id": c[0], "width": 1024, "height": 576, "seed": 300 + k, "prompt": prompt(c),
-                  "refs": [os.path.join(SHEETS, nm + ".png") for nm in c[2]]}
+                  "refs": [os.path.join(SHEETS, ("_앞_" if os.environ.get("FRONT") else "") + nm + ".png") for nm in c[2]]}
                  for k, c in enumerate(CUTS) if not only or c[0] in only]
         os.makedirs(folder, exist_ok=True)
         out = os.path.join(folder, "job.json")
