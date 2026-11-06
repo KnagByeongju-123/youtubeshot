@@ -59,6 +59,13 @@ S_ = {
  "c29": {"set": "walk", "opt": {**WALK, "mood": "dusk", "teams": TEAMS}, "cam": {"pos": [-8, 6, 40], "look": [-8, 6, 0], "fov": 50}, "fx": ["past"]},
  "c30": {"set": "ahu", "opt": {"mood": "dusk"}, "cam": {"pos": [-14, 5, 14], "look": [4, 3, 2], "fov": 50},
          "chars": [ch(H, [-6, 6], 100, ["walk"], to=[12, 6], speed=1.0, exit=True)]},
+ "c31": {"set": "field", "extra": {"moai": [[-3, -1, 90, 1.6, True]]}, "cam": {"pos": [5, 4, 12], "look": [-1, 2.5, 0], "fov": 48},
+         "chars": [ch(H, [2.5, 2.5], -40, ["blink", "breath", "talk"])]},
+ "c32": {"set": "field", "extra": {"moai": [[-8, -8, 20, 2.0]]}, "cam": {"pos": [0, 7.5, 21], "look": [-2, 6.5, 0], "fov": 56},
+         "chars": [ch(A, [-1.6, 1.5], 25, ["blink", "talk", "flap"]), ch(H, [1.8, 1.2], -30, ["blink", "laugh"])]},
+ "c33": {"set": "walk", "opt": {**WALK, "teams": TEAMS, "stumble": True, "period": 3.0}, "cam": {"pos": [-6, 10, 34], "look": [-7, 6, 0], "fov": 52}},
+ "c34": {"set": "walk", "opt": {**WALK, "walk": False, "teams": TEAMS}, "cam": {"pos": [8, 4.5, -1], "look": [-3, 2, -8], "fov": 54},
+         "chars": [ch(H, [-2.0, -6.0], 63, ["blink", "laugh", "sit"])]},
 }
 
 
@@ -86,6 +93,8 @@ CAM = {
  "c15": orbit(0, 7, 0, -140, -95, 36, 32, 8, 12, 52, "follow", 0.35),
  "c16": orbit(0, 7, 0, 25, 60, 36, 34, 7, 9, 52, "follow", 0.3),
  "c17": orbit(-6, 3, -9, 60, 100, 17, 16, 5, 6, 54, shake=0),
+ "c33": orbit(0, 7, 0, -20, 10, 36, 30, 8, 9, 52, "follow", 0.6),
+ "c31": orbit(-1, 2.5, 0, 30, 0, 12, 10, 4, 3.5, 48),
  "c19": orbit(0, 6, 0, -95, -60, 32, 30, 9, 11, 50, "follow", 0.3),
  "c20": orbit(0, 5, -3, -20, 20, 25, 23, 6, 7, 52),
  "c23": orbit(0, 6, -3, 0, 0, 20, 19, 3, 9, 50),
@@ -96,7 +105,7 @@ CAM = {
 }
 for k_, c_ in CAM.items():
     S_[k_]["cam"] = c_
-for k_ in ("c04", "c05", "c07", "c11", "c18", "c21", "c22", "c27", "c28", "c30"):   # 나머지는 손 카메라로 살짝
+for k_ in ("c32", "c34", "c04", "c05", "c07", "c11", "c18", "c21", "c22", "c27", "c28", "c30"):   # 나머지는 손 카메라로 살짝
     S_[k_]["cam"]["hand"] = 0.12 if k_ not in ("c05", "c28") else 0.04
 S_["c18"]["cam"]["shake"] = 0.3
 for k_ in S_:

@@ -443,6 +443,12 @@ def pose3d(acts, t, seed):
         p["bob"] = 0.015 * math.sin(t * 40)
     if "sit" in acts:
         p["sit"] = True
+    if "flap" in acts:   # 두 팔을 새 날개처럼 파닥파닥
+        f_ = 70 + 45 * math.sin(t * 2 * math.pi / 0.45)
+        p["arm_r"], p["arm_l"] = f_, f_
+    if "laugh" in acts:  # 깔깔 웃음: 입을 크게 벌리고 몸을 들썩
+        p["talk"] = 0.6 + 0.4 * abs(math.sin(t * 9))
+        p["bob"] = p.get("bob", 0) + 0.06 * abs(math.sin(t * 9))
     return p
 
 
@@ -761,6 +767,9 @@ def walking_moai(t, p, o):
     per = o.get("period", 2.4)          # 왼쪽·오른쪽 한 번씩 = 두 걸음
     ph = 2 * math.pi * t / per
     tilt = 9 * math.sin(ph)
+    if o.get("stumble"):   # 박자가 엉켜 크게 비틀 → 뒤 팀이 잡아 멈춤 (장면 35~70% 동안)
+        q_ = min(1.0, max(0.0, (p - 0.35) / 0.35))
+        tilt += 17 * math.sin(math.pi * q_) * math.sin(t * 7)
     q = p if o.get("walk", True) else 0.0
     mx = x0 + (x1 - x0) * q
     yaw = 90 + 7 * math.cos(ph)         # 걸음마다 살짝 돌아감 (+x 쪽을 봄)
