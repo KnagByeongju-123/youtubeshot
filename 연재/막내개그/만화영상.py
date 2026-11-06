@@ -123,7 +123,13 @@ def peep(name, face, size, talk=False, blink=False):
     k = (name, face, size, talk, blink)
     if k not in _PEEPS:
         raw = LORE.get(name, face, 512, talk=talk, blink=blink) if STYLE == "lorelei" else PEEP.get(name, face, 512)
-        im = Image.open(io.BytesIO(raw)).convert("RGBA").resize((size, size), Image.LANCZOS)
+        im = Image.open(io.BytesIO(raw)).convert("RGBA")
+        if STYLE == "lorelei":                          # 빈 여백을 잘라 얼굴·목을 꽉 차게 → 높이 size 로
+            bb = im.split()[3].getbbox()
+            im = im.crop(bb)
+            im = im.resize((max(1, int(im.width * size / im.height)), size), Image.LANCZOS)
+        else:
+            im = im.resize((size, size), Image.LANCZOS)
         a = np.asarray(im).astype(np.float32)
         lum = a[..., :3] @ np.array([0.299, 0.587, 0.114])
         g = np.where(lum < 110, INK, 255).astype(np.uint8)
@@ -270,25 +276,26 @@ def panel_frame(pid, tl, lines_here, t):
     speaking = [l for l in lines_here if l["t0"] <= t <= l["t1"]]
     cur_who = speaking[0]["who"] if speaking else None
     pos = {}
+    CEN = {1: {"가운데": 960}, 2: {"왼": 560, "오른": 1360, "가운데": 960}, 3: {"왼": 380, "가운데": 960, "오른": 1540}}
+    hgt = {1: 720, 2: 640, 3: 540}[n]
     for ni, (name, face, slot) in enumerate(who):
-        x = SLOTS[n].get(slot, 640)
-        lsize = int(size * 0.9) if STYLE == "lorelei" else size
-        x += (size - lsize) // 2
-        y = H - size + 40 if STYLE != "lorelei" else H - int(lsize * 1.42)
         talk = blink = False
+        bounce = 0
         if name == cur_who:
-            y -= int(8 * abs(math.sin((t - speaking[0]["t0"]) * 9)))       # 말할 때 들썩
-            talk = int((t - speaking[0]["t0"]) / 0.13) % 2 == 1             # 입 열고 닫기
-        ph = (t + ni * 1.37) % 3.3                                          # 3초쯤마다 깜빡
-        blink = ph < 0.12
+            bounce = int(8 * abs(math.sin((t - speaking[0]["t0"]) * 9)))      # 말할 때 들썩
+            talk = int((t - speaking[0]["t0"]) / 0.13) % 2 == 1                # 입 열고 닫기
+        blink = (t + ni * 1.37) % 3.3 < 0.12                                    # 3초쯤마다 깜빡
         if STYLE == "lorelei":
-            body(d, name, x, y, lsize)
-        g, a = peep(name, face, lsize, talk=talk, blink=blink)
-        flip = slot == "오른"
-        if flip:
+            g, a = peep(name, face, hgt, talk=talk, blink=blink)
+            x = CEN[n].get(slot, 960) - g.width // 2
+            y = H - hgt + 10 - bounce                                           # 목이 화면 아래에 닿게 (몸은 그리지 않음)
+        else:
+            g, a = peep(name, face, size)
+            x, y = SLOTS[n].get(slot, 640), H - size + 40 - bounce
+        if slot == "오른":
             g, a = g.transpose(Image.FLIP_LEFT_RIGHT), a.transpose(Image.FLIP_LEFT_RIGHT)
         c.paste(g, (x, y), a)
-        pos[name] = (x + lsize // 2, y + int(lsize * 0.15))
+        pos[name] = (x + g.width // 2, y + int(g.height * 0.05))
     # 소품·효과
     for kind in ("초밥", "파스타", "고기", "순댓국"):
         if kind in prop:
