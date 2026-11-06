@@ -23,7 +23,7 @@ LOOK = {
     "이대리": "a 30-year-old Korean man with black hair styled up and back in a neat pompadour, sly smirk, slim navy blue suit, light blue shirt with open collar and no necktie",
     "박사원": "a 25-year-old Korean young woman with black hair in a high ponytail with see-through bangs, bright eyes, beige knit cardigan over a white t-shirt, light blue jeans, an ID card on a blue lanyard",
 }
-BOSS = ("the company president (no reference image): a dignified Korean man in his sixties with neat silver-white hair combed back, "
+BOSS = ("the company president (no reference image): an elderly dignified Korean man aged about 65 with visible wrinkles, neat silver-white hair combed back, "
         "clean-shaven, calm sharp eyes, charcoal black suit, white shirt, navy necktie")
 OFFICE = "a bright modern Korean corporate office of a food company planning team, rows of white desks with monitors, potted plants, large windows"
 MEETING = "a large modern corporate meeting room with a long table, office chairs and a big presentation screen on the wall"
@@ -61,12 +61,12 @@ CUTS = [
     ("c24", [27], ["이대리"], False, False, HALL, "the pompadour man in a navy suit standing at the end of the hallway with his arms crossed, smirking", "복도 끝의 이 대리"),
     ("c25", [28], ["이대리", "막내"], False, False, HALL, "the pompadour man in a navy suit talking down to the curly-haired young man with a condescending grin, the young man looking down", "회사는 원래 그렇다는 이 대리"),
     ("c26", [29], ["막내"], False, False, NIGHT_OFFICE, "the curly-haired young man staring in disbelief at his glowing smartphone screen in the dark office, the screen shows a chat message bubble with blurred unreadable text", "밤에 온 메시지"),
-    ("c27", [30], ["막내"], False, False, NIGHT_OFFICE, "the curly-haired young man alone in the empty dark office making presentation slides on the monitor, tired but focused, the clock shows past midnight", "빈 사무실에서 자료를 만드는 지후"),
+    ("c27", [30], ["막내"], False, False, NIGHT_OFFICE, "the curly-haired young man alone in the empty dark office making presentation slides on the monitor, tired but focused. Only one person in the whole image, no reflections of people", "빈 사무실에서 자료를 만드는 지후"),
     ("c28", [31], ["막내"], False, False, "the copy room of the office at night with a big photocopier", "the curly-haired young man standing at a large photocopier as stacks of printed pages come out, lonely face", "복사기를 돌리는 지후"),
     ("c29", [32], ["팀장님"], False, False, "a dim office at night seen through a glass partition", "the woman with a black bob and silver glasses quietly watching from behind a glass partition, arms folded, thoughtful expression", "조용히 보고 있던 윤 팀장"),
-    ("c30", [33], ["이대리"], True, True, MEETING, "presentation day morning, executives seated at the long table including the president at the head, the pompadour man in a navy suit standing confidently in front of the big screen", "발표 날 회의실"),
-    ("c31", [34], ["이대리"], False, True, MEETING, "the pompadour man in a navy suit presenting smoothly, pointing at colorful charts on the big screen with one hand", "매끄러운 발표"),
-    ("c32", [35], ["막내"], False, False, MEETING + ", seen from the back of the room near the door", "the curly-haired young man standing by the door at the back of the room holding his notebook to his chest, watching with a bitter quiet face", "문 옆에서 지켜보는 지후"),
+    ("c30", [33], ["이대리"], True, True, MEETING, "presentation day morning, the elderly president seated at the far head of the long table, a few executives seated along the sides, the pompadour man in a navy suit standing confidently in front of the big screen at the side. Nobody else is standing", "발표 날 회의실"),
+    ("c31", [34], ["이대리"], False, True, MEETING, "the pompadour man in a navy suit, the only person standing, presenting smoothly and pointing at colorful bar charts on the big screen with one hand, seated executives watching from the table", "매끄러운 발표"),
+    ("c32", [35], ["막내"], False, True, MEETING + ", seen from the back of the room near the door", "the curly-haired young man standing by the door at the back of the room holding his notebook to his chest, watching the presentation with a bitter quiet face, the backs of seated people in the foreground, the screen far away showing only simple charts", "문 옆에서 지켜보는 지후"),
     ("c33", [36], [], True, False, MEETING, "the president seated at the table turning the pages of a printed report and stopping at the last page, his finger on a small table", "마지막 장에서 멈춘 사장님"),
     ("c34", [37], [], True, False, MEETING, "close-up of the president looking up from the report with calm sharp eyes, asking a question", "숫자의 근거를 묻는 사장님"),
     ("c35", [38, 39, 40], ["이대리"], False, False, MEETING, "close-up of the pompadour man in a navy suit sweating nervously, forced smile, eyes darting sideways", "대답 못 하는 이 대리"),
@@ -115,8 +115,10 @@ def prompt(cut):
         p += "No main characters. "
     if not crowd:
         p += "No other people besides those described in the scene. "
+        if len(who) == 1 and not boss:
+            p += "Exactly one person in the whole image, no twin, no copy, no reflection of him or her. "
     else:
-        p += "Other people are ordinary background office workers who look different from the main characters. "
+        p += "Other people are ordinary background office workers who look clearly different from the main characters; each main character appears only once, nobody else has the same hair or suit. "
     p += f"Scene: {desc}. Setting: {place}. "
     p += "Cinematic composition, full-bleed image, no border, no frame, no paper edges. No speech bubbles, no readable text, no letters, no logos, no signboards with writing."
     return p
