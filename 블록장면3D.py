@@ -446,6 +446,15 @@ def pose3d(acts, t, seed):
     if "flap" in acts:   # 두 팔을 새 날개처럼 파닥파닥
         f_ = 70 + 45 * math.sin(t * 2 * math.pi / 0.45)
         p["arm_r"], p["arm_l"] = f_, f_
+    if "push" in acts:   # 두 팔을 앞으로 뻗어 밀기 (끄응)
+        p["arm"] = 88 + 3 * math.sin(t * 20)
+        p["arm2"] = p["arm"]
+        p["bob"] = p.get("bob", 0) - 0.12
+    if "pull" in acts:   # 줄을 잡고 뒤로 끌기
+        p["arm"] = 70 + 10 * math.sin(t * 2 * math.pi / 1.2)
+        p["arm2"] = p["arm"]
+        p["walk"] = t * 2 * math.pi / 1.2
+        p["bob"] = p.get("bob", 0) - 0.15
     if "laugh" in acts:  # 깔깔 웃음: 입을 크게 벌리고 몸을 들썩
         p["talk"] = 0.6 + 0.4 * abs(math.sin(t * 9))
         p["bob"] = p.get("bob", 0) + 0.06 * abs(math.sin(t * 9))
@@ -520,30 +529,72 @@ def build(scene, cast, t, dur=None):
             ry = 14 - ((t * 18 + k * 1.37) % 16)
             boxes.append(Box((rx, ry, rz), (0.05, 0.7, 0.05), (200, 214, 228), emit=True, edge=False))
     cm = scene.get("cam", {"pos": [12, 6, 24], "look": [12, 3, 0]})
-    ease = 0.5 - 0.5 * math.cos(math.pi * pr)
+    lp = pr
+    if cm.get("shots"):   # 영화처럼 컷 나누기 (사용자 결정 2026-11-06): 장면 안에서 컷마다 다른 카메라, "to" = 그 컷이 끝나는 진행(0~1)
+        a0 = 0.0
+        for sh in cm["shots"]:
+            if pr <= sh.get("to", 1.0) or sh is cm["shots"][-1]:
+                b0 = sh.get("to", 1.0)
+                lp = min(1.0, max(0.0, (pr - a0) / max(1e-6, b0 - a0)))
+                cm = {**{k: v for k, v in cm.items() if k != "shots"}, **sh}
+                break
+            a0 = sh.get("to", 1.0)
+    cpos, clook, fov = cam_at(cm, lp, t, o, info)
+    cam = Camera(cpos, clook, fov=fov)
+    return {"boxes": boxes, "cam": cam, "mood": mood, "o": o, "fx": fx, "pr": pr, "chars": info}
+
+
+def smoother(x):
+    x = min(1.0, max(0.0, x))
+    return x * x * x * (x * (6 * x - 15) + 10)   # 영화 카메라처럼 천천히 출발·천천히 멈춤
+
+
+def cam_at(cm, pr, t, o, info):
+    """카메라 한 컷의 위치·바라보는 곳·화각
+    mode: (없음) pos+move / dolly·crane: pos→pos1, look→look1 / orbit·follow: 대상 둘레 / track: 인물(who)을 따라감
+    fov→fov1 = 줌, hand = 손 카메라 흔들림, shake = 모아이 걸음 흔들림"""
+    ease = smoother(pr) if cm.get("mode") in ("dolly", "crane", "track") else 0.5 - 0.5 * math.cos(math.pi * pr)
+    fov = cm.get("fov", 40) + (cm.get("fov1", cm.get("fov", 40)) - cm.get("fov", 40)) * ease
     mv = np.array(cm.get("move", [0, 0, 0]), float) * ease
-    cpos, clook = np.array(cm.get("pos", [0, 6, 20]), float) + mv, np.array(cm.get("look", cm.get("target", [0, 3, 0])), float) + mv * cm.get("look_follow", 1.0)
-    if cm.get("mode") in ("orbit", "follow"):
-        # orbit: 대상 둘레를 a0→a1 도 돌며 촬영 / follow: 걷는 모아이(o["_mx"])를 따라가며 돌기
+    cpos = np.array(cm.get("pos", [0, 6, 20]), float) + mv
+    clook = np.array(cm.get("look", cm.get("target", [0, 3, 0])), float) + mv * cm.get("look_follow", 1.0)
+    md = cm.get("mode")
+    if md in ("dolly", "crane"):
+        p1 = np.array(cm.get("pos1", cm.get("pos", [0, 6, 20])), float)
+        l1 = np.array(cm.get("look1", cm.get("look", [0, 3, 0])), float)
+        cpos = np.array(cm.get("pos", [0, 6, 20]), float) * (1 - ease) + p1 * ease
+        clook = np.array(cm.get("look", [0, 3, 0]), float) * (1 - ease) + l1 * ease
+    elif md == "track":   # 인물을 옆에서 따라가며 (off = 인물에서 카메라까지, aim = 인물에서 바라볼 곳)
+        who = next((c for c in info if c["who"] == cm.get("who")), None)
+        base = np.array(who["pos"], float) if who else np.array(cm.get("look", [0, 0, 0]), float)
+        off0, off1 = np.array(cm.get("off", [0, 3, 10]), float), np.array(cm.get("off1", cm.get("off", [0, 3, 10])), float)
+        cpos = base + off0 * (1 - ease) + off1 * ease
+        clook = base + np.array(cm.get("aim", [0, 2.5, 0]), float)
+    elif md in ("orbit", "follow"):
         tgt = np.array(cm.get("target", clook), float)
-        if cm["mode"] == "follow" and "_mx" in o:
+        if md == "follow" and "_mx" in o:
             tgt = np.array([o["_mx"], tgt[1], o.get("mz", 0)], float)
         ang = math.radians(cm.get("a0", 0) + (cm.get("a1", 40) - cm.get("a0", 0)) * ease)
         rad = cm.get("r0", 20) + (cm.get("r1", cm.get("r0", 20)) - cm.get("r0", 20)) * ease
-        hgt = cm.get("h0", 6) + (cm.get("h1", cm.get("h0", 6)) - cm.get("h0", 6)) * ease   # 크레인: 높이가 바뀜
+        hgt = cm.get("h0", 6) + (cm.get("h1", cm.get("h0", 6)) - cm.get("h0", 6)) * ease
         cpos = tgt + np.array([rad * math.sin(ang), hgt - tgt[1], rad * math.cos(ang)])
         clook = tgt
-    if cm.get("hand"):   # 손에 든 카메라처럼 아주 약하게 흔들림
+    if cm.get("hand"):
         a_ = cm["hand"]
         cpos = cpos + a_ * np.array([math.sin(t * 1.3), 0.6 * math.sin(t * 1.7 + 1), 0.5 * math.sin(t * 0.9 + 2)])
-    if cm.get("shake") and "_tilt" in o and o.get("walk", True):   # 모아이가 한 걸음 디딜 때마다 쿵
+    if cm.get("shake") and "_tilt" in o and o.get("walk", True):
         per = o.get("period", 2.4) / 2
         dt_ = t % per
         sh_ = cm["shake"] * math.exp(-dt_ * 7) * math.sin(dt_ * 45)
         cpos = cpos + np.array([0, sh_, 0])
         clook = clook + np.array([0, sh_ * 0.6, 0])
-    cam = Camera(cpos, clook, fov=cm.get("fov", 40))
-    return {"boxes": boxes, "cam": cam, "mood": mood, "o": o, "fx": fx, "pr": pr, "chars": info}
+    if cm.get("bump") is not None:   # 한순간 쿵 (엉덩방아 등): bump = 그 컷의 진행 시점
+        d_ = pr - cm["bump"]
+        if 0 <= d_ < 0.15:
+            k_ = 0.5 * math.exp(-d_ * 30) * math.sin(d_ * 120)
+            cpos = cpos + np.array([0, k_, 0])
+            clook = clook + np.array([0, k_, 0])
+    return cpos, clook, fov
 
 
 def frame(scene, cast, t, dur=None):
@@ -832,6 +883,181 @@ def set_walk_dio(t, p, o):
 
 SETS.update({"walk_dio": set_walk_dio})
 MOOD["diorama"] = ((206, 222, 232), (246, 238, 222), "#4f86a8", 1.0, None)   # 밝은 작업대 위 같은 하늘색 → 크림색 배경
+
+
+
+# ═════════════════════ 피라미드 편 (온 가족, 2026-11-06) ═════════════════════
+SAND, LIME, STONE = "#efd8a6", "#efe6cf", "#c49a58"   # 모래는 밝게, 피라미드 돌은 진하게 (구별되게)
+MOOD["desert"] = ((110, 170, 220), (240, 225, 195), "#3f86b8", 1.0, None)
+MOOD["desert_dusk"] = ((90, 80, 140), (245, 170, 110), "#4a6f9a", 0.9, (255, 150, 80, 0.10))
+
+
+def pyramid_vox(cx, cz, n, built=None, step=2, col=STONE, cap=False):
+    """계단식 블록 피라미드: n 층, 한 층마다 한 칸(step)씩 안으로. built = 쌓인 층 수 (반쯤 쌓인 것)"""
+    vx = Voxels()
+    lay = n if built is None else built
+    for k in range(lay):
+        half = (n - k) * step
+        for x in range(cx - half, cx + half, step):
+            for z in range(cz - half, cz + half, step):
+                if k > 0 and (cx - half + step <= x < cx + half - step) and (cz - half + step <= z < cz + half - step) and k < lay - 1:
+                    continue   # 속은 비워서 빠르게 (보이지 않음)
+                vx.v[(x, k * step, z)] = (col, False, 10)
+    out = []
+    for (x, y, z), (c, e, j) in vx.v.items():
+        out.append(Box((x, y, z), (step, step, step), E.jitter(E.hexrgb(c), (x, y, z), 10)))
+    if cap and built is None:
+        out.append(Box((cx - step, n * step, cz - step), (2 * step, step, 2 * step), "#e8c45a"))   # 꼭대기 금빛 돌
+    return out
+
+
+def sand_field(key, x0=-300, x1=300, z0=-300, z1=200, step=12, dunes=True):
+    def build():
+        out = []
+        for x in range(x0, x1, step):
+            for z in range(z0, z1, step):
+                h = (1.2 * math.sin(x * 0.05) * math.cos(z * 0.06) + 0.6 * math.sin(x * 0.11 + z * 0.07)) if dunes and (abs(x) > 30 or z < -60) else 0
+                out.append(Box((x, h - step, z), (step, step, step), E.jitter(E.hexrgb(SAND), (x, z), 12), skip=(5,), bias=-6))
+        return out
+    return list(_static(("sand", key), build))
+
+
+def sledge(x, z, yaw=0.0, block=True, statue=False):
+    """나무 썰매 + 돌 덩어리 (또는 조각상)"""
+    piv = np.array([x, 0, z])
+    R_ = [(piv, "y", yaw)] if yaw else []
+    b = [Box((x - 2.2, 0, z - 1.3), (4.4, 0.35, 0.3), "#8a5a32", R_), Box((x - 2.2, 0, z + 1.0), (4.4, 0.35, 0.3), "#8a5a32", R_),
+         Box((x - 2.6, 0.05, z - 1.3), (0.6, 0.5, 2.6), "#7a4a2a", R_)]
+    for k in range(4):
+        b.append(Box((x - 1.8 + k * 1.1, 0.35, z - 1.4), (0.35, 0.2, 2.8), "#9b6b43", R_))
+    if block:
+        b.append(Box((x - 1.6, 0.55, z - 1.1), (3.2, 2.2, 2.2), E.jitter(E.hexrgb(STONE), (x, z), 6), R_))
+    if statue:
+        b += [Box((x - 1.0, 0.55, z - 0.8), (2.0, 4.2, 1.6), "#e9e2d0", R_), Box((x - 0.8, 4.75, z - 0.7), (1.6, 1.5, 1.4), "#e9e2d0", R_),
+              Box((x - 0.9, 5.4, z - 0.8), (1.8, 0.9, 1.6), "#3a6ea8", R_)]
+    return b
+
+
+def set_desert(t, p, o):
+    """사막 + 피라미드(반쯤 또는 다 쌓은 것) + (썰매·비탈길·물 붓는 사람은 장면 설정으로)"""
+    mood = o.get("mood", "desert")
+    b = sand_field("main")
+    n = o.get("n", 12)
+    built = o.get("built")
+    px, pz = o.get("pyr", [0, -40])
+    b += list(_static(("pyr", n, built, px, pz, o.get("cap", False)), lambda: pyramid_vox(px, pz, n, built, cap=o.get("cap", False))))
+    if o.get("small_pyr"):   # 뒤쪽 작은 피라미드 두 개
+        for (qx, qz, qn) in ((-44, -70, 8), (36, -80, 7)):
+            b += list(_static(("pyr2", qx, qz, qn), lambda qx=qx, qz=qz, qn=qn: pyramid_vox(qx, qz, qn)))
+    if o.get("ramp"):   # 피라미드 앞 곧은 비탈길 (돌 부스러기로 쌓은 둑)
+        lay = built if built is not None else n
+        top = lay * 2
+        L = top * 2.5
+        for k in range(int(L // 2)):
+            h = top * (k / (L / 2))
+            b.append(Box((px + 22, 0, pz + n * 2 + L - k * 2 - 2), (6, max(0.4, h), 2), E.jitter(E.hexrgb("#b89060"), (k, 3), 10)))   # 비탈길은 사람들이 있는 곳 옆(x+22)으로
+    if o.get("spiral"):   # 피라미드 둘레를 빙글 도는 비탈길 (생각 하나)
+        for k in range(min(built or n, n) * 4):
+            lvl = k // 4
+            side = k % 4
+            half = (n - lvl) * 2 + 1.2
+            pos = [(px - half + 2 * (k % 4) * 0, lvl * 2, pz + half), (px + half, lvl * 2, pz), (px, lvl * 2, pz - half), (px - half, lvl * 2, pz)][side]
+            b.append(Box((pos[0] - 1.5, pos[1] + 2, pos[2] - 1.5), (3, 0.5, 3), "#c9a86e", edge=False))
+    for sl in o.get("sledges", []):   # [x, z, 방향, 진행 따라 움직임 dx]
+        x, z, yw = sl[0], sl[1], sl[2] if len(sl) > 2 else 0
+        x += (sl[3] if len(sl) > 3 else 0) * smoother(p)
+        b += sledge(x, z, yw, statue=len(sl) > 4 and sl[4])
+        if o.get("wet"):
+            for k in range(6):   # 썰매 앞 젖은(진한) 모래 자국
+                b.append(Box((x + 2.5 + k * 1.2, 0.02, z - 1.4), (1.2, 0.03, 2.8), "#b8955a", edge=False))
+        if o.get("pour"):   # 물 줄기 (항아리에서 모래로)
+            for k in range(5):
+                q = (t * 2 + k / 5) % 1
+                b.append(Box((x + 3.0, 1.8 - q * 1.8, z - 0.2 + 0.1 * math.sin(k)), (0.12, 0.25, 0.12), (120, 190, 230), emit=True, edge=False))
+    if o.get("ropes"):
+        for (a_, b_) in o["ropes"]:
+            sx = (o.get("sledges") or [[0, 0, 0, 0]])[0]
+            dx = (sx[3] if len(sx) > 3 else 0) * smoother(p)
+            b += rope(np.array(a_, float) + np.array([dx, 0, 0]), np.array(b_, float) + np.array([dx, 0, 0]))
+    if o.get("blocks"):   # 흩어진 돌 덩어리
+        for (x, z) in o["blocks"]:
+            b.append(Box((x - 1.5, 0, z - 1.1), (3.0, 2.2, 2.2), E.jitter(E.hexrgb(STONE), (x, z, 1), 8)))
+    if o.get("palms"):
+        for (x, z) in o["palms"]:
+            b += [Box((x - 0.3, 0, z - 0.3), (0.6, 6, 0.6), "#8a6a3a")] + [Box((x - 2.2 + 0.0, 6, z - 0.4), (4.4, 0.4, 0.8), "#3f8a3a"), Box((x - 0.4, 6, z - 2.2), (0.8, 0.4, 4.4), "#4f9a42")]
+    return b, mood
+
+
+def set_village(t, p, o):
+    """일꾼 마을: 진흙 벽돌 집, 빵 굽는 둥근 화덕(불빛), 빵 바구니"""
+    mood = o.get("mood", "desert")
+    b = sand_field("village", dunes=False)
+    def houses():
+        vx = Voxels()
+        for (hx, hz, w, d) in ((-14, -10, 8, 6), (-2, -14, 8, 6), (10, -10, 7, 6), (-16, 6, 6, 6)):
+            for x in range(hx, hx + w):
+                for z in range(hz, hz + d):
+                    edge = x in (hx, hx + w - 1) or z in (hz, hz + d - 1)
+                    for y in range(0, 4 if edge else 0):
+                        if not (z == hz + d - 1 and x == hx + w // 2 and y < 3):   # 문
+                            vx.put(x, y, z, "#b78b5c", j=12)
+                    vx.put(x, 4, z, "#a07850", j=10)
+        return vx.boxes()
+    b += list(_static("houses", houses))
+    fl = 0.6 + 0.4 * abs(math.sin(t * 9) * math.sin(t * 3.1))
+    for (ox, oz) in ((2, 2), (6, 3)):   # 둥근 화덕 (블록) + 불빛 + 김
+        b += [Box((ox - 1.2, 0, oz - 1.2), (2.4, 1.8, 2.4), "#9a6a42"), Box((ox - 0.9, 1.8, oz - 0.9), (1.8, 0.6, 1.8), "#8a5a36"),
+              Box((ox - 0.5, 0.3, oz + 1.18), (1.0, 0.8 * fl + 0.2, 0.05), "#f39c32", emit=True, edge=False)]
+        for k in range(3):
+            q = (t * 0.5 + k / 3) % 1
+            b.append(Box((ox - 0.2 + 0.3 * math.sin(t + k), 2.6 + q * 2.5, oz), (0.4 + q * 0.4,) * 3, (240, 238, 232), emit=True, edge=False))
+    for (bx, bz) in ((-1, 5), (9, 5)):   # 빵 바구니
+        b += [Box((bx - 0.8, 0, bz - 0.6), (1.6, 0.6, 1.2), "#c8a46a")] + [Box((bx - 0.6 + k * 0.45, 0.6, bz - 0.3), (0.4, 0.3, 0.6), "#d99a4a") for k in range(3)]
+    if o.get("ruin"):   # 지금: 무너진 낮은 벽만
+        b = sand_field("village_ruin", dunes=False)
+        for (hx, hz, w) in ((-14, -10, 8), (-2, -14, 8), (10, -10, 7)):
+            for x in range(hx, hx + w):
+                b.append(Box((x, 0, hz), (1, 0.8 + 0.4 * ((x * 7) % 3 == 0), 1), E.jitter(E.hexrgb("#a88a64"), (x, hz), 12)))
+    return b, mood
+
+
+def set_nile(t, p, o):
+    """나일강: 넓은 강물, 야자수 강둑, 하얀 돌을 실은 배"""
+    mood = o.get("mood", "desert")
+    b = [x for x in sand_field("nile", dunes=False) if not (-8 <= x.p[2] < 14)]
+    b += sea_tiles(t, mood, -120, 120, -8, 14, step=4, rough=0.4)
+    for x in range(-60, 60, 14):
+        b += [Box((x - 0.3, 0, -14), (0.6, 6, 0.6), "#8a6a3a"), Box((x - 2.2, 6, -14.4), (4.4, 0.4, 0.8), "#3f8a3a"), Box((x - 0.4, 6, -16.2), (0.8, 0.4, 4.4), "#4f9a42")]
+    bx = -20 + 40 * p
+    bob = 0.12 * math.sin(t * 1.5)
+    b += [Box((bx - 6, -0.5 + bob, 1), (12, 1.0, 4), "#8a5a32"), Box((bx - 7, 0.0 + bob, 1.5), (1, 1.0, 3), "#7a4a2a"), Box((bx + 6, 0.0 + bob, 1.5), (1, 1.0, 3), "#7a4a2a"),
+          Box((bx - 0.15, 0.5 + bob, 2.8), (0.3, 7, 0.3), "#6b4a30"), Box((bx - 2.5, 3 + bob, 2.95), (5, 4, 0.1), "#f1ead8", edge=False)]
+    for k in range(3):
+        b.append(Box((bx - 4.5 + k * 3.0, 0.5 + bob, 1.5), (2.4, 1.6, 2.2), LIME))
+    return b, mood
+
+
+def set_frieze(t, p, o):
+    """벽화처럼: 옆에서 평평하게 본 줄 (사람들이 조각상 썰매를 끎) — 배경은 벽 색"""
+    b = [Box((-80, -2, -6), (160, 30, 1), "#d9c79e", edge=False)]
+    b.append(Box((-80, -2, -6), (160, 2.0, 12), "#cbb48a", edge=False))
+    b += sledge(14 + 3 * smoother(p), 0, 0, block=False, statue=True)
+    for k in range(5):
+        q = (t * 2 + k / 5) % 1
+        b.append(Box((16.8 + 3 * smoother(p), 1.8 - q * 1.8, 0), (0.12, 0.25, 0.12), (120, 190, 230), emit=True, edge=False))
+    return b, "plain"
+
+
+def set_lab(t, p, o):
+    """2014년 실험: 모래 상자 두 개(마른·젖은) 위 작은 썰매, 탁자"""
+    b = [Box((-30, -1, -30), (60, 1, 60), "#d8d8d4", edge=False)]
+    b += [Box((-8, 0, -3), (16, 2.5, 6), "#e9e9e6"), Box((-7.5, 2.5, -2.5), (7, 0.4, 5), "#e2c48a"), Box((0.5, 2.5, -2.5), (7, 0.4, 5), "#b8955a")]
+    q = smoother(p)
+    b += [Box((-6.5 + 2.0 * q, 2.9, -0.8), (2.2, 0.8, 1.6), "#9b6b43"), Box((1.5 + 5.0 * q, 2.9, -0.8), (2.2, 0.8, 1.6), "#9b6b43")]
+    return b, "plain"
+
+
+SETS.update({"desert": set_desert, "village": set_village, "nile": set_nile, "frieze": set_frieze, "lab": set_lab})
 
 if __name__ == "__main__":
     a = sys.argv[1:]

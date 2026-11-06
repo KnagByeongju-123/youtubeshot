@@ -1,0 +1,59 @@
+{
+ "engine": "3d",
+ "cast": "../등장인물.json",
+ "set": "desert",
+ "opt": {
+  "pyr": [
+   0,
+   -60
+  ],
+  "n": 24,
+  "cap": false,
+  "small_pyr": true
+ },
+ "chars": [
+  {
+   "who": "안내자 하람 (14)",
+   "at": [
+    0,
+    40
+   ],
+   "face": 180,
+   "act": [
+    "blink",
+    "breath"
+   ]
+  }
+ ],
+ "cam": {
+  "shots": [
+   {
+    "mode": "dolly",
+    "pos": [
+     0,
+     3,
+     48
+    ],
+    "look": [
+     0,
+     4,
+     40
+    ],
+    "pos1": [
+     0,
+     18,
+     70
+    ],
+    "look1": [
+     0,
+     24,
+     -60
+    ],
+    "fov": 50,
+    "fov1": 46,
+    "to": 1.0
+   }
+  ],
+  "hand": 0.06
+ }
+}

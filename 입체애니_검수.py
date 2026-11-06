@@ -136,7 +136,7 @@ def check_scene(path, outdir, times=(0.3, 4.0, 7.7), dur=8.0):
             who = ch["who"].split(" (")[0]
             if ch.get("exit") and t > dur * 0.6:   # 화면 밖으로 나가는 인물(장면 설정 "exit": true)은 끝부분 검사를 뺌
                 continue
-            team = "team" in ch["acts"]            # 줄을 선 팀 사람: 서로 가리고 화면 밖으로도 이어지는 게 정상 → 발 높이만 봄
+            team = "team" in ch["acts"] or "pull" in ch["acts"]            # 줄을 선 팀 사람: 서로 가리고 화면 밖으로도 이어지는 게 정상 → 발 높이만 봄
             x, y, z = ch["pos"]
             g = ground_at(scene, x, z)
             if g == "sea":

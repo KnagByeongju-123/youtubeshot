@@ -1,0 +1,48 @@
+{
+ "engine": "3d",
+ "cast": "../등장인물.json",
+ "set": "desert",
+ "opt": {
+  "pyr": [
+   0,
+   -60
+  ],
+  "n": 24,
+  "cap": true,
+  "small_pyr": true
+ },
+ "fx": [
+  "fade_in"
+ ],
+ "cam": {
+  "shots": [
+   {
+    "mode": "dolly",
+    "pos": [
+     0,
+     90,
+     260
+    ],
+    "look": [
+     0,
+     20,
+     -60
+    ],
+    "pos1": [
+     0,
+     30,
+     120
+    ],
+    "look1": [
+     0,
+     30,
+     -60
+    ],
+    "fov": 40,
+    "fov1": 44,
+    "to": 1.0
+   }
+  ],
+  "hand": 0.06
+ }
+}
