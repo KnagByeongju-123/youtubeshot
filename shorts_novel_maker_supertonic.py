@@ -6843,7 +6843,7 @@ def _cartoon_scene_path(img_path):
         try:
             if os.path.exists(j):
                 d = json.load(open(j, encoding="utf-8"))
-                ok = j if isinstance(d, dict) and "chars" in d and "cast" in d else None
+                ok = j if isinstance(d, dict) and "cast" in d and ("chars" in d or d.get("engine") == "3d") else None   # 사람 없는 입체 장면(풍경)도 움직이는 장면으로 (전엔 멈춘 그림이었음)
         except Exception:
             ok = None
         _CARTOON[key] = ok
@@ -6853,9 +6853,9 @@ def _cartoon_scene_path(img_path):
 _BLENDER = {}
 
 
-def _blender_frame(scene_path, t, dur):
+def _blender_frame(scene_path, t, dur, _retry=True):
     """입체 블록 장면을 Blender(블록_블렌더.py 일꾼)로 그림 — BLOCK_RENDER=blender 일 때 (사용자 결정 2026-11-06).
-    영상 구간을 동시에 그리는 프로세스마다 일꾼 하나 (CPU 를 나눠 씀). 실패하면 None → 원래 블록 엔진으로"""
+    영상 구간을 동시에 그리는 프로세스마다 일꾼 하나 (CPU 를 나눠 씀). 일꾼이 꺼지면 한 번 다시 켜고, 그래도 안 되면 None → 원래 블록 엔진으로(로그에 남김)"""
     import subprocess, tempfile
     pid = os.getpid()
     w = _BLENDER.get(pid)
@@ -6866,9 +6866,10 @@ def _blender_frame(scene_path, t, dur):
             par = max(1, int(os.environ.get("RENDER_PAR", "1") or 1))
             env.setdefault("BL_THREADS", str(max(1, (os.cpu_count() or 2) // par)))
             env.setdefault("BL_SCALE", "50")
+            errf = open(os.path.join(tempfile.gettempdir(), f"_bl_worker_{pid}.log"), "a")
             w = subprocess.Popen([py, "-X", "utf8", os.path.join(BASE, "블록_블렌더.py"), "--일꾼", "--엔진", "cycles",
                                   "--샘플", os.environ.get("BL_SAMPLES", "3")], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                                 stderr=subprocess.DEVNULL, text=True, env=env, cwd=BASE)
+                                 stderr=errf, text=True, env=env, cwd=BASE)
             while True:
                 ln = w.stdout.readline()
                 if not ln or ln.strip() == "ready":
@@ -6880,16 +6881,19 @@ def _blender_frame(scene_path, t, dur):
         while True:
             ln = w.stdout.readline()
             if not ln:
-                return None
+                print(f"Blender 일꾼이 꺼짐 (pid {pid}, 기록 {tempfile.gettempdir()}/_bl_worker_{pid}.log) — {'다시 켬' if _retry else '블록 엔진으로'}", flush=True)
+                _BLENDER.pop(pid, None)
+                return _blender_frame(scene_path, t, dur, False) if _retry else None
             ln = ln.strip()
             if ln == "ok":
                 return Image.open(out).convert("RGB")
             if ln.startswith("err"):
-                print("Blender 그리기 실패:", ln)
+                print("Blender 그리기 실패:", ln, flush=True)
                 return None
     except Exception as e:  # noqa
-        print("Blender 일꾼 실패:", e)
-        return None
+        print("Blender 일꾼 실패:", repr(e), flush=True)
+        _BLENDER.pop(pid, None)
+        return _blender_frame(scene_path, t, dur, False) if _retry else None
 
 
 def _cartoon_frame(scene_path, t, size, dur=None):
