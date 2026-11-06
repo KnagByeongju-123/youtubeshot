@@ -48,6 +48,11 @@ RULES = """[입체 블록 장면 검수 규칙] — 장면마다 처음·가운�
  12. 빈 곳: 방 밖·땅 끝·바다 끝 같은 빈 공간이 보이지 않는지 (카메라는 방 안에, 땅·바다는 화면보다 넓게)
  13. 화면이 한 색으로 덮이지 않는지 (카메라 바로 앞 물체), 문짝·기둥이 화면을 크게 가리지 않는지
  14. 줄무늬·울타리처럼 보이는 것: 물결 언덕은 한 색으로 이어지게
+ ■ 카메라 (사용자 결정 2026-11-06: 영화처럼 — 장면 설정 단계부터 필수)
+ 16. 장면마다 카메라가 움직이는지: cam 에 shots(컷) 또는 mode(dolly·crane·track·orbit·follow) — 그냥 서 있는 카메라는 불합격
+ 17. 영화 문법: 처음엔 넓게 보여 주는 컷(크레인·드론처럼 위에서) → 인물 가까이 → 얼굴. 대사 장면은 어깨 너머·얼굴 쪽으로 밀고 들어가기,
+     걷기·달리기는 옆에서 따라가기(track), 큰 물체는 아래에서 올려다보기(크기), 놀람·쿵은 bump, 끝 장면은 하늘로 솟아오르기
+ 18. 컷이 바뀌는 순간 화면이 튀지 않는지(같은 쪽에서 보기, 180도 선 넘지 않기), 움직임 끝에서 인물이 화면 밖으로 잘리지 않는지
  15. 움직임: 처음과 끝 순간도 봄 — 파도가 끝에서 사라지거나, 사람이 목표 자리를 지나치거나, 물건이 화면 밖으로 날아가지 않는지
 """
 
@@ -113,6 +118,9 @@ def check_scene(path, outdir, times=(0.3, 4.0, 7.7), dur=8.0):
     scene, cast = S3.load(path)
     cid = os.path.splitext(os.path.basename(path))[0]
     probs = []
+    cm_ = scene.get("cam", {})
+    if not cm_.get("shots") and not cm_.get("mode") and not any(cm_.get("move", [0, 0, 0])):
+        probs.append(f"{cid}: 카메라가 움직이지 않음 (영화처럼: shots·dolly·crane·track·orbit 중 하나)")
     for k, t in enumerate(times):
         B = S3.build(scene, cast, t, dur)
         img = S3.frame(scene, cast, t, dur)

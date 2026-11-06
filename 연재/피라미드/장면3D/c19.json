@@ -12,19 +12,19 @@
    "face": 30,
    "act": [
     "blink",
-    "talk"
+    "laugh"
    ]
   },
   {
-   "who": "안내자 하람 (14)",
+   "who": "하푸 반장 (40대)",
    "at": [
-    1.5,
+    1.6,
     7.5
    ],
    "face": 10,
    "act": [
     "blink",
-    "laugh"
+    "talk"
    ]
   },
   {

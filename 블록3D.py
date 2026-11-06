@@ -290,7 +290,11 @@ def person(c, pos, face=0.0, pose=None, scale=1.0):
     # 머리카락
     hc, st = c["hair"], c["hair_style"]
     t = hy + hs
-    if st == "bald":
+    if c.get("nemes"):   # 머리수건 속 머리는 그리지 않음 (검은 머리가 수건 밖으로 비치지 않게)
+        st = "none"
+    if st == "none":
+        pass
+    elif st == "bald":
         for sg in (-1, 1):
             B((sg * (hwid / 2) - (0.08 if sg < 0 else 0) + (0 if sg < 0 else -0.0), hy + hs * 0.35, -hs / 2), (0.08, hs * 0.35, hs * 0.8), hc)
     else:   # 단순한 머리 (사용자 결정 2026-11-05): 윗판 + 뒤판 + 뒤쪽 절반만 덮는 짧은 옆판, 삐죽·뽀글 조각 없음
@@ -323,6 +327,23 @@ def person(c, pos, face=0.0, pose=None, scale=1.0):
         sc = c["sig"] or "#c0392b"
         B((-hwid * 0.42, sy - 0.12, -0.2), (hwid * 0.84, 0.16, 0.42), sc)
         B((hwid * 0.08, sy - 0.62, dep / 2 + 0.02), (0.16, 0.5, 0.06), shade_hex(sc, 0.85))
+    if c.get("nemes"):   # 파라오의 줄무늬 머리수건(네메스) + 가짜 턱수염 + 이마의 코브라 장식
+        g1, g2 = c["nemes"] if isinstance(c["nemes"], (list, tuple)) else ("#e3b341", "#2f5fb0")
+        B((-hwid / 2 - 0.08, t - hs * 0.3, -hs / 2 - 0.08), (hwid + 0.16, hs * 0.34, hs + 0.16), g1)
+        for k in range(3):   # 윗면 줄무늬
+            B((-hwid / 2 - 0.09, t - hs * 0.22 + k * hs * 0.1, -hs / 2 - 0.09), (hwid + 0.18, hs * 0.04, hs + 0.18), g2, edge=False)
+        for sg in (-1, 1):   # 어깨까지 내려오는 양쪽 날개
+            fx = sg * hwid / 2 - (0.18 if sg < 0 else 0) + (0.02 if sg > 0 else -0.02)
+            B((fx, hy - hs * 0.55, -hs * 0.32), (0.18, hs * 1.25, hs * 0.34), g1)
+            for k in range(5):
+                B((fx - 0.01, hy - hs * 0.5 + k * hs * 0.24, -hs * 0.33), (0.2, hs * 0.06, hs * 0.36), g2, edge=False)
+        B((-hwid / 2 - 0.06, t - hs * 1.05, -hs / 2 - 0.12), (hwid + 0.12, hs * 0.8, 0.14), g1)   # 뒤로 늘어진 천
+        B((-0.08, t - hs * 0.22, hs / 2 + 0.06), (0.16, hs * 0.22, 0.1), "#c9a227")               # 코브라
+        B((-hs * 0.08, hy - hs * 0.32, hs * 0.18), (hs * 0.16, hs * 0.34, hs * 0.2), "#2f5fb0")    # 가짜 턱수염
+        B((-hs * 0.07, hy - hs * 0.06, hs * 0.2), (hs * 0.14, hs * 0.08, hs * 0.22), "#e3b341", edge=False)
+    if c.get("collar"):   # 넓은 금 목걸이 (파라오)
+        B((-sw - 0.02, sy - 0.25, -dep / 2 - 0.04), (sw * 2 + 0.04, 0.3, dep + 0.08), "#e3b341")
+        B((-sw * 0.8, sy - 0.32, dep / 2 + 0.02), (sw * 1.6, 0.12, 0.03), "#2f5fb0", edge=False)
     if c.get("flower"):   # 꽃 머리띠: 머리 둘레 띠 + 옆머리 위 꽃 한 송이
         fc = c["flower"] if isinstance(c["flower"], str) else (c["sig"] or "#e85d75")
         B((-hwid / 2 - 0.06, t - hs * 0.18, -hs / 2 - 0.06), (hwid + 0.12, hs * 0.08, hs + 0.12), "#3f8a4a")

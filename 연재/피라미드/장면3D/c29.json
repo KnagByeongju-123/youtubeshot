@@ -9,52 +9,35 @@
   ],
   "n": 24,
   "cap": true,
-  "mood": "desert_dusk"
+  "mood": "desert_dusk",
+  "small_pyr": true
  },
- "chars": [
-  {
-   "who": "안내자 하람 (14)",
-   "at": [
-    -4,
-    40
-   ],
-   "face": 90,
-   "act": [
-    "walk"
-   ],
-   "to": [
-    12,
-    40
-   ],
-   "exit": true
-  }
- ],
  "cam": {
   "shots": [
    {
     "mode": "dolly",
     "pos": [
-     -14,
-     3,
-     52
+     0,
+     4,
+     60
     ],
     "look": [
-     -4,
-     3,
-     40
+     0,
+     20,
+     -60
     ],
     "pos1": [
-     4,
-     4,
-     56
+     0,
+     70,
+     120
     ],
     "look1": [
+     0,
      10,
-     8,
-     20
+     -60
     ],
-    "fov": 50,
-    "fov1": 50,
+    "fov": 46,
+    "fov1": 42,
     "to": 1.0
    }
   ],
