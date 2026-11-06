@@ -293,31 +293,17 @@ def person(c, pos, face=0.0, pose=None, scale=1.0):
     if st == "bald":
         for sg in (-1, 1):
             B((sg * (hwid / 2) - (0.08 if sg < 0 else 0) + (0 if sg < 0 else -0.0), hy + hs * 0.35, -hs / 2), (0.08, hs * 0.35, hs * 0.8), hc)
-    else:
-        top_h = hs * (0.24 if st != "perm" else 0.3)
+    else:   # 단순한 머리 (사용자 결정 2026-11-05): 윗판 + 뒤판 + 뒤쪽 절반만 덮는 짧은 옆판, 삐죽·뽀글 조각 없음
+        long_ = st in ("bob", "long")
+        top_h = hs * 0.22
         B((-hwid / 2 - 0.04, t - top_h + 0.06, -hs / 2 - 0.04), (hwid + 0.08, top_h, hs + 0.08), hc)
-        back_h = hs * (0.9 if st in ("bob", "long") else 0.75)
-        if c["aviator"]:   # 비행 모자 밑 머리는 짧게 (뒷머리가 검은 덩어리로 얼굴을 덮지 않게)
+        back_h = hs * (1.25 if st == "long" else 0.85 if long_ else 0.7)
+        if c["aviator"]:
             back_h = hs * 0.45
         B((-hwid / 2 - 0.04, t - back_h, -hs / 2 - 0.04), (hwid + 0.08, back_h, 0.12), hc)
-        sl = hs * (0.8 if st in ("bob", "long") else 0.45) * (0.6 if c["aviator"] else 1.0)
+        sl = hs * (0.7 if long_ else 0.4) * (0.6 if c["aviator"] else 1.0)
         for sg in (-1, 1):
-            B((sg * hwid / 2 - (0.06 if sg < 0 else -0.02) - (0 if sg < 0 else 0.04), t - sl, -hs / 2 - 0.04), (0.08, sl, hs * (0.75 if st not in ("bob", "long") else 0.95)), hc)
-        if st == "long":
-            B((-hwid / 2 - 0.04, t - hs * 1.6, -hs / 2 - 0.06), (hwid + 0.08, hs * 0.8, 0.14), hc)
-        if st == "spiky" and not c["aviator"]:
-            for i in range(5):
-                for j in range(3):
-                    px = -hwid / 2 + hwid * (i + 0.5) / 5 - 0.07
-                    pz = -hs / 2 + hs * (j + 0.5) / 3 - 0.07
-                    hh_ = 0.1 + 0.08 * ((i * 7 + j * 3) % 3)
-                    B((px, t + 0.06, pz), (0.14, hh_, 0.14), hc)
-            for i in range(4):
-                B((-hwid / 2 + hwid * (i + 0.5) / 4 - 0.07, t - top_h - 0.06, fz - 0.06), (0.14, 0.14, 0.1), hc)
-        if st == "perm":
-            for i in range(5):
-                for j in range(4):
-                    B((-hwid / 2 - 0.08 + (hwid + 0.16) * i / 4 - 0.08, t + 0.02, -hs / 2 + hs * j / 3 - 0.08), (0.18, 0.12, 0.18), hc)
+            B((sg * hwid / 2 - (0.06 if sg < 0 else -0.02) - (0 if sg < 0 else 0.04), t - sl, -hs / 2 - 0.04), (0.08, sl, hs * 0.5), hc)
     # 모자
     if c["cap"]:
         cc = c["cap"] if isinstance(c["cap"], str) else (c["sig"] or "#333a55")
