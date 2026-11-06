@@ -8,7 +8,7 @@ import re
 import subprocess
 import sys
 
-work, frames, out = sys.argv[1], sys.argv[2], sys.argv[3]
+work, frames, out = (os.path.abspath(a) for a in sys.argv[1:4])
 title = sys.argv[sys.argv.index("--제목") + 1] if "--제목" in sys.argv else ""
 tt = json.load(open(os.path.join(work, "시간표.json"), encoding="utf-8"))
 plan = json.load(open(os.path.join(work, "장면계획.json"), encoding="utf-8"))
