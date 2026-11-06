@@ -1,0 +1,50 @@
+{
+ "items": [
+  {
+   "id": "경비원",
+   "prompt": "Character turnaround sheet of ONE original character in the same clean Japanese anime / Korean webtoon style as the reference image (realistic human proportions, crisp black outlines, soft cel shading, natural colors). Exactly four full-body views of the same person standing side by side from left to right: front view, left side view, right side view, back view. Head to shoes fully visible, same outfit and hairstyle in every view, plain pure white background, no text, no labels, no props on the floor, evenly spaced. A 63-year-old Korean man, an apartment security guard: short and slim, short neatly cut white-gray hair, kind wrinkled face with gentle eyes, navy blue security guard uniform jacket and matching trousers with a small round badge patch on the chest, light blue shirt, navy necktie, navy peaked guard cap, black work shoes.",
+   "refs": [
+    "/home/user/youtubeshot/연재/막내개그/화풍샘플/사용자_캐릭터스타일_기준.png"
+   ],
+   "width": 1280,
+   "height": 576,
+   "seed": 41,
+   "steps": 4
+  },
+  {
+   "id": "대표",
+   "prompt": "Character turnaround sheet of ONE original character in the same clean Japanese anime / Korean webtoon style as the reference image (realistic human proportions, crisp black outlines, soft cel shading, natural colors). Exactly four full-body views of the same person standing side by side from left to right: front view, left side view, right side view, back view. Head to shoes fully visible, same outfit and hairstyle in every view, plain pure white background, no text, no labels, no props on the floor, evenly spaced. A 54-year-old Korean man, the residents' association head: tall and heavy-set with a big belly, slicked-back black hair, thin gold-rimmed glasses, arrogant frowning face, white polo golf shirt under a dark green quilted vest, beige trousers, a large gold wristwatch, brown loafers.",
+   "refs": [
+    "/home/user/youtubeshot/연재/막내개그/화풍샘플/사용자_캐릭터스타일_기준.png"
+   ],
+   "width": 1280,
+   "height": 576,
+   "seed": 42,
+   "steps": 4
+  },
+  {
+   "id": "서연",
+   "prompt": "Character turnaround sheet of ONE original character in the same clean Japanese anime / Korean webtoon style as the reference image (realistic human proportions, crisp black outlines, soft cel shading, natural colors). Exactly four full-body views of the same person standing side by side from left to right: front view, left side view, right side view, back view. Head to shoes fully visible, same outfit and hairstyle in every view, plain pure white background, no text, no labels, no props on the floor, evenly spaced. A 34-year-old Korean woman, an accountant: black hair tied in a low neat ponytail, calm intelligent eyes, no glasses, beige trench coat over a white blouse, dark gray slacks, black flat shoes, carrying nothing.",
+   "refs": [
+    "/home/user/youtubeshot/연재/막내개그/화풍샘플/사용자_캐릭터스타일_기준.png"
+   ],
+   "width": 1280,
+   "height": 576,
+   "seed": 43,
+   "steps": 4
+  },
+  {
+   "id": "할머니",
+   "prompt": "Character turnaround sheet of ONE original character in the same clean Japanese anime / Korean webtoon style as the reference image (realistic human proportions, crisp black outlines, soft cel shading, natural colors). Exactly four full-body views of the same person standing side by side from left to right: front view, left side view, right side view, back view. Head to shoes fully visible, same outfit and hairstyle in every view, plain pure white background, no text, no labels, no props on the floor, evenly spaced. An 81-year-old Korean grandmother: very short and slightly hunched, curly permed short gray hair, kind deeply wrinkled face, purple flower-pattern quilted vest over a cream knit sweater, dark brown loose trousers, holding a wooden walking cane in her right hand, gray comfortable shoes.",
+   "refs": [
+    "/home/user/youtubeshot/연재/막내개그/화풍샘플/사용자_캐릭터스타일_기준.png"
+   ],
+   "width": 1280,
+   "height": 576,
+   "seed": 44,
+   "steps": 4
+  }
+ ],
+ "ref_max_area": 230000,
+ "crop_border": false
+}
