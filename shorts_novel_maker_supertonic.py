@@ -2553,6 +2553,25 @@ def video_frame(path, sec):
         return None
 
 
+def whole_photo_plate(im, bw, bh, lo=0.8, hi=1.2, fill=0.95):
+    """화면과 모양이 많이 다른 사진(세로 포스터·잡지 광고, 아주 긴 가로 사진)을 화면 모양 판에 통째로 얹음 (사용자 지적 2026-11-06:
+    세로 광고가 화면 폭에 맞춰 확대돼 제목·그림이 잘리고 본문만 보였음). 판 = 같은 사진을 흐리고 어둡게 깐 배경 + 가운데 사진 전체.
+    판은 상자의 1.32배로 확대되므로 사진은 보이는 창(1/1.32)에 들어가게 fill/1.32 크기로. 모양이 비슷하면 그대로 돌려줌"""
+    r, br = im.width / im.height, bw / bh
+    if lo * br <= r <= hi * br:
+        return im
+    PW, PH = int(bw * 1.32), int(bh * 1.32)
+    k = max(PW / im.width, PH / im.height)
+    bg = im.resize((max(1, int(im.width * k / 12)), max(1, int(im.height * k / 12))), Image.BILINEAR).filter(ImageFilter.GaussianBlur(2.5))
+    bg = bg.resize((int(im.width * k) + 2, int(im.height * k) + 2), Image.BILINEAR)
+    l, tp = (bg.width - PW) // 2, (bg.height - PH) // 2
+    plate = Image.eval(bg.crop((l, tp, l + PW, tp + PH)), lambda v: int(v * 0.4))
+    s_ = min(bw * fill / im.width, bh * fill / im.height)
+    fit = im.resize((max(1, round(im.width * s_)), max(1, round(im.height * s_))), Image.LANCZOS)
+    plate.paste(fit, ((PW - fit.width) // 2, (PH - fit.height) // 2))
+    return plate
+
+
 def load_media_image(path):
     q = resolve_media(path)
     if not q:
@@ -5997,6 +6016,8 @@ class SubtitleRenderer:
                 big = Image.new("RGB", (cw_, ch_), im.getpixel((0, 0)))
                 big.paste(fit, ((cw_ - fit.width) // 2, (ch_ - fit.height) // 2))
             else:
+                if self.full and self.s.get("img_whole", "on") == "on":
+                    im = whole_photo_plate(im, bw, bh)    # 세로 사진·아주 긴 가로 사진: 잘리지 않게 통째로 + 양옆(위아래) 흐린 배경
                 sc = max(bw / im.width, bh / im.height) * 1.32
                 big = im.resize((max(bw, int(im.width * sc) + 1), max(bh, int(im.height * sc) + 1)), Image.LANCZOS)
             mask = None
