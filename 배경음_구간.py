@@ -71,7 +71,7 @@ def main(a):
                         "-af", f"loudnorm=I=-20:TP=-2:LRA=11,afade=t=in:d=1.5,afade=t=out:st={max(0, length - 2):.2f}:d=2",
                         "-ar", "44100", "-ac", "2", p], check=True)
         parts.append(p)
-        print(f"{sec.get('이름', k)}\t{t0 / 60:.0f}:{t0 % 60:04.1f} ~ {t1 / 60:.0f}:{t1 % 60:04.1f}\t{os.path.basename(sec['곡'])}", flush=True)
+        print(f"{sec.get('이름', k)}\t{int(t0 // 60)}:{t0 % 60:04.1f} ~ {int(t1 // 60)}:{t1 % 60:04.1f}\t{os.path.basename(sec['곡'])}", flush=True)
     cmd = ["ffmpeg", "-y", "-v", "error"]
     for p in parts:
         cmd += ["-i", p]
