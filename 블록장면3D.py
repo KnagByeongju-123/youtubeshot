@@ -519,7 +519,7 @@ def build(scene, cast, t, dur=None):
             ps["hold"] = ch["hold"]
         i0 = len(boxes)
         boxes += person(c, (ax, y, az), face=face, pose=ps, scale=ch.get("scale", 1.0))
-        info.append({"who": ch["who"], "pos": (ax, y, az), "face": face, "acts": acts, "i0": i0, "i1": len(boxes), "scale": ch.get("scale", 1.0), "exit": ch.get("exit", False)})
+        info.append({"who": ch["who"], "pos": (ax, y, az), "face": face, "acts": acts, "i0": i0, "i1": len(boxes), "scale": ch.get("scale", 1.0), "exit": ch.get("exit", False), "lead": bool(ch.get("lead") or c.get("nemes") or c.get("lead"))})
     fx = scene.get("fx", [])
     if "rain" in fx:
         cp = scene["cam"]["pos"]

@@ -33,7 +33,7 @@ W, H = E.W, E.H
 RULES = """[입체 블록 장면 검수 규칙] — 장면마다 처음·가운데·끝 3순간을 크게(1920px) 열고, 인물·사물마다 확대해서 하나씩 확인
  ■ 인물
   1. 발이 땅에 붙었는지: 떠 있음·땅(계단·바위)에 묻힘·바다 위를 걸음 (창밖 멀리 걷는 사람은 그 아래 땅이 있어야 함)
-  2. 얼굴: 말하는 사람이 카메라에 뒤통수만 보이지 않는지, 얼굴을 가리는 조각(귀 덮개·수염·뒷머리 덩어리)이 없는지
+  2. 얼굴: 말하는 사람이 카메라에 뒤통수만 보이지 않는지, 얼굴을 가리는 조각(귀 덮개·수염·뒷머리 덩어리)이 없는지 — 말하기·웃기·가리키기도 같음, 왕·주인공(파라오 머리수건·"lead")은 걷는 때가 아니면 뒷모습만 보이지 않게 (사용자 지적 2026-11-06: 쿠푸 왕 뒷모습)
   3. 머리·모자: 모자 밖으로 삐져나온 머리 점, 이마의 검은 점, 수염이 머리 옆 전체를 덮지 않는지 (수염은 턱 앞쪽만)
   4. 소품이 대본대로인지: 젓는 사람 손의 국자는 냄비 안, 건네는 빵은 손에, 걸린 외투·빈 침대처럼 대본에 나온 물건이 보이는지
   5. 크기: 멀리 있는 사람이 너무 작아 안 보이거나 창틀·기둥에 가리지 않는지
@@ -152,7 +152,7 @@ def check_scene(path, outdir, times=(0.3, 4.0, 7.7), dur=8.0):
             elif g is not None and abs(y - g) > 0.35:
                 probs.append(f"{cid} {t:.1f}초: {who} 발 높이 {y:.1f} ≠ 땅 {g:.1f} ({'떠 있음' if y > g else '땅에 묻힘'})")
             # 말하는데 뒤돌아 있음
-            talking = any(a in ch["acts"] for a in ("talk", "shout")) and not any(a in ch["acts"] for a in ("run", "walk"))   # 뛰어나가며 외치는 뒷모습은 괜찮음
+            talking = any(a in ch["acts"] for a in ("talk", "shout", "laugh", "point", "wave")) and not any(a in ch["acts"] for a in ("run", "walk"))   # 뛰어나가며 외치는 뒷모습은 괜찮음
             f = math.radians(ch["face"])
             fv = np.array([math.sin(f), 0, math.cos(f)])
             to_cam = cpos - np.array([x, y, z])
@@ -160,6 +160,8 @@ def check_scene(path, outdir, times=(0.3, 4.0, 7.7), dur=8.0):
             nrm = np.linalg.norm(to_cam)
             if talking and nrm > 1e-6 and float(np.dot(fv, to_cam / nrm)) < -0.35:   # 옆얼굴(0 근처)까지는 괜찮음
                 probs.append(f"{cid} {t:.1f}초: {who} 가 말하는데 카메라에 등을 보임")
+            elif ch.get("lead") and not any(a in ch["acts"] for a in ("run", "walk")) and nrm > 1e-6 and float(np.dot(fv, to_cam / nrm)) < -0.5:
+                probs.append(f"{cid} {t:.1f}초: {who} (주인공·왕) 뒷모습만 보임 — 얼굴이 보이게 돌림")   # 사용자 지적 2026-11-06: 쿠푸 왕 뒷모습
             if team:
                 continue
             # 보이는 정도·크기·잘림 (이 인물만 분홍으로 칠해 그려 봄)
