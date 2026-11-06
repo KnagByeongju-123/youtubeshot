@@ -2503,10 +2503,62 @@ def filtered_media(path, name):
     return out
 
 
+VIDEO_EXT = (".mp4", ".webm", ".mov", ".mkv", ".m4v")
+VIDEO_FPS = 24
+_VFRAMES = {}      # 영상 조각 → 낱장 그림 목록 (한 번만 읽음)
+
+
+def is_video_media(path):
+    """사진 줄에 사진 대신 영상 조각(mp4 등)을 넣었는가 (옛 TV 광고처럼 움직이는 자료, 사용자 결정 2026-11-06)"""
+    return str(path or "").lower().endswith(VIDEO_EXT)
+
+
+def video_frames(path):
+    """영상 조각을 24fps 낱장 jpg 로 한 번 풀어 둠(<영상>.frames/) → 낱장 경로 목록. 소리는 쓰지 않음(나레이션이 덮음)"""
+    q = resolve_media(path)
+    if not q:
+        return []
+    if q in _VFRAMES:
+        return _VFRAMES[q]
+    d = q + ".frames"
+    if not (os.path.isdir(d) and any(f.endswith(".jpg") for f in os.listdir(d))):
+        import shutil
+        import subprocess
+        import tempfile
+        tmp = tempfile.mkdtemp(prefix="vfr_", dir=os.path.dirname(q))
+        subprocess.run([get_ffmpeg(), "-y", "-v", "error", "-i", q, "-vf", f"fps={VIDEO_FPS},scale='min(1600,iw)':-2",
+                        "-q:v", "3", os.path.join(tmp, "f_%05d.jpg")], check=False)
+        if os.path.isdir(d):
+            shutil.rmtree(d, ignore_errors=True)
+        try:
+            os.replace(tmp, d)
+        except OSError:          # 다른 작업(구간 나눠 그리기)이 먼저 풀었으면 그것을 씀
+            shutil.rmtree(tmp, ignore_errors=True)
+    fr = sorted(os.path.join(d, f) for f in os.listdir(d) if f.endswith(".jpg")) if os.path.isdir(d) else []
+    _VFRAMES[q] = fr
+    return fr
+
+
+def video_frame(path, sec):
+    """영상 조각의 sec 초 장면(PIL RGB). 자리가 영상보다 길면 마지막 장면에서 멈춤"""
+    fr = video_frames(path)
+    if not fr:
+        return None
+    i = min(len(fr) - 1, max(0, int(sec * VIDEO_FPS)))
+    try:
+        im = Image.open(fr[i])
+        im.load()
+        return im.convert("RGB")
+    except Exception:
+        return None
+
+
 def load_media_image(path):
     q = resolve_media(path)
     if not q:
         return None
+    if is_video_media(q):          # 영상 조각: 첫 장면을 대표 그림으로 (썸네일·사진 검사·흐린 배경)
+        return video_frame(q, 0)
     try:
         im = Image.open(q)
         im.load()
@@ -5967,6 +6019,9 @@ class SubtitleRenderer:
     def _shot_crop(self, sh, t):
         """장면 sh 의 t 시점 사진 (움직임 적용) + 그림이 처음 나타날 때 그리는 효과 (그림 옆에 <그림>.인물.json 이 있으면)"""
         self._last_rect = None
+        paths = getattr(self, "img_paths", [])
+        if sh["img"] < len(paths) and is_video_media(paths[sh["img"]]):
+            return self._video_crop(sh["img"], t)
         crop, mask = self._shot_crop_raw(sh, t)
         if getattr(self, "slide", False) or self._last_rect is None:
             return crop, mask
@@ -5982,6 +6037,25 @@ class SubtitleRenderer:
                  if data.get("brush") else None)       # 인물을 붓 획 순서로 드러냄 (사용자 결정 2026-10-31)
         out = _drawfx().frame(np.asarray(crop.convert("RGB")), plate, M, prog, seed=sh["img"], fog=fog, brush=brush)
         return Image.fromarray(out).convert(crop.mode), mask
+
+    def _video_crop(self, idx, t):
+        """영상 조각 자리: 그 자리가 시작된 때부터 영상을 재생 (확대·이동 없이). 옛 TV(4:3)는 잘리지 않게 통째로, 양옆은 같은 장면을 흐리게"""
+        x0, y0, x1, y1 = self.img_box
+        bw, bh = x1 - x0, y1 - y0
+        _, mask, _ = self._img_src(idx)
+        a_ = next((a for im_, a, b in self._img_pieces(self.duration) if im_ == idx and t < b), 0.0)
+        im = video_frame(self.img_paths[idx], max(0.0, t - a_)) or self.images[idx][0].convert("RGB")
+        if abs(im.width / im.height - bw / bh) < 0.02:
+            return im.resize((bw, bh), Image.BILINEAR), mask
+        k = max(bw / im.width, bh / im.height)
+        bg = im.resize((max(1, int(im.width * k / 10)), max(1, int(im.height * k / 10))), Image.BILINEAR).filter(ImageFilter.GaussianBlur(3))
+        bg = bg.resize((int(im.width * k) + 2, int(im.height * k) + 2), Image.BILINEAR)
+        l, tp = (bg.width - bw) // 2, (bg.height - bh) // 2
+        out = Image.eval(bg.crop((l, tp, l + bw, tp + bh)), lambda v: int(v * 0.45))
+        s_ = min(bw / im.width, bh / im.height)
+        fit = im.resize((max(1, round(im.width * s_)), max(1, round(im.height * s_))), Image.BILINEAR)
+        out.paste(fit, ((bw - fit.width) // 2, (bh - fit.height) // 2))
+        return out, mask
 
     def _draw_fx_at(self, idx, t):
         """그 그림이 나타난 지 얼마나 됐는지 → (그리는 진행 0~1, 효과 자료) 또는 None (효과 없음·다 그림)
