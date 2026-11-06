@@ -37,12 +37,12 @@ NIGHT_OFFICE = "the same office late at night, all lights off except one desk la
 CUTS = [
     ("c01", [1], ["부장님"], False, True, OFFICE, "Monday morning, wide shot of the office, the department head standing at the front of the room speaking loudly to the team seated at their desks, coffee cups on desks", "월요일 아침 기획팀"),
     ("c02", [2], ["부장님"], False, False, OFFICE, "medium shot of the department head raising one finger and announcing something important with a big confident voice", "신사업 보고서를 말하는 부장님"),
-    ("c03", [3], ["막내", "이대리"], False, True, OFFICE, "office workers lowering their heads to avoid eye contact at their desks, only the curly-haired young man sits up straight looking forward with interest", "모두 고개를 숙인 가운데 막내만"),
+    ("c03", [3], ["막내"], False, True, OFFICE, "all the office workers at their desks bow their heads low and look down at their keyboards to avoid eye contact, only the curly-haired young man in the center sits up straight and looks forward with interest", "모두 고개를 숙인 가운데 막내만"),
     ("c04", [4], ["막내"], False, False, OFFICE, "the curly-haired young man at his desk taking out a small black pocket notebook, his eyes shining with excitement for the first time", "수첩을 꺼내는 지후"),
-    ("c05", [5], ["막내"], False, True, SHOP, "the curly-haired young man standing at the counter politely asking the middle-aged female shop owner questions while taking notes in his pocket notebook", "반찬 가게를 도는 지후"),
-    ("c06", [6], [], False, True, SHOP, "a tired middle-aged Korean woman shop owner in an apron behind the side-dish display, sighing as she looks at leftover side dishes at closing time. No main characters", "남는 반찬이 아깝다는 사장님"),
+    ("c05", [5], ["막내"], False, False, SHOP, "the curly-haired young man standing in front of the counter politely asking questions and taking notes in his pocket notebook, one middle-aged Korean woman shop owner in a brown apron behind the counter answering him. Only these two people in the whole shop, no customers", "반찬 가게를 도는 지후"),
+    ("c06", [6], [], False, False, SHOP + ", closing time, the shop is empty", "one tired middle-aged Korean woman shop owner in a brown apron behind the side-dish display, sighing as she looks down at leftover side dishes. Only one person in the whole image, no customers, no signboards, no menus on the walls", "남는 반찬이 아깝다는 사장님"),
     ("c07", [7], ["막내"], False, False, NIGHT_OFFICE, "the curly-haired young man working late at his desk with a calculator, his open notebook and colorful bar charts on the monitor", "숫자로 바꾸는 지후"),
-    ("c08", [8], [], False, False, "on an office desk under a desk lamp at night", "close-up of the last page of a printed report with one small neat table of numbers and handwritten-style notes in the margin, the text too small and blurry to read", "마지막 장의 작은 표"),
+    ("c08", [8], [], False, False, "on an office desk under a desk lamp at night", "close-up of the last page of a printed report with one small neat table drawn as simple gray lines and boxes, shallow depth of field so the paper is soft and out of focus, no characters or numbers visible", "마지막 장의 작은 표"),
     ("c09", [9], ["막내", "이대리"], False, False, NIGHT_OFFICE, "the curly-haired young man at his desk clicking to upload a file on the monitor, the pompadour man in a navy suit standing behind him tapping his shoulder", "어깨를 툭 치는 이 대리"),
     ("c10", [10], ["이대리"], False, False, NIGHT_OFFICE, "close-up of the pompadour man in a navy suit leaning down with a friendly but sly smile, offering to help", "봐 주겠다는 이 대리"),
     ("c11", [11], ["막내"], False, False, NIGHT_OFFICE, "the curly-haired young man standing up from his chair and bowing his head gratefully with an innocent smile", "고맙다고 고개 숙이는 지후"),
@@ -114,11 +114,11 @@ def prompt(cut):
     else:
         p += "No main characters. "
     if not crowd:
-        p += "No other people in the scene. "
+        p += "No other people besides those described in the scene. "
     else:
         p += "Other people are ordinary background office workers who look different from the main characters. "
     p += f"Scene: {desc}. Setting: {place}. "
-    p += "Cinematic composition, full-bleed image, no border, no frame, no paper edges. No speech bubbles, no readable text, no letters, no logos."
+    p += "Cinematic composition, full-bleed image, no border, no frame, no paper edges. No speech bubbles, no readable text, no letters, no logos, no signboards with writing."
     return p
 
 
