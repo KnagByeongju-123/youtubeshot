@@ -9293,6 +9293,9 @@ class PauseGate:
             self.cancel.clear()
 
 
+RENDER_VER = "face-focus-1"   # 화면 그리는 방식을 바꾸면 이 값을 바꿈 → 저장해 둔 영상 구간을 다시 만듦 (2026-11-06: 사진 얼굴 기준 자르기)
+
+
 def export_mp4_resumable(r, out, progress, cancel=None, audio=None, work_dir=None, seg_sec=300, log=None, key=""):
     """긴 영상: seg_sec 초 구간마다 따로 MP4로 만든 뒤 이어 붙이고 소리를 합침.
     중간에 꺼져도 다시 부르면 끝난 구간은 건너뜀 (구간 파일 옆 .done 표시)
@@ -9301,6 +9304,8 @@ def export_mp4_resumable(r, out, progress, cancel=None, audio=None, work_dir=Non
     work_dir = work_dir or (os.path.splitext(out)[0] + "_구간")
     os.makedirs(work_dir, exist_ok=True)
     kf = os.path.join(work_dir, "key.txt")
+    if key:
+        key = key + "|" + RENDER_VER   # 화면 그리는 방식이 바뀌면(예: 얼굴 기준 자르기) 예전 구간을 다시 만듦
     old_key = open(kf, encoding="utf-8").read().strip() if os.path.exists(kf) else ""
     if key and old_key != key:
         for f_ in os.listdir(work_dir):
