@@ -28,6 +28,8 @@ E = S3.E
 from PIL import Image
 
 W, H = 1920, 1080
+PIXEL = float(os.environ.get("BL_PIXEL", "0"))        # 픽셀 무늬: 블록 1칸에 몇 칸 (0 = 끔, 4 = 블록 게임 느낌)
+PIXEL_AMP = float(os.environ.get("BL_PIXEL_AMP", "0.12"))   # 칸마다 밝기 차이
 SCALE = int(os.environ.get("BL_SCALE", "100"))   # 그리는 크기 % (50 = 960×540 로 그리고 1920×1080 으로 키움 — 4배 빠름)
 FACES = np.array(E.FACES)          # 상자 한 개의 면 6개 (꼭짓점 번호 4개씩)
 
@@ -93,7 +95,23 @@ def setup(engine="eevee", samples=None):
     bs.inputs["Roughness"].default_value = 0.85
     if "Specular IOR Level" in bs.inputs:
         bs.inputs["Specular IOR Level"].default_value = 0.15
-    nt.links.new(at.outputs["Color"], bs.inputs["Base Color"])
+    if PIXEL:   # 픽셀 무늬: 블록 면을 작은 칸(블록 1칸 = PIXEL 칸)으로 나눠 칸마다 밝기를 살짝 다르게 — 그림 계산만, 상자 수는 그대로라 거의 안 느려짐
+        lp = nt.nodes.new("ShaderNodeAttribute"); lp.attribute_name = "lp"; lp.attribute_type = "GEOMETRY"
+        sc_ = nt.nodes.new("ShaderNodeVectorMath"); sc_.operation = "SCALE"; sc_.inputs["Scale"].default_value = PIXEL
+        nt.links.new(lp.outputs["Vector"], sc_.inputs[0])
+        fl = nt.nodes.new("ShaderNodeVectorMath"); fl.operation = "FLOOR"
+        nt.links.new(sc_.outputs[0], fl.inputs[0])
+        wn_ = nt.nodes.new("ShaderNodeTexWhiteNoise"); wn_.noise_dimensions = "3D"
+        nt.links.new(fl.outputs[0], wn_.inputs["Vector"])
+        mr_ = nt.nodes.new("ShaderNodeMapRange")
+        mr_.inputs["To Min"].default_value, mr_.inputs["To Max"].default_value = 1.0 - PIXEL_AMP, 1.0 + PIXEL_AMP * 0.6
+        nt.links.new(wn_.outputs["Value"], mr_.inputs["Value"])
+        mu_ = nt.nodes.new("ShaderNodeVectorMath"); mu_.operation = "SCALE"
+        nt.links.new(at.outputs["Color"], mu_.inputs[0])
+        nt.links.new(mr_.outputs["Result"], mu_.inputs["Scale"])
+        nt.links.new(mu_.outputs[0], bs.inputs["Base Color"])
+    else:
+        nt.links.new(at.outputs["Color"], bs.inputs["Base Color"])
     nt.links.new(at.outputs["Color"], bs.inputs["Emission Color"])
     mul = nt.nodes.new("ShaderNodeMath"); mul.operation = "MULTIPLY"; mul.inputs[1].default_value = 2.5
     nt.links.new(at.outputs["Alpha"], mul.inputs[0])
@@ -183,6 +201,13 @@ def load_boxes(boxes):
         _STATE["flip_checked"] = True
     if _STATE["flip"]:
         me.flip_normals()
+    if PIXEL:   # 상자 안 좌표 (상자가 움직여도 무늬가 따라감) + 상자마다 다른 무늬
+        S_ = np.array([b.s for b in boxes], float)
+        seed = (np.abs(np.round(S_ @ np.array([13.1, 7.3, 3.7]) + C[:, :3] @ np.array([5.0, 11.0, 17.0]), 3)) % 97.0)[:, None]
+        loc = (E.CUBE[None, :, :] * S_[:, None, :]) * 0.9998 + S_[:, None, :] * 0.0001     # 면 경계에서 칸이 흔들리지 않게 살짝 안쪽
+        lpv = loc[:, FACES.ravel(), :] + seed[:, None, :] * np.array([1.0, 0.37, 0.71])
+        la = me.attributes.new("lp", "FLOAT_VECTOR", "CORNER")
+        la.data.foreach_set("vector", yup(lpv).reshape(-1, 3).astype(np.float32).ravel())
     ca = me.color_attributes.new("col", "FLOAT_COLOR", "CORNER")
     cc = np.repeat(np.repeat(C, 6, 0), 4, 0)
     ca.data.foreach_set("color", cc.astype(np.float32).ravel())
