@@ -1,0 +1,50 @@
+{
+ "items": [
+  {
+   "id": "반장",
+   "prompt": "Character turnaround sheet of ONE original character in the same clean Japanese anime / Korean webtoon style as the reference image (realistic human proportions, crisp black outlines, soft cel shading, natural colors). Exactly four full-body views of the same person standing side by side from left to right: front view, left side view, right side view, back view. Head to shoes fully visible, same outfit and hairstyle in every view, plain pure white background, no text, no labels, no props on the floor, evenly spaced. A 62-year-old Korean man, veteran maintenance chief at a Mars base: short and sturdy build, gray buzz-cut hair, short gray stubble beard, deep wrinkles, calm stubborn eyes, a worn faded orange mechanic jumpsuit with patched elbows and knees, a brown leather tool belt with a few tools, old leather work gloves tucked into the belt, a scratched analog wristwatch, heavy dark brown work boots.",
+   "refs": [
+    "/home/user/youtubeshot/연재/막내개그/화풍샘플/사용자_캐릭터스타일_기준.png"
+   ],
+   "width": 1280,
+   "height": 576,
+   "seed": 61,
+   "steps": 4
+  },
+  {
+   "id": "관리자",
+   "prompt": "Character turnaround sheet of ONE original character in the same clean Japanese anime / Korean webtoon style as the reference image (realistic human proportions, crisp black outlines, soft cel shading, natural colors). Exactly four full-body views of the same person standing side by side from left to right: front view, left side view, right side view, back view. Head to shoes fully visible, same outfit and hairstyle in every view, plain pure white background, no text, no labels, no props on the floor, evenly spaced. A 38-year-old Korean man, the new base operations manager: tall and slim, neatly side-parted black hair, sharp cold eyes, clean-shaven, a sleek white high-collar futuristic uniform jacket with thin light-blue trim lines, white trousers, white boots, a small silver badge on the chest, hands at his sides.",
+   "refs": [
+    "/home/user/youtubeshot/연재/막내개그/화풍샘플/사용자_캐릭터스타일_기준.png"
+   ],
+   "width": 1280,
+   "height": 576,
+   "seed": 62,
+   "steps": 4
+  },
+  {
+   "id": "유나",
+   "prompt": "Character turnaround sheet of ONE original character in the same clean Japanese anime / Korean webtoon style as the reference image (realistic human proportions, crisp black outlines, soft cel shading, natural colors). Exactly four full-body views of the same person standing side by side from left to right: front view, left side view, right side view, back view. Head to shoes fully visible, same outfit and hairstyle in every view, plain pure white background, no text, no labels, no props on the floor, evenly spaced. A 28-year-old Korean young woman, a rookie mechanic at a Mars base: shoulder-length wavy dark brown hair tied in a half-up ponytail, a few freckles, bright determined eyes, a clean orange mechanic jumpsuit with sleeves rolled up over a white t-shirt, a gray tool belt, black work boots.",
+   "refs": [
+    "/home/user/youtubeshot/연재/막내개그/화풍샘플/사용자_캐릭터스타일_기준.png"
+   ],
+   "width": 1280,
+   "height": 576,
+   "seed": 63,
+   "steps": 4
+  },
+  {
+   "id": "로봇",
+   "prompt": "Character turnaround sheet of ONE original character in the same clean Japanese anime / Korean webtoon style as the reference image (realistic human proportions, crisp black outlines, soft cel shading, natural colors). Exactly four full-body views of the same person standing side by side from left to right: front view, left side view, right side view, back view. Head to shoes fully visible, same outfit and hairstyle in every view, plain pure white background, no text, no labels, no props on the floor, evenly spaced. A humanoid maintenance robot (not a person): slender human-sized body made of glossy silver-gray metal panels with dark gray joints, an angular head with one horizontal glowing blue light visor instead of a face, thin arms with three-fingered metal hands, a small number plate area on the chest that is blank, gray metal feet. No clothes, no scarf.",
+   "refs": [
+    "/home/user/youtubeshot/연재/막내개그/화풍샘플/사용자_캐릭터스타일_기준.png"
+   ],
+   "width": 1280,
+   "height": 576,
+   "seed": 64,
+   "steps": 4
+  }
+ ],
+ "ref_max_area": 230000,
+ "crop_border": false
+}
