@@ -33,6 +33,9 @@ if m.is_trad(style):
     s["chapter_hold"] = 4.2
 print("배경음:", style, "| 성우:", s.get("narr_voice"))
 narr = app.narration_for(story, s, print)
+if getattr(m, "_NV", None) is not None and m._NV.REPORT:     # 받아쓰기(Whisper) 검증 기록 → <결과>_나레이션검증.txt
+    m.atomic_write_text(out_mp3[:-4] + "_나레이션검증.txt", m._NV.report_text(title))
+    print("🔎 나레이션 검증:", sum(1 for r_ in m._NV.REPORT if not r_[2]["ok"]), "문단 문제 →", out_mp3[:-4] + "_나레이션검증.txt")
 r = m.make_renderer(title, story, s, narr)
 print("전체 길이", m.hms(r.duration))
 wav = out_mp3[:-4] + ".wav"
