@@ -79,6 +79,38 @@
    ],
    "look": "A 30-year-old ordinary Korean foot soldier of the Joseon dynasty: medium build, plain young face, a black felt jeonrip military hat with a wide round brim, a red tassel on top and a red bead chin strap (exactly like the reference), a sleeveless dark navy jeonbok vest over a dark navy jacket with red sleeves, a red cloth sash at the waist, white baggy trousers tied at the ankles with dark leggings, black cloth boots, holding a long wooden spear, the same hat and uniform in all three views",
    "look_ko": "조선 군졸, 전립(붉은 술)·남색 전복·붉은 띠·창"
+  },
+  {
+   "name": "민호",
+   "kind": "person",
+   "seed": 61,
+   "refs": [
+    "등장인물/조선/_기준/3면_사대부.png"
+   ],
+   "color": "shiny light jade-green silk with fine gold pattern",
+   "look": "A 22-year-old Korean young noble of the Joseon dynasty, the spoiled son of a powerful minister: plump soft face, small arrogant eyes, a thin black mustache, black hair in a topknot under a fine black gat hat with a long string of amber beads under the chin, a shiny light jade-green silk dopo robe with a fine gold pattern, a red silk cord belt with tassels, white socks and fine black leather shoes",
+   "look_ko": "22살 김민호, 통통한 얼굴, 갓에 호박 구슬 끈, 비단 옥색 도포·붉은 띠"
+  },
+  {
+   "name": "시험관",
+   "kind": "person",
+   "seed": 62,
+   "refs": [
+    "등장인물/조선/_기준/3면_문관.png"
+   ],
+   "color": "dark teal blue",
+   "look": "A 50-year-old Korean exam official of the Joseon dynasty: thin nervous face, a thin gray beard, worried eyes, a dark teal blue official robe with ONE square embroidered crane badge on the chest, black belt, black brimless two-tiered samo official cap (exactly like the reference sheet) with two small thin flat oval wings sticking out to the left and right at the back, black boots, the same cap and robe in all three views",
+   "look_ko": "50살 시험관, 마른 얼굴·회색 수염, 청록 관복·사모"
+  },
+  {
+   "name": "아이",
+   "kind": "person",
+   "seed": 63,
+   "refs": [
+    "등장인물/조선/_기준/3면_농민.png"
+   ],
+   "look": "A 10-year-old poor Korean village boy of the Joseon dynasty: thin, round innocent face, black hair in one long single braid down his back tied with a red ribbon (daenggi), no hat, a plain worn beige jeogori jacket and baggy beige trousers tied at the ankles, straw sandals",
+   "look_ko": "10살 마을 아이, 댕기머리 땋은 머리, 베이지 저고리·바지, 짚신"
   }
  ]
 }
