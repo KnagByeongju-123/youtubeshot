@@ -14,7 +14,7 @@ SHEETS = os.path.join(HERE, "캐릭터시트")
 PROJ = os.path.join(HERE, "붕어빵엄마_프로젝트.json")
 
 STYLE = ("Japanese anime style scene, TV anime screenshot, clean crisp line art, anime cel shading with soft shadows, "
-         "realistic human proportions, natural colors, detailed anime background art, warm modern Korean neighborhood drama in winter")
+         "realistic human proportions, natural colors, detailed anime background art, warm modern Korean neighborhood drama in winter. Bungeoppang are small hand-sized fish-shaped pastries; never draw a large fish, never a real fish")
 LOOK = {
     "엄마": "a 40-year-old slim Korean woman with black hair in a simple low bun, kind tired eyes, no makeup, faded pink padded vest over a gray hooded sweatshirt, dark red cloth apron with pockets, black work pants, gray sneakers",
     "엄마12": "a 52-year-old slim Korean woman with black hair streaked with a little gray in a simple low bun, kind calm eyes, faint wrinkles, faded pink padded vest over a gray hooded sweatshirt, dark red cloth apron, black work pants",
@@ -23,10 +23,10 @@ LOOK = {
     "회장": "a 42-year-old tall Korean woman with glossy wavy brown shoulder-length hair, heavy makeup, red lipstick, haughty face, cream white wool coat over a black turtleneck, black slim trousers, black heeled boots",
     "회장12": "a 54-year-old Korean woman with wavy brown shoulder-length hair, red lipstick, tired worried face with wrinkles, a worn beige coat over a black turtleneck, black trousers",
 }
-CART = "a small old street food cart with a hot cast-iron fish-shaped bread (bungeoppang) mold, steam rising, a paper bag stack, in front of a Korean elementary school gate on a cold winter morning, bare trees, light snow on the ground"
-CORNER = "a windy narrow alley corner near a Korean elementary school in winter, a small street cart with a fish-shaped bread mold"
-SHOP = "a small cozy Korean bungeoppang shop with a counter, fish-shaped bread molds, warm lights, a window to a snowy school street"
-NEWSHOP = "the ground floor bungeoppang shop of a new five-story building in front of a Korean elementary school, bright and clean, fish-shaped bread molds behind a counter, a small box by the door"
+CART = "a small old Korean street food cart with a flat black griddle holding rows of many small palm-sized golden fish-shaped pastries (bungeoppang, each the size of a hand), steam rising, a stack of small paper bags, in front of a Korean elementary school gate on a cold winter morning, bare trees, light snow on the ground"
+CORNER = "a windy narrow alley corner near a Korean elementary school in winter, a small old street food cart with a flat griddle holding rows of many small palm-sized golden fish-shaped pastries"
+SHOP = "a small cozy Korean bungeoppang shop with a counter, rows of small palm-sized fish-shaped pastry molds, warm lights, a window to a snowy school street"
+NEWSHOP = "the ground floor bungeoppang shop of a new five-story building in front of a Korean elementary school, bright and clean, rows of small palm-sized fish-shaped pastry molds behind a counter, a small box by the door"
 HOME = "a tiny modest Korean one-room apartment at night with a low table, a small lamp and a thin mattress on the floor"
 FRONT = "in front of a new modern five-story building across from a Korean elementary school in winter morning"
 
@@ -36,7 +36,7 @@ CUTS = [
     ("c02", [2], ["엄마"], False, False, CART, "the woman pouring batter into the hot fish-shaped bread mold with a calm tired face, steam rising", "붕어빵을 굽는 미숙 씨"),
     ("c03", [3], ["엄마"], False, False, HOME + ", shown as a memory with a soft blue tint", "the woman sitting alone on the floor of the tiny room holding a small framed photo of her late husband to her chest, quiet tears", "남편을 잃은 엄마"),
     ("c04", [4], ["엄마"], False, False, CART, "the woman pushing an old wooden street cart with both hands toward the school gate at dawn, determined face", "남편이 남긴 손수레"),
-    ("c05", [5, 6], ["준호", "엄마"], False, False, CART, "the little boy with a red backpack hugging his mother and burying his face in her apron, she gently slips a warm fish-shaped bread into his jacket pocket with a soft smile", "엄마 앞치마에 얼굴을 묻은 준호"),
+    ("c05", [5, 6], ["준호", "엄마"], False, False, CART, "the little boy (only he wears the red backpack; his mother wears no backpack) hugging his mother around the waist and burying his face in her apron; she strokes his head with one hand and holds a small warm fish-shaped pastry in the other, soft smile", "엄마 앞치마에 얼굴을 묻은 준호"),
     ("c06", [7, 8], ["회장", "엄마"], False, False, CART, "the tall woman in a cream white coat standing in front of the cart with her arms folded, frowning down with contempt; the cart woman behind the cart lowers her head", "기름 냄새가 나잖아요"),
     ("c07", [9, 10], ["회장"], False, True, "in front of a Korean elementary school gate in winter", "the woman in a cream white coat glancing back at a group of other mothers in winter coats and smirking behind her hand", "다른 엄마들을 돌아보며"),
     ("c08", [11, 12], ["준호", "엄마"], False, False, CART + ", afternoon", "the little boy crying with tears, holding up his red backpack with childish fish doodles drawn on it in marker; his mother kneels to hug him", "놀림받은 준호"),
