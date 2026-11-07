@@ -28,7 +28,7 @@ LOOK = {
     "현_맨머리": "a 20-year-old slim Korean young man, young clean-shaven face, calm intelligent eyes, full thick black hair combed back from a normal hairline and tied in a small topknot and a thin black headband, a plain white undergarment jeogori",
     "어머니": "a 45-year-old thin Korean woman, gentle tired face, black hair in a low bun with a plain wooden hairpin, a faded beige jeogori jacket and a dark navy chima skirt",
     "판서": "a 56-year-old heavy-set Korean high minister with a round belly, gray mustache and short gray beard, narrow greedy eyes, a dark crimson official robe with one square crane badge on the chest, " + SAMO,
-    "임금": "a 40-year-old Korean king, tall, calm dignified face, neat short black beard, a bright red royal robe with golden round dragon badges on the chest and shoulders, the same black ikseongwan cap with the same shape as in the reference image, jade belt",
+    "임금": "a 40-year-old Korean king, tall, calm dignified face, neat short black beard, a bright red royal robe with golden round dragon badges on the chest and shoulders, the same black ikseongwan cap with the same shape as in the reference image: a rounded black cap with two rounded lobes rising straight upward at the back of its top, the sides of the cap close and smooth, jade belt",
     "도현": "a 54-year-old Korean scientist, short neat gray-black hair, thin rimless glasses, kind tired eyes, a white lab coat over a light blue shirt",
     "수령": "a 35-year-old thin Korean magistrate with a thin black mustache and sly narrow eyes, a dark blue official robe with a square badge on the chest, " + SAMO,
     "민호": "a 22-year-old plump Korean young noble with a soft face, small arrogant eyes and a thin black mustache, a fine black gat hat with a long string of amber beads under the chin, a shiny light jade-green silk dopo robe with a fine gold pattern, a red silk cord belt",
@@ -52,7 +52,7 @@ FENCE = "a dirt road outside a Joseon village blocked by a rough wooden barricad
 STORE = "a large wooden storehouse behind a Joseon county government office, heavy wooden doors"
 MANSION = "a grand Joseon tiled-roof mansion room in Hanyang at night, a low lacquered table, folding screen, candlelight"
 EXAM = "a wide stone-paved courtyard in front of a Joseon royal palace gate on exam day, hundreds of scholars in white dopo robes and black gat hats sitting in rows on straw mats with low writing boards, a tall wooden frame at the front"
-PALACE = "a Joseon king's private study room in the palace at night, red-lacquered pillars, a low lacquered desk with paper rolls, candlelight, folding screen with painted peonies"
+PALACE = "a Joseon king's private study room in the palace at night, red-lacquered pillars, a low lacquered desk with paper rolls, one ink brush and a black inkstone, candlelight, folding screen with painted peonies"
 GATE = "the big wooden gate of a Joseon royal palace with a tiled roof"
 HANYANG = "a street of Hanyang, the Joseon capital, with tiled-roof houses"
 SCHOLARS = "Other people are Joseon scholars in plain white or light gray dopo robes and black gat hats, who look clearly different from the main characters. "
