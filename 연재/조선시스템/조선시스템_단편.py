@@ -36,7 +36,7 @@ LOOK = {
 REF = {
     "현": "_앞_현_모자.png", "현_맨머리": "_앞_현.png", "어머니": "_앞_어머니.png", "판서": "_앞_판서_모자.png",
     "임금": "_앞_임금_모자.png", "도현": "_앞_도현.png",
-    "수령": os.path.join(CAPS, "사모_앞.png"), "관찰사": os.path.join(CAPS, "사모_앞.png"),
+    "수령": "_앞_수령_모자.png", "관찰사": "_앞_관찰사_모자.png",
 }
 CAPPED = {"현", "판서", "임금", "수령", "관찰사"}
 
@@ -65,7 +65,7 @@ CUTS = {1: [
     ("c09", [9], ["현"], VILLAGERS, YARD, "worried villagers standing outside the brushwood gate shaking their heads and covering their mouths; the young man standing in the yard facing them", "괴질이었습니다"),
     ("c10", [10], ["현"], "", YARD + ", with a faint translucent ghost image of a modern laboratory in the sky behind him like a memory", "the young man standing in thought with a sharp determined look, remembering", "콜레라와 똑같은 병"),
     ("c11", [11], ["현"], "", YARD, "the young man boiling well water in a big black iron pot over a wood fire, adding a handful of salt from a small bowl, a small clay honey jar beside him, steam rising", "끓인 물에 소금과 꿀"),
-    ("c12", [12, 13], ["현_맨머리", "어머니"], "", ROOM + ", night, a small oil lamp dish glowing", "only two people: the sick mother lying on her back on the mat under a thin quilt with her eyes closed, and the young man kneeling beside her alone, gently giving her water from a wooden spoon, keeping watch through the night; nobody else is in the room", "밤새 어머니 곁을"),
+    ("c12", [12, 13], ["현_맨머리", "어머니"], "", ROOM + ", night, a small oil lamp dish glowing", "only two people: the sick mother (reference image 2) lying on her back on the mat under a thin quilt with her eyes closed, and the young man (reference image 1) dressed all in white kneeling beside her alone, gently giving her water from a wooden spoon, keeping watch through the night; nobody else is in the room", "밤새 어머니 곁을"),
     ("c13", [14, 15], ["어머니", "현_맨머리"], "", ROOM + ", soft morning light", "the mother sitting up weakly and eating porridge from a small bowl, the young man smiling with relief beside her; behind him softly glows " + PANEL, "어머니가 죽을 받아 넘기다"),
     ("c14", [16], [], "", VILLAGE + ", wide view from a small hill", "a quiet village where a strange reddish mist rises like smoke above three of the stone wells, an eerie mood", "우물 위의 붉은 안개"),
     ("c15", [17], ["현"], "", VILLAGE, "the young man standing on a dirt path looking at the village with determination, " + PANEL + " glowing beside him", "마을을 살리십시오"),
@@ -76,7 +76,7 @@ CUTS = {1: [
     ("c20", [23], [], CLERKS, FENCE, "clerks putting up a rough wooden barricade fence across the road, while an ox cart loaded with plain brown wooden medicine chests and straw-wrapped bundles turns away from the village. No main characters", "막힌 길, 돌아가는 약재 수레"),
     ("c21", [24, 25], ["수령", "현"], "", FENCE, "the young scholar stepping in front of the magistrate's brown horse with his arms spread, blocking its way; the magistrate on the horse smirking", "수령의 말 앞을 막아서다"),
     ("c22", [26, 27], ["현", "수령"], "", FENCE, "the young scholar standing and pleading earnestly; the magistrate looking down at him from the horse with a mocking sneer", "말 위에서 비웃는 수령"),
-    ("c23", [28, 29], ["현"], CLERKS, FENCE, "a clerk shoving the young scholar so that he falls onto the dirt road, dust flying, his gat hat still on his head", "흙바닥에 넘어진 이현"),
+    ("c23", [28, 29], ["현"], CLERKS, FENCE, "the young scholar has just been pushed down and is sitting fallen on the dirt road, propped on one hand, dust flying, his gat hat still on his head; a clerk in black-gray hanbok stands over him with his hand still pushed out. The young scholar appears only once, only on the ground", "흙바닥에 넘어진 이현"),
     ("c24", [30], ["현"], "", FENCE, "the young scholar half-lying on the dirt road propped on one arm, looking up at " + PANEL + " showing a faint picture of a locked wooden storehouse", "숨겨진 사실이 보입니다"),
     ("c25", [31], ["현"], VILLAGERS, VILLAGE + ", night", "the young scholar and a few villagers hanging big black iron pots over wood fires beside a stone well at night, flames and steam", "우물마다 솥을 걸다"),
     ("c26", [32], ["현"], VILLAGERS, VILLAGE + ", daytime", "a recovered little village boy standing up smiling and an old man getting up, villagers gathering around the steaming pots, the young scholar ladling boiled water into bowls", "하나둘 솥 앞에 모여들다"),

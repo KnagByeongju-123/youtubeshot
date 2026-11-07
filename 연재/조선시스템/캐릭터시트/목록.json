@@ -47,6 +47,28 @@
    "seed": 25,
    "look": "A 54-year-old Korean man in the year 2045, an infectious disease research scientist: medium build, short neat gray-black hair, thin rimless glasses, kind tired eyes, a white lab coat over a light blue shirt and dark trousers, black shoes",
    "look_ko": "2045년 54살 감염병 연구자 도현, 흰 가운, 무테안경"
+  },
+  {
+   "name": "수령",
+   "kind": "person",
+   "seed": 41,
+   "refs": [
+    "등장인물/조선/_기준/3면_문관.png"
+   ],
+   "color": "dark navy blue",
+   "look": "A 35-year-old Korean county magistrate of the Joseon dynasty: thin body, a thin black mustache, sly narrow eyes, a dark navy blue official robe with ONE square embroidered badge on the chest and ONE on the back, black belt, black samo official hat with two thin flat wings sticking out to the left and right, black boots, the same hat and robe in all three views",
+   "look_ko": "35살 박 수령, 마른 몸·콧수염, 남색 관복·사모"
+  },
+  {
+   "name": "관찰사",
+   "kind": "person",
+   "seed": 42,
+   "refs": [
+    "등장인물/조선/_기준/3면_문관.png"
+   ],
+   "color": "dark green",
+   "look": "A 60-year-old Korean provincial governor of the Joseon dynasty: dignified, a long white beard and white eyebrows, stern wise eyes, a dark green official robe with ONE square embroidered badge on the chest and ONE on the back, black belt, black samo official hat with two thin flat wings sticking out to the left and right, black boots, the same hat and robe in all three views",
+   "look_ko": "60살 관찰사, 흰 수염, 녹색 관복·사모"
   }
  ]
 }
