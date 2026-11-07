@@ -110,7 +110,7 @@ CUTS = {1: [
     ("c33", [39], [], SOLDIERS, STORE + ", evening torchlight", "the heavy storehouse doors thrown open by soldiers, revealing many old wooden carts piled high with plain brown wooden medicine chests with iron locks and straw-wrapped bundles inside, lit by burning torches held by the soldiers. No main characters", "창고 안의 약재 수레 서른 대"),
     ("c34", [40, 41], ["수령", "관찰사"], "", STORE + ", evening torchlight", "the thin magistrate kneeling with a pale terrified face; the governor standing over him holding out his hand sternly to take the magistrate's seal", "수령의 관인을 거두다"),
     ("c35", [42], ["어머니"], VILLAGERS, ENTRY + ", sunset", "villagers joyfully pulling down the wooden barricade; in the foreground the mother standing at a brushwood gate wiping tears with her sleeve, smiling", "울타리를 걷어 내는 마을 사람들"),
-    ("c36", [43, 44], ["현_맨머리"], "", ROOM + ", night", "the young man sitting at a low wooden table with an open thread-bound book, looking up at " + PANEL + " with one glowing red line at its bottom", "세 번째 임무, 장원 급제"),
+    ("c36", [43, 44], ["현_맨머리"], "", ROOM + ", night", "the young man sitting at a low wooden table with a few loose sheets of rough paper, an ink brush and a black inkstone on it, looking up at " + PANEL + " with one glowing red line at its bottom", "세 번째 임무, 장원 급제"),
     ("c37", [45], ["판서"], "", MANSION, "the heavy-set minister sitting on a floor cushion at the low lacquered table, slowly putting down a white porcelain teacup, listening to news with a cold face", "한양의 김 판서"),
     ("c38", [46, 47], ["판서"], "", MANSION, "close view of the heavy-set minister's face narrowing his eyes with a cold dangerous look, candlelight flickering", "김 판서의 눈이 가늘어지다"),
 ],
