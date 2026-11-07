@@ -69,7 +69,7 @@ MARKET = "a busy Hanyang market street with tiled-roof shops, straw mats of good
 PHYS = "Other people are old Joseon royal physicians in dark olive green official robes and black samo caps, who look clearly different from the main characters. "
 CHILDREN = "Other people are seven thin Joseon village children in plain beige and white hanbok. "
 PANEL = "a glowing translucent blue rectangular window of light floating in the air, filled only with soft light and thin abstract lines, completely blank with no letters, no numbers, no symbols"
-VILLAGERS = "Other people are poor Joseon commoners in plain white and beige hanbok, men with small topknots and headbands, women with hair in buns, who look clearly different from the main characters. None of the villagers wear a gat hat: only the young scholar wears the tall black gat. "
+VILLAGERS = "Other people are poor Joseon commoners in plain white and beige hanbok, men with small topknots and headbands, women with hair in buns, who look clearly different from the main characters. None of the villagers wear any hat: every villager is bareheaded with a small topknot and a thin headband or a bun; only the young scholar wears the tall black gat. "
 SOLDIERS = "Other people are Joseon foot soldiers who all wear exactly the uniform of the soldier in the LAST reference image: black felt jeonrip hat with a wide round brim and a red tassel, sleeveless dark navy jeonbok vest over red sleeves, red sash, white baggy trousers, black cloth boots, holding long wooden spears. "
 CLERKS = SOLDIERS   # 수령이 거느린 사람들도 조선 군졸 차림 (검은 둥근 모자가 서양 모자처럼 나와서, 2026-11-07)
 
