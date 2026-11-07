@@ -1,0 +1,61 @@
+{
+ "items": [
+  {
+   "id": "현",
+   "prompt": "Character turnaround sheet of ONE original character in the same clean Japanese anime / Korean webtoon style as the reference image (realistic human proportions, crisp black outlines, soft cel shading, natural colors). Exactly four full-body views of the same person standing side by side from left to right: front view, left side view, right side view, back view. Head to shoes fully visible, same outfit and hairstyle in every view, plain pure white background, no text, no labels, no props on the floor, evenly spaced. A 20-year-old Korean young man from the Joseon dynasty, a poor fallen-noble scholar: slim, black hair tied in a topknot (sangtu) with a black horsehair band (manggeon) on the forehead, calm intelligent eyes that look older than his age, a worn faded light gray-white hanbok dopo robe with patched sleeves tied with a thin dark blue cord, white baji trousers, straw sandals.",
+   "refs": [
+    "/home/user/youtubeshot/연재/막내개그/화풍샘플/사용자_캐릭터스타일_기준.png"
+   ],
+   "width": 1280,
+   "height": 576,
+   "seed": 181,
+   "steps": 4
+  },
+  {
+   "id": "도현",
+   "prompt": "Character turnaround sheet of ONE original character in the same clean Japanese anime / Korean webtoon style as the reference image (realistic human proportions, crisp black outlines, soft cel shading, natural colors). Exactly four full-body views of the same person standing side by side from left to right: front view, left side view, right side view, back view. Head to shoes fully visible, same outfit and hairstyle in every view, plain pure white background, no text, no labels, no props on the floor, evenly spaced. A 54-year-old Korean man in the year 2045, an infectious disease research scientist: medium build, short neat gray-black hair, thin rimless glasses, kind tired eyes, a white lab coat over a light blue shirt and dark trousers, black shoes, a small blank ID badge.",
+   "refs": [
+    "/home/user/youtubeshot/연재/막내개그/화풍샘플/사용자_캐릭터스타일_기준.png"
+   ],
+   "width": 1280,
+   "height": 576,
+   "seed": 182,
+   "steps": 4
+  },
+  {
+   "id": "어머니",
+   "prompt": "Character turnaround sheet of ONE original character in the same clean Japanese anime / Korean webtoon style as the reference image (realistic human proportions, crisp black outlines, soft cel shading, natural colors). Exactly four full-body views of the same person standing side by side from left to right: front view, left side view, right side view, back view. Head to shoes fully visible, same outfit and hairstyle in every view, plain pure white background, no text, no labels, no props on the floor, evenly spaced. A 45-year-old Korean woman from the Joseon dynasty, his poor mother: thin, black hair in a low bun (jjok) with a simple wooden binyeo hairpin, gentle tired face, a faded beige jeogori jacket and a dark brown chima skirt, white beoseon socks, straw shoes.",
+   "refs": [
+    "/home/user/youtubeshot/연재/막내개그/화풍샘플/사용자_캐릭터스타일_기준.png"
+   ],
+   "width": 1280,
+   "height": 576,
+   "seed": 183,
+   "steps": 4
+  },
+  {
+   "id": "판서",
+   "prompt": "Character turnaround sheet of ONE original character in the same clean Japanese anime / Korean webtoon style as the reference image (realistic human proportions, crisp black outlines, soft cel shading, natural colors). Exactly four full-body views of the same person standing side by side from left to right: front view, left side view, right side view, back view. Head to shoes fully visible, same outfit and hairstyle in every view, plain pure white background, no text, no labels, no props on the floor, evenly spaced. A 56-year-old Korean man from the Joseon dynasty, an arrogant corrupt high minister (panseo): heavy-set, a gray mustache and short beard, narrow greedy eyes, a crimson red official robe (danryeongpo) with a square embroidered crane badge on the chest, a black official hat (samo) with two side wings, black leather boots, a jade belt.",
+   "refs": [
+    "/home/user/youtubeshot/연재/막내개그/화풍샘플/사용자_캐릭터스타일_기준.png"
+   ],
+   "width": 1280,
+   "height": 576,
+   "seed": 184,
+   "steps": 4
+  },
+  {
+   "id": "임금",
+   "prompt": "Character turnaround sheet of ONE original character in the same clean Japanese anime / Korean webtoon style as the reference image (realistic human proportions, crisp black outlines, soft cel shading, natural colors). Exactly four full-body views of the same person standing side by side from left to right: front view, left side view, right side view, back view. Head to shoes fully visible, same outfit and hairstyle in every view, plain pure white background, no text, no labels, no props on the floor, evenly spaced. A 40-year-old Korean king from the Joseon dynasty: tall, calm dignified face, a neat short black beard, a deep red royal robe (gonryongpo) with golden round dragon badges on the chest and shoulders, a black royal hat (ikseongwan), a jade belt, black boots.",
+   "refs": [
+    "/home/user/youtubeshot/연재/막내개그/화풍샘플/사용자_캐릭터스타일_기준.png"
+   ],
+   "width": 1280,
+   "height": 576,
+   "seed": 185,
+   "steps": 4
+  }
+ ],
+ "ref_max_area": 230000,
+ "crop_border": false
+}

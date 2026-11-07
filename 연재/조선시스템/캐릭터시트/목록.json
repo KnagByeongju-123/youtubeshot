@@ -1,0 +1,17 @@
+{"chars": [
+ {"name": "현", "kind": "person", "seed": 21, "refs": ["등장인물/조선/_기준/3면_사대부.png"], "color": "faded worn light gray-white with small patches",
+  "look": "A 20-year-old Korean young man of the Joseon dynasty, a poor fallen-noble scholar: slim, young clean-shaven face with no beard and no mustache, calm intelligent eyes, black hair in a topknot under a black gat hat, a worn faded light gray-white dopo robe with small patches on the sleeves, thin dark cord belt, white socks and straw sandals",
+  "look_ko": "20살 몰락 양반 선비 현, 수염 없음, 갓, 해지고 기운 옅은 회백색 도포"},
+ {"name": "어머니", "kind": "person", "seed": 22, "refs": ["등장인물/조선/_기준/3면_아낙네.png"],
+  "look": "A 45-year-old Korean woman of the Joseon dynasty, his poor mother: thin, gentle tired face, black hair in a low bun with a plain wooden hairpin, a faded beige jeogori jacket and a dark navy chima skirt, no hat",
+  "look_ko": "45살 어머니, 쪽머리, 빛바랜 베이지 저고리·남색 치마"},
+ {"name": "판서", "kind": "person", "seed": 23, "refs": ["등장인물/조선/_기준/3면_문관.png"],
+  "look": "A 56-year-old Korean man of the Joseon dynasty, an arrogant corrupt high minister: heavy-set with a round belly, a gray mustache and short gray beard, narrow greedy eyes, a crimson red official robe with a square embroidered badge on the chest, black samo official hat, black boots",
+  "look_ko": "56살 탐욕스러운 판서, 뚱뚱함, 회색 수염, 붉은 관복·흉배·사모"},
+ {"name": "임금", "kind": "person", "seed": 24, "refs": ["등장인물/조선/_기준/3면_왕.png"],
+  "look": "A 40-year-old Korean king of the Joseon dynasty: tall, calm dignified face, neat short black beard, a bright red royal robe with golden round dragon badges on the chest and shoulders, the king's black ikseongwan cap, jade belt, black boots",
+  "look_ko": "40살 임금, 단정한 검은 수염, 붉은 곤룡포·금색 용 보·익선관"},
+ {"name": "도현", "kind": "person", "seed": 25,
+  "look": "A 54-year-old Korean man in the year 2045, an infectious disease research scientist: medium build, short neat gray-black hair, thin rimless glasses, kind tired eyes, a white lab coat over a light blue shirt and dark trousers, black shoes",
+  "look_ko": "2045년 54살 감염병 연구자 도현, 흰 가운, 무테안경"}
+]}
