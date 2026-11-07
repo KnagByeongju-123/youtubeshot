@@ -49,7 +49,7 @@ FENCE = "a dirt road outside a Joseon village blocked by a rough wooden barricad
 STORE = "a large wooden storehouse behind a Joseon county government office, heavy wooden doors"
 MANSION = "a grand Joseon tiled-roof mansion room in Hanyang at night, a low lacquered table, folding screen, candlelight"
 PANEL = "a glowing translucent blue rectangular window of light floating in the air, filled only with soft light and thin abstract lines, completely blank with no letters, no numbers, no symbols"
-VILLAGERS = "Other people are poor Joseon commoners in plain white and beige hanbok, men with small topknots and headbands, women with hair in buns, who look clearly different from the main characters. "
+VILLAGERS = "Other people are poor Joseon commoners in plain white and beige hanbok, men with small topknots and headbands, women with hair in buns, who look clearly different from the main characters. None of the villagers wear a gat hat: only the young scholar wears the tall black gat. "
 CLERKS = "Other people are county clerks in plain black-gray hanbok with small black hats, who look clearly different from the main characters. "
 
 # 부마다 (컷, 문단 번호들, 나오는 인물, 다른 사람 문장(없으면 ""), 장소, 장면(영어), 화면 설명)
@@ -61,7 +61,7 @@ CUTS = {1: [
     ("c05", [5], ["현_맨머리"], "", ROOM, "close view: the young man's astonished face lit by blue light from " + PANEL + " floating in front of him", "시스템이 시작됩니다"),
     ("c06", [6], ["현_맨머리"], "", ROOM, "the young man gazing at " + PANEL + " with one thin glowing red line of light at its bottom edge, his face serious", "첫 번째 임무, 어머니를 살리십시오"),
     ("c07", [7], ["어머니", "현_맨머리"], "", ROOM, "the thin mother lying on a mat in the corner of the room with a fever, coughing, sweat on her forehead; the young man turning toward her in alarm", "열에 들뜬 어머니"),
-    ("c08", [8], ["현_맨머리"], "", ROOM + ", shown as a faded memory with a soft sepia tint", "the young man sitting alone in the bare poor room beside a small pile of a few old thread-bound books, the room nearly empty, a lonely quiet mood", "삼대째 벼슬을 못 한 집안"),
+    ("c08", [8], ["현_맨머리"], "", ROOM + ", shown as a faded memory with a soft sepia tint", "the young man sitting alone in the bare poor room beside two thin old Korean books with soft yellowed paper covers and stitched thread binding lying flat on the floor (not hardcover books), the room nearly empty, a lonely quiet mood", "삼대째 벼슬을 못 한 집안"),
     ("c09", [9], ["현"], VILLAGERS, YARD, "worried villagers standing outside the brushwood gate shaking their heads and covering their mouths; the young man standing in the yard facing them", "괴질이었습니다"),
     ("c10", [10], ["현"], "", YARD + ", with a faint translucent ghost image of a modern laboratory in the sky behind him like a memory", "the young man standing in thought with a sharp determined look, remembering", "콜레라와 똑같은 병"),
     ("c11", [11], ["현"], "", YARD, "the young man boiling well water in a big black iron pot over a wood fire, adding a handful of salt from a small bowl, a small clay honey jar beside him, steam rising", "끓인 물에 소금과 꿀"),
