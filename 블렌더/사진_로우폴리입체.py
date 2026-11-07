@@ -6,7 +6,10 @@
   - 그림을 가로 grid 칸짜리 삼각형 그물로 나누고, 꼭짓점을 깊이만큼 앞으로 밀어 올림 → 삼각형마다 그 자리 그림 색 한 가지 (각진 로우폴리)
   - 앞으로 튀어나온 사람과 뒤 배경 사이에 늘어난 삼각형은 깊이 차가 크면 지움(구멍 대신 뒤쪽 배경판이 보임)
   - 카메라: 정면에서 시작해 좌우로 천천히 흔들며(±18도) 조금 다가감
-  - 결과: <폴더>/frame_####.png, --still 이면 정면·왼쪽·오른쪽 세 장"""
+  - --smooth : 삼각형 없이 사진을 그대로 입힌 부드러운 입체 (장문 다큐 실제 사진용), --zoom 0.86 : 카메라 거리
+  - 결과: <폴더>/frame_####.png, --still 이면 정면·왼쪽·오른쪽 세 장
+  - 마무리(사용자 제안 2026-11-07): 렌더 뒤 가운데 기준으로 114%→120% 천천히 확대 → 가장자리 빈 곳이 안 보이고 다가가는 움직임이 더해짐
+    ffmpeg -i in.mp4 -vf "scale=-2:720,zoompan=z='1.14+0.06*on/<장수>':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=1:s=1280x720:fps=24" out.mp4"""
 import math
 import os
 import sys
@@ -22,6 +25,8 @@ DEPTH = float(opt("--depth", 3.2))
 FRAMES = int(opt("--frames", 240))
 W, H = [int(v) for v in opt("--size", "1280x720").split("x")]
 STILL = "--still" in argv
+ZOOM = float(opt("--zoom", 1.0))          # 카메라 거리 배율 (작을수록 가까이 → 가장자리 빈 곳 안 보임)
+SMOOTH = "--smooth" in argv               # 삼각형 대신 사진을 그대로 입힌 부드러운 입체 (다큐용)
 os.makedirs(OUT, exist_ok=True)
 
 bpy.ops.wm.read_factory_settings(use_empty=True)
@@ -87,6 +92,20 @@ attr = me.color_attributes.new("색", "FLOAT_COLOR", "CORNER")
 for p, col in zip(me.polygons, cols):
     for li in p.loop_indices:
         attr.data[li].color = (col[0], col[1], col[2], 1.0)
+if SMOOTH:
+    uv = me.uv_layers.new(name="UV")
+    for p in me.polygons:
+        for li in p.loop_indices:
+            vx = verts[me.loops[li].vertex_index]
+            uv.data[li].uv = (vx[0] / PW + 0.5, vx[2] / PH + 0.5)
+    for p in me.polygons:
+        p.use_smooth = True
+    sm_ = bpy.data.materials.new("사진")
+    sm_.use_nodes = True
+    tx = sm_.node_tree.nodes.new("ShaderNodeTexImage")
+    tx.image = img
+    sm_.node_tree.links.new(tx.outputs["Color"], sm_.node_tree.nodes["Principled BSDF"].inputs["Base Color"])
+    me.materials.append(sm_)
 ob = bpy.data.objects.new("입체", me)
 scn.collection.objects.link(ob)
 
@@ -111,7 +130,7 @@ tc = cam.constraints.new("TRACK_TO")
 tc.target = tgt
 tc.track_axis = "TRACK_NEGATIVE_Z"
 tc.up_axis = "UP_Y"
-R0 = PW * 1.06
+R0 = PW * 1.06 * ZOOM
 
 
 def cam_at(t):        # t 0~1
@@ -125,7 +144,7 @@ scn.render.engine = "BLENDER_WORKBENCH"
 scn.view_settings.view_transform = "Standard"
 sh = scn.display.shading
 sh.light = "FLAT"
-sh.color_type = "VERTEX"
+sh.color_type = "TEXTURE" if SMOOTH else "VERTEX"
 sh.show_object_outline = False
 sh.background_type = "VIEWPORT"
 sh.background_color = (0.95, 0.93, 0.88)
