@@ -108,6 +108,17 @@
    "seed": 67,
    "look": "A 10-year-old poor Korean village boy of the Joseon dynasty: thin, round innocent face, bare head with black hair parted in the middle and combed back into one long single braid hanging down his back, tied at the end with a red ribbon (daenggi), a plain worn beige hanbok jeogori jacket tied with a cloth string and baggy beige hanbok trousers tied at the ankles, straw sandals, the same in all three views",
    "look_ko": "10살 마을 아이, 댕기머리 땋은 머리, 베이지 저고리·바지, 짚신"
+  },
+  {
+   "name": "의원",
+   "kind": "person",
+   "seed": 71,
+   "refs": [
+    "등장인물/조선/_기준/3면_문관.png"
+   ],
+   "color": "dark olive green",
+   "look": "A 65-year-old Korean royal court physician of the Joseon dynasty: thin, a long white beard and white eyebrows, proud stubborn face, a dark olive green official robe with ONE square embroidered crane badge on the chest, black belt, black brimless two-tiered samo official cap (exactly like the reference sheet) with two small thin flat oval wings sticking out to the left and right at the back, black boots, the same cap and robe in all three views",
+   "look_ko": "65살 내의원 늙은 의원, 흰 수염, 짙은 올리브 녹색 관복·사모"
   }
  ]
 }

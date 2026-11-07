@@ -34,15 +34,16 @@ LOOK = {
     "민호": "a 22-year-old plump Korean young noble with a soft face, small arrogant eyes and a thin black mustache, a fine black gat hat with a long string of amber beads under the chin, a shiny light jade-green silk dopo robe with a fine gold pattern, a red silk cord belt",
     "시험관": "a 50-year-old thin nervous Korean exam official with a thin gray beard, a dark teal blue official robe with a square crane badge, " + SAMO,
     "아이": "a 10-year-old thin poor Korean village boy with full thick black hair on his whole head, parted in the middle and combed back into one long braid down his back tied with a red ribbon, a worn beige jeogori and baggy beige trousers, straw sandals",
+    "의원": "a 65-year-old thin Korean royal court physician with a long white beard and white eyebrows, a proud stubborn face, a dark olive green official robe with a square crane badge, " + SAMO,
     "관찰사": "a 60-year-old dignified Korean governor with a long white beard and stern wise eyes, a dark green official robe, " + SAMO,
 }
 # 임금은 앞모습만: 모자 띠(옆·뒤)를 얹으면 익선관 뒤 봉우리를 옆 날개로 그림 (2026-11-07)
 REF = {
     "현": "_앞_현_모자.png", "현_맨머리": "_앞_현.png", "어머니": "_앞_어머니.png", "판서": "_앞_판서_모자.png",
     "임금": "_앞_임금.png", "도현": "_앞_도현.png",
-    "수령": "_앞_수령_모자.png", "민호": "_앞_민호_모자.png", "시험관": "_앞_시험관_모자.png", "아이": "_앞_아이.png", "관찰사": "_앞_관찰사_모자.png",
+    "수령": "_앞_수령_모자.png", "민호": "_앞_민호_모자.png", "시험관": "_앞_시험관_모자.png", "아이": "_앞_아이.png", "의원": "_앞_의원_모자.png", "관찰사": "_앞_관찰사_모자.png",
 }
-CAPPED = {"현", "판서", "임금", "수령", "관찰사", "민호", "시험관"}
+CAPPED = {"현", "판서", "임금", "수령", "관찰사", "민호", "시험관", "의원"}
 
 LAB = "a modern infectious disease research laboratory in Seoul in the year 2045 at night, glass test tubes, a microscope, cold white lights"
 ROOM = "inside a small poor thatched-roof Joseon house room, paper lattice door, worn straw mat floor, a thin old quilt; light comes only from a small open clay oil dish with one burning wick"
@@ -58,6 +59,15 @@ GATE = "the big wooden gate of a Joseon royal palace with a tiled roof"
 HANYANG = "a street of Hanyang, the Joseon capital, with tiled-roof houses"
 SCHOLARS = "Other people are Joseon scholars in plain white or light gray dopo robes and black gat hats, who look clearly different from the main characters. "
 COURT = "Other people are Joseon court officials in red and blue official robes and black samo caps, and palace servants. "
+NAEUI = "the Joseon royal pharmacy hall inside the palace with walls of many small wooden herb drawers, dried herbs hanging from beams, low tables with bronze herb grinders"
+THRONE = "a Joseon palace throne hall with red pillars and a painted folding screen of sun, moon and five peaks behind a raised wooden dais"
+COURTYARD = "the stone-paved courtyard in front of a Joseon palace hall, red pillars and a tiled roof"
+PRISON = "a dark Joseon prison cell with thick wooden bars and straw on the dirt floor, a little moonlight through a small window"
+QUAR = "a big quarantine house made in an empty wooden storehouse outside the capital walls, rows of straw mats with sick people lying under thin quilts, steaming pots"
+SEA = "a misty gray seashore with a small old wooden boat and a far lonely island"
+MARKET = "a busy Hanyang market street with tiled-roof shops, straw mats of goods and wooden stalls"
+PHYS = "Other people are old Joseon royal physicians in dark olive green official robes and black samo caps, who look clearly different from the main characters. "
+CHILDREN = "Other people are seven thin Joseon village children in plain beige and white hanbok. "
 PANEL = "a glowing translucent blue rectangular window of light floating in the air, filled only with soft light and thin abstract lines, completely blank with no letters, no numbers, no symbols"
 VILLAGERS = "Other people are poor Joseon commoners in plain white and beige hanbok, men with small topknots and headbands, women with hair in buns, who look clearly different from the main characters. None of the villagers wear a gat hat: only the young scholar wears the tall black gat. "
 SOLDIERS = "Other people are Joseon foot soldiers who all wear exactly the uniform of the soldier in the LAST reference image: black felt jeonrip hat with a wide round brim and a red tassel, sleeveless dark navy jeonbok vest over red sleeves, red sash, white baggy trousers, black cloth boots, holding long wooden spears. "
@@ -147,6 +157,46 @@ CUTS = {1: [
     ("c40", [48], ["판서"], COURT, "a Joseon palace hall with red pillars", "the heavy-set minister standing calmly among court officials with a slight cold smile, hands folded in his sleeves", "벌을 피한 김 판서"),
     ("c41", [49, 50], ["판서"], "", MANSION + ", alone", "the heavy-set minister sitting alone in the dark room by one candle, smiling slyly with narrow eyes", "내 손바닥 안이다"),
     ("c42", [51], ["현_맨머리"], "", ROOM + ", night", "the young man startled, looking at " + PANEL + " flashing with a glowing red warning light at its edges", "위험, 궁궐 안에 적이 있습니다"),
+],
+3: [
+    ("c01", [1], ["현"], COURT, GATE + ", gloomy day", "the young scholar, now the top exam passer, walking in through the big palace gate with a serious face, court officials watching him", "궁궐에 들어선 장원"),
+    ("c02", [2], ["임금"], "", THRONE, "the king seated on the raised dais, holding out his hand with a firm trusting face as if giving an order", "내의원을 맡기다"),
+    ("c03", [3], ["의원"], PHYS, NAEUI, "the old royal physician with a long white beard sneering with his arms folded, other old physicians behind him whispering coldly", "의술은 글로 배우는 것이 아니다"),
+    ("c04", [4], ["현"], PHYS, NAEUI, "the young scholar standing alone in the middle of the pharmacy hall while old physicians turn their backs on him; in the doorway far behind stands the dark shadow of a heavy-set man", "대놓고 무시한 늙은 의원들"),
+    ("c05", [5], ["현"], "", NAEUI + ", evening", "the young scholar looking up at " + PANEL + " with one glowing red line at its bottom", "네 번째 임무, 한양을 구하십시오"),
+    ("c06", [6], ["현"], "", NAEUI + ", night", "the young scholar kneeling over a big hand-drawn map of the capital spread on the floor, three red mist marks glowing above three wells on the map", "우물 세 곳의 붉은 안개"),
+    ("c07", [7], ["현"], COURT, THRONE, "the young scholar kneeling on the floor of the throne hall and speaking firmly upward toward the throne, court officials lined up on both sides", "우물을 막아야 하옵니다"),
+    ("c08", [8, 9], ["판서"], COURT, THRONE, "the heavy-set minister stepping forward from the line of officials and bowing toward the throne while speaking with a scornful face", "젊은 장원의 헛된 말이옵니다"),
+    ("c09", [10], ["현"], "", NAEUI, "the young scholar showing a hand-drawn plan of a big quarantine house and a few lumps of homemade soap on a wooden board, explaining eagerly", "두 번째 혁신, 병막과 비누"),
+    ("c10", [11], [], "", NAEUI + ", close-up", "close-up of rough brown lumps of homemade lye soap on a wooden board, white foam bubbles on a wet hand-sized lump, a small clay bowl of water. No people", "처음 보는 물건, 비누"),
+    ("c11", [12], [], VILLAGERS, HANYANG + ", sunny day", "a capital street where wells are covered with wooden boards, big iron pots of water boil over fires on every corner, and people wash their hands with foaming soap in basins. No main characters", "막힌 우물, 거리마다 솥"),
+    ("c12", [13], ["현"], VILLAGERS, QUAR + ", daytime", "the young scholar walking between the straw mats smiling with relief as patients sit up and drink from bowls", "절반으로 줄다"),
+    ("c13", [14], [], CHILDREN, QUAR + ", night, dim lamplight", "seven thin children lying collapsed on straw mats in the quarantine house at night, women crying beside them, a scene of sudden alarm. No main characters", "쓰러진 아이 일곱 명"),
+    ("c14", [15, 16], ["판서"], COURT, THRONE + ", night, candlelight", "the heavy-set minister kneeling in the throne hall and pointing back angrily as he accuses, his face full of false anger", "약에 독이 들었사옵니다"),
+    ("c15", [17], ["현"], SOLDIERS, GATE + ", night", "the young scholar being dragged away by two soldiers through the palace gate at night, looking back calmly", "의금부로 끌려가다"),
+    ("c16", [17], ["어머니"], "", GATE + ", night, cold moonlight", "the thin mother kneeling and bowing down on the stone ground in front of the closed palace gate at night, crying and calling out", "궁궐 문 앞의 어머니"),
+    ("c17", [18], ["현_맨머리"], "", PRISON, "the young man sitting on the straw floor of the prison cell, looking up at " + PANEL + " glowing in the dark", "숨겨진 사실이 보입니다"),
+    ("c18", [19], [], "", "a storehouse, shown as a memory with a soft sepia tint", "close-up of a stack of wooden medicine chests, each branded with the same small round burnt mark of a plum flower. No people", "상자에 찍힌 표시"),
+    ("c19", [20], ["현_맨머리"], "", PRISON, "the young man in the dark cell surrounded by many glowing translucent blue pages of an account book floating in the air around him, too small to read", "기록을 되살립니다"),
+    ("c20", [21], ["판서"], "", "a dark storehouse at night, shown as a memory with a soft sepia tint", "the heavy-set minister secretly watching servants swap bags of fresh good herbs for bags of rotten black herbs in wooden chests by lamplight", "빼돌린 좋은 약재"),
+    ("c21", [22], ["현"], SOLDIERS, COURTYARD, "the young scholar kneeling in the middle of the stone courtyard for the final trial, raising his head with calm determined eyes, soldiers standing around", "마지막 심문"),
+    ("c22", [23], ["현"], "", COURTYARD, "close view: the young scholar kneeling and speaking firmly with a steady gaze", "직접 보시옵소서"),
+    ("c23", [24], ["임금"], "", THRONE, "the king standing on the dais and giving an order sternly with one hand raised", "창고와 장부를 가져오너라"),
+    ("c24", [24], ["판서"], COURT, THRONE, "close view of the heavy-set minister's face starting to tremble, sweat on his brow, eyes darting", "처음으로 흔들린 얼굴"),
+    ("c25", [25], [], SOLDIERS, COURTYARD, "soldiers opening many wooden medicine chests in the courtyard, every chest branded with the same small round plum flower mark, officials holding up thick account books. No main characters", "모두 같은 표시"),
+    ("c26", [26], [], "", COURTYARD + ", close-up", "close-up of the last page of an old thread-bound account book filled with tiny brush strokes too small to read, a big square red seal stamp impression at the bottom of the page. No people", "김 판서의 도장"),
+    ("c27", [27], ["판서"], "", COURTYARD, "the heavy-set minister kneeling on the stone ground, pale, raising both hands and pleading desperately", "이것은 모함이옵니다"),
+    ("c28", [28, 29], ["판서"], "", COURTYARD, "an old thread-bound account book thrown down landing open on the stone ground right in front of the kneeling heavy-set minister, who stares at it in horror", "발 앞에 던진 장부"),
+    ("c29", [30], ["판서"], SOLDIERS, SEA, "the heavy-set man, now in plain white clothes with no official cap, his black hair in a topknot, being led by soldiers onto a small wooden boat toward a far island, head hanging", "먼 섬으로 귀양"),
+    ("c30", [31], ["현"], CHILDREN, QUAR + ", morning light", "seven recovered children sitting up and smiling, the young scholar kneeling and giving them bowls of warm water, mothers crying with joy", "다시 일어난 아이들"),
+    ("c31", [32], [], VILLAGERS, MARKET + ", bright sunny day", "a lively market where merchants sell lumps of soap on straw mats, people carry pots of boiled water, children laughing. No main characters", "장원 비누"),
+    ("c32", [33, 34], ["의원", "현"], PHYS, NAEUI, "the old royal physicians with white beards bowing their heads respectfully to the young scholar", "우리가 배우겠소"),
+    ("c33", [35, 36], ["현"], "", NAEUI, "close view: the young scholar smiling warmly and gently shaking his head", "백성들이 함께 해낸 것"),
+    ("c34", [37, 38], ["임금"], "", PALACE, "the king sitting at the low desk at night, looking forward with a warm curious smile, as if asking a question", "다른 세상에서 온 사람 같구나"),
+    ("c35", [39, 40], ["현"], "", PALACE, "the young scholar kneeling in the candlelit room, answering quietly with a gentle, slightly sad smile", "사람을 살리는 일을 오래 해 온 사람"),
+    ("c36", [41], ["어머니", "현_맨머리"], CHILDREN, YARD + ", late spring, warm afternoon", "the mother and the young man sitting together on the wooden porch of the thatched house smiling; in the yard children blow soap bubbles and run; the well is covered with a new wooden lid", "고향 초가집 마당"),
+    ("c37", [42, 43], ["현_맨머리"], "", YARD + ", golden evening light", "the young man looking at " + PANEL + " glowing softly golden-white for the last time, a peaceful touched expression", "이제, 당신의 삶을 사십시오"),
+    ("c38", [44], [], "", YARD + ", golden evening light, close-up", "close-up of two hands only: a young man's hand gently holding an older woman's thin hand on a worn beige skirt, warm evening light. Only these two hands", "어머니의 손"),
 ]}
 
 
@@ -199,12 +249,13 @@ def main():
         pj = proj_of(part)
         p = json.load(open(pj, encoding="utf-8"))
         paras = paragraphs(p["story"])
-        first = {c[1][0]: c for c in cuts}
-        assert sorted(n for c in cuts for n in c[1]) == list(range(1, len(paras) + 1)), "문단 번호가 대본과 안 맞음"
+        first = {}
+        for c in cuts:      # 한 문단에 그림 여러 장이면 차례로 (그 문단 시간을 나눠 보여 줌)
+            first.setdefault(c[1][0], []).append(c)
+        assert sorted(set(n for c in cuts for n in c[1])) == list(range(1, len(paras) + 1)), "문단 번호가 대본과 안 맞음"
         out = []
         for i, para in enumerate(paras, 1):
-            if i in first:
-                c = first[i]
+            for c in first.get(i, []):
                 out.append(f"[사진: {os.path.join(folder, c[0] + '.png')} | {c[6]} | AI 생성 그림 (FLUX.2 klein) | ]")
             out.append(para)
         p["story"] = "\n\n".join(out)
