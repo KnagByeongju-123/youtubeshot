@@ -144,7 +144,7 @@ CUTS = {1: [
     ("c27", [32], ["현_맨머리"], "", ROOM + ", night, shown as a memory with a soft golden tint", "memory: the young man writing records late at night by the oil lamp, many pages stacked neatly beside him", "열흘 동안 해 본 기록"),
     ("c28", [33], ["임금"], "", PALACE, "the king holding the short paper with both hands, deeply moved, eyes shining in the candlelight", "백성이 살아 있게 하는 것"),
     ("c29", [34, 35], ["임금"], "", PALACE, "the king standing and looking down coldly at the floor; at the bottom edge of the picture only the trembling back and dark teal sleeves of a man lying face down are visible", "엎드린 시험관"),
-    ("c30", [36], ["시험관"], "", PALACE, "close view of the exam official lying prostrate on the floor, his face pale with fear, sweat on his forehead", "김 판서 대감께서"),
+    ("c30", [36], ["시험관"], "", PALACE, "close view of the exam official lying prostrate on the floor with both bare hands flat on the floor (no bracelet, no wristwatch), his face pale with fear, sweat on his forehead", "김 판서 대감께서"),
     ("c31", [37], ["임금"], "", PALACE, "the king with cold eyes dipping a brush and writing a name at the top of a sheet of paper", "장원 자리에 적은 이름"),
     ("c32", [38], ["임금"], COURT, GATE + ", night", "the king leaving the palace at night with retainers holding burning torches around him, walking quickly", "횃불을 든 신하들과 함께"),
     ("c33", [39], ["현", "아이"], VILLAGERS, ENTRY + ", night, a small fire", "the young scholar in his dirty sweaty patched robe kneeling and carefully giving salt water from a bowl to the sick village boy lying on a mat at the village entrance", "아이에게 소금물을 먹이다"),
