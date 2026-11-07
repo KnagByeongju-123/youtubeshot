@@ -55,7 +55,7 @@ DEFAULT = {
     "명상_프리셋": [],      # 비우면 아래 MEDITATION_PRESETS 를 돌아가며
     "재미_소재": [],        # 비우면 아래 FUN_GENRES 를 돌아가며
     "그림_스타일": "자동(돌아가며)",   # 이야기 편 그림 스타일: 자동 또는 프로그램의 그림 스타일 이름(웹툰, 지브리풍 손그림 애니, 70~80년대 순정만화 …) 또는 직접 쓴 영어 지시
-    "이미지": "근거 사진(웹)",   # 사실 주제 이미지: 근거 사진(웹) / 그림: 애니(웹툰) / 그림: 애니+수채화 / 그림: 파스텔 감성 / 그림: 애니 일러스트 / 그림: 애니 모델 그대로 (그림은 이 PC에서 그림)
+    "이미지": "그림: 세밀 반실사",   # 사실 주제 이미지 (사용자 결정 2026-11-07: 세밀한 반실사 그림이 기본, 시작할 때 고름): 그림: 세밀 반실사 / 근거 사진(웹) / 그림: 애니(웹툰) / 그림: 애니 일러스트 … (그림은 이 PC에서 그림)
     "역사_이미지": "그림: 역사 수묵 담채",   # 역사 채널(--역사) 이미지: 옛 인물·전투는 사진이 없어 이 PC에서 그림 (사용자 결정 2026-10-30: 샘플 4번째 그림의 수묵 담채). "근거 사진(웹)" 으로 바꾸면 웹 사진
     "그림_간격_초": 10,      # 그림(이미지가 '그림: …')일 때 간격. 대본 글자 수로 어림한 초라 실제 화면에서는 약 8초 (규칙: 그림 한 장 5~12초)
     "썸네일_선택": "프로그램",   # 유튜브 썸네일 최종본: 프로그램(AI가 고른 것 그대로) / 외부 자동(소재탐색 썸네일 중 점수로 고른 것) /
@@ -335,6 +335,37 @@ def ask_batch_plan(c):
     return True
 
 
+VOICE_CHOICES = [("F5S", "여성 표준말 (여성 성우 5+2 섞음, 기본)"), ("M1", "남성 (남자 성우 1)")]
+IMAGE_CHOICES = [("그림: 세밀 반실사", "세밀한 반실사 그림 (기본, 그리는 효과)"), ("근거 사진(웹)", "실제 사진 (웹 자료·출처 표시)")]
+
+
+def ask_start_choices(c):
+    """시작할 때 성우·이미지를 고름 (사용자 결정 2026-11-07). 명령에 --여성/--남성, --반실사/--사진 을 붙이면 묻지 않음.
+    창 없이 돌릴 때(입력을 받을 수 없을 때)는 설정 파일 값 그대로"""
+    def pick(title, choices):
+        cur_i = 0                                  # Enter = 첫 번째(기본: 여성 표준말 · 세밀 반실사)
+        print(f"\n{title}")
+        for i, (_, label) in enumerate(choices):
+            print(f"  {i + 1} = {label}" + ("   ← Enter" if i == cur_i else ""))
+        try:
+            a = input("번호 : ").strip()
+        except EOFError:
+            a = ""
+        return choices[int(a) - 1][0] if a.isdigit() and 1 <= int(a) <= len(choices) else choices[cur_i][0]
+    flags = set(sys.argv)
+    voice = "F5S" if "--여성" in flags else ("M1" if "--남성" in flags else None)
+    image = "그림: 세밀 반실사" if "--반실사" in flags else ("근거 사진(웹)" if "--사진" in flags else None)
+    tty = sys.stdin is not None and sys.stdin.isatty()
+    if voice is None:
+        voice = pick("🎙 나레이션 성우를 고르세요", VOICE_CHOICES) if tty else str(c.get("나레이션_성우") or "F5S")
+    if image is None:
+        image = pick("🖼 이미지를 고르세요", IMAGE_CHOICES) if tty else str(c.get("이미지") or DEFAULT["이미지"])
+    if voice != str(c.get("나레이션_성우") or ""):
+        c["성우_프리셋"] = ""                      # 고른 성우가 우선 (저장해 둔 프리셋보다)
+    c["나레이션_성우"], c["이미지"] = voice, image
+    print(f"   → 성우 {voice} · 이미지 {image}")
+
+
 def main():
     if not os.path.exists(CFG):
         json.dump(DEFAULT, open(CFG, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
@@ -351,6 +382,8 @@ def main():
         c["연속_소재"] = list(TRUE_STORY_GENRES)
         c["연속_구성"] = ["지식"]
         print("📖 실화 연속 제작 모드: 실화 소재만 돌아가며 10분 다큐를 만듭니다 (명상·재미 편 없음)")
+    if not HISTORY:    # 역사 편은 정해 둔 수묵 담채·성우 그대로
+        ask_start_choices(c)
     if ONE:
         c["끝나면"] = "그대로"
         print("▶ 한 편 만들기: AI가 아직 안 다룬 새 주제를 골라 긴 영상 한 편을 끝까지 만듭니다 (쇼츠 없음, 약 2~3시간).")
@@ -659,7 +692,7 @@ def run_doc(m, app, c, gate):
                     app.vars[k_].set(str(v_))
     LONG_FIX = {"narration": "on", "layout": "자막형(큰 제목+사진+자막)", "img_fill": "전체 화면(글자가 사진 위에)",   # 장문 화면 규칙 (CLAUDE.md):
                 "img_motion": "영상처럼(확대·이동·전환)", "head_show": "안 보임(제목 카드만)", "head_pos": "숨김",   # 새 서버의 프로그램 기본값(쇼츠 세로 등)을 쓰지 않게
-                "sub_split": "한 줄씩(문장·쉼표로 나눠 차례로)", "img_label": "off" if HISTORY else "on", "fps": "24", "sub_hide": "off", "img_credit": "on",
+                "sub_split": "한 줄씩(문장·쉼표로 나눠 차례로)", "img_label": "off" if HISTORY or str(c.get("이미지") or "").startswith("그림:") else "on", "fps": "24", "sub_hide": "off", "img_credit": "on",
                 # 실제 사진 장문 다큐(--역사 아님): 오른쪽 위 = 사진 설명 상자(무엇·언제), 오른쪽 아래 = 출처(검은 바탕·흰 글자) (사용자 결정 2026-11-01). AI 그림엔 출처 표시 안 됨
                 "narr_rate": "0", "narr_tone_m": "-1.5", "narr_tone_f": "1"}   # 나레이션: 정상 속도, 여자 성우 톤 반음 1 높게 · 남자 성우 1.5 낮게 (CLAUDE.md 2장)
     for k_, v_ in LONG_FIX.items():

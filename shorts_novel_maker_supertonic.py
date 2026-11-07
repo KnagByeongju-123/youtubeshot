@@ -286,6 +286,7 @@ THUMB_STYLES = ["자동(분위기에 맞춰)", "기본(사진 꽉 + 큰 글자)"
 # 허구 이야기 그림 스타일 (이름 → 그림 AI에 주는 영어 지시). 실제 작품·작가 이름은 쓰지 않고 특징으로 묘사
 IMAGE_STYLES = {
     "사실 묘사": "realistic cinematic digital painting, detailed, natural lighting, film still look",
+    "세밀 반실사 일러스트": "Highly detailed semi-realistic digital painting, intricate fine details, sharp focus, individual hair strands and fur fibers, detailed skin pores and wrinkles, realistic materials (wood grain, glass reflections, stone texture), volumetric warm window light, cinematic lighting, rich depth, concept art quality, full-bleed image, no border, no text",   # 장문 다큐 기본 그림 (사용자 결정 2026-11-07: 화풍 시험 D 선택, 참고 실화/_화풍샘플/D_세밀_디지털페인팅.png)
     "연필 드로잉(선만)": "black and white pencil and ink line drawing on white paper, clean confident lines, light hatching, no color, sketchbook page",
     "드로잉+가벼운 채색": "loose ink line drawing with light watercolor wash, soft muted colors, white paper background, sketchy and charming",
     "풀컬러 만화(코믹스)": "full color comic book illustration, bold ink outlines, dynamic shading, vivid colors, halftone texture",
@@ -3049,6 +3050,7 @@ IMG_SOURCE_WEB = "근거 사진(웹)"
 IMG_SOURCE_PRESET = {"그림: 애니(웹툰)": "웹툰", "그림: 애니+수채화": "동화책 수채화", "그림: 애니 모델 그대로": "애니 수채화풍",   # 애니 모델 + 수채화 지시(보조 없음)
                      "그림: 파스텔 감성": "파스텔 감성 일러스트",
                      "그림: 애니 일러스트": "애니 일러스트(요즘)",
+                     "그림: 세밀 반실사": "세밀 반실사 일러스트",   # 장문 다큐 기본 (사용자 결정 2026-11-07)
                      "그림: 옛날 만화책": "옛날 만화책(세피아 펜화)",
                      "그림: 역사 수묵 담채": "역사 수묵 담채",   # 역사 채널 기본
                      "그림: 근대 수묵 담채": "근대 수묵 담채",   # 고전 단편 낭독(1920~30년대 한국)
@@ -3280,6 +3282,7 @@ def zip_image_files(zip_path, out_dir):
 
 
 IMAGE_STYLES_KO = {   # Claude·Gemini 에 한국어로 줄 화풍 설명
+    "세밀 반실사 일러스트": "아주 세밀한 반실사 디지털 그림, 머리카락·털 한 올과 피부 주름까지, 나뭇결·유리 반사 같은 실제 재질, 창으로 드는 따뜻한 빛, 영화 같은 조명. 글자·테두리 없음.",
     "인상주의 유화": "인상주의 유화, 유화 질감이 보이는 그림, 선명하게 쪼갠 색, 분위기 있는 빛.",
     "잉크 스케치": "자유로운 잉크 스케치, 손으로 그린 표현적인 잉크 선, 간결하고 즉흥적.",
     "근대 수묵 담채": "먹선과 옅은 색을 올린 동양 수묵 담채화, 화선지 질감, 1920~30년대 경성(일제강점기)의 거리·한옥·인력거·전차, 한복과 초기 양복. 지금 물건·낙관·글귀는 넣지 않음.",
