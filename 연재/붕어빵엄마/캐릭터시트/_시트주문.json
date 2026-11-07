@@ -1,0 +1,50 @@
+{
+ "items": [
+  {
+   "id": "엄마",
+   "prompt": "Character turnaround sheet of ONE original character in the same clean Japanese anime / Korean webtoon style as the reference image (realistic human proportions, crisp black outlines, soft cel shading, natural colors). Exactly four full-body views of the same person standing side by side from left to right: front view, left side view, right side view, back view. Head to shoes fully visible, same outfit and hairstyle in every view, plain pure white background, no text, no labels, no props on the floor, evenly spaced. A 40-year-old Korean woman, a widowed single mother who sells fish-shaped bread (bungeoppang) from a street cart: slim, black hair tied in a simple low bun with a few loose strands, kind tired eyes, no makeup, a faded pink padded winter vest over a gray hooded sweatshirt, a dark red cloth apron, black cotton work pants, old gray sneakers, a pair of white cotton work gloves tucked in the apron pocket.",
+   "refs": [
+    "/home/user/youtubeshot/연재/막내개그/화풍샘플/사용자_캐릭터스타일_기준.png"
+   ],
+   "width": 1280,
+   "height": 576,
+   "seed": 101,
+   "steps": 4
+  },
+  {
+   "id": "준호",
+   "prompt": "Character turnaround sheet of ONE original character in the same clean Japanese anime / Korean webtoon style as the reference image (realistic human proportions, crisp black outlines, soft cel shading, natural colors). Exactly four full-body views of the same person standing side by side from left to right: front view, left side view, right side view, back view. Head to shoes fully visible, same outfit and hairstyle in every view, plain pure white background, no text, no labels, no props on the floor, evenly spaced. A 10-year-old Korean boy, her son, an elementary school student: short neat black hair, bright shy eyes, a navy winter puffer jacket over a light blue hoodie, beige trousers, white sneakers with velcro straps, a small red backpack.",
+   "refs": [
+    "/home/user/youtubeshot/연재/막내개그/화풍샘플/사용자_캐릭터스타일_기준.png"
+   ],
+   "width": 1280,
+   "height": 576,
+   "seed": 102,
+   "steps": 4
+  },
+  {
+   "id": "청년준호",
+   "prompt": "Character turnaround sheet of ONE original character in the same clean Japanese anime / Korean webtoon style as the reference image (realistic human proportions, crisp black outlines, soft cel shading, natural colors). Exactly four full-body views of the same person standing side by side from left to right: front view, left side view, right side view, back view. Head to shoes fully visible, same outfit and hairstyle in every view, plain pure white background, no text, no labels, no props on the floor, evenly spaced. A 22-year-old Korean young man, the same son grown up: tall and slim, short neat black hair, calm warm eyes, clean-shaven, a light gray knit sweater over a white collared shirt, dark navy slacks, brown leather shoes.",
+   "refs": [
+    "/home/user/youtubeshot/연재/막내개그/화풍샘플/사용자_캐릭터스타일_기준.png"
+   ],
+   "width": 1280,
+   "height": 576,
+   "seed": 103,
+   "steps": 4
+  },
+  {
+   "id": "회장",
+   "prompt": "Character turnaround sheet of ONE original character in the same clean Japanese anime / Korean webtoon style as the reference image (realistic human proportions, crisp black outlines, soft cel shading, natural colors). Exactly four full-body views of the same person standing side by side from left to right: front view, left side view, right side view, back view. Head to shoes fully visible, same outfit and hairstyle in every view, plain pure white background, no text, no labels, no props on the floor, evenly spaced. A 42-year-old Korean woman, the arrogant head of the school parents' association: tall, glossy wavy brown shoulder-length hair, heavy makeup, red lipstick, haughty raised eyebrows, a cream white luxury wool coat over a black turtleneck, black slim trousers, black high-heeled ankle boots, a quilted designer-style handbag with no logo.",
+   "refs": [
+    "/home/user/youtubeshot/연재/막내개그/화풍샘플/사용자_캐릭터스타일_기준.png"
+   ],
+   "width": 1280,
+   "height": 576,
+   "seed": 104,
+   "steps": 4
+  }
+ ],
+ "ref_max_area": 230000,
+ "crop_border": false
+}
