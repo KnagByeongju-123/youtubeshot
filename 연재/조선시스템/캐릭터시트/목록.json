@@ -105,11 +105,8 @@
   {
    "name": "아이",
    "kind": "person",
-   "seed": 63,
-   "refs": [
-    "등장인물/조선/_기준/3면_농민.png"
-   ],
-   "look": "A 10-year-old poor Korean village boy of the Joseon dynasty: thin, round innocent face, black hair in one long single braid down his back tied with a red ribbon (daenggi), no hat, a plain worn beige jeogori jacket and baggy beige trousers tied at the ankles, straw sandals",
+   "seed": 67,
+   "look": "A 10-year-old poor Korean village boy of the Joseon dynasty: thin, round innocent face, bare head with black hair parted in the middle and combed back into one long single braid hanging down his back, tied at the end with a red ribbon (daenggi), a plain worn beige hanbok jeogori jacket tied with a cloth string and baggy beige hanbok trousers tied at the ankles, straw sandals, the same in all three views",
    "look_ko": "10살 마을 아이, 댕기머리 땋은 머리, 베이지 저고리·바지, 짚신"
   }
  ]
