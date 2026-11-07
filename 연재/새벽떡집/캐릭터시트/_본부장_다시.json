@@ -1,0 +1,17 @@
+{
+ "items": [
+  {
+   "id": "본부장",
+   "prompt": "Character turnaround sheet of ONE original character in the same clean Japanese anime / Korean webtoon style as the reference image (realistic human proportions, crisp black outlines, soft cel shading, natural colors). Exactly four full-body views of the same person standing side by side from left to right: front view, left side view, right side view, back view. Head to shoes fully visible, same outfit and hairstyle in every view, plain pure white background, no text, no labels, no props on the floor, evenly spaced. A 36-year-old Korean woman, a rice cake franchise headquarters director: tall, sleek long black hair in a low ponytail, sharp confident eyes, light red lipstick, a tailored charcoal gray pantsuit: suit jacket with matching straight trousers in every view, no skirt, a white silk blouse, black high heels.",
+   "refs": [
+    "/home/user/youtubeshot/연재/막내개그/화풍샘플/사용자_캐릭터스타일_기준.png"
+   ],
+   "width": 1280,
+   "height": 576,
+   "seed": 91,
+   "steps": 4
+  }
+ ],
+ "ref_max_area": 230000,
+ "crop_border": false
+}

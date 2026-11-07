@@ -1,0 +1,61 @@
+{
+ "items": [
+  {
+   "id": "도윤",
+   "prompt": "Character turnaround sheet of ONE original character in the same clean Japanese anime / Korean webtoon style as the reference image (realistic human proportions, crisp black outlines, soft cel shading, natural colors). Exactly four full-body views of the same person standing side by side from left to right: front view, left side view, right side view, back view. Head to shoes fully visible, same outfit and hairstyle in every view, plain pure white background, no text, no labels, no props on the floor, evenly spaced. A 45-year-old Korean man, a struggling rice cake shop owner: medium build, short neat black hair with a little gray at the temples, tired but warm eyes, light stubble, a plain white cotton work shirt with rolled sleeves, a dark navy canvas apron tied at the waist, dark gray work trousers, black rubber kitchen boots.",
+   "refs": [
+    "/home/user/youtubeshot/연재/막내개그/화풍샘플/사용자_캐릭터스타일_기준.png"
+   ],
+   "width": 1280,
+   "height": 576,
+   "seed": 81,
+   "steps": 4
+  },
+  {
+   "id": "아내",
+   "prompt": "Character turnaround sheet of ONE original character in the same clean Japanese anime / Korean webtoon style as the reference image (realistic human proportions, crisp black outlines, soft cel shading, natural colors). Exactly four full-body views of the same person standing side by side from left to right: front view, left side view, right side view, back view. Head to shoes fully visible, same outfit and hairstyle in every view, plain pure white background, no text, no labels, no props on the floor, evenly spaced. A 43-year-old Korean woman, his wife: slim, shoulder-length black hair tied back loosely with a clip, gentle smile, a pale yellow knit cardigan over a white t-shirt, a light beige cloth apron, dark blue jeans, white sneakers.",
+   "refs": [
+    "/home/user/youtubeshot/연재/막내개그/화풍샘플/사용자_캐릭터스타일_기준.png"
+   ],
+   "width": 1280,
+   "height": 576,
+   "seed": 82,
+   "steps": 4
+  },
+  {
+   "id": "딸",
+   "prompt": "Character turnaround sheet of ONE original character in the same clean Japanese anime / Korean webtoon style as the reference image (realistic human proportions, crisp black outlines, soft cel shading, natural colors). Exactly four full-body views of the same person standing side by side from left to right: front view, left side view, right side view, back view. Head to shoes fully visible, same outfit and hairstyle in every view, plain pure white background, no text, no labels, no props on the floor, evenly spaced. A 15-year-old Korean girl, his daughter, a middle school student: black hair in a short bob with straight bangs, bright eyes, a navy middle school uniform blazer with a white shirt and a small red ribbon tie, a navy pleated skirt, black knee socks, black school shoes.",
+   "refs": [
+    "/home/user/youtubeshot/연재/막내개그/화풍샘플/사용자_캐릭터스타일_기준.png"
+   ],
+   "width": 1280,
+   "height": 576,
+   "seed": 83,
+   "steps": 4
+  },
+  {
+   "id": "건물주",
+   "prompt": "Character turnaround sheet of ONE original character in the same clean Japanese anime / Korean webtoon style as the reference image (realistic human proportions, crisp black outlines, soft cel shading, natural colors). Exactly four full-body views of the same person standing side by side from left to right: front view, left side view, right side view, back view. Head to shoes fully visible, same outfit and hairstyle in every view, plain pure white background, no text, no labels, no props on the floor, evenly spaced. A 60-year-old Korean man, the arrogant building owner: short and heavy-set, slicked-back gray hair, a thick gray mustache, narrow sneering eyes, a shiny brown leather jacket over a black turtleneck, black slacks, polished brown shoes, a thick gold chain bracelet.",
+   "refs": [
+    "/home/user/youtubeshot/연재/막내개그/화풍샘플/사용자_캐릭터스타일_기준.png"
+   ],
+   "width": 1280,
+   "height": 576,
+   "seed": 84,
+   "steps": 4
+  },
+  {
+   "id": "본부장",
+   "prompt": "Character turnaround sheet of ONE original character in the same clean Japanese anime / Korean webtoon style as the reference image (realistic human proportions, crisp black outlines, soft cel shading, natural colors). Exactly four full-body views of the same person standing side by side from left to right: front view, left side view, right side view, back view. Head to shoes fully visible, same outfit and hairstyle in every view, plain pure white background, no text, no labels, no props on the floor, evenly spaced. A 36-year-old Korean woman, a rice cake franchise headquarters director: tall, sleek long black hair in a low ponytail, sharp confident eyes, light red lipstick, a tailored charcoal gray suit jacket with matching pencil skirt, a white silk blouse, black high heels.",
+   "refs": [
+    "/home/user/youtubeshot/연재/막내개그/화풍샘플/사용자_캐릭터스타일_기준.png"
+   ],
+   "width": 1280,
+   "height": 576,
+   "seed": 85,
+   "steps": 4
+  }
+ ],
+ "ref_max_area": 230000,
+ "crop_border": false
+}
