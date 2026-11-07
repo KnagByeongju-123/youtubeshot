@@ -25,7 +25,7 @@ CAP_LINE = "Each person and the cap shown above him in his reference image are o
 SAMO = "black samo cap: a small rounded black cap fitted close to the head with a higher back part, and two thin flat oval mesh wings attached only at the back of the cap that stick straight out to the left and right like ears; the sides of the cap above the ears are bare"
 LOOK = {
     "현": "a 20-year-old slim Korean young man, a poor fallen-noble scholar, young clean-shaven face, calm intelligent eyes, black gat hat with a wide flat round brim and a tall narrow crown, a faded light gray-white dopo robe with small patches, thin dark cord belt, straw sandals",
-    "현_맨머리": "a 20-year-old slim Korean young man, young clean-shaven face, calm intelligent eyes, bareheaded with his black hair in a small topknot and a thin black headband, a plain white undergarment jeogori",
+    "현_맨머리": "a 20-year-old slim Korean young man, young clean-shaven face, calm intelligent eyes, full thick black hair combed back from a normal hairline and tied in a small topknot and a thin black headband, a plain white undergarment jeogori",
     "어머니": "a 45-year-old thin Korean woman, gentle tired face, black hair in a low bun with a plain wooden hairpin, a faded beige jeogori jacket and a dark navy chima skirt",
     "판서": "a 56-year-old heavy-set Korean high minister with a round belly, gray mustache and short gray beard, narrow greedy eyes, a dark crimson official robe with one square crane badge on the chest, " + SAMO,
     "임금": "a 40-year-old Korean king, tall, calm dignified face, neat short black beard, a bright red royal robe with golden round dragon badges on the chest and shoulders, the same black ikseongwan cap with the same shape as in the reference image, jade belt",
@@ -44,7 +44,7 @@ REF = {
 CAPPED = {"현", "판서", "임금", "수령", "관찰사", "민호", "시험관"}
 
 LAB = "a modern infectious disease research laboratory in Seoul in the year 2045 at night, glass test tubes, a microscope, cold white lights"
-ROOM = "inside a small poor thatched-roof Joseon house room, paper lattice door, worn straw mat floor, a thin old quilt"
+ROOM = "inside a small poor thatched-roof Joseon house room, paper lattice door, worn straw mat floor, a thin old quilt; light comes only from a small open clay oil dish with one burning wick"
 YARD = "the dirt yard of a small poor thatched-roof Joseon house with a brushwood gate and a low stone wall"
 VILLAGE = "a poor Joseon farming village of thatched-roof houses with stone wells and dirt paths, early spring"
 ENTRY = "the entrance of a poor Joseon village with a dirt road, a big old tree and thatched houses behind"
@@ -75,7 +75,7 @@ CUTS = {1: [
     ("c09", [9], ["현"], VILLAGERS, YARD, "worried villagers standing outside the brushwood gate shaking their heads and covering their mouths; the young man standing in the yard facing them", "괴질이었습니다"),
     ("c10", [10], ["현"], "", YARD + ", with a faint translucent ghost image of a modern laboratory in the sky behind him like a memory", "the young man standing in thought with a sharp determined look, remembering", "콜레라와 똑같은 병"),
     ("c11", [11], ["현"], "", YARD, "the young man boiling well water in a big black iron pot over a wood fire, adding a handful of salt from a small bowl, a small clay honey jar beside him, steam rising", "끓인 물에 소금과 꿀"),
-    ("c12", [12, 13], ["현_맨머리", "어머니"], "", ROOM + ", night, a small oil lamp dish glowing", "only two people: the sick mother (reference image 2) lying on her back on the mat under a thin quilt with her eyes closed, and the young man (reference image 1) dressed all in white kneeling beside her alone, gently giving her water from a wooden spoon, keeping watch through the night; nobody else is in the room", "밤새 어머니 곁을"),
+    ("c12", [12, 13], ["현_맨머리", "어머니"], "", ROOM + ", night", "only two people: the sick mother (reference image 2) lying on her back on the mat under a thin quilt with her eyes closed, and the young man (reference image 1) dressed all in white kneeling beside her alone, gently giving her water from a wooden spoon, keeping watch through the night; nobody else is in the room", "밤새 어머니 곁을"),
     ("c13", [14, 15], ["어머니", "현_맨머리"], "", ROOM + ", soft morning light", "the mother sitting up weakly and eating porridge from a small bowl, the young man smiling with relief beside her; behind him softly glows " + PANEL, "어머니가 죽을 받아 넘기다"),
     ("c14", [16], [], "", VILLAGE + ", wide view from a small hill", "a quiet village where a strange reddish mist rises like smoke above three of the stone wells, an eerie mood", "우물 위의 붉은 안개"),
     ("c15", [17], ["현"], "", VILLAGE, "the young man standing on a dirt path looking at the village with determination, " + PANEL + " glowing beside him", "마을을 살리십시오"),
@@ -99,16 +99,16 @@ CUTS = {1: [
     ("c33", [39], [], SOLDIERS, STORE + ", evening torchlight", "the heavy storehouse doors thrown open by soldiers, revealing many old wooden carts piled high with plain brown wooden medicine chests with iron locks and straw-wrapped bundles inside, lit by burning torches held by the soldiers. No main characters", "창고 안의 약재 수레 서른 대"),
     ("c34", [40, 41], ["수령", "관찰사"], "", STORE + ", evening torchlight", "the thin magistrate kneeling with a pale terrified face; the governor standing over him holding out his hand sternly to take the magistrate's seal", "수령의 관인을 거두다"),
     ("c35", [42], ["어머니"], VILLAGERS, ENTRY + ", sunset", "villagers joyfully pulling down the wooden barricade; in the foreground the mother standing at a brushwood gate wiping tears with her sleeve, smiling", "울타리를 걷어 내는 마을 사람들"),
-    ("c36", [43, 44], ["현_맨머리"], "", ROOM + ", night, a small oil lamp dish glowing", "the young man sitting at a low wooden table with an open thread-bound book, looking up at " + PANEL + " with one glowing red line at its bottom", "세 번째 임무, 장원 급제"),
+    ("c36", [43, 44], ["현_맨머리"], "", ROOM + ", night", "the young man sitting at a low wooden table with an open thread-bound book, looking up at " + PANEL + " with one glowing red line at its bottom", "세 번째 임무, 장원 급제"),
     ("c37", [45], ["판서"], "", MANSION, "the heavy-set minister sitting on a floor cushion at the low lacquered table, slowly putting down a white porcelain teacup, listening to news with a cold face", "한양의 김 판서"),
     ("c38", [46, 47], ["판서"], "", MANSION, "close view of the heavy-set minister's face narrowing his eyes with a cold dangerous look, candlelight flickering", "김 판서의 눈이 가늘어지다"),
 ],
 2: [
     ("c01", [1], ["현"], VILLAGERS, VILLAGE + ", spring with blossoming trees", "the young scholar standing in the peaceful spring village, looking up at " + PANEL + " with one glowing red line at its bottom", "세 번째 임무, 장원 급제"),
     ("c02", [2], ["현"], "", "a dirt road leading out of a Joseon village toward far blue mountains, spring", "the young scholar standing on the road seen from behind, looking toward the far road to the capital with resolve", "몰락 양반이 일어설 단 하나의 길"),
-    ("c03", [3], ["현_맨머리"], "", ROOM + ", night, a small oil lamp dish glowing", "the young man reading an old book at a low wooden desk under the oil lamp, " + PANEL + " glowing softly beside him", "등잔 아래서"),
-    ("c04", [4], ["현_맨머리"], "", ROOM + ", night, a small oil lamp dish glowing", "the young man writing carefully with an ink brush on sheets of rough paper at the low desk, a hand-drawn map of a village with wells beside him, focused", "열흘의 기록"),
-    ("c05", [5, 6], ["판서", "민호"], "", MANSION, "the heavy-set minister sitting on a floor cushion and speaking seriously; his plump young son kneeling in front of him, listening with a sly smile", "아들을 부른 김 판서"),
+    ("c03", [3], ["현_맨머리"], "", ROOM + ", night", "the young man reading an old book at a low wooden desk under the oil lamp, " + PANEL + " glowing softly beside him", "등잔 아래서"),
+    ("c04", [4], ["현_맨머리"], "", ROOM + ", night", "the young man writing carefully with an ink brush on sheets of rough paper at the low desk, a hand-drawn map of a village with wells beside him, focused", "열흘의 기록"),
+    ("c05", [5, 6], ["판서", "민호"], "", MANSION, "the heavy-set minister sitting on a floor cushion and speaking seriously; his son, a grown-up adult man of 22 as tall as an adult with a thin black mustache, kneeling in front of him, listening with a sly smile", "아들을 부른 김 판서"),
     ("c06", [7], ["판서", "시험관"], "", MANSION + ", secretly, the doors closed", "the heavy-set minister pushing a small cloth bundle of silver ingots across the low table toward the nervous exam official, who glances around anxiously", "은덩이 열 개"),
     ("c07", [8], ["판서", "시험관"], "", MANSION, "the heavy-set minister leaning close and whispering coldly into the ear of the nervous exam official, who nods with a pale face", "그자의 답안은 떨어뜨리게"),
     ("c08", [9], ["민호"], SCHOLARS, EXAM, "the plump young noble in a shiny jade-green silk robe sitting proudly in the front row choosing a brush at leisure, rows of scholars behind him", "과거 시험 날"),
