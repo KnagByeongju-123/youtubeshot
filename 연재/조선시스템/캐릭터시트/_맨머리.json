@@ -1,0 +1,50 @@
+{
+ "items": [],
+ "fixes": [
+  {
+   "id": "맨머리_앞",
+   "image": "/home/user/youtubeshot/연재/조선시스템/캐릭터시트/현_맨머리.png",
+   "box": [
+    90,
+    0,
+    280,
+    150
+   ],
+   "prompt": "ink wash painting with light color washes on white background, the bare head of a 20-year-old slim Korean young man with a young clean-shaven face, no hat: full thick black hair combed neatly back from a normal hairline and tied up into a small tight sangtu topknot bun on the top of the head, a thin black horsehair manggeon headband around the forehead, exactly like the hairstyle in the reference image, plain white background above the head, front view",
+   "refs": [
+    "/home/user/youtubeshot/등장인물/조선/_관모/상투_앞.png"
+   ],
+   "seed": 31
+  },
+  {
+   "id": "맨머리_옆",
+   "image": "/home/user/youtubeshot/연재/조선시스템/캐릭터시트/현_맨머리.png",
+   "box": [
+    405,
+    0,
+    600,
+    150
+   ],
+   "prompt": "ink wash painting with light color washes on white background, the bare head of a 20-year-old slim Korean young man with a young clean-shaven face, no hat: full thick black hair combed neatly back from a normal hairline and tied up into a small tight sangtu topknot bun on the top of the head, a thin black horsehair manggeon headband around the forehead, exactly like the hairstyle in the reference image, plain white background above the head, side view facing left, the topknot seen from the side",
+   "refs": [
+    "/home/user/youtubeshot/등장인물/조선/_관모/상투_앞.png"
+   ],
+   "seed": 32
+  },
+  {
+   "id": "맨머리_뒤",
+   "image": "/home/user/youtubeshot/연재/조선시스템/캐릭터시트/현_맨머리.png",
+   "box": [
+    735,
+    0,
+    940,
+    150
+   ],
+   "prompt": "ink wash painting with light color washes on white background, the bare head of a 20-year-old slim Korean young man with a young clean-shaven face, no hat: full thick black hair combed neatly back from a normal hairline and tied up into a small tight sangtu topknot bun on the top of the head, a thin black horsehair manggeon headband around the forehead, exactly like the hairstyle in the reference image, plain white background above the head, back view of the head, the topknot and the knot of the headband seen from behind",
+   "refs": [
+    "/home/user/youtubeshot/등장인물/조선/_관모/상투_앞.png"
+   ],
+   "seed": 33
+  }
+ ]
+}

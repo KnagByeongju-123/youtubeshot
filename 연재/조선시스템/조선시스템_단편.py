@@ -24,7 +24,7 @@ STYLE_2045 = ("traditional East Asian ink wash painting with light color washes:
 CAP_LINE = "Each person and the cap shown above him in his reference image are one: he always wears exactly that cap. "
 SAMO = "black samo cap: a small rounded black cap fitted close to the head with a higher back part, and two thin flat oval mesh wings attached only at the back of the cap that stick straight out to the left and right like ears; the sides of the cap above the ears are bare"
 LOOK = {
-    "현": "a 20-year-old slim Korean young man, a poor fallen-noble scholar, young clean-shaven face, calm intelligent eyes, black gat hat with a wide flat round brim and a tall narrow crown, a faded light gray-white dopo robe with small patches, thin dark cord belt, straw sandals",
+    "현": "a 20-year-old slim Korean young man, a poor fallen-noble scholar, young clean-shaven face, calm intelligent eyes, black gat hat with a wide flat round brim and a tall narrow cylindrical crown whose top is completely flat with nothing on top, a faded light gray-white dopo robe with small patches, thin dark cord belt, straw sandals",
     "현_맨머리": "a 20-year-old slim Korean young man, young clean-shaven face, calm intelligent eyes, full thick black hair combed back from a normal hairline and tied in a small topknot and a thin black headband, a plain white undergarment jeogori",
     "어머니": "a 45-year-old thin Korean woman, gentle tired face, black hair in a low bun with a plain wooden hairpin, a faded beige jeogori jacket and a dark navy chima skirt",
     "판서": "a 56-year-old heavy-set Korean high minister with a round belly, gray mustache and short gray beard, narrow greedy eyes, a dark crimson official robe with one square crane badge on the chest, " + SAMO,
@@ -39,7 +39,7 @@ LOOK = {
 }
 # 임금은 앞모습만: 모자 띠(옆·뒤)를 얹으면 익선관 뒤 봉우리를 옆 날개로 그림 (2026-11-07)
 REF = {
-    "현": "_앞_현_모자.png", "현_맨머리": "_앞_현.png", "어머니": "_앞_어머니.png", "판서": "_앞_판서_모자.png",
+    "현": "_앞_현_모자.png", "현_맨머리": "_앞_현_맨머리.png", "어머니": "_앞_어머니.png", "판서": "_앞_판서_모자.png",
     "임금": "_앞_임금.png", "도현": "_앞_도현.png",
     "수령": "_앞_수령_모자.png", "민호": "_앞_민호_모자.png", "시험관": "_앞_시험관_모자.png", "아이": "_앞_아이.png", "의원": "_앞_의원_모자.png", "관찰사": "_앞_관찰사_모자.png",
 }
