@@ -36,9 +36,10 @@ LOOK = {
     "아이": "a 10-year-old thin poor Korean village boy with full thick black hair on his whole head, parted in the middle and combed back into one long braid down his back tied with a red ribbon, a worn beige jeogori and baggy beige trousers, straw sandals",
     "관찰사": "a 60-year-old dignified Korean governor with a long white beard and stern wise eyes, a dark green official robe, " + SAMO,
 }
+# 임금은 앞모습만: 모자 띠(옆·뒤)를 얹으면 익선관 뒤 봉우리를 옆 날개로 그림 (2026-11-07)
 REF = {
     "현": "_앞_현_모자.png", "현_맨머리": "_앞_현.png", "어머니": "_앞_어머니.png", "판서": "_앞_판서_모자.png",
-    "임금": "_앞_임금_모자.png", "도현": "_앞_도현.png",
+    "임금": "_앞_임금.png", "도현": "_앞_도현.png",
     "수령": "_앞_수령_모자.png", "민호": "_앞_민호_모자.png", "시험관": "_앞_시험관_모자.png", "아이": "_앞_아이.png", "관찰사": "_앞_관찰사_모자.png",
 }
 CAPPED = {"현", "판서", "임금", "수령", "관찰사", "민호", "시험관"}
@@ -124,22 +125,22 @@ CUTS = {1: [
     ("c18", [22], ["현"], VILLAGERS, VILLAGE + ", night", "the young scholar stirring a big iron pot of boiling water over a fire in a dark village at night, villagers carrying bowls, a well covered with boards", "이웃 마을에서 다시 솥을"),
     ("c19", [23], [], "Other people are Joseon commoners of the capital in plain hanbok, some sick and lying on mats, palace physicians in green robes shaking their heads. ", HANYANG + ", gloomy gray day", "a gloomy capital street where sick people lie on straw mats by the walls while worried physicians in green robes stand helpless. No main characters", "한양에 번진 괴질"),
     ("c20", [24], ["임금"], "", PALACE, "the king sitting alone at the low desk late at night, rubbing his tired eyes, piles of rolled exam papers beside him", "잠 못 이룬 임금"),
-    ("c21", [25], ["시험관", "임금"], "", PALACE, "the nervous exam official kneeling and holding up a few rolled exam papers with both hands to the king seated at the desk", "장원 후보 답안"),
+    ("c21", [25], ["임금"], "", PALACE, "the king seated at the low desk reaching out to take a few rolled exam papers held out toward him by two hands in dark teal sleeves coming in from the left edge of the picture; only the hands and sleeves of that person are visible", "장원 후보 답안"),
     ("c22", [26], ["임금"], "", PALACE, "the king reading a long sheet of exam paper and frowning deeply with suspicion", "어디선가 본 글"),
-    ("c23", [27, 28], ["시험관", "임금"], "", PALACE, "the exam official with a pale face, trembling, holding up a thick bundle of tied exam papers; the king pointing at it sternly", "떨어진 답안들도 가져오너라"),
+    ("c23", [27, 28], ["임금"], "", PALACE, "the king standing and pointing sternly toward the left edge of the picture with a cold face, a thick bundle of tied exam papers being held up by trembling hands in dark teal sleeves at the left edge; only those hands are visible", "떨어진 답안들도 가져오너라"),
     ("c24", [29], ["임금"], "", PALACE, "the king pulling out one short sheet from the bottom of a big pile of papers on the desk, looking at it with interest", "맨 아래의 짧은 답안"),
     ("c25", [30], [], "", PALACE + ", close-up on the desk", "close-up of a short sheet of rough paper on the desk filled with neat columns of brush strokes too small to read, with tiny ink drawings of a well, a steaming pot and a bowl. No people", "괴질을 막는 방법"),
     ("c26", [31], ["현"], VILLAGERS, VILLAGE + ", shown as a memory with a soft golden tint", "memory: the young scholar boiling water in a pot, villagers putting boards over a well, a sick villager lying alone in a separate room, a woman stirring salt and honey into water", "끓이고, 막고, 나누고, 채우고"),
     ("c27", [32], ["현_맨머리"], "", ROOM + ", night, shown as a memory with a soft golden tint", "memory: the young man writing records late at night by the oil lamp, many pages stacked neatly beside him", "열흘 동안 해 본 기록"),
     ("c28", [33], ["임금"], "", PALACE, "the king holding the short paper with both hands, deeply moved, eyes shining in the candlelight", "백성이 살아 있게 하는 것"),
-    ("c29", [34, 35], ["시험관", "임금"], "", PALACE, "the exam official throwing himself face down on the floor, trembling; the king standing over him with a cold angry face", "엎드린 시험관"),
+    ("c29", [34, 35], ["임금"], "", PALACE, "the king standing and looking down coldly at the floor; at the bottom edge of the picture only the trembling back and dark teal sleeves of a man lying face down are visible", "엎드린 시험관"),
     ("c30", [36], ["시험관"], "", PALACE, "close view of the exam official lying prostrate on the floor, his face pale with fear, sweat on his forehead", "김 판서 대감께서"),
     ("c31", [37], ["임금"], "", PALACE, "the king with cold eyes dipping a brush and writing a name at the top of a sheet of paper", "장원 자리에 적은 이름"),
     ("c32", [38], ["임금"], COURT, GATE + ", night", "the king leaving the palace at night with retainers holding burning torches around him, walking quickly", "횃불을 든 신하들과 함께"),
     ("c33", [39], ["현", "아이"], VILLAGERS, ENTRY + ", night, a small fire", "the young scholar in his dirty sweaty patched robe kneeling and carefully giving salt water from a bowl to the sick village boy lying on a mat at the village entrance", "아이에게 소금물을 먹이다"),
     ("c34", [40], ["임금", "현"], VILLAGERS, ENTRY + ", night, torchlight", "torches lighting up the bright red royal robe of the king arriving; all villagers bowing down to the ground; the young scholar quickly kneeling", "붉은 곤룡포"),
     ("c35", [41, 42], ["임금", "현"], "", ENTRY + ", night, torchlight", "the king standing and looking down kindly at the young scholar kneeling before him, who looks up and answers firmly", "사람은 다시 살릴 수 없사옵니다"),
-    ("c36", [43, 44], ["임금", "현"], "", ENTRY + ", night, torchlight", "the king gripping the young scholar's dirty forearm and pulling him up to his feet himself; the young scholar rising in surprise", "올해 과거의 장원은, 너다"),
+    ("c36", [43, 44], ["임금", "현"], "", ENTRY + ", night, torchlight", "the king bending down and placing both of his hands on the shoulders of the young scholar, lifting him up from kneeling; the young scholar half-rising in surprise; burning torches held by unseen retainers light the scene", "올해 과거의 장원은, 너다"),
     ("c37", [45], ["현"], "", ENTRY + ", night", "the young scholar standing, his face lit brightly by " + PANEL + " shining strongly in front of him, amazed", "세 번째 임무 완료"),
     ("c38", [46], [], SCHOLARS, GATE + ", morning", "a crowd of scholars gathered in front of the palace gate looking at a long white paper list hung on the wall, its writing too small to read, some cheering, some sighing. No main characters", "합격자 방이 붙다"),
     ("c39", [47], ["민호"], SOLDIERS, GATE + ", morning", "the plump young noble in the jade-green silk robe being dragged away by soldiers, shouting in panic", "자격을 잃은 김민호"),
