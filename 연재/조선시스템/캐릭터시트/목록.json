@@ -62,12 +62,12 @@
   {
    "name": "관찰사",
    "kind": "person",
-   "seed": 42,
+   "seed": 47,
    "refs": [
     "등장인물/조선/_기준/3면_문관.png"
    ],
    "color": "dark green",
-   "look": "A 60-year-old Korean provincial governor of the Joseon dynasty: dignified, a long white beard and white eyebrows, stern wise eyes, a dark green official robe with ONE square embroidered badge on the chest and ONE on the back, black belt, black samo official hat with two thin flat wings sticking out to the left and right, black boots, the same hat and robe in all three views",
+   "look": "A 60-year-old Korean provincial governor of the Joseon dynasty: dignified, a long white beard and white eyebrows, stern wise eyes, a dark green official robe with ONE plain square embroidered crane badge on the chest, round collar, black belt, black brimless two-tiered samo official cap (exactly like the reference sheet) with two small thin flat oval wings sticking out to the left and right at the back, black boots, the same hat and robe in all three views",
    "look_ko": "60살 관찰사, 흰 수염, 녹색 관복·사모"
   }
  ]
