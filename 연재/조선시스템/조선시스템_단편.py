@@ -51,7 +51,7 @@ MANSION = "a grand Joseon tiled-roof mansion room in Hanyang at night, a low lac
 PANEL = "a glowing translucent blue rectangular window of light floating in the air, filled only with soft light and thin abstract lines, completely blank with no letters, no numbers, no symbols"
 VILLAGERS = "Other people are poor Joseon commoners in plain white and beige hanbok, men with small topknots and headbands, women with hair in buns, who look clearly different from the main characters. None of the villagers wear a gat hat: only the young scholar wears the tall black gat. "
 SOLDIERS = "Other people are Joseon foot soldiers who all wear exactly the uniform of the soldier in the LAST reference image: black felt jeonrip hat with a wide round brim and a red tassel, sleeveless dark navy jeonbok vest over red sleeves, red sash, white baggy trousers, black cloth boots, holding long wooden spears. "
-CLERKS = "Other people are county clerks in plain black-gray hanbok with small black hats, who look clearly different from the main characters. "
+CLERKS = SOLDIERS   # 수령이 거느린 사람들도 조선 군졸 차림 (검은 둥근 모자가 서양 모자처럼 나와서, 2026-11-07)
 
 # 부마다 (컷, 문단 번호들, 나오는 인물, 다른 사람 문장(없으면 ""), 장소, 장면(영어), 화면 설명)
 CUTS = {1: [
@@ -72,12 +72,12 @@ CUTS = {1: [
     ("c15", [17], ["현"], "", VILLAGE, "the young man standing on a dirt path looking at the village with determination, " + PANEL + " glowing beside him", "마을을 살리십시오"),
     ("c16", [18, 19], ["현"], VILLAGERS, ENTRY, "the young man standing under the big tree shouting earnestly to a crowd of villagers, one arm raised pointing toward a well", "끓여서 마셔야 합니다"),
     ("c17", [20], [], VILLAGERS, ENTRY, "a few villagers whispering to each other doubtfully with suspicious faces, glancing to the side. No main characters", "의원 흉내를 낸다고"),
-    ("c18", [21], ["수령"], CLERKS, ENTRY + ", dust on the road", "the thin magistrate riding a brown horse arriving on the road with several clerks walking behind him, an arrogant face, the magistrate wearing a black samo cap with two flat oval wings sticking out to the left and right", "박 수령이 나타나다"),
-    ("c19", [22], ["수령"], CLERKS, ENTRY, "the thin magistrate on his horse pointing coldly with a fan, ordering the clerks to block the roads", "길을 모두 막아라"),
-    ("c20", [23], [], CLERKS, FENCE, "clerks putting up a rough wooden barricade fence across the road, while an ox cart loaded with plain brown wooden medicine chests and straw-wrapped bundles turns away from the village. No main characters", "막힌 길, 돌아가는 약재 수레"),
+    ("c18", [21], ["수령"], CLERKS, ENTRY + ", dust on the road", "the thin magistrate riding a brown horse arriving on the road with several soldiers walking behind him, an arrogant face, the magistrate wearing a black samo cap with two flat oval wings sticking out to the left and right", "박 수령이 나타나다"),
+    ("c19", [22], ["수령"], CLERKS, ENTRY, "the thin magistrate on his horse pointing coldly with a fan, ordering the soldiers to block the roads", "길을 모두 막아라"),
+    ("c20", [23], [], CLERKS, FENCE, "soldiers putting up a rough wooden barricade fence across the road, while an ox cart loaded with plain brown wooden medicine chests and straw-wrapped bundles turns away from the village. No main characters", "막힌 길, 돌아가는 약재 수레"),
     ("c21", [24, 25], ["수령", "현"], "", FENCE, "the young scholar stepping in front of the magistrate's brown horse with his arms spread, blocking its way; the magistrate on the horse smirking", "수령의 말 앞을 막아서다"),
     ("c22", [26, 27], ["현", "수령"], "", FENCE, "the magistrate sitting high on his brown horse and looking down with a mocking sneer; the young scholar standing on the ground below, pleading earnestly", "말 위에서 비웃는 수령"),
-    ("c23", [28, 29], ["현"], CLERKS, FENCE, "the young scholar has just been pushed down and is sitting fallen on the dirt road, propped on one hand, dust flying, his gat hat still on his head; a clerk in black-gray hanbok stands over him with his hand still pushed out. The young scholar appears only once, only on the ground", "흙바닥에 넘어진 이현"),
+    ("c23", [28, 29], ["현"], CLERKS, FENCE, "the young scholar has just been pushed down and is sitting fallen on the dirt road, propped on one hand, dust flying, his gat hat still on his head; a Joseon foot soldier stands two steps away sneering, his arm still stretched out from the push, their hands far apart; the young scholar's two legs are in white trousers with straw sandals. The young scholar appears only once, only on the ground", "흙바닥에 넘어진 이현"),
     ("c24", [30], ["현"], "", FENCE, "the young scholar half-lying on the dirt road propped on one arm, looking up at " + PANEL + " showing a faint picture of a locked wooden storehouse", "숨겨진 사실이 보입니다"),
     ("c25", [31], ["현"], VILLAGERS, VILLAGE + ", night", "the young scholar and a few villagers hanging big black iron pots over wood fires beside a stone well at night, flames and steam", "우물마다 솥을 걸다"),
     ("c26", [32], [], VILLAGERS, VILLAGE + ", daytime", "a recovered little village boy standing up smiling and a white-haired old man getting up from a straw mat, villagers gathering around the steaming iron pots with bowls. No main characters", "하나둘 솥 앞에 모여들다"),
