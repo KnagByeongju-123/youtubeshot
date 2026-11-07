@@ -1,0 +1,50 @@
+{
+ "items": [
+  {
+   "id": "철민",
+   "prompt": "Character turnaround sheet of ONE original character in the same clean Japanese anime / Korean webtoon style as the reference image (realistic human proportions, crisp black outlines, soft cel shading, natural colors). Exactly four full-body views of the same person standing side by side from left to right: front view, left side view, right side view, back view. Head to shoes fully visible, same outfit and hairstyle in every view, plain pure white background, no text, no labels, no props on the floor, evenly spaced. A 52-year-old Korean man, a night-shift factory worker who used to be an engineer: lean build, short black hair with a lot of gray, tired but sharp intelligent eyes, a few wrinkles, a light blue-gray long-sleeve factory work jacket with a small blank name patch and a blue lanyard ID card, dark navy work trousers, black safety shoes.",
+   "refs": [
+    "/home/user/youtubeshot/연재/막내개그/화풍샘플/사용자_캐릭터스타일_기준.png"
+   ],
+   "width": 1280,
+   "height": 576,
+   "seed": 161,
+   "steps": 4
+  },
+  {
+   "id": "딸",
+   "prompt": "Character turnaround sheet of ONE original character in the same clean Japanese anime / Korean webtoon style as the reference image (realistic human proportions, crisp black outlines, soft cel shading, natural colors). Exactly four full-body views of the same person standing side by side from left to right: front view, left side view, right side view, back view. Head to shoes fully visible, same outfit and hairstyle in every view, plain pure white background, no text, no labels, no props on the floor, evenly spaced. A 22-year-old Korean young woman, his daughter, a university student: long straight black hair, warm bright eyes, a cream knit sweater with long sleeves, a light brown plaid skirt, black tights, brown loafers, a canvas tote bag on her shoulder.",
+   "refs": [
+    "/home/user/youtubeshot/연재/막내개그/화풍샘플/사용자_캐릭터스타일_기준.png"
+   ],
+   "width": 1280,
+   "height": 576,
+   "seed": 162,
+   "steps": 4
+  },
+  {
+   "id": "팀장",
+   "prompt": "Character turnaround sheet of ONE original character in the same clean Japanese anime / Korean webtoon style as the reference image (realistic human proportions, crisp black outlines, soft cel shading, natural colors). Exactly four full-body views of the same person standing side by side from left to right: front view, left side view, right side view, back view. Head to shoes fully visible, same outfit and hairstyle in every view, plain pure white background, no text, no labels, no props on the floor, evenly spaced. A 38-year-old Korean man, an arrogant HR team leader at a big company: slim, neatly gelled black side-parted hair, thin black-framed glasses, smug smirk, a fitted dark navy suit with a light gray tie, a silver company badge with no letters, black dress shoes.",
+   "refs": [
+    "/home/user/youtubeshot/연재/막내개그/화풍샘플/사용자_캐릭터스타일_기준.png"
+   ],
+   "width": 1280,
+   "height": 576,
+   "seed": 163,
+   "steps": 4
+  },
+  {
+   "id": "회장",
+   "prompt": "Character turnaround sheet of ONE original character in the same clean Japanese anime / Korean webtoon style as the reference image (realistic human proportions, crisp black outlines, soft cel shading, natural colors). Exactly four full-body views of the same person standing side by side from left to right: front view, left side view, right side view, back view. Head to shoes fully visible, same outfit and hairstyle in every view, plain pure white background, no text, no labels, no props on the floor, evenly spaced. A 68-year-old Korean man, the dignified chairman of a big company: tall, neat silver-white combed-back hair, calm deep eyes, a few wrinkles, a charcoal gray three-piece suit with a dark red tie, a white pocket square, black shoes.",
+   "refs": [
+    "/home/user/youtubeshot/연재/막내개그/화풍샘플/사용자_캐릭터스타일_기준.png"
+   ],
+   "width": 1280,
+   "height": 576,
+   "seed": 164,
+   "steps": 4
+  }
+ ],
+ "ref_max_area": 230000,
+ "crop_border": false
+}
