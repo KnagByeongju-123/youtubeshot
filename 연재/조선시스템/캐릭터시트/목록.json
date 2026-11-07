@@ -69,6 +69,16 @@
    "color": "dark green",
    "look": "A 60-year-old Korean provincial governor of the Joseon dynasty: dignified, a long white beard and white eyebrows, stern wise eyes, a dark green official robe with ONE plain square embroidered crane badge on the chest, round collar, black belt, black brimless two-tiered samo official cap (exactly like the reference sheet) with two small thin flat oval wings sticking out to the left and right at the back, black boots, the same hat and robe in all three views",
    "look_ko": "60살 관찰사, 흰 수염, 녹색 관복·사모"
+  },
+  {
+   "name": "군졸",
+   "kind": "person",
+   "seed": 51,
+   "refs": [
+    "등장인물/조선/_기준/3면_무관.png"
+   ],
+   "look": "A 30-year-old ordinary Korean foot soldier of the Joseon dynasty: medium build, plain young face, a black felt jeonrip military hat with a wide round brim, a red tassel on top and a red bead chin strap (exactly like the reference), a sleeveless dark navy jeonbok vest over a dark navy jacket with red sleeves, a red cloth sash at the waist, white baggy trousers tied at the ankles with dark leggings, black cloth boots, holding a long wooden spear, the same hat and uniform in all three views",
+   "look_ko": "조선 군졸, 전립(붉은 술)·남색 전복·붉은 띠·창"
   }
  ]
 }

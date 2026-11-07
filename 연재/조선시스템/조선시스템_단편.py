@@ -50,6 +50,7 @@ STORE = "a large wooden storehouse behind a Joseon county government office, hea
 MANSION = "a grand Joseon tiled-roof mansion room in Hanyang at night, a low lacquered table, folding screen, candlelight"
 PANEL = "a glowing translucent blue rectangular window of light floating in the air, filled only with soft light and thin abstract lines, completely blank with no letters, no numbers, no symbols"
 VILLAGERS = "Other people are poor Joseon commoners in plain white and beige hanbok, men with small topknots and headbands, women with hair in buns, who look clearly different from the main characters. None of the villagers wear a gat hat: only the young scholar wears the tall black gat. "
+SOLDIERS = "Other people are Joseon foot soldiers who all wear exactly the uniform of the soldier in the LAST reference image: black felt jeonrip hat with a wide round brim and a red tassel, sleeveless dark navy jeonbok vest over red sleeves, red sash, white baggy trousers, black cloth boots, holding long wooden spears. "
 CLERKS = "Other people are county clerks in plain black-gray hanbok with small black hats, who look clearly different from the main characters. "
 
 # 부마다 (컷, 문단 번호들, 나오는 인물, 다른 사람 문장(없으면 ""), 장소, 장면(영어), 화면 설명)
@@ -75,18 +76,18 @@ CUTS = {1: [
     ("c19", [22], ["수령"], CLERKS, ENTRY, "the thin magistrate on his horse pointing coldly with a fan, ordering the clerks to block the roads", "길을 모두 막아라"),
     ("c20", [23], [], CLERKS, FENCE, "clerks putting up a rough wooden barricade fence across the road, while an ox cart loaded with plain brown wooden medicine chests and straw-wrapped bundles turns away from the village. No main characters", "막힌 길, 돌아가는 약재 수레"),
     ("c21", [24, 25], ["수령", "현"], "", FENCE, "the young scholar stepping in front of the magistrate's brown horse with his arms spread, blocking its way; the magistrate on the horse smirking", "수령의 말 앞을 막아서다"),
-    ("c22", [26, 27], ["현", "수령"], "", FENCE, "the young scholar standing and pleading earnestly; the magistrate looking down at him from the horse with a mocking sneer", "말 위에서 비웃는 수령"),
+    ("c22", [26, 27], ["현", "수령"], "", FENCE, "the magistrate sitting high on his brown horse and looking down with a mocking sneer; the young scholar standing on the ground below, pleading earnestly", "말 위에서 비웃는 수령"),
     ("c23", [28, 29], ["현"], CLERKS, FENCE, "the young scholar has just been pushed down and is sitting fallen on the dirt road, propped on one hand, dust flying, his gat hat still on his head; a clerk in black-gray hanbok stands over him with his hand still pushed out. The young scholar appears only once, only on the ground", "흙바닥에 넘어진 이현"),
     ("c24", [30], ["현"], "", FENCE, "the young scholar half-lying on the dirt road propped on one arm, looking up at " + PANEL + " showing a faint picture of a locked wooden storehouse", "숨겨진 사실이 보입니다"),
     ("c25", [31], ["현"], VILLAGERS, VILLAGE + ", night", "the young scholar and a few villagers hanging big black iron pots over wood fires beside a stone well at night, flames and steam", "우물마다 솥을 걸다"),
-    ("c26", [32], ["현"], VILLAGERS, VILLAGE + ", daytime", "a recovered little village boy standing up smiling and an old man getting up, villagers gathering around the steaming pots, the young scholar ladling boiled water into bowls", "하나둘 솥 앞에 모여들다"),
+    ("c26", [32], [], VILLAGERS, VILLAGE + ", daytime", "a recovered little village boy standing up smiling and a white-haired old man getting up from a straw mat, villagers gathering around the steaming iron pots with bowls. No main characters", "하나둘 솥 앞에 모여들다"),
     ("c27", [33], [], VILLAGERS, VILLAGE + ", bright morning", "the village in clear morning light, the last thin wisps of reddish mist fading away above the wells, villagers going about their work. No main characters", "걷혀 가는 붉은 안개"),
-    ("c28", [34], [], "Other people are a Joseon governor's procession: soldiers in dark blue uniforms with spears and black felt hats walking beside a man on a horse. ", FENCE + ", seen from a distance", "a governor's procession passing along the road outside the wooden barricade, smoke from steaming pots rising beyond the fence in the village", "관찰사의 행렬"),
-    ("c29", [35], ["관찰사"], "Other people are soldiers in dark blue uniforms with spears and black felt hats, standing behind the governor. ", FENCE, "the governor on a brown horse stopping and looking over the wooden barricade with a puzzled stern face", "어찌 사람들이 저리 일을"),
+    ("c28", [34], [], SOLDIERS, FENCE + ", seen from a distance", "a governor's procession passing along the road outside the wooden barricade, smoke from steaming pots rising beyond the fence in the village", "관찰사의 행렬"),
+    ("c29", [35], ["관찰사"], SOLDIERS, FENCE, "the governor on a brown horse stopping and looking over the wooden barricade with a puzzled stern face", "어찌 사람들이 저리 일을"),
     ("c30", [36], ["현"], "", FENCE, "the young scholar stepping in front of the wooden barricade and bowing deeply with both hands together", "울타리 앞에 나선 이현"),
     ("c31", [37], ["현", "관찰사"], "", FENCE, "the young scholar standing straight and speaking firmly toward the governor on his horse, pointing toward a distant storehouse", "창고를 열어 보시옵소서"),
-    ("c32", [38], ["관찰사"], "Other people are soldiers in dark blue uniforms with spears and black felt hats. ", FENCE, "the governor on his horse giving an order with a raised hand; soldiers bowing and setting off", "군졸들에게 명하다"),
-    ("c33", [39], [], "Other people are soldiers in dark blue uniforms with black felt hats. ", STORE + ", evening torchlight", "the heavy storehouse doors thrown open by soldiers, revealing many old wooden carts piled high with plain brown wooden medicine chests with iron locks and straw-wrapped bundles inside, lit by burning torches held by the soldiers. No main characters", "창고 안의 약재 수레 서른 대"),
+    ("c32", [38], ["관찰사"], SOLDIERS, FENCE, "the governor on his horse giving an order with a raised hand; soldiers bowing and setting off", "군졸들에게 명하다"),
+    ("c33", [39], [], SOLDIERS, STORE + ", evening torchlight", "the heavy storehouse doors thrown open by soldiers, revealing many old wooden carts piled high with plain brown wooden medicine chests with iron locks and straw-wrapped bundles inside, lit by burning torches held by the soldiers. No main characters", "창고 안의 약재 수레 서른 대"),
     ("c34", [40, 41], ["수령", "관찰사"], "", STORE + ", evening torchlight", "the thin magistrate kneeling with a pale terrified face; the governor standing over him holding out his hand sternly to take the magistrate's seal", "수령의 관인을 거두다"),
     ("c35", [42], ["어머니"], VILLAGERS, ENTRY + ", sunset", "villagers joyfully pulling down the wooden barricade; in the foreground the mother standing at a brushwood gate wiping tears with her sleeve, smiling", "울타리를 걷어 내는 마을 사람들"),
     ("c36", [43, 44], ["현_맨머리"], "", ROOM + ", night, a small oil lamp dish glowing", "the young man sitting at a low wooden table with an open thread-bound book, looking up at " + PANEL + " with one glowing red line at its bottom", "세 번째 임무, 장원 급제"),
@@ -134,7 +135,7 @@ def main():
     cuts = CUTS[part]
     if cmd == "job":
         only = set(sys.argv[4:])
-        items = [{"id": c[0], "width": 1024, "height": 576, "seed": 2100 + part * 100 + k, "prompt": prompt(c), "refs": [ref_of(nm) for nm in c[2]]}
+        items = [{"id": c[0], "width": 1024, "height": 576, "seed": 2100 + part * 100 + k, "prompt": prompt(c), "refs": [ref_of(nm) for nm in c[2]] + ([os.path.join(SHEETS, "_앞_군졸.png")] if c[3] is SOLDIERS else [])}
                  for k, c in enumerate(cuts) if not only or c[0] in only]
         os.makedirs(folder, exist_ok=True)
         out = os.path.join(folder, "job.json")
