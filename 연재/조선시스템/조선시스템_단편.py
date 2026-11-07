@@ -166,7 +166,7 @@ CUTS = {1: [
     ("c05", [5], ["현"], "", NAEUI + ", evening", "the young scholar looking up at " + PANEL + " with one glowing red line at its bottom", "네 번째 임무, 한양을 구하십시오"),
     ("c06", [6], ["현"], "", NAEUI + ", night", "the young scholar kneeling over a big hand-drawn map of the capital spread on the floor, three red mist marks glowing above three wells on the map", "우물 세 곳의 붉은 안개"),
     ("c07", [7], ["현"], COURT, THRONE, "the young scholar kneeling on the floor of the throne hall and speaking firmly upward toward the throne, court officials lined up on both sides", "우물을 막아야 하옵니다"),
-    ("c08", [8, 9], ["판서"], COURT, THRONE, "the heavy-set minister stepping forward from the line of officials and bowing toward the throne while speaking with a scornful face", "젊은 장원의 헛된 말이옵니다"),
+    ("c08", [8, 9], ["판서"], COURT, THRONE, "the heavy-set minister in his dark crimson red official robe stepping forward from the line of officials and bowing toward the throne while speaking with a scornful face", "젊은 장원의 헛된 말이옵니다"),
     ("c09", [10], ["현"], "", NAEUI, "the young scholar showing a hand-drawn plan of a big quarantine house and a few lumps of homemade soap on a wooden board, explaining eagerly", "두 번째 혁신, 병막과 비누"),
     ("c10", [11], [], "", NAEUI + ", close-up", "close-up of rough brown lumps of homemade lye soap on a wooden board, white foam bubbles on a wet hand-sized lump, a small clay bowl of water. No people", "처음 보는 물건, 비누"),
     ("c11", [12], [], VILLAGERS, HANYANG + ", sunny day", "a capital street where wells are covered with wooden boards, big iron pots of water boil over fires on every corner, and people wash their hands with foaming soap in basins. No main characters", "막힌 우물, 거리마다 솥"),
