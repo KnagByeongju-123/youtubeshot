@@ -70,7 +70,7 @@ CUTS = [
     ("c38", [55], [], False, False, ALLEY_DAWN, "the same little rice cake shop at the end of the dark market alley at 4 a.m., its warm light on as always. No people", "변하지 않은 새벽"),
     ("c39", [56, 57], ["딸", "도윤"], False, False, SHOP_DAWN, "the schoolgirl wearing a small apron over her uniform washing rice in the big basin next to her father, both smiling, steam rising", "함께 쌀을 씻는 하은이"),
     ("c40", [58], ["도윤", "딸"], False, False, SHOP_DAWN, "the man handing his late father's old notebook to his daughter with both hands, she receives it carefully with shining eyes", "딸에게 건넨 수첩"),
-    ("c41", [59], [], False, False, "on a wooden counter at dawn with soft first sunlight", "close-up of the old notebook's first page with two lines of handwriting in two different handwritings, a plate of golden injeolmi beside it, " + NOTE + ". No people", "새벽도, 거짓말을 안 한다"),
+    ("c41", [59], [], False, False, "on a wooden counter of the rice cake shop at dawn with soft first sunlight", "close-up of a white plate of soft chewy square white injeolmi rice cakes dusted with fine yellow soybean powder in sharp focus; behind it an old open notebook lies far out of focus and blurry so no writing can be read. No people", "새벽도, 거짓말을 안 한다"),
 ]
 
 
