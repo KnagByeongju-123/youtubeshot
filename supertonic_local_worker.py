@@ -30,6 +30,20 @@ def reply(ok, **data):
     sys.stdout.flush()
 
 
+# 섞은 목소리: 목소리·억양(ttl)은 비율대로 섞고, 끊어 읽는 박자(dp)는 따로. steps = 이 목소리의 최소 품질
+# F5S = 여성 성우 5 + 여성 성우 2 를 7:3 (표준말 억양, 사용자 결정 2026-11-07: 샘플 비교에서 선택)
+BLENDS = {"F5S": {"ttl": {"F5": .7, "F2": .3}, "dp": {"F5": 1.0}, "steps": 10}}
+
+
+def blend_style(tts, name):
+    from supertonic.core import Style
+    b = BLENDS[name]
+    base = {v: tts.get_voice_style(voice_name=v) for v in set(b["ttl"]) | set(b["dp"])}
+    ttl = sum(w * base[v].ttl for v, w in b["ttl"].items())
+    dp = sum(w * base[v].dp for v, w in b["dp"].items())
+    return Style(ttl.astype("float32"), dp.astype("float32"))
+
+
 def main():
     arg = argparse.ArgumentParser()
     arg.add_argument("--model-dir", type=Path, required=True)
@@ -57,18 +71,21 @@ def main():
             if any(0xD800 <= ord(ch) <= 0xDFFF for ch in text):
                 raise ValueError("잘못된 문자 인코딩이 포함되어 있습니다. UTF-8 통신 설정을 확인하세요.")
             voice = str(req.get("voice", "M1"))
-            if voice not in {f"M{i}" for i in range(1,6)} | {f"F{i}" for i in range(1,6)}:
+            if voice not in {f"M{i}" for i in range(1,6)} | {f"F{i}" for i in range(1,6)} | set(BLENDS):
                 raise ValueError("잘못된 성우 ID: " + voice)
             if not text:
                 raise ValueError("빈 나레이션")
             path = Path(req["out"]).resolve()
             path.parent.mkdir(parents=True, exist_ok=True)
             with contextlib.redirect_stdout(sys.stderr):
-                style = tts.get_voice_style(voice_name=voice)
+                style = blend_style(tts, voice) if voice in BLENDS else tts.get_voice_style(voice_name=voice)
+                steps = max(2, min(12, int(req.get("steps", 5))))
+                if voice in BLENDS:
+                    steps = max(steps, BLENDS[voice].get("steps", 5))
                 audio, duration = tts.synthesize(text=text, voice_style=style,
                                                  lang=str(req.get("lang", "ko")),
                                                  speed=max(.70, min(2.0, float(req.get("speed", 1.0)))),
-                                                 total_steps=max(2, min(12, int(req.get("steps", 5)))),
+                                                 total_steps=steps,
                                                  verbose=False)
                 tts.save_audio(audio, str(path))
             reply(True, status="generated", file=str(path))

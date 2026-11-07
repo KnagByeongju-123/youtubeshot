@@ -145,7 +145,7 @@ def find_font(bold=False):
     return ""
 
 
-DEFAULT_VOICE = "Supertonic M1 (남성, 무료 로컬) [supertonic:M1]"   # 성우를 따로 정하지 않으면 이 목소리 (기본 = 남자 성우 1, 톤 -1.5, 사용자 결정 2026-11-01: '창' 발음 샘플 비교에서 M1 선택. 예전 M4)
+DEFAULT_VOICE = "Supertonic F5S (여성, 표준말, 무료 로컬) [supertonic:F5S]"   # 성우를 따로 정하지 않으면 이 목소리 (기본 = 여성 성우 5에 2를 3할 섞은 표준말 목소리, 톤 +1, 사용자 결정 2026-11-07. 예전 M1 톤 -1.5)
 TTS_VOICES = {   # 마이크로소프트 온라인(Edge) 음성은 쓰지 않음. 옛 설정에 적힌 Edge 이름은 voice_code 가 DEFAULT_VOICE 로 바꿈
     "윈도우 내장 음성": "sapi",
 }
@@ -573,7 +573,7 @@ FIELDS = [
     ("나레이션", "st_emotion", "로컬 성우 감정", "choice:자동(문단별),차분,공포·긴장,슬픔·감동,놀람·반전,분노·갈등,밝음·유머", "자동(문단별)"),
     ("나레이션", "st_emotion_map", "문단별 지정(예: 2=슬픔,4=놀람)", "str", ""),
     ("나레이션", "st_steps", "로컬 성우 품질(5~12)", "int", 5),
-    ("나레이션", "narr_tone_f", "여자 성우 톤(반음, 0=원래 목소리 · 올리면 약간 울림)", "float", 0.0),
+    ("나레이션", "narr_tone_f", "여자 성우 톤(반음, 0=원래 목소리 · 올리면 약간 울림)", "float", 1.0),   # 기본 = 반음 1 높게 (사용자 결정 2026-11-07, 여성 성우 F5S 와 함께)
     ("나레이션", "narr_commas", "긴 문장 쉼표 넣어 끊어 읽기(Kiwi)", "choice:on,off", "on"),   # 규칙(사용자 결정 2026-10-31): 모든 나레이션 녹음 전에
     ("나레이션", "narr_tone_m", "남자 성우 톤(반음, 0=원래 목소리)", "float", -1.5),   # 기본 = 반음 1.5 낮게 (사용자 결정 2026-10-31, 남자 성우 4와 함께)
     ("나레이션", "narr_bright_f", "여자 목소리 밝게(고음 강조 · 약간 울림)", "choice:on,off", "off"),
@@ -8046,7 +8046,9 @@ GEMINI_VOICES = [("Zephyr", "여성, 밝음"), ("Puck", "남성, 경쾌"), ("Cha
 SUPERTONIC_VOICES = ([{"short": f"supertonic:M{i}", "gender": "Male", "locale": "ko-KR",
                         "name": f"Supertonic M{i} (남성, 무료 로컬) [supertonic:M{i}]"} for i in range(1, 6)]
                      + [{"short": f"supertonic:F{i}", "gender": "Female", "locale": "ko-KR",
-                         "name": f"Supertonic F{i} (여성, 무료 로컬) [supertonic:F{i}]"} for i in range(1, 6)])
+                         "name": f"Supertonic F{i} (여성, 무료 로컬) [supertonic:F{i}]"} for i in range(1, 6)]
+                     + [{"short": "supertonic:F5S", "gender": "Female", "locale": "ko-KR",   # 여성 5 + 여성 2 섞음 (supertonic_local_worker.BLENDS)
+                         "name": "Supertonic F5S (여성, 표준말, 무료 로컬) [supertonic:F5S]"}])
 
 
 def ai_voice_list():
@@ -8058,10 +8060,10 @@ def voice_code(voice_name):
     """설정에 적힌 성우 이름 → 음성 코드. '[supertonic:M2]' '[openai:nova]' '[gemini:Kore]' 형식이면 괄호 안을 씀"""
     if voice_name in TTS_VOICES:
         return TTS_VOICES[voice_name]
-    m = re.search(r"\[((?:openai|gemini):[A-Za-z]+|supertonic:[MF][1-5])\]", voice_name or "")
+    m = re.search(r"\[((?:openai|gemini):[A-Za-z]+|supertonic:[MF][1-5]S?)\]", voice_name or "")
     if m:
         return m.group(1)
-    if re.fullmatch(r"supertonic:[MF][1-5]", (voice_name or "").strip()):
+    if re.fullmatch(r"supertonic:[MF][1-5]S?", (voice_name or "").strip()):
         return voice_name.strip()
     return "supertonic:M2"     # 성우 미지정·옛 마이크로소프트 온라인 성우 이름 → 남자 성우 2 (기본)
 
