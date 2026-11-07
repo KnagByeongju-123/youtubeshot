@@ -95,7 +95,7 @@ CUTS = {1: [
     ("c29", [35], ["관찰사"], SOLDIERS, FENCE, "the governor on a brown horse stopping and looking over the wooden barricade with a puzzled stern face", "어찌 사람들이 저리 일을"),
     ("c30", [36], ["현"], "", FENCE, "the young scholar stepping in front of the wooden barricade and bowing deeply with both hands together", "울타리 앞에 나선 이현"),
     ("c31", [37], ["현", "관찰사"], "", FENCE, "the young scholar standing straight and speaking firmly toward the governor on his horse, pointing toward a distant storehouse", "창고를 열어 보시옵소서"),
-    ("c32", [38], ["관찰사"], SOLDIERS, FENCE, "the governor on his horse giving an order with a raised hand; soldiers bowing and setting off", "군졸들에게 명하다"),
+    ("c32", [38], ["관찰사"], SOLDIERS, FENCE, "the governor standing on the ground with both feet, holding the reins of his brown horse beside him with one hand and raising the other hand to give an order; soldiers bowing and setting off", "군졸들에게 명하다"),
     ("c33", [39], [], SOLDIERS, STORE + ", evening torchlight", "the heavy storehouse doors thrown open by soldiers, revealing many old wooden carts piled high with plain brown wooden medicine chests with iron locks and straw-wrapped bundles inside, lit by burning torches held by the soldiers. No main characters", "창고 안의 약재 수레 서른 대"),
     ("c34", [40, 41], ["수령", "관찰사"], "", STORE + ", evening torchlight", "the thin magistrate kneeling with a pale terrified face; the governor standing over him holding out his hand sternly to take the magistrate's seal", "수령의 관인을 거두다"),
     ("c35", [42], ["어머니"], VILLAGERS, ENTRY + ", sunset", "villagers joyfully pulling down the wooden barricade; in the foreground the mother standing at a brushwood gate wiping tears with her sleeve, smiling", "울타리를 걷어 내는 마을 사람들"),
