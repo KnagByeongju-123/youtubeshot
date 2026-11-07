@@ -33,7 +33,7 @@ LOOK = {
     "수령": "a 35-year-old thin Korean magistrate with a thin black mustache and sly narrow eyes, a dark blue official robe with a square badge on the chest, " + SAMO,
     "민호": "a 22-year-old plump Korean young noble with a soft face, small arrogant eyes and a thin black mustache, a fine black gat hat with a long string of amber beads under the chin, a shiny light jade-green silk dopo robe with a fine gold pattern, a red silk cord belt",
     "시험관": "a 50-year-old thin nervous Korean exam official with a thin gray beard, a dark teal blue official robe with a square crane badge, " + SAMO,
-    "아이": "a 10-year-old thin poor Korean village boy with one long black braid down his back tied with a red ribbon, bareheaded, a worn beige jeogori and baggy beige trousers, straw sandals",
+    "아이": "a 10-year-old thin poor Korean village boy with full thick black hair on his whole head, parted in the middle and combed back into one long braid down his back tied with a red ribbon, a worn beige jeogori and baggy beige trousers, straw sandals",
     "관찰사": "a 60-year-old dignified Korean governor with a long white beard and stern wise eyes, a dark green official robe, " + SAMO,
 }
 REF = {
@@ -120,7 +120,7 @@ CUTS = {1: [
     ("c14", [16, 17, 18], ["민호"], SCHOLARS, EXAM, "the plump young noble in the jade-green silk robe laughing loudly with his head thrown back, pointing; scholars around him snickering", "백지를 낸 거 아니야?"),
     ("c15", [19], ["현", "아이"], "", GATE + ", outside the exam courtyard", "the young scholar coming out of the gate; a thin village boy with a long braid waiting for him, panting and sweaty from running", "시험장 문 앞의 아이"),
     ("c16", [20], ["아이", "현"], "", GATE, "close view: the thin village boy with a long braid looking up and pleading with tearful eyes; the young scholar bending down to listen", "도령님만 찾아요"),
-    ("c17", [21], ["현"], "", "a long dirt road running away from Hanyang's walls toward the countryside", "the young scholar running fast along the road holding his gat with one hand, robe flapping, the city wall far behind", "고향 쪽으로 달려가다"),
+    ("c17", [21], ["현"], "", "a long dirt road running away from Hanyang's walls toward the countryside", "the young scholar running fast along the road with both empty hands swinging, his robe flapping, the city wall far behind", "고향 쪽으로 달려가다"),
     ("c18", [22], ["현"], VILLAGERS, VILLAGE + ", night", "the young scholar stirring a big iron pot of boiling water over a fire in a dark village at night, villagers carrying bowls, a well covered with boards", "이웃 마을에서 다시 솥을"),
     ("c19", [23], [], "Other people are Joseon commoners of the capital in plain hanbok, some sick and lying on mats, palace physicians in green robes shaking their heads. ", HANYANG + ", gloomy gray day", "a gloomy capital street where sick people lie on straw mats by the walls while worried physicians in green robes stand helpless. No main characters", "한양에 번진 괴질"),
     ("c20", [24], ["임금"], "", PALACE, "the king sitting alone at the low desk late at night, rubbing his tired eyes, piles of rolled exam papers beside him", "잠 못 이룬 임금"),
