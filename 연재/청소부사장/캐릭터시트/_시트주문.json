@@ -1,0 +1,50 @@
+{
+ "items": [
+  {
+   "id": "은주",
+   "prompt": "Character turnaround sheet of ONE original character in the same clean Japanese anime / Korean webtoon style as the reference image (realistic human proportions, crisp black outlines, soft cel shading, natural colors). Exactly four full-body views of the same person standing side by side from left to right: front view, left side view, right side view, back view. Head to shoes fully visible, same outfit and hairstyle in every view, plain pure white background, no text, no labels, no props on the floor, evenly spaced. A 32-year-old Korean woman, a hotel housekeeping cleaner: slim, black hair tied in a neat low ponytail under a small white cleaning cap, plain kind face, determined eyes, a light mint-green short-sleeve housekeeping uniform dress with a white collar and a white apron, black flat work shoes, yellow rubber gloves tucked into the apron pocket.",
+   "refs": [
+    "/home/user/youtubeshot/연재/막내개그/화풍샘플/사용자_캐릭터스타일_기준.png"
+   ],
+   "width": 1280,
+   "height": 576,
+   "seed": 121,
+   "steps": 4
+  },
+  {
+   "id": "은주사장",
+   "prompt": "Character turnaround sheet of ONE original character in the same clean Japanese anime / Korean webtoon style as the reference image (realistic human proportions, crisp black outlines, soft cel shading, natural colors). Exactly four full-body views of the same person standing side by side from left to right: front view, left side view, right side view, back view. Head to shoes fully visible, same outfit and hairstyle in every view, plain pure white background, no text, no labels, no props on the floor, evenly spaced. A 42-year-old Korean woman, the same person ten years later as a confident hotel owner: slim, black hair in a sleek low bun, calm sharp eyes, light makeup, a tailored navy blue pantsuit with a white blouse, a small silver brooch, black low-heeled shoes.",
+   "refs": [
+    "/home/user/youtubeshot/연재/막내개그/화풍샘플/사용자_캐릭터스타일_기준.png"
+   ],
+   "width": 1280,
+   "height": 576,
+   "seed": 122,
+   "steps": 4
+  },
+  {
+   "id": "지배인",
+   "prompt": "Character turnaround sheet of ONE original character in the same clean Japanese anime / Korean webtoon style as the reference image (realistic human proportions, crisp black outlines, soft cel shading, natural colors). Exactly four full-body views of the same person standing side by side from left to right: front view, left side view, right side view, back view. Head to shoes fully visible, same outfit and hairstyle in every view, plain pure white background, no text, no labels, no props on the floor, evenly spaced. A 48-year-old Korean man, an arrogant hotel general manager: tall and thin, slicked-back black hair with gray at the temples, thin mustache, narrow cold eyes, a black three-piece suit with a burgundy tie, a gold name badge with no letters, polished black shoes.",
+   "refs": [
+    "/home/user/youtubeshot/연재/막내개그/화풍샘플/사용자_캐릭터스타일_기준.png"
+   ],
+   "width": 1280,
+   "height": 576,
+   "seed": 123,
+   "steps": 4
+  },
+  {
+   "id": "회장",
+   "prompt": "Character turnaround sheet of ONE original character in the same clean Japanese anime / Korean webtoon style as the reference image (realistic human proportions, crisp black outlines, soft cel shading, natural colors). Exactly four full-body views of the same person standing side by side from left to right: front view, left side view, right side view, back view. Head to shoes fully visible, same outfit and hairstyle in every view, plain pure white background, no text, no labels, no props on the floor, evenly spaced. A 70-year-old Korean man, a kind elderly hotel guest who is secretly a business chairman: short, white neat hair, white eyebrows, gentle smile, round silver glasses, a plain beige cardigan over a white shirt, gray trousers, brown walking shoes, a wooden cane.",
+   "refs": [
+    "/home/user/youtubeshot/연재/막내개그/화풍샘플/사용자_캐릭터스타일_기준.png"
+   ],
+   "width": 1280,
+   "height": 576,
+   "seed": 124,
+   "steps": 4
+  }
+ ],
+ "ref_max_area": 230000,
+ "crop_border": false
+}
