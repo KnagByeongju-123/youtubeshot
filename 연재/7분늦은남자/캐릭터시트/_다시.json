@@ -1,0 +1,39 @@
+{
+ "items": [
+  {
+   "id": "기사",
+   "prompt": "Character turnaround sheet of ONE original character in the same clean Japanese anime / Korean webtoon style as the reference image (realistic human proportions, crisp black outlines, soft cel shading, natural colors). Exactly four full-body views of the same person standing side by side from left to right: front view, left side view, right side view, back view. Head to shoes fully visible, same outfit and hairstyle in every view, plain pure white background, no text, no labels, no props on the floor, evenly spaced. A 52-year-old Korean man, a quiet taxi driver: medium build, short black hair with gray at the sides, a faint scar on his left eyebrow, tired gentle eyes, a light gray zip-up work jacket with LONG sleeves down to the wrists in all four views over a navy collared shirt, dark brown trousers, black sneakers, an old silver wristwatch on his left wrist that runs seven minutes slow.",
+   "refs": [
+    "/home/user/youtubeshot/연재/막내개그/화풍샘플/사용자_캐릭터스타일_기준.png"
+   ],
+   "width": 1280,
+   "height": 576,
+   "seed": 161,
+   "steps": 4
+  },
+  {
+   "id": "딸",
+   "prompt": "Character turnaround sheet of ONE original character in the same clean Japanese anime / Korean webtoon style as the reference image (realistic human proportions, crisp black outlines, soft cel shading, natural colors). Exactly four full-body views of the same person standing side by side from left to right: front view, left side view, right side view, back view. Head to shoes fully visible, same outfit and hairstyle in every view, plain pure white background, no text, no labels, no props on the floor, evenly spaced. A 24-year-old Korean young woman, his daughter, a new bus driver: slim, short black bob hair, bright brave eyes, a sky-blue city bus driver uniform shirt with a navy vest that is visible from the back too (the back view shows the navy vest over the blue shirt) and a navy tie, navy trousers, black shoes, a small ID card clip.",
+   "refs": [
+    "/home/user/youtubeshot/연재/막내개그/화풍샘플/사용자_캐릭터스타일_기준.png"
+   ],
+   "width": 1280,
+   "height": 576,
+   "seed": 162,
+   "steps": 4
+  },
+  {
+   "id": "형사",
+   "prompt": "Character turnaround sheet of ONE original character in the same clean Japanese anime / Korean webtoon style as the reference image (realistic human proportions, crisp black outlines, soft cel shading, natural colors). Exactly four full-body views of the same person standing side by side from left to right: front view, left side view, right side view, back view. Head to shoes fully visible, same outfit and hairstyle in every view, plain pure white background, no text, no labels, no props on the floor, evenly spaced. A 40-year-old Korean woman, a calm police detective: tall, black hair in a low ponytail, sharp kind eyes, a knee-length beige trench coat with long sleeves and a black belt, exactly the same knee-length coat in all four views, over a white shirt, black trousers, black boots, a police badge clipped on her belt.",
+   "refs": [
+    "/home/user/youtubeshot/연재/막내개그/화풍샘플/사용자_캐릭터스타일_기준.png"
+   ],
+   "width": 1280,
+   "height": 576,
+   "seed": 164,
+   "steps": 4
+  }
+ ],
+ "ref_max_area": 230000,
+ "crop_border": false
+}
