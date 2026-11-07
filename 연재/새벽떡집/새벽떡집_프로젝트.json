@@ -175,7 +175,7 @@
   "image_quality": "medium",
   "image_style_preset": "웹툰",
   "image_style": "영화 장면 같은 사실적인 사진, 분위기 있는 조명",
-  "bgm_mode": "없음",
+  "bgm_mode": "파일",
   "bgm_style": "잔잔한 패드",
   "bgm_volume": 0.03,
   "bgm_peak": 0.35,
@@ -185,7 +185,7 @@
   "hit_sound": "자동(코미디=두둥탁)",
   "hit_volume": 0.6,
   "bgm_seed": 0,
-  "bgm_path": "",
+  "bgm_path": "/home/user/youtubeshot/output/애니/새벽떡집/분위기별_배경음.mp3",
   "chapter_hold": 0
  },
  "para_audio": {},
