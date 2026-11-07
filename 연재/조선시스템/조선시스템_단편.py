@@ -46,7 +46,7 @@ REF = {
 CAPPED = {"현", "판서", "임금", "수령", "관찰사", "민호", "시험관", "의원"}
 
 LAB = "a modern infectious disease research laboratory in Seoul in the year 2045 at night, glass test tubes, a microscope, cold white lights"
-ROOM = "inside a small poor thatched-roof Joseon house room, paper lattice door, worn straw mat floor, a thin old quilt; light comes only from a small open clay oil dish with one burning wick"
+ROOM = "inside a small poor thatched-roof Joseon house room, paper lattice door, worn straw mat floor, a thin old quilt; light comes only from a small open clay oil dish with one burning wick sitting directly on the floor or desk (no glass lamp, no lantern, no glass chimney)"
 YARD = "the dirt yard of a small poor thatched-roof Joseon house with a brushwood gate and a low stone wall"
 VILLAGE = "a poor Joseon farming village of thatched-roof houses with stone wells and dirt paths, early spring"
 ENTRY = "the entrance of a poor Joseon village with a dirt road, a big old tree and thatched houses behind"
