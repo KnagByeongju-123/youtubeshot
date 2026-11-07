@@ -43,7 +43,7 @@ DEFAULT = {
     "나레이션_먼저": True,          # 사용자 결정 2026-10-31: 대본 → 나레이션(문단마다 시간 기록) → 그 시간에 맞춰 그림 → 배경음·자막과 합치기 (그림 스타일일 때)
     "문단_최대_글자": 120,          # 나레이션 먼저일 때 이보다 긴 문단은 문장 끝에서 나눔 (약 15초) → 그림이 문단이 바뀔 때 바뀌어 박자가 맞음
     "그림_사용자점검": True,        # 사용자 결정 2026-10-31: 그림을 다 그리면 40장씩 모음(_그림점검_N.jpg)을 만들고 멈춤 → 점검 뒤 같은 명령에 --점검완료 를 붙여 이어서
-    "나레이션_성우": "F5S",         # 사용자 결정 2026-11-07: 여성 표준말 목소리 (F5 + F2 섞음, 톤 +1, 예전 M1 톤 -1.5). '성우_프리셋'을 적으면 그것이 우선
+    "나레이션_성우": "M1",          # 사용자 결정 2026-11-07: 남자 성우 1 기본 (톤 -1.5). 여성 표준말 F5S(F5+F2 섞음, 톤 +1)는 시작할 때 2번으로 고름. '성우_프리셋'을 적으면 그것이 우선
     "자막": "보임",                 # 보임(기본, 사용자 결정 2026-10-31: 자막은 그대로) / 숨김(나레이션만)
     "자막_스타일": "자동",            # 자동(소재에 맞춰) 또는 프로그램의 '인기 롱폼 스타일' 이름 그대로
     "끝나면": "그대로",              # 연속 제작이 끝난 뒤: 그대로 / 절전 / 끄기  (시작할 때 물어봄)
@@ -335,7 +335,7 @@ def ask_batch_plan(c):
     return True
 
 
-VOICE_CHOICES = [("F5S", "여성 표준말 (여성 성우 5+2 섞음, 기본)"), ("M1", "남성 (남자 성우 1)")]
+VOICE_CHOICES = [("M1", "남성 (남자 성우 1, 기본)"), ("F5S", "여성 표준말 (여성 성우 5+2 섞음)")]
 IMAGE_CHOICES = [("그림: 세밀 반실사", "세밀한 반실사 그림 (기본, 그리는 효과)"), ("근거 사진(웹)", "실제 사진 (웹 자료·출처 표시)")]
 
 
@@ -343,7 +343,7 @@ def ask_start_choices(c):
     """시작할 때 성우·이미지를 고름 (사용자 결정 2026-11-07). 명령에 --여성/--남성, --반실사/--사진 을 붙이면 묻지 않음.
     창 없이 돌릴 때(입력을 받을 수 없을 때)는 설정 파일 값 그대로"""
     def pick(title, choices):
-        cur_i = 0                                  # Enter = 첫 번째(기본: 여성 표준말 · 세밀 반실사)
+        cur_i = 0                                  # Enter = 첫 번째(기본: 남자 성우 1 · 세밀 반실사)
         print(f"\n{title}")
         for i, (_, label) in enumerate(choices):
             print(f"  {i + 1} = {label}" + ("   ← Enter" if i == cur_i else ""))
@@ -357,7 +357,7 @@ def ask_start_choices(c):
     image = "그림: 세밀 반실사" if "--반실사" in flags else ("근거 사진(웹)" if "--사진" in flags else None)
     tty = sys.stdin is not None and sys.stdin.isatty()
     if voice is None:
-        voice = pick("🎙 나레이션 성우를 고르세요", VOICE_CHOICES) if tty else str(c.get("나레이션_성우") or "F5S")
+        voice = pick("🎙 나레이션 성우를 고르세요", VOICE_CHOICES) if tty else str(c.get("나레이션_성우") or "M1")
     if image is None:
         image = pick("🖼 이미지를 고르세요", IMAGE_CHOICES) if tty else str(c.get("이미지") or DEFAULT["이미지"])
     if voice != str(c.get("나레이션_성우") or ""):
@@ -698,7 +698,7 @@ def run_doc(m, app, c, gate):
     for k_, v_ in LONG_FIX.items():
         if k_ in app.vars:
             app.vars[k_].set(v_)
-    code_ = str(c.get("나레이션_성우") or "F5S").strip()
+    code_ = str(c.get("나레이션_성우") or "M1").strip()
     if code_ and not str(c.get("성우_프리셋") or "").strip():
         app.vars["narr_voice"].set(f"Supertonic {code_} ({'남성' if code_[:1] == 'M' else '여성'}, 무료 로컬) [supertonic:{code_}]")
     app.vars["format"].set("롱폼 가로(1920×1080)")

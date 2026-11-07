@@ -145,7 +145,7 @@ def find_font(bold=False):
     return ""
 
 
-DEFAULT_VOICE = "Supertonic F5S (여성, 표준말, 무료 로컬) [supertonic:F5S]"   # 성우를 따로 정하지 않으면 이 목소리 (기본 = 여성 성우 5에 2를 3할 섞은 표준말 목소리, 톤 +1, 사용자 결정 2026-11-07. 예전 M1 톤 -1.5)
+DEFAULT_VOICE = "Supertonic M1 (남성, 무료 로컬) [supertonic:M1]"   # 성우를 따로 정하지 않으면 이 목소리 (기본 = 남자 성우 1, 톤 -1.5, 사용자 결정 2026-11-07: 다시 남자 기본. 여성 표준말 F5S 는 고를 수 있음)
 TTS_VOICES = {   # 마이크로소프트 온라인(Edge) 음성은 쓰지 않음. 옛 설정에 적힌 Edge 이름은 voice_code 가 DEFAULT_VOICE 로 바꿈
     "윈도우 내장 음성": "sapi",
 }
