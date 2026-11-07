@@ -26,7 +26,9 @@ FRAMES = int(opt("--frames", 240))
 W, H = [int(v) for v in opt("--size", "1280x720").split("x")]
 STILL = "--still" in argv
 ZOOM = float(opt("--zoom", 1.0))          # 카메라 거리 배율 (작을수록 가까이 → 가장자리 빈 곳 안 보임)
-SMOOTH = "--smooth" in argv               # 삼각형 대신 사진을 그대로 입힌 부드러운 입체 (다큐용)
+SMOOTH = "--smooth" in argv
+CAM = opt("--cam", "sway")                # sway = 좌우로 흔들기 / orbit = 앞으로 다가가며 한쪽으로 돌아감 (사용자 제안 2026-11-07)
+ARC = float(opt("--arc", 22))             # orbit 때 도는 각도(도)               # 삼각형 대신 사진을 그대로 입힌 부드러운 입체 (다큐용)
 os.makedirs(OUT, exist_ok=True)
 
 bpy.ops.wm.read_factory_settings(use_empty=True)
@@ -133,7 +135,17 @@ tc.up_axis = "UP_Y"
 R0 = PW * 1.06 * ZOOM
 
 
+def ease(x):
+    return x * x * (3 - 2 * x)
+
+
 def cam_at(t):        # t 0~1
+    if CAM == "orbit":     # 전진 + 오르빗: 왼쪽에서 시작해 오른쪽으로 돌면서 거리 25% 줄이고 살짝 내려옴
+        e = ease(t)
+        ang = math.radians(ARC) * (e - 0.5) * 2
+        r = R0 * (1.0 - 0.25 * e)
+        cam.location = (r * math.sin(ang), -DEPTH * 0.4 - r * math.cos(ang), 0.9 * (1 - e) - 0.2)
+        return
     ang = math.radians(10) * math.sin(2 * math.pi * t)
     r = R0 * (1 - 0.06 * t)
     cam.location = (r * math.sin(ang), -DEPTH * 0.4 - r * math.cos(ang), 0.6 * math.sin(math.pi * t))
