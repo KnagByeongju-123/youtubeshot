@@ -14,7 +14,7 @@ SHEETS = os.path.join(HERE, "캐릭터시트")
 PROJ = os.path.join(HERE, "붕어빵엄마_프로젝트.json")
 
 STYLE = ("Japanese anime style scene, TV anime screenshot, clean crisp line art, anime cel shading with soft shadows, "
-         "realistic human proportions, natural colors, detailed anime background art, warm modern Korean neighborhood drama in winter. Bungeoppang are small hand-sized fish-shaped pastries; never draw a large fish, never a real fish")
+         "realistic human proportions, natural colors, detailed anime background art, warm modern Korean neighborhood drama in winter. Bungeoppang are very small fish-shaped pastries only about 10 cm long, clearly smaller than an adult's palm (an adult hand can hold two at once); they are baked in a black cast-iron mold with rows of small fish-shaped hollows and kept on a small wire rack; always draw them small compared with the people's hands and faces; never draw a large fish, never a real fish")
 LOOK = {
     "엄마": "a 40-year-old slim Korean woman with black hair in a simple low bun, kind tired eyes, no makeup, faded pink padded vest over a gray hooded sweatshirt, dark red cloth apron with pockets, black work pants, gray sneakers",
     "엄마12": "a 52-year-old slim Korean woman with black hair streaked with a little gray in a simple low bun, kind calm eyes, faint wrinkles, faded pink padded vest over a gray hooded sweatshirt, dark red cloth apron, black work pants",
@@ -23,10 +23,10 @@ LOOK = {
     "회장": "a 42-year-old tall Korean woman with glossy wavy brown shoulder-length hair, heavy makeup, red lipstick, haughty face, cream white wool coat over a black turtleneck, black slim trousers, black heeled boots",
     "회장12": "a 54-year-old Korean woman with wavy brown shoulder-length hair, red lipstick, a clean face with faint wrinkles and tired worried eyes, a plain clean beige wool coat (no stains, no dirt) over a black turtleneck, black trousers",
 }
-CART = "a small old Korean street food cart with a flat black griddle holding rows of many small palm-sized golden fish-shaped pastries (bungeoppang, each the size of a hand), steam rising, a stack of small paper bags, in front of a Korean elementary school gate on a cold winter morning, bare trees, light snow on the ground"
-CORNER = "a windy narrow alley corner near a Korean elementary school in winter, a small old street food cart with a flat griddle holding rows of many small palm-sized golden fish-shaped pastries"
-SHOP = "a small cozy Korean bungeoppang shop with a counter, rows of small palm-sized fish-shaped pastry molds, warm lights, a window to a snowy school street"
-NEWSHOP = "the ground floor bungeoppang shop of a new five-story building in front of a Korean elementary school, bright and clean, rows of small palm-sized fish-shaped pastry molds behind a counter, a small box by the door"
+CART = "a small old Korean street food cart with a black cast-iron bungeoppang mold with rows of small fish-shaped hollows and a small wire rack holding a few tiny golden fish-shaped pastries (each only about 10 cm, smaller than a palm), steam rising, a stack of small paper bags, in front of a Korean elementary school gate on a cold winter morning, bare trees, light snow on the ground"
+CORNER = "a windy narrow alley corner near a Korean elementary school in winter, a small old street food cart with a black cast-iron bungeoppang mold and a small wire rack holding a few tiny golden fish-shaped pastries"
+SHOP = "a small cozy Korean bungeoppang shop with a counter, black cast-iron bungeoppang molds with small fish-shaped hollows, warm lights, a window to a snowy school street"
+NEWSHOP = "the ground floor bungeoppang shop of a new five-story building in front of a Korean elementary school, bright and clean, black cast-iron bungeoppang molds with small fish-shaped hollows behind a counter, a small box by the door"
 HOME = "a tiny modest Korean one-room apartment at night with a low table, a small lamp and a thin mattress on the floor"
 FRONT = "in front of a new modern five-story building across from a Korean elementary school in winter morning"
 
