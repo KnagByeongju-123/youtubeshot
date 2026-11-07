@@ -22,7 +22,7 @@ STYLE = ("traditional East Asian ink wash painting with light color washes: expr
 STYLE_2045 = ("traditional East Asian ink wash painting with light color washes: expressive black ink brush outlines, "
               "rich clear colors applied as transparent watercolor washes, rice paper texture, a modern 2045 research laboratory, no red seal stamp, no calligraphy")
 CAP_LINE = "Each person and the cap shown above him in his reference image are one: he always wears exactly that cap. "
-SAMO = "black brimless two-tiered samo cap with two flat oval wings sticking out to the left and right"
+SAMO = "black samo cap: a small rounded black cap fitted close to the head with a higher back part, and two thin flat oval mesh wings attached only at the back of the cap that stick straight out to the left and right like ears; the sides of the cap above the ears are bare"
 LOOK = {
     "현": "a 20-year-old slim Korean young man, a poor fallen-noble scholar, young clean-shaven face, calm intelligent eyes, black gat hat with a wide flat round brim and a tall narrow crown, a faded light gray-white dopo robe with small patches, thin dark cord belt, straw sandals",
     "현_맨머리": "a 20-year-old slim Korean young man, young clean-shaven face, calm intelligent eyes, bareheaded with his black hair in a small topknot and a thin black headband, a plain white undergarment jeogori",
@@ -86,11 +86,11 @@ CUTS = {1: [
     ("c30", [36], ["현"], "", FENCE, "the young scholar stepping in front of the wooden barricade and bowing deeply with both hands together", "울타리 앞에 나선 이현"),
     ("c31", [37], ["현", "관찰사"], "", FENCE, "the young scholar standing straight and speaking firmly toward the governor on his horse, pointing toward a distant storehouse", "창고를 열어 보시옵소서"),
     ("c32", [38], ["관찰사"], "Other people are soldiers in dark blue uniforms with spears and black felt hats. ", FENCE, "the governor on his horse giving an order with a raised hand; soldiers bowing and setting off", "군졸들에게 명하다"),
-    ("c33", [39], [], "Other people are soldiers in dark blue uniforms with black felt hats. ", STORE + ", evening torchlight", "the heavy storehouse doors thrown open by soldiers, revealing many wooden carts piled high with locked medicine boxes inside. No main characters", "창고 안의 약재 수레 서른 대"),
+    ("c33", [39], [], "Other people are soldiers in dark blue uniforms with black felt hats. ", STORE + ", evening torchlight", "the heavy storehouse doors thrown open by soldiers, revealing many old wooden carts piled high with plain brown wooden medicine chests with iron locks and straw-wrapped bundles inside, lit by burning torches held by the soldiers. No main characters", "창고 안의 약재 수레 서른 대"),
     ("c34", [40, 41], ["수령", "관찰사"], "", STORE + ", evening torchlight", "the thin magistrate kneeling with a pale terrified face; the governor standing over him holding out his hand sternly to take the magistrate's seal", "수령의 관인을 거두다"),
     ("c35", [42], ["어머니"], VILLAGERS, ENTRY + ", sunset", "villagers joyfully pulling down the wooden barricade; in the foreground the mother standing at a brushwood gate wiping tears with her sleeve, smiling", "울타리를 걷어 내는 마을 사람들"),
     ("c36", [43, 44], ["현_맨머리"], "", ROOM + ", night, a small oil lamp dish glowing", "the young man sitting at a low wooden table with an open thread-bound book, looking up at " + PANEL + " with one glowing red line at its bottom", "세 번째 임무, 장원 급제"),
-    ("c37", [45], ["판서"], "", MANSION, "the heavy-set minister sitting at the low lacquered table, slowly putting down a white porcelain teacup, listening to news with a cold face", "한양의 김 판서"),
+    ("c37", [45], ["판서"], "", MANSION, "the heavy-set minister sitting on a floor cushion at the low lacquered table, slowly putting down a white porcelain teacup, listening to news with a cold face", "한양의 김 판서"),
     ("c38", [46, 47], ["판서"], "", MANSION, "close view of the heavy-set minister's face narrowing his eyes with a cold dangerous look, candlelight flickering", "김 판서의 눈이 가늘어지다"),
 ]}
 
