@@ -40,6 +40,7 @@
   통나무: {"모양": "통나무", "반지름": 0.5, "동작": [...], "쿵": [떨어져 닿는 초...]} — 같은 빠르기로 굴러 돎, '데굴데굴' 소리.
     "등속": true 를 주면 다른 물체도 같은 빠르기로 움직임
   운석: {"모양": "운석", "쿵": [닿는 초]} — 불꼬리, 가는 쪽을 봄. 무대 "별": 개수, "행성": [x, 높이, 반지름, 색] (우주 배경)
+  번개: {"모양": "번개", "높이": m} 지그재그(소리 자동). 먹구름·구름: 뭉게구름("눈": true = 화난 얼굴, "크기")
   거품: {"모양": "거품", "반지름": 0.7, "갇힘": true(갇힐 때 '뽀글', 끝에 '뽁')} 테두리만 있는 동그라미. 징검돌: 움직이는 발판(너비)
   딱정벌레: 바닥을 기어 다니는 적(위치 = 바닥 높이), 불덩이: {"모양": "불덩이", "반지름": 0.45} 빛나며 돎.
   돌: {"모양": "돌", "반지름": 0.5, "쿵": [땅에 닿는 초], "휘익": true(떨어지는 소리)} — 떨어지는 동안 돎. 조각: 부서진 작은 돌.
@@ -48,7 +49,7 @@
   긴장 장치: "슬로": [[시작초, 끝초, 0.3]] (느리게), "번쩍": [[초, 길이, "#7a0000"]] (배경 번쩍임),
     "배경음": {..., "빠르기": [[초, BPM], ...]} (점점 빨라지는 음악), "미리보기": {"초": [a, b], "글자": "..."} (맨 앞에 붙임),
     물체 "화면고정": true — 점수·시간·목숨처럼 카메라가 확대해도 화면의 같은 자리·크기(직교 카메라)
-  날아가는 물체: "물체": [{"모양": "화살" | "광선" | "벌" | "글자" | "통나무" | "돌" | "조각" | "감옥" | "하트" | "딱정벌레" | "불덩이" | "운석" | "거품" | "징검돌", "색": 색, "동작": [{"초": 3, "위치": [x,y,z]}, {"초": 3.5, "위치": [...]}]}]
+  날아가는 물체: "물체": [{"모양": "화살" | "광선" | "벌" | "글자" | "통나무" | "돌" | "조각" | "감옥" | "하트" | "딱정벌레" | "불덩이" | "운석" | "거품" | "징검돌" | "번개" | "먹구름" | "구름", "색": 색, "동작": [{"초": 3, "위치": [x,y,z]}, {"초": 3.5, "위치": [...]}]}]
   방향: 도(°). 0 = 카메라 쪽(-Y)을 봄, 90 = 오른쪽(+X)을 봄. 위치는 m (캐릭터 키 약 2m).
   동작 사이의 위치는 부드럽게 이어짐(걷기·달리기는 그동안 다리를 움직임).
 """
@@ -693,6 +694,38 @@ def cmd_scene(scene_file, out, fancy=False):
             w = float(pr.get("너비", 1.6)) / U / 2
             box(f"징검돌{i}", (-w, -8, -8), (w, 8, 0), pr.get("색", "#8d8d8d"), root)
             box(f"징검돌위{i}", (-w, -8.2, -2), (w, 8.2, 0), pr.get("색2", "#6fbf4a"), root)
+        elif kind == "번개":  # 지그재그 번개(위치 = 내리치는 바닥, 위로 "높이" m)
+            H = float(pr.get("높이", 6.0)) / U
+            import random as _r
+            rg = _r.Random(i)
+            pts = [(0.0, 0.0)]
+            z = 0.0
+            while z < H:
+                z = min(H, z + rg.uniform(10, 16))
+                pts.append((rg.uniform(-7, 7) if z < H else 0.0, z))
+            for k, ((x0, z0), (x1, z1)) in enumerate(zip(pts, pts[1:])):
+                L = math.hypot(x1 - x0, z1 - z0)
+                mx, mz = (x0 + x1) / 2, (z0 + z1) / 2
+                ang = math.degrees(math.atan2(x1 - x0, z1 - z0))
+                box(f"번개{i}_{k}", (mx - 1.6, -0.4, mz - L / 2 - 0.8), (mx + 1.6, 0.4, mz + L / 2 + 0.8), "#ffe14d", root,
+                    (mx, 0, mz), rot=(0, ang, 0), glow=5.0, outline=False)
+                box(f"번개속{i}_{k}", (mx - 0.6, -0.6, mz - L / 2), (mx + 0.6, -0.5, mz + L / 2), "#ffffff", root,
+                    (mx, 0, mz), rot=(0, ang, 0), glow=5.0, outline=False)
+        elif kind in ("먹구름", "구름"):  # 뭉게구름(먹구름은 어둡게, "눈": true 면 화난 얼굴)
+            c = pr.get("색", "#4a4f5c" if kind == "먹구름" else "#ffffff")
+            c2 = pr.get("색2", "#3a3e49" if kind == "먹구름" else "#e8f0fb")
+            for k, (x0, z0, x1, z1) in enumerate([(-20, -6, 20, 8), (-28, -4, -12, 6), (12, -4, 28, 5), (-12, 4, 6, 15), (2, 3, 16, 12)]):
+                box(f"구름{i}_{k}", (x0, -3, z0), (x1, 3, z1), c if k % 2 == 0 else c2, root, outline=kind == "먹구름")
+            if pr.get("눈"):
+                for sx in (-1, 1):
+                    box(f"구름눈{i}{sx}", (sx * 7 - 3, -3.3, 0), (sx * 7 + 3, -3.1, 4), "#ffffff", root, outline=False)
+                    box(f"구름눈알{i}{sx}", (sx * 7 - 1.2 + sx * 0.8, -3.45, 0.6), (sx * 7 + 1.2 + sx * 0.8, -3.3, 3), "#ff2020", root,
+                        glow=3.0, outline=False)
+                    box(f"구름눈썹{i}{sx}", (sx * 7 - 4, -3.5, 4.5), (sx * 7 + 4, -3.35, 6), "#111111", root, (sx * 7, -3.4, 5.2),
+                        rot=(0, 20 * sx, 0), outline=False)
+                box(f"구름입{i}", (-5, -3.4, -4.5), (5, -3.3, -2.5), "#111111", root, outline=False)
+                for k, x in enumerate((-4, -1.5, 1, 3.5)):
+                    box(f"구름이{i}_{k}", (x, -3.5, -3.3), (x + 1.2, -3.42, -2.5), "#ffffff", root, outline=False)
         elif kind == "조각":  # 부서진 돌 조각
             a = float(pr.get("반지름", 0.12)) / U
             box(f"조각{i}", (-a, -a, -a), (a, a, a), pr.get("색", "#8d8d8d"), root)
@@ -858,6 +891,8 @@ def cmd_scene(scene_file, out, fancy=False):
                         if body is not None:
                             for ch in root.children:
                                 ch.data.body = body
+                elif kind in ("번개", "먹구름", "구름", "징검돌", "거품", "하트", "감옥"):
+                    pass  # 움직여도 기울지 않음(뒤집히지 않게)
                 elif abs(p2[0] - p[0]) > 1e-6 or abs(p2[2] - p[2]) > 1e-6:
                     root.rotation_euler = (0, -math.atan2(p2[2] - p[2], p2[0] - p[0]), 0)
         bpy.context.scene.render.filepath = os.path.join(tmpd, f"{f:05d}.png")
@@ -880,6 +915,9 @@ def cmd_scene(scene_file, out, fancy=False):
                         ev.append((float(pr["맞은초"]) + 0.05, "동전"))
                     continue
                 if kind == "글자":
+                    continue
+                if kind == "번개":
+                    ev.append((ks[0]["초"], "번개"))
                     continue
                 if kind == "거품":
                     if pr.get("갇힘"):

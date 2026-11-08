@@ -8,7 +8,9 @@
 - 층마다 할 일(STAGES 의 "층", 여러 개 가능): "벌" = 날아오는 벌을 활로, "돌" = 하늘에서 떨어지는 돌을 멈췄다 피함
 - 판마다 더할 것: "불덩이_섞기"(N 번째마다 통통 튀는 불덩이), "순찰"(층을 왔다 갔다 하는 딱정벌레 — 만나면 점프)
 - "운석": 하늘에서 불꼬리 운석이 전사가 있는 층의 바로 앞·뒤에 떨어져 폭발, "무대": 벽돌·사다리 색, 별, 행성(우주 배경)
-- 꼭대기 보스("보스"): "우주인"(광선 N번("보스_광선")을 점프로 피하고 화살 N발) 또는 "여왕벌"(날아다니며 침 두 번, 화살 N발)
+- 3판: "거품"(올라오는 거품, 거품에 갇혀 위층으로 떠오름), "징검다리"(끊긴 바닥 위를 오가는 발판)
+- 4판: "번개"(층 할 일·무작위: 작은 먹구름이 번개를 내리침), "구름"(배경 구름), 보스 "먹구름"(번개 두 번, 화살 N발)
+- 꼭대기 보스("보스"): "우주인"(광선 N번("보스_광선")을 점프로 피하고 화살 N발), "여왕벌"(날아다니며 침 두 번), "먹구름"
   → 감옥이 열리고 하트 → N판 클리어!
 - "거울": true 인 판은 좌우를 뒤집음(통나무가 반대쪽에서, 공주가 반대쪽에).
 
@@ -36,6 +38,15 @@ STAGES = [
      "순찰": [(1, -1.2, 7.0, 1.5, 5.0)],  # 다섯째 값 = 거품에 갇혀 날아가는 때
      "보스": "우주인", "보스_화살": 4, "보스_광선": 2, "거울": True,
      "하늘색": "#0b2a4a", "무대": {"벽돌색": "#2f8f9d", "벽돌색2": "#256f7a", "사다리색": "#ffffff"}},
+    {"판": 4, "제목": "하늘 위 구름 성!", "층": {1: [("번개", 3)], 2: [("벌", 2)]},
+     "구멍": {1: (-3.4, -1.8), 2: (-1.5, 2.5), 3: (2.8, 4.4)},  # 3층 가운데가 끊김 → 구름 징검다리
+     "징검다리": {"층": 2, "빠르기": 1.3, "색": "#ffffff", "색2": "#dff3ff"},
+     "번개_무작위": {"간격": 2.4},  # 전사 근처에 작은 먹구름이 번개를 내리침
+     "구름": 7,  # 뒤에서 흘러가는 흰 구름
+     "통나무_간격": 2.2, "통나무_빠르기": 5.8,
+     "보스": "먹구름", "보스_화살": 5, "거울": True,
+     "하늘색": "#7ec8ff", "무대": {"벽돌색": "#ffffff", "벽돌색2": "#e3ecf7", "사다리색": "#ff8fc8"},
+     "글자색": {"판": "#1d3557", "부제": "#d62828", "점수": "#e85d04", "점수판": "#1d3557", "클리어": "#d62828"}},  # 밝은 배경
     {"판": 5, "제목": "우주에서 운석이 떨어진다!", "층": {1: [("벌", 3)], 3: [("벌", 2)]},
      "통나무_간격": 1.9, "통나무_빠르기": 6.2, "불덩이_섞기": 4,
      "운석": {"간격": 1.4},  # 전사가 있는 층의 바로 앞·뒤에 떨어짐
@@ -232,6 +243,7 @@ def interp(keys, t):
 
 
 def build(cfg, start_score=0):
+    TC = cfg.get("글자색", {})  # 밝은 배경이면 진한 글자
     HOLES.clear()
     HOLES.update(cfg.get("구멍", DEFAULT_HOLES))
     objs, sfx = [], []
@@ -243,13 +255,50 @@ def build(cfg, start_score=0):
 
     def add_score(t, pts, x, z):
         score_ev.append((round(t, 2), pts))
-        text(f"+{pts}", t, t + 0.9, x, z + 2.8, "#ffe14d", 0.9, -2)
+        text(f"+{pts}", t, t + 0.9, x, z + 2.8, TC.get("점수", "#ffe14d"), 0.9, -2)
         sfx.append({"초": round(t + 0.03, 2), "소리": "동전"})
 
     def arrow(x0, z0, x1, z1, t_hit, speed=16.0):
         d = math.hypot(x1 - x0, z1 - z0)
         t_fire = t_hit - d / speed * 1.4
         objs.append({"모양": "화살", "동작": [{"초": round(t_fire, 2), "위치": [x0, 0, z0]}, {"초": round(t_hit, 2), "위치": [x1, 0, z1]}]})
+
+    flashes = []
+
+    def strike(x, zf, t, top=16.6, cloud=True):
+        """작은 먹구름이 나타나 번개를 내리침(번쩍 + 불꽃)."""
+        if cloud:
+            objs.append({"모양": "먹구름", "크기": 0.6, "동작": [
+                {"초": round(t - 1.0, 2), "위치": [round(x - 1.5, 2), FRONT - 0.6, top]}, {"초": round(t - 0.6, 2), "위치": [round(x, 2), FRONT - 0.6, top]},
+                {"초": round(t + 0.4, 2), "위치": [round(x, 2), FRONT - 0.6, top]}, {"초": round(t + 1.0, 2), "위치": [round(x + 2.0, 2), FRONT - 0.6, top + 0.4]}]})
+        objs.append({"모양": "글자", "내용": "!", "글자크기": 0.9, "색": "#ff3030", "동작": [
+            {"초": round(t - 0.8, 2), "위치": [round(x, 2), -1.8, round(zf + 0.3, 2)]}, {"초": round(t - 0.05, 2), "위치": [round(x, 2), -1.8, round(zf + 0.3, 2)]}]})
+        objs.append({"모양": "번개", "높이": round(top - 0.5 - zf, 2), "동작": [
+            {"초": round(t, 2), "위치": [round(x, 2), FRONT - 0.4, round(zf, 2)]}, {"초": round(t + 0.25, 2), "위치": [round(x, 2), FRONT - 0.4, round(zf, 2)]}]})
+        flashes.append([round(t, 2), 0.08, "#ffffff"])
+        for k in range(4):
+            dx = (0.4 + 0.3 * k) * (1 if k % 2 else -1)
+            pk_ = [{"초": round(t + 0.4 * j / 5, 3), "위치": [round(x + dx * j / 5, 3), FRONT - 0.3,
+                                                          round(zf + 0.2 + 4 * 0.7 * (j / 5) * (1 - j / 5), 3)]} for j in range(6)]
+            objs.append({"모양": "조각", "반지름": 0.1, "색": "#ffe14d", "등속": True, "동작": pk_})
+
+    def bolts(n):
+        """사다리까지 가는 길에 번개 n 번 — 멈추면 바로 앞에 내리치고, 그다음 지나감."""
+        target = LADDERS[P.k]
+        x0 = P.x
+        d = 1 if target > x0 else -1
+        for i in range(n):
+            stop = x0 + (target - x0) * (i + 0.7) / (n + 0.6)
+            while in_cut(P.k, stop):
+                stop -= d * 0.5
+            bx_ = stop + d * 1.4
+            P.move(stop)
+            th = P.t + 0.7
+            strike(bx_, fz(P.k, bx_), th)
+            add_score(th, 100, bx_, fz(P.k, bx_))
+            P.wait(0.45)
+            P.pose("놀람")
+            P.wait(0.6, "놀람")
 
     def bees(n):
         """사다리 끝에 서서 날아오는 벌 n 마리를 쏨."""
@@ -380,8 +429,8 @@ def build(cfg, start_score=0):
         plat_keys = (xa, xb, Tp, ztop)
 
     P = Route(-9.0, 0, 60)
-    text(f"{cfg['판']}판", 0.2, 2.2, 0, 8.6, "#ffffff", 2.0)
-    text(cfg["제목"], 0.2, 2.2, 0, 6.6, "#ffe14d", 1.4)
+    text(f"{cfg['판']}판", 0.2, 2.2, 0, 8.6, TC.get("판", "#ffffff"), 2.0)
+    text(cfg["제목"], 0.2, 2.2, 0, 6.6, TC.get("부제", "#ffe14d"), 1.4)
     text("도와주세요!", 0.5, 2.8, 7.5, 16.0, "#ff9ad5", 1.0, -2)
     P.wait(1.8)
 
@@ -402,6 +451,8 @@ def build(cfg, start_score=0):
                 rocks(n)
             elif kind == "거품":
                 bubble_capture()
+            elif kind == "번개":
+                bolts(n)
         if P.k > k:
             continue
         if plat and plat["층"] == k:
@@ -417,7 +468,46 @@ def build(cfg, start_score=0):
     P.wait(0.3)
     t_laser = P.t
     alien_acts = None
-    if cfg.get("보스", "우주인") == "여왕벌":
+    if cfg.get("보스") == "먹구름":
+        P.move(0.0, 3.0, "걷기")
+        P.turn(60)
+        T = P.t
+        bossk = [{"초": 0, "위치": [3.2, FRONT - 0.8, z + 3.0]}, {"초": round(T - 1.0, 2), "위치": [4.0, FRONT - 0.8, z + 3.1]}]
+        # 첫 번개: 전사 머리 위로 와서 내리침 → 전사는 뒤로 피함
+        bossk += [{"초": round(T + 0.7, 2), "위치": [0.0, FRONT - 0.8, z + 3.3]}, {"초": round(T + 1.1, 2), "위치": [0.0, FRONT - 0.8, z + 3.3]}]
+        P.wait(0.3, "놀람")
+        P.move(-1.6, 4.0)
+        P.turn(60)
+        strike(0.0, z, T + 0.95, top=z + 2.6, cloud=False)
+        hw = [(5.0, z + 3.0), (4.2, z + 3.4), (5.4, z + 2.8), (4.5, z + 3.2), (5.0, z + 3.0)][:cfg.get("보스_화살", 5)]
+        ht = [T + 2.2, T + 2.8, T + 3.4, T + 5.8, T + 6.4][:len(hw)]
+        P.pose("위로쏘기")
+        for t, w in zip(ht[:3], hw[:3]):
+            bossk.append({"초": round(t, 2), "위치": [w[0], FRONT - 0.8, w[1]]})
+            arrow(-1.6 + 0.9, z + 2.0, w[0] - 1.6, w[1], t)
+        # 두 번째 번개: 이번엔 전사가 앞으로 피함
+        bossk += [{"초": round(T + 4.3, 2), "위치": [-1.6, FRONT - 0.8, z + 3.3]}, {"초": round(T + 4.75, 2), "위치": [-1.6, FRONT - 0.8, z + 3.3]}]
+        P.wait(T + 3.9 - P.t, "위로쏘기")
+        P.move(0.4, 4.0)
+        P.pose("위로쏘기")
+        strike(-1.6, z, T + 4.6, top=z + 2.6, cloud=False)
+        for t, w in zip(ht[3:], hw[3:]):
+            bossk.append({"초": round(t, 2), "위치": [w[0], FRONT - 0.8, w[1]]})
+            arrow(0.4 + 0.9, z + 2.0, w[0] - 1.6, w[1], t)
+        t_fall = ht[-1]
+        bossk = sorted(bossk, key=lambda k: k["초"])
+        bossk = [k for k in bossk if k["초"] <= t_fall] + [{"초": round(t_fall + 0.15, 2), "위치": [hw[-1][0], FRONT - 0.8, hw[-1][1]]}]
+        objs.append({"모양": "먹구름", "크기": 1.45, "눈": True, "동작": bossk})
+        P.wait(t_fall - P.t + 0.4, "위로쏘기")
+        for k in range(8):  # '펑' 흩어지는 구름 조각
+            a = k * math.pi / 4
+            objs.append({"모양": "조각", "반지름": 0.35, "색": "#5a6070", "등속": True, "동작": [
+                {"초": round(t_fall + 0.15, 2), "위치": [hw[-1][0], FRONT - 0.8, hw[-1][1]]},
+                {"초": round(t_fall + 0.9, 2), "위치": [round(hw[-1][0] + 2.5 * math.cos(a), 2), FRONT - 0.8, round(hw[-1][1] + 2.0 * math.sin(a), 2)]}]})
+        text("펑!", t_fall + 0.1, t_fall + 1.0, hw[-1][0], hw[-1][1] + 1.2, "#ffffff", 1.2, -2.5)
+        sfx.append({"초": round(t_fall + 0.15, 2), "소리": "부서짐"})
+        add_score(t_fall, 1000, hw[-1][0], z)
+    elif cfg.get("보스", "우주인") == "여왕벌":
         T = P.t
         W = {"s1": (5.0, z + 2.4), "h1": (4.0, z + 2.9), "h2": (5.5, z + 2.0), "s2": (3.5, z + 2.6), "h3": (5.0, z + 3.1), "h4": (4.2, z + 2.2)}
         n_hit = cfg.get("보스_화살", 4)
@@ -498,7 +588,7 @@ def build(cfg, start_score=0):
     add_score(t_meet, 5000, cage_x - 1.5, z)
     P.pose("만세", t_meet)
     t_clear = t_meet + 0.3
-    text(f"{cfg['판']}판 클리어!", t_clear, t_clear + 3.2, 0, 7.2, "#ffe14d", 1.8)
+    text(f"{cfg['판']}판 클리어!", t_clear, t_clear + 3.2, 0, 7.2, TC.get("클리어", "#ffe14d"), 1.8)
     P.wait(3.3, "만세")
     total = round(t_clear + 3.2, 2)
 
@@ -591,6 +681,32 @@ def build(cfg, start_score=0):
             objs.append({"모양": "딱정벌레", "크기": 2.0, "등속": True, "동작": bk})
         meets([dict(b, 위치=[b["위치"][0], 0, b["위치"][2]]) for b in bk], 0.0, (0.6, 1.4))
 
+    # ── 무작위 번개: 전사 근처(앞·뒤)에 작은 먹구름이 번개를 내리침
+    if cfg.get("번개_무작위"):
+        rg = random.Random(cfg["판"] * 11)
+        t = 3.0
+        while t < t_top - 0.5:
+            px, pz, pk = P.pos(t)
+            if P.climbing(t) or pk >= 4:
+                t += 0.4
+                continue
+            xl = None
+            for _ in range(12):
+                c = px + rg.choice([-1, 1]) * rg.uniform(1.7, 3.2)
+                if -10.3 < c < 10.3 and not in_cut(pk, c, 0.5):
+                    xl = c
+                    break
+            if xl is not None:
+                strike(xl, fz(pk, xl), t, top=min(16.6, fz(pk, xl) + 3.0) if pk < 3 else 16.6)
+            t += cfg["번개_무작위"]["간격"] * rg.uniform(0.8, 1.25)
+    # ── 뒤에서 흘러가는 흰 구름
+    if cfg.get("구름"):
+        rg = random.Random(cfg["판"] * 13)
+        for k in range(cfg["구름"]):
+            zc_, sc_, v_ = rg.uniform(1.5, 16), rg.uniform(0.6, 1.3), rg.uniform(0.3, 0.7)
+            x0_ = rg.uniform(-16, 16)
+            objs.append({"모양": "구름", "크기": round(sc_, 2), "등속": True, "동작": [
+                {"초": 0, "위치": [round(x0_, 2), 6.0, round(zc_, 2)]}, {"초": total, "위치": [round(x0_ + v_ * total, 2), 6.0, round(zc_, 2)]}]})
     # ── 계속 올라오는 거품(전사는 피함)
     if cfg.get("거품"):
         rg = random.Random(cfg["판"] * 7)
@@ -624,14 +740,15 @@ def build(cfg, start_score=0):
             pk_.append({"초": round(t, 3), "위치": [round(x, 3), 0, ztop]})
             x = xb if x == xa else xa
             t += Tp
-        objs.append({"모양": "징검돌", "너비": 1.6, "등속": True, "동작": pk_})
+        objs.append({"모양": "징검돌", "너비": 1.6, "등속": True, "동작": pk_,
+                     "색": plat.get("색", "#8d8d8d"), "색2": plat.get("색2", "#6fbf4a")})
     # ── 점수판(앞 판 점수에 이어서)
     acc = start_score
     scores = [[0, f"점수 {acc}"]]
     for t_, p_ in sorted(score_ev):
         acc += p_
         scores.append([t_, f"점수 {acc}"])
-    objs.append({"모양": "글자", "내용": scores[0][1], "글자크기": 0.8, "색": "#ffffff", "바뀜": scores,
+    objs.append({"모양": "글자", "내용": scores[0][1], "글자크기": 0.8, "색": TC.get("점수판", "#ffffff"), "바뀜": scores,
                  "동작": [{"초": 0, "위치": [12.5, -3, 16.3]}, {"초": total, "위치": [12.5, -3, 16.3]}]})
 
     acts = P.keys(total)
@@ -661,6 +778,8 @@ def build(cfg, start_score=0):
     }
     if cfg.get("하늘색"):
         scene["하늘색"] = cfg["하늘색"]
+    if flashes:
+        scene["번쩍"] = flashes
     if cfg.get("거울"):
         mirror(scene)
     return scene, acc
