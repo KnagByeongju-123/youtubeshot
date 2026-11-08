@@ -5447,6 +5447,8 @@ class SubtitleRenderer:
         self.bl_on = self.depth_on and str(s.get("img_blender", "off")) == "on"   # Blender 3D 카메라 영상 (사용자 결정 2026-11-08)
         self.bl_clips, self._bl_cap = {}, {}
         self.no3d = set()            # 3D(Blender·2.5D) 를 쓰지 않을 그림 (그래프·지도·도해)
+        self.forced3d = set()        # 사용자가 무빙을 직접 고른 사진 (얼굴 순간이동보다 Blender 우선)
+        self.trans_plan = {}         # 장면별 전환 (사진 번호-1 → 물감·페이드·컷·밀어내기…), _카메라무빙.txt
         self.face_tp_on = (not self.slide) and str(s.get("img_face_tp", "off")) == "on"   # 사람 사진 = 얼굴 순간이동 (사용자 결정 2026-11-08)
         self._faces_c, self._paint_c = {}, {}
         self.paint_on = (not self.slide) and str(s.get("img_trans_paint", "off")) == "on"
@@ -6118,7 +6120,7 @@ class SubtitleRenderer:
                     self._img_cache.pop(next(iter(self._img_cache)))
                 self._img_cache[key] = z
             return self._img_cache[key], mask
-        if getattr(self, "face_tp_on", False) and self.faces_for(sh["img"]):    # 사람 사진: 3D 대신 얼굴 사이 순간이동
+        if getattr(self, "face_tp_on", False) and sh["img"] not in getattr(self, "forced3d", ()) and self.faces_for(sh["img"]):    # 사람 사진: 3D 대신 얼굴 사이 순간이동
             return self._face_tp_frame(sh, t, big, (bw, bh)), mask
         if getattr(self, "bl_on", False) and sh["img"] in self.bl_clips:     # Blender 로 미리 만든 3D 카메라 영상에서 시간 비율로 한 프레임
             fr_ = self._bl_frame(sh, t, (bw, bh))
@@ -6446,8 +6448,16 @@ class SubtitleRenderer:
             crop = self._transition(pc.convert("RGB"), crop.convert("RGB"), trans[1], trans[2])
         elif prev is not None:
             pc, _ = self._shot_crop(prev, t)
+            kind_ = getattr(self, "trans_plan", {}).get(sh["img"]) if prev["img"] != sh["img"] else None   # 장면별 전환(직접 고른 것)
+            if kind_ and kind_ not in ("물감", "페이드", "컷"):
+                crop = self._transition(pc.convert("RGB"), crop.convert("RGB"), float(smoothstep((t - sh["t0"]) / fade)), kind_)
+                kind_ = "done"
             pm = (self._paint_mask(k, (t - sh["t0"]) / fade, crop.size)
-                  if getattr(self, "paint_on", False) and prev["img"] != sh["img"] and _cv2 is not None else None)
+                  if kind_ in (None, "물감") and getattr(self, "paint_on", False) and prev["img"] != sh["img"] and _cv2 is not None else None)
+            if kind_ == "컷":
+                pm, a = None, 1.0
+            if kind_ == "done":
+                pm, pc = None, crop
             if pm is not None:                    # 물감 뿌리기 전환: 다음 사진이 물감 자국 모양으로 드러나고, 번지는 가장자리는 빨간 물감색
                 m_, rim_ = pm
                 A_ = np.asarray(pc.convert("RGB"), np.float32)
@@ -6980,27 +6990,46 @@ CAMERA_HINTS = [
 CAMERA_LIMIT = {"dollyzoom": 3, "fpv": 4, "freeze": 4}
 
 
+SCENE_TRANSITIONS = {"물감": "물감 뿌리기(빨간 테두리, 채널 시그니처)", "페이드": "부드럽게 겹쳐 바뀜", "컷": "바로 바뀜",
+                     "밀어내기": "옆으로 밀어냄", "덮기": "위에 덮음", "닦아내기": "닦아내듯", "확대": "확대하며 바뀜", "시대전환": "빛바랜 시대 전환"}
+
+
+def read_camera_plan(plan_path):
+    """<제목>_카메라무빙.txt → ({사진번호: 무빙(수동)}, {사진번호: 전환(수동)}). '자동:' 으로 시작하거나 '-' 면 자동.
+    줄 모양: '번호 | 무빙 | 전환 | 사진 설명 | 이유' (예전: '번호 | 무빙 | 사진 설명 | 이유')"""
+    mv_, tr_ = {}, {}
+    if not plan_path or not os.path.exists(plan_path):
+        return mv_, tr_
+    for ln in open(plan_path, encoding="utf-8").read().splitlines():
+        parts = [x.strip() for x in ln.split("|")]
+        if len(parts) < 3 or not parts[0].isdigit():
+            continue
+        n = int(parts[0])
+        m_ = parts[1].replace("수동:", "").strip()
+        if m_ and not m_.startswith("자동") and m_ != "-" and m_ in CAMERA_MOVES:
+            mv_[n] = m_
+        if len(parts) >= 5:
+            k_ = parts[2].replace("수동:", "").strip()
+            if k_ and not k_.startswith("자동") and k_ != "-" and k_ in SCENE_TRANSITIONS:
+                tr_[n] = k_
+    return mv_, tr_
+
+
 def choose_camera_moves(r, elig, plan_path=None, log=None, objects=()):
     """장면(사진)마다 영화 무빙 기법을 자동으로 고름 (사용자 결정 2026-11-08: 고정 순서 대신 역동적 무빙을 문맥으로).
     고르는 기준: 챕터 첫 사진 = 여는 샷(크레인·드론), 영상 마지막 = 풀백, 나레이션 낱말(CAMERA_HINTS), 사진 종류(풍경/물건, 앞층 있음),
     같은 무빙 연달아 금지·특수 무빙 횟수 제한(CAMERA_LIMIT), 트래킹은 좌우를 번갈아.
     plan_path(<제목>_카메라무빙.txt)에 '번호 | 무빙 | 사진 설명 | 이유' 로 저장 — 무빙 칸을 직접 바꾸면(예: '자동' → 'orbit') 다음부터 그 장면은 그 무빙 (수동)"""
     log = log or (lambda x: None)
-    manual = {}
-    if plan_path and os.path.exists(plan_path):
-        for ln in open(plan_path, encoding="utf-8").read().splitlines():
-            parts = [x.strip() for x in ln.split("|")]
-            if len(parts) >= 3 and parts[0].isdigit():
-                mv = parts[1].replace("수동:", "").strip()
-                if not mv.startswith("자동") and mv in CAMERA_MOVES:
-                    manual[(int(parts[0]), parts[2])] = mv
+    manual, manual_tr = read_camera_plan(plan_path)
+    r.trans_plan = {n_ - 1: k_ for n_, k_ in manual_tr.items()}     # 장면별 전환(수동) → 영상에서 씀
     paths = getattr(r, "img_paths", [])
     ctx = getattr(r, "img_ctx", {})
     chap_first = getattr(r, "chap_first", set())
     out, why, used, prev, side = {}, {}, {}, [], 0
     for n_, idx in enumerate(elig):
         cap = str(r.images[idx][1] or "")
-        key = (idx + 1, cap)                         # 번호 = 사진 번호(영상 왼쪽 위 #번호·사진 점검표와 같음)
+        key = idx + 1                                # 번호 = 사진 번호(영상 왼쪽 위 #번호·사진 점검표와 같음)
         if key in manual:
             mv = manual[key]
             out[idx], why[idx] = mv, "수동"
@@ -7049,20 +7078,23 @@ def choose_camera_moves(r, elig, plan_path=None, log=None, objects=()):
         used[mv] = used.get(mv, 0) + 1
         prev.append(mv)
     if plan_path:
+        def tr_col(i_):
+            return ("수동:" + manual_tr[i_ + 1]) if (i_ + 1) in manual_tr else ("자동:물감" if getattr(r, "paint_on", False) else "자동:페이드")
         try:
             ls = ["# 카메라 무빙 계획 (자동 선택, 사용자 결정 2026-11-08). 번호 = 작은 영상 왼쪽 위 #번호 = 사진 점검표 번호",
-                  "# 무빙 칸을 바꾸면(예: 자동:push → orbit) 다음 영상부터 그 장면은 그 무빙(수동). '자동'으로 두면 다시 고름. '-' 줄은 3D 를 쓰지 않는 사진",
+                  "# 무빙·전환 칸을 바꾸면(예: 자동:push → orbit, 자동:물감 → 컷) 다음 영상부터 그 장면은 그대로(수동). '자동'으로 두면 다시 고름. 무빙 '-' 는 3D 를 쓰지 않는 사진(무빙을 적으면 3D 로 만듦)",
                   "# 쓸 수 있는 무빙: " + " / ".join(f"{k} = {v}" for k, v in CAMERA_MOVES.items()),
-                  "# 번호 | 무빙 | 사진 설명 | 고른 이유"]
+                  "# 쓸 수 있는 전환(이 사진이 나타날 때): " + " / ".join(f"{k} = {v}" for k, v in SCENE_TRANSITIONS.items()),
+                  "# 번호 | 무빙 | 전환 | 사진 설명 | 고른 이유"]
             for i_ in range(len(r.images)):
                 cap_ = str(r.images[i_][1] or "")
                 if i_ in out:
                     mv = out[i_]
-                    ls.append(f"{i_ + 1} | {('수동:' + mv) if why[i_] == '수동' else '자동:' + mv} | {cap_} | {why[i_]}")
+                    ls.append(f"{i_ + 1} | {('수동:' + mv) if why[i_] == '수동' else '자동:' + mv} | {tr_col(i_)} | {cap_} | {why[i_]}")
                 else:
                     rs_ = ("얼굴 순간이동(사람 사진)" if getattr(r, "face_tp_on", False) and r.faces_for(i_) else
                            "천천히 확대·이동(지도·그래프·도해)" if i_ in getattr(r, "no3d", ()) else "천천히 확대·이동(세로·평평한 사진, 또는 같은 사진이 이어짐)")
-                    ls.append(f"{i_ + 1} | - | {cap_} | {rs_}")
+                    ls.append(f"{i_ + 1} | - | {tr_col(i_)} | {cap_} | {rs_}")
             atomic_write_text(plan_path, "\n".join(ls) + "\n")
         except Exception as e_:
             log("  카메라 무빙 계획 저장 실패: " + str(e_)[:80])
@@ -7105,6 +7137,7 @@ def ensure_blender_clips(r, log=None, cancel=None, plan_path=None):
         except Exception as e_:
             log("  초점 찾기 건너뜀: " + str(e_)[:80])
     order = sorted(groups, key=lambda i_: min(g_[1] for g_ in groups[i_]))
+    forced_ = read_camera_plan(plan_path)[0]          # 장면별로 직접 고른 무빙이 있으면 지도·사람 사진이라도 3D 로 (사용자 선택 우선)
     elig = []                                       # Blender 로 만들 사진 (나오는 차례대로)
     for idx in order:
         gs = groups[idx]
@@ -7117,6 +7150,11 @@ def ensure_blender_clips(r, log=None, cancel=None, plan_path=None):
         except Exception:
             continue
         if not (1.15 <= asp <= 3.2) or load_depth(path) is None:      # 가로 사진만 (세로 사진·아주 긴 도표는 프로그램 방식)
+            continue
+        if (idx + 1) in forced_:
+            r.no3d.discard(idx)
+            r.forced3d.add(idx)
+            elig.append(idx)
             continue
         if not_3d_photo(r, idx, path):                              # 그래프·지도·도해·표·여러 칸 사진은 3D 로 세우지 않음 (글자가 잘리고 휘어 보임)
             r.no3d.add(idx)

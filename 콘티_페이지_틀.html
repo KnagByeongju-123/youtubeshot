@@ -1,0 +1,173 @@
+<title>장면 무빙 콘티</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=Noto+Sans+KR:wght@400;500;700&display=swap">
+<style>
+/* Layout: 편집실 콘티 시트 — 장면 번호(슬레이트) · 썸네일 · 나레이션 · 무빙/전환 선택이 한 줄. 위에 고정된 요약 띠 */
+:root {
+  --bg: #f4f3ef; --panel: #ffffff; --ink: #1d1f22; --muted: #6b6f76; --line: #dedbd3;
+  --accent: #b5521b; --accent-soft: #f6e3d6; --chip: #ecebe6; --ok: #2f7d4f;
+  --font-body: "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #151618; --panel: #1e2023; --ink: #ecebe8; --muted: #9a9ea6; --line: #33363b;
+  --accent: #f08a4b; --accent-soft: #3a2619; --chip: #2a2c30; --ok: #6cc795; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #151618; --panel: #1e2023; --ink: #ecebe8; --muted: #9a9ea6; --line: #33363b;
+  --accent: #f08a4b; --accent-soft: #3a2619; --chip: #2a2c30; --ok: #6cc795; color-scheme: dark }
+* { box-sizing: border-box }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 0 48px }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg) }
+.wrap { max-width: 1080px; margin: 0 auto }
+header { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg); padding-block: 14px 10px; border-bottom: 1px solid var(--line) }
+h1 { font-size: 1.25rem; margin: 0 0 2px; text-wrap: balance }
+.sub { color: var(--muted); font-size: .85rem; margin: 0 }
+.bar { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; margin-top: 10px }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden }
+.seg button { font: inherit; font-size: .85rem; padding: 6px 12px; background: var(--panel); color: var(--ink); border: 0; cursor: pointer }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--bg) }
+.stat { font-family: var(--font-mono); font-size: .85rem; color: var(--muted) }
+.stat b { color: var(--accent) }
+.status { font-size: .8rem; color: var(--muted); margin-left: auto }
+.status.ok { color: var(--ok) }
+.how { font-size: .85rem; color: var(--muted); background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; margin: 14px 0 }
+ol { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px }
+li.scene { display: grid; grid-template-columns: 64px 192px minmax(0, 1fr) minmax(220px, 300px); gap: 14px; align-items: start;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px }
+li.scene.changed { border-color: var(--accent); box-shadow: inset 4px 0 0 var(--accent) }
+.num { font-family: var(--font-mono); font-weight: 600; font-size: 1.35rem; letter-spacing: .02em }
+.num small { display: block; font-size: .68rem; color: var(--muted); letter-spacing: .08em; text-transform: uppercase }
+.thumb { width: 192px; max-width: 100%; aspect-ratio: 16 / 9; border-radius: 6px; display: block; object-fit: cover; background: var(--chip) }
+.meta { min-width: 0 }
+.cap { font-weight: 700; margin: 0 0 4px }
+.text { color: var(--muted); font-size: .88rem; margin: 0 0 6px }
+.auto { font-size: .78rem; color: var(--muted) }
+.auto code { font-family: var(--font-mono); background: var(--chip); border-radius: 4px; padding: 1px 5px; color: var(--ink) }
+.pick { display: grid; gap: 8px }
+label { display: grid; gap: 3px; font-size: .75rem; color: var(--muted); letter-spacing: .04em }
+select, input[type=text] { font: inherit; font-size: .9rem; width: 100%; padding: 7px 9px; border-radius: 7px; border: 1px solid var(--line); background: var(--bg); color: var(--ink) }
+select:focus-visible, input:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px }
+.custom { margin-top: 2px }
+.empty { color: var(--muted); padding: 24px; text-align: center }
+@media (max-width: 760px) {
+  li.scene { grid-template-columns: 52px minmax(0, 1fr); }
+  .thumb { grid-column: 2; width: 100% }
+  .meta, .pick { grid-column: 1 / -1 }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important } }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1 id="title">장면 무빙 콘티</h1>
+    <p class="sub">장면마다 카메라 무빙과 장면 전환을 고르면 바로 저장돼요. 번호는 작은 영상 왼쪽 위 #번호와 같아요.</p>
+    <div class="bar">
+      <div class="seg" role="group" aria-label="보기">
+        <button id="f-all" aria-pressed="true">전체</button>
+        <button id="f-3d" aria-pressed="false">3D 장면</button>
+        <button id="f-changed" aria-pressed="false">바꾼 장면</button>
+      </div>
+      <span class="stat">바꾼 장면 <b id="n-changed">0</b> / <span id="n-all">0</span></span>
+      <span class="status" id="status">저장소 연결 중…</span>
+    </div>
+  </header>
+  <p class="how">‘자동’은 프로그램이 나레이션 문맥으로 고른 값이에요(옆에 추천이 보여요). 목록에 없는 건 ‘직접 입력’을 고르고 적어 주세요.
+    다 고르면 Claude 에게 “콘티 반영해서 작은 영상 만들어 줘”라고 말하면 돼요.</p>
+  <ol id="list"><li class="empty">장면을 불러오는 중…</li></ol>
+</div>
+
+<script>
+const DATA = __DATA__;
+const state = {};            // n -> {move, trans, moveCustom, transCustom}
+let filter = "all", db = null, coll = null;
+const $ = (id) => document.getElementById(id);
+$("title").textContent = "장면 무빙 콘티";
+$("n-all").textContent = DATA.scenes.length;
+
+function autoLabel(v) { return String(v || "-").replace(/^자동:|^수동:/, "") }
+function isChanged(n) { const s = state[n]; return !!(s && ((s.move && s.move !== "auto") || (s.trans && s.trans !== "auto"))) }
+
+function makeSelect(id, opts, value, autoText) {
+  const sel = document.createElement("select"); sel.id = id;
+  const o0 = new Option("자동 (" + autoText + ")", "auto"); sel.add(o0);
+  for (const [k, desc] of Object.entries(opts)) sel.add(new Option(k + " — " + desc, k));
+  sel.add(new Option("직접 입력…", "custom"));
+  sel.value = value || "auto";
+  return sel;
+}
+
+function render() {
+  const list = $("list"); list.textContent = "";
+  let shown = 0;
+  for (const sc of DATA.scenes) {
+    const is3d = autoLabel(sc.auto) !== "-";
+    if (filter === "3d" && !is3d) continue;
+    if (filter === "changed" && !isChanged(sc.n)) continue;
+    shown++;
+    const s = state[sc.n] || {};
+    const li = document.createElement("li"); li.className = "scene" + (isChanged(sc.n) ? " changed" : "");
+    const num = document.createElement("div"); num.className = "num";
+    num.innerHTML = "<small>장면</small>"; num.append("#" + sc.n);
+    const img = document.createElement("img"); img.className = "thumb"; img.src = sc.thumb; img.alt = sc.cap; img.loading = "lazy";
+    const meta = document.createElement("div"); meta.className = "meta";
+    const cap = document.createElement("p"); cap.className = "cap"; cap.textContent = sc.cap;
+    const tx = document.createElement("p"); tx.className = "text"; tx.textContent = sc.text ? "“" + sc.text + "”" : "";
+    const au = document.createElement("div"); au.className = "auto";
+    au.innerHTML = "자동 추천: 무빙 <code></code> · 전환 <code></code>";
+    au.querySelectorAll("code")[0].textContent = is3d ? autoLabel(sc.auto) : "3D 없음(천천히 확대)";
+    au.querySelectorAll("code")[1].textContent = autoLabel(sc.autoTrans);
+    if (sc.why) { const w = document.createElement("div"); w.textContent = "이유: " + sc.why; au.append(w) }
+    meta.append(cap, tx, au);
+    const pick = document.createElement("div"); pick.className = "pick";
+    const lm = document.createElement("label"); lm.textContent = "카메라 무빙";
+    const sm = makeSelect("mv-" + sc.n, DATA.moves, s.move, is3d ? autoLabel(sc.auto) : "3D 없음");
+    const cm = document.createElement("input"); cm.type = "text"; cm.id = "mvc-" + sc.n; cm.className = "custom";
+    cm.placeholder = "예: 천천히 오른쪽 위로 크레인"; cm.value = s.moveCustom || ""; cm.hidden = sm.value !== "custom";
+    lm.append(sm, cm);
+    const lt = document.createElement("label"); lt.textContent = "장면 전환 (이 장면이 나타날 때)";
+    const st = makeSelect("tr-" + sc.n, DATA.trans, s.trans, autoLabel(sc.autoTrans));
+    const ct = document.createElement("input"); ct.type = "text"; ct.id = "trc-" + sc.n; ct.className = "custom";
+    ct.placeholder = "예: 흰 섬광으로 바뀜"; ct.value = s.transCustom || ""; ct.hidden = st.value !== "custom";
+    lt.append(st, ct);
+    pick.append(lm, lt);
+    const save = () => saveScene(sc.n, { move: sm.value, trans: st.value, moveCustom: cm.value.trim(), transCustom: ct.value.trim() });
+    sm.addEventListener("change", () => { cm.hidden = sm.value !== "custom"; if (!cm.hidden) cm.focus(); save() });
+    st.addEventListener("change", () => { ct.hidden = st.value !== "custom"; if (!ct.hidden) ct.focus(); save() });
+    cm.addEventListener("change", save); ct.addEventListener("change", save);
+    li.append(num, img, meta, pick);
+    list.append(li);
+  }
+  if (!shown) { const e = document.createElement("li"); e.className = "empty"; e.textContent = filter === "changed" ? "아직 바꾼 장면이 없어요." : "보여 줄 장면이 없어요."; list.append(e) }
+  $("n-changed").textContent = DATA.scenes.filter(sc => isChanged(sc.n)).length;
+}
+
+const pending = {};
+async function saveScene(n, val) {
+  state[n] = val; render();
+  if (!coll) { setStatus("저장소에 연결되지 않아 이 화면에만 남아요", false); return }
+  pending[n] = (pending[n] || Promise.resolve()).then(async () => {
+    try { await coll.doc(String(n)).set({ n, ...val, at: new Date().toISOString() }); setStatus("저장됨 #" + n, true) }
+    catch (e) { setStatus("저장 실패 #" + n + " — 이 페이지를 편집할 수 있는 계정인지 확인해 주세요", false) }
+  });
+}
+function setStatus(t, ok) { const s = $("status"); s.textContent = t; s.classList.toggle("ok", !!ok) }
+
+for (const [id, f] of [["f-all", "all"], ["f-3d", "3d"], ["f-changed", "changed"]]) {
+  $(id).addEventListener("click", () => { filter = f; for (const b of document.querySelectorAll(".seg button")) b.setAttribute("aria-pressed", String(b.id === id)); render() });
+}
+render();
+
+(async () => {
+  const timer = setTimeout(() => setStatus("저장소 응답이 없어요. 고른 값은 이 화면에만 남아요", false), 10000);
+  try { db = await window.claude?.use?.("db") } catch (e) { db = null }
+  if (!db) { clearTimeout(timer); setStatus("저장소를 쓸 수 없어요(로그인 필요). 고른 값은 이 화면에만 남아요", false); return }
+  coll = db.collection("scenes");
+  coll.onSnapshot((snap) => {
+    clearTimeout(timer);
+    for (const d of snap.docs) { const v = d.data() || {}; state[Number(d.id)] = { move: v.move, trans: v.trans, moveCustom: v.moveCustom, transCustom: v.transCustom } }
+    setStatus("저장소 연결됨 · 고르면 바로 저장", true); render();
+  }, () => { clearTimeout(timer); setStatus("저장소 읽기 실패. 고른 값은 이 화면에만 남아요", false) });
+})();
+</script>
