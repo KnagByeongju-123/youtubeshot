@@ -1,0 +1,46 @@
+{
+ "A": {
+  "ropes": []
+ },
+ "B": {
+  "ropes": []
+ },
+ "C": {
+  "ropes": [
+   [
+    "sl_front",
+    "p6_hand_r"
+   ],
+   [
+    "sl_front",
+    "p7_hand_r"
+   ]
+  ]
+ },
+ "D": {
+  "ropes": []
+ },
+ "E": {
+  "ropes": [
+   [
+    "m_rope_L",
+    "cL2_hand_r"
+   ],
+   [
+    "m_rope_R",
+    "cR2_hand_r"
+   ],
+   [
+    "m_rope_B",
+    "cB2_hand_r"
+   ]
+  ],
+  "mz": [
+   150,
+   178.0,
+   1.5,
+   7,
+   256.0
+  ]
+ }
+}

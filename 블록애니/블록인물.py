@@ -53,7 +53,7 @@ def islander_palette(M):
     M.swatch('tapa2',lambda x,y:(200,150,95) if (x//4+y//4)%2 else (175,120,70),5)
     M.swatch('tapa3',lambda x,y:(235,225,200) if y%5 else (120,70,45),4)
     M.swatch('shell',(245,240,225),4); M.swatch('band',(185,50,40),5)
-    M.swatch('wood',(120,80,45),6); M.swatch('feather',(30,30,30),6)
+    M.swatch('wood',(120,80,45),6); M.swatch('feather',(30,30,30),6); M.swatch('stone_t',(90,90,95),8)
     def face(name,hair,beard=None,young=False):
         def fn(d,x,y):
             d.rectangle([x,y,x+15,y+15],fill=SKIN); d.rectangle([x,y,x+15,y+2],fill=hair)
@@ -67,13 +67,13 @@ def islander_palette(M):
         M.paint(name,fn)
     face('face_atu',HAIR,young=True); face('face_mata',GREY,beard=GREY); face('face_man',HAIR); face('face_man2',HAIR,beard=HAIR)
 
-def person(M,tag,kind='man',s=1.0,skirt='tapa2'):
+def person(M,tag,kind='man',s=1.0,skirt='tapa2',tool=None):
     """kind: atu(소년) / mata(할아버지 석공 우두머리) / man / man2 (마을 사람)"""
     c=lambda name,fr,to,col,**f: M.cube(name,[v*s for v in fr],[v*s for v in to],col,**f)
     O=lambda v:[x*s for x in v]
     legL=M.group(tag+'leg_left',O([2,12,0]),[c('leg',[0,0,-2],[4,12,2],'skin',down='skin_d')])
     legR=M.group(tag+'leg_right',O([-2,12,0]),[c('leg',[-4,0,-2],[0,12,2],'skin',down='skin_d')])
-    armL=M.group(tag+'arm_left',O([6,22,0]),[c('arm',[4,12,-2],[8,24,2],'skin')])
+    armL=M.group(tag+'arm_left',O([6,22,0]),[c('arm',[4,12,-2],[8,24,2],'skin'),M.group(tag+'hand_l',O([6,12.5,0]),[])])
     armRk=[c('arm',[-8,12,-2],[-4,24,2],'skin')]
     face={'atu':'face_atu','mata':'face_mata','man':'face_man','man2':'face_man2'}[kind]
     hair='grey' if kind=='mata' else 'hair'
@@ -90,7 +90,8 @@ def person(M,tag,kind='man',s=1.0,skirt='tapa2'):
         armRk+= [c('staff',[-7,-2,-6],[-5,30,-4],'wood')]
     if kind in ('man','man2'):
         hk+= [c('headband',[-4.4,29,-4.4],[4.4,30.4,4.4],'band')]
-    armR=M.group(tag+'arm_right',O([-6,22,0]),armRk)
+    if tool=='axe': armRk+= [c('axe_h',[-6.6,8,-1],[-5.4,14,0],'wood'), c('axe_s',[-7.5,6,-3.5],[-4.5,9,0],'stone_t')]
+    armR=M.group(tag+'arm_right',O([-6,22,0]),armRk+[M.group(tag+'hand_r',O([-6,12.5,0]),[])])
     head=M.group(tag+'head',O([0,24,0]),hk)
     bod=M.group(tag+'body',O([0,12,0]),body+[head,armL,armR])
     return M.group(tag+'root',[0,0,0],[bod,legL,legR])
@@ -123,5 +124,64 @@ def moai(M,tag,road=True,eyes=False,S=1.0):
     if eyes:
         for ex in (-6,2):
             hd+= [c('eye_w',[ex,63,-6.6],[ex+4,67,-6.2],'eye_w'), c('eye_k',[ex+1,64,-6.8],[ex+3,66,-6.4],'eye_k')]
+    hd+= [anchor(M,tag+'rope_L',[-9*S,70*S,0]), anchor(M,tag+'rope_R',[9*S,70*S,0]), anchor(M,tag+'rope_B',[0,70*S,7*S])]
     head=M.group(tag+'head',[0,46*S,0],hd)
     return M.group(tag+'root',[0,0,0],k+[head],rotation=(8 if road else 0,0,0))
+
+# ---------------- 배치·움직임 도우미 ----------------
+def move(M, g, dx=0, dy=0, dz=0):
+    """묶음 g(안의 모든 상자·묶음)를 (dx,dy,dz) 만큼 옮김"""
+    byid={e['uuid']:e for e in M.els}
+    def rec(n):
+        n['origin']=[n['origin'][0]+dx,n['origin'][1]+dy,n['origin'][2]+dz]
+        for c in n['children']:
+            if isinstance(c,dict): rec(c)
+            else:
+                e=byid[c]; e['from']=[e['from'][0]+dx,e['from'][1]+dy,e['from'][2]+dz]; e['to']=[e['to'][0]+dx,e['to'][1]+dy,e['to'][2]+dz]
+    rec(g); return g
+
+def anchor(M, name, pos):
+    """밧줄 끝을 잡을 보이지 않는 점 (묶음의 중심 = pos)"""
+    return M.group(name, pos, [])
+
+class Anim:
+    """한 장면 모형의 움직임 하나 (시간 = 영상 시간 그대로)"""
+    def __init__(self, length): self.L=length; self.tr={}
+    def add(self, g, ch, pts, interp='linear'):
+        lst=self.tr.setdefault(g['uuid'],(g['name'],[]))[1]
+        for t,v in pts:
+            lst.append({'channel':ch,'data_points':[{'x':str(round(v[0],3)),'y':str(round(v[1],3)),'z':str(round(v[2],3))}],
+                        'uuid':U(),'time':round(t,4),'color':-1,'interpolation':interp})
+    def bake(self, outliner):
+        """묶음의 고정 회전(rotation)은 움직임 화면에서 무시됨 → 움직임 키로 옮김"""
+        def rec(g):
+            r=g.get('rotation',[0,0,0])
+            if any(abs(v)>1e-6 for v in r):
+                g['rotation']=[0,0,0]
+                ent=self.tr.get(g['uuid'])
+                keys=[k for k in (ent[1] if ent else []) if k['channel']=='rotation']
+                if keys:
+                    for k in keys:
+                        dp=k['data_points'][0]
+                        for ax,v in zip('xyz',r): dp[ax]=str(round(float(dp[ax])+v,3))
+                else:
+                    self.add(g,'rotation',[(0,tuple(r))])
+            for c in g['children']:
+                if isinstance(c,dict): rec(c)
+        for g in outliner:
+            if isinstance(g,dict): rec(g)
+    def json(self, name='main'):
+        an={}
+        for uid,(nm,k) in self.tr.items():
+            # 같은 채널·같은 시간 키는 마지막 것만
+            seen={}
+            for kf in k: seen[(kf['channel'],kf['time'])]=kf
+            an[uid]={'name':nm,'type':'bone','keyframes':sorted(seen.values(),key=lambda x:x['time'])}
+        return {'uuid':U(),'name':name,'loop':'once','length':self.L,'snapping':24,'animators':an}
+
+def find(g, name):
+    if g['name']==name: return g
+    for c in g['children']:
+        if isinstance(c,dict):
+            r=find(c,name)
+            if r: return r
