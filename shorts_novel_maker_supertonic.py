@@ -272,7 +272,7 @@ UI_TABS = [
     ("🎨 글꼴·색", "all", ["font_path", "title_font_path", "text_color", "title_color", "accent_color", "quote_color", "shadow", "stroke_width"]),
     ("🔤 자막 디자인", "sub", ["style_preset", "sub_layout", "head_pos", "color_preset", "sub_box_color", "sub_box_alpha", "head_style", "head_size",
                             "head_show", "sub_size", "sub_font_path", "sub_style", "sub_split", "sub_dialog", "sub_anim", "sub_max_chars", "sec_per_char"]),
-    ("🖼 사진·장면", "sub", ["img_fill", "img_motion", "img_depth", "img_depth_amt", "img_filter", "shot_sec", "punch_in", "img_frame", "img_bg", "photo_count", "img_radius"]),
+    ("🖼 사진·장면", "sub", ["img_fill", "img_motion", "img_depth", "img_depth_amt", "img_blender", "img_filter", "shot_sec", "punch_in", "img_frame", "img_bg", "photo_count", "img_radius"]),
     ("📜 스크롤 글자", "scroll", ["font_size", "title_size", "line_gap", "para_gap", "margin_x", "margin_right", "align", "photo_h",
                               "speed", "target_sec"]),
     ("📜 스크롤 효과", "scroll", ["fade", "focus", "focus_dim", "focus_y", "ease"]),
@@ -548,6 +548,7 @@ FIELDS = [
     ("자막형", "img_depth", "사진 입체 움직임(2.5D · 깊이 AI, 앞뒤가 다르게 움직임)", "choice:on,off", "on"),
     ("자막형", "img_filter", "사진 필터(포토샵풍 · 모든 그림·사진에 덧씌움)", "choice:없음,연필 스케치,색연필,수채화,유화,컷아웃(포스터화),하프톤(망점),펜화(선),목탄,카툰,크라프트지 질감", "없음"),
     ("자막형", "img_depth_amt", "입체 움직임 세기(카메라 무빙)", "choice:약하게,보통,강하게", "약하게"),   # 세게 하면 가장자리 사물이 겹쳐 보임
+    ("자막형", "img_blender", "사진 3D 를 Blender 진짜 카메라로(설치돼 있을 때, 느림)", "choice:on,off", "off"),
     ("자막형", "shot_sec", "한 장면 최대 길이(초)", "float", 4.5),
     ("자막형", "img_fill", "사진 배치", "choice:전체 화면(글자가 사진 위에),가운데 상자", "전체 화면(글자가 사진 위에)"),
     ("자막형", "img_bg", "상자 모드: 뒤 배경을 사진 흐림으로", "choice:on,off", "on"),
@@ -5401,6 +5402,8 @@ class SubtitleRenderer:
         self.slide = str(s.get("img_fill", "")).startswith("슬라이드")
         self.depth_on = (not self.slide) and str(s.get("img_depth", "off")) == "on" and _cv2 is not None and depth_ready()
         self._depth_big = {}
+        self.bl_on = self.depth_on and str(s.get("img_blender", "off")) == "on"   # Blender 3D 카메라 영상 (사용자 결정 2026-11-08)
+        self.bl_clips, self._bl_cap = {}, {}
         self.slide_full = self.slide and not self.port and s.get("slide_full", "on") == "on"
         self.sub_pill = False
         if self.slide_full:   # PPT 발표: 슬라이드가 화면 가득, 자막은 화면 안 아래쪽 (반투명 상자 위)
@@ -6069,6 +6072,10 @@ class SubtitleRenderer:
                     self._img_cache.pop(next(iter(self._img_cache)))
                 self._img_cache[key] = z
             return self._img_cache[key], mask
+        if getattr(self, "bl_on", False) and sh["img"] in self.bl_clips:     # Blender 로 미리 만든 3D 카메라 영상에서 시간 비율로 한 프레임
+            fr_ = self._bl_frame(sh, t, (bw, bh))
+            if fr_ is not None:
+                return fr_, mask
         z0, z1, ax, bx, ay, by = sh["m"]
         p = min(1.0, max(0.0, (t - sh["t0"]) / max(0.1, sh["t1"] - sh["t0"])))
         p = 0.5 - 0.5 * np.cos(np.pi * p)             # 부드럽게 시작·끝
@@ -6109,6 +6116,44 @@ class SubtitleRenderer:
         dcrop = extent_np(dbig, size_p, box)                                 # float32 0~255
         warped = parallax_warp_np(crop_pad, dcrop, ox, oy)
         return Image.fromarray(np.ascontiguousarray(warped[my:my + bh, mx:mx + bw])), mask
+
+    def _bl_frame(self, sh, t, size):
+        """Blender 3D 영상(사진이 보이는 묶음 g0~g1 전체에 걸친 한 번의 카메라 움직임)에서 t 시점 프레임"""
+        path = self.bl_clips[sh["img"]]
+        g0, g1 = sh.get("g0", sh["t0"]), sh.get("g1", sh["t1"])
+        st = self._bl_cap.get(path)
+        try:
+            if st is None:
+                for k_ in list(self._bl_cap):                     # 열린 영상은 2개까지
+                    if len(self._bl_cap) < 2:
+                        break
+                    self._bl_cap.pop(k_)["cap"].release()
+                cap = _cv2.VideoCapture(path)
+                st = self._bl_cap[path] = {"cap": cap, "n": int(cap.get(_cv2.CAP_PROP_FRAME_COUNT) or 0), "next": 0, "img": None, "at": -1}
+            n = st["n"]
+            if n <= 0:
+                return None
+            q = min(1.0, max(0.0, (t - g0) / max(0.1, g1 - g0)))
+            want = min(n - 1, int(round(q * (n - 1))))
+            if want == st["at"] and st["img"] is not None:
+                return st["img"]
+            if want < st["next"] - 1 or want > st["next"] + 48:   # 뒤로 가거나 많이 건너뛰면 그 자리로 이동
+                st["cap"].set(_cv2.CAP_PROP_POS_FRAMES, want)
+                st["next"] = want
+            fr = None
+            while st["next"] <= want:
+                ok, fr = st["cap"].read()
+                st["next"] += 1
+                if not ok:
+                    break
+            if fr is None:
+                return st["img"]
+            if (fr.shape[1], fr.shape[0]) != tuple(size):
+                fr = _cv2.resize(fr, tuple(size), interpolation=_cv2.INTER_AREA)
+            st["img"], st["at"] = Image.fromarray(_cv2.cvtColor(fr, _cv2.COLOR_BGR2RGB)), want
+            return st["img"]
+        except Exception:
+            return None
 
     def _depth_for(self, idx, size):
         """idx 사진의 깊이 지도를 큰 사진 크기의 L 이미지로 (캐시)"""
@@ -6666,7 +6711,7 @@ _DEPTH_CACHE = {}
 _DEPTH_WARNED = set()
 _GRID_CACHE = {}
 DEPTH_AMP = {"약하게": (0.007, 0.003), "보통": (0.022, 0.010), "강하게": (0.035, 0.016)}   # 약하게는 아주 은은하게(기본)
-RENDER_VER = "2026-11-01a"   # 그리는 방식이 바뀌면 올림 → 장문 영상 구간 캐시를 새로 그림   # (가로, 세로) 최대 밀림 = 화면 크기 비율
+RENDER_VER = "2026-11-08a"   # 그리는 방식이 바뀌면 올림 → 장문 영상 구간 캐시를 새로 그림   # (가로, 세로) 최대 밀림 = 화면 크기 비율
 
 
 def depth_key(path):
@@ -6711,6 +6756,78 @@ def ensure_depth_maps(paths, log=None, cancel=None):
         except Exception as e:
             log("  깊이 계산 건너뜀: " + str(e)[:100])
     return done
+
+
+BLENDER_DIR = os.path.join(BASE, "output", "blender3d_cache")
+
+
+def blender_exe():
+    import shutil as _sh
+    return os.environ.get("BLENDER") or _sh.which("blender") or (r"C:\Program Files\Blender Foundation\Blender 4.0\blender.exe" if os.name == "nt" else "")
+
+
+def ensure_blender_clips(r, log=None, cancel=None):
+    """사진 장면마다(같은 사진이 이어지는 묶음 g0~g1) Blender 진짜 3D 카메라 영상을 미리 만듦 (사용자 결정 2026-11-08 '블렌더 활용').
+    깊이 지도가 있고(평평한 도표·그림 제외) 가로 사진(1.3~2.4)만. 한 번 만든 것은 다시 씀. 만든 영상은 r.bl_clips[사진번호]"""
+    log = log or (lambda x: None)
+    if not getattr(r, "bl_on", False):
+        return 0
+    exe = blender_exe()
+    if not exe or not os.path.exists(exe):
+        log("  ℹ Blender 가 없어 사진 3D 는 프로그램 방식(2.5D)으로 (리눅스: apt-get install blender)")
+        r.bl_on = False
+        return 0
+    x0, y0, x1, y1 = r.img_box
+    W_, H_ = int(x1 - x0) // 2 * 2, int(y1 - y0) // 2 * 2
+    groups = {}
+    for sh in r.shots:
+        g = (sh["img"], round(sh.get("g0", sh["t0"]), 2), round(sh.get("g1", sh["t1"]), 2))
+        groups.setdefault(sh["img"], set()).add(g)
+    paths = getattr(r, "img_paths", [])
+    todo, ready = [], 0
+    for idx, gs in groups.items():
+        if len(gs) != 1 or idx >= len(paths):      # 같은 사진이 떨어진 두 곳에 나오면 프로그램 방식 그대로
+            continue
+        _, g0, g1 = next(iter(gs))
+        path = paths[idx]
+        try:
+            with Image.open(path) as im_:
+                asp = im_.width / max(1, im_.height)
+        except Exception:
+            continue
+        if not (1.3 <= asp <= 2.4) or load_depth(path) is None:
+            continue
+        sec = max(2.0, round((g1 - g0) * 2) / 2)
+        out = os.path.join(BLENDER_DIR, f"{depth_key(path)}_{W_}x{H_}_{sec:.1f}_{idx % 4}.mp4")
+        if os.path.exists(out) and os.path.getsize(out) > 1000:
+            r.bl_clips[idx] = out
+            ready += 1
+        else:
+            todo.append((idx, path, out, sec))
+    if todo:
+        os.makedirs(BLENDER_DIR, exist_ok=True)
+        log(f"  🎥 Blender 3D 카메라 영상 {len(todo)}개 만드는 중... (사진 한 장(8초)에 약 1분, 한 번만)")
+    for k_, (idx, path, out, sec) in enumerate(todo):
+        if cancel is not None and cancel.is_set():
+            raise RuntimeError("취소됨")
+        npy = os.path.join(DEPTH_DIR, depth_key(path) + ".npy")
+        cmd = [exe, "-b", "-noaudio", "--factory-startup", "-P", os.path.join(BASE, "블렌더_사진3D.py"), "--",
+               path, npy, out + ".part.mp4", str(sec), str(W_), str(H_), str(idx % 4), "1.0"]
+        try:
+            p = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=1800,
+                               creationflags=(subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0))
+            if os.path.exists(out + ".part.mp4") and os.path.getsize(out + ".part.mp4") > 1000:
+                os.replace(out + ".part.mp4", out)
+                r.bl_clips[idx] = out
+                ready += 1
+            else:
+                log("  Blender 실패: " + os.path.basename(path) + " " + (p.stderr or p.stdout or "")[-160:])
+        except Exception as e:
+            log("  Blender 건너뜀: " + str(e)[:100])
+        if (k_ + 1) % 5 == 0:
+            log(f"  🎥 Blender {k_ + 1}/{len(todo)}")
+    log(f"  🎥 Blender 3D 사진 {ready}장 (나머지는 프로그램 방식)")
+    return ready
 
 
 def load_depth(path):

@@ -32,7 +32,8 @@ DEFAULT = {
     "배경음": "심해",
     "배경음_크기": 0.03,      # 0~2 (0.03 = 거의 안 들림, 목소리가 또렷하게)
     "배경음_파일": "",          # 음악 파일(mp3) 경로를 적으면 자동 작곡 대신 그 음악 (예: 케빈 맥러드 CC BY 4.0, 배경음악\\KevinMacLeod\\…). 짧으면 반복. 설명란에 출처 필수
-    "입체_사진": True,          # 사용자 결정 2026-11-08: 실제 사진 다큐는 사진 3D 효과(2.5D 깊이 움직임) 자동으로 켬 (--역사 그림 편은 끔)
+    "입체_사진": True,
+    "입체_방식": "블렌더",      # 블렌더(사용자 결정 2026-11-08: 사진을 깊이대로 세운 판을 Blender 카메라가 돌며 찍음) / 2.5D(프로그램이 픽셀을 밀어 흉내)          # 사용자 결정 2026-11-08: 실제 사진 다큐는 사진 3D 효과(2.5D 깊이 움직임) 자동으로 켬 (--역사 그림 편은 끔)
     "성우_프리셋": "",         # 🎤 성우 선택 창에서 ⭐ 새 성우로 저장한 이름 (비우면 기본: 남자 성우 2)
     "웹조사": True,
     "쇼츠_만들기": False,      # 규칙: 쇼츠는 기본적으로 안 만듦. true 로 하거나 명령에 --쇼츠 를 붙이면 롱폼마다 세로 쇼츠도 만듦
@@ -674,7 +675,8 @@ def run_doc(m, app, c, gate):
                 "sub_split": "한 줄씩(문장·쉼표로 나눠 차례로)", "img_label": "off" if HISTORY else "on", "fps": "24", "sub_hide": "off", "img_credit": "on",
                 # 실제 사진 장문 다큐(--역사 아님): 오른쪽 위 = 사진 설명 상자(무엇·언제), 오른쪽 아래 = 출처(검은 바탕·흰 글자) (사용자 결정 2026-11-01). AI 그림엔 출처 표시 안 됨
                 "narr_rate": "0", "narr_tone_m": "-1.5",   # 나레이션: 정상 속도·톤 반음 1.5 낮게 (CLAUDE.md 2장)
-                "img_depth": "on" if (not HISTORY and c.get("입체_사진", True)) else "off"}   # 실제 사진 3D 효과 (사용자 결정 2026-11-08)
+                "img_depth": "on" if (not HISTORY and c.get("입체_사진", True)) else "off",
+                "img_blender": "on" if (not HISTORY and c.get("입체_사진", True) and str(c.get("입체_방식", "블렌더")).startswith("블렌더")) else "off"}   # 3D 를 Blender 진짜 카메라로 (사용자 결정 2026-11-08)   # 실제 사진 3D 효과 (사용자 결정 2026-11-08)
     for k_, v_ in LONG_FIX.items():
         if k_ in app.vars:
             app.vars[k_].set(v_)
@@ -898,6 +900,9 @@ def run_doc(m, app, c, gate):
 
     # 3) 영상 (5분 구간마다 저장 → 이어서)
     r = m.make_renderer(title, story, s, narr)
+    if hasattr(m, "ensure_blender_clips") and str(s.get("img_blender", "off")) == "on":
+        m.ensure_depth_maps(m.story_photo_paths(story), log)
+        m.ensure_blender_clips(r, log, gate)
     log(f"영상 길이 {m.hms(r.duration)} · 챕터 {len(r.chapter_times())}개 · 사진 {len(m.photo_credits(story))}장")
     audio = m.build_audio(r, s, c["배경음"])
     last = [0]
@@ -908,7 +913,7 @@ def run_doc(m, app, c, gate):
             last[0] = p
             log(f"  MP4 {p}%")
     import hashlib
-    key = hashlib.md5((story + "|" + getattr(m, "RENDER_VER", "") + "|" + json.dumps({k: s.get(k) for k in ("fps", "format", "layout", "img_fill", "img_motion", "img_depth", "img_depth_amt", "head_style", "head_pos", "head_size", "head_show", "sub_style", "sub_size", "sub_layout", "sub_dialog", "sub_anim", "sub_split", "sub_hide", "style_preset", "text_color", "sub_box_alpha",
+    key = hashlib.md5((story + "|" + getattr(m, "RENDER_VER", "") + "|" + json.dumps({k: s.get(k) for k in ("fps", "format", "layout", "img_fill", "img_motion", "img_depth", "img_depth_amt", "img_blender", "head_style", "head_pos", "head_size", "head_show", "sub_style", "sub_size", "sub_layout", "sub_dialog", "sub_anim", "sub_split", "sub_hide", "style_preset", "text_color", "sub_box_alpha",
                                                                          "font_path", "title_font_path", "bgm_volume", "intro_sec", "outro_sec", "outro_text", "img_filter", "motion_count", "motion_chart", "motion_icon", "motion_lower", "motion_popup")}, ensure_ascii=False)
                        + "|" + title + "|" + ",".join(f"{d_:.3f}" for _, _, d_ in narr) + "|" + ",".join(f"{sg_['t0']:.2f}" for sg_ in getattr(r, "segs", [])) + f"|{r.duration:.2f}" + getattr(r, "fx_sig", "")).encode("utf-8")).hexdigest()   # 나레이션이 바뀌면(발음 수정 등) 영상 구간도 새로
     m.export_mp4_resumable(r, base + ".mp4", prog, gate, audio, work_dir=os.path.join(work, "영상구간"), seg_sec=SEG_SEC, log=log, key=key)
