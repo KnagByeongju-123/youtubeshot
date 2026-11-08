@@ -6449,11 +6449,15 @@ class SubtitleRenderer:
         elif prev is not None:
             pc, _ = self._shot_crop(prev, t)
             kind_ = getattr(self, "trans_plan", {}).get(sh["img"]) if prev["img"] != sh["img"] else None   # 장면별 전환(직접 고른 것)
+            paint_rgb_ = PAINT_RGB
+            if kind_ and kind_.startswith("물감-"):                  # 물감 색을 고른 장면
+                paint_rgb_ = PAINT_COLORS.get(kind_[3:], PAINT_RGB)
+                kind_ = "물감"
             if kind_ and kind_ not in ("물감", "페이드", "컷"):
                 crop = self._transition(pc.convert("RGB"), crop.convert("RGB"), float(smoothstep((t - sh["t0"]) / fade)), kind_)
                 kind_ = "done"
             pm = (self._paint_mask(k, (t - sh["t0"]) / fade, crop.size)
-                  if kind_ in (None, "물감") and getattr(self, "paint_on", False) and prev["img"] != sh["img"] and _cv2 is not None else None)
+                  if (kind_ == "물감" or (kind_ is None and getattr(self, "paint_on", False))) and prev["img"] != sh["img"] and _cv2 is not None else None)
             if kind_ == "컷":
                 pm, a = None, 1.0
             if kind_ == "done":
@@ -6463,7 +6467,7 @@ class SubtitleRenderer:
                 A_ = np.asarray(pc.convert("RGB"), np.float32)
                 B_ = np.asarray(crop.convert("RGB"), np.float32)
                 o_ = A_ * (1 - m_[..., None]) + B_ * m_[..., None]
-                o_ = o_ * (1 - rim_[..., None]) + np.array(PAINT_RGB, np.float32) * rim_[..., None]
+                o_ = o_ * (1 - rim_[..., None]) + np.array(paint_rgb_, np.float32) * rim_[..., None]
                 crop = Image.fromarray(o_.clip(0, 255).astype(np.uint8))
             else:
                 crop = Image.blend(pc, crop, float(a))
@@ -6897,7 +6901,7 @@ _DEPTH_CACHE = {}
 _DEPTH_WARNED = set()
 _GRID_CACHE = {}
 DEPTH_AMP = {"약하게": (0.007, 0.003), "보통": (0.022, 0.010), "강하게": (0.035, 0.016)}   # 약하게는 아주 은은하게(기본)
-RENDER_VER = "2026-11-08e"   # 그리는 방식이 바뀌면 올림 → 장문 영상 구간 캐시를 새로 그림   # (가로, 세로) 최대 밀림 = 화면 크기 비율
+RENDER_VER = "2026-11-08f"   # 그리는 방식이 바뀌면 올림 → 장문 영상 구간 캐시를 새로 그림   # (가로, 세로) 최대 밀림 = 화면 크기 비율
 
 
 def depth_key(path):
@@ -6996,7 +7000,10 @@ CAMERA_HINTS = [
 CAMERA_LIMIT = {"dollyzoom": 3, "fpv": 4, "freeze": 4}
 
 
-SCENE_TRANSITIONS = {"물감": "물감 뿌리기(빨간 테두리, 채널 시그니처)", "페이드": "부드럽게 겹쳐 바뀜", "컷": "바로 바뀜",
+PAINT_COLORS = {"빨강": (200, 30, 40), "검정": (18, 18, 20), "흰색": (245, 245, 240), "파랑": (30, 90, 210), "노랑": (240, 200, 30),
+                "주황": (240, 120, 30), "보라": (130, 50, 170), "초록": (40, 150, 70)}   # 물감 뿌리기 색 (사용자 결정 2026-11-08)
+SCENE_TRANSITIONS = {"물감": "물감 뿌리기(빨간 테두리, 채널 시그니처)",
+                     **{f"물감-{k}": f"물감 뿌리기({k} 물감)" for k in PAINT_COLORS}, "페이드": "부드럽게 겹쳐 바뀜", "컷": "바로 바뀜",
                      "밀어내기": "옆으로 밀어냄", "덮기": "위에 덮음", "닦아내기": "닦아내듯", "확대": "확대하며 바뀜", "시대전환": "빛바랜 시대 전환"}
 
 
