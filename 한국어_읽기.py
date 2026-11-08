@@ -127,6 +127,13 @@ def ko_numbers(text):
     TTS(특히 Supertonic)가 숫자를 잘못 읽거나 오류를 내는 것을 막음"""
     t = text
     t = re.sub(r"(?<=\d),(?=\d{3}(?!\d))", "", t)                         # 12,000 → 12000
+    def _native_range(m_):                                              # 25~35살 → 스물다섯에서 35살 (뒤 숫자는 아래에서 '서른다섯') — 사용자 지적 2026-11-08
+        a_ = int(m_.group(1))
+        if not 1 <= a_ <= 99:
+            return m_.group(0)
+        first = _KO_NATIVE_TENS.get(a_ // 10, "") + {1: "하나", 2: "둘", 3: "셋", 4: "넷"}.get(a_ % 10, _KO_NATIVE.get(a_ % 10, ""))
+        return first + "에서 "
+    t = re.sub(r"(?<![\d.])(\d{1,2})\s*[~～∼]\s*(?=\d{1,2}\s*(?:" + "|".join(map(re.escape, _KO_NATIVE_UNITS)) + r"))", _native_range, t)
     t = re.sub(r"(\d)\s*[~～∼]\s*(?=\d)", r"\1에서 ", t)                  # 10~20 → 10에서 20
     t = re.sub(r"(?<![\w.])-(?=\d)", "마이너스 ", t)
     t = re.sub(r"(?<![\d.])(시속\s*)?(\d+(?:\.\d+)?)\s*km/h", r"시속 \2km", t)   # 100km/h → 시속 100km (시속 100km/h 처럼 이미 있으면 두 번 붙이지 않음)
