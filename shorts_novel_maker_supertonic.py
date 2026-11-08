@@ -537,7 +537,8 @@ FIELDS = [
     ("자막형", "sub_max_chars", "자막 한 번에 글자 수", "int", 28),
     ("자막형", "img_motion", "사진 움직임", "choice:영상처럼(확대·이동·전환),천천히 확대만,없음", "영상처럼(확대·이동·전환)"),
     ("자막형", "img_label", "사진 제목 표시(오른쪽 위)", "choice:on,off", "on"),
-    ("자막형", "img_credit", "사진 출처 표시(오른쪽 아래, 작게)", "choice:on,off", "on"),   # 사용자 결정 2026-11-01: 실제 사진은 화면에 작가·라이선스 (CC BY 조건). AI 그림은 표시 안 함
+    ("자막형", "img_credit", "사진 출처 표시(오른쪽 아래, 작게)", "choice:on,off", "on"),
+    ("자막형", "img_trans", "사진이 바뀔 때 전환", "choice:겹쳐 바뀜,물감 튀김(빨간 테두리)", "겹쳐 바뀜"),   # 사용자 결정 2026-11-08: 홀리 편부터 채널 시그니처 = 물감 튀김   # 사용자 결정 2026-11-01: 실제 사진은 화면에 작가·라이선스 (CC BY 조건). AI 그림은 표시 안 함
     ("자막형", "sub_hide", "자막 숨김(나레이션만 · 장문 기본 on)", "choice:off,on", "off"),
     ("자막형", "img_motion_amt", "사진 움직임 세기", "choice:은은하게,크게(예전)", "은은하게"),
     ("자막형", "motion_count", "모션: 숫자 카운트업(통계 수치가 올라감)", "choice:on,off", "off"),
@@ -1085,6 +1086,7 @@ CATEGORIES[DOC_CATEGORY] = (True, {
     "[실화] 불가능에 도전한 사람들": ("실제 기록에 남은 탐험·도전(최초의 횡단·등정·잠수·비행). 왜 아무도 못 했나 → 준비와 실패 → 결정적 고비 → 해낸 순간과 그 대가. 이미 아주 유명한 사례는 덜 알려진 각도로.", "네온 시티"),
     "[실화] 과학이 밝혀낸 미스터리": ("오랫동안 풀리지 않던 수수께끼를 최근 과학 연구(네이처·사이언스 등 동료 심사 논문)가 풀어내거나 새로 설명한 이야기. AI든 실험이든 관측이든 가리지 않는다. 구성: 무엇이 오래 수수께끼였나 → 왜 아무도 못 풀었나 → 결정적 단서와 방법 → 밝혀진 답 → 아직 남은 의문. 반드시 웹 조사로 논문·기관·연도를 확인하고, '확인된 사실'과 '아직 검증 중인 가설'을 분명히 나눈다. '완전히 끝났다' 같은 단정·과장은 하지 않는다.", "시네마 다크"),
     "[실화] 최근 밝혀진 과학 발견": ("최근 1~3개월 사이에 동료 심사 논문(네이처·사이언스 등)이나 연구기관 발표로 새로 밝혀진 과학 사실. 수수께끼가 아니어도 된다: 첫 증거, 가장 오래된 기록, 새로 발견된 생물·천체, 상식을 뒤집은 결과. 구성: 발표 날짜·저널·연구팀으로 신선함을 바로 알림 → 이전까지 우리가 알던 것 → 무엇을 어떻게 발견했나 → 왜 중요한가 → 아직 확인이 필요한 부분과 반론. 반드시 웹 조사로 발표 날짜·저널·기관을 확인하고 제목이나 오프닝에 '2026년 ○월' 같은 시점을 넣는다. 막 나온 연구는 바뀔 수 있으니 '밝혀졌다'로 단정하지 말고 검증 단계(후속 연구·반론)를 분명히 밝힌다.", "네온 시티"),
+    "[실화] 세계의 축제와 풍속": ("세계의 실제 축제·풍속 하나를 실제 사진과 기록으로 깊이 보는 이야기 (사용자 결정 2026-11-08, 홀리 편). 구성: 축제 당일 장면(소리·색·냄새) → '왜 이렇게 할까?' 질문 → 전해지는 신화·전설(전설은 '전해지는 이야기로는'으로) → 기록에 남은 역사(문헌·연도는 조사 자료 안에서만) → 시대에 따라 바뀐 모습과 요즘의 문제 → 세계로 퍼진 모습 → 이 축제가 사람들에게 주는 의미. 종교·문화를 비하하거나 신비화하지 않고 존중하는 시선으로, 확인된 사실과 전설·해석을 분명히 나눈다.", "감동 웜톤"),
     "[실화] 기록으로 보는 진짜 역사": ("드라마·소설로 알려진 역사 장면을 실제 기록(조선왕조실록, 진수의 정사 『삼국지』 등)과 맞대어 보는 이야기. 구성: 모두가 아는 장면(사극·연의) → 기록을 펴 보면(실록은 '○○ ○년 ○월 ○일 기사', 정사는 '「○○전」'처럼 어디에 적혔는지 밝힘) → 그 한 줄이 뜻하는 것 → 왜 이야기가 바뀌었나(후대 소설·야사·드라마) → 아직 남은 의문. 반드시 웹 조사로 기록의 날짜·권·편을 확인하고, 기록·소설(연의)·드라마·야사·학자의 해석을 '실록에는', '소설에서는', '전해지는 이야기로는', '~라는 해석이 있다'로 분명히 나눈다. 정사 본문과 배송지의 주석(다른 책을 인용한 것)도 구분한다. 한국어 번역문을 길게 그대로 옮기지 말고 자기 말로 풀어 쓰며, 직접 인용은 한두 문장에 출처를 붙인다. 실제 인물을 깎아내리거나 미화하지 않고, 논쟁이 있는 평가는 양쪽을 함께 소개한다.", "시네마 다크"),
 })
 for _t, _snd in (("우주의 비밀", "우주"), ("양자물리·현실의 본질", "우주"), ("과학자의 생각법", "잔잔한 패드"),
@@ -1109,7 +1111,7 @@ for _t, _snd in (("[실화] 극한 생존기", "바람"), ("[실화] 미제 사�
                  ("[실화] 믿기 힘든 우연", "밝은 오르골"), ("[실화] 희대의 사기와 범죄", "긴장 펄스"), ("[실화] 평범한 사람의 위대한 순간", "잔잔한 패드"),
                  ("[실화] 재난에서 살아남은 날", "어두운 드론"), ("[실화] 불가능에 도전한 사람들", "바람"),
                  ("[실화] 과학이 밝혀낸 미스터리", "어두운 드론"), ("[실화] 최근 밝혀진 과학 발견", "우주"),
-                 ("[실화] 기록으로 보는 진짜 역사", "잔잔한 패드")):
+                 ("[실화] 기록으로 보는 진짜 역사", "잔잔한 패드"), ("[실화] 세계의 축제와 풍속", "밝은 오르골")):
     SOUND_BY_TOPIC.setdefault(_t, _snd)
 
 # 장문 '이야기'(허구) 소재: 유튜브 장편 낭독·오디오드라마로 인기 있는 장르 (소재 이름 앞 [이야기])
@@ -6028,7 +6030,11 @@ class SubtitleRenderer:
                 sig.append(str(int(os.path.getmtime(p_ + ".인물.json"))))
             except OSError:
                 sig.append("-")
-        return hashlib.md5(",".join(sig).encode()).hexdigest()[:12] if any(x != "-" for x in sig) else ""
+            for ext_ in (".clip/clip.json", ".얼굴.json"):      # Blender 클립·얼굴 순간이동이 바뀌어도 새로 그림
+                if os.path.exists(p_ + ext_):
+                    sig.append(ext_[1] + str(int(os.path.getmtime(p_ + ext_))))
+        sig.append(str(self.s.get("img_trans", "")))
+        return hashlib.md5(",".join(sig).encode()).hexdigest()[:12] if any(x not in ("-", "", "겹쳐 바뀜") for x in sig) else ""
 
     def _shot_crop_raw(self, sh, t):
         """장면 sh 의 t 시점 사진 (움직임 적용)"""
@@ -6069,6 +6075,9 @@ class SubtitleRenderer:
                     self._img_cache.pop(next(iter(self._img_cache)))
                 self._img_cache[key] = z
             return self._img_cache[key], mask
+        special = self._special_crop(sh, t, bw, bh)       # Blender 영상(클립) · 얼굴 순간이동 (사용자 결정 2026-11-08)
+        if special is not None:
+            return special, mask
         z0, z1, ax, bx, ay, by = sh["m"]
         p = min(1.0, max(0.0, (t - sh["t0"]) / max(0.1, sh["t1"] - sh["t0"])))
         p = 0.5 - 0.5 * np.cos(np.pi * p)             # 부드럽게 시작·끝
@@ -6109,6 +6118,90 @@ class SubtitleRenderer:
         dcrop = extent_np(dbig, size_p, box)                                 # float32 0~255
         warped = parallax_warp_np(crop_pad, dcrop, ox, oy)
         return Image.fromarray(np.ascontiguousarray(warped[my:my + bh, mx:mx + bw])), mask
+
+    def _piece_of(self, idx, t):
+        """그 그림이 지금 보이는 구간 (시작, 끝)"""
+        return next(((a_, b_) for im_, a_, b_ in self._img_pieces(self.duration) if im_ == idx and a_ - 0.8 <= t < b_ + 0.8), None)
+
+    def _special_crop(self, sh, t, bw, bh):
+        """<그림>.clip/ 이 있으면 Blender 로 만든 프레임을, <그림>.얼굴.json 이 있으면 얼굴 순간이동 화면을 돌려줌. 없으면 None"""
+        paths = getattr(self, "img_paths", [])
+        idx = sh["img"]
+        if idx >= len(paths) or not paths[idx]:
+            return None
+        p_ = paths[idx]
+        info = self.__dict__.setdefault("_special_info", {})
+        if p_ not in info:
+            kind = None
+            try:
+                if os.path.exists(os.path.join(p_ + ".clip", "clip.json")):
+                    kind = ("clip", json.load(open(os.path.join(p_ + ".clip", "clip.json"), encoding="utf-8")))
+                elif os.path.exists(p_ + ".얼굴.json"):
+                    fs = json.load(open(p_ + ".얼굴.json", encoding="utf-8")).get("faces") or []
+                    if fs:
+                        kind = ("face", fs)
+            except Exception:
+                kind = None
+            info[p_] = kind
+        kind = info[p_]
+        if kind is None:
+            return None
+        pc = self._piece_of(idx, t) or (sh["t0"], sh["t1"])
+        age = max(0.0, t - pc[0])
+        if kind[0] == "clip":
+            meta = kind[1]
+            n = int(meta.get("n", 1))
+            fi = min(n, max(1, int(age * float(meta.get("fps", 24))) + 1))
+            cache = self.__dict__.setdefault("_clip_frames", {})
+            key = (p_, fi, bw, bh)
+            if key not in cache:
+                fp = os.path.join(p_ + ".clip", f"{fi:04d}.jpg")
+                try:
+                    im = Image.open(fp).convert("RGB")
+                except Exception:
+                    return None
+                sc = max(bw / im.width, bh / im.height)
+                im = im.resize((max(bw, round(im.width * sc)), max(bh, round(im.height * sc))), Image.BILINEAR)
+                l, tp = (im.width - bw) // 2, (im.height - bh) // 2
+                if len(cache) > 6:
+                    cache.pop(next(iter(cache)))
+                cache[key] = im.crop((l, tp, l + bw, tp + bh))
+            return cache[key]
+        # 얼굴 순간이동: 넓은 화면으로 머물다 → 한 얼굴 클로즈업으로 순간 컷 → 다른 얼굴 … (머무는 동안 천천히 흐름). 사진은 3D 로 바꾸지 않음
+        im = self.images[idx][0]
+        IW, IH = im.width, im.height
+        asp = bw / bh
+        dur = max(1.0, pc[1] - pc[0])
+        fs = [f_ for f_ in kind[1] if (f_["box"][3] - f_["box"][1]) * IH * 2.8 >= bh * 0.42][:3]   # 너무 작은 얼굴은 크게 하면 흐려서 뺌
+        n = 1 + len(fs)
+        if dur < 3.2 * n:                                  # 시간이 짧으면 얼굴 수를 줄임 (한 컷 최소 3초 남짓)
+            fs = fs[:max(0, int(dur // 3.2) - 1)]
+            n = 1 + len(fs)
+        wide_len = dur * (0.4 if fs else 1.0)
+        if age < wide_len or not fs:
+            k_, q = -1, age / max(0.5, wide_len)
+        else:
+            k_ = min(len(fs) - 1, int((age - wide_len) / ((dur - wide_len) / len(fs))))
+            q = ((age - wide_len) - k_ * (dur - wide_len) / len(fs)) / ((dur - wide_len) / len(fs))
+        q = min(1.0, max(0.0, q))
+        if k_ < 0:                                         # 넓은 화면: 사진 전체(화면 비율), 아주 천천히 다가감
+            w_, h_ = (IW, IW / asp) if IW / IH < asp else (IH * asp, IH)
+            z = 1.0 + 0.06 * q
+            cx, cy = IW / 2, IH / 2
+        else:
+            x0_, y0_, x1_, y1_ = fs[k_]["box"]
+            fw, fh = (x1_ - x0_) * IW, (y1_ - y0_) * IH
+            h_ = min(IH, fh * 2.8)
+            w_ = h_ * asp
+            if w_ > IW:
+                w_, h_ = IW, IW / asp
+            z = 1.0 + 0.05 * q
+            cx = (x0_ + x1_) / 2 * IW + (0.03 if k_ % 2 else -0.03) * w_ * (q - 0.5)    # 옆으로 천천히 흐름
+            cy = (y0_ + y1_) / 2 * IH + fh * 0.35
+        w_, h_ = w_ / z, h_ / z
+        l = min(max(0.0, cx - w_ / 2), IW - w_)
+        tp = min(max(0.0, cy - h_ / 2), IH - h_)
+        return extent_resize(im.convert("RGB"), (bw, bh), (l, tp, l + w_, tp + h_))
 
     def _depth_for(self, idx, size):
         """idx 사진의 깊이 지도를 큰 사진 크기의 L 이미지로 (캐시)"""
@@ -6219,6 +6312,10 @@ class SubtitleRenderer:
             return canvas
         sh = self.shots[k]
         fade = 0.35
+        splash = (str(self.s.get("img_trans", "")).startswith("물감") and k > 0 and not getattr(self, "slide", False)
+                  and self.shots[k - 1]["img"] != sh["img"])
+        if splash:
+            fade = 0.75
         prev = self.shots[k - 1] if k > 0 and t - sh["t0"] < fade else None
         if prev is not None and getattr(self, "slide", False) and self.images[prev["img"]][0] is self.images[sh["img"]][0]:
             prev = None                       # 같은 슬라이드 확대 이동: 겹치지 않고 카메라만 움직임
@@ -6242,6 +6339,9 @@ class SubtitleRenderer:
         if trans is not None:
             pc, _ = self._shot_crop(trans[0], t)
             crop = self._transition(pc.convert("RGB"), crop.convert("RGB"), trans[1], trans[2])
+        elif prev is not None and splash:
+            pc, _ = self._shot_crop(prev, t)
+            crop = paint_splash(pc.convert("RGB"), crop.convert("RGB"), (t - sh["t0"]) / fade, seed=k)
         elif prev is not None:
             pc, _ = self._shot_crop(prev, t)
             crop = Image.blend(pc, crop, float(a))
@@ -6666,7 +6766,62 @@ _DEPTH_CACHE = {}
 _DEPTH_WARNED = set()
 _GRID_CACHE = {}
 DEPTH_AMP = {"약하게": (0.007, 0.003), "보통": (0.022, 0.010), "강하게": (0.035, 0.016)}   # 약하게는 아주 은은하게(기본)
-RENDER_VER = "2026-11-01a"   # 그리는 방식이 바뀌면 올림 → 장문 영상 구간 캐시를 새로 그림   # (가로, 세로) 최대 밀림 = 화면 크기 비율
+_SPLASH_CACHE = {}
+
+
+def _splash_field(w, h, seed):
+    """물감 튀김 모양: 큰 물감 덩어리 몇 개 + 튄 방울. 값이 작을수록 먼저 칠해짐 (0~1). 작은 크기로 만들어 키움"""
+    key = (w, h, seed)
+    if key in _SPLASH_CACHE:
+        return _SPLASH_CACHE[key]
+    sw, sh_ = 320, max(2, round(320 * h / w))
+    rng = np.random.default_rng(1000 + seed)
+    yy, xx = np.mgrid[0:sh_, 0:sw].astype(np.float32)
+    ang = np.arctan2(1, 1)
+    field = np.full((sh_, sw), 9.0, np.float32)
+    nb = 5
+    for i in range(nb):
+        cx, cy = rng.uniform(0.1, 0.9) * sw, rng.uniform(0.15, 0.85) * sh_
+        r0 = rng.uniform(0.18, 0.32) * sw
+        a = np.arctan2(yy - cy, xx - cx)
+        wob = 1 + 0.18 * np.sin(a * rng.integers(5, 9) + rng.uniform(0, 6)) + 0.1 * np.sin(a * rng.integers(11, 17) + rng.uniform(0, 6))
+        d = np.hypot(xx - cx, yy - cy) / (r0 * wob)
+        start = i / nb * 0.35                          # 덩어리마다 조금씩 늦게 터짐
+        field = np.minimum(field, start + d * 0.65)
+        for _ in range(14):                            # 둘레로 튄 방울
+            aa = rng.uniform(0, 2 * np.pi)
+            rr = r0 * rng.uniform(1.05, 1.8)
+            px, py = cx + np.cos(aa) * rr, cy + np.sin(aa) * rr
+            dr = rng.uniform(0.012, 0.035) * sw
+            dd = np.hypot(xx - px, yy - py) / dr
+            field = np.minimum(field, start + 0.3 + dd * 0.35)
+    field = (field - field.min()) / max(1e-6, np.percentile(field, 99.5) - field.min())
+    big = np.asarray(Image.fromarray(np.clip(field * 255, 0, 255).astype(np.uint8)).resize((w, h), Image.BICUBIC), np.float32) / 255
+    if len(_SPLASH_CACHE) > 6:
+        _SPLASH_CACHE.pop(next(iter(_SPLASH_CACHE)))
+    _SPLASH_CACHE[key] = big
+    return big
+
+
+def paint_splash(a, b, e, seed=0, edge=(206, 18, 38)):
+    """a(앞 장면) → b(다음 장면): 물감이 튀며 다음 장면이 드러남, 경계는 빨간 물감 테두리 (채널 시그니처, 사용자 결정 2026-11-08)"""
+    e = float(min(1.0, max(0.0, e)))
+    if e >= 1:
+        return b
+    w, h = b.size
+    f = _splash_field(w, h, seed % 7)
+    thr = e * 1.25
+    soft = 0.012
+    reveal = np.clip((thr - f) / soft, 0, 1)[..., None]
+    band = 0.035 * (1 - e * 0.6)                       # 빨간 테두리 두께 (끝날수록 얇게)
+    rim = (np.clip((thr + band - f) / soft, 0, 1) * (1 - reveal[..., 0]))[..., None]
+    A, B = np.asarray(a, np.float32), np.asarray(b, np.float32)
+    out = A * (1 - reveal) + B * reveal
+    out = out * (1 - rim) + np.array(edge, np.float32) * rim
+    return Image.fromarray(np.clip(out, 0, 255).astype(np.uint8))
+
+
+RENDER_VER = "2026-11-08a"   # 그리는 방식이 바뀌면 올림 → 장문 영상 구간 캐시를 새로 그림   # (가로, 세로) 최대 밀림 = 화면 크기 비율
 
 
 def depth_key(path):

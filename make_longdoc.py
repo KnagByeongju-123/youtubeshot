@@ -475,6 +475,10 @@ def main():
             save_state()
             ci = dict(c, 주제=topic, 소재=genre, 기획메모=cur.get("메모", ""), 소재탐색_폴더=cur_folder)
         ci["배경음"] = m.SOUND_BY_TOPIC.get(ci["소재"], c.get("배경음") or "잔잔한 패드")
+        bm_ = re.search(r"^\s*-?\s*배경음\s*[:：]\s*(.+?)\s*$", str(ci.get("기획메모") or ""), re.M)   # 기획메모에 '배경음: 이름' 이 있으면 그것 (예: 홀리 편 = 인도 전통 · 카피)
+        if bm_ and bm_.group(1) in m.SOUND_STYLE_NAMES:
+            ci["배경음"] = bm_.group(1)
+            log(f"🎵 배경음(기획메모): {ci['배경음']}")
         res = run_doc(m, app, ci, gate)
         done_list.append({"종류": kind, "주제": ci["주제"], "소재": ci["소재"], "제목": res.get("title", ""), "완료": time.strftime("%Y-%m-%d %H:%M")})
         cur = None
@@ -661,7 +665,8 @@ def run_doc(m, app, c, gate):
                 "img_motion": "영상처럼(확대·이동·전환)", "head_show": "안 보임(제목 카드만)", "head_pos": "숨김",   # 새 서버의 프로그램 기본값(쇼츠 세로 등)을 쓰지 않게
                 "sub_split": "한 줄씩(문장·쉼표로 나눠 차례로)", "img_label": "off" if HISTORY else "on", "fps": "24", "sub_hide": "off", "img_credit": "on",
                 # 실제 사진 장문 다큐(--역사 아님): 오른쪽 위 = 사진 설명 상자(무엇·언제), 오른쪽 아래 = 출처(검은 바탕·흰 글자) (사용자 결정 2026-11-01). AI 그림엔 출처 표시 안 됨
-                "narr_rate": "0", "narr_tone_m": "-1.5"}   # 나레이션: 정상 속도·톤 반음 1.5 낮게 (CLAUDE.md 2장)
+                "narr_rate": "0", "narr_tone_m": "-1.5",
+                "img_trans": "물감 튀김(빨간 테두리)"}   # 사진이 바뀔 때 물감 튀김 + 빨간 테두리 = 채널 시그니처 (사용자 결정 2026-11-08)   # 나레이션: 정상 속도·톤 반음 1.5 낮게 (CLAUDE.md 2장)
     for k_, v_ in LONG_FIX.items():
         if k_ in app.vars:
             app.vars[k_].set(v_)
