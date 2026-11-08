@@ -10,6 +10,9 @@
   # 장면 영상(장면 파일에 인물·동작·카메라를 적음 — 아래 '장면 파일' 참고)
   xvfb-run -a .blender_venv/bin/python 블록애니.py 장면 블록애니/장면_예시.json 결과.mp4 [--고급]
 
+  # 판 영상 합치기(차례로 이어 붙임)
+  .blender_venv/bin/python 블록애니.py 합치기 전체.mp4 1판.mp4 2판.mp4
+
   기본 촬영은 Workbench(한 장 1초 안팎, 만화처럼 검은 테두리). --고급 은 EEVEE(그림자·빛, 한 장 수십 초).
 
 캐릭터 파일(JSON) — 이름마다:
@@ -871,6 +874,17 @@ def main():
         del argv[i:i + 2]
     fancy = "--고급" in argv
     argv = [a for a in argv if a != "--고급"]
+    if cmd == "합치기":  # 합치기 결과.mp4 1판.mp4 2판.mp4 … — 판 영상들을 차례로 이어 붙임
+        ins = argv[2:]
+        args = ["ffmpeg", "-y", "-loglevel", "error"]
+        for f in ins:
+            args += ["-i", f]
+        fil = "".join(f"[{i}:v][{i}:a]" for i in range(len(ins))) + f"concat=n={len(ins)}:v=1:a=1[v][a]"
+        args += ["-filter_complex", fil, "-map", "[v]", "-map", "[a]", "-c:v", "libx264", "-pix_fmt", "yuv420p",
+                 "-crf", "12", "-tune", "animation", "-c:a", "aac", "-b:a", "192k", argv[1]]
+        subprocess.run(args, check=True)
+        print("합친 영상:", argv[1])
+        return
     if cmd == "시트":
         cmd_sheet(argv[1], argv[2], names)
     elif cmd == "장면":
