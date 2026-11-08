@@ -259,11 +259,42 @@ def project(pj_path, only_missing=True):
         move = MOVES[k % len(MOVES)]
         k += 1
         cj = os.path.join(p + ".clip", "clip.json")
-        if only_missing and os.path.exists(cj) and json.load(open(cj)).get("move") == move:
-            continue                                            # 이미 같은 움직임으로 만든 것은 건너뜀
+        if only_missing and os.path.exists(cj):
+            old = json.load(open(cj))
+            if old.get("move") == move and list(old.get("size") or []) == list(SIZE):
+                continue                                        # 이미 같은 움직임·같은 화질로 만든 것은 건너뜀
         if not os.path.exists(p + ".얼굴.json"):
             save_faces(p)
         layers3d(p, round(sec, 1), move)
+
+
+def use_for(pj):
+    """이 프로젝트에 Blender 효과를 자동으로 쓸지: 실제 사진(근거 사진(웹)) 장문 다큐만. 역사(수묵 그림)·그림 스타일은 아님"""
+    return (str(pj.get("img_source") or "근거 사진(웹)").startswith("근거 사진")
+            and not str(pj.get("genre") or "").startswith("[실화] 기록으로 보는 진짜 역사")
+            and str((pj.get("settings") or {}).get("blender_fx", "on")) != "off")
+
+
+def run_for(pj_path, log=print, big=False):
+    """make_longdoc·render_project 가 영상을 만들기 바로 전에 부름 (규칙: 사용자 결정 2026-11-08).
+    모든 실제 사진 → 앞뒤 두 층 3D + 카메라 움직임 차례로. Blender 가 없으면 건너뜀(평면 사진으로)"""
+    try:
+        pj = json.load(open(pj_path, encoding="utf-8"))
+    except Exception:
+        return False
+    if not use_for(pj):
+        return False
+    if not os.path.exists(BLENDER) and not shutil.which(BLENDER):
+        log("⚠ Blender 가 없어 사진 3D 효과 없이 만듭니다 (세션 시작 준비가 Blender 를 받음: ~/tools)")
+        return False
+    py = os.path.join(HERE, ".supertonic_venv", "bin", "python")
+    log(f"🎬 Blender 사진 3D(앞뒤 두 층, 카메라 움직임 차례로) · {'크게 1920×1080' if big else '작은 화질 640×360(검토용)'} — 이미 만든 것은 건너뜀")
+    cmd = [py if os.path.exists(py) else sys.executable, "-X", "utf8", "-u", os.path.join(HERE, "블렌더_효과.py"), "프로젝트", pj_path] + (["--크게"] if big else [])
+    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, cwd=HERE)
+    for line in p.stdout:
+        if line.startswith(("OK", "사진", "Blender")):
+            log("   " + line.strip()[-110:])
+    return p.wait() == 0
 
 
 def main():

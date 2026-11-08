@@ -7,6 +7,8 @@
                   넣은 뒤 프로젝트 파일에 저장 → 다시 실행하면 사진은 건너뜀
   - --suffix 이름 : 결과 파일 이름 끝에 _이름 (같은 제목으로 덧붙일 부분을 따로 만들 때. 화면 제목은 그대로)
   - --썸네일만 : 영상은 만들지 않고 썸네일 후보만 새로 (디자인 16가지 + 영상 장면 실사 편집). 지금 유튜브 썸네일은 그대로
+  - --블렌더크게 : 실제 사진 3D(Blender 앞뒤 두 층)를 1920×1080 으로 (기본은 검토용 작은 화질 640×360) — 사용자 검토 뒤 최종본
+  - --블렌더없음 : Blender 사진 3D 를 하지 않음 (평면 사진 + 보통 확대·이동)
   - --대본그대로 : 손으로 쓴 대본의 오프닝(30초 후크·'끝까지 보시면')과 챕터 끝 예고를 AI 가 고쳐 쓰지 않음 (에세이처럼 원문 분위기를 지킬 때. 존댓말 고치기는 그대로)
   - --길이고정 : 롱폼 길이 규칙(10~15분, 짧으면 내용을 더해 늘림)을 건너뜀
   - --영어 : 영상 완성 뒤 영어 제목·설명란·자막(SRT)도 만듦 (유튜브 '번역'으로 덧붙이는 용도, 영어_번역.py)
@@ -186,6 +188,15 @@ def main(a):
 
     if getattr(m, "is_trad", lambda x: False)(bgm):
         s["chapter_hold"] = 4.2               # 챕터 제목 동안 나레이션을 쉬고 고쟁 연주
+    if not str((c.get("settings") or {}).get("img_trans") or "") and str(c.get("img_source") or "근거 사진").startswith("근거 사진"):
+        s["img_trans"] = "물감 튀김(빨간 테두리)"     # 채널 시그니처 (사용자 결정 2026-11-08): 예전 프로젝트도 사진이 바뀔 때 물감 튀김
+    if "--블렌더없음" not in a:      # 규칙(사용자 결정 2026-11-08): 실제 사진 장문 다큐는 모든 사진을 Blender 앞뒤 두 층 3D 로 (작은 화질, --블렌더크게 면 1920×1080)
+        try:
+            sys.path.insert(0, HERE)
+            import importlib
+            importlib.import_module("블렌더_효과").run_for(proj_path, log, big="--블렌더크게" in a)
+        except Exception as e:
+            log(f"⚠ Blender 효과를 못 함 (평면 사진으로 계속): {str(e)[:160]}")
     r = m.make_renderer(title, story, s, narr)
     vdir = "영상구간"
     if "--vi" in a:     # 한글 자막 위에 베트남어 자막

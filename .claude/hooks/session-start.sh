@@ -76,6 +76,20 @@ if [ ! -f models/FLUX2_klein_4B/transformer/diffusion_pytorch_model.safetensors 
 fi
 rm -rf /root/.cache/pip /root/.cache/huggingface/hub 2>/dev/null || true     # 받은 뒤 남는 임시 파일(수 GB)은 지움
 
+# 4-2) Blender 효과(블렌더_효과.py, 사용자 결정 2026-11-08): 장문 다큐의 사진 3D(앞뒤 두 층)·로우폴리 장면
+#      Blender 4.2 LTS(GPL, 약 350MB) → ~/tools, 얼굴 찾기 YuNet(Apache-2.0), 주인공 오리기 rembg isnet(MIT) 모델
+BL=~/tools/blender-4.2.23-linux-x64/blender
+if [ ! -x "$BL" ]; then
+  mkdir -p ~/tools
+  (cd ~/tools && curl -sSfL -o b.tar.xz https://download.blender.org/release/Blender4.2/blender-4.2.23-linux-x64.tar.xz \
+     && tar xf b.tar.xz && rm -f b.tar.xz) || echo "Blender 를 못 받음 (블렌더 효과 없이 평면 사진으로 만들어짐)" >&2
+fi
+mkdir -p models
+[ -f models/face_detection_yunet_2023mar.onnx ] || curl -sSfL -o models/face_detection_yunet_2023mar.onnx \
+  https://huggingface.co/opencv/face_detection_yunet/resolve/main/face_detection_yunet_2023mar.onnx || true
+[ -f ~/.rembg/models/isnet-general-use/isnet-general-use.onnx ] || \
+  "$VENV/bin/python" -c "from rembg import new_session; new_session('isnet-general-use')" >/dev/null 2>&1 || true
+
 # 5) 이 세션에서 python = 위 실행 환경
 if [ -n "${CLAUDE_ENV_FILE:-}" ]; then
   echo "export PATH=\"$CLAUDE_PROJECT_DIR/$VENV/bin:\$PATH\"" >> "$CLAUDE_ENV_FILE"
