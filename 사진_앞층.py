@@ -1,7 +1,7 @@
 r"""사진 앞층 오려 내기 (사용자 결정 2026-11-08) — 무료 rembg(MIT, isnet-general-use 모델)로 사진 앞쪽 주인공(사람·인형·성·유물…)을 저절로 오려 내고,
 배경의 빈자리는 둘레 색으로 메움(OpenCV inpaint). Blender(블렌더_사진3D.py)가 앞층을 배경 앞에 세워 카메라가 움직일 때 앞·뒤가 다른 속도로 움직이게 함.
 
-사용: python 사진_앞층.py <저장폴더> <사진1> <사진2> ...
+사용: python 사진_앞층.py <저장폴더> <사진1> <사진2> ...   (사진 앞에 '+' = 콘티에서 '켜기': 크기·가장자리 기준을 건너뛰고 큰 덩어리를 오림)
   사진마다 <저장폴더>/<키>_fg.png (앞층, 투명 배경) · <키>_bg.png (빈자리를 메운 배경) · <키>_mask.png 를 만들고
   'OK 사진 fg bg' / 'NOFG 사진 (이유)' 한 줄씩 출력. 앞층이 너무 작거나(2% 미만) 너무 크면(60% 넘음) 앞층 없이(NOFG) — 풍경·도표 사진
 모델은 models/rembg/ 에 (처음 한 번 약 180MB 내려받음)
@@ -21,13 +21,15 @@ def key_for(path):
     return hashlib.md5(f"{os.path.abspath(path)}|{st.st_size}|{int(st.st_mtime)}".encode("utf-8")).hexdigest()[:20]
 
 
-def split(path, out_dir, session):
+def split(path, out_dir, session, force=False):
     import cv2
     from rembg import remove
     k = key_for(path)
     fg_p, bg_p, mk_p = (os.path.join(out_dir, f"{k}_{n}.png") for n in ("fg", "bg", "mask"))
     if os.path.exists(fg_p) and os.path.exists(bg_p):
         return "OK", fg_p, bg_p
+    if force and os.path.exists(os.path.join(out_dir, f"{k}_nofg.txt")):
+        os.remove(os.path.join(out_dir, f"{k}_nofg.txt"))         # 사용자가 '켜기'로 고름 → 다시 오림
     if os.path.exists(os.path.join(out_dir, f"{k}_nofg.txt")):
         return "NOFG", open(os.path.join(out_dir, f"{k}_nofg.txt"), encoding="utf-8").read(), ""
     im = Image.open(path).convert("RGB")
@@ -35,7 +37,13 @@ def split(path, out_dir, session):
     small.thumbnail((1024, 1024))
     m = np.asarray(remove(small, session=session, only_mask=True), np.float32) / 255.0
     area = float((m > 0.5).mean())
-    if 0.02 <= area <= 0.60:                       # 큰 덩어리만 남김 — 조각이 흩어져 있으면(건물 일부·글자) 앞층을 쓰지 않음 (얼룩·겹친 글자가 생김)
+    if force and 0.005 <= area <= 0.85:                 # 켜기: 큰 덩어리만 남기고 기준(크기·가장자리)은 건너뜀
+        n_, lab_, st_, _ = cv2.connectedComponentsWithStats((m > 0.5).astype(np.uint8), 8)
+        if n_ > 1:
+            big_ = int(np.argmax(st_[1:, cv2.CC_STAT_AREA])) + 1
+            m = m * cv2.dilate((lab_ == big_).astype(np.uint8), np.ones((5, 5), np.uint8)).astype(np.float32)
+        area = 0.1
+    elif 0.02 <= area <= 0.60:                       # 큰 덩어리만 남김 — 조각이 흩어져 있으면(건물 일부·글자) 앞층을 쓰지 않음 (얼룩·겹친 글자가 생김)
         n_, lab_, st_, _ = cv2.connectedComponentsWithStats((m > 0.5).astype(np.uint8), 8)
         tot_ = float(st_[1:, cv2.CC_STAT_AREA].sum()) if n_ > 1 else 0.0
         keep_ = [i_ for i_ in range(1, n_) if st_[i_, cv2.CC_STAT_AREA] >= 0.15 * tot_]
@@ -83,8 +91,10 @@ def main():
     from rembg import new_session
     session = new_session("isnet-general-use")
     for p in paths:
+        force = p.startswith("+")                        # '+사진' = 콘티에서 '켜기'
+        p = p[1:] if force else p
         try:
-            r = split(p, out_dir, session)
+            r = split(p, out_dir, session, force)
             print(r[0], p, r[1], r[2], flush=True)
         except Exception as e:
             print("ERR", p, str(e)[:200], flush=True)

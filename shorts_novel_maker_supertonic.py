@@ -7008,9 +7008,10 @@ SCENE_TRANSITIONS = {"물감": "물감 뿌리기(빨간 테두리, 채널 시그
 
 
 def read_camera_plan(plan_path):
-    """<제목>_카메라무빙.txt → ({사진번호: 무빙(수동)}, {사진번호: 전환(수동)}). '자동:' 으로 시작하거나 '-' 면 자동.
-    줄 모양: '번호 | 무빙 | 전환 | 사진 설명 | 이유' (예전: '번호 | 무빙 | 사진 설명 | 이유')"""
+    """<제목>_카메라무빙.txt → ({사진번호: 무빙(수동)}, {사진번호: 전환(수동)}), 앞층(수동)은 read_camera_plan.layers. '자동:' 으로 시작하거나 '-' 면 자동.
+    줄 모양: '번호 | 무빙 | 전환 | 앞층 | 사진 설명 | 이유' (예전: 5칸·4칸도 읽음)"""
     mv_, tr_ = {}, {}
+    read_camera_plan.layers = {}                     # {사진번호: '켜기'|'끄기'} 앞층 오려 세우기(수동)
     if not plan_path or not os.path.exists(plan_path):
         return mv_, tr_
     for ln in open(plan_path, encoding="utf-8").read().splitlines():
@@ -7025,6 +7026,10 @@ def read_camera_plan(plan_path):
             k_ = parts[2].replace("수동:", "").strip()
             if k_ and not k_.startswith("자동") and k_ != "-" and k_ in SCENE_TRANSITIONS:
                 tr_[n] = k_
+        if len(parts) >= 6:                           # 6칸: 번호 | 무빙 | 전환 | 앞층 | 사진 설명 | 이유
+            l_ = parts[3].replace("수동:", "").strip()
+            if l_ in ("켜기", "끄기"):
+                read_camera_plan.layers[n] = l_
     return mv_, tr_
 
 
@@ -7094,6 +7099,13 @@ def choose_camera_moves(r, elig, plan_path=None, log=None, objects=()):
         used[mv] = used.get(mv, 0) + 1
         prev.append(mv)
     if plan_path:
+        man_ly = getattr(read_camera_plan, "layers", {})
+
+        def ly_col(i_):
+            if (i_ + 1) in man_ly:
+                return "수동:" + man_ly[i_ + 1]
+            return "자동:있음" if i_ in objects else ("자동:없음" if i_ in out else "-")
+
         def tr_col(i_):
             return ("수동:" + manual_tr[i_ + 1]) if (i_ + 1) in manual_tr else ("자동:물감" if getattr(r, "paint_on", False) else "자동:페이드")
         try:
@@ -7101,16 +7113,17 @@ def choose_camera_moves(r, elig, plan_path=None, log=None, objects=()):
                   "# 무빙·전환 칸을 바꾸면(예: 자동:push → orbit, 자동:물감 → 컷) 다음 영상부터 그 장면은 그대로(수동). '자동'으로 두면 다시 고름. 무빙 '-' 는 3D 를 쓰지 않는 사진(무빙을 적으면 3D 로 만듦)",
                   "# 쓸 수 있는 무빙: " + " / ".join(f"{k} = {v}" for k, v in CAMERA_MOVES.items()),
                   "# 쓸 수 있는 전환(이 사진이 나타날 때): " + " / ".join(f"{k} = {v}" for k, v in SCENE_TRANSITIONS.items()),
-                  "# 번호 | 무빙 | 전환 | 사진 설명 | 고른 이유"]
+                  "# 앞층 = 사진 앞쪽 주인공을 오려 배경 앞에 세우기(rembg): 자동:있음/자동:없음 → 켜기·끄기로 바꿀 수 있음",
+                  "# 번호 | 무빙 | 전환 | 앞층 | 사진 설명 | 고른 이유"]
             for i_ in range(len(r.images)):
                 cap_ = str(r.images[i_][1] or "")
                 if i_ in out:
                     mv = out[i_]
-                    ls.append(f"{i_ + 1} | {('수동:' + mv) if why[i_] == '수동' else '자동:' + mv} | {tr_col(i_)} | {cap_} | {why[i_]}")
+                    ls.append(f"{i_ + 1} | {('수동:' + mv) if why[i_] == '수동' else '자동:' + mv} | {tr_col(i_)} | {ly_col(i_)} | {cap_} | {why[i_]}")
                 else:
                     rs_ = ("얼굴 순간이동(사람 사진)" if getattr(r, "face_tp_on", False) and r.faces_for(i_) else
                            "천천히 확대·이동(지도·그래프·도해)" if i_ in getattr(r, "no3d", ()) else "천천히 확대·이동(세로·평평한 사진, 또는 같은 사진이 이어짐)")
-                    ls.append(f"{i_ + 1} | - | {tr_col(i_)} | {cap_} | {rs_}")
+                    ls.append(f"{i_ + 1} | - | {tr_col(i_)} | {ly_col(i_)} | {cap_} | {rs_}")
             atomic_write_text(plan_path, "\n".join(ls) + "\n")
         except Exception as e_:
             log("  카메라 무빙 계획 저장 실패: " + str(e_)[:80])
@@ -7180,10 +7193,20 @@ def ensure_blender_clips(r, log=None, cancel=None, plan_path=None):
         elig.append(idx)
     # 앞층(주인공) 오려 내기 (사용자 결정 2026-11-08, rembg): 앞층은 배경 앞에 세우고 배경 빈자리는 둘레 색으로 메움
     layers = {}
+    man_ly = getattr(read_camera_plan, "layers", {})                  # 콘티에서 고른 앞층 켜기·끄기 (사용자 선택 우선)
     if elig and str(r.s.get("img_layers", "on")) == "on":
         lay_dir = os.path.join(BLENDER_DIR, "layers")
+        want_ = []
+        for i_ in elig:
+            ch_ = man_ly.get(i_ + 1)
+            if ch_ == "끄기":
+                continue
+            if ch_ == "켜기":
+                want_.append("+" + paths[i_])           # '+' = 기준(크기·가장자리)을 넘더라도 오려 세움
+            elif not any(w_ in str(r.images[i_][1] or "") for w_ in ("위성", "항공", "우주에서")):   # 위에서 내려다본 사진은 앞층 없음
+                want_.append(paths[i_])
         try:
-            pr_ = subprocess.run([_supertonic_python(), "-X", "utf8", os.path.join(BASE, "사진_앞층.py"), lay_dir] + [paths[i_] for i_ in elig if not any(w_ in str(r.images[i_][1] or "") for w_ in ("위성", "항공", "우주에서"))],   # 위에서 내려다본 사진은 앞층 없음
+            pr_ = subprocess.run([_supertonic_python(), "-X", "utf8", os.path.join(BASE, "사진_앞층.py"), lay_dir] + want_,
                                  capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=3600,
                                  creationflags=(subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0))
             for ln in (pr_.stdout or "").splitlines():

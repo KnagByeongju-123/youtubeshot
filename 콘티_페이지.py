@@ -16,7 +16,9 @@ if pf:
     for ln in open(pf[0], encoding="utf-8").read().splitlines():
         p = [x.strip() for x in ln.split("|")]
         if len(p) >= 4 and p[0].isdigit():
-            if len(p) >= 5:
+            if len(p) >= 6:
+                plan[int(p[0])] = {"move": p[1], "trans": p[2], "layer": p[3], "why": p[5]}
+            elif len(p) >= 5:
                 plan[int(p[0])] = {"move": p[1], "trans": p[2], "why": p[4]}
             else:
                 plan[int(p[0])] = {"move": p[1], "trans": "자동:물감", "why": p[3]}
@@ -38,7 +40,7 @@ for l in lines:
         n = len(scenes) + 1
         pl = plan.get(n, {})
         scenes.append({"n": n, "cap": parts[1] if len(parts) > 1 else "", "thumb": "data:image/jpeg;base64," + base64.b64encode(b.getvalue()).decode(),
-                       "auto": pl.get("move", "-"), "autoTrans": pl.get("trans", "자동:물감"), "why": pl.get("why", ""), "text": ""})
+                       "auto": pl.get("move", "-"), "autoTrans": pl.get("trans", "자동:물감"), "autoLayer": pl.get("layer", "-"), "why": pl.get("why", ""), "text": ""})
         pend.append(len(scenes) - 1)
         continue
     if l.startswith("#"):

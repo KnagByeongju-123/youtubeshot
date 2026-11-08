@@ -31,6 +31,9 @@ h1 { font-size: 1.25rem; margin: 0 0 2px; text-wrap: balance }
 .stat { font-family: var(--font-mono); font-size: .85rem; color: var(--muted) }
 .stat b { color: var(--accent) }
 .status { font-size: .8rem; color: var(--muted); margin-left: auto }
+.apply { font: inherit; font-weight: 700; font-size: .9rem; padding: 8px 14px; border-radius: 8px; border: 0; background: var(--accent); color: #fff; cursor: pointer }
+.apply[disabled] { opacity: .5; cursor: default }
+.applynote { font-size: .8rem; color: var(--muted); flex-basis: 100% }
 .status.ok { color: var(--ok) }
 .how { font-size: .85rem; color: var(--muted); background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; margin: 14px 0 }
 ol { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px }
@@ -71,6 +74,8 @@ select:focus-visible, input:focus-visible, button:focus-visible { outline: 2px s
       </div>
       <span class="stat">바꾼 장면 <b id="n-changed">0</b> / <span id="n-all">0</span></span>
       <span class="status" id="status">저장소 연결 중…</span>
+      <button class="apply" id="apply" disabled>적용해서 작은 영상 만들기</button>
+      <span class="applynote" id="applynote">고른 값은 바로 저장돼요. 다 고르면 이 버튼을 눌러 주세요 — Claude 가 반영해 작은 영상을 다시 만들어요.</span>
     </div>
   </header>
   <p class="how">‘자동’은 프로그램이 나레이션 문맥으로 고른 값이에요(옆에 추천이 보여요). 목록에 없는 건 ‘직접 입력’을 고르고 적어 주세요.
@@ -87,7 +92,7 @@ $("title").textContent = "장면 무빙 콘티";
 $("n-all").textContent = DATA.scenes.length;
 
 function autoLabel(v) { return String(v || "-").replace(/^자동:|^수동:/, "") }
-function isChanged(n) { const s = state[n]; return !!(s && ((s.move && s.move !== "auto") || (s.trans && s.trans !== "auto"))) }
+function isChanged(n) { const s = state[n]; return !!(s && ((s.move && s.move !== "auto") || (s.trans && s.trans !== "auto") || (s.layer && s.layer !== "auto"))) }
 
 function makeSelect(id, opts, value, autoText) {
   const sel = document.createElement("select"); sel.id = id;
@@ -118,6 +123,8 @@ function render() {
     au.innerHTML = "자동 추천: 무빙 <code></code> · 전환 <code></code>";
     au.querySelectorAll("code")[0].textContent = is3d ? autoLabel(sc.auto) : "3D 없음(천천히 확대)";
     au.querySelectorAll("code")[1].textContent = autoLabel(sc.autoTrans);
+    const lyAuto = autoLabel(sc.autoLayer); const lyCode = document.createElement("code"); lyCode.textContent = lyAuto === "-" ? "없음" : lyAuto;
+    au.append(" · 앞층 ", lyCode);
     if (sc.why) { const w = document.createElement("div"); w.textContent = "이유: " + sc.why; au.append(w) }
     meta.append(cap, tx, au);
     const pick = document.createElement("div"); pick.className = "pick";
@@ -131,11 +138,15 @@ function render() {
     const ct = document.createElement("input"); ct.type = "text"; ct.id = "trc-" + sc.n; ct.className = "custom";
     ct.placeholder = "예: 흰 섬광으로 바뀜"; ct.value = s.transCustom || ""; ct.hidden = st.value !== "custom";
     lt.append(st, ct);
-    pick.append(lm, lt);
-    const save = () => saveScene(sc.n, { move: sm.value, trans: st.value, moveCustom: cm.value.trim(), transCustom: ct.value.trim() });
+    const ll = document.createElement("label"); ll.textContent = "앞층 오려 세우기 (주인공을 배경 앞에)";
+    const sl = document.createElement("select"); sl.id = "ly-" + sc.n;
+    sl.add(new Option("자동 (" + (lyAuto === "-" ? "없음" : lyAuto) + ")", "auto")); sl.add(new Option("켜기 — 주인공을 오려 세움", "켜기")); sl.add(new Option("끄기 — 사진 한 장으로", "끄기"));
+    sl.value = s.layer || "auto"; ll.append(sl);
+    pick.append(lm, lt, ll);
+    const save = () => saveScene(sc.n, { move: sm.value, trans: st.value, layer: sl.value, moveCustom: cm.value.trim(), transCustom: ct.value.trim() });
     sm.addEventListener("change", () => { cm.hidden = sm.value !== "custom"; if (!cm.hidden) cm.focus(); save() });
     st.addEventListener("change", () => { ct.hidden = st.value !== "custom"; if (!ct.hidden) ct.focus(); save() });
-    cm.addEventListener("change", save); ct.addEventListener("change", save);
+    cm.addEventListener("change", save); ct.addEventListener("change", save); sl.addEventListener("change", save);
     li.append(num, img, meta, pick);
     list.append(li);
   }
@@ -166,8 +177,32 @@ render();
   coll = db.collection("scenes");
   coll.onSnapshot((snap) => {
     clearTimeout(timer);
-    for (const d of snap.docs) { const v = d.data() || {}; state[Number(d.id)] = { move: v.move, trans: v.trans, moveCustom: v.moveCustom, transCustom: v.transCustom } }
+    for (const d of snap.docs) { const v = d.data() || {}; state[Number(d.id)] = { move: v.move, trans: v.trans, layer: v.layer, moveCustom: v.moveCustom, transCustom: v.transCustom } }
     setStatus("저장소 연결됨 · 고르면 바로 저장", true); render();
   }, () => { clearTimeout(timer); setStatus("저장소 읽기 실패. 고른 값은 이 화면에만 남아요", false) });
+})();
+
+// 적용 버튼: 고른 값을 Claude 에게 보내 작은 영상을 다시 만들게 함 (Send to Claude)
+(async () => {
+  const btn = $("apply"), note = $("applynote");
+  let cm = null;
+  try { cm = await window.claude?.use?.("comments") } catch (e) { cm = null }
+  if (!cm || !cm.sendToClaude) { note.textContent = "이 화면에서는 Claude 에게 바로 보낼 수 없어요. 다 고른 뒤 대화창에 ‘콘티 반영해서 작은 영상 만들어 줘’라고 적어 주세요."; return }
+  let can = "off";
+  try { can = await cm.canSendToClaude() } catch (e) { can = "off" }
+  if (can !== "available") { note.textContent = can === "no_session" ? "지금 Claude 세션이 이 페이지를 보고 있지 않아요. 대화창에 ‘콘티 반영해서 작은 영상 만들어 줘’라고 적어 주세요." : "다 고른 뒤 대화창에 ‘콘티 반영해서 작은 영상 만들어 줘’라고 적어 주세요."; return }
+  btn.disabled = false;
+  btn.addEventListener("click", async () => {
+    btn.disabled = true;
+    const changed = DATA.scenes.filter(sc => isChanged(sc.n)).map(sc => "#" + sc.n).join(", ");
+    try {
+      const anchor = await cm.anchorFor(btn);
+      await cm.sendToClaude({ anchor, text: "콘티 반영해서 작은 영상 만들어 줘. 바꾼 장면: " + (changed || "없음(모두 자동)") });
+      note.textContent = "Claude 에게 보냈어요. 작은 영상이 준비되면 대화창으로 알려 줘요.";
+    } catch (e) {
+      btn.disabled = false;
+      note.textContent = "보내지 못했어요. 대화창에 ‘콘티 반영해서 작은 영상 만들어 줘’라고 적어 주세요.";
+    }
+  });
 })();
 </script>
