@@ -28,6 +28,14 @@ STAGES = [
      "통나무_간격": 1.9, "통나무_빠르기": 6.2, "불덩이_섞기": 3,  # 세 번째마다 통나무 대신 불덩이
      "순찰": [(1, -1.2, 7.0, 1.6), (3, -10.0, 2.2, 1.8)],  # (층, 왼끝, 오른끝, 빠르기) 딱정벌레
      "보스": "여왕벌", "보스_화살": 4, "거울": True},
+    {"판": 3, "제목": "거품이 올라온다!", "층": {1: [("벌", 2), ("거품", 0)], 2: [("돌", 1)]},
+     "구멍": {1: (-3.4, -1.8), 2: (5.6, 7.2), 3: (-2.0, 2.0)},  # 4층 가운데 4m 끊김 → 징검다리
+     "징검다리": {"층": 3, "빠르기": 1.2},
+     "거품": {"간격": 0.8},  # 땅에서 계속 올라오는 거품(전사는 피함)
+     "통나무_간격": 2.2, "통나무_빠르기": 5.6,
+     "순찰": [(1, -1.2, 7.0, 1.5, 5.0)],  # 다섯째 값 = 거품에 갇혀 날아가는 때
+     "보스": "우주인", "보스_화살": 4, "보스_광선": 2, "거울": True,
+     "하늘색": "#0b2a4a", "무대": {"벽돌색": "#2f8f9d", "벽돌색2": "#256f7a", "사다리색": "#ffffff"}},
     {"판": 5, "제목": "우주에서 운석이 떨어진다!", "층": {1: [("벌", 3)], 3: [("벌", 2)]},
      "통나무_간격": 1.9, "통나무_빠르기": 6.2, "불덩이_섞기": 4,
      "운석": {"간격": 1.4},  # 전사가 있는 층의 바로 앞·뒤에 떨어짐
@@ -42,7 +50,8 @@ SLOPE = 0.9 / 22
 LADDERS = [8.0, -8.0, 8.0, -3.0]  # i 번째 사다리: i층 → i+1층
 EDGE = 11.0
 TOP_X0 = LADDERS[3] + 0.6  # 꼭대기 층은 사다리 오른쪽부터(왼쪽 위는 하늘 — 통나무가 떨어지는 곳)
-HOLES = {1: (-3.4, -1.8), 2: (5.6, 7.2), 3: (2.8, 4.4)}  # 끊어진 바닥
+DEFAULT_HOLES = {1: (-3.4, -1.8), 2: (5.6, 7.2), 3: (2.8, 4.4)}  # 끊어진 바닥(판마다 "구멍"으로 바꿀 수 있음)
+HOLES = dict(DEFAULT_HOLES)
 GAP = 0.6
 RUN, CLIMB = 5.0, 3.2
 JUMP = (0.65, 1.8)
@@ -78,6 +87,7 @@ class Route:
     def __init__(self, x, k, face):
         self.t, self.x, self.k, self.face = 0.0, x, k, face
         self.seg, self.poses, self.faces, self.climbs, self.jumps = [], [(0.0, "서기")], [(0.0, face)], [], []
+        self.riding = False
 
     def pose(self, p, t=None):
         self.poses.append((self.t if t is None else t, p))
@@ -94,7 +104,7 @@ class Route:
 
     def wait(self, dur, p="서기"):
         self.pose(p)
-        z = fz(self.k, self.x)
+        z = self.zc() if self.riding else fz(self.k, self.x)
         self._seg(dur, self.x, z, z)
 
     def move(self, x1, speed=RUN, p="달리기"):
@@ -117,6 +127,17 @@ class Route:
         self._seg(dur, self.x, z0, z1)
         self.k += 1
         self.pose("서기")
+
+    def zc(self):
+        return self.seg[-1][5] if self.seg else fz(self.k, self.x)
+
+    def seg_to(self, x1, z1, dur, p=None):
+        """정해진 높이로 직선 이동(징검다리·거품)."""
+        if p:
+            self.pose(p)
+        self.seg.append((self.t, self.t + dur, self.x, x1, self.zc(), z1, self.k))
+        self.t += dur
+        self.x = x1
 
     def jump_here(self, h, d):
         self.jumps.append((self.t + d / 2, d, h))
@@ -211,6 +232,8 @@ def interp(keys, t):
 
 
 def build(cfg, start_score=0):
+    HOLES.clear()
+    HOLES.update(cfg.get("구멍", DEFAULT_HOLES))
     objs, sfx = [], []
     score_ev = []
 
@@ -282,6 +305,80 @@ def build(cfg, start_score=0):
             P.pose("놀람")
             P.wait(0.6, "놀람")
 
+    def bubble_capture():
+        """거품에 갇혀 위층 높이까지 떠올랐다가 '뽁' 터져 위층에 내려섬(사다리 없이 지름길)."""
+        k = P.k
+        target = LADDERS[k]
+        d = 1 if target > P.x else -1
+        xc = P.x + d * 3.0
+        while in_cut(k, xc, 0.8) or in_cut(k + 1, xc - d * 0.8, 1.0):
+            xc += d * 0.5
+        P.move(xc, 3.0, "걷기")
+        t_c = P.t + 0.3
+        P.wait(0.3)
+        z0 = fz(k, xc)
+        R = 1.45
+        # 아래(땅)에서 올라오는 거품 → 전사를 감쌈 → 함께 떠오름 → 터짐
+        rise = []
+        zb = -1.0
+        t_start = t_c - (z0 + 1.2 - zb) / 2.2
+        for j in range(9):
+            u = j / 8
+            rise.append({"초": round(t_start + (t_c - t_start) * u, 3), "위치": [round(xc, 2), FRONT - 0.5, round(zb + (z0 + 1.2 - zb) * u, 3)]})
+        x1 = xc - d * 0.8
+        z1 = fz(k + 1, x1) + 0.9
+        dur = 1.8
+        P.climbs.append((t_c, t_c + dur + 0.4))
+        P.pose("놀람")
+        n = 12
+        for j in range(1, n + 1):
+            u = j / n
+            xx = xc + (x1 - xc) * u + 0.25 * math.sin(u * 2 * math.pi)
+            P.seg_to(round(xx, 3), round(z0 + (z1 - z0) * u, 3), dur / n)
+            rise.append({"초": round(P.t, 3), "위치": [round(xx, 3), FRONT - 0.5, round(P.zc() + 1.2, 3)]})
+        objs.append({"모양": "거품", "반지름": R, "갇힘": True, "갇힘초": round(t_c, 2), "등속": True, "동작": rise})
+        text("뽀글!", t_c, t_c + 1.0, xc, z0 + 3.0, "#9fe8ff", 1.0, -2.5)
+        P.seg_to(x1, fz(k + 1, x1), 0.35, "점프")
+        P.k = k + 1
+        P.pose("서기")
+        add_score(P.t, 500, x1, fz(k + 1, x1))
+        text("지름길!", P.t, P.t + 1.0, x1, fz(k + 1, x1) + 3.6, "#9fe8ff", 0.9, -2)
+
+    plat = cfg.get("징검다리")
+    plat_keys = None
+
+    def ride_platform():
+        """끊긴 바닥 앞에서 징검다리를 기다렸다가 올라타고 건넘."""
+        nonlocal plat_keys
+        k = P.k
+        a, b = HOLES[k]
+        target = LADDERS[k]
+        d = 1 if target > P.x else -1
+        w = 1.6
+        xa, xb = a + w / 2, b - w / 2
+        v = plat["빠르기"]
+        Tp = (xb - xa) / v
+        ztop = round((fz(k, a) + fz(k, b)) / 2, 3)
+        near_edge, far_edge = (b + 0.4, a - 0.4) if d < 0 else (a - 0.4, b + 0.4)
+        near_c, far_c = (xb, xa) if d < 0 else (xa, xb)
+        P.move(near_edge)
+        # 발판이 가까운 끝(near_c)에 오는 때: 왼끝은 2nTp, 오른끝은 (2n+1)Tp
+        off = Tp if near_c == xb else 0.0
+        nn = 0
+        while off + 2 * nn * Tp < P.t + 0.6:
+            nn += 1
+        t_on = off + 2 * nn * Tp
+        P.wait(t_on - 0.45 - P.t)
+        P.jumps.append((t_on - 0.2, 0.45, 1.0))
+        P.seg_to(near_c, ztop, 0.45, "점프")
+        P.riding = True
+        P.seg_to(far_c, ztop, Tp, "서기")
+        P.riding = False
+        P.jumps.append((P.t + 0.2, 0.45, 1.0))
+        P.seg_to(far_edge, fz(k, far_edge), 0.45, "점프")
+        P.pose("서기")
+        plat_keys = (xa, xb, Tp, ztop)
+
     P = Route(-9.0, 0, 60)
     text(f"{cfg['판']}판", 0.2, 2.2, 0, 8.6, "#ffffff", 2.0)
     text(cfg["제목"], 0.2, 2.2, 0, 6.6, "#ffe14d", 1.4)
@@ -293,6 +390,8 @@ def build(cfg, start_score=0):
     P.climb()
     # ── 2층 · 3층 · 4층
     for k in (1, 2, 3):
+        if P.k > k:  # 거품 지름길로 이미 올라옴
+            continue
         tasks = cfg["층"].get(k, [])
         if isinstance(tasks, tuple):
             tasks = [tasks]
@@ -301,6 +400,12 @@ def build(cfg, start_score=0):
                 bees(n)
             elif kind == "돌":
                 rocks(n)
+            elif kind == "거품":
+                bubble_capture()
+        if P.k > k:
+            continue
+        if plat and plat["층"] == k:
+            ride_platform()
         P.move(LADDERS[k])
         P.climb()
 
@@ -462,7 +567,9 @@ def build(cfg, start_score=0):
                 objs.append({"모양": "조각", "반지름": 0.13, "색": "#ff7a1f" if k % 2 else "#6b4a3a", "등속": True, "동작": pk_})
             t += cfg["운석"]["간격"] * rg.uniform(0.8, 1.25)
     # ── 딱정벌레 순찰: 층 위를 왔다 갔다(만나면 점프)
-    for (k, xa, xb, v) in cfg.get("순찰", []):
+    for pt in cfg.get("순찰", []):
+        k, xa, xb, v = pt[:4]
+        t_cap = pt[4] if len(pt) > 4 else None
         bk, t, x, d = [], 0.0, (xa + xb) / 2, 1
         while t < total + 0.5:
             bk.append({"초": round(t, 3), "위치": [round(x, 3), FRONT + 0.6, round(fz(k, x), 3)]})
@@ -470,9 +577,54 @@ def build(cfg, start_score=0):
             t += abs(nx - x) / v
             x, d = nx, -d
         bk.append({"초": round(t, 3), "위치": [round(x, 3), FRONT + 0.6, round(fz(k, x), 3)]})
-        objs.append({"모양": "딱정벌레", "크기": 2.0, "등속": True, "동작": bk})
+        if t_cap:  # 거품에 갇혀 하늘로 날아감
+            q = interp(bk, t_cap)
+            bk = [b for b in bk if b["초"] < t_cap] + [{"초": t_cap, "위치": [round(q[0], 3), q[1], round(q[2], 3)]}]
+            up = [{"초": round(t_cap + 3.0 * j / 6, 3), "위치": [round(q[0] + 0.3 * math.sin(j), 3), q[1], round(q[2] + (SKY + 2 - q[2]) * j / 6, 3)]}
+                  for j in range(1, 7)]
+            bub = [{"초": round(t_cap - 1.2, 3), "위치": [round(q[0], 3), FRONT - 0.3, round(q[2] + 0.5 - 2.6, 3)]},
+                   {"초": t_cap, "위치": [round(q[0], 3), FRONT - 0.3, round(q[2] + 0.5, 3)]}]
+            bub += [{"초": u["초"], "위치": [u["위치"][0], FRONT - 0.3, round(u["위치"][2] + 0.5, 3)]} for u in up]
+            objs.append({"모양": "거품", "반지름": 0.9, "갇힘": True, "갇힘초": t_cap, "등속": True, "동작": bub})
+            objs.append({"모양": "딱정벌레", "크기": 2.0, "등속": True, "동작": bk + up})
+        else:
+            objs.append({"모양": "딱정벌레", "크기": 2.0, "등속": True, "동작": bk})
         meets([dict(b, 위치=[b["위치"][0], 0, b["위치"][2]]) for b in bk], 0.0, (0.6, 1.4))
 
+    # ── 계속 올라오는 거품(전사는 피함)
+    if cfg.get("거품"):
+        rg = random.Random(cfg["판"] * 7)
+        t = 0.3
+        while t < total - 1:
+            r_ = rg.uniform(0.45, 0.85)
+            vz = rg.uniform(1.8, 2.6)
+            for _ in range(15):
+                bx = rg.uniform(-10.5, 10.5)
+                ok = True
+                tt = t
+                while tt < t + (SKY + 2) / vz:
+                    bz = -1 + vz * (tt - t)
+                    px, pz, pk = P.pos(tt)
+                    if abs(bx - px) < 1.4 and pz - 1.0 < bz < pz + 3.2:
+                        ok = False
+                        break
+                    tt += 0.1
+                if ok:
+                    break
+            if ok:
+                ks = [{"초": round(t + j * 0.5, 3), "위치": [round(bx + 0.3 * math.sin(j * 1.3), 3), FRONT - 0.6, round(-1 + vz * j * 0.5, 3)]}
+                      for j in range(int((SKY + 2) / vz / 0.5) + 2)]
+                objs.append({"모양": "거품", "반지름": round(r_, 2), "동작": ks})
+            t += cfg["거품"]["간격"] * rg.uniform(0.7, 1.3)
+    # ── 징검다리 발판(왔다 갔다)
+    if plat_keys:
+        xa, xb, Tp, ztop = plat_keys
+        pk_, t, x = [], 0.0, xa
+        while t < total + Tp:
+            pk_.append({"초": round(t, 3), "위치": [round(x, 3), 0, ztop]})
+            x = xb if x == xa else xa
+            t += Tp
+        objs.append({"모양": "징검돌", "너비": 1.6, "등속": True, "동작": pk_})
     # ── 점수판(앞 판 점수에 이어서)
     acc = start_score
     scores = [[0, f"점수 {acc}"]]
@@ -507,6 +659,8 @@ def build(cfg, start_score=0):
         "배경음": {"곡": "레트로전투", "크기": 0.35, "끝": round(t_clear - 0.1, 2)},
         "카메라": CAM,
     }
+    if cfg.get("하늘색"):
+        scene["하늘색"] = cfg["하늘색"]
     if cfg.get("거울"):
         mirror(scene)
     return scene, acc
