@@ -6104,6 +6104,9 @@ class SubtitleRenderer:
                     self._img_cache.pop(next(iter(self._img_cache)))
                 self._img_cache[key] = z
             return self._img_cache[key], mask
+        clip_fr = self._clip_frame(sh["img"], t, (bw, bh))   # 사진 옆에 블렌더 입체 영상(<사진>.입체.mp4)이 있으면 그 영상을 씀
+        if clip_fr is not None:
+            return clip_fr, mask
         z0, z1, ax, bx, ay, by = sh["m"]
         p = min(1.0, max(0.0, (t - sh["t0"]) / max(0.1, sh["t1"] - sh["t0"])))
         p = 0.5 - 0.5 * np.cos(np.pi * p)             # 부드럽게 시작·끝
@@ -6144,6 +6147,44 @@ class SubtitleRenderer:
         dcrop = extent_np(dbig, size_p, box)                                 # float32 0~255
         warped = parallax_warp_np(crop_pad, dcrop, ox, oy)
         return Image.fromarray(np.ascontiguousarray(warped[my:my + bh, mx:mx + bw])), mask
+
+    def _clip_frame(self, idx, t, size):
+        """사진 idx 옆에 '<사진>.입체.mp4'(블렌더 입체 영상, 사진_입체영상.py, 사용자 결정 2026-11-07)가 있으면
+        그 사진이 화면에 나오는 전체 시간(처음~끝)에 맞춰 영상의 해당 장면을 size 로. 없으면 None"""
+        if _cv2 is None:
+            return None
+        cache = self.__dict__.setdefault("_clips", {})
+        if idx not in cache:
+            info = None
+            try:
+                path = self.img_paths[idx] + ".입체.mp4"
+                if os.path.exists(path):
+                    cap = _cv2.VideoCapture(path)
+                    n = int(cap.get(_cv2.CAP_PROP_FRAME_COUNT))
+                    spans = [(a_, b_) for i_, a_, b_ in self._img_pieces(self.duration) if self.img_paths[i_] == self.img_paths[idx]]
+                    if n > 1 and spans:
+                        info = {"cap": cap, "n": n, "t0": min(a_ for a_, _ in spans), "t1": max(b_ for _, b_ in spans), "pos": -1, "fr": None}
+            except Exception:
+                info = None
+            cache[idx] = info
+        c = cache[idx]
+        if c is None:
+            return None
+        q = min(1.0, max(0.0, (t - c["t0"]) / max(0.1, c["t1"] - c["t0"])))
+        fi = int(round(q * (c["n"] - 1)))
+        if fi != c["pos"]:
+            if fi != c["pos"] + 1:
+                c["cap"].set(_cv2.CAP_PROP_POS_FRAMES, fi)
+            ok, fr = c["cap"].read()
+            if not ok:
+                return Image.fromarray(c["fr"]) if c["fr"] is not None else None
+            fr = _cv2.cvtColor(fr, _cv2.COLOR_BGR2RGB)
+            h_, w_ = fr.shape[:2]
+            sc = max(size[0] / w_, size[1] / h_)
+            fr = _cv2.resize(fr, (max(size[0], int(w_ * sc + 0.5)), max(size[1], int(h_ * sc + 0.5))), interpolation=_cv2.INTER_AREA)
+            y0_, x0_ = (fr.shape[0] - size[1]) // 2, (fr.shape[1] - size[0]) // 2
+            c["fr"], c["pos"] = np.ascontiguousarray(fr[y0_:y0_ + size[1], x0_:x0_ + size[0]]), fi
+        return Image.fromarray(c["fr"])
 
     def _depth_for(self, idx, size):
         """idx 사진의 깊이 지도를 큰 사진 크기의 L 이미지로 (캐시)"""

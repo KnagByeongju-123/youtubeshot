@@ -27,6 +27,7 @@ W, H = [int(v) for v in opt("--size", "1280x720").split("x")]
 STILL = "--still" in argv
 ZOOM = float(opt("--zoom", 1.0))          # 카메라 거리 배율 (작을수록 가까이 → 가장자리 빈 곳 안 보임)
 SMOOTH = "--smooth" in argv
+KEY = "--key" in argv                     # 빈 곳(배경·뒤판)을 자홍색으로 → 사진_입체영상.py 가 가장자리 까짐을 찾아 잘라 냄
 CAM = opt("--cam", "sway")                # sway = 좌우로 흔들기 / orbit = 앞으로 다가가며 한쪽으로 돌아감 (사용자 제안 2026-11-07)
 ARC = float(opt("--arc", 22))             # orbit 때 도는 각도(도)               # 삼각형 대신 사진을 그대로 입힌 부드러운 입체 (다큐용)
 os.makedirs(OUT, exist_ok=True)
@@ -114,8 +115,9 @@ scn.collection.objects.link(ob)
 # 뒤 배경판 (구멍 난 곳 뒤로 보이는 흐린 그림)
 bpy.ops.mesh.primitive_plane_add(size=1, location=(0, DEPTH * 0.02 + 0.3, 0), rotation=(math.pi / 2, 0, 0))
 bg = bpy.context.object
+bg.hide_render = KEY                      # 검사 모드: 뒤판 없이 빈 곳은 배경(자홍)으로
 bg.scale = (PW * 2.5, PH * 2.5, 1)
-bc = px.reshape(-1, 4).mean(0)
+bc = (1.0, 0.0, 1.0) if KEY else px.reshape(-1, 4).mean(0)
 ca = bg.data.color_attributes.new("색", "FLOAT_COLOR", "CORNER")
 for d_ in ca.data:
     d_.color = (bc[0], bc[1], bc[2], 1.0)
@@ -159,7 +161,7 @@ sh.light = "FLAT"
 sh.color_type = "TEXTURE" if SMOOTH else "VERTEX"
 sh.show_object_outline = False
 sh.background_type = "VIEWPORT"
-sh.background_color = (0.95, 0.93, 0.88)
+sh.background_color = (1.0, 0.0, 1.0) if KEY else (0.95, 0.93, 0.88)
 scn.display.render_aa = "8"
 scn.render.resolution_x, scn.render.resolution_y = W, H
 scn.render.image_settings.file_format = "PNG"
