@@ -4,7 +4,7 @@
 블록애니.py 가 장면 영상에 자동으로 넣음. 따로 들어 보기:
   python 레트로소리.py 견본 <폴더>      # 효과음마다 wav + 배경음 wav
 
-효과음 이름: 착지 놀람 활 맞음 광선 점프 쓰러짐 승리 동전 주먹 윙윙 데굴데굴 부서짐 휘익
+효과음 이름: 착지 놀람 활 맞음 광선 점프 쓰러짐 승리 동전 주먹 윙윙 데굴데굴 부서짐 휘익 삐 심장 아야
 배경음 곡: 레트로전투
 """
 import math
@@ -92,6 +92,16 @@ def sfx(name):
         sec = 1.3
         f = sweep(1400, 300, sec)
         return square(f, sec, 0.5) * env(int(sec * SR), attack=0.2) * 0.5 + triangle(f / 2, sec) * 0.3
+    if name == "삐":  # 남은 시간 경고
+        return square(1760, 0.12, 0.5) * env(int(0.12 * SR), attack=0.002) * 0.6
+    if name == "심장":  # 쿵-쾅
+        def thump(sec, f0):
+            return np.sin(2 * math.pi * np.cumsum(sweep(f0, 40, sec)) / SR) * env(int(sec * SR), decay=0.05)
+        return np.concatenate([thump(0.14, 90), np.zeros(int(0.06 * SR)), thump(0.18, 75) * 0.8])
+    if name == "아야":  # 맞았을 때 '뾰로롱↓'
+        sec = 0.4
+        return square(sweep(900, 150, sec), sec, 0.5) * (0.6 + 0.4 * np.sign(np.sin(2 * math.pi * 25 * _t(sec)))) \
+            * env(int(sec * SR)) * 0.7
     if name == "주먹":
         return sfx("맞음")
     if name == "광선":  # '퓨웅~' 떨리며 내려감
@@ -143,9 +153,8 @@ def hz(s):  # "A4" → 440
     return 440.0 * 2 ** ((NOTE[name] + (octv - 4) * 12 - 9) / 12)
 
 
-def bgm(sec, song="레트로전투"):
-    """직접 만든 8비트 전투 곡(라단조, 150 BPM). sec 길이만큼 반복."""
-    bpm = 150
+def bgm(sec, song="레트로전투", bpm=150):
+    """직접 만든 8비트 전투 곡(라단조, 기본 150 BPM). sec 길이만큼 반복."""
     step = 60 / bpm / 2  # 8분음표
     # 가락(8분음표 한 칸씩, 4마디 = 32칸) — Am F G E 진행
     lead = ("A4 - C5 E5 A5 - G5 E5  F5 - E5 C5 A4 - C5 -  "
@@ -171,14 +180,29 @@ def bgm(sec, song="레트로전투"):
 
 
 # ───────────── 섞기 ─────────────
-SFX_VOL = {"윙윙": 0.4, "동전": 0.7, "데굴데굴": 0.6, "부서짐": 0.6, "휘익": 0.5}  # 효과음마다 크기 배율
-def mix(total_sec, events, music=None, music_vol=0.35, music_end=None, sfx_vol=0.9):
+SFX_VOL = {"윙윙": 0.4, "동전": 0.7, "데굴데굴": 0.6, "부서짐": 0.6, "휘익": 0.5, "삐": 0.6, "심장": 0.9}  # 효과음마다 크기 배율
+def bgm_tempo(sec, song, tempo):
+    """tempo = [(초, BPM), ...] — 구간마다 빠르기를 바꿔 이어 붙임(점점 빨라지는 음악)."""
+    tempo = sorted(tempo) or [(0, 150)]
+    if tempo[0][0] > 0:
+        tempo = [(0, 150)] + tempo
+    parts = []
+    for k, (t0, b) in enumerate(tempo):
+        t1 = tempo[k + 1][0] if k + 1 < len(tempo) else sec
+        if t1 > t0:
+            parts.append(bgm(t1 - t0, song, b))
+    m = np.concatenate(parts)
+    n = int(sec * SR)
+    return np.pad(m, (0, max(0, n - len(m))))[:n]
+
+
+def mix(total_sec, events, music=None, music_vol=0.35, music_end=None, sfx_vol=0.9, tempo=None):
     """events = [(초, 효과음이름), ...]. 배경음은 music_end 초에 0.4초 동안 줄어들며 끝남.
     배경음 최고 크기 music_vol(설정 bgm_peak 와 같은 뜻)."""
     n = int(total_sec * SR)
     out = np.zeros(n)
     if music:
-        m = bgm(total_sec, music)
+        m = bgm_tempo(total_sec, music, tempo) if tempo else bgm(total_sec, music)
         m = m / (np.max(np.abs(m)) + 1e-9) * music_vol
         if music_end is not None:
             e0, e1 = int(music_end * SR), int((music_end + 0.4) * SR)

@@ -39,6 +39,9 @@
   돌: {"모양": "돌", "반지름": 0.5, "쿵": [땅에 닿는 초], "휘익": true(떨어지는 소리)} — 떨어지는 동안 돎. 조각: 부서진 작은 돌.
   감옥: {"모양": "감옥", "너비": 2.8, "높이": 2.6} — 위로 올리는 키를 주면 열림. 하트: {"모양": "하트", "크기": 0.18}
   인물 "바꿈": {"키": 1.0} — 이 장면에서만 캐릭터 값을 바꿈. 캐릭터 "치마": 색, "왕관": 색. 자세 "오르기"(사다리)
+  긴장 장치: "슬로": [[시작초, 끝초, 0.3]] (느리게), "번쩍": [[초, 길이, "#7a0000"]] (배경 번쩍임),
+    "배경음": {..., "빠르기": [[초, BPM], ...]} (점점 빨라지는 음악), "미리보기": {"초": [a, b], "글자": "..."} (맨 앞에 붙임),
+    물체 "화면고정": true — 점수·시간·목숨처럼 카메라가 확대해도 화면의 같은 자리·크기(직교 카메라)
   날아가는 물체: "물체": [{"모양": "화살" | "광선" | "벌" | "글자" | "통나무" | "돌" | "조각" | "감옥" | "하트", "색": 색, "동작": [{"초": 3, "위치": [x,y,z]}, {"초": 3.5, "위치": [...]}]}]
   방향: 도(°). 0 = 카메라 쪽(-Y)을 봄, 90 = 오른쪽(+X)을 봄. 위치는 m (캐릭터 키 약 2m).
   동작 사이의 위치는 부드럽게 이어짐(걷기·달리기는 그동안 다리를 움직임).
@@ -660,8 +663,10 @@ def cmd_scene(scene_file, out, fancy=False):
             c = pr.get("색", "#7CFF4F")
             box(f"광선{i}", (-4, -2, -2), (4, 2, 2), c, root, glow=4.0)
             box(f"광선꼬리{i}", (4, -1, -1), (9, 1, 1), "#c8ffb0", root, glow=4.0)
-        k = float(pr.get("크기", 1.0))
+        k = 1.0 if kind == "하트" else float(pr.get("크기", 1.0))  # 하트는 '크기'가 점 크기(두 번 곱하지 않음)
         root.scale = (k, k, k)
+        root["기본크기"] = k
+        root["화면고정"] = int(bool(pr.get("화면고정", False)))
         keys = sorted(pr["동작"], key=lambda k: k["초"])
         root["모양"] = kind
         root["맞은초"] = float(pr.get("맞은초", 1e9))
@@ -672,10 +677,34 @@ def cmd_scene(scene_file, out, fancy=False):
     cams = sorted(S.get("카메라", [{"초": 0, "위치": [0, -8, 2], "보는곳": [0, 0, 1]}]), key=lambda k: k["초"])
     cam = add_camera(cams[0]["위치"], cams[0]["보는곳"], cams[0].get("렌즈", 35), ortho=cams[0].get("직교"))
     tmpd = tempfile.mkdtemp()
-    n = int(round(sec * fps))
+    # 슬로모션: [[시작초, 끝초, 빠르기]] — 그 구간은 장면 시간이 천천히 흐름(0.3 = 세 배 느리게)
+    slow = S.get("슬로", [])
+
+    def rate(tt):
+        for s0, s1, rr in slow:
+            if s0 <= tt < s1:
+                return float(rr)
+        return 1.0
+    times = []
+    tt = 0.0
+    while tt < sec - 1e-9:
+        times.append(tt)
+        tt += rate(tt) / fps
+    n = len(times)
+    import bisect
+
+    def tau(ts):  # 장면 시각 → 영상 시각(슬로모션 때문에 늘어남)
+        return bisect.bisect_left(times, ts) / fps
+    flashes = S.get("번쩍", [])  # [[초, 길이, 색]] — 배경이 잠깐 그 색으로(맞았을 때 빨강)
+    sky_lin = tuple(bpy.context.scene.world.color)
     walk_phase = {}
-    for f in range(n):
-        t = f / fps
+    for f, t in enumerate(times):
+        dt = rate(t) / fps
+        fc = None
+        for ft, fd, fcol in flashes:
+            if ft <= t < ft + fd:
+                fc = tuple(_lin(v) for v in _hex(fcol))
+        bpy.context.scene.world.color = fc or sky_lin
         for a, rig, keys in actors:
             pos = _track(keys, t, "위치", a.get("위치", [0, 0]))
             pos = _track([{"초": -1, "위치": a.get("위치", [0, 0])}] + keys, t, "위치", pos)
@@ -683,7 +712,7 @@ def cmd_scene(scene_file, out, fancy=False):
             pose = _pose_at(keys, t)
             ph = walk_phase.get(a["이름"], 0.0)
             if pose in ("걷기", "달리기", "오르기"):
-                ph += {"걷기": 1.0, "달리기": 1.6, "오르기": 1.8}[pose] / fps
+                ph += {"걷기": 1.0, "달리기": 1.6, "오르기": 1.8}[pose] * dt
             walk_phase[a["이름"]] = ph
             apply_pose(rig, pose, ph)
             z = pos[2] if len(pos) > 2 else 0.0  # 위치에 높이(m)를 주면 발판 위에 섬
@@ -692,6 +721,15 @@ def cmd_scene(scene_file, out, fancy=False):
             r.rotation_euler = (math.radians(-90) if pose == "쓰러짐" else 0, 0, math.radians(yaw))
             if pose == "쓰러짐":
                 r.location = (pos[0], pos[1], z + 0.25)
+        cl = _track(cams, t, "위치", cams[0]["위치"])
+        ck = _track(cams, t, "보는곳", cams[0]["보는곳"])
+        cam.data.lens = _track(cams, t, "렌즈", cams[0].get("렌즈", 35))
+        if cams[0].get("직교"):
+            cam.data.ortho_scale = _track(cams, t, "직교", cams[0]["직교"])
+        aim(cam, cl, ck)
+        # 화면 고정(점수·시간·목숨): 확대해도 화면의 같은 자리·같은 크기
+        base_look = cams[0]["보는곳"]
+        ratio = (cam.data.ortho_scale / cams[0]["직교"]) if cams[0].get("직교") else 1.0
         for root, keys in props:
             vis = keys[0]["초"] <= t <= keys[-1]["초"]
             for ch in [root] + list(root.children):
@@ -701,6 +739,10 @@ def cmd_scene(scene_file, out, fancy=False):
                 p = _track(keys, t, "위치", keys[0]["위치"], lin)
                 p2 = _track(keys, min(t + 0.02, keys[-1]["초"]), "위치", p, lin)
                 root.location = p
+                if root.get("화면고정"):
+                    root.location = (ck[0] + (p[0] - base_look[0]) * ratio, p[1], ck[2] + (p[2] - base_look[2]) * ratio)
+                    kk = root["기본크기"] * ratio
+                    root.scale = (kk, kk, kk)
                 kind = root["모양"]
                 if kind == "벌":  # 가는 쪽을 봄, 날개는 한 장면씩 위·아래(옛날 게임식), 맞으면 빙글 돌며 떨어짐
                     dead = t >= root["맞은초"]
@@ -716,7 +758,7 @@ def cmd_scene(scene_file, out, fancy=False):
                 elif kind in ("돌", "조각"):  # 떨어지는 동안만 돎(땅에 닿으면 멈춤)
                     moving = abs(p2[2] - p[2]) > 1e-6 or abs(p2[0] - p[0]) > 1e-6
                     if moving:
-                        root["각"] = root.get("각", 0.0) + root["돌기"] / fps
+                        root["각"] = root.get("각", 0.0) + root["돌기"] * dt
                     elif kind == "돌":  # 땅에 닿으면 가장 가까운 평평한 면으로 놓임(모서리로 서 있지 않게)
                         root["각"] = round(root.get("각", 0.0) / (math.pi / 2)) * (math.pi / 2)
                     root.rotation_euler = (0.3 if moving or kind == "조각" else 0.0, root.get("각", 0.0), 0)
@@ -733,12 +775,6 @@ def cmd_scene(scene_file, out, fancy=False):
                                 ch.data.body = body
                 elif abs(p2[0] - p[0]) > 1e-6 or abs(p2[2] - p[2]) > 1e-6:
                     root.rotation_euler = (0, -math.atan2(p2[2] - p[2], p2[0] - p[0]), 0)
-        cl = _track(cams, t, "위치", cams[0]["위치"])
-        ck = _track(cams, t, "보는곳", cams[0]["보는곳"])
-        cam.data.lens = _track(cams, t, "렌즈", cams[0].get("렌즈", 35))
-        if cams[0].get("직교"):
-            cam.data.ortho_scale = _track(cams, t, "직교", cams[0]["직교"])
-        aim(cam, cl, ck)
         bpy.context.scene.render.filepath = os.path.join(tmpd, f"{f:05d}.png")
         bpy.ops.render.render(write_still=True)
         if f % fps == 0:
@@ -784,8 +820,10 @@ def cmd_scene(scene_file, out, fancy=False):
                             ev.append((k["초"], auto[k["자세"]]))
                         prev = k["자세"]
         bg = S.get("배경음", {"곡": "레트로전투"})
-        x = RS.mix(sec, ev, music=bg.get("곡") if bg else None, music_vol=float(bg.get("크기", 0.35)) if bg else 0,
-                   music_end=bg.get("끝") if bg else None)
+        ev = [(tau(t_), nm) for t_, nm in ev]  # 슬로모션만큼 효과음 시각도 옮김
+        tempo = [(tau(a_), b_) for a_, b_ in (bg.get("빠르기", []) if bg else [])]
+        x = RS.mix(n / fps, ev, music=bg.get("곡") if bg else None, music_vol=float(bg.get("크기", 0.35)) if bg else 0,
+                   music_end=tau(bg["끝"]) if bg and bg.get("끝") is not None else None, tempo=tempo)
         audio = os.path.join(tmpd, "소리.wav")
         RS.write_wav(audio, x)
         print("  효과음:", ", ".join(f"{t:.1f}초 {n}" for t, n in sorted(ev)))
@@ -796,6 +834,22 @@ def cmd_scene(scene_file, out, fancy=False):
         cmd += ["-vf", f"scale=iw*{px}:ih*{px}:flags=neighbor"]
     cmd += ["-c:v", "libx264", "-pix_fmt", "yuv420p", "-crf", "12", "-tune", "animation", out]
     subprocess.run(cmd, check=True)
+    pv = S.get("미리보기")  # {"초": [시작, 끝], "글자": "..."} — 그 구간을 맨 앞에 한 번 더(자막과 함께)
+    if pv:
+        a_, b_ = tau(pv["초"][0]), tau(pv["초"][1])
+        main_ = out + ".본편.mp4"
+        os.replace(out, main_)
+        font = "/usr/share/fonts/truetype/nanum/NanumSquareB.ttf"
+        txt = pv.get("글자", "").replace(":", "\\:").replace("'", "")
+        fil = (f"[0:v]trim={a_}:{b_},setpts=PTS-STARTPTS,"
+               f"drawtext=fontfile={font}:text='{txt}':fontsize=84:fontcolor=white:borderw=6:bordercolor=black:"
+               f"x=(w-text_w)/2:y=h*0.42[pv];"
+               f"[0:a]atrim={a_}:{b_},asetpts=PTS-STARTPTS[pa];"
+               f"[pv][pa][0:v][0:a]concat=n=2:v=1:a=1[v][a]")
+        subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", main_, "-filter_complex", fil, "-map", "[v]", "-map", "[a]",
+                        "-c:v", "libx264", "-pix_fmt", "yuv420p", "-crf", "12", "-tune", "animation", "-c:a", "aac",
+                        "-b:a", "192k", out], check=True)
+        os.remove(main_)
     print("영상 저장:", out)
 
 
