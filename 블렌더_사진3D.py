@@ -165,6 +165,22 @@ def pose(t):
         f = t * 4 - k
         loc, tgt, lm = spots[k]
         return (loc[0] + VW * 0.03 * f, loc[1] + VH * 0.01 * f, loc[2] - D0 * 0.03 * f), tgt, 0.0, lm
+    if MOVE in ("orbit_cw", "orbit_ccw"):            # 오르빗 시계/반시계 (위에서 볼 때)
+        sg = 1 if MOVE == "orbit_cw" else -1
+        ang = math.radians(sg * (-10 + 20 * e) * A)
+        r_ = D0 * 0.85
+        return ((TX * 0.5) + r_ * math.sin(ang), TY * 0.5 + VH * 0.02 * math.sin(math.pi * t), TZ + r_ * math.cos(ang)), (TX * 0.5, TY * 0.5, TZ), 0.0, 1.15
+    if MOVE == "track_fwd":                          # 트래킹 전진: 낮게, 일정한 빠르기로 앞으로
+        return (TX * 0.3 * e, -VH * 0.10 + VH * 0.04 * e, D0 * (1.0 - 0.32 * e * A)), (TX * 0.3 * e, VH * 0.05, 0), 0.0, 1.05
+    if MOVE == "track_back":                         # 트래킹 후진: 일정한 빠르기로 뒤로 물러남
+        return (TX * 0.3 * (1 - e), -VH * 0.06 + VH * 0.04 * (1 - e), D0 * (0.68 + 0.32 * e)), (TX * 0.3 * (1 - e), VH * 0.05, 0), 0.0, 1.05
+    if MOVE == "crane_down":                         # 크레인 다운: 높은 데서 내려오며 눈높이로
+        return (TX * 0.3 * (1 - e), -VH * 0.24 * e, D0 * (0.98 - 0.18 * e)), (TX * 0.3 * (1 - e), VH * 0.10 * e, 0), 0.0, 1.1
+    if MOVE == "tilt_down":                          # 틸트 다운: 제자리에서 위 → 아래로 훑음
+        return (TX * 0.2, -VH * 0.04, D0 * 0.90), (TX * 0.2, VH * 0.16 - VH * 0.32 * e, 0), 0.0, 1.18
+    if MOVE in ("pan_left", "pan_right"):            # 팬: 카메라는 제자리, 고개만 옆으로 돌림
+        sg = 1 if MOVE == "pan_right" else -1
+        return (0, 0, D0 * 0.9), (sg * (-VW * 0.16 + VW * 0.32 * e), 0, 0), 0.0, 1.2
     if MOVE == "crane":                              # 크레인 업: 낮은 데서 올라가며 내려다봄 (장면을 여는 샷)
         return (TX * 0.3 * e, -VH * 0.24 * (1 - e), D0 * (0.80 + 0.18 * e)), (TX * 0.3 * e, VH * 0.10 * (1 - e), 0), 0.0, 1.1
     if MOVE == "tilt":                               # 틸트 업: 제자리에서 아래 → 위로 훑음

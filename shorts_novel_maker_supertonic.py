@@ -6974,11 +6974,17 @@ def not_3d_photo(r, idx, path):
         return False
 
 
-CAMERA_MOVES = {   # 영화 무빙 기법 (블렌더_사진3D.py 의 움직임 이름) — 이름: 쉬운 설명
-    "push": "달리 인(곧장 다가감, 점점 빨라짐)", "zoomout": "풀백 리빌(바짝 붙었다가 물러나며 전체)", "orbit": "아크 샷(주인공 둘레를 돎)",
-    "drone": "드론(위에서 내려다보며 앞으로)", "crane": "크레인 업(올라가며 내려다봄, 장면 여는 샷)", "tilt": "틸트 업(아래에서 위로 훑음)",
-    "right": "트래킹(오른쪽으로 흐름)", "left": "트래킹(왼쪽으로 흐름)", "fpv": "1인칭 드론(기울고 흔들리며 파고듦)",
-    "freeze": "멈춘 시간 순간이동(3~4자리로 뚝뚝)", "dollyzoom": "돌리 줌(현기증 효과: 물러나며 확대, 긴장·반전)"}
+CAMERA_MOVES = {   # 영화 무빙 기법 (블렌더_사진3D.py 의 움직임 이름) — 이름: 쉬운 설명. 방향별로 나눔 (사용자 결정 2026-11-08)
+    "push": "달리 인(곧장 다가감, 점점 빨라짐)", "zoomout": "풀백 리빌(바짝 붙었다가 물러나며 전체)",
+    "track_fwd": "트래킹 전진(일정하게 앞으로)", "track_back": "트래킹 후진(일정하게 뒤로)",
+    "left": "트래킹 왼쪽(옆으로 흐름)", "right": "트래킹 오른쪽(옆으로 흐름)",
+    "orbit_cw": "오르빗 시계 방향(주인공 둘레를 돎)", "orbit_ccw": "오르빗 반시계 방향(주인공 둘레를 돎)",
+    "crane": "크레인 업(올라가며 내려다봄, 장면 여는 샷)", "crane_down": "크레인 다운(내려오며 눈높이로)",
+    "tilt": "틸트 업(아래 → 위로 훑음)", "tilt_down": "틸트 다운(위 → 아래로 훑음)",
+    "pan_left": "팬 왼쪽(제자리에서 고개를 왼쪽으로)", "pan_right": "팬 오른쪽(제자리에서 고개를 오른쪽으로)",
+    "drone": "드론(위에서 내려다보며 앞으로)", "fpv": "1인칭 드론(기울고 흔들리며 파고듦)",
+    "freeze": "멈춘 시간 순간이동(3~4자리로 뚝뚝)", "dollyzoom": "돌리 줌(현기증 효과: 물러나며 확대, 긴장·반전)",
+    "orbit": "오르빗(예전 이름 = 시계 방향)"}
 # 문맥 낱말 → 어울리는 무빙 (나레이션·사진 설명에서 찾음)
 CAMERA_HINTS = [
     (("하늘에서", "내려다", "항공", "위성", "위에서", "지도"), "drone", 3), (("하늘에서", "내려다", "전경", "풍경", "평원", "사막"), "crane", 2),
@@ -7043,8 +7049,9 @@ def choose_camera_moves(r, elig, plan_path=None, log=None, objects=()):
             land = rows.std() > 1e-6 and float(np.corrcoef(rows, np.arange(len(rows)))[0, 1]) > 0.6
         if idx in objects:                                # 앞층(주인공)을 오려 낸 사진은 물건·유물 쪽 무빙
             land = False
-        sc = {m_: 0.0 for m_ in CAMERA_MOVES}
-        base_ = ("drone", "crane", "right", "left", "fpv", "tilt") if land else ("push", "orbit", "zoomout", "dollyzoom", "freeze", "tilt")
+        sc = {m_: 0.0 for m_ in CAMERA_MOVES if m_ != "orbit"}      # 'orbit' 는 예전 이름(시계 방향)이라 자동으로는 안 고름
+        base_ = (("drone", "crane", "right", "left", "fpv", "tilt", "track_fwd", "pan_left", "pan_right", "crane_down") if land else
+                 ("push", "orbit_cw", "orbit_ccw", "zoomout", "dollyzoom", "freeze", "tilt", "track_back", "tilt_down"))
         for m_ in base_:
             sc[m_] += 1.0
         reason = ["풍경" if land else "물건·유물"]
@@ -7052,7 +7059,9 @@ def choose_camera_moves(r, elig, plan_path=None, log=None, objects=()):
             hit = next((w for w in words if w in text), None)
             if hit:
                 if mv_ == "track":
-                    sc["right" if side % 2 == 0 else "left"] += w_
+                    sc[("right", "left", "track_fwd")[side % 3]] += w_
+                elif mv_ == "orbit":
+                    sc["orbit_cw" if used.get("orbit_cw", 0) <= used.get("orbit_ccw", 0) else "orbit_ccw"] += w_
                 else:
                     sc[mv_] += w_
                 reason.append(f"'{hit}'")
@@ -7072,7 +7081,7 @@ def choose_camera_moves(r, elig, plan_path=None, log=None, objects=()):
             if used.get(m_, 0) >= CAMERA_LIMIT.get(m_, 99):
                 sc[m_] -= 10
         mv = max(sc, key=lambda m_: (sc[m_], -used.get(m_, 0)))
-        if mv in ("right", "left"):
+        if mv in ("right", "left", "track_fwd"):
             side += 1
         out[idx], why[idx] = mv, " · ".join(reason[:4])
         used[mv] = used.get(mv, 0) + 1
