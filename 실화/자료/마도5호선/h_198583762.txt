@@ -1,0 +1,14 @@
+HTTP/1.1 200 Connection Established
+
+HTTP/1.1 200 OK
+Date: Sun, 08 Nov 2026 09:58:33 GMT
+Server: JBCS httpd
+Set-Cookie: WMONID=Q59D-9MCD2I; Expires=Mon, 08-Nov-2027 18:58:33 GMT; Path=/
+Set-Cookie: JSESSIONID=fLD5rULVP8MmvF980K4YaA6C.korea0101; Path=/; Secure; HttpOnly
+Content-Disposition: attachment;filename="(국영문 동시배포) 1104 ‘바다의 경주’ 태안 마도해역에서 고려 난파선 두 척(5·6호선) 발굴(본문).hwpx";
+Content-Transfer-Encoding: binary
+Content-Language: ko-KR
+Content-Length: 217309
+Content-Type: application/x-download
+Set-Cookie: clientid=000035103552; Path=/
+

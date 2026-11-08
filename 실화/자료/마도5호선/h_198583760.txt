@@ -1,0 +1,14 @@
+HTTP/1.1 200 Connection Established
+
+HTTP/1.1 200 OK
+Date: Sun, 08 Nov 2026 09:58:29 GMT
+Server: JBCS httpd
+Set-Cookie: WMONID=geEBxvIIWR9; Expires=Mon, 08-Nov-2027 18:58:29 GMT; Path=/
+Set-Cookie: JSESSIONID=s4hnrQHsLktwwIWrbWrZOeIW.korea0403; Path=/; Secure; HttpOnly
+Content-Disposition: attachment;filename="(국영문 동시배포) 1104 Two Goryeo-Period Shipwrecks Discovered off Taean in South Korea, “Gyeongju of the Sea”.docx";
+Content-Transfer-Encoding: binary
+Content-Language: ko-KR
+Content-Length: 2968314
+Content-Type: application/x-download
+Set-Cookie: clientid=000018097347; Path=/
+
