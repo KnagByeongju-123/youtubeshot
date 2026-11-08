@@ -11,8 +11,8 @@ import sys
 import cv2
 import numpy as np
 
-a = sys.argv[1:]
-A, B, OUT = a[0], a[1], a[2]
+a = sys.argv[1:] if __name__ == "__main__" else []
+A, B, OUT = (a + [None, None, None])[:3]
 opt = lambda k, d: (a[a.index(k) + 1] if k in a else d)
 SEC = float(opt("--초", 1.0))
 PRE, POST = float(opt("--앞초", 2.0)), float(opt("--뒤초", 2.0))
@@ -57,30 +57,39 @@ def noise(rng, scale):
     return cv2.GaussianBlur(cv2.resize(g, (W, H), interpolation=cv2.INTER_CUBIC), (0, 0), scale * 0.35)
 
 
-rng = np.random.default_rng(SEED)
-yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
-DIAG = float(np.hypot(W, H))
-n_spl = int(rng.integers(6, 9))
-splats = []
-for i in range(n_spl):
-    cx = W * (0.5 + (rng.random() - 0.5) * 0.85)
-    cy = H * (0.5 + (rng.random() - 0.5) * 0.8)
-    t0 = 0.6 * i / n_spl + rng.random() * 0.06                    # 차례로 튐
-    rmax = DIAG * (0.11 + rng.random() * 0.12)
-    ang = np.arctan2(yy - cy, xx - cx)
-    k = int(rng.integers(7, 13))                                  # 가장자리 울퉁불퉁 (각도별 반지름 흔들림)
-    ph = rng.random(k) * 6.28
-    wob = sum(np.sin(ang * (j + 2) + ph[j]) * (0.10 / (j + 1) ** 0.6) for j in range(k))
-    spikes = np.clip(np.sin(ang * int(rng.integers(9, 17)) + rng.random() * 6.28), 0, 1) ** 6 * 0.35   # 튄 줄기
-    dist = np.hypot(xx - cx, yy - cy)
-    drops = []                                                    # 둘레의 작은 방울
-    for _ in range(int(rng.integers(8, 16))):
-        a_ = rng.random() * 6.28
-        dr = 0.9 + rng.random() * 0.7
-        drops.append((cx + np.cos(a_) * rmax * dr * 0.6, cy + np.sin(a_) * rmax * dr * 0.6, rmax * (0.03 + rng.random() * 0.05), dr))
-    splats.append((t0, rmax, dist, wob, spikes, drops))
-N1 = noise(rng, 24)
-N2 = noise(rng, 7)
+def init(w=None, h=None, seed=None, col=None):
+    """물감 덩어리·결 다시 만들기 (다른 프로그램이 크기·무늬를 바꿔 부를 때)"""
+    global W, H, SEED, RED, rng, yy, xx, DIAG, n_spl, splats, N1, N2
+    if w: W, H = w, h
+    if seed is not None: SEED = seed
+    if col: RED = np.array([int(col[4:6], 16), int(col[2:4], 16), int(col[0:2], 16)], np.float32)
+    rng = np.random.default_rng(SEED)
+    yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
+    DIAG = float(np.hypot(W, H))
+    n_spl = int(rng.integers(6, 9))
+    splats = []
+    for i in range(n_spl):
+        cx = W * (0.5 + (rng.random() - 0.5) * 0.85)
+        cy = H * (0.5 + (rng.random() - 0.5) * 0.8)
+        t0 = 0.6 * i / n_spl + rng.random() * 0.06                    # 차례로 튐
+        rmax = DIAG * (0.11 + rng.random() * 0.12)
+        ang = np.arctan2(yy - cy, xx - cx)
+        k = int(rng.integers(7, 13))                                  # 가장자리 울퉁불퉁 (각도별 반지름 흔들림)
+        ph = rng.random(k) * 6.28
+        wob = sum(np.sin(ang * (j + 2) + ph[j]) * (0.10 / (j + 1) ** 0.6) for j in range(k))
+        spikes = np.clip(np.sin(ang * int(rng.integers(9, 17)) + rng.random() * 6.28), 0, 1) ** 6 * 0.35   # 튄 줄기
+        dist = np.hypot(xx - cx, yy - cy)
+        drops = []                                                    # 둘레의 작은 방울
+        for _ in range(int(rng.integers(8, 16))):
+            a_ = rng.random() * 6.28
+            dr = 0.9 + rng.random() * 0.7
+            drops.append((cx + np.cos(a_) * rmax * dr * 0.6, cy + np.sin(a_) * rmax * dr * 0.6, rmax * (0.03 + rng.random() * 0.05), dr))
+        splats.append((t0, rmax, dist, wob, spikes, drops))
+    N1 = noise(rng, 24)
+    N2 = noise(rng, 7)
+
+
+init()
 
 
 def ease_out(x):
@@ -125,22 +134,23 @@ def blend(fa, fb, p):
     return np.clip(out, 0, 255).astype(np.uint8)
 
 
-n_pre, n_tr, n_post = int(PRE * FPS), max(2, int(SEC * FPS)), int(POST * FPS)
-fa = frames_of(A, n_pre + n_tr, tail=True)
-fb = frames_of(B, n_tr + n_post, tail=False)
-tmp = OUT + ".frames"
-os.makedirs(tmp, exist_ok=True)
-k = 0
-for i in range(n_pre):
-    cv2.imwrite(os.path.join(tmp, "f_%05d.jpg" % k), fa[i], [cv2.IMWRITE_JPEG_QUALITY, 95]); k += 1
-for i in range(n_tr):
-    p = (i + 1) / n_tr
-    cv2.imwrite(os.path.join(tmp, "f_%05d.jpg" % k), blend(fa[n_pre + i], fb[i], p), [cv2.IMWRITE_JPEG_QUALITY, 95]); k += 1
-for i in range(n_post):
-    cv2.imwrite(os.path.join(tmp, "f_%05d.jpg" % k), fb[n_tr + i], [cv2.IMWRITE_JPEG_QUALITY, 95]); k += 1
-subprocess.run(["ffmpeg", "-nostdin", "-v", "error", "-y", "-framerate", str(FPS), "-i", os.path.join(tmp, "f_%05d.jpg"),
-                "-c:v", "libx264", "-pix_fmt", "yuv420p", "-crf", "19", OUT], check=True)
-for f in os.listdir(tmp):
-    os.remove(os.path.join(tmp, f))
-os.rmdir(tmp)
-print("OK", OUT, k, "장")
+if __name__ == "__main__":
+    n_pre, n_tr, n_post = int(PRE * FPS), max(2, int(SEC * FPS)), int(POST * FPS)
+    fa = frames_of(A, n_pre + n_tr, tail=True)
+    fb = frames_of(B, n_tr + n_post, tail=False)
+    tmp = OUT + ".frames"
+    os.makedirs(tmp, exist_ok=True)
+    k = 0
+    for i in range(n_pre):
+        cv2.imwrite(os.path.join(tmp, "f_%05d.jpg" % k), fa[i], [cv2.IMWRITE_JPEG_QUALITY, 95]); k += 1
+    for i in range(n_tr):
+        p = (i + 1) / n_tr
+        cv2.imwrite(os.path.join(tmp, "f_%05d.jpg" % k), blend(fa[n_pre + i], fb[i], p), [cv2.IMWRITE_JPEG_QUALITY, 95]); k += 1
+    for i in range(n_post):
+        cv2.imwrite(os.path.join(tmp, "f_%05d.jpg" % k), fb[n_tr + i], [cv2.IMWRITE_JPEG_QUALITY, 95]); k += 1
+    subprocess.run(["ffmpeg", "-nostdin", "-v", "error", "-y", "-framerate", str(FPS), "-i", os.path.join(tmp, "f_%05d.jpg"),
+                    "-c:v", "libx264", "-pix_fmt", "yuv420p", "-crf", "19", OUT], check=True)
+    for f in os.listdir(tmp):
+        os.remove(os.path.join(tmp, f))
+    os.rmdir(tmp)
+    print("OK", OUT, k, "장")
