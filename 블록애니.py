@@ -37,7 +37,9 @@
   통나무: {"모양": "통나무", "반지름": 0.5, "동작": [...], "쿵": [떨어져 닿는 초...]} — 같은 빠르기로 굴러 돎, '데굴데굴' 소리.
     "등속": true 를 주면 다른 물체도 같은 빠르기로 움직임
   돌: {"모양": "돌", "반지름": 0.5, "쿵": [땅에 닿는 초], "휘익": true(떨어지는 소리)} — 떨어지는 동안 돎. 조각: 부서진 작은 돌.
-  날아가는 물체: "물체": [{"모양": "화살" | "광선" | "벌" | "글자" | "통나무" | "돌" | "조각", "색": 색, "동작": [{"초": 3, "위치": [x,y,z]}, {"초": 3.5, "위치": [...]}]}]
+  감옥: {"모양": "감옥", "너비": 2.8, "높이": 2.6} — 위로 올리는 키를 주면 열림. 하트: {"모양": "하트", "크기": 0.18}
+  인물 "바꿈": {"키": 1.0} — 이 장면에서만 캐릭터 값을 바꿈. 캐릭터 "치마": 색, "왕관": 색. 자세 "오르기"(사다리)
+  날아가는 물체: "물체": [{"모양": "화살" | "광선" | "벌" | "글자" | "통나무" | "돌" | "조각" | "감옥" | "하트", "색": 색, "동작": [{"초": 3, "위치": [x,y,z]}, {"초": 3.5, "위치": [...]}]}]
   방향: 도(°). 0 = 카메라 쪽(-Y)을 봄, 90 = 오른쪽(+X)을 봄. 위치는 m (캐릭터 키 약 2m).
   동작 사이의 위치는 부드럽게 이어짐(걷기·달리기는 그동안 다리를 움직임).
 """
@@ -203,6 +205,10 @@ def build_character(name, spec):
         box(f"{name}_벨트", lo, hi, s["벨트"], body, (0, 0, 12))
     if s.get("망토"):
         box(f"{name}_망토", (-4.5, 2.1, 6), (4.5, 2.8, 24), s["망토"], body, (0, 0, 12))
+    if s.get("치마"):  # 긴 치마(다리를 덮음, 아래로 갈수록 넓게)
+        box(f"{name}_치마위", (-4.4, -2.4, 9), (4.4, 2.4, 15), s["치마"], body, (0, 0, 12))
+        box(f"{name}_치마아래", (-5.4, -3.2, 2.5), (5.4, 3.2, 9.2), s["치마"], body, (0, 0, 12))
+        box(f"{name}_치마단", (-5.6, -3.4, 2.2), (5.6, 3.4, 3.2), s.get("치마단", "#ffffff"), body, (0, 0, 12))
     # 팔(어깨 관절) — 소매 + 손
     arms = {}
     sleeve_bot = 15 if s["소매"] == "긴" else 19
@@ -264,6 +270,12 @@ def build_character(name, spec):
             box(f"{name}_후드옆{sx}", (min(sx * 4, sx * 4.6), -4.4, 23.5), (max(sx * 4, sx * 4.6), 4.6, 33),
                 hc, head, o)
         box(f"{name}_후드앞", (-4.6, -4.5, 31), (4.6, -4, 32), hc, head, o)
+    if s.get("왕관"):  # 금색 왕관 + 빨간 보석
+        g = s["왕관"]
+        box(f"{name}_왕관띠", (-3.4, -3.4, 32.2), (3.4, 3.4, 33.6), g, head, o)
+        for k, (x, y) in enumerate([(-3.4, -3.4), (-0.6, -3.4), (2.2, -3.4), (-3.4, 2.2), (2.2, 2.2)]):
+            box(f"{name}_왕관꼭지{k}", (x, y, 33.6), (x + 1.2, y + 1.2, 35.2), g, head, o)
+        box(f"{name}_왕관보석", (-0.6, -3.55, 32.5), (0.6, -3.4, 33.3), "#ff2040", head, o, outline=False)
     if s.get("모자"):
         box(f"{name}_모자", (-4.6, -4.6, 31.5), (4.6, 4.6, 34), s["모자"], head, o)
         box(f"{name}_모자챙", (-4.6, -7, 31.5), (4.6, -4.6, 32.2), s["모자"], head, o)
@@ -332,6 +344,13 @@ def apply_pose(rig, pose, phase=0.0, amp=1.0):
     """자세를 관절에 넣음. 걷기·달리기는 phase(0~1 반복)에 따라 다리를 흔듦."""
     for k in ("머리", "몸", "왼팔", "오른팔", "왼다리", "오른다리"):
         rig[k].rotation_euler = (0, 0, 0)
+    if pose == "오르기":  # 사다리: 팔을 위로 번갈아, 다리도 번갈아
+        w = math.sin(phase * 2 * math.pi)
+        rig["왼팔"].rotation_euler = (math.radians(-150 - 25 * w), 0, 0)
+        rig["오른팔"].rotation_euler = (math.radians(-150 + 25 * w), 0, 0)
+        rig["왼다리"].rotation_euler = (math.radians(-35 * max(0, w)), 0, 0)
+        rig["오른다리"].rotation_euler = (math.radians(-35 * max(0, -w)), 0, 0)
+        return
     if pose in ("걷기", "달리기"):
         a = (30 if pose == "걷기" else 55) * amp
         w = math.sin(phase * 2 * math.pi)
@@ -537,6 +556,7 @@ def cmd_scene(scene_file, out, fancy=False):
     actors = []
     for a in S["인물"]:
         spec = dict(chars[a["이름"]])
+        spec.update(a.get("바꿈", {}))  # 이 장면에서만 바꿀 값(예: {"키": 1.0})
         if S.get("꼬마"):
             spec.setdefault("머리크기", float(S["꼬마"]) if not isinstance(S["꼬마"], bool) else 1.5)
         rig = build_character(a["이름"], spec)
@@ -599,6 +619,29 @@ def cmd_scene(scene_file, out, fancy=False):
             a = float(pr.get("반지름", 0.12)) / U
             box(f"조각{i}", (-a, -a, -a), (a, a, a), pr.get("색", "#8d8d8d"), root)
             root["돌기"] = float(pr.get("돌기", 12.0))
+        elif kind == "감옥":  # 앞쪽 창살 + 위·아래 틀(바닥 가운데가 기준). 위로 올리면 열림
+            w, h = float(pr.get("너비", 2.8)) / U / 2, float(pr.get("높이", 2.6)) / U
+            c = pr.get("색", "#5b5f73")
+            box(f"감옥위{i}", (-w, -9, h - 1.5), (w, 9, h), c, root)
+            box(f"감옥아래{i}", (-w, -9, 0), (w, 9, 1.0), c, root)
+            for sx in (-1, 1):
+                box(f"감옥기둥{i}{sx}", (sx * w - 1, -9, 0), (sx * w + 1, -7.5, h), c, root)
+            x = -w + 4
+            k = 0
+            while x < w - 2:
+                box(f"창살{i}_{k}", (x - 0.5, -9, 1.0), (x + 0.5, -8.2, h - 1.5), c, root)
+                x += 4
+                k += 1
+        elif kind == "하트":  # 픽셀 하트
+            pat = [".XX.XX.", "XXXXXXX", "XXXXXXX", ".XXXXX.", "..XXX..", "...X..."]
+            px_ = float(pr.get("크기", 0.18)) / U
+            for r_, row in enumerate(pat):
+                for c_, ch_ in enumerate(row):
+                    if ch_ == "X":
+                        x0 = (c_ - 3.5) * px_
+                        z0 = (len(pat) - r_) * px_
+                        box(f"하트{i}_{r_}_{c_}", (x0, -0.5, z0), (x0 + px_, 0.5, z0 + px_), pr.get("색", "#ff3366"), root,
+                            outline=False)
         elif kind == "글자":  # 점수 같은 글자(숫자·영어)
             cu = bpy.data.curves.new(f"글자{i}", "FONT")
             cu.body = pr.get("내용", "+100")
@@ -639,8 +682,8 @@ def cmd_scene(scene_file, out, fancy=False):
             yaw = _track([{"초": -1, "방향": a.get("방향", 0)}] + keys, t, "방향", a.get("방향", 0))
             pose = _pose_at(keys, t)
             ph = walk_phase.get(a["이름"], 0.0)
-            if pose in ("걷기", "달리기"):
-                ph += (1.0 if pose == "걷기" else 1.6) / fps
+            if pose in ("걷기", "달리기", "오르기"):
+                ph += {"걷기": 1.0, "달리기": 1.6, "오르기": 1.8}[pose] / fps
             walk_phase[a["이름"]] = ph
             apply_pose(rig, pose, ph)
             z = pos[2] if len(pos) > 2 else 0.0  # 위치에 높이(m)를 주면 발판 위에 섬
