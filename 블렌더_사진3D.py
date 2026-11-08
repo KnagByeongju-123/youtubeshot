@@ -31,6 +31,7 @@ AMT = float(argv[7]) if len(argv) > 7 and not argv[7].startswith("--") else 1.0
 def _opt(name):
     return argv[argv.index(name) + 1] if name in argv else ""
 FG, BG, MASK = _opt("--fg"), _opt("--bg"), _opt("--mask")      # 사진_앞층.py 가 오려 낸 앞층·메운 배경 (없으면 깊이 판 하나)
+FOCUS = [float(x) for x in _opt("--focus").split(",")] if _opt("--focus") else None   # 꼭 보여야 하는 곳 [x0,y0,x1,y1] 0~1 (사진_초점.py·Claude)
 LAYERED = bool(FG and BG and MASK and os.path.exists(FG) and os.path.exists(BG))
 FPS = 24
 AA = os.environ.get("BL_AA", "FXAA")
@@ -113,6 +114,12 @@ fit_w = min(PW, PH * aspect_out)                     # 판을 화면에 '꽉 차
 D0 = (fit_w * 0.90 / 2) / (cd.sensor_width / 2 / BASE_LENS)   # 10% 여유를 둔 기본 거리
 VW, VH = fit_w * 0.90, fit_w * 0.90 / aspect_out
 TX, TY = (PU - 0.5) * PW, (0.5 - PV) * PH            # 주인공 자리 (판 좌표)
+if FOCUS:                                            # 사진 밖(빈 곳)을 보여 줄 수는 없으니, 상자는 '꽉 차게 볼 수 있는 범위' 안으로 줄임
+    hx_, hy_ = (fit_w / PW) / 2 * 0.97, (fit_w / aspect_out / PH) / 2 * 0.97
+    FOCUS = [max(FOCUS[0], 0.5 - hx_), max(FOCUS[1], 0.5 - hy_), min(FOCUS[2], 0.5 + hx_), min(FOCUS[3], 0.5 + hy_)]
+if FOCUS:                                            # 주인공 자리 = 꼭 보여야 하는 곳의 가운데
+    PU, PV = (FOCUS[0] + FOCUS[2]) / 2, (FOCUS[1] + FOCUS[3]) / 2
+    TX, TY = (PU - 0.5) * PW, (0.5 - PV) * PH
 TZ = float(d[int(PV * (dh - 1)), int(PU * (dw - 1))]) * DEPTH_AMP
 A = AMT
 
@@ -159,6 +166,23 @@ def pose(t):
         loc, tgt, lm = spots[k]
         return (loc[0] + VW * 0.03 * f, loc[1] + VH * 0.01 * f, loc[2] - D0 * 0.03 * f), tgt, 0.0, lm
     return (0, 0, D0 * (1 - 0.1 * e)), (0, 0, 0), 0.0, 1.0
+
+
+def focus_in(loc, rot, lens):
+    """꼭 보여야 하는 상자의 네 귀퉁이가 화면 안(가장자리 4% 안쪽)에 있는지"""
+    if not FOCUS:
+        return True
+    m = rot.to_matrix().transposed()
+    half_w = cd.sensor_width / 2 / lens
+    half_h = half_w / aspect_out
+    for u, v in ((FOCUS[0], FOCUS[1]), (FOCUS[2], FOCUS[1]), (FOCUS[0], FOCUS[3]), (FOCUS[2], FOCUS[3])):
+        P = Vector(((u - 0.5) * PW, (0.5 - v) * PH, 0.0)) - Vector(loc)
+        c = m @ P
+        if c.z >= -1e-6:
+            return False
+        if abs(c.x / -c.z) > half_w * 0.99 or abs(c.y / -c.z) > half_h * 0.99:
+            return False
+    return True
 
 
 def covered(loc, rot, lens):
@@ -210,7 +234,18 @@ for f in range(N):
     loc, tgt, roll, lm = pose(t)
     rot = look(loc, tgt, roll)
     lens = BASE_LENS * lm
-    for _ in range(40):                              # 판 밖이 보이면 렌즈를 당김
+    for _ in range(80):                              # 판 밖이 보이면 렌즈를 당기고, 꼭 보여야 하는 곳이 밖으로 나가면 카메라를 뒤로 뺌
+        ok_c, ok_f = covered(loc, rot, lens), focus_in(loc, rot, lens)
+        if ok_c and ok_f:
+            break
+        if not ok_f:
+            loc = (loc[0] * 0.95, loc[1] * 0.95, min(loc[2] * 1.03, D0 / 0.9))
+            lens = max(lens / 1.015, BASE_LENS * 0.9)
+            tgt = (tgt[0] * 0.95 + (PU - 0.5) * PW * 0.05, tgt[1] * 0.95 + (0.5 - PV) * PH * 0.05, tgt[2])
+            rot = look(loc, tgt, roll)
+        else:
+            lens *= 1.03
+    for _ in range(60):                              # 그래도 판 밖(검은 빈 곳)이 보이면 그건 꼭 막음 (빈 곳이 더 나쁨)
         if covered(loc, rot, lens):
             break
         lens *= 1.03

@@ -6119,6 +6119,19 @@ class SubtitleRenderer:
         cx = big.width / 2 + (ax + (bx - ax) * p) * sx
         cy = big.height / 2 + (ay + (by - ay) * p) * sy
         l, tp = cx - cw / 2, cy - ch / 2
+        fb_ = self.focus_box(sh["img"])                # 꼭 보여야 하는 곳(날짜·글자·문맥상 주인공)은 확대·이동해도 화면 안에 (사용자 결정 2026-11-08)
+        if fb_:
+            fx0, fy0, fx1, fy1 = fb_[0] * big.width, fb_[1] * big.height, fb_[2] * big.width, fb_[3] * big.height
+            k_ = max((fx1 - fx0) / cw, (fy1 - fy0) / ch, 1.0)
+            if k_ > 1.0:                               # 상자가 더 크면 덜 확대 (사진 크기 안에서)
+                k_ = min(k_, big.width / cw, big.height / ch)
+                cx_, cy_ = l + cw / 2, tp + ch / 2
+                cw, ch = cw * k_, ch * k_
+                l, tp = cx_ - cw / 2, cy_ - ch / 2
+            l = min(max(l, fx1 - cw), fx0)
+            tp = min(max(tp, fy1 - ch), fy0)
+            l = min(max(l, 0.0), big.width - cw)
+            tp = min(max(tp, 0.0), big.height - ch)
         self._last_rect = (l, tp, l + cw, tp + ch)
         dbig = self._depth_for(sh["img"], big.size) if (getattr(self, "depth_on", False) and z < 1.22 and sh["img"] not in getattr(self, "no3d", ())) else None   # 확대(줌)된 장면은 2.5D 안 함 (가장자리 겹침이 더 잘 보임)
         if dbig is None:
@@ -6143,6 +6156,22 @@ class SubtitleRenderer:
         dcrop = extent_np(dbig, size_p, box)                                 # float32 0~255
         warped = parallax_warp_np(crop_pad, dcrop, ox, oy)
         return Image.fromarray(np.ascontiguousarray(warped[my:my + bh, mx:mx + bw])), mask
+
+    def focus_box(self, idx):
+        """<사진>.focus.json 의 상자 [x0, y0, x1, y1] (0~1) 또는 None — 사진_초점.py(글자 자동) 또는 Claude 가 문맥을 보고 적은 것"""
+        c_ = self.__dict__.setdefault("_focus_c", {})
+        if idx not in c_:
+            b_ = None
+            try:
+                paths_ = getattr(self, "img_paths", [])
+                if 0 <= idx < len(paths_) and os.path.exists(paths_[idx] + ".focus.json"):
+                    v_ = json.load(open(paths_[idx] + ".focus.json", encoding="utf-8")).get("box")
+                    if v_ and len(v_) == 4:
+                        b_ = [float(x) for x in v_]
+            except Exception:
+                b_ = None
+            c_[idx] = b_
+        return c_[idx]
 
     def faces_for(self, idx):
         """사진 속 사람 얼굴 [(x, y, w, h) 0~1] — 너무 작은 얼굴(가로 3.5% 미만)은 뺌. 왼쪽부터"""
@@ -6828,7 +6857,7 @@ _DEPTH_CACHE = {}
 _DEPTH_WARNED = set()
 _GRID_CACHE = {}
 DEPTH_AMP = {"약하게": (0.007, 0.003), "보통": (0.022, 0.010), "강하게": (0.035, 0.016)}   # 약하게는 아주 은은하게(기본)
-RENDER_VER = "2026-11-08c"   # 그리는 방식이 바뀌면 올림 → 장문 영상 구간 캐시를 새로 그림   # (가로, 세로) 최대 밀림 = 화면 크기 비율
+RENDER_VER = "2026-11-08d"   # 그리는 방식이 바뀌면 올림 → 장문 영상 구간 캐시를 새로 그림   # (가로, 세로) 최대 밀림 = 화면 크기 비율
 
 
 def depth_key(path):
@@ -6925,6 +6954,15 @@ def ensure_blender_clips(r, log=None, cancel=None):
         groups.setdefault(sh["img"], set()).add(g)
     paths = getattr(r, "img_paths", [])
     todo, ready = [], 0
+    need_ = [p_ for p_ in dict.fromkeys(paths) if p_ and os.path.exists(p_) and not os.path.exists(p_ + ".focus.json")]
+    if need_:                                        # 꼭 보여야 하는 곳(사진 속 글자) 자동으로 찾기 → 확대·카메라가 그 곳을 화면 밖으로 내보내지 않음
+        try:
+            subprocess.run([_supertonic_python(), "-X", "utf8", os.path.join(BASE, "사진_초점.py")] + need_, capture_output=True, timeout=1800,
+                           creationflags=(subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0))
+            r.__dict__.pop("_focus_c", None)
+            log(f"  🎯 사진 속 글자(꼭 보여야 하는 곳) 찾기: {sum(1 for p_ in need_ if r.focus_box(paths.index(p_)))}장 / {len(need_)}장")
+        except Exception as e_:
+            log("  초점 찾기 건너뜀: " + str(e_)[:80])
     order = sorted(groups, key=lambda i_: min(g_[1] for g_ in groups[i_]))
     elig = []                                       # Blender 로 만들 사진 (나오는 차례대로)
     for idx in order:
@@ -6970,7 +7008,7 @@ def ensure_blender_clips(r, log=None, cancel=None):
         path = paths[idx]
         sec = max(2.0, round((g1 - g0) * 2) / 2)
         lay = layers.get(idx, "")
-        out = os.path.join(BLENDER_DIR, f"{depth_key(path)}_{W_}x{H_}_{sec:.1f}_{moves[idx]}{'_L' if lay else ''}.mp4")
+        out = os.path.join(BLENDER_DIR, f"{depth_key(path)}_{W_}x{H_}_{sec:.1f}_{moves[idx]}{'_L' if lay else ''}{'_F' if r.focus_box(idx) else ''}.mp4")
         if os.path.exists(out) and os.path.getsize(out) > 1000:
             r.bl_clips[idx] = out
             ready += 1
@@ -6986,7 +7024,8 @@ def ensure_blender_clips(r, log=None, cancel=None):
         npy = os.path.join(DEPTH_DIR, depth_key(path) + ".npy")
         cmd = [exe, "-b", "-noaudio", "--factory-startup", "-P", os.path.join(BASE, "블렌더_사진3D.py"), "--",
                path, npy, out + ".part.mp4", str(sec), str(W_), str(H_), mv, "1.0"] + (
-               ["--fg", lay + "_fg.png", "--bg", lay + "_bg.png", "--mask", lay + "_mask.png"] if lay else [])
+               ["--fg", lay + "_fg.png", "--bg", lay + "_bg.png", "--mask", lay + "_mask.png"] if lay else []) + (
+               ["--focus", ",".join(f"{v_:.4f}" for v_ in r.focus_box(idx))] if r.focus_box(idx) else [])
         try:
             p = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=1800,
                                creationflags=(subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0))
