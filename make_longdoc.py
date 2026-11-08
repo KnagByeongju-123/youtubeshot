@@ -42,6 +42,8 @@ DEFAULT = {
     "제목_표시": "왼쪽 위 작게",      # 위 가운데 / 왼쪽 위 작게 / 숨김  (10분 다큐는 큰 제목이 화면을 가려 작게)
     "나레이션_먼저": True,          # 사용자 결정 2026-10-31: 대본 → 나레이션(문단마다 시간 기록) → 그 시간에 맞춰 그림 → 배경음·자막과 합치기 (그림 스타일일 때)
     "문단_최대_글자": 120,          # 나레이션 먼저일 때 이보다 긴 문단은 문장 끝에서 나눔 (약 15초) → 그림이 문단이 바뀔 때 바뀌어 박자가 맞음
+    "사진_입체": True,             # 사용자 결정 2026-11-07: 실제 사진 다큐는 풍경·유적 사진을 블렌더 입체 영상으로 (사진_입체영상.py, 장문다큐.md 4장)
+    "사진_입체_최대": 10,
     "그림_사용자점검": True,        # 사용자 결정 2026-10-31: 그림을 다 그리면 40장씩 모음(_그림점검_N.jpg)을 만들고 멈춤 → 점검 뒤 같은 명령에 --점검완료 를 붙여 이어서
     "나레이션_성우": "M1",          # 사용자 결정 2026-11-01: 남자 성우 1 (Supertonic M1, 예전 M4). '성우_프리셋'을 적으면 그것이 우선
     "자막": "보임",                 # 보임(기본, 사용자 결정 2026-10-31: 자막은 그대로) / 숨김(나레이션만)
@@ -87,6 +89,11 @@ SEG_SEC = 120
 
 T0 = time.time()
 LOG_FILE = os.path.join(HERE, "장문_진행기록.txt")
+
+
+def shutil_which(name):
+    import shutil
+    return shutil.which(name)
 
 
 def log(x):
@@ -943,6 +950,19 @@ def run_doc(m, app, c, gate):
     if "--영상제외" in sys.argv:            # 대본·나레이션·그림까지 이 서버에서 → 영상(합치기)은 다른 서버 (같은 명령을 --영상제외 없이 다시 실행하면 이어서)
         log("⏸ --영상제외: 대본·나레이션·그림까지 끝. output/장문 을 다른 서버로 옮겨 --영상제외 없이 같은 명령으로 이어서 하세요")
         raise SystemExit(0)
+
+    # 2.9) 실제 사진 입체 영상 (사용자 결정 2026-11-07, 장문다큐.md 4장): 풍경·유적 사진만 골라 '<사진>.입체.mp4' → 영상이 그 사진 자리에 씀
+    if not HISTORY and c.get("사진_입체", True) and m.photo_credits(story) and shutil_which("blender"):
+        import subprocess
+        pj_ = json.load(open(base + "_프로젝트.json", encoding="utf-8")) if os.path.exists(base + "_프로젝트.json") else {"title": title}
+        pj_["story"] = story
+        pj_["settings"] = {k: v for k, v in dict(pj_.get("settings") or {}, **dict(s, bgm_style=c["배경음"])).items() if k not in m.SECRET_KEYS}
+        m.atomic_write_text(base + "_프로젝트.json", json.dumps(pj_, ensure_ascii=False, indent=1))
+        log("🎥 사진 입체 영상(블렌더) 만드는 중... (풍경·유적 사진만, 한 장 1~2분)")
+        rc = subprocess.call([sys.executable, "-X", "utf8", "-u", os.path.join(HERE, "사진_입체영상.py"), base + "_프로젝트.json",
+                              "--최대", str(c.get("사진_입체_최대", 10))], cwd=HERE)
+        if rc:
+            log(f"  ⚠ 사진 입체 영상 실패 (코드 {rc}) — 평면 사진으로 계속")
 
     # 3) 영상 (5분 구간마다 저장 → 이어서)
     r = m.make_renderer(title, story, s, narr)
