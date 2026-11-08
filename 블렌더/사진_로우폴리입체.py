@@ -145,7 +145,7 @@ def shake(t, seed, amp):        # 손떨림처럼 불규칙한 흔들림 (주기
     return amp * (math.sin(t * 37.1 + seed) * 0.5 + math.sin(t * 61.7 + seed * 2.3) * 0.3 + math.sin(t * 97.3 + seed * 4.1) * 0.2)
 
 
-TELE = [(-14, 1.00, 0.6), (11, 0.74, -0.25), (-5, 0.58, 0.25), (16, 0.86, -0.45)]   # (각도, 거리 배율, 높이) — 순간이동 자리 4곳
+TELE = [(-10, 1.00, 0.5, 0.0, 0.0), (12, 0.86, 0.9, -0.22, 0.12), (-6, 0.82, 0.2, 0.22, 0.05), (14, 0.9, -0.3, 0.0, -0.1)]   # (각도, 거리 배율, 높이, 볼 곳 가로·세로(그림 크기 비율)) — 순간이동 자리 4곳
 
 
 def cam_at(t):        # t 0~1
@@ -164,10 +164,11 @@ def cam_at(t):        # t 0~1
         n = len(TELE)
         k = min(n - 1, int(t * n))
         u = t * n - k
-        a0, d0, h0 = TELE[k]
+        a0, d0, h0, tx, tz = TELE[k]
         ang = math.radians(a0 + 3 * u * (1 if k % 2 == 0 else -1))
         r = R0 * d0 * (1 - 0.05 * u)
-        cam.location = (r * math.sin(ang), -DEPTH * 0.4 - r * math.cos(ang), h0 + 0.15 * u)
+        tgt.location = (tx * PW, -DEPTH * 0.4, tz * PH)
+        cam.location = (tx * PW + r * math.sin(ang), -DEPTH * 0.4 - r * math.cos(ang), tz * PH + h0 + 0.15 * u)
         return
     if CAM == "orbit":     # 전진 + 오르빗: 왼쪽에서 시작해 오른쪽으로 돌면서 거리 25% 줄이고 살짝 내려옴
         e = ease(t)
