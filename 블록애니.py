@@ -28,6 +28,10 @@
   픽셀(옛날 게임) 모드: "픽셀": 6, "꼬마": 1.5, "배경": "레트로", "무대": {"바닥": [-12,12], "발판": [[x0,x1,높이]],
     "사다리": [[x, 아래, 위]]}, 카메라에 "직교": 14 (옆에서 평평하게, 화면 가로 14m)
   자세: 서기 | 걷기 | 달리기 | 주먹 | 가리키기 | 놀람 | 팔짱 | 쓰러짐 | 활쏘기 | 맞음 | 만세 | 광선 | 점프
+  소리(자동, 레트로소리.py): 화살 → 활·맞음, 광선 → 광선(맞히면 "맞힘": true), 점프·놀람·쓰러짐 동작 → 그 소리.
+    더 넣기: "효과음": [{"초": 1.0, "소리": "착지"}, {"초": 7, "소리": "승리"}]
+    (착지 놀람 활 맞음 광선 점프 쓰러짐 승리 동전 주먹), 배경음: "배경음": {"곡": "레트로전투", "크기": 0.35, "끝": 6.9}
+    (끝 = 그 초에 배경음이 줄어들며 멈춤), 소리를 빼려면 "소리": false
   날아가는 물체: "물체": [{"모양": "화살" | "광선", "색": 색, "동작": [{"초": 3, "위치": [x,y,z]}, {"초": 3.5, "위치": [...]}]}]
   방향: 도(°). 0 = 카메라 쪽(-Y)을 봄, 90 = 오른쪽(+X)을 봄. 위치는 m (캐릭터 키 약 2m).
   동작 사이의 위치는 부드럽게 이어짐(걷기·달리기는 그동안 다리를 움직임).
@@ -561,10 +565,40 @@ def cmd_scene(scene_file, out, fancy=False):
         bpy.ops.render.render(write_still=True)
         if f % fps == 0:
             print(f"  {f}/{n} 장", flush=True)
-    subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-framerate", str(fps), "-i",
-                    os.path.join(tmpd, "%05d.png")]
-                   + (["-vf", f"scale=iw*{px}:ih*{px}:flags=neighbor"] if px else []) + ["-c:v", "libx264", "-pix_fmt", "yuv420p",
-                    "-crf", "12", "-tune", "animation", out], check=True)
+    # 소리: 날아가는 물체·동작에서 자동 효과음 + 장면 파일의 "효과음" + 8비트 배경음 (레트로소리.py)
+    audio = None
+    if S.get("소리", True):
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        import 레트로소리 as RS
+        ev = [(float(e["초"]), e["소리"]) for e in S.get("효과음", [])]
+        if S.get("자동효과음", True):
+            for pr in S.get("물체", []):
+                ks = sorted(pr["동작"], key=lambda k: k["초"])
+                kind = pr.get("모양", "화살")
+                ev.append((ks[0]["초"], "활" if kind == "화살" else "광선"))
+                if pr.get("맞힘", kind == "화살"):
+                    ev.append((ks[-1]["초"], "맞음"))
+            auto = {"점프": "점프", "쓰러짐": "쓰러짐", "놀람": "놀람"}
+            for a, rig, keys in actors:
+                prev = "서기"
+                for k in keys:
+                    if "자세" in k:
+                        if k["자세"] in auto and k["자세"] != prev and k["초"] > 0:
+                            ev.append((k["초"], auto[k["자세"]]))
+                        prev = k["자세"]
+        bg = S.get("배경음", {"곡": "레트로전투"})
+        x = RS.mix(sec, ev, music=bg.get("곡") if bg else None, music_vol=float(bg.get("크기", 0.35)) if bg else 0,
+                   music_end=bg.get("끝") if bg else None)
+        audio = os.path.join(tmpd, "소리.wav")
+        RS.write_wav(audio, x)
+        print("  효과음:", ", ".join(f"{t:.1f}초 {n}" for t, n in sorted(ev)))
+    cmd = ["ffmpeg", "-y", "-loglevel", "error", "-framerate", str(fps), "-i", os.path.join(tmpd, "%05d.png")]
+    if audio:  # 입력(그림·소리)을 먼저, 그다음 출력 설정
+        cmd += ["-i", audio, "-map", "0:v", "-map", "1:a", "-c:a", "aac", "-b:a", "192k", "-shortest"]
+    if px:
+        cmd += ["-vf", f"scale=iw*{px}:ih*{px}:flags=neighbor"]
+    cmd += ["-c:v", "libx264", "-pix_fmt", "yuv420p", "-crf", "12", "-tune", "animation", out]
+    subprocess.run(cmd, check=True)
     print("영상 저장:", out)
 
 
