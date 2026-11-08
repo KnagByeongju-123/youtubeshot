@@ -202,7 +202,17 @@ def read_korean(t):
     t = t.replace("㎢", " 제곱킬로미터").replace("㎡", " 제곱미터")   # 360만㎡ → '에크'로 읽힘 (2026-11-01). 숫자 바로 뒤가 아니어도
     if re.search(r"\d", t):
         t = ko_numbers(t)
+    t = yak_apart(t)
     return t
+
+
+def yak_apart(t):
+    """'약 만 칠천'처럼 '약' 뒤 낱말이 ㄴ·ㅁ 소리로 시작하면 성우가 '양만'으로 붙여 읽음 → '약,' 으로 살짝 끊어 띄어 들리게
+    (사용자 지적 2026-11-08, 라스코 편. '대략'으로 바꾸면 '대량만'으로 똑같이 붙음. 자막은 그대로 '약')"""
+    def rep(m_):
+        c = ord(m_.group(1)) - 0xAC00
+        return ("약, " if 0 <= c < 11172 and c // 588 in (2, 6) else "약 ") + m_.group(1)
+    return re.sub(r"(?<![가-힣])약 ([가-힣])", rep, t)
 
 
 def say(text):
