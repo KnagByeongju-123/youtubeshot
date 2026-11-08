@@ -28,7 +28,7 @@ STILL = "--still" in argv
 ZOOM = float(opt("--zoom", 1.0))          # 카메라 거리 배율 (작을수록 가까이 → 가장자리 빈 곳 안 보임)
 SMOOTH = "--smooth" in argv
 KEY = "--key" in argv                     # 빈 곳(배경·뒤판)을 자홍색으로 → 사진_입체영상.py 가 가장자리 까짐을 찾아 잘라 냄
-CAM = opt("--cam", "sway")                # sway = 좌우로 흔들기 / orbit = 앞으로 다가가며 한쪽으로 돌아감 (사용자 제안 2026-11-07)
+CAM = opt("--cam", "sway")   # sway·orbit·fpv(FPV 드론)·teleport(멈춘 시간 순간이동)                # sway = 좌우로 흔들기 / orbit = 앞으로 다가가며 한쪽으로 돌아감 (사용자 제안 2026-11-07)
 ARC = float(opt("--arc", 22))             # orbit 때 도는 각도(도)               # 삼각형 대신 사진을 그대로 입힌 부드러운 입체 (다큐용)
 os.makedirs(OUT, exist_ok=True)
 
@@ -141,7 +141,34 @@ def ease(x):
     return x * x * (3 - 2 * x)
 
 
+def shake(t, seed, amp):        # 손떨림처럼 불규칙한 흔들림 (주기가 다른 사인파 셋)
+    return amp * (math.sin(t * 37.1 + seed) * 0.5 + math.sin(t * 61.7 + seed * 2.3) * 0.3 + math.sin(t * 97.3 + seed * 4.1) * 0.2)
+
+
+TELE = [(-14, 1.00, 0.6), (11, 0.74, -0.25), (-5, 0.58, 0.25), (16, 0.86, -0.45)]   # (각도, 거리 배율, 높이) — 순간이동 자리 4곳
+
+
 def cam_at(t):        # t 0~1
+    if CAM == "fpv":       # FPV 드론(고글 화면): 빠르게 앞으로 날며 좌우로 기울고(롤) 잔떨림 (사용자 제안 2026-11-08)
+        tc.mute = True
+        y = -DEPTH * 0.4 - R0 + R0 * 0.62 * t
+        x = 0.9 * math.sin(2 * math.pi * t * 0.8) + shake(t, 1, 0.05)
+        z = 0.35 * math.sin(2 * math.pi * t * 0.5 + 1) + shake(t, 2, 0.04) - 0.1
+        roll = math.radians(7) * math.sin(2 * math.pi * t * 0.8 + 0.6) + shake(t, 3, math.radians(0.8))
+        yaw = -math.radians(4) * math.sin(2 * math.pi * t * 0.8) + shake(t, 4, math.radians(0.4))
+        pitch = shake(t, 5, math.radians(0.5))
+        cam.location = (x, y, z)
+        cam.rotation_euler = (math.radians(90) + pitch, roll, yaw)
+        return
+    if CAM == "teleport":  # 멈춘 시간·순간이동: 3~4 자리를 순간적으로 옮겨 가며, 자리마다 천천히 흘러감
+        n = len(TELE)
+        k = min(n - 1, int(t * n))
+        u = t * n - k
+        a0, d0, h0 = TELE[k]
+        ang = math.radians(a0 + 3 * u * (1 if k % 2 == 0 else -1))
+        r = R0 * d0 * (1 - 0.05 * u)
+        cam.location = (r * math.sin(ang), -DEPTH * 0.4 - r * math.cos(ang), h0 + 0.15 * u)
+        return
     if CAM == "orbit":     # 전진 + 오르빗: 왼쪽에서 시작해 오른쪽으로 돌면서 거리 25% 줄이고 살짝 내려옴
         e = ease(t)
         ang = math.radians(ARC) * (e - 0.5) * 2
