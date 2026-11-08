@@ -27,7 +27,11 @@ H = int(argv[5]) if len(argv) > 5 else 540
 MOVE = argv[6] if len(argv) > 6 else "right"
 if MOVE.isdigit():                                   # 예전 번호 방식 호환
     MOVE = ["right", "left", "drone", "zoomout"][int(MOVE) % 4]
-AMT = float(argv[7]) if len(argv) > 7 else 1.0
+AMT = float(argv[7]) if len(argv) > 7 and not argv[7].startswith("--") else 1.0
+def _opt(name):
+    return argv[argv.index(name) + 1] if name in argv else ""
+FG, BG, MASK = _opt("--fg"), _opt("--bg"), _opt("--mask")      # 사진_앞층.py 가 오려 낸 앞층·메운 배경 (없으면 깊이 판 하나)
+LAYERED = bool(FG and BG and MASK and os.path.exists(FG) and os.path.exists(BG))
 FPS = 24
 AA = os.environ.get("BL_AA", "FXAA")
 
@@ -35,7 +39,7 @@ bpy.ops.wm.read_factory_settings(use_empty=True)
 scn = bpy.context.scene
 
 # ── 사진·깊이 ──
-img = bpy.data.images.load(img_path)
+img = bpy.data.images.load(BG if LAYERED else img_path)
 iw, ih = img.size
 aspect_img = iw / ih
 d = np.load(depth_path).astype(np.float32)
@@ -44,6 +48,21 @@ for _ in range(3):                                   # 깊이를 부드럽게 (�
     p = np.pad(d, 2, mode="edge")
     d = sum(p[i:i + d.shape[0], j:j + d.shape[1]] for i in range(5) for j in range(5)) / 25.0
 dh, dw = d.shape
+if LAYERED:                                          # 배경 판의 깊이에서 앞층 자리는 둘레 깊이로 메움 (앞층은 따로 세움)
+    from PIL import Image as _PI
+    mk = np.asarray(_PI.open(MASK).convert("L").resize((dw, dh)), np.float32) / 255.0
+    hole = mk > 0.05
+    if hole.any() and (~hole).any():
+        ring = np.zeros_like(hole)                       # 앞층 바로 둘레의 깊이
+        for dy_ in (-4, 0, 4):
+            for dx_ in (-4, 0, 4):
+                ring |= np.roll(np.roll(hole, dy_, 0), dx_, 1)
+        ring &= ~hole
+        fillv = float(np.median(d[ring])) if ring.any() else float(np.median(d[~hole]))
+        d = np.where(hole, fillv, d)
+        for _ in range(4):
+            p = np.pad(d, 3, mode="edge")
+            d = sum(p[i:i + dh, j:j + dw] for i in range(7) for j in range(7)) / 49.0
 
 # 주인공 자리 = 가까운 곳(깊이 상위 8%)의 가운데, 가장자리 쪽이면 안으로 당김
 thr = np.quantile(d, 0.92)
@@ -157,6 +176,31 @@ def covered(loc, rot, lens):
             return False
     return True
 
+
+if LAYERED:                                          # 앞층: 배경보다 카메라 쪽에 세운 투명 판. 시작 자리에서 볼 때 사진과 똑같이 겹치게 줄여 둠
+    FZ = 0.22 * PW * AMT
+    loc0 = pose(0.0)[0]
+    kz = (loc0[2] - FZ) / loc0[2]
+    fimg = bpy.data.images.load(FG)
+    bpy.ops.mesh.primitive_grid_add(x_subdivisions=2, y_subdivisions=2, size=1.0, calc_uvs=True)
+    fo = bpy.context.active_object
+    for v in fo.data.vertices:
+        X, Y = v.co.x * PW, v.co.y * PH
+        v.co.x = loc0[0] + (X - loc0[0]) * kz
+        v.co.y = loc0[1] + (Y - loc0[1]) * kz
+        v.co.z = FZ
+    fm = bpy.data.materials.new("fg")
+    fm.use_nodes = True
+    fm.blend_method = "CLIP"
+    fm.alpha_threshold = 0.5
+    fnt = fm.node_tree
+    ft = fnt.nodes.new("ShaderNodeTexImage")
+    ft.image = fimg
+    ft.extension = "CLIP"
+    fb = fnt.nodes.get("Principled BSDF")
+    fnt.links.new(ft.outputs["Color"], fb.inputs["Base Color"])
+    fnt.links.new(ft.outputs["Alpha"], fb.inputs["Alpha"])
+    fo.data.materials.append(fm)
 
 N = int(round(SEC * FPS))
 scn.frame_start, scn.frame_end = 1, N

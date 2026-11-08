@@ -272,7 +272,7 @@ UI_TABS = [
     ("🎨 글꼴·색", "all", ["font_path", "title_font_path", "text_color", "title_color", "accent_color", "quote_color", "shadow", "stroke_width"]),
     ("🔤 자막 디자인", "sub", ["style_preset", "sub_layout", "head_pos", "color_preset", "sub_box_color", "sub_box_alpha", "head_style", "head_size",
                             "head_show", "sub_size", "sub_font_path", "sub_style", "sub_split", "sub_dialog", "sub_anim", "sub_max_chars", "sec_per_char"]),
-    ("🖼 사진·장면", "sub", ["img_fill", "img_motion", "img_depth", "img_depth_amt", "img_blender", "img_face_tp", "img_trans_paint", "img_filter", "shot_sec", "punch_in", "img_frame", "img_bg", "photo_count", "img_radius"]),
+    ("🖼 사진·장면", "sub", ["img_fill", "img_motion", "img_depth", "img_depth_amt", "img_blender", "img_layers", "img_face_tp", "img_trans_paint", "img_filter", "shot_sec", "punch_in", "img_frame", "img_bg", "photo_count", "img_radius"]),
     ("📜 스크롤 글자", "scroll", ["font_size", "title_size", "line_gap", "para_gap", "margin_x", "margin_right", "align", "photo_h",
                               "speed", "target_sec"]),
     ("📜 스크롤 효과", "scroll", ["fade", "focus", "focus_dim", "focus_y", "ease"]),
@@ -549,6 +549,7 @@ FIELDS = [
     ("자막형", "img_filter", "사진 필터(포토샵풍 · 모든 그림·사진에 덧씌움)", "choice:없음,연필 스케치,색연필,수채화,유화,컷아웃(포스터화),하프톤(망점),펜화(선),목탄,카툰,크라프트지 질감", "없음"),
     ("자막형", "img_depth_amt", "입체 움직임 세기(카메라 무빙)", "choice:약하게,보통,강하게", "약하게"),   # 세게 하면 가장자리 사물이 겹쳐 보임
     ("자막형", "img_blender", "사진 3D 를 Blender 진짜 카메라로(설치돼 있을 때, 느림)", "choice:on,off", "off"),
+    ("자막형", "img_layers", "Blender 3D: 사진 앞쪽 주인공을 오려 배경 앞에 세움(rembg)", "choice:on,off", "on"),
     ("자막형", "img_face_tp", "사람 사진: 얼굴 사이 순간이동(넓게 → 얼굴1 → 얼굴2, 3D 안 함)", "choice:on,off", "off"),
     ("자막형", "img_trans_paint", "사진 바뀔 때 물감 뿌리기 전환(빨간 물감 테두리, 채널 시그니처)", "choice:on,off", "off"),
     ("자막형", "shot_sec", "한 장면 최대 길이(초)", "float", 4.5),
@@ -6827,7 +6828,7 @@ _DEPTH_CACHE = {}
 _DEPTH_WARNED = set()
 _GRID_CACHE = {}
 DEPTH_AMP = {"약하게": (0.007, 0.003), "보통": (0.022, 0.010), "강하게": (0.035, 0.016)}   # 약하게는 아주 은은하게(기본)
-RENDER_VER = "2026-11-08b"   # 그리는 방식이 바뀌면 올림 → 장문 영상 구간 캐시를 새로 그림   # (가로, 세로) 최대 밀림 = 화면 크기 비율
+RENDER_VER = "2026-11-08c"   # 그리는 방식이 바뀌면 올림 → 장문 영상 구간 캐시를 새로 그림   # (가로, 세로) 최대 밀림 = 화면 크기 비율
 
 
 def depth_key(path):
@@ -6924,36 +6925,12 @@ def ensure_blender_clips(r, log=None, cancel=None):
         groups.setdefault(sh["img"], set()).add(g)
     paths = getattr(r, "img_paths", [])
     todo, ready = [], 0
-    # 카메라 움직임 (장문다큐.md 7장 규칙): 장면마다 바꿔 지루하지 않게, 같은 움직임이 두 장면 넘게 이어지지 않게.
-    # 풍경(깊이가 위→아래로 고르게 가까워짐) = drone·right·left·fpv, 유물·물건 = push·orbit·zoomout·freeze, 마지막 사진 = zoomout(멀어지며 끝)
-    LAND, OBJ = ["drone", "right", "left", "fpv"], ["push", "orbit", "zoomout", "freeze"]
     order = sorted(groups, key=lambda i_: min(g_[1] for g_ in groups[i_]))
-    moves, recent, li_, oi_ = {}, [], 0, 0
-    for n_, idx in enumerate(order):
-        dep = load_depth(paths[idx]) if idx < len(paths) else None
-        land = False
-        if dep is not None:
-            rows = dep.mean(axis=1)
-            land = rows.std() > 1e-6 and float(np.corrcoef(rows, np.arange(len(rows)))[0, 1]) > 0.6
-        if n_ == len(order) - 1:
-            mv = "zoomout"
-        else:
-            pool, k0 = (LAND, li_) if land else (OBJ, oi_)
-            mv = pool[k0 % len(pool)]
-            for k_ in range(len(pool)):
-                mv = pool[(k0 + k_) % len(pool)]
-                if mv not in recent[-1:]:
-                    break
-            if land:
-                li_ += 1
-            else:
-                oi_ += 1
-        moves[idx] = mv
-        recent.append(mv)
-    for idx, gs in groups.items():
+    elig = []                                       # Blender 로 만들 사진 (나오는 차례대로)
+    for idx in order:
+        gs = groups[idx]
         if len(gs) != 1 or idx >= len(paths):      # 같은 사진이 떨어진 두 곳에 나오면 프로그램 방식 그대로
             continue
-        _, g0, g1 = next(iter(gs))
         path = paths[idx]
         try:
             with Image.open(path) as im_:
@@ -6967,23 +6944,49 @@ def ensure_blender_clips(r, log=None, cancel=None):
             continue
         if getattr(r, "face_tp_on", False) and r.faces_for(idx):    # 사람이 나오는 실제 사진은 3D 로 바꾸지 않음 (얼굴 순간이동)
             continue
+        elig.append(idx)
+    # 카메라 움직임은 장면마다 돌아가며 (사용자 결정 2026-11-08): 직진 → 오르빗 → 줌아웃 → 순간이동 → 드론 → 옆으로 → 1인칭 드론 → 반대쪽
+    CYCLE = ["push", "orbit", "zoomout", "freeze", "drone", "right", "fpv", "left"]
+    moves = {idx: CYCLE[n_ % len(CYCLE)] for n_, idx in enumerate(elig)}
+    # 앞층(주인공) 오려 내기 (사용자 결정 2026-11-08, rembg): 앞층은 배경 앞에 세우고 배경 빈자리는 둘레 색으로 메움
+    layers = {}
+    if elig and str(r.s.get("img_layers", "on")) == "on":
+        lay_dir = os.path.join(BLENDER_DIR, "layers")
+        try:
+            pr_ = subprocess.run([_supertonic_python(), "-X", "utf8", os.path.join(BASE, "사진_앞층.py"), lay_dir] + [paths[i_] for i_ in elig],
+                                 capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=3600,
+                                 creationflags=(subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0))
+            for ln in (pr_.stdout or "").splitlines():
+                if ln.startswith("OK "):
+                    parts_ = ln.split(" ")
+                    fgp = next((x for x in parts_ if x.endswith("_fg.png")), "")
+                    if fgp:
+                        layers[next(i_ for i_ in elig if ln.startswith("OK " + paths[i_] + " "))] = fgp[:-7]
+            log(f"  ✂ 앞층(주인공) 오려 냄: {len(layers)}장 / {len(elig)}장 (나머지는 풍경·배경만이라 깊이 판 하나)")
+        except Exception as e_:
+            log("  앞층 오려 내기 건너뜀: " + str(e_)[:100])
+    for idx in elig:
+        _, g0, g1 = next(iter(groups[idx]))
+        path = paths[idx]
         sec = max(2.0, round((g1 - g0) * 2) / 2)
-        out = os.path.join(BLENDER_DIR, f"{depth_key(path)}_{W_}x{H_}_{sec:.1f}_{moves.get(idx, 'right')}.mp4")
+        lay = layers.get(idx, "")
+        out = os.path.join(BLENDER_DIR, f"{depth_key(path)}_{W_}x{H_}_{sec:.1f}_{moves[idx]}{'_L' if lay else ''}.mp4")
         if os.path.exists(out) and os.path.getsize(out) > 1000:
             r.bl_clips[idx] = out
             ready += 1
         else:
-            todo.append((idx, path, out, sec, moves.get(idx, "right")))
+            todo.append((idx, path, out, sec, moves[idx], lay))
     if todo:
         os.makedirs(BLENDER_DIR, exist_ok=True)
         log(f"  🎥 Blender 3D 카메라 영상 {len(todo)}개 만드는 중... ({W_}×{H_}, 사진 한 장(8초)에 약 20초, 한 번만) · 움직임 "
             + " ".join(f"{mv_}{sum(1 for v_ in moves.values() if v_ == mv_)}" for mv_ in dict.fromkeys(moves.values())))
-    for k_, (idx, path, out, sec, mv) in enumerate(todo):
+    for k_, (idx, path, out, sec, mv, lay) in enumerate(todo):
         if cancel is not None and cancel.is_set():
             raise RuntimeError("취소됨")
         npy = os.path.join(DEPTH_DIR, depth_key(path) + ".npy")
         cmd = [exe, "-b", "-noaudio", "--factory-startup", "-P", os.path.join(BASE, "블렌더_사진3D.py"), "--",
-               path, npy, out + ".part.mp4", str(sec), str(W_), str(H_), mv, "1.0"]
+               path, npy, out + ".part.mp4", str(sec), str(W_), str(H_), mv, "1.0"] + (
+               ["--fg", lay + "_fg.png", "--bg", lay + "_bg.png", "--mask", lay + "_mask.png"] if lay else [])
         try:
             p = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=1800,
                                creationflags=(subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0))
