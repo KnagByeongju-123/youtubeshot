@@ -3860,6 +3860,20 @@ def save_auto_thumb(r, base):
 DESC_MAX = 5000      # (참고) 유튜브 설명란 한도 5,000바이트 - 실제 맞추기는 유튜브_정책.fit_description
 
 
+def music_credit_lines(s=None):
+    """음악 파일 배경음(케빈 맥러드 등, CC BY)의 설명란 출처 줄. 음악 파일 폴더의 출처.txt 에서 '설명란' 줄 다음부터 (사용자 결정 2026-11-08)"""
+    s = s or SCRIPT_ENGINE.get("s") or {}
+    if str(s.get("bgm_mode", "")) != "파일" or not s.get("bgm_path"):
+        return []
+    f = os.path.join(os.path.dirname(str(s["bgm_path"])), "출처.txt")
+    try:
+        ls = open(f, encoding="utf-8").read().splitlines()
+    except OSError:
+        return []
+    k = next((i for i, l in enumerate(ls) if "설명란" in l), -1)
+    return [l for l in ls[k + 1:] if l.strip()]
+
+
 def description_text(pkg, story, portrait=False, max_sources=8):
     """유튜브 설명란에 그대로 붙여넣는 완성본: 설명 + 챕터 + 주요 출처 + 사진 출처 + 해시태그"""
     head = [str(pkg.get("description", "")).strip()]
@@ -3884,6 +3898,9 @@ def description_text(pkg, story, portrait=False, max_sources=8):
             ls += ["", "📚 출처"] + [f"- {x}" for x in src_]
         if cred_:
             ls += ["", "🖼 사진 출처"] + cred_ + ([f"외 {more_}장 (출처는 영상 속 사진 아래 표기)"] if more_ else [])
+        mc_ = music_credit_lines()
+        if mc_:
+            ls += ["", "🎵 음악"] + mc_
         if tags:
             ls += ["", tags]
         return "\n".join(ls).strip() + "\n"

@@ -62,14 +62,16 @@ def fit_description(text, limit=DESC_MAX_BYTES):
             return None, None
         i = lines.index(title)
         j = i + 1
-        while j < len(lines) and lines[j].strip() and not lines[j].startswith(("📚", "🖼", "#")):
+        while j < len(lines) and lines[j].strip() and not lines[j].startswith(("📚", "🖼", "🎵", "#")):
             j += 1
         return i, j
     tag_i = max((k for k, ln in enumerate(lines) if ln.startswith("#")), default=None)
     tags = lines[tag_i] if tag_i is not None else ""
     si, sj = sec("📚 출처")
     pi, pj = sec("🖼 사진 출처")
-    first = min([x for x in (si, pi, tag_i) if x is not None] + [len(lines)])
+    mi, mj = sec("🎵 음악")                      # 음악 출처(CC BY 필수)는 줄이지 않음
+    music = lines[mi + 1:mj] if mi is not None else []
+    first = min([x for x in (si, pi, mi, tag_i) if x is not None] + [len(lines)])
     head = lines[:first]
     srcs = lines[si + 1:sj] if si is not None else []
     creds = lines[pi + 1:pj] if pi is not None else []
@@ -80,6 +82,8 @@ def fit_description(text, limit=DESC_MAX_BYTES):
             out += ["", "📚 출처"] + s_ + ([f"외 {more_s}건 (업로드문구 파일 참고)"] if more_s else [])
         if c_ or more_c:
             out += ["", "🖼 사진 출처"] + c_ + ([f"외 {more_c}장 (출처는 영상 속 사진 아래 표기)"] if more_c else [])
+        if music:
+            out += ["", "🎵 음악"] + music
         if tags:
             out += ["", tags]
         return re.sub(r"\n{3,}", "\n\n", "\n".join(out)).strip() + "\n"
