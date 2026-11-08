@@ -75,7 +75,8 @@ def person(M,tag,kind='man',s=1.0,skirt='tapa2',tool=None):
     legR=M.group(tag+'leg_right',O([-2,12,0]),[c('leg',[-4,0,-2],[0,12,2],'skin',down='skin_d')])
     armL=M.group(tag+'arm_left',O([6,22,0]),[c('arm',[4,12,-2],[8,24,2],'skin'),M.group(tag+'hand_l',O([6,12.5,0]),[])])
     armRk=[c('arm',[-8,12,-2],[-4,24,2],'skin')]
-    face={'atu':'face_atu','mata':'face_mata','man':'face_man','man2':'face_man2'}[kind]
+    face={'atu':'face_atu','mata':'face_mata','man':'face_man','man2':'face_man2',
+          'merer':'face_merer','worker':'face_worker','worker2':'face_worker2','ankhhaf':'face_ankh'}[kind]
     hair='grey' if kind=='mata' else 'hair'
     hk=[c('head',[-4,24,-4],[4,32,4],'skin',north=face,up=hair),
         c('hair_back',[-4.2,26,1],[4.2,32.2,4.2],hair), c('hair_top',[-4.2,31.2,-4.2],[4.2,32.4,4.2],hair)]
@@ -90,6 +91,17 @@ def person(M,tag,kind='man',s=1.0,skirt='tapa2',tool=None):
         armRk+= [c('staff',[-7,-2,-6],[-5,30,-4],'wood')]
     if kind in ('man','man2'):
         hk+= [c('headband',[-4.4,29,-4.4],[4.4,30.4,4.4],'band')]
+    if kind in ('merer','ankhhaf'):   # 이집트 가발(단발) + 넓은 목걸이
+        hk+= [c('wig_l',[3.8,24.5,-4.4],[4.8,32.6,4.6],'hair'),c('wig_r',[-4.8,24.5,-4.4],[-3.8,32.6,4.6],'hair'),
+              c('wig_b',[-4.8,24,3.6],[4.8,32.6,4.8],'hair'),c('wig_t',[-4.8,31.4,-4.6],[4.8,33,4.8],'hair')]
+        body+= [c('collar',[-4.3,20.5,-2.4],[4.3,24,2.4],'collar' if kind=='merer' else 'gold')]
+    if kind=='ankhhaf':
+        body+= [c('kilt_long',[-4.5,4,-2.5],[4.5,9,2.5],'linen')]
+        armRk+= [c('staff',[-7,-2,-6],[-5,30,-4],'gold')]
+    if kind=='merer':
+        armRk+= [c('scroll',[-7.5,11,-3.5],[-4.5,13,1.5],'papyrus')]
+    if kind=='worker2':
+        hk+= [c('headcloth',[-4.4,29.5,-4.4],[4.4,32.6,4.4],'linen')]
     if tool=='axe': armRk+= [c('axe_h',[-6.6,8,-1],[-5.4,14,0],'wood'), c('axe_s',[-7.5,6,-3.5],[-4.5,9,0],'stone_t')]
     armR=M.group(tag+'arm_right',O([-6,22,0]),armRk+[M.group(tag+'hand_r',O([-6,12.5,0]),[])])
     head=M.group(tag+'head',O([0,24,0]),hk)
@@ -185,3 +197,56 @@ def find(g, name):
         if isinstance(c,dict):
             r=find(c,name)
             if r: return r
+
+
+# ---------------- 고대 이집트 ----------------
+def egypt_palette(M):
+    M.swatch('skin',(176,118,74),4); M.swatch('skin_d',(150,98,60),4); M.swatch('skin_t',(160,106,66),4)
+    M.swatch('hair',(22,20,22),4); M.swatch('grey',(200,200,195),5)
+    M.swatch('linen',(240,236,222),4); M.swatch('linen2',lambda x,y:(240,236,222) if y%5 else (200,190,170),3)
+    M.swatch('collar',lambda x,y:[(40,90,170),(230,190,60),(200,60,50),(40,150,130)][(y//4)%4],3)
+    M.swatch('gold',(225,185,60),8); M.swatch('papyrus',(225,210,160),5)
+    M.swatch('wood',(130,90,50),6); M.swatch('wood_d',(100,68,38),6); M.swatch('stone_t',(90,90,95),8)
+    M.swatch('lime',(236,232,220),6); M.swatch('lime_d',(210,204,188),8); M.swatch('core',(200,170,120),12)
+    M.swatch('sail',lambda x,y:(235,228,205) if x%6 else (205,195,170),3); M.swatch('rope',(200,170,110),6)
+    M.swatch('jar',(170,90,55),6); M.swatch('band',(185,50,40),5); M.swatch('shell',(245,240,225),4)
+    def face(name,hair,top_rows=3,young=False,brow=True):
+        def fn(d,x,y):
+            d.rectangle([x,y,x+15,y+15],fill=(176,118,74)); d.rectangle([x,y,x+15,y+top_rows-1],fill=hair)
+            for ex in (2,10):
+                d.rectangle([x+ex,y+6,x+ex+3,y+9],fill=(255,255,255)); d.rectangle([x+ex+1,y+7,x+ex+3,y+9],fill=(25,20,20))
+                if brow: d.rectangle([x+ex,y+4,x+ex+3,y+4],fill=hair)
+            d.rectangle([x+7,y+9,x+8,y+11],fill=(150,98,60)); d.rectangle([x+5,y+13,x+10,y+13],fill=(120,60,50))
+            if young: d.rectangle([x+1,y+11,x+2,y+11],fill=(200,120,95)); d.rectangle([x+13,y+11,x+14,y+11],fill=(200,120,95))
+        M.paint(name,fn)
+    face('face_merer',(22,20,22),3); face('face_worker',(60,50,45),2); face('face_worker2',(22,20,22),3,young=True); face('face_ankh',(22,20,22),3)
+
+def boat(M,tag,L=150,W=34,cargo=3):
+    """옛 이집트 화물선: 양 끝이 들린 나무 배 + 돛대·네모 돛 + 키 노 + 석회암 돌. 길이는 z 방향, 뱃머리 = -z"""
+    k=[]; _cube=M.cube
+    class _M:   # x↔z 바꿔서 만듦 (뱃머리 +x → -z)
+        def cube(self,n,fr,to,col): return _cube(n,[fr[2],fr[1],-to[0]],[to[2],to[1],-fr[0]],col)
+    M=_M()
+    for i,(x0,x1,y0,y1,w) in enumerate([(-L/2+16,L/2-16,0,8,W),(-L/2+6,L/2-6,4,12,W-8),(-L/2,L/2,9,15,W-16)]):
+        k.append(M.cube('hull',[x0,y0,-w/2],[x1,y1,w/2],'wood' if i!=1 else 'wood_d'))
+    k+= [M.cube('bow',[L/2-4,12,-5],[L/2+4,26,5],'wood'), M.cube('stern',[-L/2-4,12,-5],[-L/2+4,30,5],'wood'),
+         M.cube('deck',[-L/2+16,8,-W/2+2],[L/2-16,9,W/2-2],'wood_d'),
+         M.cube('mast',[-2,8,-2],[2,90,2],'wood'), M.cube('yard',[-2,86,-30],[2,89,30],'wood'), M.cube('yard2',[-2,40,-30],[2,42,30],'wood'),
+         M.cube('sail',[-0.6,42,-29],[0.6,86,29],'sail'),
+         M.cube('rudder',[-L/2-12,4,-2],[-L/2+6,22,2],'wood_d')]
+    for j in range(cargo):
+        x=-L/2+28+j*30
+        if abs(x)<8: x+=14
+        k.append(M.cube('stone',[x,9,-9],[x+20,25,9],'lime'))
+    return Model.group(tag+'root',[0,0,0],k+[Model.group(tag+'bow_a',[0,20,-L/2],[])])
+
+def stone_block(M,tag,x=0,y=0,z=0,s=1.0):
+    return M.group(tag,[x,y,z],[M.cube('blk',[x-10*s,y,z-9*s],[x+10*s,y+16*s,z+9*s],'lime')])
+
+def pyramid(M,tag,cx,cz,base=640,step=12,layers=None,casing=True):
+    """계단식으로 쌓은 피라미드 (casing=True 면 하얀 겉돌, False 면 누런 속돌). layers=None 이면 꼭대기까지"""
+    k=[]; n=int(base/2/step); n=n if layers is None else min(n,layers)
+    for i in range(n):
+        h=base/2-i*step
+        k.append(M.cube('p',[cx-h,i*step*0.95,cz-h],[cx+h,(i+1)*step*0.95,cz+h],'lime' if casing else ('core' if i%2 else 'lime_d')))
+    return M.group(tag,[cx,0,cz],k)
