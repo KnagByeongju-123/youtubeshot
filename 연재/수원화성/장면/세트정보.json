@@ -1,0 +1,92 @@
+{
+ "A": {
+  "ropes": []
+ },
+ "B": {
+  "ropes": [
+   [
+    "gj_up0",
+    "gj_lo0"
+   ],
+   [
+    "gj_up1",
+    "gj_lo1"
+   ],
+   [
+    "gj_up2",
+    "gj_lo2"
+   ],
+   [
+    "gj_up3",
+    "gj_lo3"
+   ],
+   [
+    "gj_drumL",
+    "gj_up0"
+   ],
+   [
+    "gj_drumR",
+    "gj_up3"
+   ],
+   [
+    "nk_top",
+    "nk_hook"
+   ],
+   [
+    "nk_drum",
+    "nk_top"
+   ]
+  ]
+ },
+ "C": {
+  "ropes": [
+   [
+    "f_st_top",
+    "f_wl"
+   ],
+   [
+    "f_wr",
+    "f_hand"
+   ],
+   [
+    "m_beam",
+    "m_low_l"
+   ],
+   [
+    "m_low_r",
+    "m_tl"
+   ],
+   [
+    "m_tr",
+    "m_hand"
+   ],
+   [
+    "gj_up0",
+    "gj_lo0"
+   ],
+   [
+    "gj_up1",
+    "gj_lo1"
+   ],
+   [
+    "gj_up2",
+    "gj_lo2"
+   ],
+   [
+    "gj_up3",
+    "gj_lo3"
+   ],
+   [
+    "gj_drumL",
+    "gj_up0"
+   ],
+   [
+    "gj_drumR",
+    "gj_up3"
+   ]
+  ]
+ },
+ "D": {
+  "ropes": []
+ }
+}
