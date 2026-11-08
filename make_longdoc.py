@@ -795,13 +795,11 @@ def run_doc(m, app, c, gate):
                 m.atomic_write_text(base + "_프로젝트.json", json.dumps(pj_, ensure_ascii=False, indent=1))
             except Exception:
                 pass
-    if HISTORY:                                # 역사 편: 입체 움직임(2.5D) 끔 — 그리는 효과와 겹치고 없는 게 나음 (사용자 결정 2026-10-30)
-        s["img_depth"] = "off"
+    if HISTORY:
         s["bgm_mul"] = 0.5                     # 배경음 50% (사용자 결정 2026-10-31, 나레이션 크기는 그대로)
         try:
             pj_ = json.load(open(base + "_프로젝트.json", encoding="utf-8"))
-            pj_.setdefault("settings", {})["img_depth"] = "off"
-            pj_["settings"]["bgm_mul"] = 0.5
+            pj_.setdefault("settings", {})["bgm_mul"] = 0.5
             m.atomic_write_text(base + "_프로젝트.json", json.dumps(pj_, ensure_ascii=False, indent=1))
         except Exception:
             pass
@@ -816,8 +814,6 @@ def run_doc(m, app, c, gate):
 
     # 2) 나레이션 (문단마다 저장 → 이어서)
     log("🎙 나레이션 만드는 중... (이미 만든 문단은 건너뜀)")
-    if hasattr(m, "ensure_depth_maps") and str(s.get("img_depth", "off")) == "on":
-        m.ensure_depth_maps(m.story_photo_paths(story), log)
     narr = app.narration_for(story, s, lambda x: None, gate)
     log(f"나레이션 완성: {len(narr)}문단 · {sum(d for _, _, d in narr) / 60:.1f}분")
     narr_checked = False
@@ -900,7 +896,7 @@ def run_doc(m, app, c, gate):
             last[0] = p
             log(f"  MP4 {p}%")
     import hashlib
-    key = hashlib.md5((story + "|" + getattr(m, "RENDER_VER", "") + "|" + json.dumps({k: s.get(k) for k in ("fps", "format", "layout", "img_fill", "img_motion", "img_depth", "img_depth_amt", "head_style", "head_pos", "head_size", "head_show", "sub_style", "sub_size", "sub_layout", "sub_dialog", "sub_anim", "sub_split", "sub_hide", "style_preset", "text_color", "sub_box_alpha",
+    key = hashlib.md5((story + "|" + getattr(m, "RENDER_VER", "") + "|" + json.dumps({k: s.get(k) for k in ("fps", "format", "layout", "img_fill", "img_motion", "head_style", "head_pos", "head_size", "head_show", "sub_style", "sub_size", "sub_layout", "sub_dialog", "sub_anim", "sub_split", "sub_hide", "style_preset", "text_color", "sub_box_alpha",
                                                                          "font_path", "title_font_path", "bgm_volume", "intro_sec", "outro_sec", "outro_text", "img_filter", "motion_count", "motion_chart", "motion_icon", "motion_lower", "motion_popup")}, ensure_ascii=False)
                        + "|" + title + "|" + ",".join(f"{d_:.3f}" for _, _, d_ in narr) + "|" + ",".join(f"{sg_['t0']:.2f}" for sg_ in getattr(r, "segs", [])) + f"|{r.duration:.2f}" + getattr(r, "fx_sig", "")).encode("utf-8")).hexdigest()   # 나레이션이 바뀌면(발음 수정 등) 영상 구간도 새로
     m.export_mp4_resumable(r, base + ".mp4", prog, gate, audio, work_dir=os.path.join(work, "영상구간"), seg_sec=SEG_SEC, log=log, key=key)

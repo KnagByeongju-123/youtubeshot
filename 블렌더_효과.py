@@ -10,10 +10,10 @@ r"""Blender 로 만드는 영상 효과 (사용자 결정 2026-11-08, 홀리 편
       사람 얼굴이 보이면 하지 않고 얼굴 순간이동(<사진>.얼굴.json)을 만듦 (사용자 결정: 사람 사진은 진짜 사진 그대로)
   python 블렌더_효과.py 얼굴 <사진>...           얼굴 찾기만 → <사진>.얼굴.json (OpenCV YuNet, Apache-2.0)
   python 블렌더_효과.py 프로젝트 <프로젝트.json> [--크게]
-      사람이 없는 실제 사진(<프로젝트>.사람없음.txt 에 Claude 가 눈으로 확인해 적은 것)만 앞뒤 두 층으로(사용자 결정 2026-11-08): rembg 로 주인공(부조·건물·물건 …)을 오려 앞층,
+      모든 실제 사진을 앞뒤 두 층으로(사용자 결정 2026-11-08, 사람 사진도): rembg 로 주인공(사람·인형·성·부조 …)을 오려 앞층,
       빈자리를 둘레 색으로 메운 뒤층 → Blender 카메라가 움직이면 앞뒤가 다른 속도로 움직여 입체로 보임.
       카메라 움직임은 사진마다 차례로: 직진 → 오르빗 → 줌아웃 → 순간이동(얼굴이 있으면 얼굴로) → 드론 → 옆으로 → 1인칭드론 → 반대쪽
-      오림이 조각조각 깨지면 사진 한 장 판으로 같은 움직임. 사람 사진은 3D 로 안 바꾸고 얼굴만 찾음(→ 영상에서 얼굴 순간이동)
+      오림이 조각조각 깨지면(군중) 사진 한 장 판으로 같은 움직임. 순간이동 차례에 얼굴이 있으면 넓게 → 얼굴 클로즈업으로 컷
 
 --크게 가 없으면 작은 화질(640×360, 적은 샘플)로 먼저 만들어 검토 (사용자 결정 2026-11-08: 작은 화질 먼저 → 검토 → 크게)
 """
@@ -251,23 +251,16 @@ def project(pj_path, only_missing=True):
     for imgs, chars in groups:
         for im in imgs:
             todo.append((im, max(6.0, chars * sec_per_char / len(imgs) * 1.25)))
-    allow_p = os.path.splitext(pj_path)[0] + ".사람없음.txt"     # Claude 가 눈으로 '사람 없음'을 확인한 사진 이름 (한 줄에 하나)
-    if not os.path.exists(allow_p):
-        raise SystemExit(f"먼저 {allow_p} 에 사람이 없는 사진 파일 이름을 적으세요 (사람 사진은 진짜 사진 그대로 · 얼굴 순간이동)")
-    allow = {ln.strip() for ln in open(allow_p, encoding="utf-8") if ln.strip() and not ln.startswith("#")}
     k = 0
     for im, sec in todo:
         p = im if os.path.isabs(im) else (os.path.join(HERE, im) if os.path.exists(os.path.join(HERE, im)) else os.path.join(base, im))
         if not os.path.exists(p) or os.path.basename(p).startswith("blender_"):
             continue
-        if os.path.basename(p) not in allow:
-            if not os.path.exists(p + ".얼굴.json"):
-                save_faces(p)
-            continue
         move = MOVES[k % len(MOVES)]
         k += 1
-        if only_missing and os.path.exists(os.path.join(p + ".clip", "clip.json")):
-            continue
+        cj = os.path.join(p + ".clip", "clip.json")
+        if only_missing and os.path.exists(cj) and json.load(open(cj)).get("move") == move:
+            continue                                            # 이미 같은 움직임으로 만든 것은 건너뜀
         if not os.path.exists(p + ".얼굴.json"):
             save_faces(p)
         layers3d(p, round(sec, 1), move)

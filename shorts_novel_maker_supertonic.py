@@ -272,7 +272,7 @@ UI_TABS = [
     ("🎨 글꼴·색", "all", ["font_path", "title_font_path", "text_color", "title_color", "accent_color", "quote_color", "shadow", "stroke_width"]),
     ("🔤 자막 디자인", "sub", ["style_preset", "sub_layout", "head_pos", "color_preset", "sub_box_color", "sub_box_alpha", "head_style", "head_size",
                             "head_show", "sub_size", "sub_font_path", "sub_style", "sub_split", "sub_dialog", "sub_anim", "sub_max_chars", "sec_per_char"]),
-    ("🖼 사진·장면", "sub", ["img_fill", "img_motion", "img_depth", "img_depth_amt", "img_filter", "shot_sec", "punch_in", "img_frame", "img_bg", "photo_count", "img_radius"]),
+    ("🖼 사진·장면", "sub", ["img_fill", "img_motion", "img_filter", "shot_sec", "punch_in", "img_frame", "img_bg", "photo_count", "img_radius"]),
     ("📜 스크롤 글자", "scroll", ["font_size", "title_size", "line_gap", "para_gap", "margin_x", "margin_right", "align", "photo_h",
                               "speed", "target_sec"]),
     ("📜 스크롤 효과", "scroll", ["fade", "focus", "focus_dim", "focus_y", "ease"]),
@@ -457,7 +457,6 @@ def genre_profile(genre, fiction=None):
          "fonts": genre_fonts(genre, _GENRE_SUB_OF.get(genre, "지식 다큐(아래 흰 자막)")),
          "head_pos": "숨김" if fiction else "왼쪽 위 작게",
          "sub_dialog": "대사 앞에 - 표시(영화 자막처럼)" if fiction else "없음",
-         "img_depth": "on", "img_depth_amt": "약하게",
          "research": not fiction, "autophoto": True, "minutes": 10}
     if fiction:
         p["fiction_image"] = "로컬 그림 생성(무료 · 이 PC · 느림)" if sd_ready() else "분위기 웹 사진 찾기"
@@ -546,9 +545,7 @@ FIELDS = [
     ("자막형", "motion_icon", "모션: 강조 아이콘(체크·경고 등장)", "choice:on,off", "off"),
     ("자막형", "motion_lower", "모션: 로어서드(챕터 제목 띠가 슬라이드)", "choice:on,off", "off"),
     ("자막형", "motion_popup", "모션: 키워드 팝업(핵심어·대사가 튀어나옴)", "choice:on,off", "off"),
-    ("자막형", "img_depth", "사진 입체 움직임(2.5D · 깊이 AI, 앞뒤가 다르게 움직임)", "choice:on,off", "on"),
     ("자막형", "img_filter", "사진 필터(포토샵풍 · 모든 그림·사진에 덧씌움)", "choice:없음,연필 스케치,색연필,수채화,유화,컷아웃(포스터화),하프톤(망점),펜화(선),목탄,카툰,크라프트지 질감", "없음"),
-    ("자막형", "img_depth_amt", "입체 움직임 세기(카메라 무빙)", "choice:약하게,보통,강하게", "약하게"),   # 세게 하면 가장자리 사물이 겹쳐 보임
     ("자막형", "shot_sec", "한 장면 최대 길이(초)", "float", 4.5),
     ("자막형", "img_fill", "사진 배치", "choice:전체 화면(글자가 사진 위에),가운데 상자", "전체 화면(글자가 사진 위에)"),
     ("자막형", "img_bg", "상자 모드: 뒤 배경을 사진 흐림으로", "choice:on,off", "on"),
@@ -5401,8 +5398,6 @@ class SubtitleRenderer:
             self.img_box = (int(W * 0.18), int(H * 0.21), int(W * 0.82), int(H * 0.80))
             self.sub_box = (m, int(H * 0.82), W - m, int(H * 0.97))
         self.slide = str(s.get("img_fill", "")).startswith("슬라이드")
-        self.depth_on = (not self.slide) and str(s.get("img_depth", "off")) == "on" and _cv2 is not None and depth_ready()
-        self._depth_big = {}
         self.slide_full = self.slide and not self.port and s.get("slide_full", "on") == "on"
         self.sub_pill = False
         if self.slide_full:   # PPT 발표: 슬라이드가 화면 가득, 자막은 화면 안 아래쪽 (반투명 상자 위)
@@ -6095,29 +6090,7 @@ class SubtitleRenderer:
         cy = big.height / 2 + (ay + (by - ay) * p) * sy
         l, tp = cx - cw / 2, cy - ch / 2
         self._last_rect = (l, tp, l + cw, tp + ch)
-        dbig = self._depth_for(sh["img"], big.size) if (getattr(self, "depth_on", False) and z < 1.22) else None   # 확대(줌)된 장면은 2.5D 안 함 (가장자리 겹침이 더 잘 보임)
-        if dbig is None:
-            return extent_resize(big, (bw, bh), (l, tp, l + cw, tp + ch)), mask
-        # 2.5D 카메라 무빙: 장면이 진행되는 동안 한쪽으로 천천히 돌아가며(드리프트) + 7초 주기로 살짝 흔들림. 가까운 것은 많이, 먼 것은 조금 밀림
-        amt = str(self.s.get("img_depth_amt", "약하게"))
-        ax_, ay_ = DEPTH_AMP.get(amt, DEPTH_AMP["약하게"])
-        if amt.startswith("약"):                                   # 약하게 = 맨 처음 방식 그대로 (9초 주기로 살짝 흔들림, 드리프트 없음)
-            ph = 2 * np.pi * t / 9.0
-            ox, oy = bw * 0.007 * np.sin(ph), bh * 0.003 * np.sin(ph * 0.5 + 1.0)
-        else:                                                      # 보통·강하게 = 장면 동안 한쪽으로 도는 드리프트 + 7초 흔들림
-            ph = 2 * np.pi * t / 7.0
-            ox = bw * ax_ * (0.55 * np.sin(ph) + 0.75 * (2 * p - 1))
-            oy = bh * ay_ * np.sin(ph * 0.5 + 1.0)
-        zk = 1.0 / max(1.0, float(z)) ** 1.5                          # 확대(줌)된 장면은 밀림을 줄임 (클로즈업에서 겹침이 더 잘 보임)
-        ox, oy = ox * zk, oy * zk
-        mx, my = int(bw * ax_ * 1.4) + 2, int(bh * ay_ * 1.4) + 2          # 밀린 만큼 바깥 여유를 미리 잘라 두면 가장자리가 안 깨짐
-        ex, ey = cw * mx / bw, ch * my / bh
-        box = (l - ex, tp - ey, l + cw + ex, tp + ch + ey)
-        size_p = (bw + 2 * mx, bh + 2 * my)
-        crop_pad = extent_np(img_np(big), size_p, box)                       # uint8 (PIL 변환 없이)
-        dcrop = extent_np(dbig, size_p, box)                                 # float32 0~255
-        warped = parallax_warp_np(crop_pad, dcrop, ox, oy)
-        return Image.fromarray(np.ascontiguousarray(warped[my:my + bh, mx:mx + bw])), mask
+        return extent_resize(big, (bw, bh), (l, tp, l + cw, tp + ch)), mask
 
     def _piece_of(self, idx, t):
         """그 그림이 지금 보이는 구간 (시작, 끝)"""
@@ -6202,22 +6175,6 @@ class SubtitleRenderer:
         l = min(max(0.0, cx - w_ / 2), IW - w_)
         tp = min(max(0.0, cy - h_ / 2), IH - h_)
         return extent_resize(im.convert("RGB"), (bw, bh), (l, tp, l + w_, tp + h_))
-
-    def _depth_for(self, idx, size):
-        """idx 사진의 깊이 지도를 큰 사진 크기의 L 이미지로 (캐시)"""
-        if idx in self._depth_big:
-            return self._depth_big[idx]
-        paths = getattr(self, "img_paths", [])
-        d = load_depth(paths[idx]) if idx < len(paths) else None
-        im = None
-        if d is not None:
-            im = _cv2.resize((d * 255.0).astype(np.float32), (int(size[0]), int(size[1])), interpolation=_cv2.INTER_LINEAR)
-            k_ = max(1, size[0] // 400) * 2 + 1
-            im = _cv2.GaussianBlur(im, (k_, k_), 0)                              # 경계가 딱 끊기지 않게 (float32 0~255)
-        if len(self._depth_big) >= 6:
-            self._depth_big.pop(next(iter(self._depth_big)))
-        self._depth_big[idx] = im
-        return im
 
     def _slide_no(self, idx):
         m = re.match(r"\s*슬라이드 (\d+)", str(self.images[idx][1] or "")) if 0 <= idx < len(self.images) else None
@@ -15033,7 +14990,7 @@ class App(tk.Tk):
             self.vars["style_preset"].set(p["style_preset"])
             self.apply_style_preset()
         def put():
-            for k in ("head_pos", "sub_dialog", "img_depth", "img_depth_amt", "fiction_image", "image_style_preset"):
+            for k in ("head_pos", "sub_dialog", "fiction_image", "image_style_preset"):
                 if k in p and k in self.vars:
                     self.vars[k].set(p[k])
         put()
@@ -18360,8 +18317,6 @@ class App(tk.Tk):
                     log(f"  ⏭ 장면 {k + 1}/{N} 이미 완료 - 건너뜀: {first}")
                 else:
                     log(f"🎬 장면 {k + 1}/{N} 만드는 중: {first}")
-                    if str(sk.get("img_depth", "off")) == "on":
-                        ensure_depth_maps(story_photo_paths(text_k), log, self.cancel)
                     narr_a = self.narration_for(text_k, sk, log, self.cancel)
                     r = make_renderer(title, text_k, sk, narr_a)
                     if k == 0:
@@ -18429,8 +18384,6 @@ class App(tk.Tk):
 
         def job():
             nonlocal r
-            if str(s.get("layout", "")).startswith("자막형") and str(s.get("img_depth", "off")) == "on":
-                ensure_depth_maps(story_photo_paths(story_now), self.log_bg, self.cancel)
             if (str(s.get("layout", "")).startswith("자막형") and str(s.get("scene_parts", "on")) == "on" and s.get("narration") == "on"
                     and not str(s.get("narr_file", "")).strip() and not (getattr(self, "para_audio", {}) or {})):
                 return self._make_mp4_scenes(story_now, title_now, s, style, base, out, kit, prog)

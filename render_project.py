@@ -107,7 +107,7 @@ def main(a):
     app.update()
     s = app.get_settings()
     if str(genre).startswith("[실화] 기록으로 보는 진짜 역사"):   # 연재 화면 규칙(필수): 자막 스타일을 불러오면 '위 큰 제목'이 다시 보임으로 덮여서 매번 강제
-        for k_, v_ in {"head_show": "안 보임(제목 카드만)", "sub_split": "한 줄씩(문장·쉼표로 나눠 차례로)", "img_label": "off", "img_depth": "off"}.items():
+        for k_, v_ in {"head_show": "안 보임(제목 카드만)", "sub_split": "한 줄씩(문장·쉼표로 나눠 차례로)", "img_label": "off"}.items():
             app.vars[k_].set(v_)
         s = app.get_settings()
     title, story = app.title_var.get().strip() or "제목 없음", app.get_story()
@@ -177,8 +177,6 @@ def main(a):
             pass
         return 0
     log("🎙 나레이션 만드는 중... (이미 만든 문단은 건너뜀)")
-    if hasattr(m, "ensure_depth_maps") and str(s.get("img_depth", "off")) == "on":
-        m.ensure_depth_maps(m.story_photo_paths(story), log)
     narr = app.narration_for(story, s, log, gate)
     log(f"나레이션 완성: {len(narr)}문단 · {sum(d for _, _, d in narr) / 60:.1f}분")
     if getattr(m, "_NV", None) is not None and m._NV.REPORT:     # 문단별 나레이션 검증 기록
@@ -217,7 +215,7 @@ def main(a):
         if p >= last[0] + 5:
             last[0] = p
             log(f"  MP4 {p}%")
-    keys = ("fps", "format", "layout", "img_fill", "img_motion", "img_depth", "img_depth_amt", "head_style", "head_pos", "head_size", "head_show", "sub_style",
+    keys = ("fps", "format", "layout", "img_fill", "img_motion", "head_style", "head_pos", "head_size", "head_show", "sub_style",
             "sub_size", "sub_layout", "sub_dialog", "sub_anim", "sub_split", "sub_hide", "style_preset", "text_color", "sub_box_alpha", "font_path", "title_font_path", "bgm_volume", "intro_sec", "outro_sec", "outro_text", "img_filter", "motion_count", "motion_chart", "motion_icon", "motion_lower", "motion_popup", "sub_trans", "sub2_above")
     key = hashlib.md5((story + "|" + getattr(m, "RENDER_VER", "") + "|" + json.dumps({k: s.get(k) for k in keys}, ensure_ascii=False) + "|" + title + "|" + ",".join(f"{d_:.3f}" for _, _, d_ in narr) + "|" + ",".join(f"{sg_['t0']:.2f}" for sg_ in getattr(r, "segs", [])) + f"|{r.duration:.2f}" + getattr(r, "fx_sig", "")).encode("utf-8")).hexdigest()   # 나레이션이 바뀌면(발음 수정 등) 영상 구간도 새로
     m.export_mp4_resumable(r, base + ".mp4", prog, gate, audio, work_dir=os.path.join(work, vdir), seg_sec=120, log=log, key=key)
