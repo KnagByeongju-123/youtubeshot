@@ -14,6 +14,9 @@ xvfb-run -a python -X utf8 사진_입체영상.py <프로젝트.json> [--최대 
   - 한 장에 1~2분 (블렌더 단순 그리기, 영상 길이 = 그 사진이 나오는 시간, 최대 16초 → 넘으면 늘여 씀)
   - 가장자리 까짐 검사(사용자 지적 2026-11-07, 필수): 블렌더가 빈 곳을 투명으로 저장(--key) → 모든 장면에서 빈 곳이 안 보일 만큼 가운데 확대(+3%, 최소 8%)
     → 확대한 화면을 6장마다 다시 검사. 1.32배 넘게 잘라야 하면 카메라를 당겨 다시 → 흔들기로 다시 → 그래도 안 되면 평면(입체 안 씀)
+  - ★ 두 층 입체(사용자 결정 2026-11-08, 기본): 공간 통과가 아닌 입체 사진은 먼저 `사진_층입체.py` — 앞쪽 주인공(사람·인형·성 …)을 rembg(bria-rmbg)로 오려 앞층,
+    빈자리는 둘레 색으로 메운 뒤층, 블렌더가 앞층을 배경 앞에 세워 찍음. 카메라는 장면마다 직진→오르빗→줌아웃→순간이동→드론→옆으로→1인칭→반대쪽 차례로.
+    주인공이 조각나거나 너무 작거나(3%)·크면(85%) 위의 깊이 입체로. --깊이만: 두 층을 쓰지 않음
   - --다시: 이미 있는 .입체.mp4 도 다시 만듦, --보기: 고르기만 하고 만들지 않음"""
 import json
 import math
@@ -32,6 +35,7 @@ PORTRAIT_WORDS = ("초상", "얼굴", "인물", "사진 속", "모습")   # 인�
 THIN_WORDS = ("탑", "첨탑", "기둥", "미나렛", "오벨리스크", "등대", "종탑", "돛대")
 DEPTH_MODEL = os.path.join(HERE, "models", "depth_anything_v2_small_fp16.onnx")
 DEPTH_URL = "https://huggingface.co/onnx-community/depth-anything-v2-small/resolve/main/onnx/model_fp16.onnx"
+LAYER_MOVES = ["직진", "오르빗", "줌아웃", "순간이동", "드론", "옆으로", "1인칭", "반대쪽"]   # 두 층 입체 카메라, 장면마다 이 차례 (사용자 결정 2026-11-08)
 SD_PY = os.path.join(HERE, ".sd_venv", "bin", "python")
 ST_PY = os.path.join(HERE, ".supertonic_venv", "bin", "python")
 
@@ -197,6 +201,7 @@ def main(a):
     most = int(a[a.index("--최대") + 1]) if "--최대" in a else 10
     n_pass = int(a[a.index("--통과") + 1]) if "--통과" in a else 2
     redo, look = "--다시" in a, "--보기" in a
+    no_layer = "--깊이만" in a
     from PIL import Image
     ensure_model()
     work = os.path.join(os.path.dirname(proj), "_입체작업")
@@ -280,10 +285,21 @@ def main(a):
         if os.path.exists(outp):
             open(outp + ".사람", "w").write("사람 사이 순간이동")      # 표시 (입체가 아닌 사람 영상)
             print("  완성 (사람 순간이동)", os.path.basename(c["path"]), r.stdout.strip().split("OK")[-1][-60:])
+    lay_k = 0
     for i, c in enumerate(pick, 1):
         if os.path.exists(c["path"] + ".입체.mp4") and not redo:
             continue
         shutil.rmtree(os.path.join(work, "층"), ignore_errors=True)
+        if c["mode"] != "통과" and not no_layer:    # ★ 두 층 입체(사용자 결정 2026-11-08): 주인공을 rembg 로 오려 앞층, 카메라는 장면마다 차례로
+            mv = LAYER_MOVES[lay_k % len(LAYER_MOVES)]
+            outp = c["path"] + ".입체.mp4"
+            r = subprocess.run(["xvfb-run", "-a", ST_PY, "-X", "utf8", os.path.join(HERE, "사진_층입체.py"), c["src"], outp, "--움직임", mv, "--초", f"{c['secs']:.2f}"],
+                               capture_output=True, text=True)
+            if os.path.exists(outp) and "OK" in r.stdout:
+                lay_k += 1
+                print(f"  [{i}/{len(pick)}] 완성 (두 층·{mv}) {os.path.basename(c['path'])}.입체.mp4 — {r.stdout.strip().splitlines()[-1][-40:]}")
+                continue
+            print(f"  [{i}/{len(pick)}] 주인공을 깔끔히 못 오려 깊이 입체로 {os.path.basename(c['path'])}")
         md = render(c["src"], c["npy"], c["mode"], c["secs"], work, out=c["path"] + ".입체.mp4")
         if md:
             print(f"  [{i}/{len(pick)}] 완성 ({md}) {os.path.basename(c['path'])}.입체.mp4 — 가장자리 빈 곳 검사 통과")

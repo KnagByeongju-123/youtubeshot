@@ -44,9 +44,9 @@ def main(a):
         if 0 < f0 < f1 < n:
             wins.append((f0, f1, k))
     print("전환", len(wins), "곳:", ", ".join(f"{f0 / fps:.1f}초" for f0, _, _ in wins))
-    tmp = out + ".video.mp4"
     p = subprocess.Popen(["ffmpeg", "-nostdin", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "bgr24", "-s", f"{W}x{H}", "-r", str(fps),
-                          "-i", "-", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-crf", "19", "-preset", "veryfast", tmp], stdin=subprocess.PIPE)
+                          "-i", "-", "-i", src, "-map", "0:v", "-map", "1:a?", "-c:a", "copy",          # 소리는 원본에서 바로 (파일을 한 번만 씀 — 디스크 절약)
+                          "-c:v", "libx264", "-pix_fmt", "yuv420p", "-crf", "20", "-preset", "veryfast", out], stdin=subprocess.PIPE)
     i, wi = 0, 0
     buf = None
     while True:
@@ -76,8 +76,6 @@ def main(a):
         i += 1
     p.stdin.close()
     p.wait()
-    subprocess.run(["ffmpeg", "-nostdin", "-v", "error", "-y", "-i", tmp, "-i", src, "-map", "0:v", "-map", "1:a?", "-c:v", "copy", "-c:a", "copy", out], check=True)
-    os.remove(tmp)
     print("OK", out)
 
 
