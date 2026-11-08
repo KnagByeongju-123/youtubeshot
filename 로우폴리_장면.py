@@ -1,6 +1,6 @@
 """로우폴리 장면 — 그림 한 장 → '그리는 효과' 뒤 로우폴리 입체 카메라 움직임 영상 (장문 다큐, 사용자 결정 2026-11-08)
 
-  python -X utf8 로우폴리_장면.py <그림> <인물 마스크.png 또는 - 또는 빨강> <결과.mp4> --초 9.5 [--움직임 right|left|push|orbit|zoomout|drone] [--그리는효과 3.5] [--조각 15000,10000] [--기준점 0.5,0.4]
+  python -X utf8 로우폴리_장면.py <그림> <인물 마스크.png 또는 - 또는 빨강> <결과.mp4> --초 9.5 [--움직임 right|left|push|orbit|zoomout|drone|fpv|freeze] [--그리는효과 3.5] [--조각 15000,10000] [--기준점 0.5,0.4]
   - 움직임(영상미, 사용자 결정 2026-11-08): push = 앞층(토마토·인물) 사이 틈으로 곧장 날아 통과, orbit = 주인공 둘레 돌기, zoomout = 바짝 붙었다 빠지기, drone = 내려다보며 날기
   - 마스크 자리에 '빨강'을 주면 붉은 토마토를 저절로 찾아 앞층으로 (토마토 사이 직진 통과용)
   - 기준점: push 는 지나갈 틈, orbit·zoomout 은 주인공 가운데 (그림 안 비율). 안 주면 저절로 (push = 앞층이 없는 가장 넓은 빈틈, 그 밖 = 앞층 가운데)
@@ -90,7 +90,7 @@ def main(argv):
     H_, W_ = im.shape[:2]
     if a.기준점:
         pu, pv = (float(x) for x in a.기준점.split(","))
-    elif m is not None and m.any() and a.움직임 == "push":   # 앞층이 없는 가장 넓은 빈틈 (가운데 쪽)
+    elif m is not None and m.any() and a.움직임 in ("push", "fpv"):   # 앞층이 없는 가장 넓은 빈틈 (가운데 쪽)
         dist = cv2.distanceTransform((~m).astype(np.uint8), cv2.DIST_L2, 5)
         yy, xx = np.mgrid[0:H_, 0:W_]
         dist = dist * (1 - 0.85 * np.hypot((xx / W_ - .5) * 2, (yy / H_ - .5) * 2).clip(0, 1))   # 가운데 가까운 틈
@@ -110,9 +110,14 @@ def main(argv):
     move = os.path.join(work, "move.mp4")
     r = subprocess.run(["xvfb-run", "-a", "blender", "-b", "-P", os.path.join(HERE, "로우폴리_블렌더.py"), "--", js, move,
                         f"{a.초 - draw:.2f}", str(RW), str(RH), a.움직임,
-                        a.앞층거리 or ("8" if a.움직임 == "push" else "2.6"), f"{pu:.3f}", f"{pv:.3f}"], capture_output=True, text=True)
+                        a.앞층거리 or ("8" if a.움직임 in ("push", "fpv") else "3.5" if a.움직임 == "freeze" else "2.6"), f"{pu:.3f}", f"{pv:.3f}"], capture_output=True, text=True)
     if "DONE" not in r.stdout:
         sys.exit("블렌더 실패: " + (r.stdout + r.stderr)[-800:])
+    if a.움직임 == "fpv":                                   # 고글 촬영 느낌: 살짝 볼록한 광각 렌즈 + 가장자리 어둡게
+        fx = os.path.join(work, "fpv.mp4")
+        subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", move, "-vf", "lenscorrection=k1=0.12:k2=0.04,scale=iw*1.08:-2,crop=" + f"{RW}:{RH},vignette=PI/4.5",
+                        "-c:v", "libx264", "-crf", "18", fx], check=True)
+        move = fx
     if draw <= 0:
         os.replace(move, a.out); print("OK", a.out); return
     f0 = os.path.join(work, "f0.png"); m1 = os.path.join(work, "m.png"); dr = os.path.join(work, "draw.mp4")

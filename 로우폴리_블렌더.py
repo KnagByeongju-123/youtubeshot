@@ -3,6 +3,7 @@
   xvfb-run -a blender -b -P 로우폴리_블렌더.py -- <자료.json> <결과.mp4> [초=6] [가로=1920] [세로=1080] [움직임] [앞층거리] [기준점x] [기준점y]
   움직임(사용자 결정 2026-11-08, 영상미): right·left = 옆으로 흐르며 살짝 다가감 / push = 앞층(토마토·인물) 사이 틈으로 곧장 날아 통과(직진 통과)
            orbit = 기준점을 중심으로 빙 돌기 / zoomout = 기준점에 바짝 붙었다가 뒤로 빠지며 전체 / drone = 높은 곳에서 내려다보며 앞으로 날기
+           fpv = 1인칭 드론(고글 시점): 낮게 빠르게 날며 좌우로 기울고 흔들림 / freeze = 멈춘 장면 속에서 카메라가 순간이동(3~4자리, 자리마다 살짝 흐름)
   기준점 = 그림 안 비율(0~1): push 는 통과할 틈, orbit·zoomout 은 주인공 가운데
 - 인물 층은 배경보다 앞(카메라 쪽)에 세우고, 카메라 시작점에서 그림과 똑같이 겹치게 줄여 둠 → 카메라가 옆으로 움직이며 다가가면 앞뒤가 다른 속도로 움직여 입체로 보임
 - 삼각형마다 그림 색 + 아주 약한 면 밝기 차이(깨져 보이지 않게, 사용자 결정 2026-11-08), Workbench 엔진(그래픽카드 없이 빠름)"""
@@ -70,14 +71,44 @@ elif move == "orbit":                       # 주인공을 중심으로 좌우�
 elif move == "zoomout":                     # 주인공에 바짝 붙었다가 뒤로 빠지며 그림 전체
     key(1, (PX * .85, PY * .85, FZ + (D - FZ) * 0.42), (PX * .85, PY * .85, 0), base_lens)
     key(n, (0, 0, D), (0, 0, 0), base_lens)
+elif move == "fpv":                         # 1인칭 드론: 낮게 출발해 앞층 틈으로 빠르게 파고들며 좌우로 기울고 잘게 흔들림
+    ze = FZ - 1.0
+    hw, hh = (SW * .94 / 2) * ze / D / 1.3, (SH * .94 / 2) * ze / D / 1.3
+    ex = max(-(SW / 2 - hw), min(SW / 2 - hw, PX)); ey = max(-(SH / 2 - hh), min(SH / 2 - hh, PY))
+    steps = 12
+    for i in range(steps + 1):
+        t = i / steps; e = t * t                               # 갈수록 빨라짐
+        x = ex * e + 0.25 * math.sin(t * 9.0); y = -0.6 * (1 - t) + ey * e + 0.12 * math.sin(t * 23.0)
+        z = D + (ze - D) * e
+        f = 1 + round((n - 1) * t)
+        cam.location = (x, y, z); cam.rotation_euler = (math.radians(1.5 * math.sin(t * 17)), math.radians(1.2 * math.sin(t * 13)), math.radians(8 * math.sin(t * 5.5)))
+        cd.lens = base_lens * 1.3
+        cam.keyframe_insert("location", frame=f); cam.keyframe_insert("rotation_euler", frame=f); cd.keyframe_insert("lens", frame=f)
+elif move == "freeze":                      # 시간이 멈춘 장면 속 순간이동: 자리마다 1.2~2초 머물며 살짝 흐르고, 다음 자리로 뚝 끊어 넘어감
+    spots = [((0, 0, D), (0, 0, 0), 1.0),
+             ((PX * .5 + 4.2, PY * .5 + 1.1, FZ + (D - FZ) * .6), (PX * .7, PY * .7, FZ * .5), 1.55),
+             ((PX * .5 - 4.2, PY * .5 - 0.9, FZ + (D - FZ) * .4), (PX * .7, PY * .7, FZ * .5), 1.55),
+             ((PX * .8, PY * .8, FZ + (D - FZ) * .32), (PX * .8, PY * .8, 0), 1.0)]
+    seg = n / len(spots)
+    for k_, (loc, tgt, lm) in enumerate(spots):
+        f0 = 1 + round(seg * k_); f1 = max(f0 + 1, round(seg * (k_ + 1)))
+        drift = (0.35, 0.12, -0.6)
+        key(f0, loc, tgt, base_lens * lm)
+        key(f1, (loc[0] + drift[0], loc[1] + drift[1], loc[2] + drift[2]), tgt, base_lens * lm)
+    for dat in (cam, cd):
+        for fc in dat.animation_data.action.fcurves:
+            kps = fc.keyframe_points
+            for j, kp in enumerate(kps):
+                kp.interpolation = "LINEAR" if j % 2 == 0 else "CONSTANT"   # 자리 안에서는 천천히, 자리 사이는 순간이동
 else:                                       # drone: 위에서 내려다보며 앞으로 날다 내려옴
     key(1, (0, 1.6, D + 1.0), (0, -1.0, 0), base_lens * 1.45)
     key(n, (0, 0.2, D - 3.5), (0, -0.3, 0), base_lens * 1.45)
-for dat in (cam, cd):
+for dat in (cam, cd) if move not in ("freeze",) else ():
     if dat.animation_data and dat.animation_data.action:
         for fc in dat.animation_data.action.fcurves:
             for kp in fc.keyframe_points:
                 if move == "push": kp.interpolation = "QUAD"; kp.easing = "EASE_IN"
+                elif move == "fpv": kp.interpolation = "LINEAR"
                 else: kp.interpolation = "BEZIER"; kp.easing = "EASE_IN_OUT"
 r = sc.render; r.engine = "BLENDER_WORKBENCH"; r.resolution_x, r.resolution_y = RW, RH; r.fps = FPS
 sh = sc.display.shading; sh.light = "FLAT"; sh.color_type = "VERTEX"; sh.show_specular_highlight = False
