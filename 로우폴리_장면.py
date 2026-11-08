@@ -126,7 +126,7 @@ def main(argv):
     subprocess.run([sys.executable, "-X", "utf8", os.path.join(HERE, "그리는효과.py"), f0, m1 if m is not None else "-", dr,
                     "--초", f"{draw:.2f}", "--fps", "24"], check=True, capture_output=True)
     subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", dr, "-i", move, "-filter_complex",
-                    "[0:v]fps=24,format=yuv420p,setsar=1[a];[1:v]fps=24,format=yuv420p,setsar=1[b];[a][b]concat=n=2:v=1[v]",
+                    f"[0:v]scale={RW}:{RH},fps=24,format=yuv420p,setsar=1[a];[1:v]scale={RW}:{RH},fps=24,format=yuv420p,setsar=1[b];[a][b]concat=n=2:v=1[v]",   # 그리는효과는 늘 큰 화질로 나옴 → 크기를 맞춤
                     "-map", "[v]", "-c:v", "libx264", "-crf", "18", a.out], check=True)
     print("OK", a.out)
 
