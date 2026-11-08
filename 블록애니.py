@@ -23,6 +23,9 @@
    "인물": [{"이름": "도윤", "위치": [x,y], "방향": 0,
              "동작": [{"초": 0, "자세": "서기"}, {"초": 1, "자세": "걷기", "위치": [x,y]}, ...]}],
    "카메라": [{"초": 0, "위치": [x,y,z], "보는곳": [x,y,z], "렌즈": 35}, ...]}
+  위치 [x, y, 높이] 처럼 세 번째 값을 주면 그 높이(발판 위)에 섬.
+  픽셀(옛날 게임) 모드: "픽셀": 6, "꼬마": 1.5, "배경": "레트로", "무대": {"바닥": [-12,12], "발판": [[x0,x1,높이]],
+    "사다리": [[x, 아래, 위]]}, 카메라에 "직교": 14 (옆에서 평평하게, 화면 가로 14m)
   자세: 서기 | 걷기 | 달리기 | 주먹 | 가리키기 | 놀람 | 팔짱 | 쓰러짐
   방향: 도(°). 0 = 카메라 쪽(-Y)을 봄, 90 = 오른쪽(+X)을 봄. 위치는 m (캐릭터 키 약 2m).
   동작 사이의 위치는 부드럽게 이어짐(걷기·달리기는 그동안 다리를 움직임).
@@ -180,6 +183,8 @@ def build_character(name, spec):
     # 머리(목 관절)
     o = (0, 0, 24)
     head = j("머리", o)
+    hs = float(s.get("머리크기", 1.0))  # 1.5 쯤 = 꼬마 비율(옛날 게임 느낌)
+    head.scale = (hs, hs, hs)
     box(f"{name}_얼굴", (-4, -4, 24), (4, 4, 32), s["피부"], head, o)
     hair, style = s["머리"], s["머리모양"]
     F = -4.06  # 얼굴 앞면 바로 앞
@@ -268,7 +273,7 @@ def reset_scene():
     _MATS.clear()
 
 
-def setup_render(w, h, fancy=False, bg="#ffffff"):
+def setup_render(w, h, fancy=False, bg="#ffffff", pixel=False):
     sc = bpy.context.scene
     sc.render.resolution_x, sc.render.resolution_y = w, h
     sc.render.resolution_percentage = 100
@@ -299,7 +304,7 @@ def setup_render(w, h, fancy=False, bg="#ffffff"):
         sh.show_shadows = False
         sh.show_backface_culling = True  # 테두리 껍질의 안쪽 면을 숨김
         sh.show_cavity = False
-        sc.display.render_aa = "16"
+        sc.display.render_aa = "OFF" if pixel else "16"  # 픽셀 = 다듬지 않은 또렷한 점
     return sc
 
 
@@ -330,6 +335,39 @@ def ground(kind, size=24):
         for iy in range(-size // 2, size // 2):
             c = cols[(ix + iy) % 2]
             box(f"땅{ix}_{iy}", (ix * 16, iy * 16, -16), ((ix + 1) * 16, (iy + 1) * 16, 0), c)
+
+
+def retro_stage(stage):
+    """옛날 오락실 게임 같은 옆모습 무대: 벽돌 바닥, 떠 있는 발판, 사다리.
+    stage = {"바닥": [x0, x1], "발판": [[x0, x1, 높이m], ...], "사다리": [[x, 아래m, 위m], ...], "벽돌색": 색}"""
+    c1 = stage.get("벽돌색", "#c8502a")
+    c2 = stage.get("벽돌색2", "#a63f1f")
+
+    def bricks(x0, x1, ztop, rows=2):
+        n = 0
+        for r in range(rows):
+            off = 0 if r % 2 == 0 else 8
+            x = x0 * 16 - off
+            while x < x1 * 16:
+                lo = max(x, x0 * 16)
+                hi = min(x + 16, x1 * 16)
+                z = ztop * 16 - (r + 1) * 8
+                box(f"벽돌{n}_{x}_{z}", (lo, -8, z), (hi, 8, z + 8), c1 if (n + r) % 3 else c2)
+                x += 16
+                n += 1
+
+    x0, x1 = stage.get("바닥", [-12, 12])
+    bricks(x0, x1, 0, rows=3)
+    for i, (a, b, zt) in enumerate(stage.get("발판", [])):
+        bricks(a, b, zt, rows=1)
+    lc = stage.get("사다리색", "#4fc3f7")
+    for i, (x, za, zb) in enumerate(stage.get("사다리", [])):
+        for sx in (-6, 6):
+            box(f"사다리{i}_{sx}", (x * 16 + sx - 1, 9, za * 16), (x * 16 + sx + 1, 10, zb * 16), lc)
+        z = za * 16 + 4
+        while z < zb * 16:
+            box(f"가로대{i}_{z}", (x * 16 - 6, 9, z), (x * 16 + 6, 10, z + 1.2), lc)
+            z += 6
 
 
 # ───────────────────────── 명령: 시트 ─────────────────────────
@@ -404,19 +442,28 @@ def cmd_scene(scene_file, out, fancy=False):
     chars = json.load(open(cf if os.path.isabs(cf) else os.path.join(base, cf), encoding="utf-8"))
     fps, sec = int(S.get("fps", 24)), float(S.get("초", 5))
     w, h = S.get("크기", [1920, 1080])
+    px = int(S.get("픽셀", 0))  # 예: 6 → 320×180 으로 찍고 6배로 키워 도트 그림처럼
+    global OUTLINE
+    if px:
+        OUTLINE = 0.0  # 픽셀에서는 1점짜리 물체 테두리만 씀
     reset_scene()
     bgk = S.get("배경", "풀밭")
-    sky = {"풀밭": "#9fd3f0", "밤": "#141826", "흰": "#ffffff"}.get(bgk, "#9fd3f0")
-    setup_render(w, h, fancy=fancy, bg=sky)
-    if bgk != "흰":
+    sky = {"풀밭": "#9fd3f0", "밤": "#141826", "흰": "#ffffff", "레트로": "#000000"}.get(bgk, "#9fd3f0")
+    setup_render(w // px if px else w, h // px if px else h, fancy=fancy, bg=sky, pixel=bool(px))
+    if bgk == "레트로":
+        retro_stage(S.get("무대", {}))
+    elif bgk != "흰":
         ground(bgk)
     actors = []
     for a in S["인물"]:
-        rig = build_character(a["이름"], chars[a["이름"]])
+        spec = dict(chars[a["이름"]])
+        if S.get("꼬마"):
+            spec.setdefault("머리크기", float(S["꼬마"]) if not isinstance(S["꼬마"], bool) else 1.5)
+        rig = build_character(a["이름"], spec)
         keys = sorted(a.get("동작", []), key=lambda k: k["초"])
         actors.append((a, rig, keys))
     cams = sorted(S.get("카메라", [{"초": 0, "위치": [0, -8, 2], "보는곳": [0, 0, 1]}]), key=lambda k: k["초"])
-    cam = add_camera(cams[0]["위치"], cams[0]["보는곳"], cams[0].get("렌즈", 35))
+    cam = add_camera(cams[0]["위치"], cams[0]["보는곳"], cams[0].get("렌즈", 35), ortho=cams[0].get("직교"))
     tmpd = tempfile.mkdtemp()
     n = int(round(sec * fps))
     walk_phase = {}
@@ -432,22 +479,25 @@ def cmd_scene(scene_file, out, fancy=False):
                 ph += (1.0 if pose == "걷기" else 1.6) / fps
             walk_phase[a["이름"]] = ph
             apply_pose(rig, pose, ph)
-            z = 0.0
+            z = pos[2] if len(pos) > 2 else 0.0  # 위치에 높이(m)를 주면 발판 위에 섬
             r = rig["root"]
             r.location = (pos[0], pos[1], z)
             r.rotation_euler = (math.radians(-90) if pose == "쓰러짐" else 0, 0, math.radians(yaw))
             if pose == "쓰러짐":
-                r.location = (pos[0], pos[1], 0.25)
+                r.location = (pos[0], pos[1], z + 0.25)
         cl = _track(cams, t, "위치", cams[0]["위치"])
         ck = _track(cams, t, "보는곳", cams[0]["보는곳"])
         cam.data.lens = _track(cams, t, "렌즈", cams[0].get("렌즈", 35))
+        if cams[0].get("직교"):
+            cam.data.ortho_scale = _track(cams, t, "직교", cams[0]["직교"])
         aim(cam, cl, ck)
         bpy.context.scene.render.filepath = os.path.join(tmpd, f"{f:05d}.png")
         bpy.ops.render.render(write_still=True)
         if f % fps == 0:
             print(f"  {f}/{n} 장", flush=True)
     subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-framerate", str(fps), "-i",
-                    os.path.join(tmpd, "%05d.png"), "-c:v", "libx264", "-pix_fmt", "yuv420p",
+                    os.path.join(tmpd, "%05d.png")]
+                   + (["-vf", f"scale=iw*{px}:ih*{px}:flags=neighbor"] if px else []) + ["-c:v", "libx264", "-pix_fmt", "yuv420p",
                     "-crf", "18", out], check=True)
     print("영상 저장:", out)
 
