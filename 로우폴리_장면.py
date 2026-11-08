@@ -1,6 +1,9 @@
 """로우폴리 장면 — 그림 한 장 → '그리는 효과' 뒤 로우폴리 입체 카메라 움직임 영상 (장문 다큐, 사용자 결정 2026-11-08)
 
-  python -X utf8 로우폴리_장면.py <그림> <인물 마스크.png 또는 -> <결과.mp4> --초 9.5 [--움직임 right|left] [--그리는효과 3.5] [--조각 15000,10000]
+  python -X utf8 로우폴리_장면.py <그림> <인물 마스크.png 또는 - 또는 빨강> <결과.mp4> --초 9.5 [--움직임 right|left|push|orbit|zoomout|drone] [--그리는효과 3.5] [--조각 15000,10000] [--기준점 0.5,0.4]
+  - 움직임(영상미, 사용자 결정 2026-11-08): push = 앞층(토마토·인물) 사이 틈으로 곧장 날아 통과, orbit = 주인공 둘레 돌기, zoomout = 바짝 붙었다 빠지기, drone = 내려다보며 날기
+  - 마스크 자리에 '빨강'을 주면 붉은 토마토를 저절로 찾아 앞층으로 (토마토 사이 직진 통과용)
+  - 기준점: push 는 지나갈 틈, orbit·zoomout 은 주인공 가운데 (그림 안 비율). 안 주면 저절로 (push = 앞층이 없는 가장 넓은 빈틈, 그 밖 = 앞층 가운데)
 
   1) 인물(동물) 마스크(흰색 = 인물, sam_worker.py 로 만듦)로 인물을 떼어 내고, 빈 자리는 둘레 색으로 메움(로우폴리라 티 안 남)
   2) 배경·인물을 각각 작은 삼각형(기본 1만 5천·1만 개 = 촘촘하게, 깨져 보이지 않게)으로 나누고 삼각형마다 그림 색
@@ -71,12 +74,31 @@ def main(argv):
     ap.add_argument("image"); ap.add_argument("mask"); ap.add_argument("out")
     ap.add_argument("--초", type=float, default=9.0); ap.add_argument("--움직임", default="right")
     ap.add_argument("--그리는효과", type=float, default=3.5); ap.add_argument("--조각", default="15000,10000")
-    ap.add_argument("--크기", default="1920x1080")
+    ap.add_argument("--크기", default="1920x1080"); ap.add_argument("--기준점", default=""); ap.add_argument("--앞층거리", default="")
     a = ap.parse_args(argv)
     RW, RH = (int(x) for x in a.크기.split("x"))
     n_bg, n_fg = (int(x) for x in a.조각.split(","))
     im = cv2.cvtColor(cv2.imread(a.image), cv2.COLOR_BGR2RGB)
-    m = None if a.mask == "-" else cv2.resize(cv2.imread(a.mask, 0), (im.shape[1], im.shape[0])) > 127
+    if a.mask == "빨강":                                      # 잘 익은 토마토: 붉고 진한 곳
+        hsv = cv2.cvtColor(im, cv2.COLOR_RGB2HSV)
+        red = (((hsv[..., 0] < 10) | (hsv[..., 0] > 170)) & (hsv[..., 1] > 120) & (hsv[..., 2] > 70)).astype(np.uint8)
+        red = cv2.morphologyEx(red, cv2.MORPH_OPEN, np.ones((5, 5), np.uint8))
+        nlab, lab, st, _ = cv2.connectedComponentsWithStats(red)
+        m = np.isin(lab, [i for i in range(1, nlab) if st[i, cv2.CC_STAT_AREA] > im.shape[0] * im.shape[1] * 0.0015])
+    else:
+        m = None if a.mask == "-" else cv2.resize(cv2.imread(a.mask, 0), (im.shape[1], im.shape[0])) > 127
+    H_, W_ = im.shape[:2]
+    if a.기준점:
+        pu, pv = (float(x) for x in a.기준점.split(","))
+    elif m is not None and m.any() and a.움직임 == "push":   # 앞층이 없는 가장 넓은 빈틈 (가운데 쪽)
+        dist = cv2.distanceTransform((~m).astype(np.uint8), cv2.DIST_L2, 5)
+        yy, xx = np.mgrid[0:H_, 0:W_]
+        dist = dist * (1 - 0.85 * np.hypot((xx / W_ - .5) * 2, (yy / H_ - .5) * 2).clip(0, 1))   # 가운데 가까운 틈
+        pv, pu = np.unravel_index(np.argmax(dist), dist.shape); pu, pv = pu / W_, pv / H_
+    elif m is not None and m.any():
+        ys, xs = np.nonzero(m); pu, pv = xs.mean() / W_, ys.mean() / H_
+    else:
+        pu, pv = 0.5, 0.5
     bg = im
     if m is not None and m.any():
         big = cv2.dilate(m.astype(np.uint8) * 255, np.ones((31, 31), np.uint8))
@@ -87,7 +109,8 @@ def main(argv):
     draw = max(0.0, min(a.그리는효과, a.초 - 1.0))
     move = os.path.join(work, "move.mp4")
     r = subprocess.run(["xvfb-run", "-a", "blender", "-b", "-P", os.path.join(HERE, "로우폴리_블렌더.py"), "--", js, move,
-                        f"{a.초 - draw:.2f}", str(RW), str(RH), a.움직임], capture_output=True, text=True)
+                        f"{a.초 - draw:.2f}", str(RW), str(RH), a.움직임,
+                        a.앞층거리 or ("8" if a.움직임 == "push" else "2.6"), f"{pu:.3f}", f"{pv:.3f}"], capture_output=True, text=True)
     if "DONE" not in r.stdout:
         sys.exit("블렌더 실패: " + (r.stdout + r.stderr)[-800:])
     if draw <= 0:
