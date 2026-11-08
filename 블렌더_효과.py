@@ -154,9 +154,10 @@ def project(pj_path):
     base = os.path.dirname(os.path.abspath(pj_path))
     import re
     paths = []
-    for m in re.finditer(r"\[사진[^\]]*?\|?\s*([^\]|]+\.(?:jpe?g|png|webp))", pj.get("story", ""), re.I):
+    for m in re.finditer(r"\[사진:\s*([^|\]]+?\.(?:jpe?g|png|webp))\s*[|\]]", pj.get("story", ""), re.I):
         p = m.group(1).strip()
-        p = p if os.path.isabs(p) else os.path.join(base, p)
+        if not os.path.isabs(p):     # 대본의 사진 경로는 프로그램 폴더 기준 (없으면 프로젝트 폴더 기준)
+            p = os.path.join(HERE, p) if os.path.exists(os.path.join(HERE, p)) else os.path.join(base, p)
         if os.path.exists(p) and p not in paths:
             paths.append(p)
     print(f"사진 {len(paths)}장")

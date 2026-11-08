@@ -6172,7 +6172,7 @@ class SubtitleRenderer:
         IW, IH = im.width, im.height
         asp = bw / bh
         dur = max(1.0, pc[1] - pc[0])
-        fs = [f_ for f_ in kind[1] if (f_["box"][3] - f_["box"][1]) * IH * 2.8 >= bh * 0.42][:3]   # 너무 작은 얼굴은 크게 하면 흐려서 뺌
+        fs = [f_ for f_ in kind[1] if (f_["box"][3] - f_["box"][1]) >= 0.035][:3]   # 사진 높이의 3.5%보다 작은 얼굴(먼 군중)은 크게 하면 흐려서 뺌
         n = 1 + len(fs)
         if dur < 3.2 * n:                                  # 시간이 짧으면 얼굴 수를 줄임 (한 컷 최소 3초 남짓)
             fs = fs[:max(0, int(dur // 3.2) - 1)]
@@ -6191,7 +6191,7 @@ class SubtitleRenderer:
         else:
             x0_, y0_, x1_, y1_ = fs[k_]["box"]
             fw, fh = (x1_ - x0_) * IW, (y1_ - y0_) * IH
-            h_ = min(IH, fh * 2.8)
+            h_ = min(IH, max(fh * 3.0, IH * 0.3))      # 얼굴과 어깨까지 (너무 크게 키우지 않게 사진 높이의 30% 이상)
             w_ = h_ * asp
             if w_ > IW:
                 w_, h_ = IW, IW / asp
