@@ -1,0 +1,29 @@
+{
+ "items": [
+  {
+   "id": "g07",
+   "width": 1024,
+   "height": 576,
+   "seed": 3156,
+   "prompt": "realistic painterly historical illustration, rich oil painting style with visible brush strokes, warm natural light, detailed and historically accurate 17th-18th century northern Spain (Castile) setting, cinematic composition, full-bleed image, no border, no frame, no speech bubbles, no readable text, no letters, no logos. Scene: 1621, northern Spain: inside a gothic village church, a group of Castilian village men in 17th-century dark clothes and capes gathered around a wooden table; one priest signs a parchment rule book with a white goose-feather quill dipped in an inkwell, everyone else only watches with hands folded; no pens, by candlelight. Exactly two arms and two legs and five fingers on each hand for every person.",
+   "refs": []
+  },
+  {
+   "id": "g11",
+   "width": 1024,
+   "height": 576,
+   "seed": 3160,
+   "prompt": "realistic painterly historical illustration, rich oil painting style with visible brush strokes, warm natural light, detailed and historically accurate 17th-18th century northern Spain (Castile) setting, cinematic composition, full-bleed image, no border, no frame, no speech bubbles, no readable text, no letters, no logos. Scene: 1779, Burgos: an artisan's workshop; an old mask maker with a normal human face (ordinary small nose, gray hair) wearing an apron holds a paintbrush and paints a separate yellow papier-mache devil mask lying on his workbench; the mask has a long prominent nose and chin and black painted eyebrows; warm window light. Only one person. Exactly two arms and two legs and five fingers on each hand for every person.",
+   "refs": []
+  },
+  {
+   "id": "g12",
+   "width": 1024,
+   "height": 576,
+   "seed": 3161,
+   "prompt": "realistic painterly historical illustration, rich oil painting style with visible brush strokes, warm natural light, detailed and historically accurate 17th-18th century northern Spain (Castile) setting, cinematic composition, full-bleed image, no border, no frame, no speech bubbles, no readable text, no letters, no logos. Scene: close-up still life on an old wooden bench in a church sacristy: a short wooden stick with a long bushy brown horse-tail of loose horse hair tied to its end, and next to it a pair of large wooden castanets (two shell-shaped hollow wooden clappers tied together with a cord). No people. Exactly two arms and two legs and five fingers on each hand for every person.",
+   "refs": []
+  }
+ ],
+ "crop_border": true
+}
