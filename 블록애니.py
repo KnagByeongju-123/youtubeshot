@@ -10,6 +10,7 @@
   # 장면 영상(장면 파일에 인물·동작·카메라를 적음 — 아래 '장면 파일' 참고)
   xvfb-run -a .blender_venv/bin/python 블록애니.py 장면 블록애니/장면_예시.json 결과.mp4 [--고급]
 
+  # 한 장만 찍기(썸네일): 장면 파일에 "시작": 초, "초": 시작+0.04 를 넣고 결과를 .png 로
   # 판 영상 합치기(차례로 이어 붙임)
   .blender_venv/bin/python 블록애니.py 합치기 전체.mp4 1판.mp4 2판.mp4
 
@@ -794,7 +795,7 @@ def cmd_scene(scene_file, out, fancy=False):
                 return float(rr)
         return 1.0
     times = []
-    tt = 0.0
+    tt = float(S.get("시작", 0.0))  # "시작": 이 초부터 찍음(썸네일 한 장 찍을 때)
     while tt < sec - 1e-9:
         times.append(tt)
         tt += rate(tt) / fps
@@ -899,6 +900,14 @@ def cmd_scene(scene_file, out, fancy=False):
         bpy.ops.render.render(write_still=True)
         if f % fps == 0:
             print(f"  {f}/{n} 장", flush=True)
+    if out.lower().endswith((".png", ".jpg")):  # 한 장만: 첫 장면을 점 그대로 키워 저장
+        from PIL import Image
+        im = Image.open(os.path.join(tmpd, "00000.png")).convert("RGB")
+        if px:
+            im = im.resize((im.width * px, im.height * px), Image.NEAREST)
+        im.save(out)
+        print("그림 저장:", out)
+        return
     # 소리: 날아가는 물체·동작에서 자동 효과음 + 장면 파일의 "효과음" + 8비트 배경음 (레트로소리.py)
     audio = None
     if S.get("소리", True):
