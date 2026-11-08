@@ -554,10 +554,131 @@ def build_photo():
         cam.keyframe_insert("rotation_euler", frame=f)
 
 
+# ───────── 앞뒤 두 층 사진 (사용자 결정 2026-11-08) ─────────
+MOVES = ["직진", "오르빗", "줌아웃", "순간이동", "드론", "옆으로", "1인칭드론", "반대쪽"]
+
+
+def image_plane(path, w, h, z, name, alpha=False):
+    bpy.ops.mesh.primitive_plane_add(size=1, location=(0, 0, z))
+    o = bpy.context.active_object
+    o.name = name
+    o.scale = (w, h, 1)
+    img = bpy.data.images.load(path)
+    m = bpy.data.materials.new(name)
+    m.use_nodes = True
+    nt = m.node_tree
+    for n in list(nt.nodes):
+        nt.nodes.remove(n)
+    tex = nt.nodes.new("ShaderNodeTexImage")
+    tex.image = img
+    tex.extension = "EXTEND"
+    em = nt.nodes.new("ShaderNodeEmission")
+    out = nt.nodes.new("ShaderNodeOutputMaterial")
+    nt.links.new(tex.outputs["Color"], em.inputs["Color"])
+    if alpha:
+        tr = nt.nodes.new("ShaderNodeBsdfTransparent")
+        mix = nt.nodes.new("ShaderNodeMixShader")
+        nt.links.new(tex.outputs["Alpha"], mix.inputs[0])
+        nt.links.new(tr.outputs[0], mix.inputs[1])
+        nt.links.new(em.outputs[0], mix.inputs[2])
+        nt.links.new(mix.outputs[0], out.inputs[0])
+    else:
+        nt.links.new(em.outputs[0], out.inputs[0])
+    o.data.materials.append(m)
+    return o, img.size
+
+
+def build_layers():
+    """뒤층(빈자리를 메운 배경) 판 + 앞층(오려 낸 주인공) 판을 카메라 쪽으로 띄워 세움.
+    앞층은 처음 카메라 자리에서 원래 사진과 똑같이 겹쳐 보이게 크기를 줄임 → 카메라가 움직이면 앞층이 더 많이 움직여 입체로 보임"""
+    W, H = bpy.data.images.load(ARGS["bg"]).size
+    asp = W / H
+    fov = 2 * math.atan(36 / 2 / 50)
+    F = 0.82                                                   # 처음 화면 = 사진의 82% (움직여도 가장자리가 안 보이게)
+    D = 0.5 * min(asp, 16 / 9) * F / math.tan(fov / 2)
+    hf = float(ARGS.get("gap", 0.28)) * D                      # 앞층을 배경에서 띄우는 거리 (클수록 입체감이 큼)
+    image_plane(ARGS["bg"], asp, 1, 0, "뒤층")
+    if ARGS.get("fg"):
+        k = (D - hf) / D
+        image_plane(ARGS["fg"], asp * k, k, hf, "앞층", alpha=True)
+    SC.cycles.samples = int(ARGS.get("samples", 4))
+    SC.view_settings.view_transform = "Standard"
+    SC.view_settings.look = "None"
+    cam = camera(lens=50)
+    bx = ARGS.get("box") or [0.3, 0.3, 0.7, 0.7]               # 주인공 자리 (0~1)
+    cx, cy = ((bx[0] + bx[2]) / 2 - 0.5) * asp, (0.5 - (bx[1] + bx[3]) / 2)
+    vw = min(asp, 16 / 9) * F                                  # 처음 화면 너비
+    lim_x = max(0.0, (asp - vw) / 2 - 0.01)
+    lim_y = max(0.0, (1 - vw * 9 / 16) / 2 - 0.01)
+    cx, cy = max(-lim_x, min(lim_x, cx * 0.5)), max(-lim_y, min(lim_y, cy * 0.5))
+    move = ARGS.get("move", "직진")
+
+    def ease(t):
+        return t * t * (3 - 2 * t)
+
+    def put(f, loc, rot=(0, 0, 0)):
+        cam.location = loc
+        cam.rotation_euler = rot
+        cam.keyframe_insert("location", frame=f)
+        cam.keyframe_insert("rotation_euler", frame=f)
+
+    s_ = min(lim_x, 0.07 * asp)
+    for f in range(1, NF + 1):
+        t = (f - 1) / max(1, NF - 1)
+        e = ease(t)
+        if move == "직진":            # 앞으로 다가감 (주인공 쪽으로 살짝)
+            put(f, (cx * e, cy * e, D * (1 - 0.2 * e)))
+        elif move == "줌아웃":        # 주인공 가까이에서 뒤로 빠짐
+            put(f, (cx * (1 - e), cy * (1 - e), D * (0.8 + 0.2 * e)))
+        elif move == "오르빗":        # 주인공 둘레를 옆으로 돔
+            a = math.radians(8) * (2 * e - 1)
+            r = D - hf
+            put(f, (cx + math.sin(a) * r, cy, hf + math.cos(a) * r * 0.97), (0, a, 0))
+        elif move in ("옆으로", "반대쪽"):
+            sg = 1 if move == "옆으로" else -1
+            put(f, (sg * s_ * (2 * e - 1), cy * 0.3, D * 0.95))
+        elif move == "드론":          # 낮게 있다가 위로 오르며 앞으로, 아래를 내려다보던 고개를 듦
+            th = math.radians(7 * (1 - e) + 2)
+            z = D * (0.82 + 0.16 * e)
+            ay = -0.05 + 0.1 * e
+            put(f, (cx * 0.5, ay - math.tan(th) * (z - hf) * 0.5, z), (th, 0, 0))
+        elif move == "1인칭드론":     # 빠르게 앞으로 + 좌우로 기울고 흔들림 (뒤에서 볼록 렌즈·어두운 모서리)
+            roll = math.radians(4) * math.sin(t * 2 * math.pi * 1.3)
+            sh = (RNG.gauss(0, 0.002), RNG.gauss(0, 0.002), 0)
+            put(f, (cx * t + sh[0], cy * t + sh[1], D * (1 - 0.3 * t)), (0, 0, roll))
+    if move == "순간이동":            # 넓게 → 주인공(또는 얼굴) 가까이로 순간 컷 → 다른 곳 … 머무는 동안 천천히 흐름
+        spots = [(0, 0, D)]
+        for b_ in (ARGS.get("faces") or [])[:2] or [bx]:
+            fx, fy = ((b_[0] + b_[2]) / 2 - 0.5) * asp, 0.5 - (b_[1] + b_[3]) / 2
+            size = max((b_[3] - b_[1]) * 3.0, 0.3)
+            z = hf + (D - hf) * min(1.0, size / (vw * 9 / 16))
+            spots.append((fx, fy, max(z, hf + (D - hf) * 0.35)))
+        if len(spots) == 2:
+            fx, fy, z = spots[1]
+            spots.append((fx * 0.4, fy * 0.4, (z + D) / 2))
+        n = len(spots)
+        edges = [1 + round(i * (NF - 1) / n) for i in range(n + 1)]
+        for i, (x, y, z) in enumerate(spots):
+            # 화면이 사진 밖으로 나가지 않게 가둠
+            half_w = vw / 2 * (z / D)
+            half_h = half_w * 9 / 16
+            x = max(-(asp / 2 - half_w), min(asp / 2 - half_w, x))
+            y = max(-(0.5 - half_h), min(0.5 - half_h, y))
+            dx = half_w * 0.08 * (1 if i % 2 else -1)
+            f0, f1 = edges[i], (edges[i + 1] - 1 if i < n - 1 else edges[i + 1])
+            put(f0, (x - dx / 2, y, z))
+            put(f1, (x + dx / 2, y, z * 0.97))
+            for fc in cam.animation_data.action.fcurves:
+                for kp in fc.keyframe_points:
+                    kp.interpolation = "LINEAR"
+
+
 def main():
     reset()
     if ARGS["kind"] == "입체사진":
         build_photo()
+    elif ARGS["kind"] == "앞뒤층":
+        build_layers()
     else:
         info = SCENES[ARGS["scene"]]()
         cam = camera(lens=float(ARGS.get("lens", 28)))

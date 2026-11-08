@@ -10,8 +10,10 @@ r"""Blender 로 만드는 영상 효과 (사용자 결정 2026-11-08, 홀리 편
       사람 얼굴이 보이면 하지 않고 얼굴 순간이동(<사진>.얼굴.json)을 만듦 (사용자 결정: 사람 사진은 진짜 사진 그대로)
   python 블렌더_효과.py 얼굴 <사진>...           얼굴 찾기만 → <사진>.얼굴.json (OpenCV YuNet, Apache-2.0)
   python 블렌더_효과.py 프로젝트 <프로젝트.json> [--크게]
-      프로젝트의 모든 실제 사진에서 얼굴 찾기 → 얼굴.json. 입체사진은 자동으로 만들지 않음:
-      얼굴을 못 찾은 사진에도 사람(뒷모습·가루에 가린 얼굴)이 있을 수 있어, Claude 가 눈으로 '사람 없음'을 확인한 사진만 '입체사진' 으로
+      프로젝트의 모든 실제 사진을 앞뒤 두 층으로(사용자 결정 2026-11-08): rembg 로 주인공(사람·인형·성 …)을 오려 앞층,
+      빈자리를 둘레 색으로 메운 뒤층 → Blender 카메라가 움직이면 앞뒤가 다른 속도로 움직여 입체로 보임.
+      카메라 움직임은 사진마다 차례로: 직진 → 오르빗 → 줌아웃 → 순간이동(얼굴이 있으면 얼굴로) → 드론 → 옆으로 → 1인칭드론 → 반대쪽
+      오림이 조각조각 깨지면(군중 사진) 사진 한 장 판으로 같은 움직임
 
 --크게 가 없으면 작은 화질(640×360, 적은 샘플)로 먼저 만들어 검토 (사용자 결정 2026-11-08: 작은 화질 먼저 → 검토 → 크게)
 """
@@ -127,6 +129,61 @@ def save_faces(path):
     return fs
 
 
+# ───────── 앞뒤 두 층 (사용자 결정 2026-11-08) ─────────
+_REMBG = {}
+
+
+def cut_layers(path, model="isnet-general-use"):
+    """사진 앞쪽의 주인공(사람·인형·성 …)을 rembg(MIT)로 오려 앞층(RGBA png), 빈자리를 둘레 색으로 메운 뒤층(jpg)을 만듦.
+    결과: <사진>.앞층.png, <사진>.뒤층.jpg (이미 있으면 그대로). 주인공이 너무 작거나(2%↓) 거의 전부(85%↑)면 None"""
+    import cv2
+    fg_p, bg_p = path + ".앞층.png", path + ".뒤층.jpg"
+    if os.path.exists(path + ".앞층.json"):
+        if not json.load(open(path + ".앞층.json")).get("ok"):
+            return None
+        if os.path.exists(fg_p) and os.path.exists(bg_p):
+            return fg_p, bg_p
+    from rembg import new_session, remove
+    if model not in _REMBG:
+        _REMBG[model] = new_session(model)
+    im = Image.open(path).convert("RGB")
+    k = min(1.0, 1600 / max(im.size))
+    if k < 1:
+        im = im.resize((round(im.width * k), round(im.height * k)), Image.LANCZOS)
+    m = np.asarray(remove(im, session=_REMBG[model], only_mask=True, post_process_mask=True).convert("L"), np.float32) / 255
+    # 작은 조각(사진의 0.4%↓)은 버림, 조각조각 깨진 오림(큰 덩어리가 전체의 60% 미만이거나 큰 조각이 4개 넘음)은 쓰지 않음
+    bm = (m > 0.5).astype(np.uint8)
+    n_, lab, st, _ = cv2.connectedComponentsWithStats(bm, 8)
+    areas = st[1:, cv2.CC_STAT_AREA] if n_ > 1 else np.array([0])
+    keep = [i + 1 for i, a_ in enumerate(areas) if a_ >= bm.size * 0.004]
+    m = m * np.isin(lab, keep)
+    frac = float((m > 0.5).mean())
+    big = sorted((areas[i - 1] for i in keep), reverse=True)
+    meta = {"frac": round(frac, 3), "pieces": len(keep), "main": round(float(big[0] / max(1, sum(big))), 2) if big else 0}
+    if frac < 0.02 or frac > 0.85 or not big or meta["main"] < 0.6 and len(keep) > 2 or len(keep) > 4:
+        json.dump(dict(meta, ok=False), open(path + ".앞층.json", "w"))
+        return None
+    ys, xs = np.nonzero(m > 0.5)
+    meta.update(ok=True, box=[round(xs.min() / m.shape[1], 3), round(ys.min() / m.shape[0], 3), round(xs.max() / m.shape[1], 3), round(ys.max() / m.shape[0], 3)])
+    json.dump(meta, open(path + ".앞층.json", "w"))
+    m = cv2.GaussianBlur(m, (0, 0), 1.2)                       # 가장자리를 살짝 부드럽게
+    rgb = np.asarray(im)
+    Image.fromarray(np.dstack([rgb, (np.clip(m, 0, 1) * 255).astype(np.uint8)]), "RGBA").save(fg_p)
+    # 뒤층: 주인공 자리(넉넉히 넓힌 것)를 둘레 색으로 메움 — 작게 줄여 메운 뒤 키우고, 둘레와 부드럽게 섞음
+    hole = (m > 0.2).astype(np.uint8)
+    hole = cv2.dilate(hole, np.ones((3, 3), np.uint8), iterations=max(3, im.width // 120))
+    s = 0.25
+    small = cv2.resize(rgb, None, fx=s, fy=s, interpolation=cv2.INTER_AREA)
+    hs = cv2.resize(hole, (small.shape[1], small.shape[0]), interpolation=cv2.INTER_NEAREST)
+    fill = cv2.inpaint(cv2.cvtColor(small, cv2.COLOR_RGB2BGR), hs * 255, 9, cv2.INPAINT_TELEA)
+    fill = cv2.cvtColor(cv2.resize(fill, (im.width, im.height), interpolation=cv2.INTER_CUBIC), cv2.COLOR_BGR2RGB)
+    fill = cv2.GaussianBlur(fill, (0, 0), 6)
+    a = cv2.GaussianBlur(hole.astype(np.float32), (0, 0), 4)[..., None]
+    out = rgb * (1 - a) + fill * a
+    Image.fromarray(np.clip(out, 0, 255).astype(np.uint8)).save(bg_p, quality=93)
+    return fg_p, bg_p
+
+
 # ───────── 입체 사진 ─────────
 def depth_of(path):
     sys.path.insert(0, HERE)
@@ -149,27 +206,63 @@ def photo3d(path, sec):
     print("OK", path, n, "프레임 (입체)")
 
 
-def project(pj_path):
+MOVES = ["직진", "오르빗", "줌아웃", "순간이동", "드론", "옆으로", "1인칭드론", "반대쪽"]   # 장면마다 차례로 (사용자 결정 2026-11-08)
+
+
+def layers3d(path, sec, move):
+    """사진 → 앞층(오려 낸 주인공)·뒤층(빈자리 메움) → Blender 카메라 움직임. 오림이 깨지면 사진 한 장 판으로 같은 움직임"""
+    clip = path + ".clip"
+    shutil.rmtree(clip, ignore_errors=True)
+    r = cut_layers(path)
+    meta = json.load(open(path + ".앞층.json")) if os.path.exists(path + ".앞층.json") else {}
+    fs = []
+    if os.path.exists(path + ".얼굴.json"):
+        fs = [f_["box"] for f_ in json.load(open(path + ".얼굴.json", encoding="utf-8")).get("faces", []) if f_["box"][3] - f_["box"][1] >= 0.035]
+    cfg = dict(kind="앞뒤층", bg=os.path.abspath(r[1] if r else path), fg=os.path.abspath(r[0]) if r else "",
+               box=meta.get("box") or (fs[0] if fs else None), faces=fs, move=move, sec=sec, fps=FPS,
+               w=SIZE[0], h=SIZE[1], samples=8 if BIG else 4, out=clip, step=STEP)
+    run_blender(cfg)
+    n = finish_clip(clip, None, fpv=(move == "1인칭드론"))
+    json.dump(dict(json.load(open(os.path.join(clip, "clip.json"))), move=move, layers=bool(r)), open(os.path.join(clip, "clip.json"), "w"))
+    print("OK", path, n, "프레임", move, "앞뒤층" if r else "한 장")
+
+
+def project(pj_path, only_missing=True):
+    """프로젝트의 모든 실제 사진(블렌더 장면 그림 제외)을 대본 순서대로: 얼굴 찾기 → 앞뒤층 → 움직임은 MOVES 를 차례로 돌아가며.
+    클립 길이 = 그 사진이 보이는 시간(문단 글자 수로 어림, 넉넉히 +25%)"""
+    import re
     pj = json.load(open(pj_path, encoding="utf-8"))
     base = os.path.dirname(os.path.abspath(pj_path))
-    import re
-    paths = []
-    for m in re.finditer(r"\[사진:\s*([^|\]]+?\.(?:jpe?g|png|webp))\s*[|\]]", pj.get("story", ""), re.I):
-        p = m.group(1).strip()
-        if not os.path.isabs(p):     # 대본의 사진 경로는 프로그램 폴더 기준 (없으면 프로젝트 폴더 기준)
-            p = os.path.join(HERE, p) if os.path.exists(os.path.join(HERE, p)) else os.path.join(base, p)
-        if os.path.exists(p) and p not in paths:
-            paths.append(p)
-    print(f"사진 {len(paths)}장")
-    for p in paths:
-        if os.path.exists(p + ".clip") or os.path.exists(p + ".얼굴.json"):
+    story = pj.get("story", "")
+    paras = [p_.strip() for p_ in re.split(r"\n\s*\n", story) if p_.strip()]
+    sec_per_char = float(opt("--초당글자", 0)) or 1 / 7.6       # 이 편: 4,400자 ≈ 9.6분
+    groups, cur = [], None                                     # [(사진들, 글자 수)]
+    for p_ in paras:
+        if p_.startswith("[사진"):
+            if cur is None or cur[1] > 0:
+                cur = [[], 0]
+                groups.append(cur)
+            m = re.match(r"\[사진:\s*([^|\]]+?\.(?:jpe?g|png|webp))\s*[|\]]", p_, re.I)
+            if m:
+                cur[0].append(m.group(1).strip())
+        elif cur is not None and not p_.startswith("#"):
+            cur[1] += len(p_)
+    todo = []
+    for imgs, chars in groups:
+        for im in imgs:
+            todo.append((im, max(6.0, chars * sec_per_char / len(imgs) * 1.25)))
+    k = 0
+    for im, sec in todo:
+        p = im if os.path.isabs(im) else (os.path.join(HERE, im) if os.path.exists(os.path.join(HERE, im)) else os.path.join(base, im))
+        if not os.path.exists(p) or os.path.basename(p).startswith("blender_"):
             continue
-        fs = save_faces(p)
-        if fs:
-            print("얼굴", len(fs), p)
-        else:
-            os.remove(p + ".얼굴.json")
-            print("얼굴 없음 (사람이 없는지 눈으로 확인한 뒤에만 '입체사진' 으로):", p)
+        move = MOVES[k % len(MOVES)]
+        k += 1
+        if only_missing and os.path.exists(os.path.join(p + ".clip", "clip.json")):
+            continue
+        if not os.path.exists(p + ".얼굴.json"):
+            save_faces(p)
+        layers3d(p, round(sec, 1), move)
 
 
 def main():
