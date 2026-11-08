@@ -6079,7 +6079,14 @@ class SubtitleRenderer:
                 sig.append(str(int(os.path.getmtime(p_ + ".인물.json"))))
             except OSError:
                 sig.append("-")
-        return hashlib.md5(",".join(sig).encode()).hexdigest()[:12] if any(x != "-" for x in sig) else ""
+        extra_ = ""                                    # Blender 3D 장면·장면별 전환·초점 상자가 바뀌면 영상 구간도 새로 (예전 구간을 다시 쓰던 문제)
+        bl_ = getattr(self, "bl_clips", {})
+        if bl_ or getattr(self, "trans_plan", {}):
+            parts_ = [f"{k}:{os.path.basename(v)}:{int(os.path.getmtime(v)) if os.path.exists(v) else 0}" for k, v in sorted(bl_.items())]
+            parts_ += [f"t{k}:{v}" for k, v in sorted(getattr(self, "trans_plan", {}).items())]
+            extra_ = hashlib.md5("|".join(parts_).encode()).hexdigest()[:12]
+        base_ = hashlib.md5(",".join(sig).encode()).hexdigest()[:12] if any(x != "-" for x in sig) else ""
+        return base_ + extra_
 
     def _shot_crop_raw(self, sh, t):
         """장면 sh 의 t 시점 사진 (움직임 적용)"""
