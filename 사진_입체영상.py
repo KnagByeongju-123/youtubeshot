@@ -3,7 +3,8 @@ xvfb-run -a python -X utf8 사진_입체영상.py <프로젝트.json> [--최대 
   - 프로젝트의 [사진: 경로 | 설명 | 출처] 마다 화면에 나오는 시간을 재고(영상과 같은 방법),
     입체에 맞는 사진만 골라 '<사진>.입체.mp4' 를 사진 옆에 만듦 → render_project 가 그 사진 자리에 이 영상을 씀(_clip_frame)
   - 고르는 법:
-    · 빼는 것: 설명에 지도·도표·그래프·논문·문서·기록·비문·글씨·초상·얼굴·인물·표·그림 이 있거나, 세로 사진, 깊이 차이(위·아래 10% 차)가 0.35 미만(평평한 사진)
+    · 빼는 것: 설명에 지도·도표·그래프·논문·문서·기록·비문·글씨·표·그림 이 있거나, 깊이 차이(위·아래 10% 차)가 0.35 미만(평평한 사진)
+    · 인물 사진도 함(사용자 결정 2026-11-07): 전진+오르빗, 공간 통과는 안 함. 세로 사진은 16:9 로 잘라(위쪽 25% 기준, 얼굴) 찍음
     · 카메라: 설명에 탑·첨탑·기둥·미나렛·오벨리스크·등대·종탑 → 좌우 흔들기(sway), 나머지 → 전진+오르빗(orbit 12도)
     · 공간 통과: 앞층(가까운 30%)이 화면의 12~40% 이고 화면 아래 가운데를 다 덮지 않는 사진 중 깊이 차이가 큰 순으로 --통과(기본 2)장
     · 깊이 차이가 큰 순으로 최대 --최대(기본 10)장
@@ -22,7 +23,8 @@ import sys
 import numpy as np
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-SKIP_WORDS = ("지도", "도표", "그래프", "논문", "문서", "기록", "비문", "글씨", "초상", "얼굴", "인물", "표 ", "그림", "삽화", "문자", "편지", "신문")
+SKIP_WORDS = ("지도", "도표", "그래프", "논문", "문서", "기록", "비문", "글씨", "표 ", "그림", "삽화", "문자", "편지", "신문")
+PORTRAIT_WORDS = ("초상", "얼굴", "인물", "사진 속", "모습")   # 인물 사진도 전진+오르빗 (사용자 결정 2026-11-07: '인물사진 오르빗도 좋았어')
 THIN_WORDS = ("탑", "첨탑", "기둥", "미나렛", "오벨리스크", "등대", "종탑", "돛대")
 DEPTH_MODEL = os.path.join(HERE, "models", "depth_anything_v2_small_fp16.onnx")
 DEPTH_URL = "https://huggingface.co/onnx-community/depth-anything-v2-small/resolve/main/onnx/model_fp16.onnx"
@@ -143,12 +145,12 @@ def blend_render(path, npy, mode, frames, fr_dir, work, zoom):
     subprocess.run(cmd, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 
-def render(path, npy, mode, secs, work):
+def render(path, npy, mode, secs, work, out=None):
     """블렌더로 찍고 → 빈 곳(자홍) 검사 → 안 보일 만큼 가운데 확대 → 다시 검사. 너무 많이 비면 카메라를 당겨 다시, 그래도 안 되면 흔들기, 마지막엔 포기(평면)"""
     from PIL import Image
     frames = max(48, min(16 * 24, int(math.ceil(secs * 24))))
     fr_dir = os.path.join(work, "frames")
-    out = path + ".입체.mp4"
+    out = out or path + ".입체.mp4"
     tries = [(mode, 0.8 if mode == "오르빗" else 0.86), (mode, 0.68 if mode != "통과" else 0.0), ("흔들기", 0.72)]
     for md, zoom in tries:
         if md == "통과" and zoom == 0.0:
@@ -208,11 +210,15 @@ def main(a):
         if any(w in cap for w in SKIP_WORDS):
             print("  평면 (설명)", os.path.basename(ap), cap)
             continue
-        w_, h_ = Image.open(ap).size
-        if h_ > w_ * 0.95:
-            print("  평면 (세로 사진)", os.path.basename(ap))
-            continue
-        npy = depth_of(ap, work)
+        im_ = Image.open(ap).convert("RGB")
+        w_, h_ = im_.size
+        src = ap
+        if h_ > w_ * 0.95:                 # 세로 사진(인물 등): 16:9 로 잘라 따로 저장 (얼굴이 있는 위쪽 25% 기준)
+            th = int(w_ * 9 / 16)
+            top = int((h_ - th) * 0.25)
+            src = os.path.join(work, "세로_" + os.path.splitext(os.path.basename(ap))[0] + ".jpg")
+            im_.crop((0, top, w_, top + th)).save(src, quality=95)
+        npy = depth_of(src, work)
         if not npy:
             continue
         d = np.load(npy).astype(np.float32)
@@ -221,13 +227,13 @@ def main(a):
             print("  평면 (깊이 차이 %.2f)" % spread, os.path.basename(ap))
             continue
         mode = "흔들기" if any(w in cap for w in THIN_WORDS) else "오르빗"
-        cands.append({"path": ap, "cap": cap, "npy": npy, "spread": spread, "mode": mode,
+        cands.append({"src": src, "portrait": any(w in cap for w in PORTRAIT_WORDS) or src != ap, "path": ap, "cap": cap, "npy": npy, "spread": spread, "mode": mode,
                       "secs": sp[key][1] - sp[key][0], "fg": fg_ok(npy)})
     cands.sort(key=lambda c: -c["spread"])
     pick = cands[:most]
     k = 0
     for c in pick:
-        if k < n_pass and c["mode"] == "오르빗" and c["fg"]:
+        if k < n_pass and c["mode"] == "오르빗" and c["fg"] and not c["portrait"]:
             c["mode"] = "통과"
             k += 1
     print(f"✅ 입체로 만들 사진 {len(pick)}장 (후보 {len(cands)}장)")
@@ -239,7 +245,7 @@ def main(a):
         if os.path.exists(c["path"] + ".입체.mp4") and not redo:
             continue
         shutil.rmtree(os.path.join(work, "층"), ignore_errors=True)
-        md = render(c["path"], c["npy"], c["mode"], c["secs"], work)
+        md = render(c["src"], c["npy"], c["mode"], c["secs"], work, out=c["path"] + ".입체.mp4")
         if md:
             print(f"  [{i}/{len(pick)}] 완성 ({md}) {os.path.basename(c['path'])}.입체.mp4 — 가장자리 빈 곳 검사 통과")
         else:
