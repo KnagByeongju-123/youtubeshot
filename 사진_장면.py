@@ -42,9 +42,17 @@ def seg(path, out, N, cx, cy, z0, z1):
     vf = (f"scale=3840:2160:force_original_aspect_ratio=increase,crop=3840:2160,"
           f"zoompan=z='{z0}+({z1}-{z0})*on/{N}':x='max(0,min(iw-iw/zoom,{cx}*iw-iw/zoom/2))':y='max(0,min(ih-ih/zoom,{cy}*ih-ih/zoom/2))':d={N}:s=1920x1080:fps=24")
     subprocess.run(["ffmpeg", "-v", "error", "-y", "-loop", "1", "-i", path, "-vf", vf, "-frames:v", str(N), "-c:v", "libx264", "-crf", "16", "-pix_fmt", "yuv420p", out], check=True)
+from PIL import ImageOps
+def upright(path, out):
+    """사진 파일 안의 '돌려 보기' 정보(EXIF)대로 바로 세움 — 안 하면 옆으로 누운 사진이 나옴 (2026-11-08)"""
+    im = Image.open(path); im2 = ImageOps.exif_transpose(im)
+    if im2.size != im.size or (im.getexif() or {}).get(274, 1) != 1:
+        im2.convert("RGB").save(out, quality=95); return out
+    return path
 k = 0
 for i, x in enumerate(L):
     if x["k"] != "photo": continue
+    x = dict(x); x["file"] = upright(x["file"], f"{T}/shots/{i+1:02d}_src.jpg")
     dur = D[i] + 0.7 + 0.4; N = int(round(dur * 24)); k += 1
     z0, z1 = (1.0, 1.12) if k % 2 else (1.12, 1.0)
     ov = f"{T}/shots/{i+1:02d}_ov.png"; overlay(x["label"], x["credit"], ov)
