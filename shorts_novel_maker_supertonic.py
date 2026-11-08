@@ -5407,6 +5407,7 @@ class SubtitleRenderer:
         self._depth_big = {}
         self.bl_on = self.depth_on and str(s.get("img_blender", "off")) == "on"   # Blender 3D 카메라 영상 (사용자 결정 2026-11-08)
         self.bl_clips, self._bl_cap = {}, {}
+        self.no3d = set()            # 3D(Blender·2.5D) 를 쓰지 않을 그림 (그래프·지도·도해)
         self.face_tp_on = (not self.slide) and str(s.get("img_face_tp", "off")) == "on"   # 사람 사진 = 얼굴 순간이동 (사용자 결정 2026-11-08)
         self._faces_c, self._paint_c = {}, {}
         self.paint_on = (not self.slide) and str(s.get("img_trans_paint", "off")) == "on"
@@ -6101,7 +6102,7 @@ class SubtitleRenderer:
         cy = big.height / 2 + (ay + (by - ay) * p) * sy
         l, tp = cx - cw / 2, cy - ch / 2
         self._last_rect = (l, tp, l + cw, tp + ch)
-        dbig = self._depth_for(sh["img"], big.size) if (getattr(self, "depth_on", False) and z < 1.22) else None   # 확대(줌)된 장면은 2.5D 안 함 (가장자리 겹침이 더 잘 보임)
+        dbig = self._depth_for(sh["img"], big.size) if (getattr(self, "depth_on", False) and z < 1.22 and sh["img"] not in getattr(self, "no3d", ())) else None   # 확대(줌)된 장면은 2.5D 안 함 (가장자리 겹침이 더 잘 보임)
         if dbig is None:
             return extent_resize(big, (bw, bh), (l, tp, l + cw, tp + ch)), mask
         # 2.5D 카메라 무빙: 장면이 진행되는 동안 한쪽으로 천천히 돌아가며(드리프트) + 7초 주기로 살짝 흔들림. 가까운 것은 많이, 먼 것은 조금 밀림
@@ -6865,6 +6866,27 @@ def blender_exe():
     return os.environ.get("BLENDER") or _sh.which("blender") or (r"C:\Program Files\Blender Foundation\Blender 4.0\blender.exe" if os.name == "nt" else "")
 
 
+NOT_3D_WORDS = ("지도", "도해", "그래프", "도면", "모식도", "스케치", "비교표", "곡선", "복원도", "해부도", "구조도", "구조 ", "식생", "도식", "연대 결과", "조사 지역", "연구)", "표 ", "붕괴")
+
+
+def not_3d_photo(r, idx, path):
+    """3D(입체)로 세우면 안 되는 그림: 설명에 지도·그래프·도해… 가 있거나, 넓은 평평한 바탕(흰·검은 배경의 도표·그림)"""
+    try:
+        cap = str(r.images[idx][1] or "") + " "
+    except Exception:
+        cap = ""
+    if any(w_ in cap for w_ in NOT_3D_WORDS):
+        return True
+    try:
+        with Image.open(path) as im_:
+            g = np.asarray(im_.convert("L").resize((256, 144)), np.float32)
+        bl_ = g[:144 // 8 * 8, :256 // 8 * 8].reshape(18, 8, 32, 8)
+        flat_white = (bl_.std(axis=(1, 3)) < 2.5) & (bl_.mean(axis=(1, 3)) > 200)   # 흰 바탕 도표·그림 (검은 바탕 유물 사진은 3D 로 괜찮음)
+        return float(flat_white.mean()) > 0.30
+    except Exception:
+        return False
+
+
 def ensure_blender_clips(r, log=None, cancel=None):
     """사진 장면마다(같은 사진이 이어지는 묶음 g0~g1) Blender 진짜 3D 카메라 영상을 미리 만듦 (사용자 결정 2026-11-08 '블렌더 활용').
     깊이 지도가 있고(평평한 도표·그림 제외) 가로 사진(1.3~2.4)만. 한 번 만든 것은 다시 씀. 만든 영상은 r.bl_clips[사진번호]"""
@@ -6922,6 +6944,9 @@ def ensure_blender_clips(r, log=None, cancel=None):
         except Exception:
             continue
         if not (1.15 <= asp <= 3.2) or load_depth(path) is None:      # 가로 사진만 (세로 사진·아주 긴 도표는 프로그램 방식)
+            continue
+        if not_3d_photo(r, idx, path):                              # 그래프·지도·도해·표·여러 칸 사진은 3D 로 세우지 않음 (글자가 잘리고 휘어 보임)
+            r.no3d.add(idx)
             continue
         if getattr(r, "face_tp_on", False) and r.faces_for(idx):    # 사람이 나오는 실제 사진은 3D 로 바꾸지 않음 (얼굴 순간이동)
             continue
