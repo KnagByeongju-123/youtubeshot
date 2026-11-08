@@ -7,7 +7,8 @@
   그 층의 기울기를 따라 반대로 구름(4층 → 3층 → 2층 → 땅 → 화면 밖). 만나는 순간 전사가 자동으로 점프.
 - 층마다 할 일(STAGES 의 "층", 여러 개 가능): "벌" = 날아오는 벌을 활로, "돌" = 하늘에서 떨어지는 돌을 멈췄다 피함
 - 판마다 더할 것: "불덩이_섞기"(N 번째마다 통통 튀는 불덩이), "순찰"(층을 왔다 갔다 하는 딱정벌레 — 만나면 점프)
-- 꼭대기 보스("보스"): "우주인"(광선을 점프로 피하고 화살 N발) 또는 "여왕벌"(날아다니며 침 두 번, 화살 N발)
+- "운석": 하늘에서 불꼬리 운석이 전사가 있는 층의 바로 앞·뒤에 떨어져 폭발, "무대": 벽돌·사다리 색, 별, 행성(우주 배경)
+- 꼭대기 보스("보스"): "우주인"(광선 N번("보스_광선")을 점프로 피하고 화살 N발) 또는 "여왕벌"(날아다니며 침 두 번, 화살 N발)
   → 감옥이 열리고 하트 → N판 클리어!
 - "거울": true 인 판은 좌우를 뒤집음(통나무가 반대쪽에서, 공주가 반대쪽에).
 
@@ -17,6 +18,7 @@
 """
 import json
 import math
+import random
 import sys
 
 STAGES = [
@@ -26,6 +28,12 @@ STAGES = [
      "통나무_간격": 1.9, "통나무_빠르기": 6.2, "불덩이_섞기": 3,  # 세 번째마다 통나무 대신 불덩이
      "순찰": [(1, -1.2, 7.0, 1.6), (3, -10.0, 2.2, 1.8)],  # (층, 왼끝, 오른끝, 빠르기) 딱정벌레
      "보스": "여왕벌", "보스_화살": 4, "거울": True},
+    {"판": 5, "제목": "우주에서 운석이 떨어진다!", "층": {1: [("벌", 3)], 3: [("벌", 2)]},
+     "통나무_간격": 1.9, "통나무_빠르기": 6.2, "불덩이_섞기": 4,
+     "운석": {"간격": 1.4},  # 전사가 있는 층의 바로 앞·뒤에 떨어짐
+     "보스": "우주인", "보스_화살": 5, "보스_광선": 2, "거울": False,
+     "무대": {"벽돌색": "#7d8aa3", "벽돌색2": "#5f6b85", "사다리색": "#ffd21f", "별": 160,
+            "행성": [-14.0, 9.0, 1.6, "#5b6ee1"]}},
 ]
 
 BASE = [0.0, 3.2, 6.4, 9.6, 12.8]  # 층 높이(가운데 기준): 땅, 2층, 3층, 4층, 꼭대기
@@ -338,20 +346,28 @@ def build(cfg, start_score=0):
         add_score(t_fall, 1000, fx, z)
         sfx.append({"초": round(t_fall + 0.1, 2), "소리": "휘익"})
     else:
-        objs.append({"모양": "광선", "색": "#7CFF4F", "동작": [{"초": round(t_laser, 2), "위치": [alien_x - 1.0, 0, z + 1.6]},
-                                                             {"초": round(t_laser + 0.9, 2), "위치": [-14.5, 0, z + 1.0]}]})
-        P.jump_here(2.4, 0.75)
-        P.pose("활쏘기")
-        hits = []
-        for k in range(cfg["보스_화살"]):
-            th = P.t + 0.55 + k * 0.7
-            arrow(P.x + 0.9, z + 1.45, alien_x - 0.6, z + 1.6, th)
-            hits.append(th)
-        P.wait(hits[-1] - P.t + 0.3, "활쏘기")
+        n_l, n_a = cfg.get("보스_광선", 1), cfg["보스_화살"]
+        per = math.ceil(n_a / n_l)
+        hits, lasers = [], []
+        for li in range(n_l):  # 광선 → 점프로 피함 → 화살 몇 발, 되풀이
+            tl = P.t if li == 0 else P.t + 0.2
+            if li:
+                P.wait(0.2, "서기")
+            lasers.append(tl)
+            objs.append({"모양": "광선", "색": "#7CFF4F", "동작": [{"초": round(tl, 2), "위치": [alien_x - 1.0, 0, z + 1.6]},
+                                                                 {"초": round(tl + 0.9, 2), "위치": [-14.5, 0, z + 1.0]}]})
+            P.jump_here(2.4, 0.75)
+            P.pose("활쏘기")
+            for k in range(min(per, n_a - len(hits))):
+                th = P.t + 0.55 + k * 0.7
+                arrow(P.x + 0.9, z + 1.45, alien_x - 0.6, z + 1.6, th)
+                hits.append(th)
+            P.wait(hits[-1] - P.t + 0.3, "활쏘기")
         t_fall = hits[-1]
         add_score(t_fall, 1000, alien_x, z)
-        alien_acts = [{"초": 0, "자세": "서기", "위치": [alien_x, FRONT, z]}, {"초": round(t_laser - 0.4, 2), "자세": "광선"},
-                      {"초": round(t_laser + 0.5, 2), "자세": "서기"}]
+        alien_acts = [{"초": 0, "자세": "서기", "위치": [alien_x, FRONT, z]}]
+        for tl in lasers:
+            alien_acts += [{"초": round(tl - 0.4, 2), "자세": "광선"}, {"초": round(tl + 0.5, 2), "자세": "서기"}]
         for th in hits[:-1]:
             alien_acts += [{"초": round(th, 2), "자세": "맞음"}, {"초": round(th + 0.35, 2), "자세": "서기"}]
         alien_acts += [{"초": round(t_fall, 2), "자세": "쓰러짐", "위치": [alien_x, FRONT, z]}]
@@ -411,6 +427,40 @@ def build(cfg, start_score=0):
             objs.append({"모양": "통나무", "반지름": LOG_R, "쿵": thuds, "동작": lk})
         meets(lk, LOG_R, JUMP)
         t_d += cfg["통나무_간격"]
+    # ── 운석: 전사가 있는 층의 바로 앞·뒤에 불꼬리 운석이 떨어져 폭발
+    if cfg.get("운석"):
+        rg = random.Random(cfg["판"])
+        t = 2.4
+        while t < t_top - 0.5:
+            px, pz, pk = P.pos(t)
+            if P.climbing(t) or pk >= 4:
+                t += 0.4
+                continue
+            xl = None
+            for _ in range(12):
+                c = px + rg.choice([-1, 1]) * rg.uniform(1.5, 3.2)
+                if -10.3 < c < 10.3 and not in_cut(pk, c, 0.5):
+                    xl = c
+                    break
+            if xl is None:
+                t += 0.4
+                continue
+            zg = fz(pk, xl)
+            dx = rg.choice([-1, 1])
+            objs.append({"모양": "글자", "내용": "!", "글자크기": 0.9, "색": "#ff3030", "동작": [
+                {"초": round(t - 0.9, 2), "위치": [round(xl, 2), -1.6, round(zg + 0.3, 2)]},
+                {"초": round(t - 0.05, 2), "위치": [round(xl, 2), -1.6, round(zg + 0.3, 2)]}]})
+            objs.append({"모양": "운석", "쿵": [round(t, 2)], "등속": True, "동작": [
+                {"초": round(t - 0.9, 3), "위치": [round(xl - dx * 6, 2), FRONT - 0.3, SKY + 1]},
+                {"초": round(t, 3), "위치": [round(xl, 2), FRONT - 0.3, round(zg + 0.45, 2)]}]})
+            for k in range(6):
+                ddx = (0.5 + 0.4 * k) * (1 if k % 2 else -1)
+                pk_ = [{"초": round(t + 0.5 * j / 6, 3), "위치": [round(xl + ddx * j / 6, 3), FRONT - 0.3,
+                                                              round(zg + 0.25 + 4 * 1.0 * (j / 6) * (1 - j / 6) - 0.13 * j / 6, 3)]}
+                       for j in range(7)]
+                pk_.append({"초": round(t + 0.8, 3), "위치": pk_[-1]["위치"]})
+                objs.append({"모양": "조각", "반지름": 0.13, "색": "#ff7a1f" if k % 2 else "#6b4a3a", "등속": True, "동작": pk_})
+            t += cfg["운석"]["간격"] * rg.uniform(0.8, 1.25)
     # ── 딱정벌레 순찰: 층 위를 왔다 갔다(만나면 점프)
     for (k, xa, xb, v) in cfg.get("순찰", []):
         bk, t, x, d = [], 0.0, (xa + xb) / 2, 1
@@ -434,6 +484,7 @@ def build(cfg, start_score=0):
 
     acts = P.keys(total)
     stage = {"바닥": [-14, 14], "발판": [], "사다리": []}
+    stage.update(cfg.get("무대", {}))
     for k in (1, 2, 3, 4):
         x = -EDGE if k < 4 else TOP_X0
         for a, b in cuts(k):
