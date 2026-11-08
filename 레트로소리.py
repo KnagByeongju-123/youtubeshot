@@ -4,7 +4,7 @@
 블록애니.py 가 장면 영상에 자동으로 넣음. 따로 들어 보기:
   python 레트로소리.py 견본 <폴더>      # 효과음마다 wav + 배경음 wav
 
-효과음 이름: 착지 놀람 활 맞음 광선 점프 쓰러짐 승리 동전 주먹
+효과음 이름: 착지 놀람 활 맞음 광선 점프 쓰러짐 승리 동전 주먹 윙윙
 배경음 곡: 레트로전투
 """
 import math
@@ -71,6 +71,12 @@ def sfx(name):
         a = noise(0.16, 6) * env(int(0.16 * SR), decay=0.045)
         b = square(sweep(220, 70, 0.16), 0.16) * env(int(0.16 * SR), decay=0.06) * 0.5
         return a * 0.8 + b
+    if name == "윙윙":  # 벌 날갯소리(떨리는 낮은 소리)
+        sec = 0.9
+        t = _t(sec)
+        f = 190 + 12 * np.sin(2 * math.pi * 6 * t)
+        a = square(f, sec, 0.3) * (0.6 + 0.4 * np.sin(2 * math.pi * 28 * t)) * env(int(sec * SR), attack=0.08)
+        return a
     if name == "주먹":
         return sfx("맞음")
     if name == "광선":  # '퓨웅~' 떨리며 내려감
@@ -150,6 +156,7 @@ def bgm(sec, song="레트로전투"):
 
 
 # ───────────── 섞기 ─────────────
+SFX_VOL = {"윙윙": 0.4, "동전": 0.7}  # 효과음마다 크기 배율
 def mix(total_sec, events, music=None, music_vol=0.35, music_end=None, sfx_vol=0.9):
     """events = [(초, 효과음이름), ...]. 배경음은 music_end 초에 0.4초 동안 줄어들며 끝남.
     배경음 최고 크기 music_vol(설정 bgm_peak 와 같은 뜻)."""
@@ -167,7 +174,7 @@ def mix(total_sec, events, music=None, music_vol=0.35, music_end=None, sfx_vol=0
         out += m
     for t, name in events:
         s = sfx(name)
-        s = s / (np.max(np.abs(s)) + 1e-9) * sfx_vol
+        s = s / (np.max(np.abs(s)) + 1e-9) * sfx_vol * SFX_VOL.get(name, 1.0)
         i = int(t * SR)
         if i >= n:
             continue

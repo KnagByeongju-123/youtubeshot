@@ -32,7 +32,9 @@
     더 넣기: "효과음": [{"초": 1.0, "소리": "착지"}, {"초": 7, "소리": "승리"}]
     (착지 놀람 활 맞음 광선 점프 쓰러짐 승리 동전 주먹), 배경음: "배경음": {"곡": "레트로전투", "크기": 0.35, "끝": 6.9}
     (끝 = 그 초에 배경음이 줄어들며 멈춤), 소리를 빼려면 "소리": false
-  날아가는 물체: "물체": [{"모양": "화살" | "광선", "색": 색, "동작": [{"초": 3, "위치": [x,y,z]}, {"초": 3.5, "위치": [...]}]}]
+  벌: {"모양": "벌", "크기": 1.6, "맞은초": 2.0, "동작": [...]} — 맞은초부터 빙글 돌며 떨어짐(그 뒤 키로 떨어질 곳을 적음),
+    날아올 때 '윙윙', 맞으면 '띠링'(점수). 글자: {"모양": "글자", "내용": "+100", "동작": [...]} (숫자·영어)
+  날아가는 물체: "물체": [{"모양": "화살" | "광선" | "벌" | "글자", "색": 색, "동작": [{"초": 3, "위치": [x,y,z]}, {"초": 3.5, "위치": [...]}]}]
   방향: 도(°). 0 = 카메라 쪽(-Y)을 봄, 90 = 오른쪽(+X)을 봄. 위치는 m (캐릭터 키 약 2m).
   동작 사이의 위치는 부드럽게 이어짐(걷기·달리기는 그동안 다리를 움직임).
 """
@@ -282,12 +284,13 @@ POSES = {
     "서기": {},
     "주먹": {"오른팔": (-90, 0, 0), "왼팔": (-30, 0, 15), "몸": (0, 0, -15), "왼다리": (-15, 0, 0), "오른다리": (15, 0, 0)},
     "가리키기": {"오른팔": (-90, 0, 10), "머리": (0, 0, 0)},
-    "놀람": {"오른팔": (0, -150, 0), "왼팔": (0, 150, 0), "몸": (8, 0, 0)},
+    # 옆모습에서도 보이게 팔을 '앞쪽 위'로 듦(옆으로 벌리면 화면 안쪽이라 큰 머리에 가려짐)
+    "놀람": {"오른팔": (-125, -15, 0), "왼팔": (-125, 15, 0), "몸": (-8, 0, 0)},
     "팔짱": {"오른팔": (-60, 0, -55), "왼팔": (-60, 0, 55)},
     "쓰러짐": {"몸": (0, 0, 0)},
     "활쏘기": {"왼팔": (-90, 0, 0), "오른팔": (-90, 0, -35), "머리": (0, 0, 0), "왼다리": (-12, 0, 0), "오른다리": (12, 0, 0)},
     "맞음": {"몸": (-22, 0, 0), "왼팔": (-40, 0, 25), "오른팔": (-40, 0, -25), "머리": (-15, 0, 0)},
-    "만세": {"왼팔": (0, 160, 0), "오른팔": (0, -160, 0), "머리": (-10, 0, 0)},
+    "만세": {"왼팔": (-160, 15, 0), "오른팔": (-160, -15, 0), "머리": (-10, 0, 0)},
     "광선": {"오른팔": (-90, 0, 0), "왼팔": (-90, 0, 0), "몸": (8, 0, 0)},
     "점프": {"왼다리": (-35, 0, 0), "오른다리": (20, 0, 0), "왼팔": (0, 60, 0), "오른팔": (0, -60, 0)},
 }
@@ -516,11 +519,36 @@ def cmd_scene(scene_file, out, fancy=False):
             box(f"화살대{i}", (-7, -0.3, -0.3), (5, 0.3, 0.3), "#8b5a2b", root)
             box(f"화살촉{i}", (5, -0.8, -0.8), (8, 0.8, 0.8), "#cfd8dc", root)
             box(f"화살깃{i}", (-8, -0.2, -1.2), (-5, 0.2, 1.2), "#f5f5f5", root)
+        elif kind == "벌":  # 머리가 +X 쪽, 날개가 파닥임
+            box(f"벌몸{i}", (-4, -2.5, -2.5), (4, 2.5, 2.5), pr.get("색", "#ffd21f"), root)
+            for sx in (-1.6, 1.4):
+                box(f"벌줄{i}_{sx}", (sx, -2.65, -2.65), (sx + 1.0, 2.65, 2.65), "#1e1e1e", root, outline=False)
+            box(f"벌머리{i}", (4, -2, -2), (7, 2, 2), "#2a2a2a", root)
+            box(f"벌눈{i}", (5.2, -2.15, 0), (6.4, -2.0, 1.2), "#ffffff", root, outline=False)
+            box(f"벌침{i}", (-6.5, -0.5, -0.7), (-4, 0.5, 0.3), "#1e1e1e", root)
+            for wy in (-1.2, 1.2):
+                w = box(f"벌날개{i}_{wy}", (-3, wy - 0.2, 2.5), (1.5, wy + 0.2, 7), "#dff4ff", root, (-1, wy, 2.5))
+                w["날개"] = 1 if wy < 0 else -1
+        elif kind == "글자":  # 점수 같은 글자(숫자·영어)
+            cu = bpy.data.curves.new(f"글자{i}", "FONT")
+            cu.body = pr.get("내용", "+100")
+            cu.align_x = "CENTER"
+            cu.size = pr.get("글자크기", 0.8)
+            cu.extrude = 0.03
+            tx = bpy.data.objects.new(f"글자{i}", cu)
+            tx.data.materials.append(mat(pr.get("색", "#ffe14d")))
+            tx.parent = root
+            tx.rotation_euler = (math.radians(90), 0, 0)
+            bpy.context.scene.collection.objects.link(tx)
         else:  # 광선 덩어리
             c = pr.get("색", "#7CFF4F")
             box(f"광선{i}", (-4, -2, -2), (4, 2, 2), c, root, glow=4.0)
             box(f"광선꼬리{i}", (4, -1, -1), (9, 1, 1), "#c8ffb0", root, glow=4.0)
+        k = float(pr.get("크기", 1.0))
+        root.scale = (k, k, k)
         keys = sorted(pr["동작"], key=lambda k: k["초"])
+        root["모양"] = kind
+        root["맞은초"] = float(pr.get("맞은초", 1e9))
         props.append((root, keys))
     cams = sorted(S.get("카메라", [{"초": 0, "위치": [0, -8, 2], "보는곳": [0, 0, 1]}]), key=lambda k: k["초"])
     cam = add_camera(cams[0]["위치"], cams[0]["보는곳"], cams[0].get("렌즈", 35), ortho=cams[0].get("직교"))
@@ -553,7 +581,21 @@ def cmd_scene(scene_file, out, fancy=False):
                 p = _track(keys, t, "위치", keys[0]["위치"])
                 p2 = _track(keys, min(t + 0.02, keys[-1]["초"]), "위치", p)
                 root.location = p
-                if abs(p2[0] - p[0]) > 1e-6 or abs(p2[2] - p[2]) > 1e-6:
+                kind = root["모양"]
+                if kind == "벌":  # 가는 쪽을 봄, 날개는 한 장면씩 위·아래(옛날 게임식), 맞으면 빙글 돌며 떨어짐
+                    dead = t >= root["맞은초"]
+                    face = math.pi if p2[0] - p[0] < -1e-6 else 0.0
+                    if abs(p2[0] - p[0]) > 1e-6:
+                        root["face"] = face
+                    spin = (t - root["맞은초"]) * 14 if dead else 0.0
+                    root.rotation_euler = (spin, 0, root.get("face", math.pi))
+                    for ch in root.children:
+                        if "날개" in ch:
+                            ang = 0 if dead else (45 if f % 2 else -15)
+                            ch.rotation_euler = (math.radians(ang * ch["날개"]), 0, 0)
+                elif kind == "글자":
+                    pass
+                elif abs(p2[0] - p[0]) > 1e-6 or abs(p2[2] - p[2]) > 1e-6:
                     root.rotation_euler = (0, -math.atan2(p2[2] - p[2], p2[0] - p[0]), 0)
         cl = _track(cams, t, "위치", cams[0]["위치"])
         ck = _track(cams, t, "보는곳", cams[0]["보는곳"])
@@ -575,6 +617,13 @@ def cmd_scene(scene_file, out, fancy=False):
             for pr in S.get("물체", []):
                 ks = sorted(pr["동작"], key=lambda k: k["초"])
                 kind = pr.get("모양", "화살")
+                if kind == "벌":
+                    ev.append((ks[0]["초"], "윙윙"))
+                    if "맞은초" in pr:
+                        ev.append((float(pr["맞은초"]) + 0.05, "동전"))
+                    continue
+                if kind == "글자":
+                    continue
                 ev.append((ks[0]["초"], "활" if kind == "화살" else "광선"))
                 if pr.get("맞힘", kind == "화살"):
                     ev.append((ks[-1]["초"], "맞음"))
