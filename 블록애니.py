@@ -16,7 +16,8 @@
   피부·머리·윗옷·바지·신발·눈: 색("#rrggbb")
   머리모양: 짧은 | 삐죽 | 긴 | 대머리 | 후드     소매: 긴 | 짧은
   빛나는눈: true (눈동자가 스스로 빛남, 강자·악당)   수염: true   벨트: 색   망토: 색   모자: 색
-  손에: 검 | 없음   검색: 색   키: 1.0(기본) — 몸 전체 크기 배율   표정: 보통 | 화남 | 웃음 | 놀람
+  손에: 검 | 활 | 없음   검색·활색: 색   화살통: 색(등에 화살통)
+  괴물용: 외눈: true(가운데 큰 눈)   더듬이: 색   더듬이끝: 색   이빨: true   머리크기: 배율   키: 1.0(기본) — 몸 전체 크기 배율   표정: 보통 | 화남 | 웃음 | 놀람
 
 장면 파일(JSON):
   {"캐릭터": "캐릭터.json", "초": 6, "fps": 24, "크기": [1920,1080], "배경": "풀밭" | "밤" | "흰",
@@ -26,7 +27,8 @@
   위치 [x, y, 높이] 처럼 세 번째 값을 주면 그 높이(발판 위)에 섬.
   픽셀(옛날 게임) 모드: "픽셀": 6, "꼬마": 1.5, "배경": "레트로", "무대": {"바닥": [-12,12], "발판": [[x0,x1,높이]],
     "사다리": [[x, 아래, 위]]}, 카메라에 "직교": 14 (옆에서 평평하게, 화면 가로 14m)
-  자세: 서기 | 걷기 | 달리기 | 주먹 | 가리키기 | 놀람 | 팔짱 | 쓰러짐
+  자세: 서기 | 걷기 | 달리기 | 주먹 | 가리키기 | 놀람 | 팔짱 | 쓰러짐 | 활쏘기 | 맞음 | 만세 | 광선 | 점프
+  날아가는 물체: "물체": [{"모양": "화살" | "광선", "색": 색, "동작": [{"초": 3, "위치": [x,y,z]}, {"초": 3.5, "위치": [...]}]}]
   방향: 도(°). 0 = 카메라 쪽(-Y)을 봄, 90 = 오른쪽(+X)을 봄. 위치는 m (캐릭터 키 약 2m).
   동작 사이의 위치는 부드럽게 이어짐(걷기·달리기는 그동안 다리를 움직임).
 """
@@ -138,11 +140,12 @@ def build_character(name, spec):
     k = float(s.get("키", 1.0))
     root.scale = (k, k, k)
 
-    def j(nm, origin):  # 관절(빈 물체) — 여기를 돌리면 팔·다리·머리가 움직임
+    def j(nm, origin, par=None):  # 관절(빈 물체) — 여기를 돌리면 팔·다리·머리가 움직임
         e = bpy.data.objects.new(f"{name}_{nm}", None)
         bpy.context.scene.collection.objects.link(e)
-        e.parent = root
-        e.location = Vector(origin) * U
+        e.parent = par or root
+        po = (par or root).get("origin", (0, 0, 0))
+        e.location = (Vector(origin) - Vector(po)) * U
         e["origin"] = origin
         return e
 
@@ -168,7 +171,7 @@ def build_character(name, spec):
     sleeve_bot = 15 if s["소매"] == "긴" else 19
     for side, x in (("왼팔", 6), ("오른팔", -6)):
         o = (x, 0, 22)
-        jt = j(side, o)
+        jt = j(side, o, body)
         box(f"{name}_{side}_소매", (x - 2, -2, sleeve_bot), (x + 2, 2, 24), s["윗옷"], jt, o)
         box(f"{name}_{side}_손", (x - 1.9, -1.9, 12), (x + 1.9, 1.9, sleeve_bot), s["피부"], jt, o)
         arms[side] = jt
@@ -180,9 +183,23 @@ def build_character(name, spec):
         box(f"{name}_검막이", (-7.8, -1.6, 9.0), (-4.2, 1.6, 9.6), "#8a8a8a", a, o)
         box(f"{name}_검날", (-6.4, -0.45, -1.0), (-5.6, 0.45, 9.0), s.get("검색", "#cfd8dc"), a, o,
             glow=2.0 if s.get("빛나는눈") else 0.0)
+    if s.get("손에") == "활":  # 왼손에 활(팔을 앞으로 뻗으면 활이 세로로 섬)
+        a = arms["왼팔"]
+        o2 = a["origin"]
+        bc = s.get("활색", "#8b5a2b")
+        box(f"{name}_활손잡이", (5.4, -1.5, 10.5), (6.6, 1.5, 12), bc, a, o2)
+        box(f"{name}_활위", (5.5, -8, 11.2), (6.5, -1.5, 12.2), bc, a, o2, rot=None)
+        box(f"{name}_활아래", (5.5, 1.5, 11.2), (6.5, 8, 12.2), bc, a, o2)
+        box(f"{name}_활끝1", (5.5, -9, 12.2), (6.5, -7.5, 14.2), bc, a, o2)
+        box(f"{name}_활끝2", (5.5, 7.5, 12.2), (6.5, 9, 14.2), bc, a, o2)
+        box(f"{name}_활시위", (5.8, -8.5, 14.0), (6.2, 8.5, 14.4), "#f5f5f5", a, o2, outline=False)
+    if s.get("화살통"):
+        box(f"{name}_화살통", (-2.5, 2.1, 15), (0.5, 4.2, 24), s["화살통"], body, (0, 0, 12))
+        for i, x in enumerate((-2, -0.8)):
+            box(f"{name}_깃{i}", (x, 2.6, 24), (x + 1, 3.6, 26.5), "#f5f5f5", body, (0, 0, 12))
     # 머리(목 관절)
     o = (0, 0, 24)
-    head = j("머리", o)
+    head = j("머리", o, body)
     hs = float(s.get("머리크기", 1.0))  # 1.5 쯤 = 꼬마 비율(옛날 게임 느낌)
     head.scale = (hs, hs, hs)
     box(f"{name}_얼굴", (-4, -4, 24), (4, 4, 32), s["피부"], head, o)
@@ -216,7 +233,20 @@ def build_character(name, spec):
     # 얼굴: 눈(흰자+눈동자), 눈썹, 입
     glow = 4.0 if s.get("빛나는눈") else 0.0
     ex = s.get("표정", "보통")
-    for sx in (-1, 1):
+    eye_sides = () if s.get("외눈") else (-1, 1)
+    if s.get("외눈"):  # 가운데 큰 눈 하나
+        box(f"{name}_큰흰자", (-2.2, F - 0.05, 26.6), (2.2, F + 0.06, 29.4), "#ffffff" if not glow else "#1a1a1a", head, o, outline=False)
+        box(f"{name}_큰눈동자", (-1.0, F - 0.12, 27.2), (1.0, F, 28.8), s["눈"], head, o, glow=glow, outline=False)
+        tilt = {"화남": 12}.get(ex, 0)
+        for sx in (-1, 1):
+            box(f"{name}_눈썹{sx}", (min(0, sx * 2.6), F - 0.12, 29.8), (max(0, sx * 2.6), F, 30.4), "#2a2a2a", head,
+                (sx * 1.3, F, 30.1), rot=(0, tilt * sx, 0), outline=False)
+    if s.get("더듬이"):
+        for sx in (-1, 1):
+            box(f"{name}_더듬이{sx}", (sx * 2 - 0.4, -0.4, 32), (sx * 2 + 0.4, 0.4, 36), s["더듬이"], head, (sx * 2, 0, 32),
+                rot=(0, -20 * sx, 0))
+            box(f"{name}_더듬이끝{sx}", (sx * 3.4 - 1, -1, 35.4), (sx * 3.4 + 1, 1, 37.4), s.get("더듬이끝", "#7CFF4F"), head, o, glow=3.0)
+    for sx in eye_sides:
         x0, x1 = sorted((sx * 1, sx * 3))
         box(f"{name}_흰자{sx}", (x0, F - 0.05, 27), (x1, F + 0.06, 28.2 if ex != "놀람" else 28.6),
             "#ffffff" if not glow else "#1a1a1a", head, o, outline=False)
@@ -228,7 +258,12 @@ def build_character(name, spec):
             head, ((x0 + x1) / 2, F, brow_z + 0.3), rot=(0, tilt, 0), outline=False)
     mw = {"웃음": 1.6, "놀람": 0.8, "화남": 1.4}.get(ex, 1.2)
     mh = {"놀람": 1.2}.get(ex, 0.45)
-    box(f"{name}_입", (-mw, F - 0.12, 25.6), (mw, F, 25.6 + mh), "#7a3b30" if ex != "놀람" else "#3a1a1a", head, o, outline=False)
+    if s.get("이빨"):  # 괴물 입: 어두운 입 + 흰 이빨
+        box(f"{name}_입", (-3, F - 0.1, 24.6), (3, F, 26.2), "#2a0a12", head, o, outline=False)
+        for i, x in enumerate((-2.6, -1.0, 0.6, 2.0)):
+            box(f"{name}_이{i}", (x, F - 0.16, 25.4), (x + 0.6, F - 0.08, 26.2), "#ffffff", head, o, outline=False)
+    else:
+        box(f"{name}_입", (-mw, F - 0.12, 25.6), (mw, F, 25.6 + mh), "#7a3b30" if ex != "놀람" else "#3a1a1a", head, o, outline=False)
     if s.get("수염"):
         box(f"{name}_수염", (-4.2, -4.3, 24), (4.2, -3.9, 25.3), hair, head, o)
         for sx in (-1, 1):
@@ -246,6 +281,11 @@ POSES = {
     "놀람": {"오른팔": (0, -150, 0), "왼팔": (0, 150, 0), "몸": (8, 0, 0)},
     "팔짱": {"오른팔": (-60, 0, -55), "왼팔": (-60, 0, 55)},
     "쓰러짐": {"몸": (0, 0, 0)},
+    "활쏘기": {"왼팔": (-90, 0, 0), "오른팔": (-90, 0, -35), "머리": (0, 0, 0), "왼다리": (-12, 0, 0), "오른다리": (12, 0, 0)},
+    "맞음": {"몸": (-22, 0, 0), "왼팔": (-40, 0, 25), "오른팔": (-40, 0, -25), "머리": (-15, 0, 0)},
+    "만세": {"왼팔": (0, 160, 0), "오른팔": (0, -160, 0), "머리": (-10, 0, 0)},
+    "광선": {"오른팔": (-90, 0, 0), "왼팔": (-90, 0, 0), "몸": (8, 0, 0)},
+    "점프": {"왼다리": (-35, 0, 0), "오른다리": (20, 0, 0), "왼팔": (0, 60, 0), "오른팔": (0, -60, 0)},
 }
 
 
@@ -261,7 +301,7 @@ def apply_pose(rig, pose, phase=0.0, amp=1.0):
         rig["왼팔"].rotation_euler = (math.radians(-a * w), 0, 0)
         rig["오른팔"].rotation_euler = (math.radians(a * w), 0, 0)
         if pose == "달리기":
-            rig["몸"].rotation_euler = (math.radians(-12), 0, 0)
+            rig["몸"].rotation_euler = (math.radians(12), 0, 0)  # 앞으로 숙임
         return
     for k, r in POSES.get(pose, {}).items():
         rig[k].rotation_euler = tuple(math.radians(v) for v in r)
@@ -462,6 +502,22 @@ def cmd_scene(scene_file, out, fancy=False):
         rig = build_character(a["이름"], spec)
         keys = sorted(a.get("동작", []), key=lambda k: k["초"])
         actors.append((a, rig, keys))
+    props = []  # 날아가는 물체(화살·광선): 첫 키 ~ 마지막 키 사이에만 보임
+    for i, pr in enumerate(S.get("물체", [])):
+        root = bpy.data.objects.new(f"물체{i}", None)
+        bpy.context.scene.collection.objects.link(root)
+        root["origin"] = (0, 0, 0)
+        kind = pr.get("모양", "화살")
+        if kind == "화살":
+            box(f"화살대{i}", (-7, -0.3, -0.3), (5, 0.3, 0.3), "#8b5a2b", root)
+            box(f"화살촉{i}", (5, -0.8, -0.8), (8, 0.8, 0.8), "#cfd8dc", root)
+            box(f"화살깃{i}", (-8, -0.2, -1.2), (-5, 0.2, 1.2), "#f5f5f5", root)
+        else:  # 광선 덩어리
+            c = pr.get("색", "#7CFF4F")
+            box(f"광선{i}", (-4, -2, -2), (4, 2, 2), c, root, glow=4.0)
+            box(f"광선꼬리{i}", (4, -1, -1), (9, 1, 1), "#c8ffb0", root, glow=4.0)
+        keys = sorted(pr["동작"], key=lambda k: k["초"])
+        props.append((root, keys))
     cams = sorted(S.get("카메라", [{"초": 0, "위치": [0, -8, 2], "보는곳": [0, 0, 1]}]), key=lambda k: k["초"])
     cam = add_camera(cams[0]["위치"], cams[0]["보는곳"], cams[0].get("렌즈", 35), ortho=cams[0].get("직교"))
     tmpd = tempfile.mkdtemp()
@@ -485,6 +541,16 @@ def cmd_scene(scene_file, out, fancy=False):
             r.rotation_euler = (math.radians(-90) if pose == "쓰러짐" else 0, 0, math.radians(yaw))
             if pose == "쓰러짐":
                 r.location = (pos[0], pos[1], z + 0.25)
+        for root, keys in props:
+            vis = keys[0]["초"] <= t <= keys[-1]["초"]
+            for ch in [root] + list(root.children):
+                ch.hide_render = not vis
+            if vis:
+                p = _track(keys, t, "위치", keys[0]["위치"])
+                p2 = _track(keys, min(t + 0.02, keys[-1]["초"]), "위치", p)
+                root.location = p
+                if abs(p2[0] - p[0]) > 1e-6 or abs(p2[2] - p[2]) > 1e-6:
+                    root.rotation_euler = (0, -math.atan2(p2[2] - p[2], p2[0] - p[0]), 0)
         cl = _track(cams, t, "위치", cams[0]["위치"])
         ck = _track(cams, t, "보는곳", cams[0]["보는곳"])
         cam.data.lens = _track(cams, t, "렌즈", cams[0].get("렌즈", 35))
@@ -498,7 +564,7 @@ def cmd_scene(scene_file, out, fancy=False):
     subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-framerate", str(fps), "-i",
                     os.path.join(tmpd, "%05d.png")]
                    + (["-vf", f"scale=iw*{px}:ih*{px}:flags=neighbor"] if px else []) + ["-c:v", "libx264", "-pix_fmt", "yuv420p",
-                    "-crf", "18", out], check=True)
+                    "-crf", "12", "-tune", "animation", out], check=True)
     print("영상 저장:", out)
 
 
