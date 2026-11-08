@@ -242,6 +242,10 @@ def main(a):
         log("📝 업로드 문구·설명란·유튜브 썸네일 만드는 중...")
         m.publish_kit(app.model_var.get().strip(), base, title, story, c.get("category") or m.DOC_CATEGORY, genre, s, ch,
                       c.get("sources") or [], c.get("notes", ""), log)
+    if "--미리보기" in a:                      # 콘티 페이지도 같이 (사용자 결정 2026-11-08: 기본 작업 순서)
+        import subprocess
+        subprocess.call([sys.executable, "-X", "utf8", os.path.join(HERE, "콘티_페이지.py"), plan_base + "_프로젝트.json", plan_base + "_콘티.html"], cwd=HERE)
+        log("🎬 콘티 페이지: " + plan_base + "_콘티.html (고르지 않은 장면은 자동)")
     log("✅ 전부 완료 → " + base + ".mp4")
     # 규칙: 쇼츠는 기본적으로 만들지 않음. --쇼츠 를 붙일 때만 롱폼 완성 뒤 40~50초 세로 쇼츠를 만듦 (쇼츠_자동.py). (예전 --쇼츠없음 은 그대로 둬도 됨)
     if (c.get("category") or m.DOC_CATEGORY) == m.DOC_CATEGORY and "--쇼츠" in a and "--쇼츠없음" not in a and suf != "_쇼츠":

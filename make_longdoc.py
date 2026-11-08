@@ -928,6 +928,12 @@ def run_doc(m, app, c, gate):
                        + "|" + title + "|" + ",".join(f"{d_:.3f}" for _, _, d_ in narr) + "|" + ",".join(f"{sg_['t0']:.2f}" for sg_ in getattr(r, "segs", [])) + f"|{r.duration:.2f}" + getattr(r, "fx_sig", "")).encode("utf-8")).hexdigest()   # 나레이션이 바뀌면(발음 수정 등) 영상 구간도 새로
     m.export_mp4_resumable(r, base + ".mp4", prog, gate, audio, work_dir=os.path.join(work, "영상구간_미리보기" if preview else "영상구간"), seg_sec=SEG_SEC, log=log, key=key)
     if preview:
+        try:                                    # 콘티 페이지(장면별 카메라 무빙·전환 고르기)도 같이 만듦 → Claude 가 Artifact 로 올림 (사용자 결정 2026-11-08: 기본 작업 순서)
+            import subprocess
+            subprocess.call([sys.executable, "-X", "utf8", os.path.join(HERE, "콘티_페이지.py"), final_base + "_프로젝트.json", final_base + "_콘티.html"], cwd=HERE)
+            log("🎬 콘티 페이지: " + final_base + "_콘티.html (Claude 가 Artifact 로 올려 사용자가 장면별 무빙·전환을 고름. 고르지 않은 장면은 자동)")
+        except Exception as e_:
+            log("  콘티 페이지 만들기 실패: " + str(e_)[:100])
         log("⏸ 작은 영상 완성: " + base + ".mp4 → 사용자에게 보내 검토받고, 고칠 곳을 고친 뒤 --검토완료 를 붙여 다시 실행하면 큰 영상·업로드 문구 (카메라 무빙은 " + os.path.basename(final_base) + "_카메라무빙.txt 에서 장면별로 바꿀 수 있음)")
         raise SystemExit(0)
     del audio
