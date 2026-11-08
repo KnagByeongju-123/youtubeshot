@@ -165,6 +165,14 @@ def pose(t):
         f = t * 4 - k
         loc, tgt, lm = spots[k]
         return (loc[0] + VW * 0.03 * f, loc[1] + VH * 0.01 * f, loc[2] - D0 * 0.03 * f), tgt, 0.0, lm
+    if MOVE == "crane":                              # 크레인 업: 낮은 데서 올라가며 내려다봄 (장면을 여는 샷)
+        return (TX * 0.3 * e, -VH * 0.24 * (1 - e), D0 * (0.80 + 0.18 * e)), (TX * 0.3 * e, VH * 0.10 * (1 - e), 0), 0.0, 1.1
+    if MOVE == "tilt":                               # 틸트 업: 제자리에서 아래 → 위로 훑음
+        return (TX * 0.2, -VH * 0.04, D0 * 0.90), (TX * 0.2, -VH * 0.16 + VH * 0.32 * e, 0), 0.0, 1.18
+    if MOVE == "dollyzoom":                          # 돌리 줌(현기증): 물러나며 확대 — 주인공 크기는 그대로, 배경만 당겨짐
+        z0, z1 = D0 * 0.68, D0 * 1.0
+        z = z0 + (z1 - z0) * e
+        return (TX * 0.4, TY * 0.4, z), (TX * 0.4, TY * 0.4, TZ), 0.0, (z - TZ) / (z0 - TZ)
     return (0, 0, D0 * (1 - 0.1 * e)), (0, 0, 0), 0.0, 1.0
 
 
@@ -255,7 +263,7 @@ for f in range(N):
     cam.keyframe_insert("location", frame=f + 1)
     cam.keyframe_insert("rotation_euler", frame=f + 1)
     cd.keyframe_insert("lens", frame=f + 1)
-interp = "CONSTANT" if MOVE == "freeze" else "LINEAR"
+interp = "CONSTANT" if MOVE == "freeze" else "LINEAR"   # (프레임마다 키를 넣으므로 LINEAR 면 그대로)
 for dat in (cam, cd):
     for fc in dat.animation_data.action.fcurves:
         for kp in fc.keyframe_points:

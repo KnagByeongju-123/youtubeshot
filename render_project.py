@@ -5,6 +5,7 @@
   - --소재프로필 : 손으로 쓴 대본을 그 소재의 기본 스타일(다큐 자막·제목 위치·근거 사진·웹 조사)로 맞춤
   - --사진 [초] : 대본에 사진이 적으면 웹에서 근거 사진을 자동으로 찾아 넣음 (나레이션 '초'마다 한 장, 기본 8초 - 관련 사진을 최대한 많이).
                   넣은 뒤 프로젝트 파일에 저장 → 다시 실행하면 사진은 건너뜀
+  - --미리보기 : 작은 영상(1280×720, <제목>_미리보기.mp4)만 만듦 — 사용자 검토가 끝난 뒤 --미리보기 없이 큰 영상(1920×1080) (사용자 결정 2026-11-08)
   - --suffix 이름 : 결과 파일 이름 끝에 _이름 (같은 제목으로 덧붙일 부분을 따로 만들 때. 화면 제목은 그대로)
   - --썸네일만 : 영상은 만들지 않고 썸네일 후보만 새로 (디자인 16가지 + 영상 장면 실사 편집). 지금 유튜브 썸네일은 그대로
   - --대본그대로 : 손으로 쓴 대본의 오프닝(30초 후크·'끝까지 보시면')과 챕터 끝 예고를 AI 가 고쳐 쓰지 않음 (에세이처럼 원문 분위기를 지킬 때. 존댓말 고치기는 그대로)
@@ -188,8 +189,16 @@ def main(a):
 
     if getattr(m, "is_trad", lambda x: False)(bgm):
         s["chapter_hold"] = 4.2               # 챕터 제목 동안 나레이션을 쉬고 고쟁 연주
-    r = m.make_renderer(title, story, s, narr)
+    plan_base = base                           # 카메라 무빙 계획(_카메라무빙.txt)은 미리보기·최종이 같은 파일을 씀
     vdir = "영상구간"
+    if "--미리보기" in a:                      # 사용자 결정 2026-11-08: 작은 영상(1280×720)을 먼저 만들어 검토받은 뒤에 큰 영상(1920×1080)
+        m.set_format("롱폼 가로 미리보기(1280×720)")
+        s = m.preview_settings(s)                # 글자 크기·여백도 화면에 맞춰 줄임
+        s["format"] = "롱폼 가로 미리보기(1280×720)"
+        base = base + "_미리보기"
+        vdir = "영상구간_미리보기"
+        log("🔍 미리보기: 작은 영상(1280×720)으로 만듦 → 검토가 끝나면 --미리보기 없이 다시 실행해 큰 영상(1920×1080)")
+    r = m.make_renderer(title, story, s, narr)
     if "--vi" in a:     # 한글 자막 위에 베트남어 자막
         vi = dict(c.get("sub_trans") or {})
         texts = []
@@ -209,7 +218,7 @@ def main(a):
         vdir = "영상구간_베트남어"
         log(f"🇻🇳 베트남어 자막 {len(vi)}줄 (한글 자막 위)")
     if hasattr(m, "ensure_blender_clips") and str(s.get("img_blender", "off")) == "on":   # Blender 사진 3D (사용자 결정 2026-11-08)
-        m.ensure_blender_clips(r, log, gate)
+        m.ensure_blender_clips(r, log, gate, plan_path=plan_base + "_카메라무빙.txt")
     log(f"영상 길이 {m.hms(r.duration)} · 챕터 {len(r.chapter_times())}개 · 사진 {len(m.photo_credits(story))}장")
     audio = m.build_audio(r, s, bgm)
     last = [0]

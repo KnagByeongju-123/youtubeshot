@@ -114,7 +114,21 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFont, ImageTk, ImageFilter, ImageEnhance, ImageOps
 
 W, H = 1080, 1920            # 현재 화면 크기 (set_format 으로 바뀜)
-FORMATS = {"쇼츠 세로(1080×1920)": (1080, 1920), "롱폼 가로(1920×1080)": (1920, 1080)}
+FORMATS = {"쇼츠 세로(1080×1920)": (1080, 1920), "롱폼 가로(1920×1080)": (1920, 1080), "롱폼 가로 미리보기(1280×720)": (1280, 720)}
+
+
+PIXEL_SIZE_KEYS = ("font_size", "title_size", "margin_x", "margin_right", "head_size", "sub_size")   # 화면 크기에 맞춰 줄여야 하는 픽셀 크기 설정
+
+
+def preview_settings(s, scale=1280 / 1920):
+    """작은 미리보기 영상(1280×720)용: 글자 크기·여백을 화면 크기에 맞춰 줄인 설정 (사용자 결정 2026-11-08: 작은 영상 검토 뒤 큰 영상)"""
+    s = dict(s)
+    for k_ in PIXEL_SIZE_KEYS:
+        try:
+            s[k_] = type(s[k_])(round(float(s[k_]) * scale)) if k_ in s else s.get(k_)
+        except (TypeError, ValueError):
+            pass
+    return s
 
 
 def set_format(name):
@@ -5338,6 +5352,12 @@ class SubtitleRenderer:
                     cur_img = len(self.images) - 1
                     stack.append(cur_img)
                 continue
+            ctx_ = self.__dict__.setdefault("img_ctx", {})     # 사진마다 바로 뒤 나레이션 문단 (카메라 무빙을 문맥으로 고를 때)
+            for i_ in range(len(self.images)):
+                if i_ not in ctx_:
+                    ctx_[i_] = para
+            if para.startswith("#"):
+                self.__dict__.setdefault("chap_first", set()).add(len(self.images))   # 챕터 첫 사진
             hm = HOLD_RE.match(para)
             if hm:                                 # [쉼:2.5] 말 없이 화면만 (몽타주)
                 segs.append({"i": None, "kind": "hold", "text": "", "img": cur_img, "dur": max(0.5, float(hm.group(1))), "sfx": pend,
@@ -6934,7 +6954,108 @@ def not_3d_photo(r, idx, path):
         return False
 
 
-def ensure_blender_clips(r, log=None, cancel=None):
+CAMERA_MOVES = {   # 영화 무빙 기법 (블렌더_사진3D.py 의 움직임 이름) — 이름: 쉬운 설명
+    "push": "달리 인(곧장 다가감, 점점 빨라짐)", "zoomout": "풀백 리빌(바짝 붙었다가 물러나며 전체)", "orbit": "아크 샷(주인공 둘레를 돎)",
+    "drone": "드론(위에서 내려다보며 앞으로)", "crane": "크레인 업(올라가며 내려다봄, 장면 여는 샷)", "tilt": "틸트 업(아래에서 위로 훑음)",
+    "right": "트래킹(오른쪽으로 흐름)", "left": "트래킹(왼쪽으로 흐름)", "fpv": "1인칭 드론(기울고 흔들리며 파고듦)",
+    "freeze": "멈춘 시간 순간이동(3~4자리로 뚝뚝)", "dollyzoom": "돌리 줌(현기증 효과: 물러나며 확대, 긴장·반전)"}
+# 문맥 낱말 → 어울리는 무빙 (나레이션·사진 설명에서 찾음)
+CAMERA_HINTS = [
+    (("하늘에서", "내려다", "항공", "위성", "위에서", "지도"), "drone", 3), (("하늘에서", "내려다", "전경", "풍경", "평원", "사막"), "crane", 2),
+    (("아무도", "수수께끼", "정체", "모릅", "모르", "미스터리", "비밀", "반전", "처음으로", "드디어"), "dollyzoom", 3),
+    (("둘레", "주위", "모양", "생김새", "구조", "가운데"), "orbit", 2), (("가까이", "자세히", "작은", "구슬", "뼈", "치석", "손톱", "알갱이", "새겨", "찍혀"), "push", 3),
+    (("순간", "멈", "갑자기", "그때", "단 나흘", "한 번"), "freeze", 2), (("뻗", "따라", "줄", "늘어", "길이", "km", "구간", "이어"), "track", 3),
+    (("높이", "쌓", "층", "위로", "올라", "세 겹"), "tilt", 3), (("빠르", "날아", "파고", "들어가", "곧장"), "fpv", 2),
+    (("전체", "모두", "넓", "결국", "남아", "끝"), "zoomout", 2)]
+CAMERA_LIMIT = {"dollyzoom": 3, "fpv": 4, "freeze": 4}
+
+
+def choose_camera_moves(r, elig, plan_path=None, log=None):
+    """장면(사진)마다 영화 무빙 기법을 자동으로 고름 (사용자 결정 2026-11-08: 고정 순서 대신 역동적 무빙을 문맥으로).
+    고르는 기준: 챕터 첫 사진 = 여는 샷(크레인·드론), 영상 마지막 = 풀백, 나레이션 낱말(CAMERA_HINTS), 사진 종류(풍경/물건, 앞층 있음),
+    같은 무빙 연달아 금지·특수 무빙 횟수 제한(CAMERA_LIMIT), 트래킹은 좌우를 번갈아.
+    plan_path(<제목>_카메라무빙.txt)에 '번호 | 무빙 | 사진 설명 | 이유' 로 저장 — 무빙 칸을 직접 바꾸면(예: '자동' → 'orbit') 다음부터 그 장면은 그 무빙 (수동)"""
+    log = log or (lambda x: None)
+    manual = {}
+    if plan_path and os.path.exists(plan_path):
+        for ln in open(plan_path, encoding="utf-8").read().splitlines():
+            parts = [x.strip() for x in ln.split("|")]
+            if len(parts) >= 3 and parts[0].isdigit():
+                mv = parts[1].replace("수동:", "").strip()
+                if not mv.startswith("자동") and mv in CAMERA_MOVES:
+                    manual[(int(parts[0]), parts[2])] = mv
+    paths = getattr(r, "img_paths", [])
+    ctx = getattr(r, "img_ctx", {})
+    chap_first = getattr(r, "chap_first", set())
+    out, why, used, prev, side = {}, {}, {}, [], 0
+    for n_, idx in enumerate(elig):
+        cap = str(r.images[idx][1] or "")
+        key = (n_ + 1, cap)
+        if key in manual:
+            mv = manual[key]
+            out[idx], why[idx] = mv, "수동"
+            prev.append(mv)
+            continue
+        text = cap + " " + str(ctx.get(idx, ""))
+        dep = load_depth(paths[idx]) if idx < len(paths) else None
+        land = False
+        if dep is not None:
+            rows = dep.mean(axis=1)
+            land = rows.std() > 1e-6 and float(np.corrcoef(rows, np.arange(len(rows)))[0, 1]) > 0.6
+        sc = {m_: 0.0 for m_ in CAMERA_MOVES}
+        base_ = ("drone", "crane", "right", "left", "fpv", "tilt") if land else ("push", "orbit", "zoomout", "dollyzoom", "freeze", "tilt")
+        for m_ in base_:
+            sc[m_] += 1.0
+        reason = ["풍경" if land else "물건·유물"]
+        for words, mv_, w_ in CAMERA_HINTS:
+            hit = next((w for w in words if w in text), None)
+            if hit:
+                if mv_ == "track":
+                    sc["right" if side % 2 == 0 else "left"] += w_
+                else:
+                    sc[mv_] += w_
+                reason.append(f"'{hit}'")
+        if idx in chap_first or n_ == 0:
+            sc["crane" if land else "drone"] += 2.5
+            sc["crane"] += 1.0
+            reason.append("챕터 여는 샷")
+        if n_ == len(elig) - 1:
+            sc["zoomout"] += 4
+            reason.append("마지막 = 풀백")
+        for m_ in sc:                                 # 같은 무빙 연달아·자주 쓰기 막기, 횟수 제한
+            if prev and prev[-1] == m_:
+                sc[m_] -= 6
+            if m_ in prev[-3:]:
+                sc[m_] -= 1.5
+            sc[m_] -= 0.35 * used.get(m_, 0)
+            if used.get(m_, 0) >= CAMERA_LIMIT.get(m_, 99):
+                sc[m_] -= 10
+        mv = max(sc, key=lambda m_: (sc[m_], -used.get(m_, 0)))
+        if mv in ("right", "left"):
+            side += 1
+        out[idx], why[idx] = mv, " · ".join(reason[:4])
+        used[mv] = used.get(mv, 0) + 1
+        prev.append(mv)
+    if plan_path:
+        try:
+            ls = ["# 카메라 무빙 계획 (자동 선택, 사용자 결정 2026-11-08). 무빙 칸을 바꾸면 다음 영상부터 그 장면은 그대로(수동). '자동'으로 두면 다시 고름",
+                  "# 쓸 수 있는 무빙: " + " / ".join(f"{k} = {v}" for k, v in CAMERA_MOVES.items()),
+                  "# 번호 | 무빙 | 사진 설명 | 고른 이유"]
+            for n_, idx in enumerate(elig):
+                mv = out[idx]
+                ls.append(f"{n_ + 1} | {('수동:' + mv) if why[idx] == '수동' else '자동:' + mv} | {str(r.images[idx][1] or '')} | {why[idx]}")
+            atomic_write_text(plan_path, "\n".join(ls) + "\n")
+        except Exception as e_:
+            log("  카메라 무빙 계획 저장 실패: " + str(e_)[:80])
+    cnt = {}
+    for v in out.values():
+        cnt[v] = cnt.get(v, 0) + 1
+    log("  🎬 카메라 무빙(문맥 자동" + (f" · 수동 {sum(1 for v in why.values() if v == '수동')}장" if any(v == "수동" for v in why.values()) else "") + "): "
+        + " ".join(f"{k}{v}" for k, v in cnt.items()) + (f" → {os.path.basename(plan_path)}" if plan_path else ""))
+    return out
+
+
+def ensure_blender_clips(r, log=None, cancel=None, plan_path=None):
     """사진 장면마다(같은 사진이 이어지는 묶음 g0~g1) Blender 진짜 3D 카메라 영상을 미리 만듦 (사용자 결정 2026-11-08 '블렌더 활용').
     깊이 지도가 있고(평평한 도표·그림 제외) 가로 사진(1.3~2.4)만. 한 번 만든 것은 다시 씀. 만든 영상은 r.bl_clips[사진번호]"""
     log = log or (lambda x: None)
@@ -6947,7 +7068,8 @@ def ensure_blender_clips(r, log=None, cancel=None):
         return 0
     x0, y0, x1, y1 = r.img_box
     sc_ = float(r.s.get("img_blender_scale", 0.5) or 0.5)          # 작은 화질(사용자 결정 2026-11-08): 화면의 절반 크기로 만들고 영상에서 키움
-    W_, H_ = int((x1 - x0) * sc_) // 2 * 2, int((y1 - y0) * sc_) // 2 * 2
+    k_full = 1920 / max(W, H) if max(W, H) < 1920 else 1.0          # 미리보기(1280×720)도 큰 영상과 같은 크기로 만들어 두 번 만들지 않음
+    W_, H_ = int((x1 - x0) * sc_ * k_full) // 2 * 2, int((y1 - y0) * sc_ * k_full) // 2 * 2
     groups = {}
     for sh in r.shots:
         g = (sh["img"], round(sh.get("g0", sh["t0"]), 2), round(sh.get("g1", sh["t1"]), 2))
@@ -6983,9 +7105,7 @@ def ensure_blender_clips(r, log=None, cancel=None):
         if getattr(r, "face_tp_on", False) and r.faces_for(idx):    # 사람이 나오는 실제 사진은 3D 로 바꾸지 않음 (얼굴 순간이동)
             continue
         elig.append(idx)
-    # 카메라 움직임은 장면마다 돌아가며 (사용자 결정 2026-11-08): 직진 → 오르빗 → 줌아웃 → 순간이동 → 드론 → 옆으로 → 1인칭 드론 → 반대쪽
-    CYCLE = ["push", "orbit", "zoomout", "freeze", "drone", "right", "fpv", "left"]
-    moves = {idx: CYCLE[n_ % len(CYCLE)] for n_, idx in enumerate(elig)}
+    moves = choose_camera_moves(r, elig, plan_path, log)     # 영화 무빙 기법을 문맥으로 자동 선택 (+ 장면별 수동 지정, 사용자 결정 2026-11-08)
     # 앞층(주인공) 오려 내기 (사용자 결정 2026-11-08, rembg): 앞층은 배경 앞에 세우고 배경 빈자리는 둘레 색으로 메움
     layers = {}
     if elig and str(r.s.get("img_layers", "on")) == "on":
