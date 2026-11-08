@@ -2532,6 +2532,7 @@ def fix_image_url(url):
     """위키미디어 주소를 '1600px 축소본' 주소로 통일 (원본·파일 페이지·썸네일 주소 모두 처리)"""
     from urllib.parse import quote, unquote
     url = url.strip()
+    url = re.sub(r"^(https?://media\.springernature\.com/)(?:lw\d+|m\d+|w\d+)(/springer-static/)", r"\1full\2", url)   # 논문 그림: lw1200 같은 축소 주소는 404 → 원본(full)
     name = None
     m = re.match(r"https?://(?:commons\.wikimedia\.org|[\w-]+\.wikipedia\.org)/wiki/(?:File|파일|Datei|Fichier|Archivo|Fichier):([^?#]+)", url)
     if m:
