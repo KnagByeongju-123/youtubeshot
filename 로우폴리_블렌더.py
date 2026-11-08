@@ -1,5 +1,5 @@
 """로우폴리_장면.py 가 부르는 Blender 쪽 스크립트 (직접 쓸 일은 거의 없음)
-로우폴리 자료(JSON: 배경·인물 층의 삼각형과 색) → Blender 장면 + 카메라 움직임 → mp4
+로우폴리 자료(JSON: 배경·인물 층의 삼각형과 색) 또는 사진 그대로 두 장(배경·앞층, JSON 의 photo) → Blender 장면 + 카메라 움직임 → mp4
   xvfb-run -a blender -b -P 로우폴리_블렌더.py -- <자료.json> <결과.mp4> [초=6] [가로=1920] [세로=1080] [움직임] [앞층거리] [기준점x] [기준점y]
   움직임(사용자 결정 2026-11-08, 영상미): right·left = 옆으로 흐르며 살짝 다가감 / push = 앞층(토마토·인물) 사이 틈으로 곧장 날아 통과(직진 통과)
            orbit = 기준점을 중심으로 빙 돌기 / zoomout = 기준점에 바짝 붙었다가 뒤로 빠지며 전체 / drone = 높은 곳에서 내려다보며 앞으로 날기
@@ -20,7 +20,32 @@ bpy.ops.wm.read_factory_settings(use_empty=True)
 sc = bpy.context.scene
 cam0 = {"right": (-0.35, 0.0), "left": (0.35, 0.0)}.get(move, (0.0, 0.0))   # 이 자리에서 볼 때 앞층이 그림과 똑같이 겹침
 PX, PY = (PU - .5) * SW, -(PV - .5) * SH
-for L in data["layers"]:
+def photo_plane(name, img_path, z, fg):
+    """사진 그대로 입체(사용자 결정 2026-11-08): 사진을 그대로 입힌 판. 배경판은 촘촘한 격자로 바닥을 살짝 앞으로, 앞층판은 구멍(투명)을 오려 냄"""
+    nx_, ny_ = (64, 36) if not fg else (2, 2)
+    verts, faces, uvs = [], [], []
+    for j in range(ny_ + 1):
+        for i in range(nx_ + 1):
+            u, v = i / nx_, j / ny_
+            X, Y = (u - .5) * SW, (v - .5) * SH
+            zz = z + (0 if fg else max(0.0, ((1 - v) - .62)) * 2.2)
+            k = (D - zz) / D
+            verts.append((cam0[0] + (X - cam0[0]) * k, cam0[1] + (Y - cam0[1]) * k, zz)); uvs.append((u, v))
+    for j in range(ny_):
+        for i in range(nx_):
+            a_ = j * (nx_ + 1) + i; faces.append((a_, a_ + 1, a_ + nx_ + 2, a_ + nx_ + 1))
+    me = bpy.data.meshes.new(name); me.from_pydata(verts, [], faces); me.update()
+    uvl = me.uv_layers.new(name="UV")
+    for poly in me.polygons:
+        for li in poly.loop_indices: uvl.data[li].uv = uvs[me.loops[li].vertex_index]
+    mat = bpy.data.materials.new(name); mat.use_nodes = True
+    nt = mat.node_tree; bs = nt.nodes["Principled BSDF"]; tex = nt.nodes.new("ShaderNodeTexImage")
+    tex.image = bpy.data.images.load(img_path); tex.interpolation = "Cubic"
+    nt.links.new(tex.outputs["Color"], bs.inputs["Base Color"]); nt.links.new(tex.outputs["Alpha"], bs.inputs["Alpha"])
+    mat.blend_method = "CLIP" if fg else "OPAQUE"
+    me.materials.append(mat)
+    ob = bpy.data.objects.new(name, me); sc.collection.objects.link(ob)
+for L in ([] if data.get("photo") else data["layers"]):
     fg = L["name"] == "fg"
     zbase = FZ if fg else 0.0
     verts = []
@@ -43,6 +68,9 @@ for L in data["layers"]:
             col.data[li].color = (min(1, c[0] * sh_) ** 2.2, min(1, c[1] * sh_) ** 2.2, min(1, c[2] * sh_) ** 2.2, 1.0)   # 그림 색(sRGB) → 선형
     me.color_attributes.active_color = col
     ob = bpy.data.objects.new(L["name"], me); sc.collection.objects.link(ob)
+if data.get("photo"):
+    photo_plane("bg", data["photo"]["bg"], 0.0, False)
+    if data["photo"].get("fg"): photo_plane("fg", data["photo"]["fg"], FZ, True)
 cd = bpy.data.cameras.new("cam"); cd.sensor_width = 36; base_lens = 36 * D / (SW * .94)
 cam = bpy.data.objects.new("cam", cd); sc.collection.objects.link(cam); sc.camera = cam
 n = int(sec * FPS); sc.frame_start, sc.frame_end = 1, n
@@ -57,7 +85,7 @@ if move in ("right", "left"):
         cam.location = (x, y, z); cam.rotation_euler = (0, 0, math.radians(rz)); cd.lens = base_lens
         cam.keyframe_insert("location", frame=f); cam.keyframe_insert("rotation_euler", frame=f)
 elif move == "push":                        # 틈(PX,PY)으로 곧장 날아가 앞층을 지나감 — 갈수록 빨라짐
-    ze = FZ - 1.2                                         # 앞층을 지난 자리. 화면이 그림 밖으로 나가지 않게 x·y 를 가둠
+    ze = FZ - 1.2 if not data.get("photo") else max(FZ + 2.2, D * 0.6)   # 사진: 1.7배까지만 다가감(더 가면 흐려짐)   # 앞층을 지난 자리 (사진은 앞층 바로 앞에서 멈춤 — 지나가면 메운 자리가 보임). 화면이 그림 밖으로 나가지 않게 x·y 를 가둠
     hw, hh = (SW * .94 / 2) * ze / D, (SH * .94 / 2) * ze / D
     ex = max(-(SW / 2 - hw), min(SW / 2 - hw, PX)); ey = max(-(SH / 2 - hh), min(SH / 2 - hh, PY))
     key(1, (0, 0, D), (0, 0, 0), base_lens)
@@ -65,14 +93,14 @@ elif move == "push":                        # 틈(PX,PY)으로 곧장 날아가 
 elif move == "orbit":                       # 주인공을 중심으로 좌우로 돌기 (가장자리가 보이지 않게 당겨 찍음)
     r_ = D - FZ * 0.5; steps = 6
     for i in range(steps + 1):
-        t = i / steps; ang = math.radians(-9 + 18 * t)
+        t = i / steps; amp = 14 if data.get("photo") else 9; ang = math.radians(-amp + 2 * amp * t)
         key(1 + round((n - 1) * t), (PX * .5 + r_ * math.sin(ang) * 0.45, PY * .5 + 0.2 * math.sin(math.pi * t), FZ * 0.5 + r_ * math.cos(ang) - 1.0 * t),
             (PX * .5, PY * .5, FZ * 0.5), base_lens * 1.5)
 elif move == "zoomout":                     # 주인공에 바짝 붙었다가 뒤로 빠지며 그림 전체
     key(1, (PX * .85, PY * .85, FZ + (D - FZ) * 0.42), (PX * .85, PY * .85, 0), base_lens)
     key(n, (0, 0, D), (0, 0, 0), base_lens)
 elif move == "fpv":                         # 1인칭 드론: 낮게 출발해 앞층 틈으로 빠르게 파고들며 좌우로 기울고 잘게 흔들림
-    ze = FZ - 1.0
+    ze = FZ - 1.0 if not data.get("photo") else max(FZ + 2.2, D * 0.6)
     hw, hh = (SW * .94 / 2) * ze / D / 1.3, (SH * .94 / 2) * ze / D / 1.3
     ex = max(-(SW / 2 - hw), min(SW / 2 - hw, PX)); ey = max(-(SH / 2 - hh), min(SH / 2 - hh, PY))
     steps = 12
@@ -111,7 +139,7 @@ for dat in (cam, cd) if move not in ("freeze",) else ():
                 elif move == "fpv": kp.interpolation = "LINEAR"
                 else: kp.interpolation = "BEZIER"; kp.easing = "EASE_IN_OUT"
 r = sc.render; r.engine = "BLENDER_WORKBENCH"; r.resolution_x, r.resolution_y = RW, RH; r.fps = FPS
-sh = sc.display.shading; sh.light = "FLAT"; sh.color_type = "VERTEX"; sh.show_specular_highlight = False
+sh = sc.display.shading; sh.light = "FLAT"; sh.color_type = "TEXTURE" if data.get("photo") else "VERTEX"; sh.show_specular_highlight = False
 sc.display_settings.display_device = "sRGB"; sc.view_settings.view_transform = "Standard"
 sc.world = bpy.data.worlds.new("w")
 r.image_settings.file_format = "FFMPEG"; r.ffmpeg.format = "MPEG4"; r.ffmpeg.codec = "H264"; r.ffmpeg.constant_rate_factor = "HIGH"

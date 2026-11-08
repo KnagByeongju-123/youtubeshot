@@ -2,7 +2,8 @@
 
   python -X utf8 로우폴리_장면.py <그림> <인물 마스크.png 또는 - 또는 빨강> <결과.mp4> --초 9.5 [--움직임 right|left|push|orbit|zoomout|drone|fpv|freeze] [--그리는효과 3.5] [--조각 15000,10000] [--기준점 0.5,0.4]
   - 움직임(영상미, 사용자 결정 2026-11-08): push = 앞층(토마토·인물) 사이 틈으로 곧장 날아 통과, orbit = 주인공 둘레 돌기, zoomout = 바짝 붙었다 빠지기, drone = 내려다보며 날기
-  - 마스크 자리에 '빨강'을 주면 붉은 토마토를 저절로 찾아 앞층으로 (토마토 사이 직진 통과용)
+  - 마스크 자리에 '빨강'을 주면 붉은 토마토를, '자동'을 주면 앞에 있는 사람·물건(rembg)을 저절로 찾아 앞층으로
+  - --모양 사진 = 사진 그대로 입체(사진 화질 그대로 앞층·배경 두 장, 실제 사진 장문 다큐용, 사용자 결정 2026-11-08)
   - 기준점: push 는 지나갈 틈, orbit·zoomout 은 주인공 가운데 (그림 안 비율). 안 주면 저절로 (push = 앞층이 없는 가장 넓은 빈틈, 그 밖 = 앞층 가운데)
 
   1) 인물(동물) 마스크(흰색 = 인물, sam_worker.py 로 만듦)로 인물을 떼어 내고, 빈 자리는 둘레 색으로 메움(로우폴리라 티 안 남)
@@ -74,12 +75,21 @@ def main(argv):
     ap.add_argument("image"); ap.add_argument("mask"); ap.add_argument("out")
     ap.add_argument("--초", type=float, default=9.0); ap.add_argument("--움직임", default="right")
     ap.add_argument("--그리는효과", type=float, default=3.5); ap.add_argument("--조각", default="15000,10000")
+    ap.add_argument("--모양", default="로우폴리", help="로우폴리 / 사진 (사진 그대로 입체: 사진을 그대로 입힌 앞층·배경 두 장)");
     ap.add_argument("--크기", default="1920x1080"); ap.add_argument("--기준점", default=""); ap.add_argument("--앞층거리", default="")
     a = ap.parse_args(argv)
     RW, RH = (int(x) for x in a.크기.split("x"))
     n_bg, n_fg = (int(x) for x in a.조각.split(","))
-    im = cv2.cvtColor(cv2.imread(a.image), cv2.COLOR_BGR2RGB)
-    if a.mask == "빨강":                                      # 잘 익은 토마토: 붉고 진한 곳
+    from PIL import Image as _I, ImageOps as _O
+    im = np.array(_O.exif_transpose(_I.open(a.image)).convert("RGB"))     # 사진 속 돌려 보기 정보대로 바로 세움
+    if max(im.shape[:2]) > 2400:
+        s_ = 2400 / max(im.shape[:2]); im = cv2.resize(im, (int(im.shape[1] * s_), int(im.shape[0] * s_)))
+    if a.mask == "자동":                                       # 앞에 있는 사람·물건을 저절로 떼어 냄 (rembg, MIT)
+        from rembg import remove, new_session
+        mk = np.array(remove(_I.fromarray(im), session=new_session("u2net"), only_mask=True)) > 127
+        frac = mk.mean()
+        m = mk if 0.03 < frac < 0.65 else None                 # 너무 작거나 거의 전체면 앞층 없이(배경판만)
+    elif a.mask == "빨강":                                      # 잘 익은 토마토: 붉고 진한 곳
         hsv = cv2.cvtColor(im, cv2.COLOR_RGB2HSV)
         red = (((hsv[..., 0] < 10) | (hsv[..., 0] > 170)) & (hsv[..., 1] > 120) & (hsv[..., 2] > 70)).astype(np.uint8)
         red = cv2.morphologyEx(red, cv2.MORPH_OPEN, np.ones((5, 5), np.uint8))
@@ -90,13 +100,15 @@ def main(argv):
     H_, W_ = im.shape[:2]
     if a.기준점:
         pu, pv = (float(x) for x in a.기준점.split(","))
-    elif m is not None and m.any() and a.움직임 in ("push", "fpv"):   # 앞층이 없는 가장 넓은 빈틈 (가운데 쪽)
+    elif m is not None and m.any() and a.움직임 in ("push", "fpv") and a.모양 != "사진":   # 앞층이 없는 가장 넓은 빈틈 (가운데 쪽). 사진은 앞층(주인공)을 향해 — 틈으로 가면 메운 자리가 보임
         dist = cv2.distanceTransform((~m).astype(np.uint8), cv2.DIST_L2, 5)
         yy, xx = np.mgrid[0:H_, 0:W_]
         dist = dist * (1 - 0.85 * np.hypot((xx / W_ - .5) * 2, (yy / H_ - .5) * 2).clip(0, 1))   # 가운데 가까운 틈
         pv, pu = np.unravel_index(np.argmax(dist), dist.shape); pu, pv = pu / W_, pv / H_
-    elif m is not None and m.any():
-        ys, xs = np.nonzero(m); pu, pv = xs.mean() / W_, ys.mean() / H_
+    elif m is not None and m.any():                            # 가장 큰 앞층 덩어리(주인공)의 가운데
+        nl, lab, st, cen = cv2.connectedComponentsWithStats(m.astype(np.uint8))
+        big = 1 + int(np.argmax(st[1:, cv2.CC_STAT_AREA])) if nl > 1 else 0
+        pu, pv = (cen[big][0] / W_, cen[big][1] / H_) if big else (0.5, 0.5)
     else:
         pu, pv = 0.5, 0.5
     bg = im
@@ -105,7 +117,16 @@ def main(argv):
         bg = cv2.inpaint(im, big, 12, cv2.INPAINT_TELEA)
     work = tempfile.mkdtemp(prefix="lowpoly_")
     js = os.path.join(work, "mesh.json")
-    json.dump(build_mesh(im, bg, m, n_bg, n_fg), open(js, "w"))
+    if a.모양 == "사진":                                      # 사진 그대로 입체 (사용자 결정 2026-11-08): 사진 화질 그대로 두 층
+        bgp, fgp = os.path.join(work, "bg.png"), os.path.join(work, "fg.png")
+        cv2.imwrite(bgp, cv2.cvtColor(bg, cv2.COLOR_RGB2BGR))
+        data = {"W": im.shape[1], "H": im.shape[0], "photo": {"bg": bgp}}
+        if m is not None and m.any():
+            al = cv2.GaussianBlur((m * 255).astype(np.uint8), (5, 5), 0)
+            cv2.imwrite(fgp, np.dstack([cv2.cvtColor(im, cv2.COLOR_RGB2BGR), al])); data["photo"]["fg"] = fgp
+        json.dump(data, open(js, "w"))
+    else:
+        json.dump(build_mesh(im, bg, m, n_bg, n_fg), open(js, "w"))
     draw = max(0.0, min(a.그리는효과, a.초 - 1.0))
     move = os.path.join(work, "move.mp4")
     r = subprocess.run(["xvfb-run", "-a", "blender", "-b", "-P", os.path.join(HERE, "로우폴리_블렌더.py"), "--", js, move,
