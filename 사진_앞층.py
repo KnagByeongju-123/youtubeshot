@@ -35,6 +35,23 @@ def split(path, out_dir, session):
     small.thumbnail((1024, 1024))
     m = np.asarray(remove(small, session=session, only_mask=True), np.float32) / 255.0
     area = float((m > 0.5).mean())
+    if 0.02 <= area <= 0.60:                       # 큰 덩어리만 남김 — 조각이 흩어져 있으면(건물 일부·글자) 앞층을 쓰지 않음 (얼룩·겹친 글자가 생김)
+        n_, lab_, st_, _ = cv2.connectedComponentsWithStats((m > 0.5).astype(np.uint8), 8)
+        tot_ = float(st_[1:, cv2.CC_STAT_AREA].sum()) if n_ > 1 else 0.0
+        keep_ = [i_ for i_ in range(1, n_) if st_[i_, cv2.CC_STAT_AREA] >= 0.15 * tot_]
+        kept_ = float(sum(st_[i_, cv2.CC_STAT_AREA] for i_ in keep_))
+        if tot_ <= 0 or kept_ < 0.75 * tot_ or len(keep_) > 4:
+            why = f"앞층 조각이 흩어짐 (큰 덩어리 {kept_ / max(1.0, tot_) * 100:.0f}%, {len(keep_)}개)"
+            open(os.path.join(out_dir, f"{k}_nofg.txt"), "w", encoding="utf-8").write(why)
+            return "NOFG", why, ""
+        m = m * cv2.dilate(np.isin(lab_, keep_).astype(np.uint8), np.ones((5, 5), np.uint8)).astype(np.float32)
+        area = float((m > 0.5).mean())
+        mb_ = m > 0.5                                # 주인공은 화면 안쪽에 있음 — 앞층이 사진 가장자리에 붙어 있으면(나무·건물 일부·기계 끝) 오려 세우지 않음
+        edge_ = float(np.concatenate([mb_[0], mb_[-1], mb_[:, 0], mb_[:, -1]]).mean())
+        if edge_ > 0.03:
+            why = f"앞층이 가장자리에 붙음 ({edge_ * 100:.0f}%)"
+            open(os.path.join(out_dir, f"{k}_nofg.txt"), "w", encoding="utf-8").write(why)
+            return "NOFG", why, ""
     if area < 0.02 or area > 0.60:
         why = f"앞층 {area * 100:.0f}% (2~60% 밖)"
         open(os.path.join(out_dir, f"{k}_nofg.txt"), "w", encoding="utf-8").write(why)

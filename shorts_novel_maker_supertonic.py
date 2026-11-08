@@ -6953,7 +6953,7 @@ def ensure_blender_clips(r, log=None, cancel=None):
     if elig and str(r.s.get("img_layers", "on")) == "on":
         lay_dir = os.path.join(BLENDER_DIR, "layers")
         try:
-            pr_ = subprocess.run([_supertonic_python(), "-X", "utf8", os.path.join(BASE, "사진_앞층.py"), lay_dir] + [paths[i_] for i_ in elig],
+            pr_ = subprocess.run([_supertonic_python(), "-X", "utf8", os.path.join(BASE, "사진_앞층.py"), lay_dir] + [paths[i_] for i_ in elig if not any(w_ in str(r.images[i_][1] or "") for w_ in ("위성", "항공", "우주에서"))],   # 위에서 내려다본 사진은 앞층 없음
                                  capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=3600,
                                  creationflags=(subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0))
             for ln in (pr_.stdout or "").splitlines():
