@@ -123,6 +123,7 @@ PIXEL_SIZE_KEYS = ("font_size", "title_size", "margin_x", "margin_right", "head_
 def preview_settings(s, scale=1280 / 1920):
     """작은 미리보기 영상(1280×720)용: 글자 크기·여백을 화면 크기에 맞춰 줄인 설정 (사용자 결정 2026-11-08: 작은 영상 검토 뒤 큰 영상)"""
     s = dict(s)
+    s["scene_no"] = "on"                                  # 왼쪽 위 장면 번호 (검토할 때 번호로 말하게)
     for k_ in PIXEL_SIZE_KEYS:
         try:
             s[k_] = type(s[k_])(round(float(s[k_]) * scale)) if k_ in s else s.get(k_)
@@ -6457,6 +6458,15 @@ class SubtitleRenderer:
             else:
                 crop = Image.blend(pc, crop, float(a))
         canvas.paste(crop, (self.img_box[0], self.img_box[1]), mask)
+        if str(self.s.get("scene_no", "off")) == "on":       # 미리보기: 왼쪽 위 장면 번호 (사진 점검표·_카메라무빙.txt 번호와 같음, 사용자 결정 2026-11-08)
+            d_ = ImageDraw.Draw(canvas)
+            fs_ = max(18, int(H * 0.055))
+            f_ = load_font(self.s.get("font_path", ""), fs_)
+            tx_ = f"#{sh['img'] + 1}"
+            bb_ = d_.textbbox((0, 0), tx_, font=f_)
+            x_, y_ = int(H * 0.025), int(H * 0.025)
+            d_.rounded_rectangle([x_ - 8, y_ - 6, x_ + bb_[2] - bb_[0] + 8, y_ + bb_[3] - bb_[1] + 10], radius=8, fill=(0, 0, 0, 200) if canvas.mode == "RGBA" else (0, 0, 0))
+            d_.text((x_ - bb_[0], y_ - bb_[1]), tx_, font=f_, fill=(255, 225, 60))
         fr = str(self.s.get("img_frame", "없음"))
         if not self.full and fr != "없음":
             d = ImageDraw.Draw(canvas)
@@ -6877,7 +6887,7 @@ _DEPTH_CACHE = {}
 _DEPTH_WARNED = set()
 _GRID_CACHE = {}
 DEPTH_AMP = {"약하게": (0.007, 0.003), "보통": (0.022, 0.010), "강하게": (0.035, 0.016)}   # 약하게는 아주 은은하게(기본)
-RENDER_VER = "2026-11-08d"   # 그리는 방식이 바뀌면 올림 → 장문 영상 구간 캐시를 새로 그림   # (가로, 세로) 최대 밀림 = 화면 크기 비율
+RENDER_VER = "2026-11-08e"   # 그리는 방식이 바뀌면 올림 → 장문 영상 구간 캐시를 새로 그림   # (가로, 세로) 최대 밀림 = 화면 크기 비율
 
 
 def depth_key(path):
@@ -6990,7 +7000,7 @@ def choose_camera_moves(r, elig, plan_path=None, log=None, objects=()):
     out, why, used, prev, side = {}, {}, {}, [], 0
     for n_, idx in enumerate(elig):
         cap = str(r.images[idx][1] or "")
-        key = (n_ + 1, cap)
+        key = (idx + 1, cap)                         # 번호 = 사진 번호(영상 왼쪽 위 #번호·사진 점검표와 같음)
         if key in manual:
             mv = manual[key]
             out[idx], why[idx] = mv, "수동"
@@ -7040,12 +7050,19 @@ def choose_camera_moves(r, elig, plan_path=None, log=None, objects=()):
         prev.append(mv)
     if plan_path:
         try:
-            ls = ["# 카메라 무빙 계획 (자동 선택, 사용자 결정 2026-11-08). 무빙 칸을 바꾸면 다음 영상부터 그 장면은 그대로(수동). '자동'으로 두면 다시 고름",
+            ls = ["# 카메라 무빙 계획 (자동 선택, 사용자 결정 2026-11-08). 번호 = 작은 영상 왼쪽 위 #번호 = 사진 점검표 번호",
+                  "# 무빙 칸을 바꾸면(예: 자동:push → orbit) 다음 영상부터 그 장면은 그 무빙(수동). '자동'으로 두면 다시 고름. '-' 줄은 3D 를 쓰지 않는 사진",
                   "# 쓸 수 있는 무빙: " + " / ".join(f"{k} = {v}" for k, v in CAMERA_MOVES.items()),
                   "# 번호 | 무빙 | 사진 설명 | 고른 이유"]
-            for n_, idx in enumerate(elig):
-                mv = out[idx]
-                ls.append(f"{n_ + 1} | {('수동:' + mv) if why[idx] == '수동' else '자동:' + mv} | {str(r.images[idx][1] or '')} | {why[idx]}")
+            for i_ in range(len(r.images)):
+                cap_ = str(r.images[i_][1] or "")
+                if i_ in out:
+                    mv = out[i_]
+                    ls.append(f"{i_ + 1} | {('수동:' + mv) if why[i_] == '수동' else '자동:' + mv} | {cap_} | {why[i_]}")
+                else:
+                    rs_ = ("얼굴 순간이동(사람 사진)" if getattr(r, "face_tp_on", False) and r.faces_for(i_) else
+                           "천천히 확대·이동(지도·그래프·도해)" if i_ in getattr(r, "no3d", ()) else "천천히 확대·이동(세로·평평한 사진, 또는 같은 사진이 이어짐)")
+                    ls.append(f"{i_ + 1} | - | {cap_} | {rs_}")
             atomic_write_text(plan_path, "\n".join(ls) + "\n")
         except Exception as e_:
             log("  카메라 무빙 계획 저장 실패: " + str(e_)[:80])
