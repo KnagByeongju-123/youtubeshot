@@ -34,7 +34,9 @@
     (끝 = 그 초에 배경음이 줄어들며 멈춤), 소리를 빼려면 "소리": false
   벌: {"모양": "벌", "크기": 1.6, "맞은초": 2.0, "왕관": true, "눈색": "#ff2020"(빛나는 눈), "동작": [...]} — 맞은초부터 빙글 돌며 떨어짐(그 뒤 키로 떨어질 곳을 적음),
     날아올 때 '윙윙', 맞으면 '띠링'(점수). 글자: {"모양": "글자", "내용": "+100", "동작": [...], "바뀜": [[초, 내용], ...]} (한글 됨, 바뀜 = 점수판처럼 바뀌는 글자)
-  날아가는 물체: "물체": [{"모양": "화살" | "광선" | "벌" | "글자", "색": 색, "동작": [{"초": 3, "위치": [x,y,z]}, {"초": 3.5, "위치": [...]}]}]
+  통나무: {"모양": "통나무", "반지름": 0.5, "동작": [...], "쿵": [떨어져 닿는 초...]} — 같은 빠르기로 굴러 돎, '데굴데굴' 소리.
+    "등속": true 를 주면 다른 물체도 같은 빠르기로 움직임
+  날아가는 물체: "물체": [{"모양": "화살" | "광선" | "벌" | "글자" | "통나무", "색": 색, "동작": [{"초": 3, "위치": [x,y,z]}, {"초": 3.5, "위치": [...]}]}]
   방향: 도(°). 0 = 카메라 쪽(-Y)을 봄, 90 = 오른쪽(+X)을 봄. 위치는 m (캐릭터 키 약 2m).
   동작 사이의 위치는 부드럽게 이어짐(걷기·달리기는 그동안 다리를 움직임).
 """
@@ -125,6 +127,34 @@ def box(name, lo, hi, color, parent=None, origin=(0, 0, 0), glow=0.0, rot=None, 
     ob["origin"] = origin
     if rot:
         ob.rotation_euler = [math.radians(a) for a in rot]
+    return ob
+
+
+def cyl(name, r, y0, y1, color, parent, sides=20, outline=True):
+    """Y 방향으로 누운 둥근 원통(칸 단위, 부모 중심 기준). 앞면(y0)이 화면 쪽."""
+    me = bpy.data.meshes.new(name)
+    v = []
+    for y in (y0, y1):
+        for i in range(sides):
+            a = 2 * math.pi * i / sides
+            v.append((r * math.cos(a) * U, y * U, r * math.sin(a) * U))
+    f = [(i, sides + i, sides + (i + 1) % sides, (i + 1) % sides) for i in range(sides)]  # 바깥을 보는 옆면
+    f.append(tuple(range(sides)))  # 앞 뚜껑(-Y)
+    f.append(tuple(range(2 * sides - 1, sides - 1, -1)))  # 뒤 뚜껑(+Y)
+    me.from_pydata(v, [], f)
+    me.update()
+    me.materials.append(mat(color))
+    ob = bpy.data.objects.new(name, me)
+    if outline and OUTLINE > 0:
+        me.materials.append(_outline_mat())
+        md = ob.modifiers.new("테두리", "SOLIDIFY")
+        md.thickness = OUTLINE * U
+        md.offset = 1.0
+        md.use_flip_normals = True
+        md.material_offset = 1
+        md.use_rim = False
+    bpy.context.scene.collection.objects.link(ob)
+    ob.parent = parent
     return ob
 
 
@@ -459,8 +489,9 @@ def _smooth(t):
     return t * t * (3 - 2 * t)
 
 
-def _track(keys, t, field, default):
-    """keys(초 순서)에서 t 초의 값. 이전 키 → 다음 키 사이를 부드럽게."""
+def _track(keys, t, field, default, linear=False):
+    """keys(초 순서)에서 t 초의 값. 이전 키 → 다음 키 사이를 부드럽게(linear=True 면 같은 빠르기로)."""
+    sm = (lambda u: u) if linear else _smooth
     pts = [(k["초"], k[field]) for k in keys if field in k]
     if not pts:
         return default
@@ -470,8 +501,8 @@ def _track(keys, t, field, default):
         if t0 <= t <= t1:
             u = 0 if t1 == t0 else (t - t0) / (t1 - t0)
             if isinstance(v0, (int, float)):
-                return v0 + (v1 - v0) * _smooth(u)
-            return _lerp(v0, v1, _smooth(u))
+                return v0 + (v1 - v0) * sm(u)
+            return _lerp(v0, v1, sm(u))
     return pts[-1][1]
 
 
@@ -544,6 +575,15 @@ def cmd_scene(scene_file, out, fancy=False):
             for wy in (-1.2, 1.2):
                 w = box(f"벌날개{i}_{wy}", (-3, wy - 0.2, 2.5), (1.5, wy + 0.2, 7), "#dff4ff", root, (-1, wy, 2.5))
                 w["날개"] = 1 if wy < 0 else -1
+        elif kind == "통나무":  # 끝면(나이테)이 화면 쪽, 옆으로 굴러감. 반지름 = "반지름"(m)
+            r = float(pr.get("반지름", 0.6)) / U
+            L = float(pr.get("길이", 0.9)) / U
+            cyl(f"통껍질{i}", r, -L, L, pr.get("색", "#7a4a22"), root)
+            cyl(f"나이테{i}", r * 0.8, -L - 0.08, -L + 0.5, "#e0b070", root, outline=False)
+            cyl(f"속나이테{i}", r * 0.42, -L - 0.14, -L + 0.5, "#b98447", root, outline=False)
+            a = r
+            box(f"나이테줄{i}", (-0.35, -L - 0.2, 0), (0.35, -L - 0.1, a * 0.75), "#6b3d17", root, outline=False)  # 도는 게 보이게
+            root["반지름"] = r * U
         elif kind == "글자":  # 점수 같은 글자(숫자·영어)
             cu = bpy.data.curves.new(f"글자{i}", "FONT")
             cu.body = pr.get("내용", "+100")
@@ -567,6 +607,7 @@ def cmd_scene(scene_file, out, fancy=False):
         keys = sorted(pr["동작"], key=lambda k: k["초"])
         root["모양"] = kind
         root["맞은초"] = float(pr.get("맞은초", 1e9))
+        root["등속"] = int(bool(pr.get("등속", kind == "통나무")))  # 통나무는 같은 빠르기로 굴러감
         if kind == "글자" and pr.get("바뀜"):  # [[초, 내용], ...] — 점수판처럼 시간마다 글자가 바뀜
             root["바뀜"] = json.dumps(pr["바뀜"], ensure_ascii=False)
         props.append((root, keys))
@@ -598,8 +639,9 @@ def cmd_scene(scene_file, out, fancy=False):
             for ch in [root] + list(root.children):
                 ch.hide_render = not vis
             if vis:
-                p = _track(keys, t, "위치", keys[0]["위치"])
-                p2 = _track(keys, min(t + 0.02, keys[-1]["초"]), "위치", p)
+                lin = bool(root.get("등속", 0))
+                p = _track(keys, t, "위치", keys[0]["위치"], lin)
+                p2 = _track(keys, min(t + 0.02, keys[-1]["초"]), "위치", p, lin)
                 root.location = p
                 kind = root["모양"]
                 if kind == "벌":  # 가는 쪽을 봄, 날개는 한 장면씩 위·아래(옛날 게임식), 맞으면 빙글 돌며 떨어짐
@@ -613,6 +655,8 @@ def cmd_scene(scene_file, out, fancy=False):
                         if "날개" in ch:
                             ang = 0 if dead else (45 if f % 2 else -15)
                             ch.rotation_euler = (math.radians(ang * ch["날개"]), 0, 0)
+                elif kind == "통나무":  # 간 거리만큼 굴러 돎
+                    root.rotation_euler = (0, -(keys[0]["위치"][0] - p[0]) / root["반지름"], 0)
                 elif kind == "글자":
                     if "바뀜" in root:
                         body = None
@@ -650,6 +694,11 @@ def cmd_scene(scene_file, out, fancy=False):
                         ev.append((float(pr["맞은초"]) + 0.05, "동전"))
                     continue
                 if kind == "글자":
+                    continue
+                if kind == "통나무":
+                    ev.append((ks[0]["초"], "데굴데굴"))
+                    for tb in pr.get("쿵", []):  # 떨어져 닿는 시각
+                        ev.append((float(tb), "착지"))
                     continue
                 ev.append((ks[0]["초"], "활" if kind == "화살" else "광선"))
                 if pr.get("맞힘", kind == "화살"):
