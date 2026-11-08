@@ -36,7 +36,7 @@ def reset():
     SC.cycles.max_bounces = 3
     SC.cycles.diffuse_bounces = 2
     SC.cycles.glossy_bounces = 1
-    SC.cycles.transparent_max_bounces = 8
+    SC.cycles.transparent_max_bounces = 4
     SC.render.resolution_x = int(ARGS.get("w", 960))
     SC.render.resolution_y = int(ARGS.get("h", 540))
     SC.render.resolution_percentage = 100
@@ -191,16 +191,18 @@ def powder_burst(origin, direction, color, n=26, spread=0.9, size=0.16, dist=2.2
     """공중에 멈춘 물감 가루 구름 (작은 덩어리들 + 큰 반투명 구름)"""
     d = Vector(direction).normalized()
     m = mat("dust" + color, srgb(color), 1.0, emit=0.35, alpha=0.62)
+    mo = mat("dusto" + color, srgb(color), 1.0, emit=0.35)
     for i in range(n):
         t = (i / n) ** 0.7
         p = Vector(origin) + d * dist * t + Vector((RNG.gauss(0, 1), RNG.gauss(0, 1), RNG.gauss(0, 1))) * spread * t * 0.6
         p.z += 0.4 * math.sin(math.pi * t)
         r = size * (0.5 + 1.8 * t) * RNG.uniform(0.6, 1.3)
-        o = add("ico", loc=p, m=m, subdivisions=2 if r > 0.25 else 1, radius=r)
+        o = add("ico", loc=p, m=m if r > 0.18 else mo, subdivisions=2 if r > 0.25 else 1, radius=r)
         o.scale = (RNG.uniform(0.7, 1.3), RNG.uniform(0.7, 1.3), RNG.uniform(0.6, 1.0))
+    # 작은 알갱이는 불투명 (반투명이 많으면 그리는 시간이 몇 배)
     for _ in range(int(n * 1.5)):       # 흩날리는 작은 알갱이
         p = Vector(origin) + d * dist * RNG.uniform(0.1, 1.2) + Vector((RNG.gauss(0, 1), RNG.gauss(0, 1), RNG.gauss(0, 0.7))) * spread
-        add("ico", loc=p, m=m, subdivisions=1, radius=RNG.uniform(0.015, 0.04))
+        add("ico", loc=p, m=mo, subdivisions=1, radius=RNG.uniform(0.015, 0.04))
 
 
 def drops(origin, direction, color="#9fd8ff", n=30):
