@@ -20,6 +20,7 @@ python3.12 -c "import tkinter" 2>/dev/null || need+=(python3-tk)
 [ -f /usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc ] || need+=(fonts-noto-cjk)
 command -v xvfb-run >/dev/null || need+=(xvfb)
 command -v ffmpeg >/dev/null || need+=(ffmpeg)
+command -v blender >/dev/null || need+=(blender)      # 장문 다큐 로우폴리 카메라 움직임 (로우폴리_장면.py, 사용자 결정 2026-11-08)
 if [ ${#need[@]} -gt 0 ]; then
   export DEBIAN_FRONTEND=noninteractive
   apt-get update -q >/dev/null
@@ -29,10 +30,10 @@ fi
 # 2) 파이썬 실행 환경 (프로그램이 성우 담당으로 .supertonic_venv/bin/python 을 찾음)
 VENV=.supertonic_venv
 [ -x "$VENV/bin/python" ] || python3.12 -m venv "$VENV"
-if ! "$VENV/bin/python" -c "import supertonic, numpy, PIL, cv2, imageio_ffmpeg, rembg, faster_whisper, huggingface_hub, kiwipiepy" 2>/dev/null; then
+if ! "$VENV/bin/python" -c "import supertonic, numpy, PIL, cv2, imageio_ffmpeg, rembg, faster_whisper, huggingface_hub, kiwipiepy, scipy" 2>/dev/null; then
   "$VENV/bin/python" -m pip install -q --disable-pip-version-check --upgrade pip
   "$VENV/bin/python" -m pip install -q --disable-pip-version-check \
-    numpy pillow supertonic opencv-python-headless imageio-ffmpeg "rembg[cpu]" faster-whisper huggingface_hub kiwipiepy   # kiwipiepy: 나레이션 쉼표(나레이션_쉼표.py)
+    numpy pillow supertonic opencv-python-headless imageio-ffmpeg "rembg[cpu]" faster-whisper huggingface_hub kiwipiepy scipy   # scipy: 로우폴리_장면.py · kiwipiepy: 나레이션 쉼표(나레이션_쉼표.py)
 fi
 # 나레이션 쉼표 넣기(나레이션_쉼표.py)용 한국어 형태소 분석기 Kiwi (kiwipiepy, LGPL-3.0)
 "$VENV/bin/python" -c "import kiwipiepy" 2>/dev/null || "$VENV/bin/python" -m pip install -q --disable-pip-version-check kiwipiepy || true
