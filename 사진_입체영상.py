@@ -200,6 +200,15 @@ def main(a):
     ensure_model()
     work = os.path.join(os.path.dirname(proj), "_입체작업")
     os.makedirs(work, exist_ok=True)
+    lock = os.path.join(work, ".잠금")              # 같은 프로젝트를 두 번 동시에 돌리면 작업 폴더를 서로 지움 (2026-11-08 엘 콜라초)
+    if os.path.exists(lock):
+        try:
+            os.kill(int(open(lock).read().strip()), 0)
+            print("⚠ 이미 같은 프로젝트의 입체 영상을 만드는 중 (잠금", lock, ") — 끝난 뒤 다시")
+            return 1
+        except (OSError, ValueError):
+            pass
+    open(lock, "w").write(str(os.getpid()))
     print("🎥 사진이 나오는 시간 재는 중...")
     sp = spans(proj)
     cands = []
