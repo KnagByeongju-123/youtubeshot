@@ -1,6 +1,8 @@
 """장면 잇기 — 장면 영상들을 '물감 뿌리기 전환'(채널 시그니처, 사용자 결정 2026-11-08)으로 이어 붙이고 나레이션·자막을 넣음
 
-  python -X utf8 장면_잇기.py <목록.json> <결과.mp4> [--전환 0.4] [--물감색 200,30,40] [--나레이션 소리.wav] [--자막 자막.ass] [--배경음 소리.wav]
+  python -X utf8 장면_잇기.py <목록.json> <결과.mp4> [--전환 0.4] [--전환종류 섞기|paint|zoom|warp_in|warp_out]
+  전환종류(사용자 결정 2026-11-08): zoom = 끝까지 줌인했다가 다음 장면이 줌아웃되며 / warp_in = 광속 워프가 끝날 때처럼 새 장면이 바깥에서 안쪽으로 모이며
+           warp_out = 광속 워프가 시작할 때처럼 새 장면이 안쪽에서 바깥으로 퍼지며 / paint = 흩어뿌리기 물감. 기본 '섞기' = 이 넷을 돌아가며 [--물감색 200,30,40] [--나레이션 소리.wav] [--자막 자막.ass] [--배경음 소리.wav]
   목록.json = ["장면1.mp4", "장면2.mp4", ...]  (장면마다 길이 = 그 장면 몫 + 전환 길이. 앞 장면 끝과 다음 장면 앞이 전환 길이만큼 겹침)
   전환: 물감을 흩어뿌리듯 크고 작은 방울이 부드럽게 내려앉아 번지며 다음 장면이 드러남(사용자 결정 2026-11-08: 부드럽게), 젖은 자리에 옅은 물감색이 잠깐
   물감전환_마스크(n, w, h, seed) 는 다른 프로그램에서도 씀 (0~1 마스크 n장)"""
@@ -46,6 +48,57 @@ def 물감전환_마스크(n, w, h, seed=0, small=(480, 270)):
     return out
 
 
+def _scale(img, s):
+    """가운데 기준 s 배 확대 (s >= 1)"""
+    if s <= 1.001: return img
+    h, w = img.shape[:2]; cw, ch = int(w / s), int(h / s)
+    x0, y0 = (w - cw) // 2, (h - ch) // 2
+    return cv2.resize(img[y0:y0 + ch, x0:x0 + cw], (w, h), interpolation=cv2.INTER_LINEAR)
+
+
+def _zoom_blur(img, k, n=7):
+    """가운데에서 바깥으로 뻗는 빛줄기 흐림(광속 워프 느낌). k = 늘어나는 정도"""
+    if k <= 0.01: return img.astype(np.float32)
+    acc = np.zeros(img.shape, np.float32)
+    for j in range(n):
+        acc += _scale(img, 1 + k * j / (n - 1)).astype(np.float32)
+    return acc / n
+
+
+_RAD = {}
+def _radius(w, h):
+    if (w, h) not in _RAD:
+        yy, xx = np.mgrid[0:h, 0:w].astype(np.float32)
+        _RAD[(w, h)] = (np.hypot((xx - w / 2) / (w / 2), (yy - h / 2) / (h / 2)) / np.sqrt(2))[..., None]   # 가운데 0 ~ 모서리 1
+    return _RAD[(w, h)]
+
+
+def 전환_장면(kind, A, B, p, w, h, paint=None, mask=None):
+    """A(앞 장면) → B(뒤 장면), p = 0~1 진행. kind: paint / zoom / warp_in / warp_out (사용자 결정 2026-11-08)"""
+    A = A.astype(np.float32); B = B.astype(np.float32)
+    if kind == "zoom":                     # 앞 장면 끝까지 줌인 → 뒤 장면이 바짝 붙은 채로 나타나 줌아웃
+        if p < 0.5:
+            q = p / 0.5; return _zoom_blur(_scale(A.astype(np.uint8), 1 + 2.2 * q * q), 0.22 * q)
+        q = (1 - p) / 0.5; return _zoom_blur(_scale(B.astype(np.uint8), 1 + 2.2 * q * q), 0.22 * q)
+    R = _radius(w, h)
+    if kind == "warp_in":                  # 광속 워프가 끝날 때: 새 장면이 바깥에서 안쪽으로 모이며 드러남
+        e = 1 - p
+        Bs = _zoom_blur(_scale(B.astype(np.uint8), 1 + 0.6 * e), 0.5 * e)
+        As = _zoom_blur(A.astype(np.uint8), 0.6 * p)
+        m = np.clip((R - (1 - p) * 1.05) / 0.12 + 0.5, 0, 1)    # 가장자리부터 안쪽으로
+        o = As * (1 - m) + Bs * m
+        return o + 255 * 0.25 * np.clip(1 - np.abs(R - (1 - p)) / 0.06, 0, 1) * (p < 0.98)   # 모이는 경계에 옅은 빛
+    if kind == "warp_out":                 # 광속 워프가 시작할 때: 새 장면이 가운데에서 바깥쪽으로 퍼지며 드러남
+        As = _zoom_blur(A.astype(np.uint8), 0.7 * p)              # 앞 장면은 빛줄기로 늘어남
+        Bs = _zoom_blur(B.astype(np.uint8), 0.45 * (1 - p))
+        m = np.clip((p * 1.08 - R) / 0.12 + 0.5, 0, 1)            # 가운데부터 바깥으로
+        o = As * (1 - m) + Bs * m
+        return o + 255 * 0.3 * np.clip(1 - np.abs(R - p * 1.08) / 0.06, 0, 1) * (p < 0.98)
+    m, rim = mask                          # paint: 흩어뿌리기 물감
+    o = A * (1 - m[..., None]) + B * m[..., None]
+    return o * (1 - rim[..., None] * .92) + paint * rim[..., None] * .92
+
+
 def frames(path, w, h):
     p = subprocess.Popen(["ffmpeg", "-v", "error", "-i", path, "-vf", f"scale={w}:{h},fps=24", "-f", "rawvideo", "-pix_fmt", "rgb24", "-"], stdout=subprocess.PIPE)
     sz = w * h * 3
@@ -66,6 +119,7 @@ def main(argv):
     ap.add_argument("--전환", type=float, default=0.4); ap.add_argument("--물감색", default="200,30,40")
     ap.add_argument("--나레이션", default=""); ap.add_argument("--자막", default=""); ap.add_argument("--배경음", default="")
     ap.add_argument("--크기", default="1920x1080")
+    ap.add_argument("--전환종류", default="섞기", help="섞기(줌·워프 끝·워프 시작·물감을 돌아가며) 또는 paint/zoom/warp_in/warp_out 하나")
     a = ap.parse_args(argv)
     W, H = (int(x) for x in a.크기.split("x"))
     shots = json.load(open(a.list, encoding="utf-8"))
@@ -87,13 +141,13 @@ def main(argv):
     prev = []                                                   # 앞 장면의 마지막 X 장 (이번 장면 앞부분과 겹침)
     for si, path in enumerate(shots):
         n = nframes(path); last = si == len(shots) - 1
-        masks = 물감전환_마스크(X, W, H, seed=si) if prev else None
+        kinds = ["zoom", "warp_in", "warp_out", "paint"] if a.전환종류 == "섞기" else [a.전환종류]
+        kind = kinds[(si - 1) % len(kinds)] if si else "paint"
+        masks = 물감전환_마스크(X, W, H, seed=si) if prev and kind == "paint" else None
         keep = []
         for fi, fr in enumerate(frames(path, W, H)):
             if prev and fi < len(prev):                         # 물감 전환: 뒤 장면이 물감 자국 모양으로 드러남
-                m, rim = masks[fi]
-                o = prev[fi].astype(np.float32) * (1 - m[..., None]) + fr.astype(np.float32) * m[..., None]
-                o = o * (1 - rim[..., None] * .92) + paint * rim[..., None] * .92
+                o = 전환_장면(kind, prev[fi], fr, (fi + 1) / (len(prev) + 1), W, H, paint, masks[fi] if masks else None)
                 enc.stdin.write(o.clip(0, 255).astype(np.uint8).tobytes())
             elif not last and fi >= n - X:                      # 다음 장면과 겹칠 끝부분은 보관
                 keep.append(fr.copy())
