@@ -310,8 +310,8 @@ def scene_street():
         x += w + 0.1
     for k in range(-2, 8):
         bunting((k * 5, -3.1, 4.2), (k * 5 + 4, 3.1, 4.4))
-    shots = [((-3.5, 0.3, 3.0), (12, 0, 1.0)), ((8.2, -1.9, 1.0), (11.5, 0.4, 1.7)),
-             ((12.5, 2.5, 1.5), (12, -1.2, 1.5)), ((15.5, 0.0, 5.6), (10.5, 0, 0.8))]
+    shots = [((-1.5, 0.6, 1.9), (12, 0, 1.6)), ((8.2, -1.9, 1.0), (11.5, 0.4, 1.7)),
+             ((14.0, 1.6, 1.2), (8.0, -0.5, 1.8)), ((15.5, 0.0, 5.6), (10.5, 0, 0.8))]
     CAM_KEEP[:] = [p for p, _ in shots] + [(x_, 0) for x_ in range(-10, 37, 2)]   # FPV 길 위(높이 2.6m)는 머리 위라 괜찮지만 넉넉히
     hands_all = []
     for i in range(60):
@@ -332,8 +332,9 @@ def scene_street():
     for _ in range(4):
         drops((RNG.uniform(0, 20), RNG.uniform(-2, 2), 1.4), (RNG.uniform(-1, 1), RNG.uniform(-1, 1), 0.5))
     for _ in range(6):                 # 하늘 높이 떠 있는 큰 색 구름
-        powder_burst((RNG.uniform(5, 28), RNG.uniform(-2, 2), 3.4), (RNG.uniform(-1, 1), 0, 0.3), RNG.choice(PALETTE), n=18, spread=1.4, size=0.35, dist=2)
-    return {"path": [(-10, 0, 2.6), (34, 0, 2.9)], "look": Vector((12, 0, 1.4)), "shots": shots}
+        powder_burst((RNG.uniform(8, 28), RNG.choice([-1, 1]) * RNG.uniform(1.3, 2.1), 3.4), (RNG.uniform(-1, 1), 0, 0.3), RNG.choice(PALETTE), n=18, spread=1.4, size=0.35, dist=2)
+    return {"path": [(-10, 0, 2.6), (24, 0, 2.9)], "look": Vector((12, 0, 1.4)), "shots": shots,
+            "slow": [((-6, 0.4, 2.0), (20, 0, 1.6)), ((3, -0.4, 2.3), (26, 0, 1.6))]}   # 천천히: 골목을 따라 앞으로 (앞을 봄)
 
 
 def scene_bonfire():
@@ -489,6 +490,11 @@ def move_fpv(cam, info):
 
 
 def move_slow(cam, info):
+    if info.get("slow"):
+        (p0, a0), (p1, a1) = info["slow"]
+        key(cam, 1, Vector(p0), look_rot(p0, a0))
+        key(cam, NF, Vector(p1), look_rot(p1, a1))
+        return
     (x0, y0, z0), (x1, y1, z1) = info["path"]
     tgt = info["look"]
     key(cam, 1, Vector((x0, y0, z0)), look_rot((x0, y0, z0), tgt))
