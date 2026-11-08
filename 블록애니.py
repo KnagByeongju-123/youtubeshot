@@ -36,7 +36,8 @@
     날아올 때 '윙윙', 맞으면 '띠링'(점수). 글자: {"모양": "글자", "내용": "+100", "동작": [...], "바뀜": [[초, 내용], ...]} (한글 됨, 바뀜 = 점수판처럼 바뀌는 글자)
   통나무: {"모양": "통나무", "반지름": 0.5, "동작": [...], "쿵": [떨어져 닿는 초...]} — 같은 빠르기로 굴러 돎, '데굴데굴' 소리.
     "등속": true 를 주면 다른 물체도 같은 빠르기로 움직임
-  날아가는 물체: "물체": [{"모양": "화살" | "광선" | "벌" | "글자" | "통나무", "색": 색, "동작": [{"초": 3, "위치": [x,y,z]}, {"초": 3.5, "위치": [...]}]}]
+  돌: {"모양": "돌", "반지름": 0.5, "쿵": [땅에 닿는 초], "휘익": true(떨어지는 소리)} — 떨어지는 동안 돎. 조각: 부서진 작은 돌.
+  날아가는 물체: "물체": [{"모양": "화살" | "광선" | "벌" | "글자" | "통나무" | "돌" | "조각", "색": 색, "동작": [{"초": 3, "위치": [x,y,z]}, {"초": 3.5, "위치": [...]}]}]
   방향: 도(°). 0 = 카메라 쪽(-Y)을 봄, 90 = 오른쪽(+X)을 봄. 위치는 m (캐릭터 키 약 2m).
   동작 사이의 위치는 부드럽게 이어짐(걷기·달리기는 그동안 다리를 움직임).
 """
@@ -584,6 +585,20 @@ def cmd_scene(scene_file, out, fancy=False):
             a = r
             box(f"나이테줄{i}", (-0.35, -L - 0.2, 0), (0.35, -L - 0.1, a * 0.75), "#6b3d17", root, outline=False)  # 도는 게 보이게
             root["반지름"] = r * U
+        elif kind == "돌":  # 울퉁불퉁한 돌(상자 3개), 떨어지며 돎
+            a = float(pr.get("반지름", 0.5)) / U * 0.8
+            c = pr.get("색", "#8d8d8d")
+            box(f"돌{i}", (-a, -a, -a), (a, a, a * 0.85), c, root)
+            box(f"돌위{i}", (-a * 0.7, -a * 0.9, a * 0.5), (a * 0.6, a * 0.9, a * 1.1), pr.get("색2", "#a9a9a9"), root)
+            box(f"돌옆{i}", (a * 0.4, -a * 0.8, -a * 0.9), (a * 1.25, a * 0.8, a * 0.3), pr.get("색3", "#6f6f6f"), root)
+            box(f"돌왼{i}", (-a * 1.2, -a * 0.75, -a * 0.6), (-a * 0.3, a * 0.75, a * 0.55), pr.get("색2", "#a9a9a9"), root)
+            box(f"돌밑{i}", (-a * 0.6, -a * 0.85, -a * 1.15), (a * 0.7, a * 0.85, -a * 0.3), pr.get("색3", "#6f6f6f"), root)
+            box(f"돌꼭대기{i}", (-a * 0.25, -a * 0.6, a * 0.9), (a * 0.35, a * 0.6, a * 1.3), pr.get("색3", "#6f6f6f"), root)
+            root["돌기"] = float(pr.get("돌기", 6.0))
+        elif kind == "조각":  # 부서진 돌 조각
+            a = float(pr.get("반지름", 0.12)) / U
+            box(f"조각{i}", (-a, -a, -a), (a, a, a), pr.get("색", "#8d8d8d"), root)
+            root["돌기"] = float(pr.get("돌기", 12.0))
         elif kind == "글자":  # 점수 같은 글자(숫자·영어)
             cu = bpy.data.curves.new(f"글자{i}", "FONT")
             cu.body = pr.get("내용", "+100")
@@ -655,6 +670,13 @@ def cmd_scene(scene_file, out, fancy=False):
                         if "날개" in ch:
                             ang = 0 if dead else (45 if f % 2 else -15)
                             ch.rotation_euler = (math.radians(ang * ch["날개"]), 0, 0)
+                elif kind in ("돌", "조각"):  # 떨어지는 동안만 돎(땅에 닿으면 멈춤)
+                    moving = abs(p2[2] - p[2]) > 1e-6 or abs(p2[0] - p[0]) > 1e-6
+                    if moving:
+                        root["각"] = root.get("각", 0.0) + root["돌기"] / fps
+                    elif kind == "돌":  # 땅에 닿으면 가장 가까운 평평한 면으로 놓임(모서리로 서 있지 않게)
+                        root["각"] = round(root.get("각", 0.0) / (math.pi / 2)) * (math.pi / 2)
+                    root.rotation_euler = (0.3 if moving or kind == "조각" else 0.0, root.get("각", 0.0), 0)
                 elif kind == "통나무":  # 간 거리만큼 굴러 돎
                     root.rotation_euler = (0, -(keys[0]["위치"][0] - p[0]) / root["반지름"], 0)
                 elif kind == "글자":
@@ -694,6 +716,13 @@ def cmd_scene(scene_file, out, fancy=False):
                         ev.append((float(pr["맞은초"]) + 0.05, "동전"))
                     continue
                 if kind == "글자":
+                    continue
+                if kind in ("돌", "조각"):
+                    if pr.get("휘익"):
+                        ev.append((ks[0]["초"], "휘익"))
+                    for tb in pr.get("쿵", []):
+                        ev.append((float(tb), "착지"))
+                        ev.append((float(tb) + 0.03, "부서짐"))
                     continue
                 if kind == "통나무":
                     ev.append((ks[0]["초"], "데굴데굴"))
