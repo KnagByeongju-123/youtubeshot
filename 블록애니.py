@@ -25,7 +25,7 @@
              "동작": [{"초": 0, "자세": "서기"}, {"초": 1, "자세": "걷기", "위치": [x,y]}, ...]}],
    "카메라": [{"초": 0, "위치": [x,y,z], "보는곳": [x,y,z], "렌즈": 35}, ...]}
   위치 [x, y, 높이] 처럼 세 번째 값을 주면 그 높이(발판 위)에 섬.
-  픽셀(옛날 게임) 모드: "픽셀": 6, "꼬마": 1.5, "배경": "레트로", "무대": {"바닥": [-12,12], "발판": [[x0,x1,높이]],
+  픽셀(옛날 게임) 모드: "픽셀": 6, "꼬마": 1.5, "배경": "레트로", "무대": {"바닥": [-12,12], "발판": [[x0,x1,높이]] 또는 [[x0,x1,왼쪽높이,오른쪽높이]](기울어진 바닥),
     "사다리": [[x, 아래, 위]]}, 카메라에 "직교": 14 (옆에서 평평하게, 화면 가로 14m)
   자세: 서기 | 걷기 | 달리기 | 주먹 | 가리키기 | 놀람 | 팔짱 | 쓰러짐 | 활쏘기 | 위로쏘기 | 맞음 | 만세 | 광선 | 점프
   소리(자동, 레트로소리.py): 화살 → 활·맞음, 광선 → 광선(맞히면 "맞힘": true), 점프·놀람·쓰러짐 동작 → 그 소리.
@@ -444,7 +444,8 @@ def retro_stage(stage):
     c1 = stage.get("벽돌색", "#c8502a")
     c2 = stage.get("벽돌색2", "#a63f1f")
 
-    def bricks(x0, x1, ztop, rows=2):
+    def bricks(x0, x1, ztop, rows=2, ztop1=None):
+        """ztop1 을 주면 x0 에서 ztop, x1 에서 ztop1 로 기울어진 바닥(벽돌마다 높이를 조금씩 다르게)."""
         n = 0
         for r in range(rows):
             off = 0 if r % 2 == 0 else 8
@@ -452,15 +453,19 @@ def retro_stage(stage):
             while x < x1 * 16:
                 lo = max(x, x0 * 16)
                 hi = min(x + 16, x1 * 16)
-                z = ztop * 16 - (r + 1) * 8
+                zt = ztop
+                if ztop1 is not None and x1 > x0:
+                    xc = (lo + hi) / 2 / 16
+                    zt = ztop + (ztop1 - ztop) * (xc - x0) / (x1 - x0)
+                z = zt * 16 - (r + 1) * 8
                 box(f"벽돌{n}_{x}_{z}", (lo, -8, z), (hi, 8, z + 8), c1 if (n + r) % 3 else c2)
                 x += 16
                 n += 1
 
     x0, x1 = stage.get("바닥", [-12, 12])
     bricks(x0, x1, 0, rows=3)
-    for i, (a, b, zt) in enumerate(stage.get("발판", [])):
-        bricks(a, b, zt, rows=1)
+    for i, fl in enumerate(stage.get("발판", [])):  # [x0, x1, 높이] 또는 [x0, x1, x0높이, x1높이](기울어짐)
+        bricks(fl[0], fl[1], fl[2], rows=1, ztop1=fl[3] if len(fl) > 3 else None)
     lc = stage.get("사다리색", "#4fc3f7")
     for i, (x, za, zb) in enumerate(stage.get("사다리", [])):
         for sx in (-6, 6):
