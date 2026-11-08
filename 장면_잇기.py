@@ -2,7 +2,7 @@
 
   python -X utf8 장면_잇기.py <목록.json> <결과.mp4> [--전환 0.4] [--물감색 200,30,40] [--나레이션 소리.wav] [--자막 자막.ass] [--배경음 소리.wav]
   목록.json = ["장면1.mp4", "장면2.mp4", ...]  (장면마다 길이 = 그 장면 몫 + 전환 길이. 앞 장면 끝과 다음 장면 앞이 전환 길이만큼 겹침)
-  전환: 화면 여러 곳에 물감이 '퍽' 하고 튀어 번지며 다음 장면이 드러남 — 물감이 닿은 곳은 잠깐 물감색이었다가 다음 장면으로 바뀜, 작은 물방울도 튐
+  전환: 물감을 흩어뿌리듯 크고 작은 방울이 부드럽게 내려앉아 번지며 다음 장면이 드러남(사용자 결정 2026-11-08: 부드럽게), 젖은 자리에 옅은 물감색이 잠깐
   물감전환_마스크(n, w, h, seed) 는 다른 프로그램에서도 씀 (0~1 마스크 n장)"""
 import argparse, json, subprocess, sys
 import numpy as np
@@ -10,33 +10,38 @@ import cv2
 
 
 def 물감전환_마스크(n, w, h, seed=0, small=(480, 270)):
-    """물감이 튀어 번지는 순서(도착 시간) 지도를 한 번 만들고, 시간마다 잘라 마스크 n장. 끝 장은 화면 전체"""
+    """흩어뿌리기 전환(사용자 결정 2026-11-08: 부드럽게): 크고 작은 물감 방울 수백 개가 흩뿌려지듯 차례로 내려앉아
+    번지며 다음 장면이 드러남. 방울 가장자리는 부드럽게, 물감색은 옅게 잠깐만. 끝 장은 화면 전체"""
     rng = np.random.default_rng(seed)
     sw, sh = small
     yy, xx = np.mgrid[0:sh, 0:sw].astype(np.float32)
-    T = np.full((sh, sw), 9.0, np.float32)
-    for k in range(rng.integers(6, 10)):                      # 큰 물감 덩어리: 늦게 뿌린 것일수록 늦게 시작
-        cx, cy = rng.uniform(-.05, 1.05) * sw, rng.uniform(-.05, 1.05) * sh
-        t0 = rng.uniform(0, .45); speed = rng.uniform(.55, .9) * sw
-        ang = np.arctan2(yy - cy, xx - cx)
-        wob = np.zeros_like(ang)
-        for f in (3, 5, 7, 11, 17):                            # 가장자리 울퉁불퉁 (물감 튄 모양)
-            wob += rng.uniform(.04, .16) / (f / 3) * np.sin(f * ang + rng.uniform(0, 6.3))
-        spikes = rng.uniform(.25, .6) * np.clip(np.sin(rng.integers(9, 16) * ang + rng.uniform(0, 6.3)), 0, 1) ** 8   # 뾰족하게 튄 줄기
-        d = np.hypot(xx - cx, yy - cy) / (1 + wob + spikes)
-        T = np.minimum(T, t0 + d / speed)
-    for k in range(rng.integers(25, 45)):                     # 작은 물방울: 일찍 '톡톡' 찍힘
-        cx, cy, r = rng.uniform(0, sw), rng.uniform(0, sh), rng.uniform(2, 9)
-        t0 = rng.uniform(.02, .5)
-        T = np.where(np.hypot(xx - cx, yy - cy) < r, np.minimum(T, t0), T)
-    T = cv2.GaussianBlur(T, (0, 0), 0.8)
-    T = cv2.resize(T, (w, h), interpolation=cv2.INTER_LINEAR)
+    # 바탕 순서: 부드러운 큰 얼룩 무늬(낮은 주파수 잡음) → 어느 곳이 먼저 젖을지
+    base = np.zeros((sh, sw), np.float32)
+    for f, a_ in ((2, 1.0), (4, .5), (8, .25)):
+        g = rng.normal(size=(f + 1, f + 1)).astype(np.float32)
+        base += a_ * cv2.resize(g, (sw, sh), interpolation=cv2.INTER_CUBIC)
+    base = (base - base.min()) / (base.max() - base.min() + 1e-6)
+    T = 0.55 + 0.5 * base                                     # 방울이 없는 곳도 끝에는 젖음
+    # 흩뿌린 방울: 뿌린 방향(두세 곳)에서 퍼지듯, 큰 방울은 일찍·작은 방울은 촘촘히
+    centers = [(rng.uniform(.1, .9) * sw, rng.uniform(.1, .9) * sh) for _ in range(rng.integers(2, 4))]
+    for k in range(rng.integers(260, 380)):
+        cx0, cy0 = centers[k % len(centers)]
+        r_ = abs(rng.normal(0, .45)) * sw
+        ang = rng.uniform(0, 2 * np.pi)
+        cx, cy = cx0 + r_ * np.cos(ang), cy0 + r_ * .7 * np.sin(ang)
+        rad = rng.uniform(2, 7) if rng.random() < .75 else rng.uniform(8, 22)
+        t0 = rng.uniform(0, .7) * (0.7 if rad > 8 else 1.0)
+        grow = rng.uniform(.12, .3) * sw                       # 내려앉은 뒤 천천히 번짐
+        d = np.hypot(xx - cx, yy - cy)
+        T = np.minimum(T, t0 + np.maximum(d - rad, 0) / grow)
+    T = cv2.GaussianBlur(T, (0, 0), 1.6)
+    T = cv2.resize(T, (w, h), interpolation=cv2.INTER_CUBIC)
     out = []
     for i in range(n):
-        t = (i + 1) / n * 1.02
-        m = np.clip((t - T) * 40 + 0.5, 0, 1)                  # 부드러운 가장자리 (몇 화소)
-        rim = np.clip(1 - (t - T) / 0.16, 0, 1) * m * (t < 1.0)   # 막 물감이 닿은 곳은 잠깐 물감색 → 다음 장면으로 바뀜
-        out.append((m, rim))
+        t = (i + 1) / n * 0.86          # 마지막 장까지 고르게 번지도록
+        m = np.clip((t - T) * 16 + 0.5, 0, 1)                   # 아주 부드러운 가장자리
+        rim = np.clip(1 - (t - T) / 0.10, 0, 1) * m * (t < 1.0) * 0.45   # 젖은 자리에 옅은 물감색이 잠깐
+        out.append((m.astype(np.float32), rim.astype(np.float32)))
     out[-1] = (np.ones((h, w), np.float32), np.zeros((h, w), np.float32))
     return out
 
