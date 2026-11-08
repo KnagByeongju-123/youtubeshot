@@ -31,6 +31,8 @@ DEFAULT = {
     "길이_분": 12,               # 규칙: 긴 영상은 10~15분
     "배경음": "심해",
     "배경음_크기": 0.03,      # 0~2 (0.03 = 거의 안 들림, 목소리가 또렷하게)
+    "배경음_파일": "",          # 음악 파일(mp3) 경로를 적으면 자동 작곡 대신 그 음악 (예: 케빈 맥러드 CC BY 4.0, 배경음악\\KevinMacLeod\\…). 짧으면 반복. 설명란에 출처 필수
+    "입체_사진": True,          # 사용자 결정 2026-11-08: 실제 사진 다큐는 사진 3D 효과(2.5D 깊이 움직임) 자동으로 켬 (--역사 그림 편은 끔)
     "성우_프리셋": "",         # 🎤 성우 선택 창에서 ⭐ 새 성우로 저장한 이름 (비우면 기본: 남자 성우 2)
     "웹조사": True,
     "쇼츠_만들기": False,      # 규칙: 쇼츠는 기본적으로 안 만듦. true 로 하거나 명령에 --쇼츠 를 붙이면 롱폼마다 세로 쇼츠도 만듦
@@ -649,7 +651,17 @@ def run_doc(m, app, c, gate):
             + ("이 PC에서 직접 그림" if str(app.vars['fiction_image'].get()).startswith("로컬") else "분위기 웹 사진"))
     if str(c.get("제목_표시", "")).strip() in ("위 가운데", "왼쪽 위 작게", "숨김"):
         app.vars["head_pos"].set(str(c["제목_표시"]).strip())
-    app.vars["bgm_mode"].set("자동생성")
+    bgm_file_ = str(c.get("배경음_파일") or "").strip()
+    if bgm_file_ and not os.path.isabs(bgm_file_):
+        bgm_file_ = os.path.join(HERE, bgm_file_)
+    if bgm_file_ and os.path.exists(bgm_file_):      # 음악 파일(케빈 맥러드 등) — 자동 작곡 대신 (사용자 결정 2026-11-08)
+        app.vars["bgm_mode"].set("파일")
+        app.vars["bgm_path"].set(bgm_file_)
+        log(f"🎵 배경음 파일: {os.path.basename(bgm_file_)} (설명란에 음악 출처를 꼭 적음)")
+    else:
+        if bgm_file_:
+            log(f"  ⚠ 배경음 파일이 없어 자동 작곡으로: {bgm_file_}")
+        app.vars["bgm_mode"].set("자동생성")
     app.vars["bgm_volume"].set(str(c["배경음_크기"]))
     if str(c.get("성우_프리셋") or "").strip():      # 저장한 성우(🎤 성우 선택 창의 ⭐ 새 성우로 저장). 비우면 기본 성우
         tmp = {}
@@ -661,7 +673,8 @@ def run_doc(m, app, c, gate):
                 "img_motion": "영상처럼(확대·이동·전환)", "head_show": "안 보임(제목 카드만)", "head_pos": "숨김",   # 새 서버의 프로그램 기본값(쇼츠 세로 등)을 쓰지 않게
                 "sub_split": "한 줄씩(문장·쉼표로 나눠 차례로)", "img_label": "off" if HISTORY else "on", "fps": "24", "sub_hide": "off", "img_credit": "on",
                 # 실제 사진 장문 다큐(--역사 아님): 오른쪽 위 = 사진 설명 상자(무엇·언제), 오른쪽 아래 = 출처(검은 바탕·흰 글자) (사용자 결정 2026-11-01). AI 그림엔 출처 표시 안 됨
-                "narr_rate": "0", "narr_tone_m": "-1.5"}   # 나레이션: 정상 속도·톤 반음 1.5 낮게 (CLAUDE.md 2장)
+                "narr_rate": "0", "narr_tone_m": "-1.5",   # 나레이션: 정상 속도·톤 반음 1.5 낮게 (CLAUDE.md 2장)
+                "img_depth": "on" if (not HISTORY and c.get("입체_사진", True)) else "off"}   # 실제 사진 3D 효과 (사용자 결정 2026-11-08)
     for k_, v_ in LONG_FIX.items():
         if k_ in app.vars:
             app.vars[k_].set(v_)
