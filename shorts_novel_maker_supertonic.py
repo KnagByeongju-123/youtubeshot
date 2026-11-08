@@ -6149,7 +6149,7 @@ class SubtitleRenderer:
             if fr is None:
                 return st["img"]
             if (fr.shape[1], fr.shape[0]) != tuple(size):
-                fr = _cv2.resize(fr, tuple(size), interpolation=_cv2.INTER_AREA)
+                fr = _cv2.resize(fr, tuple(size), interpolation=_cv2.INTER_CUBIC if fr.shape[1] < size[0] else _cv2.INTER_AREA)
             st["img"], st["at"] = Image.fromarray(_cv2.cvtColor(fr, _cv2.COLOR_BGR2RGB)), want
             return st["img"]
         except Exception:
@@ -6778,13 +6778,40 @@ def ensure_blender_clips(r, log=None, cancel=None):
         r.bl_on = False
         return 0
     x0, y0, x1, y1 = r.img_box
-    W_, H_ = int(x1 - x0) // 2 * 2, int(y1 - y0) // 2 * 2
+    sc_ = float(r.s.get("img_blender_scale", 0.5) or 0.5)          # 작은 화질(사용자 결정 2026-11-08): 화면의 절반 크기로 만들고 영상에서 키움
+    W_, H_ = int((x1 - x0) * sc_) // 2 * 2, int((y1 - y0) * sc_) // 2 * 2
     groups = {}
     for sh in r.shots:
         g = (sh["img"], round(sh.get("g0", sh["t0"]), 2), round(sh.get("g1", sh["t1"]), 2))
         groups.setdefault(sh["img"], set()).add(g)
     paths = getattr(r, "img_paths", [])
     todo, ready = [], 0
+    # 카메라 움직임 (장문다큐.md 7장 규칙): 장면마다 바꿔 지루하지 않게, 같은 움직임이 두 장면 넘게 이어지지 않게.
+    # 풍경(깊이가 위→아래로 고르게 가까워짐) = drone·right·left·fpv, 유물·물건 = push·orbit·zoomout·freeze, 마지막 사진 = zoomout(멀어지며 끝)
+    LAND, OBJ = ["drone", "right", "left", "fpv"], ["push", "orbit", "zoomout", "freeze"]
+    order = sorted(groups, key=lambda i_: min(g_[1] for g_ in groups[i_]))
+    moves, recent, li_, oi_ = {}, [], 0, 0
+    for n_, idx in enumerate(order):
+        dep = load_depth(paths[idx]) if idx < len(paths) else None
+        land = False
+        if dep is not None:
+            rows = dep.mean(axis=1)
+            land = rows.std() > 1e-6 and float(np.corrcoef(rows, np.arange(len(rows)))[0, 1]) > 0.6
+        if n_ == len(order) - 1:
+            mv = "zoomout"
+        else:
+            pool, k0 = (LAND, li_) if land else (OBJ, oi_)
+            mv = pool[k0 % len(pool)]
+            for k_ in range(len(pool)):
+                mv = pool[(k0 + k_) % len(pool)]
+                if mv not in recent[-1:]:
+                    break
+            if land:
+                li_ += 1
+            else:
+                oi_ += 1
+        moves[idx] = mv
+        recent.append(mv)
     for idx, gs in groups.items():
         if len(gs) != 1 or idx >= len(paths):      # 같은 사진이 떨어진 두 곳에 나오면 프로그램 방식 그대로
             continue
@@ -6798,21 +6825,22 @@ def ensure_blender_clips(r, log=None, cancel=None):
         if not (1.3 <= asp <= 2.4) or load_depth(path) is None:
             continue
         sec = max(2.0, round((g1 - g0) * 2) / 2)
-        out = os.path.join(BLENDER_DIR, f"{depth_key(path)}_{W_}x{H_}_{sec:.1f}_{idx % 4}.mp4")
+        out = os.path.join(BLENDER_DIR, f"{depth_key(path)}_{W_}x{H_}_{sec:.1f}_{moves.get(idx, 'right')}.mp4")
         if os.path.exists(out) and os.path.getsize(out) > 1000:
             r.bl_clips[idx] = out
             ready += 1
         else:
-            todo.append((idx, path, out, sec))
+            todo.append((idx, path, out, sec, moves.get(idx, "right")))
     if todo:
         os.makedirs(BLENDER_DIR, exist_ok=True)
-        log(f"  🎥 Blender 3D 카메라 영상 {len(todo)}개 만드는 중... (사진 한 장(8초)에 약 1분, 한 번만)")
-    for k_, (idx, path, out, sec) in enumerate(todo):
+        log(f"  🎥 Blender 3D 카메라 영상 {len(todo)}개 만드는 중... ({W_}×{H_}, 사진 한 장(8초)에 약 20초, 한 번만) · 움직임 "
+            + " ".join(f"{mv_}{sum(1 for v_ in moves.values() if v_ == mv_)}" for mv_ in dict.fromkeys(moves.values())))
+    for k_, (idx, path, out, sec, mv) in enumerate(todo):
         if cancel is not None and cancel.is_set():
             raise RuntimeError("취소됨")
         npy = os.path.join(DEPTH_DIR, depth_key(path) + ".npy")
         cmd = [exe, "-b", "-noaudio", "--factory-startup", "-P", os.path.join(BASE, "블렌더_사진3D.py"), "--",
-               path, npy, out + ".part.mp4", str(sec), str(W_), str(H_), str(idx % 4), "1.0"]
+               path, npy, out + ".part.mp4", str(sec), str(W_), str(H_), mv, "1.0"]
         try:
             p = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=1800,
                                creationflags=(subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0))
