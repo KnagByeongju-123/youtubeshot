@@ -121,6 +121,9 @@ sh.background_color = (1.0, 0.0, 1.0) if KEY else (0.9, 0.92, 0.9)
 scn.display.render_aa = "8"
 scn.render.resolution_x, scn.render.resolution_y = W, H
 scn.render.image_settings.file_format = "PNG"
+if KEY:                                      # 검사 모드: 빈 곳은 투명(알파 0) → 사진_입체영상.py 가 찾아 잘라 냄
+    scn.render.film_transparent = True
+    scn.render.image_settings.color_mode = "RGBA"
 if STILL:
     for nm, t in (("처음", 0.0), ("가운데", 0.5), ("끝", 1.0)):
         cam_at(t)

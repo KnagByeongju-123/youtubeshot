@@ -8,8 +8,8 @@ xvfb-run -a python -X utf8 사진_입체영상.py <프로젝트.json> [--최대 
     · 공간 통과: 앞층(가까운 30%)이 화면의 12~40% 이고 화면 아래 가운데를 다 덮지 않는 사진 중 깊이 차이가 큰 순으로 --통과(기본 2)장
     · 깊이 차이가 큰 순으로 최대 --최대(기본 10)장
   - 한 장에 1~2분 (블렌더 단순 그리기, 영상 길이 = 그 사진이 나오는 시간, 최대 16초 → 넘으면 늘여 씀)
-  - 가장자리 까짐 검사(사용자 지적 2026-11-07, 필수): 블렌더가 빈 곳을 자홍색으로 그림(--key) → 모든 장면에서 자홍이 안 보일 만큼 가운데 확대(+3%, 최소 8%)
-    → 완성 영상을 12장마다 다시 검사. 1.32배 넘게 잘라야 하면 카메라를 당겨 다시 → 흔들기로 다시 → 그래도 안 되면 평면(입체 안 씀)
+  - 가장자리 까짐 검사(사용자 지적 2026-11-07, 필수): 블렌더가 빈 곳을 투명으로 저장(--key) → 모든 장면에서 빈 곳이 안 보일 만큼 가운데 확대(+3%, 최소 8%)
+    → 확대한 화면을 6장마다 다시 검사. 1.32배 넘게 잘라야 하면 카메라를 당겨 다시 → 흔들기로 다시 → 그래도 안 되면 평면(입체 안 씀)
   - --다시: 이미 있는 .입체.mp4 도 다시 만듦, --보기: 고르기만 하고 만들지 않음"""
 import json
 import math
@@ -105,9 +105,8 @@ def fg_ok(npy):
 
 
 def key_mask(fr):
-    """자홍색(빈 곳) 픽셀"""
-    r, g, b = fr[..., 0].astype(int), fr[..., 1].astype(int), fr[..., 2].astype(int)
-    return (r - g > 110) & (b - g > 110)
+    """빈 곳 픽셀 (블렌더 --key 는 빈 곳을 투명으로 저장)"""
+    return fr[..., 3] < 200
 
 
 def need_crop(fr_dir):
@@ -116,7 +115,7 @@ def need_crop(fr_dir):
     need = 1.0
     files = sorted(f for f in os.listdir(fr_dir) if f.endswith(".png"))
     for f in files:
-        fr = np.asarray(Image.open(os.path.join(fr_dir, f)).convert("RGB").resize((320, 180)))
+        fr = np.asarray(Image.open(os.path.join(fr_dir, f)).convert("RGBA").resize((320, 180)))
         m = key_mask(fr)
         if not m.any():
             continue
@@ -168,13 +167,13 @@ def render(path, npy, mode, secs, work):
             vf = f"crop=iw/{c:.4f}:ih/{c:.4f},scale=1280:720"
         subprocess.run(["ffmpeg", "-nostdin", "-v", "error", "-y", "-framerate", "24", "-i", os.path.join(fr_dir, "frame_%04d.png"),
                         "-vf", vf, "-c:v", "libx264", "-pix_fmt", "yuv420p", "-crf", "19", out], check=True)
-        chk = os.path.join(work, "chk")              # 완성 영상을 다시 검사 (12장마다 한 장)
-        shutil.rmtree(chk, ignore_errors=True)
-        os.makedirs(chk)
-        subprocess.run(["ffmpeg", "-nostdin", "-v", "error", "-i", out, "-vf", "select=not(mod(n\\,12))", "-vsync", "vfr",
-                        os.path.join(chk, "c_%04d.png")], check=True)
-        bad = sum(int(key_mask(np.asarray(Image.open(os.path.join(chk, f)).convert("RGB"))).sum() > 30) for f in os.listdir(chk))
-        shutil.rmtree(chk, ignore_errors=True)
+        bad = 0                                       # 확대한 뒤 다시 검사: 잘린 화면 안에 빈 곳이 남았는지 장면마다 확인
+        for f in sorted(os.listdir(fr_dir))[::6]:
+            fr = np.asarray(Image.open(os.path.join(fr_dir, f)).convert("RGBA"))
+            h_, w_ = fr.shape[:2]
+            cz = c + (0.05 if md == "흔들기" else 0)
+            ch_, cw_ = int(h_ / c / 2), int(w_ / c / 2)
+            bad += int(key_mask(fr[h_ // 2 - ch_:h_ // 2 + ch_, w_ // 2 - cw_:w_ // 2 + cw_]).sum() > 20)
         shutil.rmtree(fr_dir, ignore_errors=True)
         if bad == 0:
             return md
