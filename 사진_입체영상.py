@@ -4,7 +4,8 @@ xvfb-run -a python -X utf8 사진_입체영상.py <프로젝트.json> [--최대 
     입체에 맞는 사진만 골라 '<사진>.입체.mp4' 를 사진 옆에 만듦 → render_project 가 그 사진 자리에 이 영상을 씀(_clip_frame)
   - 고르는 법:
     · 빼는 것: 설명에 지도·도표·그래프·논문·문서·기록·비문·글씨·표·그림 이 있거나, 깊이 차이(위·아래 10% 차)가 0.35 미만(평평한 사진)
-    · 인물 사진도 함(사용자 결정 2026-11-07): 전진+오르빗, 공간 통과는 안 함. 세로 사진은 16:9 로 잘라(위쪽 25% 기준, 얼굴) 찍음
+    · 사람이 나오는 실제 사진(얼굴이 사진 너비 2.5% 넘게 보이는 것)은 입체로 만들지 않음(사용자 결정 2026-11-08): 진짜 사진 그대로
+      넓은 화면 → 얼굴 클로즈업 순간이동 (사진_사람순간이동.py, 얼굴 자동 찾기 YuNet). 얼굴이 작은 군중·풍경 사진만 입체
     · 카메라: 설명에 탑·첨탑·기둥·미나렛·오벨리스크·등대·종탑 → 좌우 흔들기(sway), 나머지 → 전진+오르빗(orbit 12도)
     · 공간 통과: 설명이 장소·풍경(들판·숲·폭포·산·광장·유적지 …)이고, 앞층(가까운 30%)이 화면의 12~40% 이며 화면 아래 가운데를 다 덮지 않는 사진 중
       깊이 차이가 큰 순으로 --통과(기본 2)장. 사람이 주인공인 사진·인물은 전진+오르빗 (카메라 규칙, 장문다큐.md 4장)
@@ -211,7 +212,15 @@ def main(a):
     open(lock, "w").write(str(os.getpid()))
     print("🎥 사진이 나오는 시간 재는 중...")
     sp = spans(proj)
-    cands = []
+    cands, people = [], []
+    import importlib.util
+    try:
+        sp_ = importlib.util.spec_from_file_location("face_mod", os.path.join(HERE, "사진_사람순간이동.py"))
+        face_mod = importlib.util.module_from_spec(sp_)
+        sp_.loader.exec_module(face_mod)
+    except Exception as e:
+        print("  ⚠ 얼굴 찾기를 못 씀:", e)
+        face_mod = None
     for p, cap in photos(proj):
         ap = p if os.path.isabs(p) else os.path.join(os.path.dirname(proj), p)
         if not os.path.exists(ap) or ap.lower().endswith((".mp4", ".gif")):
@@ -230,6 +239,12 @@ def main(a):
             top = int((h_ - th) * 0.25)
             src = os.path.join(work, "세로_" + os.path.splitext(os.path.basename(ap))[0] + ".jpg")
             im_.crop((0, top, w_, top + th)).save(src, quality=95)
+        if face_mod is not None:                     # 사람이 나오는 실제 사진 → 입체 대신 '사람 사이 순간이동' (사용자 결정 2026-11-08)
+            import cv2
+            fs = face_mod.faces_of(cv2.imread(ap))
+            if fs:
+                people.append({"path": ap, "cap": cap, "secs": sp[key][1] - sp[key][0], "n": len(fs)})
+                continue
         npy = depth_of(src, work)
         if not npy:
             continue
@@ -248,11 +263,23 @@ def main(a):
         if k < n_pass and c["mode"] == "오르빗" and c["fg"] and not c["portrait"] and any(w in c["cap"] for w in PASS_WORDS):
             c["mode"] = "통과"
             k += 1
+    print(f"👥 사람 사이 순간이동 {len(people)}장 (사람이 나오는 실제 사진, 입체 안 함)")
+    for c in people:
+        print(f"  사람 {c['secs']:5.1f}초 얼굴 {c['n']}개  {os.path.basename(c['path'])}  {c['cap']}")
     print(f"✅ 입체로 만들 사진 {len(pick)}장 (후보 {len(cands)}장)")
     for c in pick:
         print(f"  {c['mode']:4s} {c['secs']:5.1f}초 깊이차 {c['spread']:.2f}  {os.path.basename(c['path'])}  {c['cap']}")
     if look:
         return 0
+    for c in people:
+        outp = c["path"] + ".입체.mp4"
+        if os.path.exists(outp) and not redo and os.path.exists(outp + ".사람"):
+            continue
+        r = subprocess.run([ST_PY, "-X", "utf8", os.path.join(HERE, "사진_사람순간이동.py"), c["path"], outp, "--초", f"{c['secs']:.2f}"],
+                           capture_output=True, text=True)
+        if os.path.exists(outp):
+            open(outp + ".사람", "w").write("사람 사이 순간이동")      # 표시 (입체가 아닌 사람 영상)
+            print("  완성 (사람 순간이동)", os.path.basename(c["path"]), r.stdout.strip().split("OK")[-1][-60:])
     for i, c in enumerate(pick, 1):
         if os.path.exists(c["path"] + ".입체.mp4") and not redo:
             continue
