@@ -75,6 +75,11 @@ if [ ! -f models/FLUX2_klein_4B/transformer/diffusion_pytorch_model.safetensors 
   "$SDV/bin/python" -m gdown "https://drive.google.com/drive/folders/$KLEIN_GDRIVE_FOLDER" -O models/FLUX2_klein_4B \
     || echo "구글 드라이브에서도 못 받음 (폴더 공유 설정 확인)" >&2
 fi
+# 사진 장면 순간이동용 얼굴 찾기 YuNet (OpenCV Zoo, Apache-2.0, 약 230KB) → 사진_장면.py
+if [ ! -s models/yunet/face_detection_yunet_2023mar.onnx ] || [ "$(stat -c%s models/yunet/face_detection_yunet_2023mar.onnx 2>/dev/null || echo 0)" -lt 10000 ]; then
+  mkdir -p models/yunet
+  curl -sSL -m 120 -o models/yunet/face_detection_yunet_2023mar.onnx "https://media.githubusercontent.com/media/opencv/opencv_zoo/main/models/face_detection_yunet/face_detection_yunet_2023mar.onnx" || true
+fi
 rm -rf /root/.cache/pip /root/.cache/huggingface/hub 2>/dev/null || true     # 받은 뒤 남는 임시 파일(수 GB)은 지움
 
 # 5) 이 세션에서 python = 위 실행 환경
