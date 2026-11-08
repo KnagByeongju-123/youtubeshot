@@ -7123,7 +7123,8 @@ def choose_camera_moves(r, elig, plan_path=None, log=None, objects=()):
                 else:
                     rs_ = ("얼굴 순간이동(사람 사진)" if getattr(r, "face_tp_on", False) and r.faces_for(i_) else
                            "천천히 확대·이동(지도·그래프·도해)" if i_ in getattr(r, "no3d", ()) else "천천히 확대·이동(세로·평평한 사진, 또는 같은 사진이 이어짐)")
-                    ls.append(f"{i_ + 1} | - | {tr_col(i_)} | {ly_col(i_)} | {cap_} | {rs_}")
+                    mv_keep = ("수동:" + manual[i_ + 1]) if (i_ + 1) in manual else "-"     # 직접 고른 무빙은 지우지 않음
+                    ls.append(f"{i_ + 1} | {mv_keep} | {tr_col(i_)} | {ly_col(i_)} | {cap_} | {rs_}")
             atomic_write_text(plan_path, "\n".join(ls) + "\n")
         except Exception as e_:
             log("  카메라 무빙 계획 저장 실패: " + str(e_)[:80])
@@ -7173,17 +7174,17 @@ def ensure_blender_clips(r, log=None, cancel=None, plan_path=None):
         if len(gs) != 1 or idx >= len(paths):      # 같은 사진이 떨어진 두 곳에 나오면 프로그램 방식 그대로
             continue
         path = paths[idx]
+        if (idx + 1) in forced_ and os.path.exists(os.path.join(DEPTH_DIR, depth_key(path) + ".npy")):   # 콘티에서 무빙을 고른 장면은 비율·평평함과 상관없이 3D
+            r.no3d.discard(idx)
+            r.forced3d.add(idx)
+            elig.append(idx)
+            continue
         try:
             with Image.open(path) as im_:
                 asp = im_.width / max(1, im_.height)
         except Exception:
             continue
         if not (1.15 <= asp <= 3.2) or load_depth(path) is None:      # 가로 사진만 (세로 사진·아주 긴 도표는 프로그램 방식)
-            continue
-        if (idx + 1) in forced_:
-            r.no3d.discard(idx)
-            r.forced3d.add(idx)
-            elig.append(idx)
             continue
         if not_3d_photo(r, idx, path):                              # 그래프·지도·도해·표·여러 칸 사진은 3D 로 세우지 않음 (글자가 잘리고 휘어 보임)
             r.no3d.add(idx)
