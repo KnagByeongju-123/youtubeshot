@@ -42,6 +42,8 @@ const shots=all.shots.filter(s=>!want||want.includes(s.name));
   const n=Math.max(1,Math.round((sh.t1-sh.t0)*sh.fps));
   const idx=testFlag?[0,Math.floor(n/3),Math.floor(2*n/3),n-1]:[...Array(n).keys()];
   for(const i of idx){
+   const fpath=path.join(dir,`f${String(i).padStart(5,'0')}.png`);
+   if(!testFlag && fs.existsSync(fpath) && fs.statSync(fpath).size>1000) continue;   // 이미 찍은 장은 건너뜀 (멈춘 뒤 이어 찍기)
    const t=sh.t0+i/sh.fps, u=n>1?i/(n-1):0;
    await p.evaluate(([t,u,cam,follow,ropes])=>{
      Timeline.setTime(t); Animator.preview();
@@ -60,7 +62,7 @@ const shots=all.shots.filter(s=>!want||want.includes(s.name));
      if(follow){const F=wp(follow); pos=[pos[0]+F.x,pos[1]+F.y,pos[2]+F.z]; tgt=[tgt[0]+F.x,tgt[1]+F.y,tgt[2]+F.z];}
      const P=Preview.selected; P.camera.position.set(...pos); P.controls.target.set(...tgt); P.controls.update();
    },[t,u,sh.cam,sh.follow||null,ropes]);
-   await p.screenshot({path:path.join(dir,`f${String(i).padStart(5,'0')}.png`),clip});
+   await p.screenshot({path:fpath,clip});
   }
   console.log('shot',sh.name,idx.length);
  }
