@@ -272,7 +272,7 @@ UI_TABS = [
     ("🎨 글꼴·색", "all", ["font_path", "title_font_path", "text_color", "title_color", "accent_color", "quote_color", "shadow", "stroke_width"]),
     ("🔤 자막 디자인", "sub", ["style_preset", "sub_layout", "head_pos", "color_preset", "sub_box_color", "sub_box_alpha", "head_style", "head_size",
                             "head_show", "sub_size", "sub_font_path", "sub_style", "sub_split", "sub_dialog", "sub_anim", "sub_max_chars", "sec_per_char"]),
-    ("🖼 사진·장면", "sub", ["img_fill", "img_motion", "img_depth", "img_depth_amt", "img_blender", "img_filter", "shot_sec", "punch_in", "img_frame", "img_bg", "photo_count", "img_radius"]),
+    ("🖼 사진·장면", "sub", ["img_fill", "img_motion", "img_depth", "img_depth_amt", "img_blender", "img_face_tp", "img_trans_paint", "img_filter", "shot_sec", "punch_in", "img_frame", "img_bg", "photo_count", "img_radius"]),
     ("📜 스크롤 글자", "scroll", ["font_size", "title_size", "line_gap", "para_gap", "margin_x", "margin_right", "align", "photo_h",
                               "speed", "target_sec"]),
     ("📜 스크롤 효과", "scroll", ["fade", "focus", "focus_dim", "focus_y", "ease"]),
@@ -549,6 +549,8 @@ FIELDS = [
     ("자막형", "img_filter", "사진 필터(포토샵풍 · 모든 그림·사진에 덧씌움)", "choice:없음,연필 스케치,색연필,수채화,유화,컷아웃(포스터화),하프톤(망점),펜화(선),목탄,카툰,크라프트지 질감", "없음"),
     ("자막형", "img_depth_amt", "입체 움직임 세기(카메라 무빙)", "choice:약하게,보통,강하게", "약하게"),   # 세게 하면 가장자리 사물이 겹쳐 보임
     ("자막형", "img_blender", "사진 3D 를 Blender 진짜 카메라로(설치돼 있을 때, 느림)", "choice:on,off", "off"),
+    ("자막형", "img_face_tp", "사람 사진: 얼굴 사이 순간이동(넓게 → 얼굴1 → 얼굴2, 3D 안 함)", "choice:on,off", "off"),
+    ("자막형", "img_trans_paint", "사진 바뀔 때 물감 뿌리기 전환(빨간 물감 테두리, 채널 시그니처)", "choice:on,off", "off"),
     ("자막형", "shot_sec", "한 장면 최대 길이(초)", "float", 4.5),
     ("자막형", "img_fill", "사진 배치", "choice:전체 화면(글자가 사진 위에),가운데 상자", "전체 화면(글자가 사진 위에)"),
     ("자막형", "img_bg", "상자 모드: 뒤 배경을 사진 흐림으로", "choice:on,off", "on"),
@@ -5404,6 +5406,9 @@ class SubtitleRenderer:
         self._depth_big = {}
         self.bl_on = self.depth_on and str(s.get("img_blender", "off")) == "on"   # Blender 3D 카메라 영상 (사용자 결정 2026-11-08)
         self.bl_clips, self._bl_cap = {}, {}
+        self.face_tp_on = (not self.slide) and str(s.get("img_face_tp", "off")) == "on"   # 사람 사진 = 얼굴 순간이동 (사용자 결정 2026-11-08)
+        self._faces_c, self._paint_c = {}, {}
+        self.paint_on = (not self.slide) and str(s.get("img_trans_paint", "off")) == "on"
         self.slide_full = self.slide and not self.port and s.get("slide_full", "on") == "on"
         self.sub_pill = False
         if self.slide_full:   # PPT 발표: 슬라이드가 화면 가득, 자막은 화면 안 아래쪽 (반투명 상자 위)
@@ -6072,6 +6077,8 @@ class SubtitleRenderer:
                     self._img_cache.pop(next(iter(self._img_cache)))
                 self._img_cache[key] = z
             return self._img_cache[key], mask
+        if getattr(self, "face_tp_on", False) and self.faces_for(sh["img"]):    # 사람 사진: 3D 대신 얼굴 사이 순간이동
+            return self._face_tp_frame(sh, t, big, (bw, bh)), mask
         if getattr(self, "bl_on", False) and sh["img"] in self.bl_clips:     # Blender 로 미리 만든 3D 카메라 영상에서 시간 비율로 한 프레임
             fr_ = self._bl_frame(sh, t, (bw, bh))
             if fr_ is not None:
@@ -6116,6 +6123,86 @@ class SubtitleRenderer:
         dcrop = extent_np(dbig, size_p, box)                                 # float32 0~255
         warped = parallax_warp_np(crop_pad, dcrop, ox, oy)
         return Image.fromarray(np.ascontiguousarray(warped[my:my + bh, mx:mx + bw])), mask
+
+    def faces_for(self, idx):
+        """사진 속 사람 얼굴 [(x, y, w, h) 0~1] — 너무 작은 얼굴(가로 3.5% 미만)은 뺌. 왼쪽부터"""
+        if idx not in self._faces_c:
+            fs = []
+            try:
+                if 0 <= idx < len(self.images):
+                    fs = [f_ for f_ in thumb_faces(self.images[idx][0]) if f_[2] >= 0.035][:3]
+            except Exception:
+                fs = []
+            self._faces_c[idx] = sorted(fs, key=lambda f_: f_[0])
+        return self._faces_c[idx]
+
+    def _face_tp_frame(self, sh, t, big, size):
+        """사람 사진 순간이동 (사용자 결정 2026-11-08): 넓게 잠깐 → 얼굴 1 클로즈업 → 얼굴 2 … 자리 사이는 뚝 끊어 넘어가고, 자리마다 천천히 흐름"""
+        bw, bh = size
+        BW, BH = big.size
+        asp = bw / bh
+        faces = self.faces_for(sh["img"])
+        g0, g1 = sh.get("g0", sh["t0"]), sh.get("g1", sh["t1"])
+        dur = max(0.5, g1 - g0)
+        n_f = len(faces) if dur >= 2.5 * (len(faces) + 1) else max(1, int(dur // 2.5) - 1)
+        big_ = sorted(sorted(faces, key=lambda f_: -f_[2] * f_[3])[:max(1, n_f)], key=lambda f_: f_[0])   # 큰 얼굴부터 고르고, 왼쪽부터 차례로
+        spots = [None] + big_
+        wts = [1.4] + [1.0] * (len(spots) - 1)
+        q = min(1.0, max(0.0, (t - g0) / dur)) * sum(wts)
+        k, acc = 0, 0.0
+        while k < len(spots) - 1 and q > acc + wts[k]:
+            acc += wts[k]
+            k += 1
+        f = min(1.0, max(0.0, (q - acc) / wts[k]))
+        if spots[k] is None:                                 # 넓게: 사진 전체(꽉 차게)
+            cw = min(BW, BH * asp)
+            cx, cy = BW / 2, BH / 2
+        else:
+            fx, fy, fw, fh = spots[k]
+            hh = max(fh * BH * 3.0, BH * 0.30)               # 머리·어깨가 들어가게 (너무 크게 키우면 흐려짐)
+            cw = min(BW, BH * asp, hh * asp)
+            cx, cy = (fx + fw / 2) * BW, (fy + fh / 2) * BH + cw / asp * 0.12
+        z = 1.0 + 0.045 * f                                  # 자리마다 천천히 다가가며 옆으로 살짝 흐름
+        cw2, ch2 = cw / z, cw / z / asp
+        cx += (1 if k % 2 == 0 else -1) * cw * 0.03 * (f - 0.5)
+        cx = min(BW - cw2 / 2, max(cw2 / 2, cx))
+        cy = min(BH - ch2 / 2, max(ch2 / 2, cy))
+        return extent_resize(big, (bw, bh), (cx - cw2 / 2, cy - ch2 / 2, cx + cw2 / 2, cy + ch2 / 2))
+
+    def _paint_mask(self, k, e, size):
+        """물감 뿌리기 전환 마스크 (사용자 결정 2026-11-08, 채널 시그니처): e 0~1 → (드러남 0~1, 물감 테두리 0~1) float32 (h, w)"""
+        if k not in self._paint_c:
+            w, h = size
+            sw, sh_ = 480, 270
+            rng = np.random.default_rng(k)
+            yy, xx = np.mgrid[0:sh_, 0:sw].astype(np.float32)
+            base = np.zeros((sh_, sw), np.float32)
+            for fq, a_ in ((2, 1.0), (4, .5), (8, .25)):
+                g = rng.normal(size=(fq + 1, fq + 1)).astype(np.float32)
+                base += a_ * _cv2.resize(g, (sw, sh_), interpolation=_cv2.INTER_CUBIC)
+            base = (base - base.min()) / (base.max() - base.min() + 1e-6)
+            T = 0.55 + 0.5 * base
+            centers = [(rng.uniform(.1, .9) * sw, rng.uniform(.1, .9) * sh_) for _ in range(int(rng.integers(2, 4)))]
+            for j in range(int(rng.integers(260, 380))):
+                cx0, cy0 = centers[j % len(centers)]
+                r_ = abs(rng.normal(0, .45)) * sw
+                ang = rng.uniform(0, 2 * np.pi)
+                cx, cy = cx0 + r_ * np.cos(ang), cy0 + r_ * .7 * np.sin(ang)
+                rad = rng.uniform(2, 7) if rng.random() < .75 else rng.uniform(8, 22)
+                t0 = rng.uniform(0, .7) * (0.7 if rad > 8 else 1.0)
+                grow = rng.uniform(.12, .3) * sw
+                T = np.minimum(T, t0 + np.maximum(np.hypot(xx - cx, yy - cy) - rad, 0) / grow)
+            T = _cv2.GaussianBlur(T, (0, 0), 1.6)
+            if len(self._paint_c) >= 3:
+                self._paint_c.pop(next(iter(self._paint_c)))
+            self._paint_c[k] = _cv2.resize(T, (w, h), interpolation=_cv2.INTER_CUBIC)
+        T = self._paint_c[k]
+        if e >= 0.999:
+            return None
+        tt = e * 0.86 + 0.02
+        m = np.clip((tt - T) * 16 + 0.5, 0, 1)
+        rim = np.clip(1 - (tt - T) / 0.10, 0, 1) * m * 0.6
+        return m.astype(np.float32), rim.astype(np.float32)
 
     def _bl_frame(self, sh, t, size):
         """Blender 3D 영상(사진이 보이는 묶음 g0~g1 전체에 걸친 한 번의 카메라 움직임)에서 t 시점 프레임"""
@@ -6263,7 +6350,7 @@ class SubtitleRenderer:
         if k < 0:
             return canvas
         sh = self.shots[k]
-        fade = 0.35
+        fade = 0.4 if getattr(self, "paint_on", False) else 0.35
         prev = self.shots[k - 1] if k > 0 and t - sh["t0"] < fade else None
         if prev is not None and getattr(self, "slide", False) and self.images[prev["img"]][0] is self.images[sh["img"]][0]:
             prev = None                       # 같은 슬라이드 확대 이동: 겹치지 않고 카메라만 움직임
@@ -6289,7 +6376,17 @@ class SubtitleRenderer:
             crop = self._transition(pc.convert("RGB"), crop.convert("RGB"), trans[1], trans[2])
         elif prev is not None:
             pc, _ = self._shot_crop(prev, t)
-            crop = Image.blend(pc, crop, float(a))
+            pm = (self._paint_mask(k, (t - sh["t0"]) / fade, crop.size)
+                  if getattr(self, "paint_on", False) and prev["img"] != sh["img"] and _cv2 is not None else None)
+            if pm is not None:                    # 물감 뿌리기 전환: 다음 사진이 물감 자국 모양으로 드러나고, 번지는 가장자리는 빨간 물감색
+                m_, rim_ = pm
+                A_ = np.asarray(pc.convert("RGB"), np.float32)
+                B_ = np.asarray(crop.convert("RGB"), np.float32)
+                o_ = A_ * (1 - m_[..., None]) + B_ * m_[..., None]
+                o_ = o_ * (1 - rim_[..., None]) + np.array(PAINT_RGB, np.float32) * rim_[..., None]
+                crop = Image.fromarray(o_.clip(0, 255).astype(np.uint8))
+            else:
+                crop = Image.blend(pc, crop, float(a))
         canvas.paste(crop, (self.img_box[0], self.img_box[1]), mask)
         fr = str(self.s.get("img_frame", "없음"))
         if not self.full and fr != "없음":
@@ -6711,7 +6808,7 @@ _DEPTH_CACHE = {}
 _DEPTH_WARNED = set()
 _GRID_CACHE = {}
 DEPTH_AMP = {"약하게": (0.007, 0.003), "보통": (0.022, 0.010), "강하게": (0.035, 0.016)}   # 약하게는 아주 은은하게(기본)
-RENDER_VER = "2026-11-08a"   # 그리는 방식이 바뀌면 올림 → 장문 영상 구간 캐시를 새로 그림   # (가로, 세로) 최대 밀림 = 화면 크기 비율
+RENDER_VER = "2026-11-08b"   # 그리는 방식이 바뀌면 올림 → 장문 영상 구간 캐시를 새로 그림   # (가로, 세로) 최대 밀림 = 화면 크기 비율
 
 
 def depth_key(path):
@@ -6759,6 +6856,7 @@ def ensure_depth_maps(paths, log=None, cancel=None):
 
 
 BLENDER_DIR = os.path.join(BASE, "output", "blender3d_cache")
+PAINT_RGB = (200, 30, 40)     # 물감 뿌리기 전환의 물감색 (토마토 빨강, 장면_잇기.py 와 같음)
 
 
 def blender_exe():
@@ -6822,7 +6920,9 @@ def ensure_blender_clips(r, log=None, cancel=None):
                 asp = im_.width / max(1, im_.height)
         except Exception:
             continue
-        if not (1.3 <= asp <= 2.4) or load_depth(path) is None:
+        if not (1.15 <= asp <= 3.2) or load_depth(path) is None:      # 가로 사진만 (세로 사진·아주 긴 도표는 프로그램 방식)
+            continue
+        if getattr(r, "face_tp_on", False) and r.faces_for(idx):    # 사람이 나오는 실제 사진은 3D 로 바꾸지 않음 (얼굴 순간이동)
             continue
         sec = max(2.0, round((g1 - g0) * 2) / 2)
         out = os.path.join(BLENDER_DIR, f"{depth_key(path)}_{W_}x{H_}_{sec:.1f}_{moves.get(idx, 'right')}.mp4")
@@ -6845,6 +6945,13 @@ def ensure_blender_clips(r, log=None, cancel=None):
             p = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=1800,
                                creationflags=(subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0))
             if os.path.exists(out + ".part.mp4") and os.path.getsize(out + ".part.mp4") > 1000:
+                if mv == "fpv":                      # 1인칭 드론 고글: 살짝 볼록한 광각 렌즈 + 어두운 귀퉁이
+                    subprocess.run([get_ffmpeg(), "-y", "-v", "error", "-i", out + ".part.mp4", "-vf",
+                                    "scale=iw*1.12:ih*1.12,lenscorrection=k1=-0.18:k2=-0.03,crop=iw/1.12:ih/1.12,vignette=angle=PI/4.2",
+                                    "-c:v", "libx264", "-crf", "18", "-pix_fmt", "yuv420p", out + ".fpv.mp4"],
+                                   capture_output=True, creationflags=(subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0))
+                    if os.path.exists(out + ".fpv.mp4") and os.path.getsize(out + ".fpv.mp4") > 1000:
+                        os.replace(out + ".fpv.mp4", out + ".part.mp4")
                 os.replace(out + ".part.mp4", out)
                 r.bl_clips[idx] = out
                 ready += 1

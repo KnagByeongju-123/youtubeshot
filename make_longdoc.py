@@ -676,6 +676,7 @@ def run_doc(m, app, c, gate):
                 # 실제 사진 장문 다큐(--역사 아님): 오른쪽 위 = 사진 설명 상자(무엇·언제), 오른쪽 아래 = 출처(검은 바탕·흰 글자) (사용자 결정 2026-11-01). AI 그림엔 출처 표시 안 됨
                 "narr_rate": "0", "narr_tone_m": "-1.5",   # 나레이션: 정상 속도·톤 반음 1.5 낮게 (CLAUDE.md 2장)
                 "img_depth": "on" if (not HISTORY and c.get("입체_사진", True)) else "off",
+                "img_face_tp": "on" if not HISTORY else "off", "img_trans_paint": "on" if not HISTORY else "off",   # 사람 사진 얼굴 순간이동·물감 뿌리기 전환 (사용자 결정 2026-11-08)
                 "img_blender": "on" if (not HISTORY and c.get("입체_사진", True) and str(c.get("입체_방식", "블렌더")).startswith("블렌더")) else "off"}   # 3D 를 Blender 진짜 카메라로 (사용자 결정 2026-11-08)   # 실제 사진 3D 효과 (사용자 결정 2026-11-08)
     for k_, v_ in LONG_FIX.items():
         if k_ in app.vars:
@@ -913,7 +914,7 @@ def run_doc(m, app, c, gate):
             last[0] = p
             log(f"  MP4 {p}%")
     import hashlib
-    key = hashlib.md5((story + "|" + getattr(m, "RENDER_VER", "") + "|" + json.dumps({k: s.get(k) for k in ("fps", "format", "layout", "img_fill", "img_motion", "img_depth", "img_depth_amt", "img_blender", "head_style", "head_pos", "head_size", "head_show", "sub_style", "sub_size", "sub_layout", "sub_dialog", "sub_anim", "sub_split", "sub_hide", "style_preset", "text_color", "sub_box_alpha",
+    key = hashlib.md5((story + "|" + getattr(m, "RENDER_VER", "") + "|" + json.dumps({k: s.get(k) for k in ("fps", "format", "layout", "img_fill", "img_motion", "img_depth", "img_depth_amt", "img_blender", "img_face_tp", "img_trans_paint", "head_style", "head_pos", "head_size", "head_show", "sub_style", "sub_size", "sub_layout", "sub_dialog", "sub_anim", "sub_split", "sub_hide", "style_preset", "text_color", "sub_box_alpha",
                                                                          "font_path", "title_font_path", "bgm_volume", "intro_sec", "outro_sec", "outro_text", "img_filter", "motion_count", "motion_chart", "motion_icon", "motion_lower", "motion_popup")}, ensure_ascii=False)
                        + "|" + title + "|" + ",".join(f"{d_:.3f}" for _, _, d_ in narr) + "|" + ",".join(f"{sg_['t0']:.2f}" for sg_ in getattr(r, "segs", [])) + f"|{r.duration:.2f}" + getattr(r, "fx_sig", "")).encode("utf-8")).hexdigest()   # 나레이션이 바뀌면(발음 수정 등) 영상 구간도 새로
     m.export_mp4_resumable(r, base + ".mp4", prog, gate, audio, work_dir=os.path.join(work, "영상구간"), seg_sec=SEG_SEC, log=log, key=key)
