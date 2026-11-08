@@ -6970,7 +6970,7 @@ CAMERA_HINTS = [
 CAMERA_LIMIT = {"dollyzoom": 3, "fpv": 4, "freeze": 4}
 
 
-def choose_camera_moves(r, elig, plan_path=None, log=None):
+def choose_camera_moves(r, elig, plan_path=None, log=None, objects=()):
     """장면(사진)마다 영화 무빙 기법을 자동으로 고름 (사용자 결정 2026-11-08: 고정 순서 대신 역동적 무빙을 문맥으로).
     고르는 기준: 챕터 첫 사진 = 여는 샷(크레인·드론), 영상 마지막 = 풀백, 나레이션 낱말(CAMERA_HINTS), 사진 종류(풍경/물건, 앞층 있음),
     같은 무빙 연달아 금지·특수 무빙 횟수 제한(CAMERA_LIMIT), 트래킹은 좌우를 번갈아.
@@ -7002,6 +7002,8 @@ def choose_camera_moves(r, elig, plan_path=None, log=None):
         if dep is not None:
             rows = dep.mean(axis=1)
             land = rows.std() > 1e-6 and float(np.corrcoef(rows, np.arange(len(rows)))[0, 1]) > 0.6
+        if idx in objects:                                # 앞층(주인공)을 오려 낸 사진은 물건·유물 쪽 무빙
+            land = False
         sc = {m_: 0.0 for m_ in CAMERA_MOVES}
         base_ = ("drone", "crane", "right", "left", "fpv", "tilt") if land else ("push", "orbit", "zoomout", "dollyzoom", "freeze", "tilt")
         for m_ in base_:
@@ -7105,7 +7107,6 @@ def ensure_blender_clips(r, log=None, cancel=None, plan_path=None):
         if getattr(r, "face_tp_on", False) and r.faces_for(idx):    # 사람이 나오는 실제 사진은 3D 로 바꾸지 않음 (얼굴 순간이동)
             continue
         elig.append(idx)
-    moves = choose_camera_moves(r, elig, plan_path, log)     # 영화 무빙 기법을 문맥으로 자동 선택 (+ 장면별 수동 지정, 사용자 결정 2026-11-08)
     # 앞층(주인공) 오려 내기 (사용자 결정 2026-11-08, rembg): 앞층은 배경 앞에 세우고 배경 빈자리는 둘레 색으로 메움
     layers = {}
     if elig and str(r.s.get("img_layers", "on")) == "on":
@@ -7123,6 +7124,7 @@ def ensure_blender_clips(r, log=None, cancel=None, plan_path=None):
             log(f"  ✂ 앞층(주인공) 오려 냄: {len(layers)}장 / {len(elig)}장 (나머지는 풍경·배경만이라 깊이 판 하나)")
         except Exception as e_:
             log("  앞층 오려 내기 건너뜀: " + str(e_)[:100])
+    moves = choose_camera_moves(r, elig, plan_path, log, objects=set(layers))   # 영화 무빙 기법을 문맥으로 자동 선택 (+ 장면별 수동 지정, 사용자 결정 2026-11-08)
     for idx in elig:
         _, g0, g1 = next(iter(groups[idx]))
         path = paths[idx]
