@@ -33,7 +33,8 @@ def pieces(text):
     return out
 F='NanumGothicExtraBold'
 ev=[]
-ev.append(f"Dialogue: 0,{ts(0.2)},{ts(3.2)},Title,,0,0,0,,{{\\fad(400,400)}}{esc(pj['title'])}")
+_tt=pj['title']; _fs=120 if len(_tt)<=14 else max(64,int(120*14/len(_tt)))   # 긴 제목은 글자를 줄여 한 줄에 (화면 밖으로 넘치지 않게)
+ev.append(f"Dialogue: 0,{ts(0.2)},{ts(3.2)},Title,,0,0,0,,{{\\fad(400,400)\\fs{_fs}}}{esc(_tt)}")
 for sg in tim['segs']:
     t0,dur,txt=sg['t0'],sg['dur'],sg['text']
     if sg['kind']=='chapter':
