@@ -30,7 +30,14 @@ def pieces(text):
             if cur and len(cur)+len(w)>24: out.append(cur); cur=w
             else: cur=(cur+' '+w).strip()
         if cur: out.append(cur)
-    return out
+    # 쉼표가 없어 여전히 긴 조각(28자 넘음)은 가운데 가까운 띄어쓰기에서 둘로 (화면 밖으로 넘치지 않게)
+    res=[]
+    for p in out:
+        while len(p)>28 and ' ' in p:
+            mid=len(p)//2; sp=[i for i,ch in enumerate(p) if ch==' ']; k=min(sp,key=lambda i:abs(i-mid))
+            res.append(p[:k]); p=p[k+1:]
+        res.append(p)
+    return res
 F='NanumGothicExtraBold'
 ev=[]
 _tt=pj['title']; _fs=120 if len(_tt)<=14 else max(64,int(120*14/len(_tt)))   # 긴 제목은 글자를 줄여 한 줄에 (화면 밖으로 넘치지 않게)
