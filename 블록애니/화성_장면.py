@@ -953,6 +953,9 @@ if __name__=='__main__':
     for k in info: info[k].setdefault('ropes',[])
     json.dump(info,open(f'{OUT}/세트정보.json','w',encoding='utf-8'),ensure_ascii=False,indent=1)
     SHOTS.sort(key=lambda s:s['t0'])
+    FAST={'비행','처박힘','총','도약','꽂힘','다시','뛰는트윌','나온다','달려감','사라짐','밀침','불기둥','트윌떠남','화살','출발'}      # 빠른 움직임만 1초 24장, 나머지는 12장 (촬영 시간 때문에)
+    for s_ in SHOTS:
+        if s_['fps']==24 and s_['name'].split('_',1)[1] not in FAST: s_['fps']=12
     for i,s in enumerate(SHOTS): s['name']=f"{i:03d}_{s['name'].split('_',1)[1]}"
     bad=[(a['name'],b['name'],round(b['t0']-a['t1'],2)) for a,b in zip(SHOTS,SHOTS[1:]) if abs(b['t0']-a['t1'])>0.02]
     if SHOTS[0]['t0']>0.02: bad.insert(0,('처음',SHOTS[0]['name'],SHOTS[0]['t0']))
