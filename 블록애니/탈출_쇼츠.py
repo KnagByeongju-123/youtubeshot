@@ -27,6 +27,7 @@ def make(name,ranges,hook,end):
             # HUD: 층 + 남은 부품
             fl=[f for f in FLOOR if f[0]<=x0<f[1]][0][2]; marks=sorted([p for p in PARTS if x0<p<x1]+[x0,x1])
             for m0,m1 in zip(marks,marks[1:]):
+                if x0>=315: break          # 지상(다시 맞춘 뒤)에는 부품 표시를 안 띄움
                 left=7-sum(1 for p in PARTS if p<=m0); caps.append({'t0':t+m0-x0,'t1':t+m1-x0,'text':f"{fl}   부품 {'■'*left}{'□'*(7-left)}",'style':'Hud'})
             for c in TT['cues']:
                 if x0<=c['t']<x1: cues.append({'t':round(t+c['t']-x0,2),'kind':c['kind'],'vol':c.get('vol',1)})
