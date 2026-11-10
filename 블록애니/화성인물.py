@@ -45,6 +45,12 @@ def mars_palette(M):
     face('f_jarvis',(95,62,40),nose=(225,95,85))            # 얼어서 빨간 코
     face('f_harrison',(150,150,150),mous=(150,150,150)); face('f_putz',(225,190,100)); face('f_leroy',(28,24,24),mous=(28,24,24))
     face('f_fancy',(225,190,100),lips=(210,50,60),lash=True)
+    S('gskin',(120,190,110),3)
+    def alien(d,x,y):
+        d.rectangle([x,y,x+15,y+15],fill=(120,190,110))
+        for ex in (2,9): d.rectangle([x+ex,y+5,x+ex+4,y+9],fill=(15,15,20)); d.rectangle([x+ex+1,y+6,x+ex+1,y+6],fill=(255,255,255))
+        d.rectangle([x+6,y+12,x+9,y+12],fill=(60,110,60))
+    M.paint('f_alien',alien)
 
 PEOPLE={ # kind: (얼굴, 윗옷, 윗옷 어두운, 바지, 신, 머리색)
  'jarvis':('f_jarvis','khaki','khaki_d','khaki_d','boot','h_brown'),
@@ -52,18 +58,20 @@ PEOPLE={ # kind: (얼굴, 윗옷, 윗옷 어두운, 바지, 신, 머리색)
  'putz':('f_putz','olive','olive_d','olive','boot','h_blond'),
  'leroy':('f_leroy','white','white_d','navy_d','black','h_black'),
  'fancy':('f_fancy','red','red_d','skin','red_d','h_blond'),
+ 'alien':('f_alien','steel','steel_d','steel','black','gskin'),   # 옛 소설의 '겉모습만 다른 사람' 외계인 (은빛 옷·초록 얼굴·더듬이)
 }
 def human(M, tag, kind='jarvis', s=1.0, tank=True, gun=False):
     """탐사대원·팬시 롱 (키 32*s).  자비스: 가죽 모자+고글, 등에 물통(tank), gun=오른손 권총"""
     c=lambda name,fr,to,col,**f: M.cube(name,[v*s for v in fr],[v*s for v in to],col,**f)
     O=lambda v:[x*s for x in v]
     fc,top,topd,pt,sh,hc=PEOPLE[kind]
+    sk='gskin' if kind=='alien' else 'skin'
     legL=M.group(tag+'leg_left',O([2,12,0]),[c('leg',[0,3,-2],[4,12,2],pt), c('shoe',[-0.2,0,-2.8],[4.2,3,2.2],sh)])
     legR=M.group(tag+'leg_right',O([-2,12,0]),[c('leg',[-4,3,-2],[0,12,2],pt), c('shoe',[-4.2,0,-2.8],[0.2,3,2.2],sh)])
     short = kind=='fancy'
-    aL=[c('sleeve',[4,20 if short else 15,-2.2],[8.2,24,2.2],top), c('hand',[4.6,12,-1.6],[7.6,20 if short else 15,1.6],'skin')]
-    aR=[c('sleeve',[-8.2,20 if short else 15,-2.2],[-4,24,2.2],top), c('hand',[-7.6,12,-1.6],[-4.6,20 if short else 15,1.6],'skin')]
-    if gun: aR+= [c('gun_grip',[-6.6,10.5,-2.4],[-5.4,13,-1],'black'), c('gun_barrel',[-6.6,12,-6.5],[-5.4,13.4,-1],'steel_d')]
+    aL=[c('sleeve',[4,20 if short else 15,-2.2],[8.2,24,2.2],top), c('hand',[4.6,12,-1.6],[7.6,20 if short else 15,1.6],sk)]
+    aR=[c('sleeve',[-8.2,20 if short else 15,-2.2],[-4,24,2.2],top), c('hand',[-7.6,12,-1.6],[-4.6,20 if short else 15,1.6],sk)]
+    if gun: aR+= [M.group(tag+'gun',O([-6,12,-2]),[c('gun_grip',[-6.6,10.5,-2.4],[-5.4,13,-1],'black'), c('gun_barrel',[-6.6,12,-6.5],[-5.4,13.4,-1],'steel_d')])]   # 묶음 → 필요할 때만 보이게
     hl=M.group(tag+'hand_l',O([6,12.5,0]),[]); hr=M.group(tag+'hand_r',O([-6,12.5,0]),[])
     armL=M.group(tag+'arm_left',O([6,22,0]),aL+[hl]); armR=M.group(tag+'arm_right',O([-6,22,0]),aR+[hr])
     body=[c('torso',[-4.2,12,-2.2],[4.2,24,2.2],top)]
@@ -83,7 +91,7 @@ def human(M, tag, kind='jarvis', s=1.0, tank=True, gun=False):
         body+= [c('bib',[-3,16,-2.6],[3,22,-2.2],'olive_d'), c('tool',[4.3,11,-1],[5,15,1],'steel_d')]
     if kind=='leroy':
         body+= [c('coat_low',[-4.5,6,-2.5],[4.5,13,2.5],'white'), c('coat_open',[-0.6,6,-2.6],[0.6,20,-2.4],'white_d')]
-    hk=[c('head',[-4,24,-4],[4,32,4],'skin',north=fc,up=hc,south=hc),
+    hk=[c('head',[-4,24,-4],[4,32,4],sk,north=fc,up=hc,south=hc),
         c('hair_back',[-4.2,25.5,1.2],[4.2,32.2,4.2],hc), c('hair_top',[-4.2,31.2,-4.2],[4.2,32.4,4.2],hc),
         c('hair_side_l',[3.9,28,-1],[4.2,32,4],hc), c('hair_side_r',[-4.2,28,-1],[-3.9,32,4],hc)]
     if kind=='jarvis':     # 가죽 비행 모자 + 이마 위 고글
@@ -93,6 +101,8 @@ def human(M, tag, kind='jarvis', s=1.0, tank=True, gun=False):
               c('goggle_band',[-4.5,30.6,-4.5],[4.5,31.4,4.5],'belt'), c('nose',[-0.8,26.2,-4.7],[0.8,27.4,-4],'red')]
     if kind=='harrison':   # 대장 모자
         hk+= [c('cap',[-4.4,31,-4.4],[4.4,34,4.4],'navy'), c('cap_band',[-4.5,31,-4.5],[4.5,32,4.5],'gold'), c('visor',[-4,30.6,-6.4],[4,31.2,-4.2],'black')]
+    if kind=='alien':      # 더듬이 둘 + 어깨 장식
+        hk=hk[:1]+[c('ant_l',[1.5,32,-0.5],[2.5,37,0.5],'steel'), c('ant_r',[-2.5,32,-0.5],[-1.5,37,0.5],'steel'), c('ant_bl',[1,37,-1],[3,39,1],'red'), c('ant_br',[-3,37,-1],[-1,39,1],'red')]
     if kind=='fancy':      # 어깨 아래까지 내려오는 금발
         hk+= [c('hair_long',[-4.4,19,2],[4.4,26,4.6],hc), c('hair_fl',[3.6,21,-1],[4.6,28,3],hc), c('hair_fr',[-4.6,21,-1],[-3.6,28,3],hc)]
     head=M.group(tag+'head',O([0,24,0]),hk)
@@ -113,7 +123,7 @@ def tweel(M, tag, s=1.0, bag=True, gun=False):
         x0,x1=(6,7.2) if sx>0 else (-7.2,-6); m=(x0+x1)/2
         k=[c('arm',[x0,14,-0.6],[x1,23,0.6],'tw_d'), c('palm',[x0-0.4,12.6,-1.2],[x1+0.4,14,1.2],'tw_leg')]
         for i,dz in enumerate((-1.4,-0.5,0.4,1.1)): k.append(c(f'finger{i}',[m-0.3,10.4,dz],[m+0.3,12.6,dz+0.5],'tw_leg'))
-        if gun and sx<0: k+= [c('gun_grip',[m-0.8,10.6,-2.6],[m+0.8,12.8,-1.2],'glass'), c('gun_barrel',[m-0.5,11.6,-6],[m+0.5,12.6,-1.2],'glass')]
+        if gun and sx<0: k+= [M.group(tag+'gun',O([m,12,-2]),[c('gun_grip',[m-0.8,10.6,-2.6],[m+0.8,12.8,-1.2],'glass'), c('gun_barrel',[m-0.5,11.6,-6],[m+0.5,12.6,-1.2],'glass')])]
         k.append(M.group(tag+('hand_l' if sx>0 else 'hand_r'),O([m,11.5,0]),[]))
         return M.group(tag+('arm_left' if sx>0 else 'arm_right'),O([m,23,0]),k)
     beak=M.group(tag+'beak',O([0,34,-1.8]),[c('beak1',[-0.9,33.2,-6.5],[0.9,34.8,-1.8],'beak'),
@@ -197,6 +207,6 @@ def cart(M, tag, s=1.0, load=None):
        c('wall_f',[-5.8,4,-7.8],[5.8,9,-7],'copper'), c('wall_b',[-5.8,4,5],[5.8,9,5.8],'copper'),
        c('wheel_l',[5.8,0,-3.5],[7,5,1.5],'copper_d'), c('wheel_r',[-7,0,-3.5],[-5.8,5,1.5],'copper_d'),
        c('handle_l',[3,8,5.8],[4,9,9.5],'copper_d'), c('handle_r',[-4,8,5.8],[-3,9,9.5],'copper_d'), c('handle',[-4,8,9.5],[4,9,10.3],'copper_d')]
-    if load=='rubble':
-        k+= [c('sandload',[-5,4,-7],[5,8.4,5],'sand'), c('rock1',[-3,8,-4],[0,10.5,-1],'steel_d'), c('rock2',[1,8,0],[4,10,3],'scale_d'), c('weed',[-2,8,1],[-1,12,2],'tw_d')]
+    if load=='rubble':     # 짐은 묶음(tag_load) → 쏟은 뒤 안 보이게 할 수 있음
+        k+= [M.group(tag+'load',[0,4*s,0],[c('sandload',[-5,4,-7],[5,8.4,5],'sand'), c('rock1',[-3,8,-4],[0,10.5,-1],'steel_d'), c('rock2',[1,8,0],[4,10,3],'scale_d'), c('weed',[-2,8,1],[-1,12,2],'tw_d')])]
     return M.group(tag+'root',[0,0,0],k)

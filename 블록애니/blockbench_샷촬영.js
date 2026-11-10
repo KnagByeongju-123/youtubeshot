@@ -1,5 +1,5 @@
 // 샷 촬영: node blockbench_샷촬영.js <샷목록.json> <모형폴더> <출력폴더> [샷이름,...] [--test]
-// 샷 = {name,set,t0,t1,fps,sky:[색,...],ropes:bool,view:'textured'|'wireframe', cam:[{u,pos:[x,y,z],tgt:[x,y,z]}], follow:'묶음이름'(있으면 pos·tgt 는 그 묶음 위치 기준)}
+// 샷 = {name,set,t0,t1,fps,sky:[색,...],ropes:bool,view:'textured'|'wireframe', cam:[{u,pos:[x,y,z],tgt:[x,y,z],shake?}], follow:'묶음이름'(있으면 pos·tgt 는 그 묶음 위치 기준), shake:흔들림 크기}
 const {chromium}=require('playwright');const fs=require('fs');const path=require('path');
 const [,,shotFile,modelDir,outDir,only,testFlag]=process.argv;
 const all=JSON.parse(fs.readFileSync(shotFile,'utf8'));
@@ -45,7 +45,7 @@ const shots=all.shots.filter(s=>!want||want.includes(s.name));
    const fpath=path.join(dir,`f${String(i).padStart(5,'0')}.png`);
    if(!testFlag && fs.existsSync(fpath) && fs.statSync(fpath).size>1000) continue;   // 이미 찍은 장은 건너뜀 (멈춘 뒤 이어 찍기)
    const t=sh.t0+i/sh.fps, u=n>1?i/(n-1):0;
-   await p.evaluate(([t,u,cam,follow,ropes])=>{
+   await p.evaluate(([t,u,cam,follow,ropes,shake])=>{
      Timeline.setTime(t); Animator.preview();
      const V=THREE.Vector3; const grp=n=>Group.all.find(g=>g.name===n);
      const wp=n=>{const g=grp(n); const v=new V(); if(g&&g.mesh){g.mesh.updateWorldMatrix(true,false); g.mesh.getWorldPosition(v);} return v;};
@@ -60,8 +60,10 @@ const shots=all.shots.filter(s=>!want||want.includes(s.name));
      const c0=cam[k], c1=cam[Math.min(k+1,cam.length-1)]; const f=c1.u>c0.u?sm(Math.min(1,Math.max(0,(u-c0.u)/(c1.u-c0.u)))):0;
      const L=(a,b)=>a.map((v,j)=>v+(b[j]-v)*f); let pos=L(c0.pos,c1.pos), tgt=L(c0.tgt,c1.tgt);
      if(follow){const F=wp(follow); pos=[pos[0]+F.x,pos[1]+F.y,pos[2]+F.z]; tgt=[tgt[0]+F.x,tgt[1]+F.y,tgt[2]+F.z];}
+     if(shake){const w=(c0.shake!==undefined?c0.shake:1)*(1-f)+(c1.shake!==undefined?c1.shake:1)*f, q=shake*w;   // 흔들림 (추락·싸움): 키마다 shake 배율(0~1)을 줄 수 있음
+       pos=[pos[0]+q*Math.sin(t*31.7),pos[1]+q*Math.sin(t*23.3+1.3),pos[2]+q*0.6*Math.sin(t*17.9+2.1)]; tgt=[tgt[0]+q*0.7*Math.sin(t*27.1+0.5),tgt[1]+q*0.7*Math.sin(t*19.7+2.9),tgt[2]];}
      const P=Preview.selected; P.camera.position.set(...pos); P.controls.target.set(...tgt); P.controls.update();
-   },[t,u,sh.cam,sh.follow||null,ropes]);
+   },[t,u,sh.cam,sh.follow||null,ropes,sh.shake||0]);
    await p.screenshot({path:fpath,clip});
   }
   console.log('shot',sh.name,idx.length);
