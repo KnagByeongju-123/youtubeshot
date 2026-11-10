@@ -48,11 +48,14 @@ def silla_palette(M):
     M.swatch('cloth',(120,95,70),5)                                                 # 두건
     M.swatch('monk',(130,130,128),5); M.swatch('monk_d',(105,105,103),5); M.swatch('kasa',(150,70,45),5)
     M.swatch('robe_w',(232,232,225),4); M.swatch('gat',(25,25,28),3)
+    M.swatch('vest',(110,75,45),5); M.swatch('shirt',(230,225,210),3); M.swatch('leather',(95,60,40),5); M.swatch('scarf_r',(185,40,35),4); M.swatch('coat_blk',(35,35,40),4)
+    M.swatch('pants_dk',(60,55,55),4); M.swatch('lena_hair',(110,70,40),4); M.swatch('brass',(200,160,70),6); M.swatch('lens',(120,190,210),3)
+    M.swatch('mari_coat',(50,65,95),5); M.swatch('cap_e',(70,85,115),4); M.swatch('overall',(85,105,135),5); M.swatch('trav_coat',(140,110,75),5); M.swatch('mari_hair',(60,40,30),3)
     M.swatch('robe_red',(150,45,40),5); M.swatch('robe_navy',(45,60,100),5); M.swatch('jo_ochre2',(175,135,70),5)
     M.swatch('jo_teal',(70,120,120),5); M.swatch('jo_red',(140,55,50),5); M.swatch('apron',(90,80,70),4); M.swatch('labcoat',(240,242,244),3); M.swatch('jeans',(70,90,130),5)
     M.swatch('robe_b',(185,212,222),4); M.swatch('jo_white',(228,222,205),4); M.swatch('band_b',(45,60,105),4)
     M.swatch('iron',(70,72,78),5); M.swatch('wood',(130,90,55),6); M.swatch('wood_d',(95,65,40),5)
-    def face(name,hair,beard=None,young=False,brow=None,bald=False,glasses=False):
+    def face(name,hair,beard=None,young=False,brow=None,bald=False,glasses=False,lips=False,mustache=None):
         def fn(d,x,y):
             d.rectangle([x,y,x+15,y+15],fill=SKIN)
             if not bald: d.rectangle([x,y,x+15,y+2],fill=hair)
@@ -66,9 +69,13 @@ def silla_palette(M):
             if glasses:
                 for ex in (2,9): d.rectangle([x+ex,y+5,x+ex+4,y+9],outline=(30,30,30))
                 d.rectangle([x+7,y+6,x+8,y+6],fill=(30,30,30))
+            if lips: d.rectangle([x+6,y+12,x+9,y+12],fill=(200,70,80)); d.rectangle([x+2,y+5,x+2,y+6],fill=(25,20,20)); d.rectangle([x+13,y+5,x+13,y+6],fill=(25,20,20))
+            if mustache: d.rectangle([x+4,y+11,x+11,y+11],fill=mustache)
         M.paint(name,fn)
     face('f_bau',HAIR,young=True); face('f_bau_old',HAIR,beard=(45,38,35)); face('f_deokbo',GREY,beard=GREY,brow=GREY)
     face('f_man',HAIR); face('f_man2',HAIR,beard=HAIR); face('f_monk',HAIR,bald=True); face('f_seonbi',HAIR,beard=HAIR)
+    face('f_owen',GREY,beard=GREY,brow=GREY); face('f_lena',(110,70,40),young=True,lips=True,brow=(110,70,40)); face('f_grimes',HAIR,mustache=(30,26,26))
+    face('f_mari',(60,40,30),young=True,lips=True,brow=(60,40,30)); face('f_owen_y',(90,60,40),brow=(90,60,40)); face('f_worker',HAIR,beard=(45,38,35)); face('f_trav',HAIR,mustache=(70,50,35))
     face('f_susong',GREY,beard=GREY,brow=GREY); face('f_han',HAIR,beard=(45,38,35)); face('f_aming',HAIR,young=True)
     face('f_apu',HAIR,young=True); face('f_uncle',HAIR,beard=(45,38,35)); face('f_grandma',GREY,brow=GREY); face('f_sci',HAIR,glasses=True)
     face('f_makdong',HAIR,young=True); face('f_oh',HAIR,beard=(55,45,40)); face('f_dasan',HAIR,beard=(40,34,32))
@@ -81,6 +88,13 @@ PEOPLE={  # kind: (얼굴, 저고리, 저고리 어두운, 바지, 띠, 머리)
  'man2':('f_man2','jo_ochre','jo_beige_d','pants_w','belt_r','topknot'),
  'monk':('f_monk','monk','monk_d','monk','monk_d','bald'),
  'seonbi':('f_seonbi','robe_w','robe_w','robe_w','gat','gat'),
+ 'owen':('f_owen','vest','vest','pants_dk','belt','goggle_grey'),
+ 'lena':('f_lena','leather','leather','pants_dk','belt','pony_goggle'),
+ 'grimes':('f_grimes','coat_blk','coat_blk','coat_blk','belt','tophat'),
+ 'mari':('f_mari','mari_coat','mari_coat','pants_dk','belt','cap_e'),
+ 'owen_y':('f_owen_y','vest','vest','pants_dk','belt','goggle_brown'),
+ 'worker':('f_worker','overall','overall','overall','belt','cap_w'),
+ 'trav':('f_trav','trav_coat','trav_coat','pants_dk','belt','bowler'),
  'susong':('f_susong','robe_red','robe_red','robe_red','gat','futou'),
  'han':('f_han','robe_navy','robe_navy','robe_navy','belt','dugeon'),
  'aming':('f_aming','jo_ochre2','jo_beige_d','pants_g','belt','bun'),
@@ -98,10 +112,10 @@ def person(M, tag, kind='man', s=1.0, tool=None):
     c=lambda name,fr,to,col,**f: M.cube(name,[v*s for v in fr],[v*s for v in to],col,**f)
     O=lambda v:[x*s for x in v]
     fc,jo,jod,pt,bt,hair=PEOPLE[kind]
-    hc='grey' if kind in ('deokbo','grandma','susong') else 'hair'
+    hc='grey' if kind in ('deokbo','grandma','susong','owen') else ('lena_hair' if kind=='lena' else ('mari_hair' if kind=='mari' else ('wood_d' if kind=='owen_y' else 'hair')))
     legL=M.group(tag+'leg_left',O([2,12,0]),[c('leg',[0,1.6,-2],[4,12,2],pt), c('shoe',[-0.2,0,-2.8],[4.2,1.6,2.2],'straw')])
     legR=M.group(tag+'leg_right',O([-2,12,0]),[c('leg',[-4,1.6,-2],[0,12,2],pt), c('shoe',[-4.2,0,-2.8],[0.2,1.6,2.2],'straw')])
-    long_robe = kind in ('monk','seonbi','dasan','grandma','sci','susong','han')
+    long_robe = kind in ('monk','seonbi','dasan','grandma','sci','susong','han','grimes')
     armL_k=[c('sleeve',[4,15,-2.2],[8.2,24,2.2],jo), c('hand',[4.6,12,-1.6],[7.6,15,1.6],'skin')]
     armR_k=[c('sleeve',[-8.2,15,-2.2],[-4,24,2.2],jo), c('hand',[-7.6,12,-1.6],[-4.6,15,1.6],'skin')]
     hl=M.group(tag+'hand_l',O([6,12.5,0]),[]); hr=M.group(tag+'hand_r',O([-6,12.5,0]),[])
@@ -116,6 +130,10 @@ def person(M, tag, kind='man', s=1.0, tool=None):
     # 몸: 저고리(엉덩이까지) + 띠, 승복·도포는 무릎 아래까지
     body=[c('torso',[-4.2,12,-2.2],[4.2,24,2.2],jo,north=jo), c('belt',[-4.4,15,-2.4],[4.4,16.4,2.4],bt)]
     body+= [c('collar',[-1.2,20,-2.5],[1.2,24,-2.3],jod)]            # 깃 (가운데 여밈)
+    if kind in ('owen','owen_y'): body+= [c('shirt_f',[-2.4,13,-2.35],[2.4,24,-2.25],'shirt'), c('watch',[2,17,-2.5],[3.2,18.2,-2.3],'brass')]
+    if kind=='worker': body+= [c('strap_l',[1.5,16,-2.5],[2.8,24,-2.3],'belt'), c('strap_r',[-2.8,16,-2.5],[-1.5,24,-2.3],'belt')]
+    if kind=='mari': body+= [c('m_btn',[-0.5,14,-2.5],[0.5,22,-2.3],'brass')]
+    if kind=='lena': body+= [c('scarf',[-3.6,22,-2.7],[3.6,24.5,2.7],'scarf_r'), c('scarf_tail',[1,17,-2.8],[3,22,-2.5],'scarf_r')]
     if long_robe:
         body+= [c('robe_low',[-4.6,4,-2.6],[4.6,13,2.6],jo)]
         if kind=='monk': body+= [c('kasa',[-4.5,13,-2.5],[1,23,2.5],'kasa')]
@@ -127,6 +145,19 @@ def person(M, tag, kind='man', s=1.0, tool=None):
               c('hair_side_l',[3.9,28,-1],[4.2,32,4],hc), c('hair_side_r',[-4.2,28,-1],[-3.9,32,4],hc)]
     if hair=='braid':      # 아이: 뒤로 땋아 내린 머리
         hk+= [c('braid',[-1,16,4],[1,26,5.4],'hair'), c('braid_tie',[-1.3,18,3.9],[1.3,19.2,5.7],'belt_r')]
+    if hair in ('goggle_grey','pony_goggle','goggle_brown'):   # 이마 위 놋쇠 고글 (띠 + 렌즈 두 개)
+        hk+= [c('gog_band',[-4.3,29.5,-4.3],[4.3,30.8,4.3],'belt'), c('gog_l',[0.6,29,-4.8],[3.6,31.6,-4.2],'brass'), c('gog_r',[-3.6,29,-4.8],[-0.6,31.6,-4.2],'brass'),
+              c('gog_ll',[1.1,29.5,-4.9],[3.1,31.1,-4.75],'lens'), c('gog_rl',[-3.1,29.5,-4.9],[-1.1,31.1,-4.75],'lens')]
+    if hair=='pony_goggle':   # 뒤로 묶은 갈색 머리
+        hk+= [c('pony',[-1.2,22,4],[1.2,29,6],hc)]
+    if hair=='cap_e':   # 기관사 모자 (둥근 통 + 앞 챙) + 뒤로 묶은 머리
+        hk+= [c('cap',[-4.4,29.5,-4.4],[4.4,34,4.4],'cap_e'), c('cap_bill',[-4.4,29.5,-7.5],[4.4,30.3,-4.2],'cap_e'), c('cap_band',[-4.5,29.6,-4.5],[4.5,30.6,4.5],'brass'), c('pony',[-1.2,22,4],[1.2,29,6],hc)]
+    if hair=='cap_w':   # 인부 모자
+        hk+= [c('capw',[-4.4,30,-4.4],[4.4,33.5,4.4],'belt'), c('capw_bill',[-4.4,30,-7],[4.4,30.8,-4.2],'belt')]
+    if hair=='bowler':  # 둥근 중절모
+        hk+= [c('bw_brim',[-5.5,31.6,-5.5],[5.5,32.4,5.5],'wood_d'), c('bw_crown',[-3.8,32.4,-3.8],[3.8,36.5,3.8],'wood_d')]
+    if hair=='tophat':
+        hk+= [c('th_brim',[-6,31.6,-6],[6,32.4,6],'gat'), c('th_crown',[-3.8,32.4,-3.8],[3.8,40,3.8],'gat'), c('th_band',[-3.9,32.6,-3.9],[3.9,33.8,3.9],'scarf_r')]
     if hair=='futou':   # 송나라 관리 모자(복두): 검은 모자 + 양옆으로 길게 뻗은 날개
         hk+= [c('futou',[-4.4,29,-4.4],[4.4,35,4.4],'gat'), c('futou_back',[-3.4,35,0],[3.4,37,4.2],'gat'), c('wing_l',[4.4,32.5,1],[16,33.5,2.2],'gat'), c('wing_r',[-16,32.5,1],[-4.4,33.5,2.2],'gat')]
     if hair in ('bun','bun_grey'):   # 머리 위로 올려 묶은 쪽머리

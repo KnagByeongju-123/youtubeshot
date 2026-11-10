@@ -17,9 +17,9 @@ const dir=process.argv[2];
   const H=await p.evaluate(()=>{try{three_grid.visible=false}catch(e){}; try{Transformer.visible=false;Transformer.detach()}catch(e){};
      Outliner.selected.length=0; try{unselectAllElements()}catch(e){}; try{updateSelection()}catch(e){};
      const P=Preview.selected; P.canvas.style.background='#ffffff';
-     let top=0; Outliner.elements.forEach(e=>{top=Math.max(top,e.to[1])}); return top;});
+     let top=0,bot=1e9,sp=0; Outliner.elements.forEach(e=>{top=Math.max(top,e.to[1]);bot=Math.min(bot,e.from[1]);sp=Math.max(sp,Math.abs(e.from[0]),Math.abs(e.to[0]),Math.abs(e.from[2]),Math.abs(e.to[2]))}); return [top,Math.max(0,bot),sp];});
   const rect=await p.evaluate(()=>{const c=Preview.selected.canvas.getBoundingClientRect();return {x:c.x,y:c.y,width:c.width,height:c.height};});
-  const cy=H/2, dist=H*4.2;
+  const cy=(H[0]+H[1])/2, S=Math.max(H[0]-H[1],H[2]*2*0.95), dist=S*4.2;   // 긴 물건(기차)은 너비로 거리
   const views=[[0,-1],[1,0],[-1,0],[0,1]];   // 앞(-z) 옆(+x) 옆(-x) 뒤(+z)
   for(let i=0;i<4;i++){
    await p.evaluate(([vx,vz,cy,dist])=>{const P=Preview.selected; P.camera.fov=14; P.camera.updateProjectionMatrix();
