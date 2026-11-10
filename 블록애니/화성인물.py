@@ -102,6 +102,7 @@ def human(M, tag, kind='jarvis', s=1.0, tank=True, gun=False):
     if kind=='harrison':   # 대장 모자
         hk+= [c('cap',[-4.4,31,-4.4],[4.4,34,4.4],'navy'), c('cap_band',[-4.5,31,-4.5],[4.5,32,4.5],'gold'), c('visor',[-4,30.6,-6.4],[4,31.2,-4.2],'black')]
     if kind=='alien':      # 더듬이 둘 + 어깨 장식
+        drop=set(hk[1:]); M.els[:]=[e for e in M.els if e['uuid'] not in drop]     # 머리카락 상자는 만들지 않은 것으로 (안 지우면 원점에 떠 있음)
         hk=hk[:1]+[c('ant_l',[1.5,32,-0.5],[2.5,37,0.5],'steel'), c('ant_r',[-2.5,32,-0.5],[-1.5,37,0.5],'steel'), c('ant_bl',[1,37,-1],[3,39,1],'red'), c('ant_br',[-3,37,-1],[-1,39,1],'red')]
     if kind=='fancy':      # 어깨 아래까지 내려오는 금발
         hk+= [c('hair_long',[-4.4,19,2],[4.4,26,4.6],hc), c('hair_fl',[3.6,21,-1],[4.6,28,3],hc), c('hair_fr',[-4.6,21,-1],[-3.6,28,3],hc)]
