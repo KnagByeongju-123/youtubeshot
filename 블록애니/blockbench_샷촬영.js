@@ -1,5 +1,5 @@
 // 샷 촬영: node blockbench_샷촬영.js <샷목록.json> <모형폴더> <출력폴더> [샷이름,...] [--test]
-// 샷 = {name,set,t0,t1,fps,sky:[색,...],ropes:bool,view:'textured'|'wireframe', cam:[{u,pos:[x,y,z],tgt:[x,y,z],shake?}], follow:'묶음이름'(있으면 pos·tgt 는 그 묶음 위치 기준), shake:흔들림 크기}
+// 샷 = {name,set,t0,t1,fps,sky:[색,...],ropes:bool,view:'textured'|'wireframe', cam:[{u,pos:[x,y,z],tgt:[x,y,z],shake?,fov?,roll?}], follow:'묶음이름'(있으면 pos·tgt 는 그 묶음 위치 기준), shake:흔들림 크기}
 const {chromium}=require('playwright');const fs=require('fs');const path=require('path');
 const [,,shotFile,modelDir,outDir,only,testFlag]=process.argv;
 const all=JSON.parse(fs.readFileSync(shotFile,'utf8'));
@@ -62,7 +62,12 @@ const shots=all.shots.filter(s=>!want||want.includes(s.name));
      if(follow){const F=wp(follow); pos=[pos[0]+F.x,pos[1]+F.y,pos[2]+F.z]; tgt=[tgt[0]+F.x,tgt[1]+F.y,tgt[2]+F.z];}
      if(shake){const w=(c0.shake!==undefined?c0.shake:1)*(1-f)+(c1.shake!==undefined?c1.shake:1)*f, q=shake*w;   // 흔들림 (추락·싸움): 키마다 shake 배율(0~1)을 줄 수 있음
        pos=[pos[0]+q*Math.sin(t*31.7),pos[1]+q*Math.sin(t*23.3+1.3),pos[2]+q*0.6*Math.sin(t*17.9+2.1)]; tgt=[tgt[0]+q*0.7*Math.sin(t*27.1+0.5),tgt[1]+q*0.7*Math.sin(t*19.7+2.9),tgt[2]];}
-     const P=Preview.selected; P.camera.position.set(...pos); P.controls.target.set(...tgt); P.controls.update();
+     const P=Preview.selected;
+     const num=(k,dv)=>{const a=(c0[k]!==undefined?c0[k]:dv), b=(c1[k]!==undefined?c1[k]:dv); return a+(b-a)*f;};
+     const fov=num('fov',38), roll=num('roll',0)*Math.PI/180;      // 순간 확대(시야각)·화면 기울이기 (게임 같은 카메라)
+     if(Math.abs(P.camera.fov-fov)>0.01){P.camera.fov=fov; P.camera.updateProjectionMatrix();}
+     P.camera.up.set(Math.sin(roll),Math.cos(roll),0);
+     P.camera.position.set(...pos); P.controls.target.set(...tgt); P.controls.update();
    },[t,u,sh.cam,sh.follow||null,ropes,sh.shake||0]);
    await p.screenshot({path:fpath,clip});
   }

@@ -34,7 +34,10 @@ def mop(M, tag, patch=False, s=1.0):
         x0,x1=(6.4,9.6) if sx>0 else (-9.6,-6.4); nm='arm_left' if sx>0 else 'arm_right'; m=(x0+x1)/2
         k=[c('shoulder',[x0-0.4,17.4,-2.4],[x1+0.4,20.6,2.4],P('teal','p_or' if sx>0 else 'p_pu')), c('arm',[x0+0.6,9,-1.3],[x1-0.6,17.6,1.3],'frame'),
            c('cuff',[x0,9,-2],[x1,11.4,2],P('w','p_ye' if sx>0 else 'rust'))]
-        if sx<0: k+= [c('mop_handle',[m-0.6,3,-7],[m+0.6,4.2,1],'handle'), c('mop_head',[m-3,2.2,-10],[m+3,5,-7],'brush')]       # 오른손: 걸레 솔
+        if sx<0:      # 오른손: 긴 자루 걸레 (자루를 손에 쥐고 세워 듦, 아래 끝에 흰 걸레 술) — 사용자 지적 2026-11-10: 짧은 자루가 발 옆에 있어 망치처럼 보였음
+            k+= [c('mop_handle',[m-0.6,1.6,-4.4],[m+0.6,27,-3.2],'handle'), c('mop_clamp',[m-2.2,1.2,-5.2],[m+2.2,2.8,-2.4],'joint'),
+                 c('mop_s1',[m-3,0,-5.6],[m-1.4,1.6,-2],'w'), c('mop_s2',[m-1,0,-6.2],[m+1,1.4,-1.6],'w_d'), c('mop_s3',[m+1.4,0,-5.6],[m+3,1.6,-2],'w'),
+                 c('mop_grip',[x0-0.2,7.4,-4.8],[x1+0.2,9.4,-1.2],'joint')]
         else: k+= [c('grip1',[x0+0.2,7,-1.6],[x0+1.2,9,1.6],'joint'), c('grip2',[x1-1.2,7,-1.6],[x1-0.2,9,1.6],'joint')]
         k.append(G(tag+('hand_l' if sx>0 else 'hand_r'),O([m,8,0]),[]))
         return G(tag+nm,O([m,19,0]),k)
