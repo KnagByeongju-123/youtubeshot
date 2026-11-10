@@ -5,6 +5,7 @@ pj_path, shot_path, fdir, audio, out = sys.argv[1:6]
 pj=json.load(open(pj_path,encoding='utf-8')); shots=json.load(open(shot_path,encoding='utf-8'))['shots']
 tim=json.load(open(os.path.splitext(pj_path)[0]+'_시간.json',encoding='utf-8'))
 nums=json.load(open(sys.argv[sys.argv.index('--숫자')+1],encoding='utf-8')) if '--숫자' in sys.argv else []
+out=os.path.abspath(out); fdir=os.path.abspath(fdir); audio=os.path.abspath(audio)      # 목록 파일은 그 파일 기준으로 길을 읽음 → 절대 경로로
 work=os.path.splitext(out)[0]+'_작업'; os.makedirs(work,exist_ok=True)
 # 1) 샷 → 24fps 조각
 parts=[]
