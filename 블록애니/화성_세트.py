@@ -234,7 +234,7 @@ def hall(M,W=760,D=520,H=300):
         if fx<W/2-30:
             col=['m_g','m_b','mars1','pl2','bulb'][i%5]
             k+= [M.cube('frame',[fx-36,120,D/2-5],[fx+36,220,D/2],'gold_f'), M.cube('pic',[fx-31,125,D/2-6],[fx+31,215,D/2-4],col),
-                 M.cube('pic_a',[fx-20,135,D/2-7],[fx+4,170,D/2-5],'ink'), M.cube('pic_b',[fx-2,150,D/2-7],[fx+24,205,D/2-5],'star'), M.cube('plate',[fx-12,104,D/2-4],[fx+12,112,D/2],'gold_f')]
+                 M.cube('pic_a',[fx-20,135,D/2-7],[fx+4,170,D/2-5],'ink'), M.cube('pic_b',[fx-2,150,D/2-8.2],[fx+24,205,D/2-5],'star'), M.cube('plate',[fx-12,104,D/2-4],[fx+12,112,D/2],'gold_f')]
     for sx in (-1,1):       # 옆벽 책장
         for j,z in enumerate(range(-D//2-120,D//2-60,150)):
             xw=sx*(W/2); k.append(M.cube('shelf',[min(xw,xw-sx*18),0,z],[max(xw,xw-sx*18),190,z+110],'wood_d'))

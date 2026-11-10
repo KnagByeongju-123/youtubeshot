@@ -5,6 +5,7 @@
 import sys, os, json, math, random
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from 화성_세트 import *
+import 겹침면_검사
 ROOT='/home/user/youtubeshot/연재/화성의오디세이'
 OUT=f'{ROOT}/장면'; os.makedirs(OUT,exist_ok=True)
 TIM=json.load(open(f'{ROOT}/화성의오디세이_시간.json',encoding='utf-8')); SEG=TIM['segs']; L=round(TIM['duration']+1,2)
@@ -153,7 +154,8 @@ def night(M,A,top,spans,n=150,seed=5):
     st=stars(M,'stars',n,seed); mo=moons(M,'moons'); top+= [st,mo]; vis(A,st,spans); vis(A,mo,spans)
 def save(M,A,top,name,key,info=None):
     for a in ACTS: a.finish()
-    ACTS.clear(); A.bake(top); M.save(f'{OUT}/{key}_{name}.bbmodel',top,[A.json()],name=key); print(key,name,len(M.els),'상자')
+    ACTS.clear(); A.bake(top); nfix=겹침면_검사.fix(M.els,top)        # 같은 높이로 겹친 면 → 두께를 달리함 (색이 번갈아 바뀌는 깜박임 방지)
+    M.save(f'{OUT}/{key}_{name}.bbmodel',top,[A.json()],name=key); print(key,name,len(M.els),'상자, 겹침 고침',nfix)
     return info or {}
 def newset(tex=1024):
     M=BigModel(tex); M.big('cover',128,160,cover_art); mars_palette(M); world_palette(M); return M,Anim(L)
