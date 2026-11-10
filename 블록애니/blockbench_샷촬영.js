@@ -8,7 +8,8 @@ const want=(only&&only!=='all')?only.split(','):null;
 const shots=all.shots.filter(s=>!want||want.includes(s.name));
 (async()=>{
  const b=await chromium.launch({args:['--use-gl=swiftshader','--enable-unsafe-swiftshader']});
- const p=await b.newPage({viewport:{width:1600,height:1100}});
+ const VERT=!!process.env.VERT;      // VERT=1 → 세로(9:16, 쇼츠)로 찍음
+ const p=await b.newPage({viewport:VERT?{width:1500,height:2200}:{width:1600,height:1100}});
  p.on('pageerror',e=>console.log('ERR',e.message));
  await p.goto('https://web.blockbench.net/',{waitUntil:'load',timeout:120000});
  await p.waitForFunction(()=>window.Codecs&&window.Codecs.project,{timeout:120000});
@@ -28,6 +29,7 @@ const shots=all.shots.filter(s=>!want||want.includes(s.name));
    await p.waitForTimeout(500);
    const rect=await p.evaluate(()=>{const c=Preview.selected.canvas.getBoundingClientRect();return {x:c.x,y:c.y,width:c.width,height:c.height};});
    let w=rect.width,h=Math.round(w*9/16); if(h>rect.height){h=rect.height;w=Math.round(h*16/9);}
+   if(VERT){ h=rect.height; w=Math.round(h*9/16); if(w>rect.width){w=rect.width;h=Math.round(w*16/9);} }
    clip={x:Math.round(rect.x+(rect.width-w)/2),y:Math.round(rect.y+(rect.height-h)/2),width:w,height:h};
    loaded=sh.set; console.log('set',sh.set,JSON.stringify(clip));
   }
@@ -45,7 +47,7 @@ const shots=all.shots.filter(s=>!want||want.includes(s.name));
    const fpath=path.join(dir,`f${String(i).padStart(5,'0')}.png`);
    if(!testFlag && fs.existsSync(fpath) && fs.statSync(fpath).size>1000) continue;   // 이미 찍은 장은 건너뜀 (멈춘 뒤 이어 찍기)
    const t=sh.t0+i/sh.fps, u=n>1?i/(n-1):0;
-   await p.evaluate(([t,u,cam,follow,ropes,shake])=>{
+   await p.evaluate(([t,u,cam,follow,ropes,shake,vert])=>{
      Timeline.setTime(t); Animator.preview();
      const V=THREE.Vector3; const grp=n=>Group.all.find(g=>g.name===n);
      const wp=n=>{const g=grp(n); const v=new V(); if(g&&g.mesh){g.mesh.updateWorldMatrix(true,false); g.mesh.getWorldPosition(v);} return v;};
@@ -64,11 +66,12 @@ const shots=all.shots.filter(s=>!want||want.includes(s.name));
        pos=[pos[0]+q*Math.sin(t*31.7),pos[1]+q*Math.sin(t*23.3+1.3),pos[2]+q*0.6*Math.sin(t*17.9+2.1)]; tgt=[tgt[0]+q*0.7*Math.sin(t*27.1+0.5),tgt[1]+q*0.7*Math.sin(t*19.7+2.9),tgt[2]];}
      const P=Preview.selected;
      const num=(k,dv)=>{const a=(c0[k]!==undefined?c0[k]:dv), b=(c1[k]!==undefined?c1[k]:dv); return a+(b-a)*f;};
-     const fov=num('fov',38), roll=num('roll',0)*Math.PI/180;      // 순간 확대(시야각)·화면 기울이기 (게임 같은 카메라)
+     let fov=num('fov',38); const roll=num('roll',0)*Math.PI/180;
+     if(vert) fov=Math.min(104,2*Math.atan(Math.tan(fov*Math.PI/360)*2.1)*180/Math.PI);      // 세로 화면은 좌우가 좁아짐 → 시야각을 넓혀 맞춤      // 순간 확대(시야각)·화면 기울이기 (게임 같은 카메라)
      if(Math.abs(P.camera.fov-fov)>0.01){P.camera.fov=fov; P.camera.updateProjectionMatrix();}
      P.camera.up.set(Math.sin(roll),Math.cos(roll),0);
      P.camera.position.set(...pos); P.controls.target.set(...tgt); P.controls.update();
-   },[t,u,sh.cam,sh.follow||null,ropes,sh.shake||0]);
+   },[t,u,sh.cam,sh.follow||null,ropes,sh.shake||0,VERT]);
    await p.screenshot({path:fpath,clip});
   }
   console.log('shot',sh.name,idx.length);
