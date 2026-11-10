@@ -1,0 +1,95 @@
+{
+ "duration": 57.1,
+ "cues": [
+  {
+   "t": 0.0,
+   "kind": "run",
+   "vol": 1.0
+  },
+  {
+   "t": 3.5,
+   "kind": "stomp",
+   "vol": 1.0
+  },
+  {
+   "t": 9.5,
+   "kind": "snap",
+   "vol": 1.0
+  },
+  {
+   "t": 10.0,
+   "kind": "clang",
+   "vol": 1.0
+  },
+  {
+   "t": 13.5,
+   "kind": "slide",
+   "vol": 1.0
+  },
+  {
+   "t": 16.7,
+   "kind": "jump",
+   "vol": 1.0
+  },
+  {
+   "t": 28.5,
+   "kind": "slide",
+   "vol": 1.0
+  },
+  {
+   "t": 30.5,
+   "kind": "clang",
+   "vol": 1.0
+  },
+  {
+   "t": 32.1,
+   "kind": "snap",
+   "vol": 1.0
+  },
+  {
+   "t": 32.2,
+   "kind": "spark",
+   "vol": 1.0
+  },
+  {
+   "t": 32.8,
+   "kind": "hit",
+   "vol": 1.0
+  },
+  {
+   "t": 39.3,
+   "kind": "hit",
+   "vol": 1.0
+  },
+  {
+   "t": 39.4,
+   "kind": "snap",
+   "vol": 1.0
+  },
+  {
+   "t": 44.3,
+   "kind": "lever",
+   "vol": 1.0
+  },
+  {
+   "t": 44.5,
+   "kind": "fan",
+   "vol": 1.0
+  },
+  {
+   "t": 46.7,
+   "kind": "crash",
+   "vol": 1.0
+  },
+  {
+   "t": 46.8,
+   "kind": "snap",
+   "vol": 1.0
+  },
+  {
+   "t": 47.5,
+   "kind": "powerup",
+   "vol": 1.0
+  }
+ ]
+}

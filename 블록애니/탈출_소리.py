@@ -93,7 +93,7 @@ def music(L,calm_end=36.0,ground=315.0):
 if __name__=='__main__':
     tj=json.load(open(sys.argv[1],encoding='utf-8')); out=sys.argv[2]; L=tj['duration']
     a=float(sys.argv[sys.argv.index('--시작')+1]) if '--시작' in sys.argv else 0.0; b=float(sys.argv[sys.argv.index('--끝')+1]) if '--끝' in sys.argv else L
-    buf=music(L)
+    buf=music(L,calm_end=0.0,ground=L+99) if '--추격만' in sys.argv else music(L)      # 쇼츠: 처음부터 끝까지 추격 음악
     for i,c in enumerate(tj['cues']): put(buf,sfx(c['kind'],i),c['t'],0.55*c.get('vol',1.0))
     buf=buf[int(a*SR):int(b*SR)]; n=len(buf); f=int(0.4*SR); buf[:f]*=np.linspace(0,1,f); buf[-f*3:]*=np.linspace(1,0,f*3)
     buf=np.tanh(buf*1.3); buf=buf/(np.abs(buf).max()+1e-9)*0.89
