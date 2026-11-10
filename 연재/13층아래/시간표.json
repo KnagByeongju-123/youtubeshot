@@ -1,0 +1,588 @@
+{
+ "duration": 420.0,
+ "captions": [
+  {
+   "t0": 0.4,
+   "t1": 3.6,
+   "text": "13층 아래",
+   "style": "Title"
+  },
+  {
+   "t0": 4.5,
+   "t1": 8,
+   "text": "B13",
+   "style": "Floor"
+  },
+  {
+   "t0": 13,
+   "t1": 19,
+   "text": "「 꺼 내  줘 」",
+   "style": "Blink"
+  },
+  {
+   "t0": 66,
+   "t1": 69,
+   "text": "B12",
+   "style": "Floor"
+  },
+  {
+   "t0": 93.5,
+   "t1": 97,
+   "text": "B10",
+   "style": "Floor"
+  },
+  {
+   "t0": 100.5,
+   "t1": 104,
+   "text": "B10",
+   "style": "Floor"
+  },
+  {
+   "t0": 135.5,
+   "t1": 139,
+   "text": "B9",
+   "style": "Floor"
+  },
+  {
+   "t0": 170.5,
+   "t1": 174,
+   "text": "B7",
+   "style": "Floor"
+  },
+  {
+   "t0": 206,
+   "t1": 209,
+   "text": "B6",
+   "style": "Floor"
+  },
+  {
+   "t0": 218,
+   "t1": 221,
+   "text": "B5",
+   "style": "Floor"
+  },
+  {
+   "t0": 226,
+   "t1": 229,
+   "text": "B4",
+   "style": "Floor"
+  },
+  {
+   "t0": 236.5,
+   "t1": 239.5,
+   "text": "B3",
+   "style": "Floor"
+  },
+  {
+   "t0": 240.5,
+   "t1": 244,
+   "text": "B3",
+   "style": "Floor"
+  },
+  {
+   "t0": 280.5,
+   "t1": 284,
+   "text": "B1",
+   "style": "Floor"
+  },
+  {
+   "t0": 319.8,
+   "t1": 323,
+   "text": "지상",
+   "style": "Floor"
+  },
+  {
+   "t0": 413.5,
+   "t1": 419.6,
+   "text": "13층 아래",
+   "style": "Title"
+  }
+ ],
+ "cues": [
+  {
+   "t": 12,
+   "kind": "blink",
+   "vol": 1.0
+  },
+  {
+   "t": 28,
+   "kind": "blink",
+   "vol": 1.0
+  },
+  {
+   "t": 34.5,
+   "kind": "glass",
+   "vol": 1.0
+  },
+  {
+   "t": 36,
+   "kind": "alarm",
+   "vol": 1.0
+  },
+  {
+   "t": 41,
+   "kind": "door",
+   "vol": 1.0
+  },
+  {
+   "t": 42,
+   "kind": "stomp",
+   "vol": 1.0
+  },
+  {
+   "t": 43.5,
+   "kind": "run",
+   "vol": 1.0
+  },
+  {
+   "t": 47,
+   "kind": "stomp",
+   "vol": 1.0
+  },
+  {
+   "t": 52,
+   "kind": "creak",
+   "vol": 1.0
+  },
+  {
+   "t": 57,
+   "kind": "creak",
+   "vol": 1.0
+  },
+  {
+   "t": 63.4,
+   "kind": "whoosh",
+   "vol": 1.0
+  },
+  {
+   "t": 67.4,
+   "kind": "climb",
+   "vol": 1.0
+  },
+  {
+   "t": 78,
+   "kind": "elevator",
+   "vol": 1.0
+  },
+  {
+   "t": 88,
+   "kind": "snap",
+   "vol": 1.0
+  },
+  {
+   "t": 88.5,
+   "kind": "clang",
+   "vol": 1.0
+  },
+  {
+   "t": 93,
+   "kind": "creak",
+   "vol": 1.0
+  },
+  {
+   "t": 112.2,
+   "kind": "slide",
+   "vol": 1.0
+  },
+  {
+   "t": 115.4,
+   "kind": "jump",
+   "vol": 1.0
+  },
+  {
+   "t": 121.5,
+   "kind": "zap",
+   "vol": 1.0
+  },
+  {
+   "t": 121.8,
+   "kind": "steam",
+   "vol": 1.0
+  },
+  {
+   "t": 128.6,
+   "kind": "door",
+   "vol": 1.0
+  },
+  {
+   "t": 148.4,
+   "kind": "crash",
+   "vol": 1.0
+  },
+  {
+   "t": 152,
+   "kind": "rumble",
+   "vol": 1.0
+  },
+  {
+   "t": 159.4,
+   "kind": "slide",
+   "vol": 1.0
+  },
+  {
+   "t": 161.4,
+   "kind": "clang",
+   "vol": 1.0
+  },
+  {
+   "t": 163,
+   "kind": "snap",
+   "vol": 1.0
+  },
+  {
+   "t": 163.1,
+   "kind": "spark",
+   "vol": 1.0
+  },
+  {
+   "t": 166,
+   "kind": "slam",
+   "vol": 1.0
+  },
+  {
+   "t": 172.0,
+   "kind": "burst",
+   "vol": 1.0
+  },
+  {
+   "t": 172,
+   "kind": "water",
+   "vol": 1.0
+  },
+  {
+   "t": 173.5,
+   "kind": "burst",
+   "vol": 1.0
+  },
+  {
+   "t": 175.0,
+   "kind": "burst",
+   "vol": 1.0
+  },
+  {
+   "t": 175,
+   "kind": "wade",
+   "vol": 1.0
+  },
+  {
+   "t": 176,
+   "kind": "spark",
+   "vol": 1.0
+  },
+  {
+   "t": 184,
+   "kind": "spark",
+   "vol": 1.0
+  },
+  {
+   "t": 186,
+   "kind": "plop",
+   "vol": 1.0
+  },
+  {
+   "t": 187.5,
+   "kind": "plop",
+   "vol": 1.0
+  },
+  {
+   "t": 192.3,
+   "kind": "spark",
+   "vol": 1.0
+  },
+  {
+   "t": 192.5,
+   "kind": "zap",
+   "vol": 1.0
+  },
+  {
+   "t": 194.0,
+   "kind": "jump",
+   "vol": 1.0
+  },
+  {
+   "t": 195.2,
+   "kind": "thud",
+   "vol": 1.0
+  },
+  {
+   "t": 196.0,
+   "kind": "jump",
+   "vol": 1.0
+  },
+  {
+   "t": 197.2,
+   "kind": "thud",
+   "vol": 1.0
+  },
+  {
+   "t": 198.0,
+   "kind": "jump",
+   "vol": 1.0
+  },
+  {
+   "t": 199.2,
+   "kind": "thud",
+   "vol": 1.0
+  },
+  {
+   "t": 200.0,
+   "kind": "jump",
+   "vol": 1.0
+  },
+  {
+   "t": 201.4,
+   "kind": "thud",
+   "vol": 1.0
+  },
+  {
+   "t": 206,
+   "kind": "elevator",
+   "vol": 1.0
+  },
+  {
+   "t": 208,
+   "kind": "drone",
+   "vol": 1.0
+  },
+  {
+   "t": 214,
+   "kind": "drone",
+   "vol": 1.0
+  },
+  {
+   "t": 220,
+   "kind": "drone",
+   "vol": 1.0
+  },
+  {
+   "t": 221.5,
+   "kind": "hit",
+   "vol": 1.0
+  },
+  {
+   "t": 228,
+   "kind": "hit",
+   "vol": 1.0
+  },
+  {
+   "t": 228.1,
+   "kind": "snap",
+   "vol": 1.0
+  },
+  {
+   "t": 236,
+   "kind": "clang",
+   "vol": 1.0
+  },
+  {
+   "t": 236.6,
+   "kind": "door",
+   "vol": 1.0
+  },
+  {
+   "t": 240.6,
+   "kind": "tiptoe",
+   "vol": 1.0
+  },
+  {
+   "t": 253.4,
+   "kind": "beep",
+   "vol": 1.0
+  },
+  {
+   "t": 255.5,
+   "kind": "ok",
+   "vol": 1.0
+  },
+  {
+   "t": 256,
+   "kind": "rumble",
+   "vol": 1.0
+  },
+  {
+   "t": 258.5,
+   "kind": "alarm",
+   "vol": 1.0
+  },
+  {
+   "t": 262,
+   "kind": "rumble",
+   "vol": 1.0
+  },
+  {
+   "t": 264.2,
+   "kind": "clang",
+   "vol": 1.0
+  },
+  {
+   "t": 268,
+   "kind": "crunch",
+   "vol": 1.0
+  },
+  {
+   "t": 268.1,
+   "kind": "snap",
+   "vol": 1.0
+  },
+  {
+   "t": 270.6,
+   "kind": "slam",
+   "vol": 1.0
+  },
+  {
+   "t": 271.4,
+   "kind": "thud",
+   "vol": 1.0
+  },
+  {
+   "t": 273.0,
+   "kind": "thud",
+   "vol": 1.0
+  },
+  {
+   "t": 274,
+   "kind": "drag",
+   "vol": 1.0
+  },
+  {
+   "t": 274.6,
+   "kind": "thud",
+   "vol": 1.0
+  },
+  {
+   "t": 276.2,
+   "kind": "thud",
+   "vol": 1.0
+  },
+  {
+   "t": 281,
+   "kind": "drag",
+   "vol": 1.0
+  },
+  {
+   "t": 292,
+   "kind": "stomp",
+   "vol": 1.0
+  },
+  {
+   "t": 296,
+   "kind": "stomp",
+   "vol": 1.0
+  },
+  {
+   "t": 299,
+   "kind": "stomp",
+   "vol": 1.0
+  },
+  {
+   "t": 303,
+   "kind": "lever",
+   "vol": 1.0
+  },
+  {
+   "t": 303.2,
+   "kind": "fan",
+   "vol": 1.0
+  },
+  {
+   "t": 305.4,
+   "kind": "crash",
+   "vol": 1.0
+  },
+  {
+   "t": 305.5,
+   "kind": "snap",
+   "vol": 1.0
+  },
+  {
+   "t": 308.6,
+   "kind": "drag",
+   "vol": 1.0
+  },
+  {
+   "t": 317.5,
+   "kind": "creak",
+   "vol": 1.0
+  },
+  {
+   "t": 319.5,
+   "kind": "thud",
+   "vol": 1.0
+  },
+  {
+   "t": 321,
+   "kind": "drag",
+   "vol": 1.0
+  },
+  {
+   "t": 326,
+   "kind": "birds",
+   "vol": 1.0
+  },
+  {
+   "t": 340,
+   "kind": "powerdown",
+   "vol": 1.0
+  },
+  {
+   "t": 357.6,
+   "kind": "patter",
+   "vol": 1.0
+  },
+  {
+   "t": 373.0,
+   "kind": "attach",
+   "vol": 1.0
+  },
+  {
+   "t": 376.0,
+   "kind": "attach",
+   "vol": 1.0
+  },
+  {
+   "t": 376.6,
+   "kind": "attach",
+   "vol": 1.0
+  },
+  {
+   "t": 380.5,
+   "kind": "attach",
+   "vol": 1.0
+  },
+  {
+   "t": 385.0,
+   "kind": "attach",
+   "vol": 1.0
+  },
+  {
+   "t": 389.5,
+   "kind": "attach",
+   "vol": 1.0
+  },
+  {
+   "t": 392.0,
+   "kind": "attach",
+   "vol": 1.0
+  },
+  {
+   "t": 395.0,
+   "kind": "attach",
+   "vol": 1.0
+  },
+  {
+   "t": 397.5,
+   "kind": "attach",
+   "vol": 1.0
+  },
+  {
+   "t": 398.4,
+   "kind": "birds",
+   "vol": 1.0
+  },
+  {
+   "t": 401.8,
+   "kind": "powerup",
+   "vol": 1.0
+  }
+ ]
+}
