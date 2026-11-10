@@ -14,12 +14,12 @@ const dir=process.argv[2];
   await p.evaluate(()=>{try{BarItems.toggle_sidebars.click()}catch(e){}});
   await p.waitForTimeout(800);
   await p.addStyleTag({content:'.preview_menu,.preview_view_mode_menu,.orbit_gizmo,.preview_options,.preview_tool_bar{display:none!important}'});
-  const H=await p.evaluate(()=>{try{three_grid.visible=false}catch(e){}; try{Transformer.visible=false;Transformer.detach()}catch(e){};
+  const HH=await p.evaluate(()=>{try{three_grid.visible=false}catch(e){}; try{Transformer.visible=false;Transformer.detach()}catch(e){};
      Outliner.selected.length=0; try{unselectAllElements()}catch(e){}; try{updateSelection()}catch(e){};
      const P=Preview.selected; P.canvas.style.background='#ffffff';
-     let top=0; Outliner.elements.forEach(e=>{top=Math.max(top,e.to[1])}); return top;});
+     let top=0,wid=0; Outliner.elements.forEach(e=>{top=Math.max(top,e.to[1]); wid=Math.max(wid,Math.abs(e.from[0]),Math.abs(e.to[0]),Math.abs(e.from[2]),Math.abs(e.to[2]))}); return [Math.max(top,wid*2.1),top];});   // 키보다 옆으로 넓은 것(수레·괴물)도 잘리지 않게
   const rect=await p.evaluate(()=>{const c=Preview.selected.canvas.getBoundingClientRect();return {x:c.x,y:c.y,width:c.width,height:c.height};});
-  const cy=H/2, dist=H*4.2;
+  const H=HH[0], cy=HH[1]/2, dist=H*4.2;
   const views=[[0,-1],[1,0],[-1,0],[0,1]];   // 앞(-z) 옆(+x) 옆(-x) 뒤(+z)
   for(let i=0;i<4;i++){
    await p.evaluate(([vx,vz,cy,dist])=>{const P=Preview.selected; P.camera.fov=14; P.camera.updateProjectionMatrix();
