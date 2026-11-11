@@ -166,3 +166,60 @@ def loose_arm(M, tag, top, bottom, col, short=False, s=1.0, pieces=1):
     low=[cyl(M,'l_fore',P(k+0.06),P(0.92),1.05*s,0.9*s,'wood'), sphere(M,'l_hand',bottom,1.35*s,'wood_l')]
     if pieces==1: return M.group(tag+'root',top,up+low)
     return M.group(tag+'up',top,up), M.group(tag+'low',P(k),low)
+
+
+def doll2(M, tag, s=1.0, o=None, nose=1.8):
+    """옷을 정해서 만드는 나무 인형 (다른 작품을 나무 인형으로 옮길 때).  o = {
+         'shirt': 소매·윗옷 색, 'vest': 조끼 색(없으면 None), 'bottom': 'shorts'|'pants'|'skirt'|'coat', 'bottom_col': 색,
+         'shoe': 신발 색, 'hair': 'short'|'pigtails'|'ponytail'|'side'(옆·뒤만), 'hair_col': 색, 'beard': 수염 색(None),
+         'mustache': 콧수염 색(None), 'scarf': 목도리 색(None), 'hood': 후드 색(None), 'cane': 지팡이(True/False),
+         'wet': 젖은 소매 색 — 어깨 젖은 자국 묶음 wet_l / wet_r (크기 0/1 로 보이기) }
+       묶음 이름은 블록 인물과 같음 (팔·다리 통째로 흔들기)"""
+    o=o or {}
+    S=lambda p:[x*s for x in p]
+    def C(n,a,b,r0,r1,col,seg=12): return cyl(M,n,S(a),S(b),r0*s,r1*s,col,seg)
+    def B(n,c,r,col,**k): return sphere(M,n,S(c),r*s,col,**k)
+    G=lambda n,oo,ch: M.group(tag+n,S(oo),ch)
+    sh=o.get('shirt','paint_shirt'); bt=o.get('bottom','shorts'); bc=o.get('bottom_col','paint_short'); shoe=o.get('shoe','paint_shoe')
+    def leg(side):
+        x=2.1*side; k=[]
+        if bt=='shorts': k+= [C('thigh',[x,12.2,0],[x,7.0,0],1.9,1.6,bc), C('shin',[x,7.4,0],[x,1.6,0],1.3,1.1,'wood')]
+        elif bt=='pants': k+= [C('pants',[x,12.2,0],[x,2.2,0],1.9,1.65,bc)]
+        else: k+= [C('shin',[x,11.5,0],[x,1.6,0],1.25,1.1,o.get('leg_col','wood'))]
+        k.append(B('shoe',[x,1.2,-0.8],2.0,shoe,sx=0.95,sy=0.62,sz=1.45))
+        return G('leg_'+('left' if side>0 else 'right'),[x,12,0],k)
+    def arm(side):
+        x=5.4*side; n='l' if side>0 else 'r'
+        k=[B('shoulder',[x,21.4,0],1.6,sh), C('upper',[x,21,0],[x,15.6,0],1.3,1.15,sh), C('fore',[x,16.2,0],[x,12.4,0],1.05,0.9,'wood'),
+           B('hand',[x,11.6,0],1.35,'wood_l',sx=0.9,sy=1.1,sz=0.9), G('hand_'+n,[x,11.2,0],[])]
+        if o.get('wet'): k.append(G('wet_'+n,[x,21.5,0],[B('wet',[x,21.4,0],1.7,o['wet']), C('wet_up',[x,21,0],[x,18.2,0],1.4,1.3,o['wet'])]))
+        if o.get('cane') and side<0: k.append(G('cane',[x,11.2,0],[]))
+        return G('arm_'+('left' if side>0 else 'right'),[x,21.5,0],k)
+    legL,legR=leg(1),leg(-1); armL,armR=arm(1),arm(-1)
+    if o.get('cane'):   # 지팡이: 오른손에서 땅까지
+        cn=find(armR,tag+'cane'); cn['children']=[C('cane_stick',[-5.4,11.4,-1.8],[-5.4,0.3,-1.8],0.45,0.45,'wood_dk'), C('cane_top',[-5.4,11.6,-1.8],[-5.4,11.6,0.4],0.5,0.5,'wood_dk')]
+    if bt=='skirt': body=[C('chest',[0,14.6,0],[0,21.6,0],3.4,4.0,sh,seg=16), C('skirt',[0,15.0,0],[0,8.4,0],3.5,5.4,bc,seg=18)]
+    elif bt=='coat': body=[C('chest',[0,14.6,0],[0,21.6,0],3.5,4.0,sh,seg=16), C('coat_low',[0,15.0,0],[0,6.0,0],3.6,4.3,bc,seg=18)]
+    else: body=[C('waist',[0,12,0],[0,14.6,0],3.6,3.5,bc,seg=16), C('belt',[0,14.5,0],[0,15.5,0],3.65,3.6,'paint_belt',seg=16), C('chest',[0,15.4,0],[0,21.6,0],3.5,4.1,sh,seg=16)]
+    body+= [B('shoulder_top',[0,21.6,0],4.05,sh,sy=0.35,seg=16), C('neck',[0,22.6,0],[0,24.4,0],1.1,1.1,'wood')]
+    if o.get('vest'): body+= [C('vest',[0,15.3,0],[0,21.4,0],3.62,4.18,o['vest'],seg=16), B('v_btn',[0,18.0,-4.05],0.42,'button',seg=8,rings=6)]
+    if o.get('scarf'): body+= [C('scarf',[0,21.6,0],[0,23.4,0],2.6,2.0,o['scarf'],seg=14), C('scarf_tail',[1.4,21.6,-3.2],[1.6,16.8,-3.9],0.7,0.6,o['scarf'],seg=8)]
+    if o.get('hood'): body+= [B('hood',[0,23.0,2.6],2.6,o['hood'],seg=12,rings=8,sz=0.6)]
+    hk=[B('head',[0,28,0],4.0,'wood',seg=16,rings=10),
+        C('nose',[0,27.4,-3.5],[0,27.5,-3.5-nose],0.85,0.7,'wood_l',seg=10), B('nose_tip',[0,27.5,-3.5-nose],0.72,'wood_l',seg=10,rings=6),
+        B('eye_l',[1.55,28.6,-3.45],0.85,'eye_w',seg=10,rings=6,sz=0.55), B('eye_r',[-1.55,28.6,-3.45],0.85,'eye_w',seg=10,rings=6,sz=0.55),
+        B('pupil_l',[1.55,28.5,-3.95],0.42,'eye_k',seg=8,rings=6,sz=0.5), B('pupil_r',[-1.55,28.5,-3.95],0.42,'eye_k',seg=8,rings=6,sz=0.5),
+        B('cheek_l',[2.5,26.6,-3.0],0.75,'cheek',seg=8,rings=6,sz=0.4), B('cheek_r',[-2.5,26.6,-3.0],0.75,'cheek',seg=8,rings=6,sz=0.4)]
+    hc=o.get('hair_col','wood_hair'); hs=o.get('hair','short')
+    if hs in ('short','pigtails','ponytail'): hk.append(B('hair',[0,29.3,0.45],4.17,hc,seg=16,rings=10,sy=0.83,sz=0.99))
+    if hs=='pigtails': hk+= [B('tail_l',[4.6,27.2,1.0],1.5,hc,seg=10,rings=6,sy=1.5), B('tail_r',[-4.6,27.2,1.0],1.5,hc,seg=10,rings=6,sy=1.5),
+                             B('ribbon_l',[4.1,29.2,1.0],0.9,'paint_ribbon',seg=8,rings=6,sx=0.7,sz=1.4), B('ribbon_r',[-4.1,29.2,1.0],0.9,'paint_ribbon',seg=8,rings=6,sx=0.7,sz=1.4)]
+    if hs=='ponytail': hk+= [B('pony',[0,26.6,4.4],1.6,hc,seg=10,rings=8,sy=2.6,sz=0.9), B('pony_tie',[0,29.0,4.2],0.9,o.get('scarf') or 'paint_ribbon',seg=8,rings=6,sz=0.8)]
+    if hs=='side': hk+= [B('side_l',[3.5,27.6,1.6],1.1,hc,seg=10,rings=6,sx=0.8,sz=1.4), B('side_r',[-3.5,27.6,1.6],1.1,hc,seg=10,rings=6,sx=0.8,sz=1.4),
+                         B('back_h',[0,27.6,3.2],2.8,hc,seg=12,rings=6,sy=0.6,sz=0.5), B('top_h',[0,31.6,0.6],2.6,hc,seg=12,rings=6,sy=0.35)]
+    if o.get('beard'): hk.append(B('beard',[0,25.0,-2.4],2.5,o['beard'],seg=12,rings=8,sx=1.1,sy=0.95,sz=0.7))
+    if o.get('mustache'): hk.append(B('mustache',[0,26.4,-3.55],1.4,o['mustache'],seg=10,rings=6,sx=1.3,sy=0.45,sz=0.5))
+    if not o.get('beard') and not o.get('mustache'): hk.append(C('mouth',[-0.8,25.7,-3.1],[0.8,25.7,-3.1],0.24,0.24,'mouth',seg=6))
+    head=G('head',[0,24.4,0],hk)
+    bod=G('body',[0,12,0],body+[head,armL,armR])
+    return G('root',[0,0,0],[bod,legL,legR])
