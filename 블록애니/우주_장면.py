@@ -281,6 +281,9 @@ if __name__=='__main__':
     json.dump({k:{'ropes':[]} for k in SETS},open(f'{OUT}/세트정보.json','w'))
     S=sorted(D.SHOTS,key=lambda s:s['t0'])
     for i,s in enumerate(S): s['name']=f"{i:03d}_{s['name'].split('_',1)[1]}"
+    SLOW={'지구','기지','먼빛','다가옴','그림자','크기','경보','함대','함교뒤','충전','잔해','결심','고요','해돋이','끝'}      # 느린 장면은 1초 12장 (촬영 시간 때문에), 전투는 24장
+    for s in S:
+        if s['name'].split('_',1)[1] in SLOW: s['fps']=12
     bad=[(a['name'],b['name'],round(b['t0']-a['t1'],2)) for a,b in zip(S,S[1:]) if abs(b['t0']-a['t1'])>0.02]
     json.dump({'shots':S},open(f'{OUT}/샷목록.json','w',encoding='utf-8'),ensure_ascii=False,indent=1)
     json.dump({'duration':L,'captions':sorted(D.CAPS,key=lambda c:c['t0']),'cues':sorted(CUES,key=lambda c:c['t'])},open(f'{ROOT}/시간표.json','w',encoding='utf-8'),ensure_ascii=False,indent=1)
