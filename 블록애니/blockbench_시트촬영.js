@@ -17,13 +17,15 @@ const dir=process.argv[2];
   const H=await p.evaluate(()=>{try{three_grid.visible=false}catch(e){}; try{Transformer.visible=false;Transformer.detach()}catch(e){};
      Outliner.selected.length=0; try{unselectAllElements()}catch(e){}; try{updateSelection()}catch(e){};
      const P=Preview.selected; P.canvas.style.background='#ffffff';
-     let top=0; Outliner.elements.forEach(e=>{top=Math.max(top,e.to[1])}); return top;});
+     let b=[1e9,1e9,1e9,-1e9,-1e9,-1e9]; Outliner.elements.forEach(e=>{for(let i=0;i<3;i++){b[i]=Math.min(b[i],e.from[i],e.to[i]);b[i+3]=Math.max(b[i+3],e.from[i],e.to[i]);}});
+     return b;});
   const rect=await p.evaluate(()=>{const c=Preview.selected.canvas.getBoundingClientRect();return {x:c.x,y:c.y,width:c.width,height:c.height};});
-  const cy=H/2, dist=H*4.2;
+  // H = 상자 전체 범위 [x0,y0,z0,x1,y1,z1]: 가운데를 보고, 높이·폭 중 큰 쪽이 화면에 들어오게 (사람은 예전과 같음)
+  const cx=(H[0]+H[3])/2, cz=(H[2]+H[5])/2, cy=H[4]/2, span=Math.max(H[4], Math.max(H[3]-H[0],H[5]-H[2])*1.08), dist=span*4.2;
   const views=[[0,-1],[1,0],[-1,0],[0,1]];   // 앞(-z) 옆(+x) 옆(-x) 뒤(+z)
   for(let i=0;i<4;i++){
-   await p.evaluate(([vx,vz,cy,dist])=>{const P=Preview.selected; P.camera.fov=14; P.camera.updateProjectionMatrix();
-      P.camera.position.set(vx*dist,cy+dist*0.03,vz*dist); P.controls.target.set(0,cy,0); P.controls.update();},[views[i][0],views[i][1],cy,dist]);
+   await p.evaluate(([vx,vz,cy,dist,cx,cz])=>{const P=Preview.selected; P.camera.fov=14; P.camera.updateProjectionMatrix();
+      P.camera.position.set(cx+vx*dist,cy+dist*0.03,cz+vz*dist); P.controls.target.set(cx,cy,cz); P.controls.update();},[views[i][0],views[i][1],cy,dist,cx,cz]);
    await p.waitForTimeout(300);
    await p.screenshot({path:path.join(dir,f.replace('.bbmodel',`_v${i}.png`)),clip:rect});
   }
