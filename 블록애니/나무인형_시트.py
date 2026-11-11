@@ -1,0 +1,11 @@
+"""나무 인형 캐릭터 시트.  사용: python 나무인형_시트.py <폴더>"""
+import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from 나무인형 import *
+out=sys.argv[1]; os.makedirs(out,exist_ok=True)
+M=Model(256); palette(M); g=doll(M,'d_'); M.save(f'{out}/나무인형.bbmodel',[g],[],name='나무인형')
+# 움직임 확인용: 팔꿈치·무릎을 굽힌 자세
+M=Model(256); palette(M); g=doll(M,'d_')
+for n,r in [('arm_left',[-40,0,20]),('forearm_l',[-60,0,0]),('arm_right',[30,0,0]),('leg_left',[-35,0,0]),('shin_l',[50,0,0]),('head',[0,-20,0])]:
+    find(g,'d_'+n)['rotation']=r
+M.save(f'{out}/나무인형_자세.bbmodel',[g],[],name='나무인형_자세')
+print('ok')
