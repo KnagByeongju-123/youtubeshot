@@ -70,36 +70,86 @@ def palette(M):
     M.swatch('paint_shoe',wood_fn((190,55,45),(150,40,35),6),3); M.swatch('paint_belt',(70,45,30),3)
     M.swatch('eye_w',(250,250,248),2); M.swatch('eye_k',(25,22,22),2); M.swatch('cheek',(240,140,130),3); M.swatch('mouth',(150,60,55),3)
     M.swatch('button',(235,205,120),3)
+    M.swatch('paint_dress',wood_fn((235,125,105),(200,95,80),7),3); M.swatch('paint_sock',(245,242,235),2); M.swatch('paint_ribbon',(250,215,90),3)
+    M.swatch('paint_mustard',wood_fn((215,170,70),(180,135,50),8),3); M.swatch('paint_apron',wood_fn((140,95,60),(110,72,45),9),3)
+    M.swatch('paint_pants',wood_fn((95,95,100),(70,70,75),10),3); M.swatch('paint_cap',wood_fn((70,110,150),(50,85,120),11),3)
+    M.swatch('wood_grey',wood_fn((205,200,190),(165,160,150),12),3); M.swatch('wood_dk',wood_fn((150,100,58),(105,68,38),13),3)
 
-def doll(M, tag, s=1.0, nose=4.0):
-    """오리지널 나무 인형.  팔·다리는 블록 인물처럼 통째로 흔들림.  nose: 코 길이"""
+def doll(M, tag, s=1.0, nose=1.8, kind='boy'):
+    """오리지널 나무 인형.  팔·다리는 블록 인물처럼 통째로 흔들림.  nose: 코 길이(짧고 끝이 둥글게)
+       kind: boy(나무 소년) / girl(나무 소녀: 원피스·양갈래) / grandpa(목수 할아버지: 수염·털모자·앞치마·긴 바지)"""
+    S=lambda p:[x*s for x in p]
+    def C(n,a,b,r0,r1,col,seg=12): return cyl(M,n,S(a),S(b),r0*s,r1*s,col,seg)
+    def B(n,c,r,col,**k): return sphere(M,n,S(c),r*s,col,**k)
+    def X(n,a,b,col): return M.cube(n,S(a),S(b),col)
+    G=lambda n,o,ch: M.group(tag+n,S(o),ch)
+    shirt={'boy':'paint_shirt','girl':'paint_dress','grandpa':'paint_mustard'}[kind]
+    bottom={'boy':'paint_short','girl':'paint_dress','grandpa':'paint_pants'}[kind]
+    shoe={'boy':'paint_shoe','girl':'paint_shoe','grandpa':'paint_apron'}[kind]
+    # 다리·팔은 블록 인물처럼 한 덩어리 (엉덩이·어깨에서만 흔들림, 사용자 결정 2026-11-11: 팔꿈치·무릎 관절이 어색함)
+    def leg(side):
+        x=2.1*side; k=[]
+        if kind=='boy':     k+= [C('thigh',[x,12.2,0],[x,7.0,0],1.9,1.6,bottom), C('shin',[x,7.4,0],[x,1.6,0],1.3,1.1,'wood')]
+        elif kind=='girl':  k+= [C('shin',[x,11.5,0],[x,4.4,0],1.2,1.05,'wood'), C('sock',[x,4.6,0],[x,1.6,0],1.25,1.15,'paint_sock')]
+        else:               k+= [C('pants',[x,12.2,0],[x,2.2,0],1.9,1.65,bottom)]
+        k.append(B('shoe',[x,1.2,-0.8],2.0,shoe,sx=0.95,sy=0.62,sz=1.45))
+        return G('leg_'+('left' if side>0 else 'right'),[x,12,0],k)
+    def arm(side):
+        x=5.4*side; n='l' if side>0 else 'r'
+        hand=G('hand_'+n,[x,11.2,0],[])
+        sleeve_end=18.0 if kind=='girl' else 15.6
+        return G('arm_'+('left' if side>0 else 'right'),[x,21.5,0],[B('shoulder',[x,21.4,0],1.6,shirt),
+               C('upper',[x,21,0],[x,sleeve_end,0],1.3,1.15,shirt), C('fore',[x,sleeve_end+0.6,0],[x,12.4,0],1.05,0.9,'wood'),
+               B('hand',[x,11.6,0],1.35,'wood_l',sx=0.9,sy=1.1,sz=0.9), hand])
+    legL,legR=leg(1),leg(-1); armL,armR=arm(1),arm(-1)
+    if kind=='girl':    # 원피스: 위는 몸통, 아래는 퍼지는 치마
+        body=[C('chest',[0,14.6,0],[0,21.6,0],3.4,4.0,shirt,seg=16), C('skirt',[0,15.0,0],[0,8.4,0],3.5,5.4,shirt,seg=18),
+              C('collar',[0,21.2,0],[0,22.0,0],2.2,1.6,'paint_sock',seg=12)]
+    else:
+        body=[C('waist',[0,12,0],[0,14.6,0],3.6,3.5,bottom,seg=16), C('belt',[0,14.5,0],[0,15.5,0],3.65,3.6,'paint_belt',seg=16),
+              C('chest',[0,15.4,0],[0,21.6,0],3.5,4.1,shirt,seg=16)]
+    body+= [B('shoulder_top',[0,21.6,0],4.1 if kind!='girl' else 4.0,shirt,sy=0.35,seg=16), C('neck',[0,22.6,0],[0,24.4,0],1.1,1.1,'wood')]
+    if kind=='boy': body+= [B('btn1',[0,19.6,-3.85],0.45,'button',seg=8,rings=6), B('btn2',[0,17.4,-3.7],0.45,'button',seg=8,rings=6)]
+    if kind=='grandpa': body+= [X('apron',[-2.9,8.6,-4.25],[2.9,19.5,-3.85],'paint_apron'), X('apron_pocket',[-1.6,12,-4.45],[1.6,14.2,-4.25],'wood_dk'),
+                                X('strap_l',[1.6,19.4,-4.1],[2.4,21.8,-3.6],'paint_apron'), X('strap_r',[-2.4,19.4,-4.1],[-1.6,21.8,-3.6],'paint_apron')]
+    # 머리: 공 + 깎은 머리카락 + 짧고 둥근 코 + 동그란 눈 + 볼터치
+    hk=[B('head',[0,28,0],4.0,'wood',seg=16,rings=10),
+        C('nose',[0,27.4,-3.5],[0,27.5,-3.5-nose],0.85,0.7,'wood_l',seg=10), B('nose_tip',[0,27.5,-3.5-nose],0.72,'wood_l',seg=10,rings=6),
+        B('eye_l',[1.55,28.6,-3.45],0.85,'eye_w',seg=10,rings=6,sz=0.55), B('eye_r',[-1.55,28.6,-3.45],0.85,'eye_w',seg=10,rings=6,sz=0.55),
+        B('pupil_l',[1.55,28.5,-3.95],0.42,'eye_k',seg=8,rings=6,sz=0.5), B('pupil_r',[-1.55,28.5,-3.95],0.42,'eye_k',seg=8,rings=6,sz=0.5),
+        B('cheek_l',[2.5,26.6,-3.0],0.75,'cheek',seg=8,rings=6,sz=0.4), B('cheek_r',[-2.5,26.6,-3.0],0.75,'cheek',seg=8,rings=6,sz=0.4)]
+    if kind=='boy':
+        hk+= [B('hair',[0,29.3,0.5],4.15,'wood_hair',seg=16,rings=10,sy=0.82,sz=0.98), C('mouth',[-0.9,25.7,-3.1],[0.9,25.7,-3.1],0.24,0.24,'mouth',seg=6)]
+    if kind=='girl':
+        hk+= [B('hair',[0,29.3,0.4],4.18,'wood_hair',seg=16,rings=10,sy=0.84,sz=0.99), C('mouth',[-0.8,25.7,-3.1],[0.8,25.7,-3.1],0.24,0.24,'mouth',seg=6),
+              B('tail_l',[4.6,27.2,1.0],1.5,'wood_hair',seg=10,rings=6,sy=1.5), B('tail_r',[-4.6,27.2,1.0],1.5,'wood_hair',seg=10,rings=6,sy=1.5),
+              B('ribbon_l',[4.1,29.2,1.0],0.9,'paint_ribbon',seg=8,rings=6,sx=0.7,sz=1.4), B('ribbon_r',[-4.1,29.2,1.0],0.9,'paint_ribbon',seg=8,rings=6,sx=0.7,sz=1.4)]
+    if kind=='grandpa':
+        hk+= [B('cap',[0,30.0,0.2],4.2,'paint_cap',seg=16,rings=10,sy=0.72), C('cap_rim',[0,29.1,0.2],[0,30.1,0.2],4.25,4.25,'paint_cap',seg=16),
+              B('cap_ball',[0,33.1,0.2],0.9,'paint_sock',seg=8,rings=6),
+              B('side_hair_l',[3.5,27.4,1.8],1.05,'wood_grey',seg=10,rings=6,sx=0.8,sz=1.3), B('side_hair_r',[-3.5,27.4,1.8],1.05,'wood_grey',seg=10,rings=6,sx=0.8,sz=1.3), B('back_hair',[0,27.2,3.2],2.6,'wood_grey',seg=12,rings=6,sy=0.55,sz=0.5),   # 귀 뒤·뒤통수 흰머리 (얼굴 옆을 가리지 않게)
+              B('beard',[0,24.9,-2.4],2.7,'wood_grey',seg=12,rings=8,sx=1.15,sy=1.05,sz=0.7), B('mustache',[0,26.4,-3.55],1.5,'wood_grey',seg=10,rings=6,sx=1.3,sy=0.45,sz=0.5)]
+    head=G('head',[0,24.4,0],hk)
+    bod=G('body',[0,12,0],body+[head,armL,armR])
+    return G('root',[0,0,0],[bod,legL,legR])
+
+def wood_dog(M, tag, s=1.0):
+    """끌고 다니는 나무 강아지 장난감 (바퀴 넷).  앞 = -z.  묶음: body·head·tail·wheels"""
     S=lambda p:[x*s for x in p]
     def C(n,a,b,r0,r1,col,seg=12): return cyl(M,n,S(a),S(b),r0*s,r1*s,col,seg)
     def B(n,c,r,col,**k): return sphere(M,n,S(c),r*s,col,**k)
     G=lambda n,o,ch: M.group(tag+n,S(o),ch)
-    # 다리·팔은 블록 인물처럼 한 덩어리 (엉덩이·어깨에서만 흔들림, 사용자 결정 2026-11-11: 팔꿈치·무릎 관절이 어색함)
-    def leg(side):
-        x=2.1*side
-        return G('leg_'+('left' if side>0 else 'right'),[x,12,0],[C('thigh',[x,12.2,0],[x,7.0,0],1.9,1.6,'paint_short'),
-                 C('shin',[x,7.4,0],[x,1.6,0],1.3,1.1,'wood'), B('shoe',[x,1.2,-0.8],2.0,'paint_shoe',sx=0.95,sy=0.62,sz=1.45)])
-    def arm(side):
-        x=5.4*side; n='l' if side>0 else 'r'
-        hand=G('hand_'+n,[x,11.2,0],[])
-        return G('arm_'+('left' if side>0 else 'right'),[x,21.5,0],[B('shoulder',[x,21.4,0],1.6,'paint_shirt'),
-               C('upper',[x,21,0],[x,15.6,0],1.3,1.15,'paint_shirt'), C('fore',[x,16.2,0],[x,12.4,0],1.05,0.9,'wood'),
-               B('hand',[x,11.6,0],1.35,'wood_l',sx=0.9,sy=1.1,sz=0.9), hand])
-    legL,legR=leg(1),leg(-1); armL,armR=arm(1),arm(-1)
-    body=[C('waist',[0,12,0],[0,14.6,0],3.6,3.5,'paint_short',seg=16), C('belt',[0,14.5,0],[0,15.5,0],3.65,3.6,'paint_belt',seg=16),
-          C('chest',[0,15.4,0],[0,21.6,0],3.5,4.1,'paint_shirt',seg=16), B('shoulder_top',[0,21.6,0],4.1,'paint_shirt',sy=0.35,seg=16),
-          B('btn1',[0,19.6,-3.85],0.45,'button',seg=8,rings=6), B('btn2',[0,17.4,-3.7],0.45,'button',seg=8,rings=6),
-          C('neck',[0,22.6,0],[0,24.4,0],1.1,1.1,'wood')]
-    # 머리: 공 + 깎은 머리카락 + 긴 원뿔 코 + 동그란 눈 + 볼터치
-    hk=[B('head',[0,28,0],4.0,'wood',seg=16,rings=10), B('hair',[0,29.3,0.5],4.15,'wood_hair',seg=16,rings=10,sy=0.82,sz=0.98),
-        C('nose',[0,27.4,-3.6],[0,27.6,-3.6-nose],0.75,0.12,'wood_l',seg=10),
-        B('eye_l',[1.55,28.6,-3.45],0.85,'eye_w',seg=10,rings=6,sz=0.55), B('eye_r',[-1.55,28.6,-3.45],0.85,'eye_w',seg=10,rings=6,sz=0.55),
-        B('pupil_l',[1.55,28.5,-3.95],0.42,'eye_k',seg=8,rings=6,sz=0.5), B('pupil_r',[-1.55,28.5,-3.95],0.42,'eye_k',seg=8,rings=6,sz=0.5),
-        B('cheek_l',[2.5,26.6,-3.0],0.75,'cheek',seg=8,rings=6,sz=0.4), B('cheek_r',[-2.5,26.6,-3.0],0.75,'cheek',seg=8,rings=6,sz=0.4),
-        C('mouth',[-0.9,25.7,-3.1],[0.9,25.7,-3.1],0.24,0.24,'mouth',seg=6)]
-    head=G('head',[0,24.4,0],hk)
-    bod=G('body',[0,12,0],body+[head,armL,armR])
-    return G('root',[0,0,0],[bod,legL,legR])
+    k=[C('board',[0,3.4,-6],[0,3.4,6],0.01,0.01,'wood_dk')]   # (자리만)
+    k=[M.cube('board',S([-3,2.6,-6.5]),S([3,3.6,6.5]),'wood_dk')]
+    for x in (-3.4,3.4):
+        for z in (-4.5,4.5): k.append(C('wheel',[x-0.6,2.1,z],[x+0.6,2.1,z],1.9,1.9,'paint_shoe',seg=14))
+    for x in (-1.6,1.6):
+        for z in (-3.6,3.6): k.append(C('leg',[x,3.6,z],[x,6.4,z],0.75,0.75,'wood'))
+    k+= [C('torso',[0,8.6,5.2],[0,8.6,-5.2],3.0,3.0,'wood',seg=14), B('spot',[1.2,10.6,1.5],1.6,'wood_dk',seg=10,rings=6,sy=0.5),
+         B('collar',[0,9.2,-5.0],2.6,'paint_shoe',seg=12,rings=6,sz=0.35)]
+    hk=[B('head',[0,12.4,-6.4],3.0,'wood',seg=14,rings=8), C('snout',[0,11.6,-8.6],[0,11.5,-10.2],1.4,1.2,'wood_l',seg=10),
+        B('dnose',[0,11.9,-10.3],0.6,'eye_k',seg=8,rings=6), B('deye_l',[1.2,13.3,-8.9],0.5,'eye_k',seg=8,rings=6), B('deye_r',[-1.2,13.3,-8.9],0.5,'eye_k',seg=8,rings=6),
+        B('ear_l',[3.0,12.2,-6.2],1.3,'wood_dk',seg=10,rings=6,sx=0.45,sy=1.6), B('ear_r',[-3.0,12.2,-6.2],1.3,'wood_dk',seg=10,rings=6,sx=0.45,sy=1.6)]
+    head=G('head',[0,10.6,-5.4],hk)
+    tail=G('tail',[0,10.2,5.2],[C('tail',[0,10.2,5.2],[0,13.2,6.8],0.5,0.35,'wood',seg=8)])
+    return G('root',[0,0,0],k+[head,tail])
