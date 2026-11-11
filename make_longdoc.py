@@ -790,6 +790,14 @@ def run_doc(m, app, c, gate):
                 m.atomic_write_text(base + "_프로젝트.json", json.dumps(pj_, ensure_ascii=False, indent=1))
             except Exception:
                 pass
+    if not HISTORY and str(s.get("img_depth", "off")) != "off":   # 실화 편도 입체 움직임(2.5D) 끔 — 모든 영상에서 쓰지 않음 (사용자 결정 2026-10-30, 2026-11-11 스키타이 편에서 켜져 있던 것을 고침)
+        s["img_depth"] = "off"
+        try:
+            pj_ = json.load(open(base + "_프로젝트.json", encoding="utf-8"))
+            pj_.setdefault("settings", {})["img_depth"] = "off"
+            m.atomic_write_text(base + "_프로젝트.json", json.dumps(pj_, ensure_ascii=False, indent=1))
+        except Exception:
+            pass
     if HISTORY:                                # 역사 편: 입체 움직임(2.5D) 끔 — 그리는 효과와 겹치고 없는 게 나음 (사용자 결정 2026-10-30)
         s["img_depth"] = "off"
         s["bgm_mul"] = 0.5                     # 배경음 50% (사용자 결정 2026-10-31, 나레이션 크기는 그대로)
