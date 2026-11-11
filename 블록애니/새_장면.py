@@ -118,7 +118,7 @@ hb=bird(M,'hb_',1.0); move(M,hb,-5.9,11.2,-1.6); GAR['children'].append(hb)
 show(hb,[(4.3,4.97),(17.0,19.17),(39.45,45)]); show(part(hb,'bandage'),[(0,17.9)])
 # 어깨 위의 새 (11~13초) · 어깨 위 새끼 새 (41.2~)
 sb=bird(M,'sb_',1.0); move(M,sb,6.2,22.2,0.3); GB['children'].append(sb); show(sb,[(11.0,13.0)])
-sc=bird(M,'sc_',0.6,chick=True,bandage=False); move(M,sc,-6.2,22.2,0.3); GB['children'].append(sc); show(sc,[(41.25,45)])
+sc=bird(M,'sc_',0.6,chick=True,bandage=False); move(M,sc,-6.2,22.2,0.3); GB['children'].append(sc)
 
 gp=[(0,14,0,-8),(2.4,-12,0,-30),(4.9,-12,0,-30),            # 바위 쪽으로 걸어가 새를 들어 올림
     (5.0,-16,0,36),(10.99,-16,0,36),                            # 둥지 뒤에서 손바닥 내밀기
@@ -185,16 +185,19 @@ R(BH,[(0,(20,0,0)),(4.29,(20,0,0)),(4.3,(0,0,0))])
 
 # ---------------- 새끼 새 3마리 (39.2~) ----------------
 CH=[]
-dests=[(39.2,(NBX,NBY+8,NBZ-1),'roof'),(39.6,(NBX+3,NBY+1,NBZ-5),'sill'),(40.0,(-12,23,6.3),'shoulder')]
-for i,(t0,(x,y,z),kind) in enumerate(dests):
+# 할머니 몸에 붙는 새끼 새 자리 (머리 위·왼쪽 어깨·오른쪽 어깨) — 화면에 잘 보이게 (2026-11-11 검수: 둥지·엄마 새 뒤에 가려 안 보였음)
+GHd=part(gm,'head')
+sc2=bird(M,'sc2_',0.6,chick=True,bandage=False); move(M,sc2,6.2,22.2,0.3); GB['children'].append(sc2)
+sc3=bird(M,'sc3_',0.6,chick=True,bandage=False); move(M,sc3,0,30.3,0.5); GHd['children'].append(sc3)
+GX,GZ=-6,6     # 이때 할머니 자리
+dests=[(38.6,(GX,30.3,GZ+0.5),sc3),(39.0,(GX+6.2,22.2,GZ+0.3),sc2),(39.4,(GX-6.2,22.2,GZ+0.3),sc)]
+for i,(t0,(x,y,z),seat) in enumerate(dests):
     c=bird(M,f'ch{i}_',0.6,chick=True,bandage=False); top.append(c); CH.append(c)
-    pts=[(t0,40+i*8,72+i*4,-170),(t0+0.8,24+i*4,50,-100),(t0+1.4,x+6,y+14,z-30),(t0+2.0,x,y,z)]
+    pts=[(t0,30+i*10,70+i*4,-170),(t0+0.8,18+i*4,48,-100),(t0+1.4,x+5,y+10,z-28),(t0+2.0,x,y,z)]
     fly_path(c,pts); flap(c,t0,t0+2.0,period=0.18)
     end=t0+2.0
-    if kind=='shoulder': show(c,[(t0,end+0.05)]); show(sc,[(end+0.04,45)])
-    else:
-        show(c,[(t0,45)]); P(c,[(end+0.01,(x,y,z)),(45,(x,y,z))]); yaw(c,[(end+0.01,0),(45,0)])
-        R(part(c,'head'),[(end+0.3,(0,0,0)),(end+0.8,(0,30,0)),(end+1.4,(0,-20,0)),(45,(0,0,0))])
+    show(c,[(t0,end+0.03)]); show(seat,[(end+0.02,45)])
+    R(part(seat,'head'),[(end+0.3,(0,0,0)),(end+0.9,(0,35,0)),(end+1.6,(0,-25,0)),(end+2.4,(0,0,0)),(45,(0,0,0))])
 # 손 위 새: 끝에 고개 갸웃
 R(part(hb,'head'),[(39.5,(0,0,0)),(40.4,(0,0,15)),(41.4,(0,25,0)),(42.4,(0,0,-10)),(45,(0,0,0))])
 
