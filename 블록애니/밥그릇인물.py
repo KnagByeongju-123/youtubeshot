@@ -86,7 +86,8 @@ def dog(M, tag, s=1.0, with_bowl=False):
     hk=[c('head',[-3,10,-12],[3,16,-6.5],'dog',north='f_dog'), c('muzzle',[-1.8,10.2,-14.6],[1.8,12.8,-12],'dog'),
         c('nose',[-0.8,11.4,-15],[0.8,12.5,-14.4],'nose'), c('patch',[1.5,13,-12.1],[3.1,16.1,-8],'dog_b')]
     mouth=M.group(tag+'mouth',O([0,10.6,-14.8]),[])
-    if with_bowl: hk+= bowl_cubes(M,0,9.4*s,-15.9*s,0.7*s)
+    if with_bowl:   # 입에 문 그릇 (묶음 mbowl: 크기 0 으로 숨겼다 보였다)
+        hk+= [M.group(tag+'mbowl',O([0,10.4,-15.9]),bowl_cubes(M,0,9.4*s,-15.9*s,0.7*s,food=False))]
     head=M.group(tag+'head',O([0,11,-7]),hk+[earL,earR,mouth])
     body=M.group(tag+'body',O([0,6.5,0]),bk+[head,tail])
     return M.group(tag+'root',[0,0,0],[body]+legs)
@@ -110,9 +111,12 @@ def box(M, tag, w=10, h=8, d=10):
 def truck(M, tag):
     """작은 파란 트럭 (앞 = -z).  길이 약 70, 운전칸(앞) + 짐칸(뒤, 상자 3개).  옆 문 묶음 door_l (+x 쪽, 꼬마 자리)"""
     k=[M.cube('chassis',[-13,5,-35],[13,9,35],'truck_d'),
-       M.cube('cab',[-13,9,-35],[13,30,-12],'truck',north='truck'), M.cube('cab_roof',[-13.4,30,-34],[13.4,31.5,-12.5],'truck_d'),
-       M.cube('windshield',[-11,19,-35.3],[11,28,-34.9],'glass'), M.cube('back_window',[-10,20,-12.1],[10,27,-11.7],'glass'),
-       M.cube('win_r',[-13.3,19,-30],[-12.9,28,-17],'glass'),
+       # 운전칸: 아래 몸통 + 기둥 4개 + 지붕 (창문은 뚫려 있어 안의 사람이 보임)
+       M.cube('cab_low',[-13,9,-35],[13,19,-12],'truck'), M.cube('cab_roof',[-13.4,29,-35.4],[13.4,31.5,-12],'truck_d'),
+       M.cube('cab_back',[-13,19,-14],[13,29,-12],'truck'), M.cube('back_window',[-9,21,-12.1],[9,27,-11.7],'glass'),
+       M.cube('pillar_fl',[11,19,-35],[13,29,-33],'truck'), M.cube('pillar_fr',[-13,19,-35],[-11,29,-33],'truck'),
+       M.cube('pillar_m',[-1,19,-35],[1,29,-34],'truck_d'),
+       M.cube('seat',[-11,9,-22],[11,15,-15],'tire'), M.cube('dash',[-11,15,-34],[11,18,-31],'tire'),
        M.cube('light_l',[7,11,-35.4],[11,14,-35],'light'), M.cube('light_r',[-11,11,-35.4],[-7,14,-35],'light'),
        M.cube('bumper',[-13.5,5,-36.5],[13.5,8,-35],'tire'),
        M.cube('bed',[-13,9,-11],[13,10,35],'truck_d'),
@@ -124,9 +128,8 @@ def truck(M, tag):
     # 짐칸 상자
     for i,(x,z,w,h) in enumerate([(-6,0,10,9),(5,2,9,8),(-4,18,11,10),(5,20,8,7)]):
         k+= [M.cube('cargo',[x-w/2,10,z-w/2],[x+w/2,10+h,z+w/2],'box',up='box_t')]
-    door=M.group(tag+'door_l',[13,9,-30],[M.cube('door',[13,9,-30],[13.4,28,-17],'truck'),
-                                         M.cube('win_l',[13.3,19,-29],[13.7,27,-18],'glass'),
-                                         M.cube('handle',[13.4,17,-21],[13.9,18,-19],'tire')])
+    door=M.group(tag+'door_l',[13,9,-30],[M.cube('door',[13,9,-30],[13.4,19,-17],'truck'),
+                                         M.cube('handle',[13.4,16,-21],[13.9,17,-19],'tire')])
     seat=M.group(tag+'seat_l',[6,12,-23],[])     # 꼬마가 앉을 자리 (조수석, +x)
     seatd=M.group(tag+'seat_r',[-6,12,-23],[])   # 아빠 운전석
     return M.group(tag+'root',[0,0,0],k+[door,seat,seatd])
