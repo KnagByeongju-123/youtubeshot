@@ -50,17 +50,19 @@ class Craft:
         s.A.add(g,'scale',[(0,(0,0,0)),(t-0.02,(0,0,0)),(t,(k*0.3,)*3),(t+0.12,(k,)*3),(t+0.4,(0,0,0))]); s.A.add(g,'rotation',[(t,(0,0,0)),(t+0.4,(60,80,30))])
         return s
     def finish(s):
-        P=s.pts; A=s.A; n=len(P); yaw=s.yaw0; yk=[]; pk=[]; rk=[]
+        P=s.pts; A=s.A; n=len(P); yaw=s.yaw0
         if getattr(s,'gone',False): vis(A,s.out,[]); return
-        for i,(t,x,y,z) in enumerate(P):
-            a=P[max(0,i-1)]; b=P[min(n-1,i+1)]; dx=b[1]-a[1]; dy=b[2]-a[2]; dz=b[3]-a[3]; h=math.hypot(dx,dz)
-            if h>2:
-                ny=math.degrees(math.atan2(dx,-dz)); yaw+= (ny-yaw+180)%360-180
-            pit=-math.degrees(math.atan2(dy,max(h,1e-6))) if (h>2 or abs(dy)>2) else 0
-            yk.append((t,yaw)); pk.append((t,(-x,y,z))); rk.append((t,max(-50,min(50,pit))))
-        for i,(t,yw) in enumerate(yk):
-            d=(yk[min(n-1,i+1)][1]-yk[max(0,i-1)][1]); roll=max(-40,min(40,d*0.35)); A.add(s.out,'rotation',[(t,(0,yw,0))],'catmullrom')
-            if s.bank: A.add(s.root,'rotation',[(t,(rk[i][1],0,roll))],'catmullrom')      # 큰 함선은 기울이지 않음(bank=False)
+        pk=[(t,(-x,y,z)) for t,x,y,z in P]
+        # 방향: 길목 점마다 따로 계산하면 돌 때 덜덜 떨림(사용자 지적 2026-11-11) → 0.25초마다 '앞뒤 0.6초의 움직임'으로 방향을 재고, 1.25초 평균으로 고르게 한 뒤 촘촘한 직선 키로 넣음
+        dt=0.25; ts=[P[0][0]+k*dt for k in range(int((P[-1][0]-P[0][0])/dt)+2)]; ys=[]; ps=[]
+        for t in ts:
+            a_=s.at(t-0.6); b_=s.at(t+0.6); dx=b_[0]-a_[0]; dy=b_[1]-a_[1]; dz=b_[2]-a_[2]; h=math.hypot(dx,dz)
+            if h>1.5: yaw+= (math.degrees(math.atan2(dx,-dz))-yaw+180)%360-180
+            ys.append(yaw); ps.append(max(-45,min(45,-math.degrees(math.atan2(dy,max(h,1e-6))))) if h>1.5 else 0)
+        sm=lambda v: [sum(v[max(0,i-2):i+3])/len(v[max(0,i-2):i+3]) for i in range(len(v))]
+        ys=sm(sm(ys)); ps=sm(sm(ps)); rate=[(ys[min(len(ys)-1,i+1)]-ys[max(0,i-1)])/(2*dt) for i in range(len(ys))]; rl=sm(sm([max(-35,min(35,r*0.22)) for r in rate]))
+        A.add(s.out,'rotation',[(t,(0,ys[i],0)) for i,t in enumerate(ts)],'linear')
+        if s.bank: A.add(s.root,'rotation',[(t,(ps[i],0,rl[i])) for i,t in enumerate(ts)],'linear')      # 큰 함선은 기울이지 않음(bank=False)
         A.add(s.out,'position',pk,'catmullrom')
         sp=s.spans if s.spans is not None else [(0,L)]
         if s.dead is not None: sp=[(a,min(b,s.dead+4)) for a,b in sp if a<s.dead+4]
