@@ -17,7 +17,9 @@ const dir=process.argv[2];
   const H=await p.evaluate(()=>{try{three_grid.visible=false}catch(e){}; try{Transformer.visible=false;Transformer.detach()}catch(e){};
      Outliner.selected.length=0; try{unselectAllElements()}catch(e){}; try{updateSelection()}catch(e){};
      const P=Preview.selected; P.canvas.style.background='#ffffff';
-     let top=0,ext=0; Outliner.elements.forEach(e=>{top=Math.max(top,e.to[1]); for(const i of [0,2]) ext=Math.max(ext,Math.abs(e.from[i]),Math.abs(e.to[i]));}); return [top,ext];});
+     let top=0,ext=0; Outliner.elements.forEach(e=>{
+       let pts=e.to?[e.from,e.to]:Object.values(e.vertices||{}).map(v=>[v[0]+(e.origin?e.origin[0]:0),v[1]+(e.origin?e.origin[1]:0),v[2]+(e.origin?e.origin[2]:0)]);   // 원통(메시)은 꼭짓점으로
+       pts.forEach(q=>{top=Math.max(top,q[1]); for(const i of [0,2]) ext=Math.max(ext,Math.abs(q[i]));});}); return [top,ext];});
   const rect=await p.evaluate(()=>{const c=Preview.selected.canvas.getBoundingClientRect();return {x:c.x,y:c.y,width:c.width,height:c.height};});
   const cy=H[0]/2, dist=Math.max(H[0],H[1]*2*1.7)*4.2;   // 키와 가로 길이 중 큰 쪽에 맞춤 (트럭·강아지가 잘리지 않게)
   const views=[[0,-1],[1,0],[-1,0],[0,1]];   // 앞(-z) 옆(+x) 옆(-x) 뒤(+z)
