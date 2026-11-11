@@ -36,18 +36,20 @@ def house(n,x,z,w,d,h,wall,roof,door=True,yaw_front=-1):
     k=[C(n+'_wall',[x-w/2,0,z],[x+w/2,h,z+d],wall)]
     for i in range(4): k.append(C(n+'_roof',[x-w/2-3+i*w/8,h+i*7,z-3],[x+w/2+3-i*w/8,h+(i+1)*7,z+d+3],roof))
     fz=z if yaw_front<0 else z+d; s=-1 if yaw_front<0 else 1
-    def face(a,b,y0,y1,col):  # 앞면에 붙는 얇은 판
-        return C(n+'_f',[a,y0,min(fz,fz+s*0.6)],[b,y1,max(fz,fz+s*0.6)],col)
-    if door: k+= [face(x-6,x+6,0,22,'door'), face(x+3,x+4.5,10,12,'tire')]
+    def face(a,b,y0,y1,col,off=0.0,dep=0.6):  # 앞면에 붙는 얇은 판 (off: 벽에서 띄우기 — 겹치는 판끼리 깊이를 다르게)
+        z0,z1=fz+s*off,fz+s*(off+dep)
+        return C(n+'_f',[a,y0,min(z0,z1)],[b,y1,max(z0,z1)],col)
+    if door: k+= [face(x-6,x+6,0,22,'door'), face(x+3,x+4.5,10,12,'tire',off=0.1,dep=0.9)]
     for wx in (x-w/2+8, x+w/2-22):
         if door and abs(wx+7-x)<12: continue
-        k+= [face(wx-1,wx+15,13,29,'frame'), face(wx,wx+14,14,28,'win')]
+        k+= [face(wx-1,wx+15,13,29,'frame'), face(wx,wx+14,14,28,'win',off=0.1,dep=0.6)]
     return k
+HX=0
 cols=['wall1','wall2','wall3','wall4']; roofs=['roof1','roof2','roof3']
 i=0
 for x in range(-380,980,95):
     if x==-0: pass
-    W+= house(f'h{i}',x if x!=-0 else 0,85,70,46,34,cols[i%4],roofs[i%3])
+    if abs(x-HX)>60: W+= house(f'h{i}',x,85,70,46,34,cols[i%4],roofs[i%3])   # 주인공 집 자리는 비움 (겹치면 벽이 깜빡임)
     W+= house(f'g{i}',x+40,-160,64,44,32,cols[(i+2)%4],roofs[(i+1)%3],yaw_front=1)
     i+=1
 # 주인공 집 (x 0): 문 앞 계단 + 담장 (문 앞만 열림)
@@ -64,7 +66,7 @@ for j,x in enumerate(range(-330,980,75)):
     W+= tree(f'tq{j}',x+30,-75,36+(j%2)*8)
 # 강아지 비 피하는 상자 (옆으로 눕힌 상자, 입구가 -x 쪽)
 BX,BZ=-66,30
-W+= [C('shelter_top',[BX-9,14,BZ-9],[BX+9,15,BZ+9],'box',up='box_t'), C('shelter_back',[BX+8,0,BZ-9],[BX+9,15,BZ+9],'box'),
+W+= [C('shelter_top',[BX-9.1,14,BZ-9.1],[BX+9.1,15.1,BZ+9.1],'box',up='box_t'), C('shelter_back',[BX+8,0,BZ-8],[BX+9,15,BZ+8],'box'),
      C('shelter_s',[BX-9,0,BZ+8],[BX+9,15,BZ+9],'box'), C('shelter_n',[BX-9,0,BZ-9],[BX+9,15,BZ-8],'box'),
      C('shelter_b',[BX-9,0,BZ-9],[BX+9,0.6,BZ+9],'box_t')]
 top.append(M.group('world',[0,0,0],W))

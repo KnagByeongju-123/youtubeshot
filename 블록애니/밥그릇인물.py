@@ -50,8 +50,8 @@ def person(M, tag, kind='kid', s=1.0):
     else:           top,top_d,pt,sh,fc='shirt','shirt_d','pants','shoe','f_dad'
     legL=M.group(tag+'leg_left',O([2,12,0]),[c('leg',[0,2,-2],[4,12,2],pt), c('shoe',[-0.2,0,-2.8],[4.2,2.4 if kind=='kid' else 1.6,2.2],sh)])
     legR=M.group(tag+'leg_right',O([-2,12,0]),[c('leg',[-4,2,-2],[0,12,2],pt), c('shoe',[-4.2,0,-2.8],[0.2,2.4 if kind=='kid' else 1.6,2.2],sh)])
-    armL_k=[c('sleeve',[4,15,-2.2],[8.2,24,2.2],top), c('hand',[4.6,12,-1.6],[7.6,15,1.6],'skin')]
-    armR_k=[c('sleeve',[-8.2,15,-2.2],[-4,24,2.2],top), c('hand',[-7.6,12,-1.6],[-4.6,15,1.6],'skin')]
+    armL_k=[c('sleeve',[4.2,15,-2.2],[8.2,24,2.2],top), c('hand',[4.6,12,-1.6],[7.6,15,1.6],'skin')]
+    armR_k=[c('sleeve',[-8.2,15,-2.2],[-4.2,24,2.2],top), c('hand',[-7.6,12,-1.6],[-4.6,15,1.6],'skin')]
     hl=M.group(tag+'hand_l',O([6,12.5,0]),[]); hr=M.group(tag+'hand_r',O([-6,12.5,0]),[])
     armL=M.group(tag+'arm_left',O([6,22,0]),armL_k+[hl]); armR=M.group(tag+'arm_right',O([-6,22,0]),armR_k+[hr])
     body=[c('torso',[-4.2,12,-2.2],[4.2,24,2.2],top)]
@@ -61,8 +61,8 @@ def person(M, tag, kind='kid', s=1.0):
     else:             # 셔츠 깃 + 허리띠
         body+= [c('collar',[-2,22.6,-2.5],[2,24,-2.3],'white'), c('belt',[-4.4,12,-2.4],[4.4,13.2,2.4],'shoe')]
     hk=[c('head',[-4,24,-4],[4,32,4],'skin',north=fc,up='hair',south='hair'),
-        c('hair_back',[-4.2,25.5,1.2],[4.2,32.2,4.2],'hair'), c('hair_top',[-4.2,31.2,-4.2],[4.2,32.4,4.2],'hair'),
-        c('hair_side_l',[3.9,28,-1],[4.2,32,4],'hair'), c('hair_side_r',[-4.2,28,-1],[-3.9,32,4],'hair')]
+        c('hair_back',[-4.2,25.5,1.2],[4.2,32.2,4.2],'hair'), c('hair_top',[-4.25,31.2,-4.25],[4.25,32.4,4.25],'hair'),
+        c('hair_side_l',[3.95,28,-1],[4.3,32,3.9],'hair'), c('hair_side_r',[-4.3,28,-1],[-3.95,32,3.9],'hair')]
     if kind=='kid':   # 빨간 야구 모자 (챙은 앞으로)
         hk+= [c('cap',[-4.4,30,-4.4],[4.4,33.4,4.4],'cap'), c('cap_brim',[-4.2,30,-8],[4.2,30.8,-4.4],'cap_d')]
     head=M.group(tag+'head',O([0,24,0]),hk)
@@ -75,7 +75,7 @@ def dog(M, tag, s=1.0, with_bowl=False):
     O=lambda v:[x*s for x in v]
     def leg(n,x,z):
         return M.group(tag+n,O([x,4,z]),[c('leg',[x-1.2,0,z-1.2],[x+1.2,4,z+1.2],'dog',down='dog_d'),
-                                         c('paw',[x-1.4,0,z-1.6],[x+1.4,0.9,z+1.2],'dog_d')])
+                                         c('paw',[x-1.4,0,z-1.6],[x+1.4,0.9,z+1.3],'dog_d')])
     legs=[leg('leg_fl',2,-4.5),leg('leg_fr',-2,-4.5),leg('leg_bl',2,4.5),leg('leg_br',-2,4.5)]
     bk=[c('torso',[-3.2,4,-6.5],[3.2,9.5,6.5],'dog',down='dog_d'), c('spot',[-3.3,7.5,0],[3.3,9.7,5],'dog_b'),
         c('chest',[-2.6,6,-8],[2.6,10.5,-5],'dog')]
@@ -121,7 +121,7 @@ def truck(M, tag):
        M.cube('bumper',[-13.5,5,-36.5],[13.5,8,-35],'tire'),
        M.cube('bed',[-13,9,-11],[13,10,35],'truck_d'),
        M.cube('bed_l',[12,10,-11],[13,17,35],'truck'), M.cube('bed_r',[-13,10,-11],[-12,17,35],'truck'),
-       M.cube('bed_back',[-13,10,34],[13,17,35],'truck'), M.cube('bed_front',[-13,10,-12],[13,19,-11],'truck')]
+       M.cube('bed_back',[-13.05,10,34],[13.05,17,35.05],'truck'), M.cube('bed_front',[-13,10,-12],[13,19,-11],'truck')]
     for z in (-24,22):
         for x,(a,b) in ((1,(12.5,15.5)),(-1,(-15.5,-12.5))):
             k+= [M.cube('tire',[a,0,z-5],[b,10,z+5],'tire',east='hub' if x>0 else 'tire',west='hub' if x<0 else 'tire')]

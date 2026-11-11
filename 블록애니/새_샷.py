@@ -24,7 +24,11 @@ S=[
  dict(name='s17_등대',t0=42.0,t1=45.0,sky=GOLD,cam=C((0,[3,27,-38],[-10,20,15]),(0.3,[2,30,-48],[-6,22,12]),(1,[14,60,-110],[22,44,40]))),
 ]
 for s in S: s.setdefault('set','A'); s.setdefault('fps',24)
-LONG_FIX={}
+LONG_FIX={   # 가로 화면에서 위가 잘리는 샷
+ 's01_바닷가': dict(cam=C((0,[-40,22,-74],[-12,12,-26]),(1,[-38,21,-72],[-14,12,-30]))),
+ 's04_먹이': dict(cam=C((0,[-15,18,4],[-16,17,28]),(1,[-15,18,6],[-16,17,28]))),
+ 's11_겨울': dict(cam=C((0,[30,44,-110],[64,64,70]),(1,[26,44,-104],[62,64,70]))),
+}
 if LONG:
     for sh in S: sh.update(LONG_FIX.get(sh['name'],{}))
     json.dump({'aspect':'16:9','fov':34,'shots':S},open('/home/user/youtubeshot/연재/돌아온새/장면/샷목록_롱폼.json','w',encoding='utf-8'),ensure_ascii=False,indent=1)

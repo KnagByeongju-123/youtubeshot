@@ -65,7 +65,7 @@ for x in range(-300,300,60):
     W.append(C('sand',[x,-3,-72],[x+60,-0.2,-20],'sand'))
     for z in range(-20,300,60): W.append(C('grass',[x,-3,z],[x+60,0,z+60],'grass' if ((x+z)//60)%2 else 'grass_d'))
 # 오두막까지 흙길
-for z in range(-20,40,8): W.append(C('path',[-36,-3,z],[-24,0.15,z+8],'path'))
+for z in range(-20,40,8): W.append(C('path',[-36,-2.9,z+0.05],[-24,0.15,z+8],'path'))
 # 바위
 ROCKS=[(-20,-40,10,6,8),(-34,-48,14,9,10),(-6,-52,8,5,7),(40,-46,12,7,9),(60,-56,16,10,10)]
 for i,(x,z,w,h,d) in enumerate(ROCKS):
@@ -95,9 +95,9 @@ for x in range(-300,300,60):
     S.append(C('snow_s',[x,-0.2,-72],[x+60,0.3,-20],'snow'))
 for i in range(4):   # 오두막 지붕 층마다 위에 눈
     S.append(C('snow_roof',[-30-28+i*5-0.3,26+(i+1)*5,37-0.3],[-30+28-i*5+0.3,26+(i+1)*5+1.2,79+0.3],'snow'))
-S+= [C('snow_bench',[BX-12,6,BZ-3],[BX+12,7,BZ+3],'snow'), C('snow_nb',[NBX-7,NBY+7,NBZ-5],[NBX+7,NBY+8,NBZ+5],'snow'),
+S+= [C('snow_bench',[BX-12,6,BZ-3],[BX+12,7,BZ+1.9],'snow'), C('snow_nb',[NBX-7,NBY+7,NBZ-5],[NBX+7,NBY+8,NBZ+5],'snow'),
      C('snow_lhbal',[57,112,57],[83,113,83],'snow'), C('snow_lhroof',[60,127,60],[80,128,80],'snow')]
-for i,(x,z) in enumerate(PINES): S+= [C('snow_p',[x-6,30,z-6],[x+6,33,z+6],'snow'), C('snow_p2',[x-3,48,z-3],[x+3,50,z+3],'snow')]
+for i,(x,z) in enumerate(PINES): S+= [C('snow_p',[x-6.3,30,z-6.3],[x+6.3,33,z+6.3],'snow'), C('snow_p2',[x-3,48,z-3],[x+3,50,z+3],'snow')]
 for x,z,w,h,d in ROCKS: S.append(C('snow_r',[x-w/2,h,z-d/2],[x+w/2,h+0.8,z+d/2],'snow'))
 S.append(C('snow_far',[-3000,-0.3,-70],[3000,0.1,3000],'snow'))   # 먼 땅까지 눈
 SNOW=M.group('snow',[0,0,0],S); top.append(SNOW); show(SNOW,[(23.0,31.0)])
@@ -180,7 +180,7 @@ fly_path(bd,fp); flap(bd,19.2,23.0)
 # 돌아옴 (37~39.45): 바다 위 → 할머니 손
 fr=[(36.9,30,70,-170),(37.6,20,56,-110),(38.4,8,38,-50),(39.0,-2,26,-18),(39.44,-11.9,20.5,-4.5)]
 fly_path(bd,fr); flap(bd,36.9,39.3)
-show(bd,[(0,23.0),(36.9,39.45)])
+show(bd,[(0,4.3),(5.0,10.97),(13.01,16.97),(19.2,23.0),(36.9,39.45)])   # 손·어깨 위에 있을 땐 숨김 (두 마리로 보이지 않게)
 R(BH,[(0,(20,0,0)),(4.29,(20,0,0)),(4.3,(0,0,0))])
 
 # ---------------- 새끼 새 3마리 (39.2~) ----------------

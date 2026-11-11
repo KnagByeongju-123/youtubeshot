@@ -45,7 +45,7 @@ def grandma(M, tag, s=1.0):
     sh=M.group(tag+'shoulder_l',O([6,22.2,0]),[])
     hk=[c('head',[-3.8,22,-3.8],[3.8,29.6,3.8],'skin',north='f_grandma',up='hair_w',south='hair_w'),
         c('hair_back',[-4,23.5,1],[4,29.8,4],'hair_w'), c('hair_top',[-4,29,-4],[4,30.2,4],'hair_w'),
-        c('hair_side_l',[3.7,25,-1.5],[4,29.8,4],'hair_w'), c('hair_side_r',[-4,25,-1.5],[-3.7,29.8,4],'hair_w'),
+        c('hair_side_l',[3.75,25,-1.5],[4.1,29.7,3.9],'hair_w'), c('hair_side_r',[-4.1,25,-1.5],[-3.75,29.7,3.9],'hair_w'),
         c('bun',[-2,26,3.8],[2,30,6.5],'hair_w')]
     head=M.group(tag+'head',O([0,22,0]),hk)
     bod=M.group(tag+'body',O([0,10,0]),body+[head,armL,armR,sh])
@@ -72,9 +72,9 @@ def bird(M, tag, s=1.0, chick=False, bandage=True):
 
 def nest_box(M, tag):
     """창가 나무 둥지 상자 (짚이 깔림, 앞이 열려 있음).  폭 12"""
-    k=[M.cube('nb_base',[-6,0,-4],[6,1,4],'wood_d'), M.cube('nb_back',[-6,1,3],[6,6,4],'wood'),
-       M.cube('nb_l',[5,1,-4],[6,6,4],'wood'), M.cube('nb_r',[-6,1,-4],[-5,6,4],'wood'),
-       M.cube('nb_front',[-6,1,-4],[6,2.5,-3],'wood'), M.cube('nb_roof',[-7,6,-5],[7,7,5],'wood_d'),
+    k=[M.cube('nb_base',[-6,0,-4],[6,1,4],'wood_d'), M.cube('nb_back',[-5.95,1,3],[5.95,6,4],'wood'),
+       M.cube('nb_l',[5,1,-4],[6,6,3.9],'wood'), M.cube('nb_r',[-6,1,-4],[-5,6,3.9],'wood'),
+       M.cube('nb_front',[-5.95,1,-3.95],[5.95,2.5,-3],'wood'), M.cube('nb_roof',[-7,6,-5],[7,7,5],'wood_d'),
        M.cube('nb_straw',[-5,1,-3],[5,2,3],'straw')]
     return M.group(tag+'root',[0,0,0],k)
 
