@@ -111,11 +111,12 @@ def station(M,tag,R=120):
 def mothership(M,tag,cell=130,nx=13,ny=5,nz=7):
     """초대형 외계 모함: 납작한 타원 덩어리(칸마다 조각) + 앞면 한가운데 빛나는 세로 틈(아가리) + 위아래로 솟은 가시들. 중심 = 원점, 앞 = -z"""
     s=Ship(M,tag); r=random.Random(7); cx,cy,cz=(nx-1)/2,(ny-1)/2,(nz-1)/2; tex=['hull_a','hull_a2','hull_a3']
+    inside=lambda i,j,k: 0<=i<nx and 0<=j<ny and 0<=k<nz and ((i-cx)/(nx/2))**2+((j-cy)/(ny/2))**2*0.9+((k-cz)/(nz/2))**2<=1.02
     for i in range(nx):
         for j in range(ny):
             for k in range(nz):
-                u=(i-cx)/(nx/2); v=(j-cy)/(ny/2); w=(k-cz)/(nz/2)
-                if u*u+v*v*0.9+w*w>1.02: continue
+                if not inside(i,j,k): continue
+                if all(inside(i+a,j+b,k+c) for a,b,c in ((1,0,0),(-1,0,0),(0,1,0),(0,-1,0),(0,0,1),(0,0,-1))) and not (i==int(cx) and k<=2): continue      # 속은 비움 (안 보이는 블록을 그리느라 촬영이 느려짐)
                 x0=(i-nx/2)*cell; y0=(j-ny/2)*cell; z0=(k-nz/2)*cell
                 if i==int(cx) and k<=1 and 1<=j<=ny-2: s.cube([x0+cell*0.2,y0,z0+cell*0.6],[x0+cell*0.8,y0+cell,z0+cell],'maw'); continue       # 아가리: 안쪽으로 들어간 빛
                 g=r.uniform(-10,10); t=tex[(i*3+j*5+k*7)%3]; s.cube([x0,y0,z0+ (g if k==0 else 0)],[x0+cell,y0+cell,z0+cell],t)
@@ -151,8 +152,14 @@ def planet_cap(M,name,c,R,h,step=40,seed=1,patches=70):
     """아주 큰 행성의 윗부분만 (둥근 지평선이 보이게): 얇은 원판을 잘게 쌓고, 그 위에 납작한 땅·구름 조각을 얹음. c=중심, h=만드는 두께"""
     r=random.Random(seed); cx,cy,cz=c; k=[]; y=R-h; i=0
     while y<R-1e-6:
-        ym=y+step/2; w=math.sqrt(max(0,R*R-ym*ym)); col='sea' if i%2 else 'sea2'
-        k.append(M.cube(name,[cx-w,cy+y,cz-w*0.72],[cx+w,cy+y+step,cz+w*0.72],col)); k.append(M.cube(name,[cx-w*0.72,cy+y,cz-w],[cx+w*0.72,cy+y+step,cz+w],col)); y+=step; i+=1
+        ym=y+step/2; w=math.sqrt(max(0,R*R-ym*ym)); col='sea' if i%2 else 'sea2'; y1=cy+y; y2=cy+y+step; yn=y+step*1.5
+        if yn<R:       # 위층에 가려 안 보이는 안쪽은 도려낸 고리로 (겉모습은 같고, 그릴 넓이가 1/4 → 촬영이 빨라짐)
+            v=math.sqrt(max(0,R*R-yn*yn))*0.985; a_=0.72
+            for fr,to in (([-w,-a_*w],[-v,a_*w]),([v,-a_*w],[w,a_*w]),([-v,a_*v],[v,a_*w]),([-v,-a_*w],[v,-a_*v]),([-a_*w,a_*w],[a_*w,w]),([-a_*w,-w],[a_*w,-a_*w])):
+                if to[0]-fr[0]>1 and to[1]-fr[1]>1: k.append(M.cube(name,[cx+fr[0],y1,cz+fr[1]],[cx+to[0],y2,cz+to[1]],col))
+        else:
+            k.append(M.cube(name,[cx-w,y1,cz-w*0.72],[cx+w,y2,cz+w*0.72],col)); k.append(M.cube(name,[cx-w*0.72,y1,cz-w],[cx+w*0.72,y2,cz+w],col))
+        y+=step; i+=1
     dmax=math.sqrt(R*R-(R-h)**2)*0.92
     for j in range(patches):
         a=r.uniform(0,6.283); d=dmax*math.sqrt(r.random()); px=cx+d*math.cos(a); pz=cz+d*math.sin(a); top=cy+math.sqrt(R*R-d*d); cloud=(j%4==0)
