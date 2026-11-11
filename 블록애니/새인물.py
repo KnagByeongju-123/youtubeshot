@@ -71,11 +71,11 @@ def bird(M, tag, s=1.0, chick=False, bandage=True):
     return M.group(tag+'root',[0,0,0],[body]+legs)
 
 def nest_box(M, tag):
-    """창가 나무 둥지 상자 (짚이 깔림, 앞이 열려 있음).  폭 12"""
-    k=[M.cube('nb_base',[-6,0,-4],[6,1,4],'wood_d'), M.cube('nb_back',[-5.95,1,3],[5.95,6,4],'wood'),
-       M.cube('nb_l',[5,1,-4],[6,6,3.9],'wood'), M.cube('nb_r',[-6,1,-4],[-5,6,3.9],'wood'),
-       M.cube('nb_front',[-5.95,1,-3.95],[5.95,2.5,-3],'wood'), M.cube('nb_roof',[-7,6,-5],[7,7,5],'wood_d'),
-       M.cube('nb_straw',[-5,1,-3],[5,2,3],'straw')]
+    """나무 둥지 바구니 (위가 열림 — 새 머리가 지붕을 뚫지 않게, 손이 뒷벽 위로 넘어 들어오게).  폭 12, 뒷벽 높이 5"""
+    k=[M.cube('nb_base',[-6,0,-4],[6,1,4],'wood_d'), M.cube('nb_back',[-5.95,1,3],[5.95,5,4],'wood'),
+       M.cube('nb_l',[5,1,-4],[6,3.5,3.9],'wood'), M.cube('nb_r',[-6,1,-4],[-5,3.5,3.9],'wood'),
+       M.cube('nb_front',[-5.95,1,-3.95],[5.95,2.5,-3],'wood'),
+       M.cube('nb_straw',[-5,1,-3],[5,2,3],'straw'), M.cube('nb_seed',[-2,2,-2.5],[1,2.3,-0.5],'beak')]
     return M.group(tag+'root',[0,0,0],k)
 
 def lighthouse(M, tag, H=110):
