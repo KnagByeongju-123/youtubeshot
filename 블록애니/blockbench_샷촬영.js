@@ -8,7 +8,8 @@ const want=(only&&only!=='all')?only.split(','):null;
 const shots=all.shots.filter(s=>!want||want.includes(s.name));
 (async()=>{
  const b=await chromium.launch({args:['--use-gl=swiftshader','--enable-unsafe-swiftshader']});
- const p=await b.newPage({viewport:{width:1600,height:1100}});
+ const VERT=all.aspect==='9:16';   // 세로 쇼츠
+ const p=await b.newPage({viewport:VERT?{width:1300,height:2000}:{width:1600,height:1100}});
  p.on('pageerror',e=>console.log('ERR',e.message));
  await p.goto('https://web.blockbench.net/',{waitUntil:'load',timeout:120000});
  await p.waitForFunction(()=>window.Codecs&&window.Codecs.project,{timeout:120000});
@@ -27,17 +28,17 @@ const shots=all.shots.filter(s=>!want||want.includes(s.name));
       try{unselectAllElements()}catch(e){}; Animation.all[0].select();});
    await p.waitForTimeout(500);
    const rect=await p.evaluate(()=>{const c=Preview.selected.canvas.getBoundingClientRect();return {x:c.x,y:c.y,width:c.width,height:c.height};});
-   let w=rect.width,h=Math.round(w*9/16); if(h>rect.height){h=rect.height;w=Math.round(h*16/9);}
+   const AR=VERT?9/16:16/9; let w=rect.width,h=Math.round(w/AR); if(h>rect.height){h=rect.height;w=Math.round(h*AR);}
    clip={x:Math.round(rect.x+(rect.width-w)/2),y:Math.round(rect.y+(rect.height-h)/2),width:w,height:h};
    loaded=sh.set; console.log('set',sh.set,JSON.stringify(clip));
   }
   const ropes=(sh.ropes===false)?[]:(info[sh.set]&&info[sh.set].ropes)||[];
-  await p.evaluate(([sky,view,nr,only])=>{const P=Preview.selected;
-     P.canvas.style.background=`linear-gradient(${sky.join(',')})`; P.camera.fov=38; P.camera.updateProjectionMatrix();
+  await p.evaluate(([sky,view,nr,only,fov])=>{const P=Preview.selected;
+     P.canvas.style.background=`linear-gradient(${sky.join(',')})`; P.camera.fov=fov; P.camera.updateProjectionMatrix();
      try{ BarItems.view_mode.set(view||'textured'); BarItems.view_mode.onChange && BarItems.view_mode.onChange(); }catch(e){ try{Project.view_mode=view||'textured'; Canvas.updateAllFaces();}catch(e2){} }
      Cube.all.forEach(c=>{ let ok=!only, q=c.parent; while(q && typeof q==='object'){ if(q.name===only) ok=true; q=q.parent; } c.mesh.visible=ok; });
      Cube.all.filter(c=>c.name.startsWith('rope_')).forEach((c,i)=>{c.mesh.visible=i<nr;});
-  },[sh.sky||['#6fbcf5','#d6f0ff'],sh.view,ropes.length,sh.only||null]);
+  },[sh.sky||['#6fbcf5','#d6f0ff'],sh.view,ropes.length,sh.only||null,sh.fov||(VERT?50:38)]);
   const dir=path.join(outDir,sh.name); fs.mkdirSync(dir,{recursive:true});
   const n=Math.max(1,Math.round((sh.t1-sh.t0)*sh.fps));
   const idx=testFlag?[0,Math.floor(n/3),Math.floor(2*n/3),n-1]:[...Array(n).keys()];
