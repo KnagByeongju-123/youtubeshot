@@ -11,7 +11,8 @@ const dir=process.argv[2];
   const txt=fs.readFileSync(path.join(dir,f),'utf8');
   await p.evaluate((t)=>{ if(window.Project) try{Project.close(true)}catch(e){}; loadModelFile({content:t,path:'m.bbmodel',name:'m.bbmodel'});},txt);
   await p.waitForTimeout(2500);
-  await p.evaluate(()=>{try{BarItems.toggle_sidebars.click()}catch(e){}});
+  // 옆 메뉴 숨기기는 한 번만 (매번 누르면 숨김·보임이 번갈아 화면 폭이 바뀌어 긴 모형이 잘림)
+  if(!global.__sb){ await p.evaluate(()=>{try{BarItems.toggle_sidebars.click()}catch(e){}}); global.__sb=1; }
   await p.waitForTimeout(800);
   await p.addStyleTag({content:'.preview_menu,.preview_view_mode_menu,.orbit_gizmo,.preview_options,.preview_tool_bar{display:none!important}'});
   const H=await p.evaluate(()=>{try{three_grid.visible=false}catch(e){}; try{Transformer.visible=false;Transformer.detach()}catch(e){};
@@ -19,7 +20,9 @@ const dir=process.argv[2];
      const P=Preview.selected; P.canvas.style.background='#ffffff';
      let top=0; Outliner.elements.forEach(e=>{top=Math.max(top,e.to[1])}); return top;});
   const rect=await p.evaluate(()=>{const c=Preview.selected.canvas.getBoundingClientRect();return {x:c.x,y:c.y,width:c.width,height:c.height};});
-  const cy=H/2, dist=H*4.2;
+  // 옆으로 긴 모형(개 등)도 잘리지 않게: 높이와 가로 길이 중 큰 것에 맞춤
+  const EXT=await p.evaluate(()=>{let m=0; Outliner.elements.forEach(e=>{m=Math.max(m,Math.abs(e.from[0]),Math.abs(e.to[0]),Math.abs(e.from[2]),Math.abs(e.to[2]))}); return m;});
+  const cy=H/2, dist=Math.max(H, EXT*2*1.08)*4.2;
   const views=[[0,-1],[1,0],[-1,0],[0,1]];   // 앞(-z) 옆(+x) 옆(-x) 뒤(+z)
   for(let i=0;i<4;i++){
    await p.evaluate(([vx,vz,cy,dist])=>{const P=Preview.selected; P.camera.fov=14; P.camera.updateProjectionMatrix();
