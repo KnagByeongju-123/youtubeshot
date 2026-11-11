@@ -142,8 +142,9 @@ def truck(M, tag):
 
 
 def ball(M, tag, r=2.2):
-    """빨간 공 (흰 줄 하나).  중심이 묶음 원점, 바닥에 놓으려면 y = r"""
-    k=[M.cube('ball',[-r,-r,-r],[r,r,r],'ball'), M.cube('ball_x',[-r*0.7,-r*0.7,-r-0.05],[r*0.7,r*0.7,r+0.05],'ball'),
-       M.cube('ball_y',[-r-0.05,-r*0.7,-r*0.7],[r+0.05,r*0.7,r*0.7],'ball'), M.cube('ball_z',[-r*0.7,-r-0.05,-r*0.7],[r*0.7,r+0.05,r*0.7],'ball'),
-       M.cube('ball_line',[-r-0.1,-0.35,-r-0.1],[r+0.1,0.35,r+0.1],'ball_w')]
+    """빨간 공: 블록 세 겹을 엇갈려 둥글게 + 흰 줄.  중심이 묶음 원점, 바닥에 놓으려면 y = r"""
+    q=r*0.62
+    k=[M.cube('ball_x',[-r,-q,-q],[r,q,q],'ball'), M.cube('ball_y',[-q,-r,-q],[q,r,q],'ball'), M.cube('ball_z',[-q,-q,-r],[q,q,r],'ball'),
+       M.cube('ball_c',[-r*0.86,-r*0.86,-r*0.86],[r*0.86,r*0.86,r*0.86],'ball'),
+       M.cube('ball_line',[-r*0.88,-0.3,-r*0.88],[r*0.88,0.3,r*0.88],'ball_w')]
     return M.group(tag+'root',[0,0,0],k)
