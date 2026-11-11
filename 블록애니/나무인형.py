@@ -75,9 +75,10 @@ def palette(M):
     M.swatch('paint_pants',wood_fn((95,95,100),(70,70,75),10),3); M.swatch('paint_cap',wood_fn((70,110,150),(50,85,120),11),3)
     M.swatch('wood_grey',wood_fn((205,200,190),(165,160,150),12),3); M.swatch('wood_dk',wood_fn((150,100,58),(105,68,38),13),3)
 
-def doll(M, tag, s=1.0, nose=1.8, kind='boy'):
+def doll(M, tag, s=1.0, nose=1.8, kind='boy', extra_arms=()):
     """오리지널 나무 인형.  팔·다리는 블록 인물처럼 통째로 흔들림.  nose: 코 길이(짧고 끝이 둥글게)
-       kind: boy(나무 소년) / girl(나무 소녀: 원피스·양갈래) / grandpa(목수 할아버지: 수염·털모자·앞치마·긴 바지)"""
+       kind: boy(나무 소년) / girl(나무 소녀: 원피스·양갈래) / grandpa(목수 할아버지: 수염·털모자·앞치마·긴 바지)
+       extra_arms: 갈아 끼울 팔 [(쪽 'l'|'r', 소매 색, 짧은 소매?)] → 묶음 arm_left2 / arm_right2 (처음엔 숨겨 두고 장면에서 보이게)"""
     S=lambda p:[x*s for x in p]
     def C(n,a,b,r0,r1,col,seg=12): return cyl(M,n,S(a),S(b),r0*s,r1*s,col,seg)
     def B(n,c,r,col,**k): return sphere(M,n,S(c),r*s,col,**k)
@@ -94,14 +95,16 @@ def doll(M, tag, s=1.0, nose=1.8, kind='boy'):
         else:               k+= [C('pants',[x,12.2,0],[x,2.2,0],1.9,1.65,bottom)]
         k.append(B('shoe',[x,1.2,-0.8],2.0,shoe,sx=0.95,sy=0.62,sz=1.45))
         return G('leg_'+('left' if side>0 else 'right'),[x,12,0],k)
-    def arm(side):
-        x=5.4*side; n='l' if side>0 else 'r'
+    def arm(side, col=None, short=None, suffix=''):
+        col=col or shirt; short=(kind=='girl') if short is None else short
+        x=5.4*side; n=('l' if side>0 else 'r')+suffix
         hand=G('hand_'+n,[x,11.2,0],[])
-        sleeve_end=18.0 if kind=='girl' else 15.6
-        return G('arm_'+('left' if side>0 else 'right'),[x,21.5,0],[B('shoulder',[x,21.4,0],1.6,shirt),
-               C('upper',[x,21,0],[x,sleeve_end,0],1.3,1.15,shirt), C('fore',[x,sleeve_end+0.6,0],[x,12.4,0],1.05,0.9,'wood'),
+        sleeve_end=18.0 if short else 15.6
+        return G('arm_'+('left' if side>0 else 'right')+suffix,[x,21.5,0],[B('shoulder',[x,21.4,0],1.6,col),
+               C('upper',[x,21,0],[x,sleeve_end,0],1.3,1.15,col), C('fore',[x,sleeve_end+0.6,0],[x,12.4,0],1.05,0.9,'wood'),
                B('hand',[x,11.6,0],1.35,'wood_l',sx=0.9,sy=1.1,sz=0.9), hand])
     legL,legR=leg(1),leg(-1); armL,armR=arm(1),arm(-1)
+    extras=[arm(1 if sd=='l' else -1, col, sh, '2') for sd,col,sh in extra_arms]
     if kind=='girl':    # 원피스: 위는 몸통, 아래는 퍼지는 치마
         body=[C('chest',[0,14.6,0],[0,21.6,0],3.4,4.0,shirt,seg=16), C('skirt',[0,15.0,0],[0,8.4,0],3.5,5.4,shirt,seg=18),
               C('collar',[0,21.2,0],[0,22.0,0],2.2,1.6,'paint_sock',seg=12)]
@@ -130,7 +133,7 @@ def doll(M, tag, s=1.0, nose=1.8, kind='boy'):
               B('side_hair_l',[3.5,27.4,1.8],1.05,'wood_grey',seg=10,rings=6,sx=0.8,sz=1.3), B('side_hair_r',[-3.5,27.4,1.8],1.05,'wood_grey',seg=10,rings=6,sx=0.8,sz=1.3), B('back_hair',[0,27.2,3.2],2.6,'wood_grey',seg=12,rings=6,sy=0.55,sz=0.5),   # 귀 뒤·뒤통수 흰머리 (얼굴 옆을 가리지 않게)
               B('beard',[0,24.9,-2.4],2.7,'wood_grey',seg=12,rings=8,sx=1.15,sy=1.05,sz=0.7), B('mustache',[0,26.4,-3.55],1.5,'wood_grey',seg=10,rings=6,sx=1.3,sy=0.45,sz=0.5)]
     head=G('head',[0,24.4,0],hk)
-    bod=G('body',[0,12,0],body+[head,armL,armR])
+    bod=G('body',[0,12,0],body+[head,armL,armR]+extras)
     return G('root',[0,0,0],[bod,legL,legR])
 
 def wood_dog(M, tag, s=1.0):
@@ -153,3 +156,13 @@ def wood_dog(M, tag, s=1.0):
     head=G('head',[0,10.6,-5.4],hk)
     tail=G('tail',[0,10.2,5.2],[C('tail',[0,10.2,5.2],[0,13.2,6.8],0.5,0.35,'wood',seg=8)])
     return G('root',[0,0,0],k+[head,tail])
+
+
+def loose_arm(M, tag, top, bottom, col, short=False, s=1.0, pieces=1):
+    """몸에서 떨어진 팔 (소품).  top → bottom 방향으로 어깨~손.  pieces=2 면 팔꿈치에서 두 동강 (묶음 tag+'up', tag+'low')"""
+    def P(t): return [top[i]+(bottom[i]-top[i])*t for i in range(3)]
+    L=math.dist(top,bottom); k=(21.4-(18.0 if short else 15.6))/9.8   # 소매 끝 비율
+    up=[sphere(M,'l_sh',top,1.6*s,col), cyl(M,'l_up',top,P(k),1.3*s,1.15*s,col)]
+    low=[cyl(M,'l_fore',P(k+0.06),P(0.92),1.05*s,0.9*s,'wood'), sphere(M,'l_hand',bottom,1.35*s,'wood_l')]
+    if pieces==1: return M.group(tag+'root',top,up+low)
+    return M.group(tag+'up',top,up), M.group(tag+'low',P(k),low)

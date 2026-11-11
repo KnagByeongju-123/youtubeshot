@@ -31,13 +31,21 @@ def snow_frame(im, k):
         d.ellipse([xx-r,yy-r,xx+r,yy+r],fill=(255,255,255,210))
     return Image.alpha_composite(im.convert('RGBA'),lay).convert('RGB')
 
+def night_frame(im, k):
+    """밤: 어둡고 푸르게 + 가운데(전등 아래)는 덜 어둡게"""
+    a=np.asarray(im).astype(np.float32)
+    yy,xx=np.mgrid[0:H,0:W]; r=np.sqrt(((xx-W/2)/(W*0.6))**2+((yy-H*0.45)/(H*0.55))**2)
+    light=np.clip(1.0-r,0,1)[...,None]*0.45+0.38
+    a=a*light*np.array([0.82,0.88,1.12])+np.array([4,6,16])
+    return Image.fromarray(np.clip(a,0,255).astype(np.uint8))
+
 parts=[]; k=0
 for sh in shots:
     d=os.path.join(fdir,sh['name']); n=round((sh['t1']-sh['t0'])*sh['fps']); o=os.path.join(work,sh['name']+'.mp4')
     src=d
-    fx=rain_frame if sh.get('rain') else snow_frame if sh.get('snow') else None
+    fx=rain_frame if sh.get('rain') else snow_frame if sh.get('snow') else night_frame if sh.get('night') else None
     if fx:   # 비·눈 장면: 사진마다 빗줄기·눈송이를 그려 넣음
-        src=os.path.join(work,sh['name']+('_비' if sh.get('rain') else '_눈')); os.makedirs(src,exist_ok=True)
+        src=os.path.join(work,sh['name']+('_비' if sh.get('rain') else '_눈' if sh.get('snow') else '_밤')); os.makedirs(src,exist_ok=True)
         for i in range(n):
             p=os.path.join(src,f'f{i:05d}.png')
             if not os.path.exists(p):
