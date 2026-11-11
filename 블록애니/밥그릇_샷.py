@@ -1,5 +1,6 @@
-"""《빈 밥그릇》 샷 목록 (세로 9:16, 24fps) → 연재/빈밥그릇/장면/샷목록.json"""
-import json
+"""《빈 밥그릇》 샷 목록 (24fps).  python 밥그릇_샷.py → 쇼츠 세로 9:16 샷목록.json / python 밥그릇_샷.py 롱폼 → 가로 16:9 샷목록_롱폼.json"""
+import json, sys
+LONG=len(sys.argv)>1 and sys.argv[1]=='롱폼'
 RAIN=['#6f7a88','#aeb6c0']; MORN=['#9fc8f0','#ffe2b8']; DAY=['#6fbcf5','#d6f0ff']; DUSK=['#5a6fb0','#ff9a5a','#ffd39a']; GOLD=['#f0a86a','#ffe2b5']
 def C(*keys): return [{'u':u,'pos':p,'tgt':t} for u,p,t in keys]
 S=[
@@ -23,5 +24,13 @@ S=[
  dict(name='s17_함께',t0=40.8,t1=45.0,sky=GOLD,cam=C((0,[410,20,36],[410,14,4]),(0.35,[412,22,42],[412,13,4]),(1,[432,60,78],[432,8,-12]))),
 ]
 for s in S: s.setdefault('set','A'); s.setdefault('fps',24)
-json.dump({'aspect':'9:16','fov':50,'shots':S},open('/home/user/youtubeshot/연재/빈밥그릇/장면/샷목록.json','w',encoding='utf-8'),ensure_ascii=False,indent=1)
+LONG_FIX={   # 가로 화면에서 따로 고칠 샷
+ 's04_아침': dict(cam=C((0,[12,18,16],[-50,8,18]),(1,[8,17,17],[-50,8,18]))),          # 옆에서: 꼬마·그릇·강아지가 한 줄로 보이게
+ 's17_함께': dict(cam=C((0,[410,24,46],[410,17,4]),(0.35,[412,24,50],[412,15,4]),(1,[432,60,78],[432,8,-12]))),   # 안긴 강아지 머리가 잘리지 않게
+}
+if LONG:   # 가로: 같은 카메라 자리, 화각만 좁혀 인물 크기를 비슷하게 (옆이 넓게 보임)
+    for sh in S: sh.update(LONG_FIX.get(sh['name'],{}))
+    json.dump({'aspect':'16:9','fov':34,'shots':S},open('/home/user/youtubeshot/연재/빈밥그릇/장면/샷목록_롱폼.json','w',encoding='utf-8'),ensure_ascii=False,indent=1)
+else:
+    json.dump({'aspect':'9:16','fov':50,'shots':S},open('/home/user/youtubeshot/연재/빈밥그릇/장면/샷목록.json','w',encoding='utf-8'),ensure_ascii=False,indent=1)
 print(len(S),'shots',sum(round((s['t1']-s['t0'])*s['fps']) for s in S),'frames')
