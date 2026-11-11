@@ -11,6 +11,13 @@ ROOT='/home/user/youtubeshot/연재/지구방위선'; OUT=f'{ROOT}/장면'; os.m
 L=300.0; D.init(L); SKY=['#03040c','#03040c']; CUES=[]
 def cue(t,kind,vol=1.0): CUES.append({'t':round(t,2),'kind':kind,'vol':vol})
 MS=(0,200,2600); MAWZ=2600-455; STN=(-420,-40,150)
+# 촬영이 느려지지 않게 궤도 세트를 시간대별 파일로 나눔: 그 시간대에 일어나는 폭발·탄·파편의 움직임만 넣음 (움직이는 묶음이 많을수록 한 장 찍는 시간이 길어짐)
+WINS=dict(O1=(0,92),O2=(92,150),O3=(150,200),O4=(232,300)); WIN=[0,300]
+_burst=burst; _explode=explode
+def burst(M,A,box,t,*a,**k):
+    if WIN[0]-3<=t<=WIN[1]: _burst(M,A,box,t,*a,**k)
+def explode(A,ship,t0,**k):
+    if t0<=WIN[1]: _explode(A,ship,t0,**k)
 
 class Craft:
     """함선 하나의 움직임: 길(pts=[(t,x,y,z)…])을 따라 날고, 가는 쪽으로 머리를 돌리고(yaw), 오르내릴 때 기수를 들고(pitch), 돌 때 기울임(roll)"""
@@ -33,13 +40,18 @@ class Craft:
     def show(s,spans): s.spans=spans; return s
     def boom(s,t,power=40,dur=1.6,seed=0,size=1.0,cuek='boom',**kw):
         """블록 분해 + 불덩이"""
-        explode(s.A,s.ship,t,power=power,dur=dur,seed=seed,**kw); s.dead=t; M=s.M
+        cue(t,cuek,min(1.5,0.6+size*0.3))
+        if t>WIN[1]: return s                     # 이 시간대엔 아직 멀쩡함
+        s.dead=t; M=s.M
+        if t+dur+0.5<WIN[0]: s.gone=True; return s  # 이미 터져 사라짐 → 통째로 숨김
+        explode(s.A,s.ship,t,power=power,dur=dur,seed=seed,**kw)
         burst(M,s.A,s.fx['children'],t,(0,0,0),n=int(8+size*3),speed=30+size*26,size=2.2+size*1.6,dur=1.0+size*0.25,seed=seed)
         g=M.group(f'{s.ship.tag}fb',[0,0,0],[M.cube('fb',[-1,-1,-1],[1,1,1],'fire3')]); s.fx['children'].append(g); k=6+size*5
         s.A.add(g,'scale',[(0,(0,0,0)),(t-0.02,(0,0,0)),(t,(k*0.3,)*3),(t+0.12,(k,)*3),(t+0.4,(0,0,0))]); s.A.add(g,'rotation',[(t,(0,0,0)),(t+0.4,(60,80,30))])
-        cue(t,cuek,min(1.5,0.6+size*0.3)); return s
+        return s
     def finish(s):
         P=s.pts; A=s.A; n=len(P); yaw=s.yaw0; yk=[]; pk=[]; rk=[]
+        if getattr(s,'gone',False): vis(A,s.out,[]); return
         for i,(t,x,y,z) in enumerate(P):
             a=P[max(0,i-1)]; b=P[min(n-1,i+1)]; dx=b[1]-a[1]; dy=b[2]-a[2]; dz=b[3]-a[3]; h=math.hypot(dx,dz)
             if h>2:
@@ -57,11 +69,12 @@ class Craft:
             if 'engine' in g['name']: cyc(A,g,'scale',0,min(L,s.dead or L),(1,1,1),(1,1,1.5),0.16,rest=(1,1,1),interp='linear') if s.dead is None else None
 def bolt(M,A,top,t,p0,p1,col='glow_c',speed=1500,length=26,thick=1.0,cuek=None):
     """레이저 탄: p0 에서 p1 로 날아가는 가늘고 긴 빛"""
+    if cuek: cue(t,cuek,0.5)
+    if not (WIN[0]-3<=t<=WIN[1]): return t
     dx,dy,dz=(p1[i]-p0[i] for i in range(3)); dist=math.sqrt(dx*dx+dy*dy+dz*dz) or 1; dur=max(0.08,dist/speed); h=math.hypot(dx,dz)
     inner=M.group('b',[0,0,0],[M.cube('bolt',[-thick,-thick,-length/2],[thick,thick,length/2],col)]); o=M.group('bo',[0,0,0],[inner]); top.append(o)
     A.add(inner,'rotation',[(0,(-math.degrees(math.atan2(dy,max(h,1e-6))),0,0))]); A.add(o,'rotation',[(0,(0,math.degrees(math.atan2(dx,-dz)),0))])
     A.add(o,'position',[(0,(-p0[0],p0[1],p0[2])),(t,(-p0[0],p0[1],p0[2])),(t+dur,(-p1[0],p1[1],p1[2]))]); A.add(o,'scale',[(0,(0,0,0)),(max(0,t-0.02),(0,0,0)),(t,(1,1,1)),(t+dur,(1,1,1)),(t+dur+0.02,(0,0,0))])
-    if cuek: cue(t,cuek,0.5)
     return t+dur
 def volley(M,A,top,a,b,t0,n=3,gap=0.14,col='glow_c',cuek='laser',spread=10,seed=0,**kw):
     r=random.Random(seed+int(t0*10))
@@ -78,8 +91,9 @@ def save(M,A,top,name,key):
 # =====================================================================
 #  O : 궤도 — 고요 · 모함 도착 · 출격 · 전투 · 주포 · 돌입 / (232~) 모함 붕괴 · 새벽
 # =====================================================================
-def set_O():
-    M,A,top=newset(); rng=random.Random(11)
+def set_O(key='O1'):
+    WIN[0],WIN[1]=WINS[key]; M,A,top=newset(); rng=random.Random(11)
+    sh=lambda name,st,t0,t1,*a,**k: D.sh(name,key,t0,t1,*a,**k) if WIN[0]<=t0<WIN[1] else None
     top+= skybox(M)+planet_cap(M,'earth',(0,-9200,2600),8200,1300,step=40,seed=4)+globe(M,'moon',(4200,1500,6200),600,MOON,seed=3,spots=10)
     sun=M.group('sun',[-3000,0,8500],[M.cube('sun',[-3380,-380,8500],[-2620,380,8520],'sun'), M.cube('sun_c',[-3260,-260,8490],[-2740,260,8500],'glow_w'), M.cube('sun_h',[-3900,-50,8524],[-2100,50,8530],'glow_y'), M.cube('sun_v',[-3050,-800,8524],[-2950,800,8530],'glow_y')]); top.append(sun)
     A.add(sun,'position',[(0,(0,-6000,0)),(258,(0,-6000,0)),(268,(0,-2600,0)),(300,(0,-1300,0))])
@@ -203,13 +217,13 @@ def set_O():
     sh('귀환','O',280,290,cam((0,[30,10,-60],[0,2,0],{'fov':50,'roll':4}),(1,[-40,16,-70],[0,2,0],{'fov':46,'roll':-3})),SKY,follow='f0_mv')
     sh('끝','O',290,300,cam((0,[-800,100,-700],[-300,0,600],{'fov':44}),(1,[-1100,260,-1100],[-200,60,1200],{'fov':40})),SKY)
     caption(2.5,6.5,'마지막 방어선','Title'); caption(292,299.5,'마지막 방어선','Title')
-    save(M,A,top,'궤도','O')
+    save(M,A,top,'궤도','%s'%key)
 
 # =====================================================================
 #  I : 모함 안 (200~232) — 굴을 따라 핵까지
 # =====================================================================
 def set_I():
-    M,A,top=newset(); W=260; H=260; ZE=2600; rng=random.Random(3); tex=['hull_a','hull_a2','hull_a3']
+    WIN[0],WIN[1]=200,232; M,A,top=newset(); W=260; H=260; ZE=2600; rng=random.Random(3); tex=['hull_a','hull_a2','hull_a3']
     for i,z in enumerate(range(-780,ZE,260)):
         top+= [M.cube('tw',[W/2,-H/2,z],[W/2+40,H/2,z+260],tex[i%3]), M.cube('tw',[-W/2-40,-H/2,z],[-W/2,H/2,z+260],tex[(i+1)%3]), M.cube('tf',[-W/2,-H/2-40,z],[W/2,-H/2,z+260],tex[(i+2)%3]), M.cube('tc',[-W/2,H/2,z],[W/2,H/2+40,z+260],tex[i%3])]
         top+= [M.cube('rib',[W/2-10,-H/2,z],[W/2,H/2,z+14],'a_p'), M.cube('rib',[-W/2,-H/2,z],[-W/2+10,H/2,z+14],'a_p'), M.cube('ribt',[-W/2,H/2-10,z],[W/2,H/2,z+14],'a_p'), M.cube('ribb',[-W/2,-H/2,z],[W/2,-H/2+10,z+14],'a_p')]
@@ -269,7 +283,7 @@ def set_I():
     sh('핵폭발','I',229.4,232,cam((0,[-380,200,2640],[0,0,CZ],{'fov':60}),(1,[-400,220,2620],[0,0,CZ],{'fov':70})),SKY,shake=6)
     save(M,A,top,'모함안','I')
 
-SETS=dict(O=set_O,I=set_I)
+SETS=dict(O1=lambda: set_O('O1'),O2=lambda: set_O('O2'),O3=lambda: set_O('O3'),O4=lambda: set_O('O4'),I=set_I)
 if __name__=='__main__':
     want=sys.argv[1] if len(sys.argv)>1 else 'all'
     for k,f in SETS.items():
@@ -280,6 +294,7 @@ if __name__=='__main__':
         else: f()
     json.dump({k:{'ropes':[]} for k in SETS},open(f'{OUT}/세트정보.json','w'))
     S=sorted(D.SHOTS,key=lambda s:s['t0'])
+    uniq=lambda L_,k: list({k(x):x for x in L_}.values()); D.CAPS[:]=uniq(D.CAPS,lambda c:(c['t0'],c['text'])); CUES[:]=uniq(CUES,lambda c:(c['t'],c['kind']))
     for i,s in enumerate(S): s['name']=f"{i:03d}_{s['name'].split('_',1)[1]}"
     SLOW={'지구','기지','먼빛','다가옴','그림자','크기','경보','함대','함교뒤','충전','잔해','결심','고요','해돋이','끝'}      # 느린 장면은 1초 12장 (촬영 시간 때문에), 전투는 24장
     for s in S:
