@@ -1,6 +1,6 @@
 """나무 인형(오리지널 캐릭터) 부품 — 원통·공·원뿔 모양(Blockbench 메시) + 나뭇결 무늬.
    디즈니 피노키오 생김새(깃털 빨간 모자·노란 멜빵바지·파란 나비넥타이)는 쓰지 않음 → 세이지 셔츠·남색 반바지·빨간 나무 신발.
-   묶음 이름은 블록 인물과 같게(body·head·arm_left·arm_right·leg_left·leg_right·hand_l·hand_r) + 팔꿈치 forearm_l/r, 무릎 shin_l/r
+   묶음 이름은 블록 인물과 같게(body·head·arm_left·arm_right·leg_left·leg_right·hand_l·hand_r). 팔·다리는 한 덩어리(블록처럼 흔들기)
    키 약 32 (s=1).  앞 = -z"""
 import os, sys, math, random
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -72,26 +72,22 @@ def palette(M):
     M.swatch('button',(235,205,120),3)
 
 def doll(M, tag, s=1.0, nose=4.0):
-    """오리지널 나무 인형.  관절마다 동그란 이음새, 팔꿈치(forearm)·무릎(shin)이 따로 굽혀짐.  nose: 코 길이"""
+    """오리지널 나무 인형.  팔·다리는 블록 인물처럼 통째로 흔들림.  nose: 코 길이"""
     S=lambda p:[x*s for x in p]
     def C(n,a,b,r0,r1,col,seg=12): return cyl(M,n,S(a),S(b),r0*s,r1*s,col,seg)
     def B(n,c,r,col,**k): return sphere(M,n,S(c),r*s,col,**k)
     G=lambda n,o,ch: M.group(tag+n,S(o),ch)
-    # 다리: 허벅지(반바지) → 무릎 → 정강이(나무) → 빨간 신발
+    # 다리·팔은 블록 인물처럼 한 덩어리 (엉덩이·어깨에서만 흔들림, 사용자 결정 2026-11-11: 팔꿈치·무릎 관절이 어색함)
     def leg(side):
         x=2.1*side
-        shin=G('shin_'+('l' if side>0 else 'r'),[x,6.5,0],[C('shin',[x,6.5,0],[x,1.6,0],1.25,1.05,'wood'),
-                 B('shoe',[x,1.2,-0.8],2.0,'paint_shoe',sx=0.95,sy=0.62,sz=1.45)])
-        return G('leg_'+('left' if side>0 else 'right'),[x,12,0],[C('thigh',[x,12.2,0],[x,7.2,0],1.9,1.5,'paint_short'),
-                 B('knee',[x,6.6,0],1.45,'wood_l'), shin])
-    # 팔: 어깨 → 위팔(셔츠) → 팔꿈치 → 아래팔(나무) → 손
+        return G('leg_'+('left' if side>0 else 'right'),[x,12,0],[C('thigh',[x,12.2,0],[x,7.0,0],1.9,1.6,'paint_short'),
+                 C('shin',[x,7.4,0],[x,1.6,0],1.3,1.1,'wood'), B('shoe',[x,1.2,-0.8],2.0,'paint_shoe',sx=0.95,sy=0.62,sz=1.45)])
     def arm(side):
         x=5.4*side; n='l' if side>0 else 'r'
         hand=G('hand_'+n,[x,11.2,0],[])
-        fore=G('forearm_'+n,[x,16,0],[C('fore',[x,16,0],[x,12.2,0],1.0,0.85,'wood'), B('hand',[x,11.4,0],1.35,'wood_l',sx=0.9,sy=1.1,sz=0.9),
-               B('wrist',[x,12.4,0],0.9,'wood_l'), hand])
         return G('arm_'+('left' if side>0 else 'right'),[x,21.5,0],[B('shoulder',[x,21.4,0],1.6,'paint_shirt'),
-               C('upper',[x,21,0],[x,16.6,0],1.3,1.1,'paint_shirt'), B('elbow',[x,16.2,0],1.1,'wood_l'), fore])
+               C('upper',[x,21,0],[x,15.6,0],1.3,1.15,'paint_shirt'), C('fore',[x,16.2,0],[x,12.4,0],1.05,0.9,'wood'),
+               B('hand',[x,11.6,0],1.35,'wood_l',sx=0.9,sy=1.1,sz=0.9), hand])
     legL,legR=leg(1),leg(-1); armL,armR=arm(1),arm(-1)
     body=[C('waist',[0,12,0],[0,14.6,0],3.6,3.5,'paint_short',seg=16), C('belt',[0,14.5,0],[0,15.5,0],3.65,3.6,'paint_belt',seg=16),
           C('chest',[0,15.4,0],[0,21.6,0],3.5,4.1,'paint_shirt',seg=16), B('shoulder_top',[0,21.6,0],4.1,'paint_shirt',sy=0.35,seg=16),
