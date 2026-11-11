@@ -45,7 +45,7 @@ for si, sh in enumerate(shots):
                         '-vf', f'scale={W}:{H}:flags=lanczos,fps=24,tpad=stop_mode=clone:stop_duration=2,format=yuv420p', '-t', f'{dur:.3f}',
                         '-c:v', 'libx264', '-crf', '18', '-preset', 'medium', '-r', '24', o], check=True)
     parts.append(o)
-lst = os.path.join(work, '목록.txt'); open(lst, 'w').write(''.join(f"file '{p}'\n" for p in parts))
+lst = os.path.join(work, '목록.txt'); open(lst, 'w').write(''.join(f"file '{os.path.abspath(p)}'\n" for p in parts))
 total = shots[-1]['t1']
 
 # 2) 화면 글자 (ASS)
