@@ -86,6 +86,17 @@ def newset():
 def save(M,A,top,name,key):
     for c in Craft.ALL: c.finish()
     Craft.ALL.clear(); D.finish_all(); A.bake([t for t in top if isinstance(t,dict)]); n=겹침면_검사.fix(M.els,top)
+    def flat(g):       # 움직임이 없는 조각 묶음은 풀어서 상자만 남김 (묶음이 많으면 한 장 찍는 시간이 길어짐)
+        out=[]
+        for c in g['children']:
+            if isinstance(c,dict):
+                flat(c)
+                if c['uuid'] not in A.tr and all(not isinstance(x,dict) for x in c['children']) and not any(abs(v)>1e-6 for v in c.get('rotation',[0,0,0])): out+=c['children']
+                else: out.append(c)
+            else: out.append(c)
+        g['children']=out
+    for t in top:
+        if isinstance(t,dict): flat(t)
     M.save(f'{OUT}/{key}_{name}.bbmodel',top,[A.json()],name=key); print(key,name,len(M.els),'상자, 겹침 고침',n)
 
 # =====================================================================
