@@ -76,6 +76,13 @@ if [ ! -f models/FLUX2_klein_4B/transformer/diffusion_pytorch_model.safetensors 
 fi
 rm -rf /root/.cache/pip /root/.cache/huggingface/hub 2>/dev/null || true     # 받은 뒤 남는 임시 파일(수 GB)은 지움
 
+# 얼굴 찾기 YuNet (OpenCV, Apache-2.0, 230KB): 동상·인물 사진이 얼굴 나오게 잘리도록 (face_keep_crop, 사용자 결정 2026-11-11)
+YN=models/face_detection_yunet_2023mar.onnx
+if [ ! -f "$YN" ] || [ "$(stat -c%s "$YN" 2>/dev/null || echo 0)" -lt 100000 ]; then
+  mkdir -p models
+  curl -sL -o "$YN" "https://media.githubusercontent.com/media/opencv/opencv_zoo/main/models/face_detection_yunet/face_detection_yunet_2023mar.onnx" || true
+fi
+
 # 5) 이 세션에서 python = 위 실행 환경
 if [ -n "${CLAUDE_ENV_FILE:-}" ]; then
   echo "export PATH=\"$CLAUDE_PROJECT_DIR/$VENV/bin:\$PATH\"" >> "$CLAUDE_ENV_FILE"

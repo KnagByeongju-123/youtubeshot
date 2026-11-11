@@ -4298,6 +4298,28 @@ FACE_MODEL = os.path.join(BASE, "models", "face_detection_yunet_2023mar.onnx")  
 _FACE_DET = {}
 
 
+def face_keep_crop(src_im, big, keep_h):
+    """규칙(사용자 결정 2026-11-11): 동상·조각상·인물 사진은 얼굴이 화면에 나오게.
+    사진을 화면에 꽉 채우려 키우면 세로로 남는 부분이 잘리는데, 예전엔 가운데를 남겨 흉상이 수염·가슴만 보였음 →
+    얼굴(YuNet)이 있으면 얼굴 가운데를, 없으면 세로로 긴 사진은 위쪽 35% 쯤(머리가 있는 곳)을 기준으로 keep_h 만큼만 남김"""
+    try:
+        if big.height <= keep_h + 2:
+            return big
+        faces = thumb_faces(src_im)
+        if faces:
+            fx, fy, fw, fh = faces[0]
+            cy = fy + fh * 0.45                  # 얼굴 가운데보다 살짝 위 (이마~입이 다 들어오게)
+        elif src_im.height >= src_im.width * 0.9:
+            cy = 0.35                            # 얼굴을 못 찾은 세로·정사각 사진(동상 옆모습 등): 위쪽
+        else:
+            return big
+        top = int(cy * big.height - keep_h / 2)
+        top = max(0, min(big.height - keep_h, top))
+        return big.crop((0, top, big.width, top + keep_h))
+    except Exception:
+        return big
+
+
 def thumb_faces(photo_im):
     """사진 속 얼굴들 [(x, y, w, h)] (0~1 비율, 큰 얼굴부터). 모델이 없거나 OpenCV 5 미만이면 []. 같은 사진은 한 번만"""
     if photo_im is None:
@@ -5947,6 +5969,7 @@ class SubtitleRenderer:
             else:
                 sc = max(bw / im.width, bh / im.height) * 1.32
                 big = im.resize((max(bw, int(im.width * sc) + 1), max(bh, int(im.height * sc) + 1)), Image.LANCZOS)
+                big = face_keep_crop(im, big, int(bh * 1.32) + 1)
             mask = None
             if not self.full and not getattr(self, "slide_full", False):
                 mask = Image.new("L", (bw, bh), 0)
