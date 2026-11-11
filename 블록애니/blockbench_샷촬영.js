@@ -47,7 +47,7 @@ const shots=all.shots.filter(s=>!want||want.includes(s.name));
    const fpath=path.join(dir,`f${String(i).padStart(5,'0')}.png`);
    if(!testFlag && fs.existsSync(fpath) && fs.statSync(fpath).size>1000) continue;   // 이미 찍은 장은 건너뜀 (멈춘 뒤 이어 찍기)
    const t=sh.t0+i/sh.fps, u=n>1?i/(n-1):0;
-   await p.evaluate(([t,u,cam,follow,ropes,shake,vert])=>{
+   await p.evaluate(([t,u,cam,follow,ropes,shake,vert,lin])=>{
      Timeline.setTime(t); Animator.preview();
      const V=THREE.Vector3; const grp=n=>Group.all.find(g=>g.name===n);
      const wp=n=>{const g=grp(n); const v=new V(); if(g&&g.mesh){g.mesh.updateWorldMatrix(true,false); g.mesh.getWorldPosition(v);} return v;};
@@ -59,7 +59,7 @@ const shots=all.shots.filter(s=>!want||want.includes(s.name));
         m.position.copy(Al); m.scale.set(1,1,Math.max(0.01,Al.distanceTo(Bl))); m.lookAt(B); m.updateMatrix();});
      // 카메라
      const sm=x=>x*x*(3-2*x); let k=0; while(k<cam.length-2&&u>cam[k+1].u) k++;
-     const c0=cam[k], c1=cam[Math.min(k+1,cam.length-1)]; const f=c1.u>c0.u?sm(Math.min(1,Math.max(0,(u-c0.u)/(c1.u-c0.u)))):0;
+     const c0=cam[k], c1=cam[Math.min(k+1,cam.length-1)]; const f0=c1.u>c0.u?Math.min(1,Math.max(0,(u-c0.u)/(c1.u-c0.u))):0; const f=lin?f0:sm(f0);   // lin = 직선 보간(촘촘한 키로 나는 카메라: 키마다 멈칫하지 않게)
      const L=(a,b)=>a.map((v,j)=>v+(b[j]-v)*f); let pos=L(c0.pos,c1.pos), tgt=L(c0.tgt,c1.tgt);
      if(follow){const F=wp(follow); pos=[pos[0]+F.x,pos[1]+F.y,pos[2]+F.z]; tgt=[tgt[0]+F.x,tgt[1]+F.y,tgt[2]+F.z];}
      if(shake){const w=(c0.shake!==undefined?c0.shake:1)*(1-f)+(c1.shake!==undefined?c1.shake:1)*f, q=shake*w;   // 흔들림 (추락·싸움): 키마다 shake 배율(0~1)을 줄 수 있음
@@ -69,9 +69,11 @@ const shots=all.shots.filter(s=>!want||want.includes(s.name));
      let fov=num('fov',38); const roll=num('roll',0)*Math.PI/180;
      if(vert) fov=Math.min(104,2*Math.atan(Math.tan(fov*Math.PI/360)*2.1)*180/Math.PI);      // 세로 화면은 좌우가 좁아짐 → 시야각을 넓혀 맞춤      // 순간 확대(시야각)·화면 기울이기 (게임 같은 카메라)
      if(Math.abs(P.camera.fov-fov)>0.01){P.camera.fov=fov; P.camera.updateProjectionMatrix();}
-     P.camera.up.set(Math.sin(roll),Math.cos(roll),0);
+     if(lin){ const fw=new V(tgt[0]-pos[0],tgt[1]-pos[1],tgt[2]-pos[2]).normalize(); const rt=new V().crossVectors(fw,new V(0,1,0)).normalize(); const up0=new V().crossVectors(rt,fw);   // 나는 카메라: 보는 방향 기준으로 기울임(어느 쪽을 보든 맞음)
+       P.camera.up.set(up0.x*Math.cos(roll)+rt.x*Math.sin(roll),up0.y*Math.cos(roll)+rt.y*Math.sin(roll),up0.z*Math.cos(roll)+rt.z*Math.sin(roll)); }
+     else P.camera.up.set(Math.sin(roll),Math.cos(roll),0);
      P.camera.position.set(...pos); P.controls.target.set(...tgt); P.controls.update();
-   },[t,u,sh.cam,sh.follow||null,ropes,sh.shake||0,VERT]);
+   },[t,u,sh.cam,sh.follow||null,ropes,sh.shake||0,VERT,!!sh.lin]);
    await p.screenshot({path:fpath,clip});
   }
   console.log('shot',sh.name,idx.length);
