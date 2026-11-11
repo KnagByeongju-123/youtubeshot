@@ -17,9 +17,9 @@ const dir=process.argv[2];
   const H=await p.evaluate(()=>{try{three_grid.visible=false}catch(e){}; try{Transformer.visible=false;Transformer.detach()}catch(e){};
      Outliner.selected.length=0; try{unselectAllElements()}catch(e){}; try{updateSelection()}catch(e){};
      const P=Preview.selected; P.canvas.style.background='#ffffff';
-     let top=0; Outliner.elements.forEach(e=>{top=Math.max(top,e.to[1])}); return top;});
+     let top=0,ext=0; Outliner.elements.forEach(e=>{top=Math.max(top,e.to[1]); for(const i of [0,2]) ext=Math.max(ext,Math.abs(e.from[i]),Math.abs(e.to[i]));}); return [top,ext];});
   const rect=await p.evaluate(()=>{const c=Preview.selected.canvas.getBoundingClientRect();return {x:c.x,y:c.y,width:c.width,height:c.height};});
-  const cy=H/2, dist=H*4.2;
+  const cy=H[0]/2, dist=Math.max(H[0],H[1]*2*1.7)*4.2;   // 키와 가로 길이 중 큰 쪽에 맞춤 (트럭·강아지가 잘리지 않게)
   const views=[[0,-1],[1,0],[-1,0],[0,1]];   // 앞(-z) 옆(+x) 옆(-x) 뒤(+z)
   for(let i=0;i<4;i++){
    await p.evaluate(([vx,vz,cy,dist])=>{const P=Preview.selected; P.camera.fov=14; P.camera.updateProjectionMatrix();
