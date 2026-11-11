@@ -39,5 +39,6 @@ def make(name,ranges,hook,end):
     json.dump(caps,open(f'{OUT}/{name}_글자.json','w',encoding='utf-8'),ensure_ascii=False,indent=1)
     json.dump({'duration':round(t,2),'cues':cues},open(f'{OUT}/{name}_시간표.json','w',encoding='utf-8'),ensure_ascii=False,indent=1)
     print(name,len(shots),'샷',round(t,1),'초',sum(round((s['t1']-s['t0'])*24) for s in shots),'장')
-make('쇼츠1_레이저',[(100,132.6)],'레이저 복도를\\N통과하라','13층 아래\\N본편은 채널에서')
-make('쇼츠2_탈출',[(43.5,49),(84,91),(111.2,121.4),(153.6,163.2),(221,230),(300,306),(401.6,411.4)],'청소 로봇의\\N13층 탈출','13층 아래\\N본편은 채널에서')
+if __name__=='__main__':
+    make('쇼츠1_레이저',[(100,132.6)],'레이저 복도를\\N통과하라','13층 아래\\N본편은 채널에서')
+    make('쇼츠2_탈출',[(43.5,49),(84,91),(111.2,121.4),(153.6,163.2),(221,230),(300,306),(401.6,411.4)],'청소 로봇의\\N13층 탈출','13층 아래\\N본편은 채널에서')

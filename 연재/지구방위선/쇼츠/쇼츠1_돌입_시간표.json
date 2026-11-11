@@ -1,0 +1,105 @@
+{
+ "duration": 35.0,
+ "cues": [
+  {
+   "t": 0.0,
+   "kind": "boom",
+   "vol": 0.96
+  },
+  {
+   "t": 0.2,
+   "kind": "boom",
+   "vol": 0.96
+  },
+  {
+   "t": 3.5,
+   "kind": "whoosh",
+   "vol": 1.0
+  },
+  {
+   "t": 9.0,
+   "kind": "laser2",
+   "vol": 0.5
+  },
+  {
+   "t": 11.0,
+   "kind": "laser2",
+   "vol": 0.5
+  },
+  {
+   "t": 13.0,
+   "kind": "laser2",
+   "vol": 0.5
+  },
+  {
+   "t": 15.0,
+   "kind": "laser2",
+   "vol": 0.5
+  },
+  {
+   "t": 17.0,
+   "kind": "laser2",
+   "vol": 0.5
+  },
+  {
+   "t": 18.0,
+   "kind": "laser2",
+   "vol": 0.5
+  },
+  {
+   "t": 18.13,
+   "kind": "boom",
+   "vol": 1.02
+  },
+  {
+   "t": 22.0,
+   "kind": "rumble",
+   "vol": 1.0
+  },
+  {
+   "t": 26.8,
+   "kind": "slam",
+   "vol": 1.2
+  },
+  {
+   "t": 27.6,
+   "kind": "boom",
+   "vol": 1.02
+  },
+  {
+   "t": 29.2,
+   "kind": "laser",
+   "vol": 0.5
+  },
+  {
+   "t": 29.9,
+   "kind": "laser",
+   "vol": 0.5
+  },
+  {
+   "t": 30.6,
+   "kind": "laser",
+   "vol": 0.5
+  },
+  {
+   "t": 31.3,
+   "kind": "laser",
+   "vol": 0.5
+  },
+  {
+   "t": 32.0,
+   "kind": "laser",
+   "vol": 0.5
+  },
+  {
+   "t": 32.5,
+   "kind": "bigboom",
+   "vol": 1.5
+  },
+  {
+   "t": 33.2,
+   "kind": "whiteout",
+   "vol": 1.3
+  }
+ ]
+}

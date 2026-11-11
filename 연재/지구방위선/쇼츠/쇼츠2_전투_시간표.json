@@ -1,0 +1,170 @@
+{
+ "duration": 40.0,
+ "cues": [
+  {
+   "t": 2.0,
+   "kind": "laser",
+   "vol": 0.5
+  },
+  {
+   "t": 2.4,
+   "kind": "cannon",
+   "vol": 0.5
+  },
+  {
+   "t": 3.7,
+   "kind": "laser",
+   "vol": 0.5
+  },
+  {
+   "t": 5.1,
+   "kind": "laser",
+   "vol": 0.5
+  },
+  {
+   "t": 5.4,
+   "kind": "laser2",
+   "vol": 0.5
+  },
+  {
+   "t": 6.0,
+   "kind": "boom",
+   "vol": 0.96
+  },
+  {
+   "t": 6.6,
+   "kind": "cannon",
+   "vol": 0.5
+  },
+  {
+   "t": 7.1,
+   "kind": "laser",
+   "vol": 0.5
+  },
+  {
+   "t": 8.0,
+   "kind": "boom",
+   "vol": 0.96
+  },
+  {
+   "t": 10.0,
+   "kind": "laser2",
+   "vol": 0.5
+  },
+  {
+   "t": 10.2,
+   "kind": "cannon",
+   "vol": 0.5
+  },
+  {
+   "t": 11.7,
+   "kind": "laser2",
+   "vol": 0.5
+  },
+  {
+   "t": 14.1,
+   "kind": "laser",
+   "vol": 0.5
+  },
+  {
+   "t": 14.4,
+   "kind": "cannon",
+   "vol": 0.5
+  },
+  {
+   "t": 15.4,
+   "kind": "beam",
+   "vol": 1.4
+  },
+  {
+   "t": 16.3,
+   "kind": "bigboom",
+   "vol": 1.5
+  },
+  {
+   "t": 19.4,
+   "kind": "charge",
+   "vol": 1.2
+  },
+  {
+   "t": 19.4,
+   "kind": "charge",
+   "vol": 1.2
+  },
+  {
+   "t": 22.4,
+   "kind": "cannon",
+   "vol": 0.5
+  },
+  {
+   "t": 24.6,
+   "kind": "laser2",
+   "vol": 0.5
+  },
+  {
+   "t": 25.4,
+   "kind": "boom",
+   "vol": 0.99
+  },
+  {
+   "t": 25.4,
+   "kind": "cannon",
+   "vol": 0.5
+  },
+  {
+   "t": 26.6,
+   "kind": "cannon",
+   "vol": 0.5
+  },
+  {
+   "t": 27.4,
+   "kind": "boom",
+   "vol": 0.96
+  },
+  {
+   "t": 28.5,
+   "kind": "bigboom",
+   "vol": 1.5
+  },
+  {
+   "t": 29.2,
+   "kind": "whiteout",
+   "vol": 1.3
+  },
+  {
+   "t": 31.0,
+   "kind": "bigboom",
+   "vol": 1.5
+  },
+  {
+   "t": 32.6,
+   "kind": "bigboom",
+   "vol": 1.4
+  },
+  {
+   "t": 34.2,
+   "kind": "bigboom",
+   "vol": 1.3
+  },
+  {
+   "t": 35.8,
+   "kind": "bigboom",
+   "vol": 1.2
+  },
+  {
+   "t": 37.4,
+   "kind": "bigboom",
+   "vol": 1.1
+  },
+  {
+   "t": 39.0,
+   "kind": "bigboom",
+   "vol": 1.0
+  },
+  {
+   "t": 39.0,
+   "kind": "whiteout",
+   "vol": 1.4
+  }
+ ]
+}
