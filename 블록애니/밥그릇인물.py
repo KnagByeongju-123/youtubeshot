@@ -25,6 +25,8 @@ def palette(M):
     M.swatch('tire',(35,35,38),3); M.swatch('hub',(170,170,175),3); M.swatch('light',(255,235,150),3)
     M.swatch('box',(200,155,95),8); M.swatch('box_t',(170,125,70),5)
     M.swatch('white',(250,250,250),2)
+    M.swatch('dog_gb',(205,190,175),5); M.swatch('dog_gw',(232,230,226),5)          # 늙은 강아지: 하얗게 센 갈색 털
+    M.swatch('jeans',(70,95,140),5); M.swatch('ball',(220,50,45),4); M.swatch('ball_w',(245,245,240),2)
     def face(name,cheek=False,brow=HAIR):
         def fn(d,x,y):
             d.rectangle([x,y,x+15,y+15],fill=SKIN)
@@ -47,44 +49,48 @@ def person(M, tag, kind='kid', s=1.0):
     c=lambda name,fr,to,col,**f: M.cube(name,[v*s for v in fr],[v*s for v in to],col,**f)
     O=lambda v:[x*s for x in v]
     if kind=='kid': top,top_d,pt,sh,fc='coat','coat_d','pants_g','boot','f_kid'
+    elif kind=='adult': top,top_d,pt,sh,fc='coat','coat_d','jeans','shoe','f_dad'
     else:           top,top_d,pt,sh,fc='shirt','shirt_d','pants','shoe','f_dad'
-    legL=M.group(tag+'leg_left',O([2,12,0]),[c('leg',[0,2,-2],[4,12,2],pt), c('shoe',[-0.2,0,-2.8],[4.2,2.4 if kind=='kid' else 1.6,2.2],sh)])
-    legR=M.group(tag+'leg_right',O([-2,12,0]),[c('leg',[-4,2,-2],[0,12,2],pt), c('shoe',[-4.2,0,-2.8],[0.2,2.4 if kind=='kid' else 1.6,2.2],sh)])
+    legL=M.group(tag+'leg_left',O([2,12,0]),[c('leg',[0,2,-2],[4,12,2],pt), c('shoe',[0.02,0,-2.8],[4.2,2.4 if kind=='kid' else 1.6,2.2],sh)])
+    legR=M.group(tag+'leg_right',O([-2,12,0]),[c('leg',[-4,2,-2],[0,12,2],pt), c('shoe',[-4.2,0,-2.8],[-0.02,2.4 if kind=='kid' else 1.6,2.2],sh)])
     armL_k=[c('sleeve',[4.2,15,-2.2],[8.2,24,2.2],top), c('hand',[4.6,12,-1.6],[7.6,15,1.6],'skin')]
     armR_k=[c('sleeve',[-8.2,15,-2.2],[-4.2,24,2.2],top), c('hand',[-7.6,12,-1.6],[-4.6,15,1.6],'skin')]
     hl=M.group(tag+'hand_l',O([6,12.5,0]),[]); hr=M.group(tag+'hand_r',O([-6,12.5,0]),[])
     armL=M.group(tag+'arm_left',O([6,22,0]),armL_k+[hl]); armR=M.group(tag+'arm_right',O([-6,22,0]),armR_k+[hr])
     body=[c('torso',[-4.2,12,-2.2],[4.2,24,2.2],top)]
+    if kind=='adult':  # 노란 후드티: 모자(후드)가 등에
+        body+= [c('hood',[-3.4,20,2.25],[3.4,24.2,3.9],'coat_d'), c('pocket',[-2.6,13.5,-2.38],[2.6,16.5,-2.25],'coat_d')]
     if kind=='kid':   # 비옷: 엉덩이 아래까지 + 단추
         body+= [c('coat_low',[-4.5,9,-2.5],[4.5,13,2.5],top), c('btn1',[-0.6,20,-2.5],[0.6,21.2,-2.3],'coat_d'),
                 c('btn2',[-0.6,16,-2.5],[0.6,17.2,-2.3],'coat_d'), c('btn3',[-0.6,12,-2.7],[0.6,13.2,-2.5],'coat_d')]
-    else:             # 셔츠 깃 + 허리띠
+    elif kind=='dad':  # 셔츠 깃 + 허리띠
         body+= [c('collar',[-2,22.6,-2.5],[2,24,-2.3],'white'), c('belt',[-4.4,12,-2.4],[4.4,13.2,2.4],'shoe')]
     hk=[c('head',[-4,24,-4],[4,32,4],'skin',north=fc,up='hair',south='hair'),
         c('hair_back',[-4.2,25.5,1.2],[4.2,32.2,4.2],'hair'), c('hair_top',[-4.25,31.2,-4.25],[4.25,32.4,4.25],'hair'),
         c('hair_side_l',[3.95,28,-1],[4.3,32,3.9],'hair'), c('hair_side_r',[-4.3,28,-1],[-3.95,32,3.9],'hair')]
-    if kind=='kid':   # 빨간 야구 모자 (챙은 앞으로)
+    if kind in ('kid','adult'):   # 빨간 야구 모자 (챙은 앞으로) — 어른이 되어도 같은 모자
         hk+= [c('cap',[-4.4,30,-4.4],[4.4,33.4,4.4],'cap'), c('cap_brim',[-4.2,30,-8],[4.2,30.8,-4.4],'cap_d')]
     head=M.group(tag+'head',O([0,24,0]),hk)
     bod=M.group(tag+'body',O([0,12,0]),body+[head,armL,armR])
     return M.group(tag+'root',[0,0,0],[bod,legL,legR])
 
-def dog(M, tag, s=1.0, with_bowl=False):
+def dog(M, tag, s=1.0, with_bowl=False, old=False):
     """강아지 (앞 = -z).  묶음: body / head(입 = mouth 점) / leg_fl·fr·bl·br / tail / ear_l·ear_r"""
+    Bc='dog_gb' if old else 'dog_b'   # 늙은 강아지: 갈색 털이 하얗게 셈
     c=lambda name,fr,to,col,**f: M.cube(name,[v*s for v in fr],[v*s for v in to],col,**f)
     O=lambda v:[x*s for x in v]
     def leg(n,x,z):
-        return M.group(tag+n,O([x,4,z]),[c('leg',[x-1.2,0,z-1.2],[x+1.2,4,z+1.2],'dog',down='dog_d'),
+        return M.group(tag+n,O([x,4,z]),[c('leg',[x-1.2,0.05,z-1.2],[x+1.2,4,z+1.2],'dog',down='dog_d'),
                                          c('paw',[x-1.4,0,z-1.6],[x+1.4,0.9,z+1.3],'dog_d')])
     legs=[leg('leg_fl',2,-4.5),leg('leg_fr',-2,-4.5),leg('leg_bl',2,4.5),leg('leg_br',-2,4.5)]
-    bk=[c('torso',[-3.2,4,-6.5],[3.2,9.5,6.5],'dog',down='dog_d'), c('spot',[-3.3,7.5,0],[3.3,9.7,5],'dog_b'),
+    bk=[c('torso',[-3.2,4,-6.5],[3.2,9.5,6.5],'dog',down='dog_d'), c('spot',[-3.3,7.5,0],[3.3,9.7,5],Bc),
         c('chest',[-2.6,6,-8],[2.6,10.5,-5],'dog')]
     tail=M.group(tag+'tail',O([0,8.5,6.5]),[c('tail',[-0.7,8.5,6.5],[0.7,12.5,7.9],'dog')])
     # 늘어진 귀: 머리 양옆에 붙어 아래로
-    earL=M.group(tag+'ear_l',O([3.2,15.5,-9]),[c('ear',[3,10.5,-10],[3.9,15.5,-7.5],'dog_b')])      # 갈색 귀(한쪽)
+    earL=M.group(tag+'ear_l',O([3.2,15.5,-9]),[c('ear',[3,10.5,-10],[3.9,15.5,-7.5],Bc)])      # 갈색 귀(한쪽)
     earR=M.group(tag+'ear_r',O([-3.2,15.5,-9]),[c('ear',[-3.9,10.5,-10],[-3,15.5,-7.5],'dog_d')])
-    hk=[c('head',[-3,10,-12],[3,16,-6.5],'dog',north='f_dog'), c('muzzle',[-1.8,10.2,-14.6],[1.8,12.8,-12],'dog'),
-        c('nose',[-0.8,11.4,-15],[0.8,12.5,-14.4],'nose'), c('patch',[1.5,13,-12.1],[3.1,16.1,-8],'dog_b')]
+    hk=[c('head',[-3,10,-12],[3,16,-6.5],'dog',north='f_dog'), c('muzzle',[-1.8,10.2,-14.6],[1.8,12.8,-12],'dog_gw' if old else 'dog'),
+        c('nose',[-0.8,11.4,-15],[0.8,12.5,-14.4],'nose'), c('patch',[1.5,13,-12.1],[3.1,16.1,-8],Bc)]
     mouth=M.group(tag+'mouth',O([0,10.6,-14.8]),[])
     if with_bowl:   # 입에 문 그릇 (묶음 mbowl: 크기 0 으로 숨겼다 보였다)
         hk+= [M.group(tag+'mbowl',O([0,10.4,-15.9]),bowl_cubes(M,0,9.4*s,-15.9*s,0.7*s,food=False))]
@@ -133,3 +139,11 @@ def truck(M, tag):
     seat=M.group(tag+'seat_l',[6,12,-23],[])     # 꼬마가 앉을 자리 (조수석, +x)
     seatd=M.group(tag+'seat_r',[-6,12,-23],[])   # 아빠 운전석
     return M.group(tag+'root',[0,0,0],k+[door,seat,seatd])
+
+
+def ball(M, tag, r=2.2):
+    """빨간 공 (흰 줄 하나).  중심이 묶음 원점, 바닥에 놓으려면 y = r"""
+    k=[M.cube('ball',[-r,-r,-r],[r,r,r],'ball'), M.cube('ball_x',[-r*0.7,-r*0.7,-r-0.05],[r*0.7,r*0.7,r+0.05],'ball'),
+       M.cube('ball_y',[-r-0.05,-r*0.7,-r*0.7],[r+0.05,r*0.7,r*0.7],'ball'), M.cube('ball_z',[-r*0.7,-r-0.05,-r*0.7],[r*0.7,r+0.05,r*0.7],'ball'),
+       M.cube('ball_line',[-r-0.1,-0.35,-r-0.1],[r+0.1,0.35,r+0.1],'ball_w')]
+    return M.group(tag+'root',[0,0,0],k)
