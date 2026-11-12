@@ -137,7 +137,10 @@ def move(M, g, dx=0, dy=0, dz=0):
         for c in n['children']:
             if isinstance(c,dict): rec(c)
             else:
-                e=byid[c]; e['from']=[e['from'][0]+dx,e['from'][1]+dy,e['from'][2]+dz]; e['to']=[e['to'][0]+dx,e['to'][1]+dy,e['to'][2]+dz]
+                e=byid[c]
+                if 'from' in e: e['from']=[e['from'][0]+dx,e['from'][1]+dy,e['from'][2]+dz]; e['to']=[e['to'][0]+dx,e['to'][1]+dy,e['to'][2]+dz]
+                else:   # 메시(원통·공): 꼭짓점을 옮김
+                    for k,v in e['vertices'].items(): e['vertices'][k]=[v[0]+dx,v[1]+dy,v[2]+dz]
     rec(g); return g
 
 def anchor(M, name, pos):
