@@ -1,4 +1,5 @@
 // 샷 촬영: node blockbench_샷촬영.js <샷목록.json> <모형폴더> <출력폴더> [샷이름,...] [--test]
+// 세트정보.json ropes: [[끝점 묶음 a, 끝점 묶음 b, (보이기 시작 초, 끝 초)], ...] — 시간을 주면 그 사이에만 줄이 보임
 // 샷 = {name,set,t0,t1,fps,sky:[색,...],ropes:bool,view:'textured'|'wireframe', cam:[{u,pos:[x,y,z],tgt:[x,y,z]}], follow:'묶음이름'(있으면 pos·tgt 는 그 묶음 위치 기준)}
 const {chromium}=require('playwright');const fs=require('fs');const path=require('path');
 const [,,shotFile,modelDir,outDir,only,testFlag]=process.argv;
@@ -52,7 +53,7 @@ const shots=all.shots.filter(s=>!want||want.includes(s.name));
      const wp=n=>{const g=grp(n); const v=new V(); if(g&&g.mesh){g.mesh.updateWorldMatrix(true,false); g.mesh.getWorldPosition(v);} return v;};
      // 밧줄
      const rc=Cube.all.filter(c=>c.name.startsWith('rope_'));
-     ropes.forEach(([a,bn],i)=>{const m=rc[i]&&rc[i].mesh; if(!m) return; const A=wp(a),B=wp(bn);
+     ropes.forEach(([a,bn,ta,tb],i)=>{const m=rc[i]&&rc[i].mesh; if(!m) return; if(ta!==undefined){ m.visible=(t>=ta && t<tb); if(!m.visible) return; } const A=wp(a),B=wp(bn);   // [a,b,보이기 시작,끝] — 시간에 따라 끊어지는 줄
         m.parent.updateWorldMatrix(true,false); const inv=m.parent.matrixWorld.clone().invert();
         const Al=A.clone().applyMatrix4(inv), Bl=B.clone().applyMatrix4(inv);
         m.position.copy(Al); m.scale.set(1,1,Math.max(0.01,Al.distanceTo(Bl))); m.lookAt(B); m.updateMatrix();});
