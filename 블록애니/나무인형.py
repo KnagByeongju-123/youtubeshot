@@ -158,6 +158,29 @@ def wood_dog(M, tag, s=1.0):
     return G('root',[0,0,0],k+[head,tail])
 
 
+def wood_dog4(M, tag, s=1.0):
+    """네 발로 걷는 나무 강아지 (바퀴·받침 없음, 사용자 결정 2026-11-12: 강아지는 나무 인형으로, 네 발로 걷게).
+       생김새는 확인한 나무 강아지와 같게(나뭇결 몸·진갈색 늘어진 귀·등 무늬·빨간 목걸이). 앞 = -z
+       묶음: body·head·tail·leg_fl·leg_fr·leg_bl·leg_br(어깨·엉덩이에서 통째로 흔들기)·leash(목줄 고리)"""
+    S=lambda p:[x*s for x in p]
+    def C(n,a,b,r0,r1,col,seg=12): return cyl(M,n,S(a),S(b),r0*s,r1*s,col,seg)
+    def B(n,c,r,col,**k): return sphere(M,n,S(c),r*s,col,**k)
+    G=lambda n,o,ch: M.group(tag+n,S(o),ch)
+    legs=[]
+    for nm,x,z in (('fl',1.7,-3.8),('fr',-1.7,-3.8),('bl',1.7,3.8),('br',-1.7,3.8)):
+        legs.append(G('leg_'+nm,[x,8.0,z],[C('leg',[x,8.0,z],[x,1.0,z],0.95,0.8,'wood'),
+                    B('paw',[x,0.75,z-0.45],1.05,'wood_l',seg=10,rings=6,sx=0.95,sy=0.7,sz=1.3)]))
+    k=[C('torso',[0,9.4,5.4],[0,9.4,-5.4],3.0,3.0,'wood',seg=14), B('rump',[0,9.4,5.4],3.0,'wood',seg=14,rings=8,sz=0.45),
+       B('spot',[1.2,11.4,1.5],1.6,'wood_dk',seg=10,rings=6,sy=0.5), B('collar',[0,10.0,-5.0],2.6,'paint_shoe',seg=12,rings=6,sz=0.35)]
+    hk=[B('head',[0,13.2,-6.4],3.0,'wood',seg=14,rings=8), C('snout',[0,12.4,-8.6],[0,12.3,-10.2],1.4,1.2,'wood_l',seg=10),
+        B('dnose',[0,12.7,-10.3],0.6,'eye_k',seg=8,rings=6), B('deye_l',[1.2,14.1,-8.9],0.5,'eye_k',seg=8,rings=6), B('deye_r',[-1.2,14.1,-8.9],0.5,'eye_k',seg=8,rings=6),
+        B('ear_l',[3.0,13.0,-6.2],1.3,'wood_dk',seg=10,rings=6,sx=0.45,sy=1.6), B('ear_r',[-3.0,13.0,-6.2],1.3,'wood_dk',seg=10,rings=6,sx=0.45,sy=1.6)]
+    head=G('head',[0,11.4,-5.4],hk)
+    tail=G('tail',[0,11.0,5.6],[C('tail',[0,11.0,5.6],[0,14.0,7.2],0.5,0.35,'wood',seg=8)])
+    leash=G('leash',[0,10.6,-6.0],[])
+    body=G('body',[0,8.0,0],k+[head,tail,leash])
+    return G('root',[0,0,0],[body]+legs)
+
 def loose_arm(M, tag, top, bottom, col, short=False, s=1.0, pieces=1):
     """몸에서 떨어진 팔 (소품).  top → bottom 방향으로 어깨~손.  pieces=2 면 팔꿈치에서 두 동강 (묶음 tag+'up', tag+'low')"""
     def P(t): return [top[i]+(bottom[i]-top[i])*t for i in range(3)]
