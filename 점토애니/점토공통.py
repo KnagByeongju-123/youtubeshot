@@ -160,7 +160,9 @@ def _bounds():
     dg = bpy.context.evaluated_depsgraph_get()
     lo = Vector((1e9,) * 3)
     hi = Vector((-1e9,) * 3)
-    for o in ROOT.children:
+    for o in ROOT.children_recursive:
+        if o.type != "MESH":
+            continue
         e = o.evaluated_get(dg)
         for c in e.bound_box:
             w = e.matrix_world @ Vector(c)
@@ -169,7 +171,42 @@ def _bounds():
     return lo, hi
 
 
-def studio_and_shoot(out_dir, samples=48, height_px=960, margin=1.15):
+def pivot(name, loc, objs):
+    """회전축(빈 물체)을 loc 에 두고 objs 를 거기에 매달음 — 축을 돌리면 덩어리가 함께 돎."""
+    e = bpy.data.objects.new(name, None)
+    bpy.context.scene.collection.objects.link(e)
+    e.parent = ROOT
+    e.location = loc
+    for o in objs:
+        o.parent = e
+        o.location = (o.location.x - loc[0], o.location.y - loc[1], o.location.z - loc[2])
+    return e
+
+
+def body_group(name="몸전체"):
+    """아직 축에 매달리지 않은 덩어리를 모두 '몸' 축에 모음 (몸 들썩임·흔들림용)."""
+    rest = [o for o in ROOT.children if o.type == "MESH"]
+    return pivot(name, (0, 0, 0), rest)
+
+
+def objs(*prefixes):
+    """이름이 prefixes 중 하나로 시작하는 덩어리들."""
+    return [o for o in ROOT.children_recursive if o.type == "MESH" and o.name.startswith(prefixes)]
+
+
+def shoot_frames(out_dir, deg, n, pose):
+    """비스듬한 각도 deg 에서 pose(f) 로 자세를 바꿔 가며 n 장."""
+    sc = bpy.context.scene
+    os.makedirs(out_dir, exist_ok=True)
+    ROOT.rotation_euler = (0, 0, math.radians(deg))
+    for f in range(n):
+        pose(f)
+        sc.render.filepath = os.path.join(out_dir, f"frame_{f:03d}.png")
+        bpy.ops.render.render(write_still=True)
+        print("찍음", sc.render.filepath, flush=True)
+
+
+def studio_and_shoot(out_dir, samples=48, height_px=960, margin=1.15, views=True):
     """모형을 가운데로 옮기고, 조명·바닥 그림자·정사영 카메라를 놓고 앞·왼옆·오른옆·뒤 4장."""
     sc = bpy.context.scene
     os.makedirs(out_dir, exist_ok=True)
@@ -227,6 +264,8 @@ def studio_and_shoot(out_dir, samples=48, height_px=960, margin=1.15):
     sc.render.film_transparent = True
     sc.view_settings.view_transform = "Standard"
 
+    if not views:
+        return
     for i, deg in enumerate((0, -90, 90, 180)):
         ROOT.rotation_euler = (0, 0, math.radians(deg))
         sc.render.filepath = os.path.join(out_dir, f"view_{i}.png")

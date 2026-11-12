@@ -2,7 +2,8 @@
 """점토 캐릭터 만들기 + 앞·옆·옆·뒤 촬영.
 
 쓰는 법 (화면 없이):
-  blender -b -P 점토애니/점토캐릭터.py -- <캐릭터> <결과폴더> [샘플수]
+  blender -b -P 점토애니/점토캐릭터.py -- <캐릭터> <결과폴더> [샘플수] [걷기]
+  걷기: frame_000..011.png (한 걸음 주기 12장) → python 점토애니/점토_걷기영상.py <결과폴더> <영상.mp4>
   캐릭터: 저승사자 / 민화호랑이 / 민화토끼
   → <결과폴더>/view_0..3.png  →  python 점토애니/점토인형_시트.py <결과폴더> <시트.png>
 
@@ -170,10 +171,86 @@ def 민화토끼():
 
 캐릭터 = {"저승사자": 저승사자, "민화호랑이": 민화호랑이, "민화토끼": 민화토끼}
 
+# ------------------------------------------------------------------ 걷기
+# 한 걸음 주기 = STEPS 장 (점토 애니처럼 12장, 영상에서는 한 장을 두 번씩 → 24fps 에 1초 한 주기)
+import math
+STEPS = 12
+R = math.radians
+
+
+def 걷기_저승사자():
+    """도포 아래로 신발이 번갈아 나오고, 넓은 소매가 반대로 흔들림, 몸이 살짝 들썩."""
+    발 = {sx: C.pivot(f"발축{sx}", (0.15 * sx, -0.27, 0.06), C.objs(f"신{sx}")) for sx in (-1, 1)}
+    팔 = {sx: C.pivot(f"어깨{sx}", (0.33 * sx, 0, 1.38), C.objs(f"소매{sx}", f"손{sx}")) for sx in (-1, 1)}
+    몸 = C.body_group()
+    base = {sx: 발[sx].location.copy() for sx in (-1, 1)}
+
+    def pose(f):
+        t = 2 * math.pi * f / STEPS
+        for sx in (-1, 1):
+            ph = t if sx < 0 else t + math.pi
+            발[sx].location.y = base[sx].y - 0.14 * math.sin(ph)
+            발[sx].location.z = base[sx].z + 0.05 * max(0, math.cos(ph))
+            팔[sx].rotation_euler.x = R(16) * math.sin(ph)       # 같은 쪽 발과 반대로
+        몸.location.z = 0.03 * (1 - math.cos(2 * t)) / 2
+        몸.rotation_euler.y = R(3) * math.sin(t)
+    return pose, 몸
+
+
+def 걷기_민화호랑이():
+    """대각선 다리끼리 함께 (앞왼·뒤오 / 앞오·뒤왼), 꼬리 살랑, 머리 끄덕."""
+    다리 = {}
+    for sy in (-0.18, 0.88):
+        for sx in (-1, 1):
+            다리[(sx, sy)] = C.pivot(f"엉덩이{sx}{sy}", (0.24 * sx, sy, 0.62),
+                                    C.objs(f"다리{sx}{sy}", f"발{sx}{sy}"))
+    꼬리 = C.pivot("꼬리축", (0, 1.08, 0.85), C.objs("꼬리"))
+    머리쪽 = [o for o in C.ROOT.children if o.type == "MESH" and o.location.y < -0.25 and o.location.z > 0.85]
+    머리 = C.pivot("목", (0, -0.25, 0.95), 머리쪽)
+    몸 = C.body_group()
+
+    def pose(f):
+        t = 2 * math.pi * f / STEPS
+        for (sx, sy), p in 다리.items():
+            ph = t if (sx < 0) == (sy < 0) else t + math.pi
+            p.rotation_euler.x = R(24) * math.sin(ph)
+        꼬리.rotation_euler.y = R(10) * math.sin(t)
+        머리.rotation_euler.x = R(4) * math.sin(2 * t)
+        몸.location.z = 0.035 * (1 - math.cos(2 * t)) / 2
+    return pose, 몸
+
+
+def 걷기_민화토끼():
+    """두 발로 아장아장: 허벅지·발이 번갈아, 몸이 좌우로 뒤뚱, 귀가 늦게 따라 흔들림."""
+    다리 = {sx: C.pivot(f"엉덩이{sx}", (0.2 * sx, 0, 0.45), C.objs(f"허벅지{sx}", f"뒷발{sx}")) for sx in (-1, 1)}
+    귀 = {sx: C.pivot(f"귀축{sx}", (0.13 * sx, 0.04, 1.58), C.objs(f"귀{sx}", f"귀속{sx}")) for sx in (-1, 1)}
+    몸 = C.body_group()
+    for sx in (-1, 1):                      # 귀는 몸을 따라 움직이게 몸 축 아래로
+        귀[sx].parent = 몸
+
+    def pose(f):
+        t = 2 * math.pi * f / STEPS
+        for sx in (-1, 1):
+            ph = t if sx < 0 else t + math.pi
+            다리[sx].rotation_euler.x = R(26) * math.sin(ph)
+            귀[sx].rotation_euler.x = R(9) * math.sin(t - 1.2)
+        몸.location.z = 0.04 * (1 - math.cos(2 * t)) / 2
+        몸.rotation_euler.y = R(6) * math.sin(t)          # 뒤뚱
+    return pose, 몸
+
+
+걷기 = {"저승사자": 걷기_저승사자, "민화호랑이": 걷기_민화호랑이, "민화토끼": 걷기_민화토끼}
+
 argv = sys.argv[sys.argv.index("--") + 1:]
 name, out = argv[0], os.path.abspath(argv[1])
 samples = int(argv[2]) if len(argv) > 2 else 48
+mode = argv[3] if len(argv) > 3 else "시트"
 C.new_scene()
 M = 공통재질()
 캐릭터[name]()
-C.studio_and_shoot(out, samples=samples)
+if mode == "걷기":
+    pose, _ = 걷기[name]()
+    C.studio_and_shoot(out, samples=samples, height_px=720, views=False)
+    C.shoot_frames(out, -55, STEPS, pose)     # 얼굴과 걸음이 함께 보이는 비스듬한 각도
+else:
+    C.studio_and_shoot(out, samples=samples)
