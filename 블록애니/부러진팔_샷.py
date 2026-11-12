@@ -19,5 +19,12 @@ S=[
  dict(name='s14_함께',t0=41.0,t1=45.0,sky=GOLD,cam=C((0,[0,24,-22],[0,14,30]),(1,[0,40,-44],[0,12,50]))),
 ]
 for s in S: s.setdefault('set','A'); s.setdefault('fps',24)
+# 사용자 지적 2026-11-12: 쇼츠에서 너무 가까워(줌인) 인물이 잘 안 보임 → 모든 카메라를 보는 곳은 그대로, 거리만 늘림
+ZOOM_OUT={'default':1.7,'s01_놀이':1.15,'s03_넘어짐':1.2,'s06_밤공방':1.25,'s11_할아버지':1.9,'s12_고침':1.6,'s14_함께':1.9}
+for s in S:
+    k=ZOOM_OUT.get(s['name'],ZOOM_OUT['default'])
+    for c in s['cam']:
+        c['pos']=[c['tgt'][i]+(c['pos'][i]-c['tgt'][i])*k for i in range(3)]
+        c['pos'][1]=max(c['pos'][1],c['tgt'][1]+2)
 json.dump({'aspect':'9:16','fov':50,'shots':S},open('/home/user/youtubeshot/연재/부러진팔/장면/샷목록.json','w',encoding='utf-8'),ensure_ascii=False,indent=1)
 print(len(S),'shots',sum(round((s['t1']-s['t0'])*s['fps']) for s in S),'frames')
