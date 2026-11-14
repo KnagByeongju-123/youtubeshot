@@ -111,7 +111,7 @@
   },
   {
    "name": "수령",
-   "look": "a Joseon county magistrate in his late 40s, stern square face, thin mustache and short black beard, wears a black samo official cap and a deep blue dallyeong official robe with a square crane rank badge, a stiff belt hanging loosely, black heukhwa boots, hands empty",
+   "look": "a Joseon county magistrate in his late 40s, stern square face, thin mustache and short black beard, wears a black two-tiered samo cap with two thin flat oval wings sticking straight out to the left and right (exactly the cap in his reference image) and a deep blue dallyeong official robe with a square crane rank badge, a stiff belt hanging loosely, black heukhwa boots, hands empty",
    "look_ko": "40대 후반 고을 수령, 엄한 네모 얼굴, 가는 콧수염과 짧은 검은 수염, 검은 사모, 짙은 파랑 단령(학 흉배), 느슨한 띠, 검은 목화",
    "face": "등장인물/조선/위조지폐편/수령.png",
    "편": "조선 사건사고 위조지폐편 (사용자 확인 2026-11-14)"
@@ -125,14 +125,14 @@
   },
   {
    "name": "태종",
-   "look": "King Taejong of Joseon in his mid 30s, strong square jaw, sharp determined eyes, short black mustache and short beard, exactly the king's costume of the reference sheet: black ikseongwan cap, bright red gonryongpo robe with gold dragon badges, okdae jade belt, black boots",
+   "look": "King Taejong of Joseon in his mid 30s, strong square jaw, sharp determined eyes, short black mustache and short beard, exactly the king's costume of the reference sheet: the same black ikseongwan cap with the same shape as in the reference image (two small rounded lobes on top), bright red gonryongpo robe with gold dragon badges, okdae jade belt, black boots",
    "look_ko": "30대 중반 태종, 각진 턱, 날카로운 눈, 짧은 콧수염·턱수염, 기본_왕 시트와 같은 익선관·붉은 곤룡포",
    "face": "등장인물/조선/위조지폐편/태종.png",
    "편": "조선 사건사고 위조지폐편 (사용자 확인 2026-11-14)"
   },
   {
    "name": "세종",
-   "look": "King Sejong of Joseon in his late 20s, round gentle scholarly face, calm thoughtful eyes, slightly plump, thin mustache and small beard, exactly the king's costume of the reference sheet: black ikseongwan cap, bright red gonryongpo robe with gold dragon badges, okdae jade belt, black boots",
+   "look": "King Sejong of Joseon in his late 20s, round gentle scholarly face, calm thoughtful eyes, slightly plump, thin mustache and small beard, exactly the king's costume of the reference sheet: the same black ikseongwan cap with the same shape as in the reference image (two small rounded lobes on top), bright red gonryongpo robe with gold dragon badges, okdae jade belt, black boots",
    "look_ko": "20대 후반 세종, 둥글고 온화한 얼굴, 차분한 눈, 약간 통통, 가는 콧수염, 기본_왕 시트와 같은 익선관·붉은 곤룡포",
    "face": "등장인물/조선/위조지폐편/세종.png",
    "편": "조선 사건사고 위조지폐편 (사용자 확인 2026-11-14)"
