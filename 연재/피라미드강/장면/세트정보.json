@@ -1,0 +1,24 @@
+{
+ "G": {
+  "ropes": [
+   [
+    "sl_front",
+    "p4_hand_r"
+   ],
+   [
+    "sl_front",
+    "p5_hand_r"
+   ],
+   [
+    "sl_front",
+    "p2_hand_r"
+   ]
+  ]
+ },
+ "T": {
+  "ropes": []
+ },
+ "C": {
+  "ropes": []
+ }
+}

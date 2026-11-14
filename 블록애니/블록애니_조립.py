@@ -5,7 +5,7 @@ pj_path, shot_path, fdir, audio, out = sys.argv[1:6]
 pj=json.load(open(pj_path,encoding='utf-8')); shots=json.load(open(shot_path,encoding='utf-8'))['shots']
 tim=json.load(open(os.path.splitext(pj_path)[0]+'_시간.json',encoding='utf-8'))
 nums=json.load(open(sys.argv[sys.argv.index('--숫자')+1],encoding='utf-8')) if '--숫자' in sys.argv else []
-work=os.path.splitext(out)[0]+'_작업'; os.makedirs(work,exist_ok=True)
+work=os.path.abspath(os.path.splitext(out)[0]+'_작업'); os.makedirs(work,exist_ok=True)
 # 1) 샷 → 24fps 조각
 parts=[]
 for sh in shots:
@@ -30,7 +30,15 @@ def pieces(text):
             if cur and len(cur)+len(w)>24: out.append(cur); cur=w
             else: cur=(cur+' '+w).strip()
         if cur: out.append(cur)
-    return out
+    res=[]
+    for p in out:      # 쉼표 없이 긴 줄은 낱말 사이에서 반으로 (한 줄 22자 넘지 않게)
+        while len(p)>22:
+            sp=[i for i,ch in enumerate(p) if ch==' ']
+            if not sp: break
+            n=max(2,-(-len(p)//22)); cut=min(sp,key=lambda i:abs(i-len(p)/n))
+            res.append(p[:cut].strip()); p=p[cut:].strip()
+        res.append(p)
+    return res
 F='NanumGothicExtraBold'
 ev=[]
 ev.append(f"Dialogue: 0,{ts(0.2)},{ts(3.2)},Title,,0,0,0,,{{\\fad(400,400)}}{esc(pj['title'])}")
