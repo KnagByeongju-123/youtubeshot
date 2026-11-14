@@ -1,0 +1,11 @@
+{"_설명": "조선 사건사고 '위조지폐범' 편 인물 (2026-11-14). 자동 시트가 불합격(수령: 사모가 갓처럼·서양 허리띠 버클 / 노비: 옷에 한자·신발이 앞뒤 다름)이라 기본 시트를 기준으로 다시 그림",
+ "chars": [
+  {"name": "수령", "kind": "person", "group": "위조지폐편",
+   "refs": ["등장인물/조선/_기준/문관.png"],
+   "look": "a Joseon county magistrate in his late 40s, stern square face, thin mustache and short black beard, wears a black samo official cap and a deep blue dallyeong official robe with a square crane rank badge, a stiff belt hanging loosely, black heukhwa boots, hands empty",
+   "look_ko": "40대 후반 고을 수령, 엄한 네모 얼굴, 가는 콧수염과 짧은 검은 수염, 검은 사모, 짙은 파랑 단령(학 흉배), 느슨한 띠, 검은 목화"},
+  {"name": "노비 위조범", "kind": "person", "group": "위조지폐편",
+   "refs": ["등장인물/조선/_기준/3면_농민.png"],
+   "look": "a thin Joseon male servant in his early 30s, gaunt narrow face, wary dark eyes, faint stubble, hair in a sangtu topknot with a black manggeon headband, plain faded white hemp jeogori jacket and loose baji trousers tied at the ankles, woven straw jipsin shoes, hands empty",
+   "look_ko": "30대 초반 마른 남자 노비, 갸름한 얼굴, 경계하는 눈, 옅은 수염자국, 상투와 망건, 바랜 흰 삼베 저고리·바지(발목 대님), 짚신, 빈손"}
+ ]}
