@@ -1,0 +1,129 @@
+X: 192
+T: I Need Thee Every Hour
+%%combinevoices 1
+C: Words: Annie Sherwood Hawks, 1872.
+C: Music: 'I Need Thee Every Hour' Robert Lowry, 1872.  Setting: "Pentecostal Hymns, No. 2", 1898.
+C: copyright: public domain.  This score is a part of the Open Hymnal Project, 2012 Revision.
+S: Music source: "Pentecostal Hymns, No. 2" 1898 page 155.   ABC file contributed to the Open Hymnal by Samuel Cantrell, 18 Jan 2012.
+M: 3/4 % time signature
+L: 1/4 % default length
+%%staves (S1V1 S1V2) | (S2V1 S2V2) 
+V: S1V1 clef=treble 
+%%MIDI beat 127 125 110 1
+V: S1V2 
+%%MIDI beat 127 125 110 1
+V: S2V1 clef=bass 
+%%MIDI beat 127 125 110 1
+V: S2V2 
+%%MIDI beat 127 125 110 1
+K: Ab % key signature
+%
+%%MIDI program 1 0 % Piano 1
+%%MIDI program 2 0 % Piano 1
+%%MIDI program 3 0 % Piano 1
+%%MIDI program 4 0 % Piano 1
+%
+% 1
+[V: S1V1] [Q:1/4=80] A | c3/2 B/ A/G/ | A2 A | (A3/2 B/) A/F/ | E2
+w: 1.~I need Thee ev- 'ry hour, Most gra- * cious_ Lord; 
+w: 2.~I need Thee ev- 'ry hour, Stay Thou_ near_ by; 
+w: 3.~I need Thee ev- 'ry hour, In joy _ or _ pain; 
+w: 4.~I need Thee ev- 'ry hour, Teach me _ Thy _ will; 
+w: 5.~I need Thee ev- 'ry hour, Most Ho- - ly _ One; 
+[V: S1V2] C | E3/2 D/ C/B,/ | C2 C | D2 D | C2
+[V: S2V1] E, | A,3/2 F,/ E,/E,/ | E,2 E, | F,2 F,/A,/ | A,2
+[V: S2V2] A,, | A,,3/2 D,/ E,/E,/ | A,,2 A,, | D,2 D, | A,,2
+% 5
+[V: S1V1] E | B3/2 c/ B/E/ | c2 A | (G3/2 A/) G/F/ | E2 ||
+w: No ten- der voice like Thine Can peace_ af- * ford. 
+w: Temp- ta- tions lose their pow'r When Thou_ art_ nigh. 
+w: Come quick- ly and a- bide, Or life_ is_ vain. 
+w: And Thy rich pro- mis- es In me _ ful- * fill. 
+w: O make me Thine in- deed, Thou bless- * ed _ Son! 
+[V: S1V2] E | E3/2 E/ E/E/ | E2 E | (E3/2 F/) E/=D/ | E2 ||
+[V: S2V1] G, | G,3/2 A,/ G,/G,/ | A,2 C | B,2 B,/A,/ | G,2 ||
+[V: S2V2] E, | E,3/2 E,/ E,/E,/ | A,2 A,, | B,,2 B,, | E,2 ||
+% 9
+[V: S1V1] c | c3/2 A/ d/c/ | c B2 | B3/2 A/ c/B/ | B A
+w: I need Thee, O I need Thee; Ev- 'ry hour I need Thee; 
+[V: S1V2] A | A3/2 E/ A/A/ | A G2 | E3/2 E/ E/E/ | E E
+[V: S2V1] E | E3/2 C/ F/E/ | E E2 | D3/2 C/ E/D/ | D C
+[V: S2V2] A, | A,3/2 A,/ A,/A,/ | E, E,2 | E,3/2 E,/ E,/E,/ | A,, A,,
+% 13
+[V: S1V1] !sintro!A | A3/2 B/ A/F/ | E A B | (c3/2 A/) B | A2 !eintro!|]
+w: O bless me now, my Sav- ior, I come * to Thee! 
+[V: S1V2] E | F3/2 F/ F/D/ | C E F | (E3/2 C/) D | C2 |]
+[V: S2V1] A, | A,3/2 A,/ A,/A,/ | A, A, A, | A,2 G, | A,2 |]
+[V: S2V2] C, | D,3/2 D,/ D,/D,/ | A,, C, D, | E,2 E, | A,,2 |]
+
+%%newpage
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% 
+% This file is a part of the Open Hymnal Project to create a freely 
+% distributable, downloadable database of Christian hymns, spiritual 
+% songs, and prelude/postlude music.  This music is to be distributed 
+% as complete scores (words and music), using all accompaniment parts, 
+% in formats that are easily accessible on most computer OS's and which
+% can be freely modified by anyone.  The current format of choice is the 
+% "ABC Plus" format, favored by folk music distributors on the internet.
+% All scores will also be converted into pdf, MIDI, and mp3 formats.
+% Some advanced features of ABC Plus are used, and for accurate 
+% translation to a printed score, please consider using "abcm2ps" 
+% version 4.10 or later.  I am doing my best to create a final product
+% that is "Hymnal-quality", and could feasibly be used as the basis for
+% a printed church hymnal.
+%
+% The maintainer of the Open Hymnal Project is Brian J. Dumont (editor
+% at openhymnal dot org).  I have gone through serious efforts 
+% to make sure that no copyright mistakes make it into this database.
+% If I am in error, please inform me as soon as possible.
+%
+% This entire effort has used only free software, and I am indebted to 
+% the efforts of many other individuals, including the authors of
+% the various ABC and ABC Plus software.  Undoubtedly, I am also indebted 
+% to all of the great Christians who wrote these hymns.
+%
+% This database comes with no guarantees whatsoever.
+%
+% I would love to get email from anyone who uses the Open Hymnal, and
+% I will take requests for hymns to add.  My decision of whether to 
+% add a hymn will be based on these criteria (in the following order):
+% 1) It must be in the public domain or freely distributable
+% 2) It must be a Christian piece
+% 3) Whether I have access to a printed copy of the music (surprisingly,
+%    a MIDI file is usually a terrible source)
+% 4) Whether I like the hymn :)
+%
+% If you would like to contribute to the Open Hymnal Project, please 
+% send an email to me, I would love the help!  PLEASE EMAIL ME IF YOU 
+% FIND ANY MISTAKES, no matter how small.  I want to ensure that every 
+% slur, stem, hyphenation, and punctuation mark is correct; and I'm sure 
+% that there must be mistakes right now.
+%
+% Open Hymnal Project, 2005 Edition
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% PAGE LAYOUT
+%
+%%pagewidth	21.6000cm
+%%pageheight	27.9000cm
+%%scale		0.6600000
+%%staffsep	1.60000cm
+%%exprabove	false
+%%measurebox	false
+%%header "193		REDEEMER"
+%%footer Heb 12:1-15, Mt 19:28, Ps 24:8		6 5 6 5 6 5 6 5 6 5 6 5
+%OHSCRIP Heb 12:1-15, Mt 19:28, Ps 24:8
+%OHTOPICS {Aspiration}, {Brotherhood [6]}, {Children (see also God's Children - the Faithful)}, {Church on Earth (Church Militant) [4]}, {Conscience [1]}, {Cross [4]}, {Crown [5]}, {Darkness, Spiritual [5]}, {Discipleship}, {Duty (see also Law) [4]}, {Eternal Life [1,5,6]}, {Example, Christ's [5]}, {Following Jesus, In Faith [1-5]}, {Following Jesus, Sanctification [1,3-5]}, {Forgiveness [1]}, {God, As King}, {God, Mercy of [1,2]}, {Grace}, {Guidance}, {Heaven [1,5,6]}, {Invitation (Faithful's to God) [4,5]}, {Jesus}, {Leadership [2]}, {Obedience [4,5]}, {Repentance [1,4]}, {Sinners [1,6]}, {Throne (also see God - As King)}, {Truth [2]}, {Victory [6]}
+%OHCATEGORY REDEEMER
+%OHMETRICAL 6 5 6 5 6 5 6 5 6 5 6 5
+%OHCOMPLEXITY 2
+%OHCOMPOSER Haydn, Franz Joseph (1732-1809)
+%OHARRANGER Dykes, John Bacchus (1823-1876)
+%OHAUTHOR Davison, W. Hope (1827-1894)
+%OHTRANSLATOR none
+%%postscript /st { moveto -8 0 rmoveto 0 8 rlineto 4 0 rlineto stroke } def
+%%postscript /nd { moveto -8 0 rmoveto 0 8 rlineto -4 0 rlineto stroke } def
+%%deco sintro 6 st 6 0 0 
+%%deco eintro 6 nd 6 0 0 

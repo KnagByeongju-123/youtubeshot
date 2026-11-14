@@ -6,9 +6,9 @@
   가야금 : 가야금이 노래(꾸밈: 농현·꺾는 음·꾸밈음), 낮은 가야금 줄이 베이스
   해금   : 해금이 노래, 가야금은 펼침화음(베이스-테너-알토-테너) 반주, 장구 아주 작게(첫 박 덩, 가운데 덕)
   함께   : 가야금 노래 + 해금이 뒤따라 은은히, 가야금 베이스, 장구
-1부 = 6곡 × (가야금·해금·함께), 2부 = 6곡 × (가야금·해금) 조금 더 느리고 작게, 마지막 곡은 장구 없이 → 끝 30초 서서히 작아짐
+1부 = 그 편의 곡 × (가야금·해금·함께), 2부 = 같은 곡 × (가야금·해금) 조금 더 느리고 작게, 마지막 곡은 장구 없이 → 끝 30초 서서히 작아짐
 
-사용법: python -X utf8 전통악기/가야금_찬송가_수면.py [결과 폴더]   → 연주곡.mp3 + 곡순서(유튜브 챕터).txt
+사용법: python -X utf8 전통악기/가야금_찬송가_수면.py [결과 폴더] [--편 1|2]   (편마다 곡 묶음이 다름, 기본 1편)   → 연주곡.mp3 + 곡순서(유튜브 챕터).txt
 """
 import os
 import subprocess
@@ -25,14 +25,26 @@ SR = K.SR
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # (악보 파일, 한국어 제목, 통일찬송가 장, 4분음표 빠르기) — 수면용으로 느리게
-SONGS = [
-    ("Amazing_Grace", "나 같은 죄인 살리신", 405, 64),
-    ("It_Is_Well_With_My_Soul", "내 평생에 가는 길", 470, 58),
-    ("Nearer_My_God_To_Thee", "내 주를 가까이 하게 함은", 364, 80),
-    ("What_A_Friend_We_Have_In_Jesus", "죄짐 맡은 우리 구주", 487, 60),
-    ("Blessed_Assurance", "예수를 나의 구주 삼고", 204, 78),
-    ("Under_His_Wings", "주 날개 밑 내가 편안히 쉬네", 478, 84),
-]
+ALBUMS = {   # 편마다 따로 만듦. 장 번호를 확인하지 못한 곡은 None (제목만 표시)
+    "1": [   # 1편 (35분)
+        ("Amazing_Grace", "나 같은 죄인 살리신", 405, 64),
+        ("It_Is_Well_With_My_Soul", "내 평생에 가는 길", 470, 58),
+        ("Nearer_My_God_To_Thee", "내 주를 가까이 하게 함은", 364, 80),
+        ("What_A_Friend_We_Have_In_Jesus", "죄짐 맡은 우리 구주", 487, 60),
+        ("Blessed_Assurance", "예수를 나의 구주 삼고", 204, 78),
+        ("Under_His_Wings", "주 날개 밑 내가 편안히 쉬네", 478, 84),
+    ],
+    "2": [   # 2편 — 마지막은 저녁 노래로 잠들기 좋게
+        ("Holy_Holy_Holy", "거룩 거룩 거룩", None, 70),
+        ("Jesus_Loves_Me", "예수 사랑하심은", None, 70),
+        ("I_Need_Thee_Every_Hour", "주 음성 외에는", None, 78),
+        ("Rock_Of_Ages", "만세 반석 열리니", None, 82),
+        ("More_Love_To_Thee", "내 구주 예수를 더욱 사랑", None, 64),
+        ("Pass_Me_Not", "인애하신 구세주여", None, 70),
+        ("When_I_Survey", "주 달려 죽은 십자가", None, 72),
+        ("Abide_With_Me", "때 저물어서 날이 어두니", None, 58),
+    ],
+}
 
 
 def sounding(notes, t):
@@ -117,7 +129,7 @@ def render_round(score, bpm, style, rng, gain=1.0, use_jango=True, sweep=False):
             push = 0.035 if (prev is not None and 0 < m - prev <= 3 and d >= 1) else 0.0
             nong = 0.022 if long_note else (0.008 if d >= 1 else 0.0)
             if long_note and rng.random() < 0.3:   # 위 이웃음에서 떨어지는 짧은 꾸밈음
-                K.place(buf, gayageum(K.hz(m + 2), 0.2, rng, bright=0.45), T(st) - 0.09, 0.25 * gain, pan=0.1)
+                K.place(buf, gayageum(K.hz(m + 2), 0.2, rng, bright=0.45), max(0.0, T(st) - 0.09), 0.25 * gain, pan=0.1)
             K.place(buf, gayageum(K.hz(m), dur + 0.6, rng, nong=nong, push=push, bright=0.42), T(st) + rng.uniform(0, 0.02), 0.8 * gain, pan=0.1)
         if style == "해금":
             K.place(buf, haegeum(K.hz(m), dur * 1.06 + 0.05, long_note), T(st), 0.42 * gain, pan=0.05)
@@ -160,7 +172,12 @@ def write_wav(path, x):
 
 
 def main(argv):
-    out_dir = argv[0] if argv else os.path.join(ROOT, "찬송가", "가야금_수면")
+    album = argv[argv.index("--편") + 1] if "--편" in argv else "1"
+    if "--편" in argv:
+        i = argv.index("--편")
+        argv = argv[:i] + argv[i + 2:]
+    SONGS = ALBUMS[album]
+    out_dir = argv[0] if argv else os.path.join(ROOT, "찬송가", "가야금_수면" + ("" if album == "1" else album))
     os.makedirs(out_dir, exist_ok=True)
     rng = np.random.default_rng(2026)
     plan = [(s, ["가야금", "해금", "함께"], 1.0, 1.0, True) for s in SONGS]                          # 1부
@@ -172,7 +189,7 @@ def main(argv):
         p = os.path.join(out_dir, f"_{k:02d}.wav")
         write_wav(p, x)
         parts.append(p)
-        chapters.append((t, f"{ko} (통일찬송가 {no}장)"))
+        chapters.append((t, f"{ko} (통일찬송가 {no}장)" if no else ko))
         print(f"{k + 1:2d}/{len(plan)} {ko}  {sec / 60:.1f}분", flush=True)
         t += sec
     lst = os.path.join(out_dir, "_목록.txt")
