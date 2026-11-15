@@ -22,6 +22,7 @@ def card(title,sub,loc,col=COL['accent'],w=150,h=90,name='card',tsize=24,ssize=1
     t1=text(title,tsize,(0,-5,h*0.08),rgb=col); t1.parent=g
     if sub:
         t2=text(sub,ssize,(0,-5,-h*0.28),rgb=COL['white'],bold=False); t2.parent=g
+    g['h']=h
     if face is not None:
         tr=g.constraints.new('TRACK_TO'); tr.target=face; tr.track_axis='TRACK_NEGATIVE_Y'; tr.up_axis='UP_Z'
     return g

@@ -13,11 +13,11 @@ for li,(nm,c,steps) in enumerate(LANES):
     y=Y[li]; x0=-500 if li<2 else 200
     if li==1: x0=-500+0
     lane=box((SX*len(steps)+40,70,8),(x0+SX*(len(steps)-1)/2,y,4),(0.18,0.21,0.27)); show(lane,starts[li]-0.4)
-    t=text(nm,26,(x0-150,y-40,40),rgb=c,align='RIGHT'); show(t,starts[li]-0.3)
+    t=text(nm,32,(x0-100,y-40,40),rgb=c,align='RIGHT'); show(t,starts[li]-0.3)
     for k,s_ in enumerate(steps):
-        b=box((120,50,40),(x0+k*SX,y,30),c,bevel=4); show(b,starts[li]+k*0.25)
-        tx=text(s_,13,(x0+k*SX,y-27,32),rgb=COL['ink']); show(tx,starts[li]+k*0.25+0.05)
-        nn=text(str(k+1),14,(x0+k*SX,y-27,62),rgb=COL['accent']); show(nn,starts[li]+k*0.25+0.05)
+        b=box((136,56,54),(x0+k*SX,y,34),c,bevel=4); show(b,starts[li]+k*0.25)
+        tx=text(s_,17,(x0+k*SX,y-30,36),rgb=COL['ink']); show(tx,starts[li]+k*0.25+0.05)
+        nn=text(str(k+1),18,(x0+k*SX,y-30,74),rgb=COL['accent']); show(nn,starts[li]+k*0.25+0.05)
 # 흐르는 판재 토큰
 tok=empty('tok',(-500,300,80)); tb=revolve(seal_profile(),'tokseal',seg=64,rgb=COL['accent']); tb.parent=tok; tb.scale=(1.5,1.5,1.5)
 keyv(tok,'location',[(0,(-500,300,80)),(T(1)+0.5,(-500,300,80)),(E(1)-0.3,(-500+SX*6,300,80)),(T(2)+0.4,(-500,100,80)),(E(2)-0.3,(-500+SX*4,100,80))])
@@ -36,6 +36,6 @@ cam,tgt=camera(32)
 cam_keys(cam,tgt,[(0,(-700,-900,700),(-200,200,40)),(T(1)+0.6,(-500,-700,520),(-80,280,40)),(E(1),(0,-700,520),(150,280,40))])
 cam_keys(cam,tgt,[(T(2)+0.6,(-500,-850,480),(-150,100,40)),(E(2),(-100,-850,480),(0,100,40))])
 cam_keys(cam,tgt,[(T(3)+0.8,(0,-1100,700),(150,-50,40)),(E(4),(500,-1200,700),(500,-200,40))])
-cam_keys(cam,tgt,[(T(5)+0.6,(250,-1700,1200),(250,0,60)),(DUR,(300,-1750,1250),(250,0,60))])
+cam_keys(cam,tgt,[(T(5)+0.6,(200,-1350,850),(200,0,80)),(DUR,(250,-1380,870),(200,0,80))])
 handheld(cam,0.5)
 finish('ch1',DUR)

@@ -19,7 +19,7 @@ for i,(nm,ns) in enumerate(plans):
     for k in range(ns):
         s_=revolve(seal_profile(H=1.5+2.5*(k+1)/ns),'pl%d%d'%(i,k),seg=64,rgb=COL['sheet']); s_.scale=(2.2,)*3; s_.location=(x-60*(ns-1)/2+k*60*0+0,0,30+k*60)
         show(s_,T(3)+0.5+i*0.3+k*0.15,base=(2.2,2.2,2.2))
-        m=s_.data.materials[0]
+        m=s_.data.materials[0].copy(); s_.data.materials[0]=m
         thin=[0.25,0.45,0.95][i] if k==ns-1 else 0.2
         jc=(max(0,min(1,1.5-abs(4*thin-3))),max(0,min(1,1.5-abs(4*thin-2))),max(0,min(1,1.5-abs(4*thin-1))))
         m.diffuse_color=(*COL['sheet'],1); m.keyframe_insert('diffuse_color',frame=F(T(3)+2.2)); m.diffuse_color=(*jc,1); m.keyframe_insert('diffuse_color',frame=F(T(3)+3.2))

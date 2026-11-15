@@ -9,13 +9,13 @@ for i,(nm,ds) in enumerate(USE):
     a=math.radians(90+i*60); p=(380*math.cos(a),380*math.sin(a),220+(i%2)*90)
     g=card(nm,ds,p,(0.4,1,0.5),w=200,h=90,tsize=24,ssize=13,face=cam)
     keyv(g,'scale',[(0,(0,0,0)),(T(1)+0.2+i*0.4,(0,0,0)),(T(1)+0.4+i*0.4,(1.1,1.1,1.1)),(T(1)+0.6+i*0.4,(1,1,1))])
-    tag=text('사용 중',13,(0,-6,-30),rot=(0,0,0),rgb=(0.4,1,0.5)); tag.parent=g; tag.rotation_euler=(math.radians(90),0,0)
+    tag=text('사용 중',14,(0,-6,-60),rot=(0,0,0),rgb=(0.4,1,0.5)); tag.parent=g; tag.rotation_euler=(math.radians(90),0,0)
 REV=[('OCR','글자 읽기'),('CAMotics','가공 시뮬레이션'),('pandas','측정 통계')]
 for i,(nm,ds) in enumerate(REV):
     p=(-300+i*300,-420,120)
     g=card(nm,ds,p,COL['accent'],w=220,h=90,tsize=24,ssize=13,face=cam)
     keyv(g,'scale',[(0,(0,0,0)),(T(2)+0.3+i*0.5,(0,0,0)),(T(2)+0.6+i*0.5,(1,1,1))])
-rv=text('도입 검토',30,(0,-430,230),rgb=COL['accent']); show(rv,T(2)+0.2)
+rv=text('도입 검토',30,(0,-430,250),rgb=COL['accent']); show(rv,T(2)+0.2)
 core=ai_orb((0,0,260),55); spin(core,0,DUR,2); show(core,0.2,base=(1,1,1))
 # 2) 숫자는 표 한 곳 → 모델 · NC · 지시서
 QX=1400
@@ -35,7 +35,7 @@ keyv(dw,'location',[(0,(vx-250,-40,150)),(T(4)+1.6,(vx-250,-40,150)),(T(4)+2.6,(
 rc=text('AI 결과는 다시 읽어 검사',26,(QX,-100,560),rgb=(0.4,1,0.5)); show(rc,T(4)+0.2)
 # 4) 사람이 꼭 하는 일
 px=QX+300
-pp=person((px-300,-150,0),(0.62,0.42,0.95),name='human',scale=1.5); keyv(pp,'scale',[(0,(0,0,0)),(T(5)-0.1,(0,0,0)),(T(5)+0.3,(1.5,1.5,1.5))])
+pp=person((px-480,-150,0),(0.62,0.42,0.95),name='human',scale=1.5); keyv(pp,'scale',[(0,(0,0,0)),(T(5)-0.1,(0,0,0)),(T(5)+0.3,(1.5,1.5,1.5))])
 for i,s_ in enumerate(('가공 조건 확정','시뮬레이션 · 드라이런','첫 가공품 승인')):
     g=card(s_,'',(px+i*0,-150,330-i*90),COL['accent'],w=300,h=70,tsize=22)
     keyv(g,'scale',[(0,(0,0,0)),(T(5)+0.5+i*0.6,(0,0,0)),(T(5)+0.8+i*0.6,(1,1,1))])
