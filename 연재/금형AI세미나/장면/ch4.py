@@ -67,6 +67,7 @@ for k,mn in enumerate(['영업관리','설계관리','구매관리','조립관�
     o=text(mn,11,(QX-150+k*62,27,443),rgb=(0.85,0.88,0.95) if mn!='설계관리' else COL['accent'],bold=False); show(o,T(6))
 tab=box((200,10,26),(QX-250,32,412),(0.95,0.95,0.97),name='tab'); show(tab,T(6)+0.1)
 tb=text('PartList 등록 · 금형제작관리',11,(QX-250,26,412),rgb=COL['ink']); show(tb,T(6)+0.15)
+pl=text('도입 예정',16,(QX+300,26,443),rgb=COL['accent']); show(pl,T(6)+0.1)
 hdr=box((690,10,24),(QX,32,380),(0.16,0.22,0.34),name='hdr'); show(hdr,T(6)+0.2)
 cols=['No','제번','금형번호','품명','재질','수량','도면']; cx=[-330,-285,-180,-75,60,140,220]
 for s_,x_ in zip(cols,cx):
@@ -79,13 +80,13 @@ for i,r_ in enumerate(rows):
     ic=empty('pdfi%d'%i,(PX,-10,200)); ib=box((40,6,18),(0,0,0),(0.85,0.18,0.18),bevel=2); ib.parent=ic; it_=text('PDF',8,(0,-4,0),rgb=COL['white']); it_.parent=ic
     keyv(ic,'location',[(0,(PX,-10,200)),(tr-0.35,(PX,-10,200)),(tr+0.2,(QX+240,26,z_))])
     keyv(ic,'scale',[(0,(0,0,0)),(tr-0.4,(0,0,0)),(tr-0.3,(1,1,1))]); sfx(tr+0.2,'pop',0.5)
-ok_=text('등록 완료',20,(QX+250,24,412),rgb=(0.3,0.8,0.4)); show(ok_,T(6)+3.0)
+ok_=text('등록 예정',20,(QX+250,24,412),rgb=COL['accent']); show(ok_,T(6)+3.0)
 # s7: 시간 절약 막대 → 발주 → 가공업체
 GX=QX; GZ=120
 g1=text('기존: 출력 → 손 입력 → 스캔 · 첨부',18,(GX-340,-60,GZ+40),rgb=COL['white'],align='LEFT'); show(g1,T(7)+0.1,E(7)+0.3)
 b1=empty('bar1',(GX-340,-60,GZ+10)); bb1=box((1,20,26),(0.5,0,0),(0.85,0.35,0.30)); bb1.parent=b1
 keyv(b1,'scale',[(0,(0,1,1)),(T(7)+0.2,(0,1,1)),(T(7)+1.6,(640,1,1)),(E(7),(640,1,1)),(E(7)+0.3,(0,1,1))])
-g2=text('ESG Smart Factory: PDF 자동 등록',18,(GX-340,-60,GZ-30),rgb=(0.4,1,0.5),align='LEFT'); show(g2,T(7)+0.3,E(7)+0.3)
+g2=text('ESG Smart Factory: PDF 자동 등록 (예정)',18,(GX-340,-60,GZ-30),rgb=(0.4,1,0.5),align='LEFT'); show(g2,T(7)+0.3,E(7)+0.3)
 b2=empty('bar2',(GX-340,-60,GZ-60)); bb2=box((1,20,26),(0.5,0,0),(0.30,0.80,0.45)); bb2.parent=b2
 keyv(b2,'scale',[(0,(0,1,1)),(T(7)+0.4,(0,1,1)),(T(7)+0.9,(120,1,1)),(E(7),(120,1,1)),(E(7)+0.3,(0,1,1))])
 sv=text('시간 절약',40,(GX-80,-70,GZ-60),rgb=COL['accent']); show(sv,T(7)+1.8,E(7)+0.3); sfx(T(7)+1.8,'pop',0.8)
