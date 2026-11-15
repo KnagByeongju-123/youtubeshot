@@ -200,7 +200,7 @@ def doll2(M, tag, s=1.0, o=None, nose=1.8):
         cn=find(armR,tag+'cane'); cn['children']=[C('cane_stick',[-5.4,11.4,-1.8],[-5.4,0.3,-1.8],0.45,0.45,'wood_dk'), C('cane_top',[-5.4,11.6,-1.8],[-5.4,11.6,0.4],0.5,0.5,'wood_dk')]
     if bt=='skirt': body=[C('chest',[0,14.6,0],[0,21.6,0],3.4,4.0,sh,seg=16), C('skirt',[0,15.0,0],[0,8.4,0],3.5,5.4,bc,seg=18)]
     elif bt=='coat': body=[C('chest',[0,14.6,0],[0,21.6,0],3.5,4.0,sh,seg=16), C('coat_low',[0,15.0,0],[0,6.0,0],3.6,4.3,bc,seg=18)]
-    else: body=[C('waist',[0,12,0],[0,14.6,0],3.6,3.5,bc,seg=16), C('belt',[0,14.5,0],[0,15.5,0],3.65,3.6,'paint_belt',seg=16), C('chest',[0,15.4,0],[0,21.6,0],3.5,4.1,sh,seg=16)]
+    else: body=[C('waist',[0,12,0],[0,14.6,0],3.6,3.5,bc,seg=16), C('belt',[0,14.5,0],[0,15.5,0],3.65,3.6,o.get('belt') or 'paint_belt',seg=16), C('chest',[0,15.4,0],[0,21.6,0],3.5,4.1,sh,seg=16)]
     body+= [B('shoulder_top',[0,21.6,0],4.05,sh,sy=0.35,seg=16), C('neck',[0,22.6,0],[0,24.4,0],1.1,1.1,'wood')]
     if o.get('vest'): body+= [C('vest',[0,15.3,0],[0,21.4,0],3.62,4.18,o['vest'],seg=16), B('v_btn',[0,18.0,-4.05],0.42,'button',seg=8,rings=6)]
     if o.get('scarf'): body+= [C('scarf',[0,21.6,0],[0,23.4,0],2.6,2.0,o['scarf'],seg=14), C('scarf_tail',[1.4,21.6,-3.2],[1.6,16.8,-3.9],0.7,0.6,o['scarf'],seg=8)]
