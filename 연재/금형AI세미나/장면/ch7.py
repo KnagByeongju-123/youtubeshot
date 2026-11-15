@@ -148,7 +148,7 @@ for i in range(140):
     ti=tW0+(tW1-tW0)*i/140; a_=2*math.pi*(ti-tW0)/(tW1-tW0)
     zz=random.uniform(30,95); px=(WX+rr*math.cos(a_)+random.uniform(-3,3),rr*math.sin(a_)+random.uniform(-3,3),zz)
     spk=sphere(random.uniform(2.2,4.0),px,(1.0,0.92,0.45),name='spark')
-    keyv(spk,'scale',[(0,(0,0,0)),(ti-0.01,(0,0,0)),(ti+0.03,(1,1,1)),(ti+0.16,(0,0,0))])
+    keyv(spk,'scale',[(0,(0,0,0)),(ti-0.05,(0,0,0)),(ti+0.04,(1,1,1)),(ti+0.16,(0,0,0))])
 slug=cyl(rr-1.5,86,(WX,0,45),(0.20,0.62,0.30),seg=64,name='slug')
 keyv(slug,'location',[(0,(WX,0,45)),(tW1+0.2,(WX,0,45)),(tW1+1.0,(WX,0,-80))])
 hole2=cyl(rr,1,(WX,0,90.6),(0.08,0.09,0.11),seg=64); keyv(hole2,'scale',[(0,(0,0,0)),(tW1+0.3,(0,0,0)),(tW1+0.6,(1,1,1))])
@@ -213,12 +213,12 @@ def swap_keys(o,start_ang,parent_free=True):
 oldt.location=S_
 keyv(oldt,'location',[(0,S_),(t2,S_),(t3,(S_[0],0,S_[2]-70))]+swap_keys(oldt,math.pi)+[(t5,(M_[0],0,M_[2]))])
 newt.parent=None
-keyv(newt,'location',[(0,(0,0,-900)),(t2-0.01,(0,0,-900)),(t2,M_),(t3,(M_[0],0,M_[2]-70))]+swap_keys(newt,0)+[(t5,(S_[0],0,S_[2]))])
-keyv(newt,'scale',[(0,(0,0,0)),(t2-0.01,(0,0,0)),(t2,(1,1,1))])
+keyv(newt,'location',[(0,(0,0,-900)),(t2-0.05,(0,0,-900)),(t2,M_),(t3,(M_[0],0,M_[2]-70))]+swap_keys(newt,0)+[(t5,(S_[0],0,S_[2]))])
+keyv(newt,'scale',[(0,(0,0,0)),(t2-0.05,(0,0,0)),(t2,(1,1,1))])
 pockets[0].hide_render=False
 # 매거진 안 원래 공구(앞 포켓)는 잡을 때 숨김 → newt 가 대신
 ghost=tool('drill','ghost'); ghost.parent=mag; ghost.location=pockets[0].location.copy()
-keyv(ghost,'scale',[(0,(1,1,1)),(t2-0.02,(1,1,1)),(t2,(0,0,0))])
+keyv(ghost,'scale',[(0,(1,1,1)),(t2-0.06,(1,1,1)),(t2,(0,0,0))])
 lt=text('자동 공구 교환  T01 → T05',24,(QX+160,-180,QZ+190),rgb=COL['accent']); show(lt,T(7)+0.1,t6+0.6)
 for t_,k_ in ((t2,'click'),(t5,'click')): pass
 # 작업표 (오른쪽)

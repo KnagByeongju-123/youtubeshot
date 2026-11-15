@@ -45,9 +45,30 @@ for i,(kf,kb) in enumerate(keys):
     seq2.append((a+step*0.98,' '))
 yz=-16*MS*0.7071
 tgt=curve_line([(MX-330,yz,150-(4.0-t)*MS),(MX+330,yz,150-(4.0-t)*MS)],bevel=1.8,rgb=(0.4,1,0.5)); show(tgt,T(4)+0.4,E(7))
-tt=text('목표 높이 4.0',20,(MX+420,yz,150-(4.0-t)*MS),rgb=(0.4,1,0.5)); show(tt,T(4)+0.5,E(7))
+tt=text('목표 높이 4.0',20,(MX,yz-10,150-(4.0-t)*MS-26),rgb=(0.4,1,0.5)); show(tt,T(4)+0.5,E(7))
 c1=text(' ',30,(MX,-250,370),rgb=COL['white']); text_seq(c1,seq+[(E(6)+0.2,' ')])
 c2=text(' ',26,(MX,-250,330),rgb=COL['accent']); text_seq(c2,seq2[:-1]+[(E(7),' ')])
+# 해석 결과 → 2D·3D 금형 치수 자동 수정 (피어싱 펀치 지름)
+SP=6.0; d0=IT[0]['pierce_dia']
+pp=cyl(d0/2*SP,190,(-540,0,155),COL['punch'],seg=64,name='piercep')
+pph=cyl(d0/2*SP+14,24,(-540,0,262),COL['punch'],seg=64,name='piercehead')
+for o_ in (pp,pph): keyv(o_,'scale',[(0,(0,0,0)),(T(4)-0.1,(0,0,0)),(T(4)+0.4,(1,1,1))])
+for i,it in enumerate(IT):
+    k_=it['pierce_dia']/d0; a=tA+i*step
+    for o_ in (pp,pph): key(o_,'scale',a+0.05,(k_,k_,1)) if i else None
+    key(pp,'scale',a+0.35,(k_,k_,1)); key(pph,'scale',a+0.35,(k_,k_,1))
+lp=text('3D 피어싱 펀치',22,(-540,-140,330),rgb=COL['sky']); show(lp,T(4)+0.3,E(7))
+# 2D 도면 화면
+pnl=box((300,6,300),(560,30,190),(0.10,0.13,0.18),bevel=4,name='p2d'); show(pnl,T(4)-0.1,E(7))
+l2=text('2D 도면',22,(560,-140,370),rgb=COL['white']); show(l2,T(4)+0.3,E(7))
+rect=empty('rect2d',(560,24,180))
+for pts in ([(-1,0,-1),(1,0,-1),(1,0,1),(-1,0,1),(-1,0,-1)],):
+    rl=curve_line([(x*1,0,z*1) for x,y,z in pts],bevel=0.02,rgb=COL['white']); rl.parent=rect
+keyv(rect,'scale',[(0,(0,0,0)),(T(4)-0.1,(0,0,0)),(T(4)+0.3,(d0/2*3.4,1,95))])
+for i,it in enumerate(IT):
+    a=tA+i*step; key(rect,'scale',a+0.35,(it['pierce_dia']/2*3.4,1,95))
+dl=text(' ',30,(560,22,300),rgb=COL['accent']); text_seq(dl,[(T(4)+0.3,'Ø%.2f'%d0)]+[(tA+i*step+0.35,'Ø%.2f'%it['pierce_dia']) for i,it in enumerate(IT)]+[(E(7),' ')])
+ad=text('해석 결과 → 금형 치수 자동 수정',28,(0,-250,460),rgb=COL['accent']); show(ad,T(4)+0.6,E(6)-0.8)
 ok=text('높이 차이 0.01 mm 이내 → 확정',30,(MX,-250,290),rgb=(0.4,1,0.5)); show(ok,T(6)+1.8,E(7))
 big=text('Ø23.25  →  Ø25.26',60,(MX,-250,410),rgb=COL['accent']); show(big,T(7)+0.3,E(7)+0.3)
 # 4) 공정 순서·금형 세트 자동 → 스트립
@@ -64,7 +85,7 @@ st=text('공정 순서 · 금형 세트 자동 생성',34,(SX,-90,260),rgb=COL['
 cam,tgt_=camera(35)
 cam_keys(cam,tgt_,[(0,(0,-1500,600),(0,0,150)),(T(1)+1.5,(0,-1250,420),(0,0,170)),(E(2),(40,-1200,420),(0,0,180))])
 cam_keys(cam,tgt_,[(T(3)+0.6,(0,-1450,230),(0,0,170)),(E(3),(-30,-1400,225),(0,0,170))])
-cam_keys(cam,tgt_,[(T(4)+0.8,(-80,-820,200),(0,0,170)),(E(6)-0.5,(80,-820,200),(0,0,170))])
+cam_keys(cam,tgt_,[(T(4)+0.8,(-50,-1550,360),(0,0,230)),(E(6)-0.5,(50,-1550,360),(0,0,230))])
 cam_keys(cam,tgt_,[(T(7)+0.4,(0,-1000,300),(0,0,270)),(E(7),(0,-980,300),(0,0,270))])
 cam_keys(cam,tgt_,[(T(8)+1.0,(SX,-900,420),(SX,0,120)),(DUR,(SX+60,-880,400),(SX,0,120))])
 sfx(T(8)+0.1,'whoosh',0.8)

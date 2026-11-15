@@ -57,15 +57,43 @@ for i,nm in enumerate(names):
     keyv(pg,'scale',[(tin+0.6,(1,1,1)),(tin+0.85,(0,0,0))])
     pages.append(pg)
 keyv(dwg,'location',[(T(5),(60,Y0+40,240)),(T(5)+0.6,(60,Y0+40,-600))])
-# 현장 · 협력업체로
-for i,(nm,x,c_) in enumerate((('현장',PX+600,COL['die']),('협력업체',PX+1000,COL['sky']))):
-    hs=box((220,160,140),(x,60,70),c_,bevel=6); show(hs,T(6)+0.2+i*0.3)
-    rf=box((240,170,20),(x,60,150),(0.3,0.33,0.4)); show(rf,T(6)+0.3+i*0.3)
-    t=text(nm,40,(x,-26,75),rgb=COL['ink']); show(t,T(6)+0.4+i*0.3)
-    cp=box((70,10,90),(PX,-40,190),(0.9,0.2,0.2),bevel=4)
-    keyv(cp,'scale',[(0,(0,0,0)),(T(6)+1.0+i*0.6,(0,0,0)),(T(6)+1.2+i*0.6,(1,1,1))])
-    keyv(cp,'location',[(T(6)+1.2+i*0.6,(PX,-40,190)),(T(6)+2.0+i*0.6,(x-100+i*60*0+((i*2-1)*0+0)+0, -40, 420)),(T(6)+2.8+i*0.6,(x,-40,200))])
-same=text('어느 컴퓨터에서나 똑같이',26,(PX+800,-40,330),rgb=COL['accent']); show(same,T(6)+2.4,E(6)+0.4)
+# PDF → 사내 MES 파트리스트 등록 → 발주 → 금형 부품과 함께 가공업체로
+QX=PX+620
+mes=box((560,8,300),(QX,40,250),(0.10,0.13,0.18),bevel=5,name='mes'); show(mes,T(6)-0.1)
+mh=text('사내 MES · 파트리스트',24,(QX-255,33,375),rgb=COL['accent'],align='LEFT'); show(mh,T(6))
+cols=['품번','품명','재질','수량','도면']; cx=[-255,-120,30,120,190]
+for s_,x_ in zip(cols,cx):
+    o=text(s_,16,(QX+x_,33,340),rgb=(0.6,0.7,0.85),align='LEFT'); show(o,T(6)+0.1)
+rows=[('SMP-P-001','버링 펀치','SKD11','1'),('SMP-D-001','버링 다이','SKD11','1'),('SMP-B-001','펀치 고정판','S50C','1')]
+for i,r_ in enumerate(rows):
+    tr=T(6)+0.5+i*0.45; z_=300-i*42
+    for s_,x_ in zip(r_,cx): o=text(s_,16,(QX+x_,33,z_),rgb=COL['white'],bold=False,align='LEFT'); show(o,tr+0.25)
+    ic=box((34,6,22),(0,0,0),(0.85,0.18,0.18),bevel=2,name='pdfi')
+    keyv(ic,'location',[(0,(PX,-10,200)),(tr-0.3,(PX,-10,200)),(tr+0.25,(QX+205,30,z_))])
+    keyv(ic,'scale',[(0,(0,0,0)),(tr-0.31,(0,0,0)),(tr-0.2,(1,1,1))])
+    sfx(tr+0.25,'pop',0.5)
+st_=text('발주',70,(QX+120,26,215),rot=(math.radians(90),math.radians(-12),0),rgb=COL['red'])
+tS=T(6)+2.2
+keyv(st_,'scale',[(0,(0,0,0)),(tS-0.05,(0,0,0)),(tS,(2.2,2.2,2.2)),(tS+0.18,(1,1,1))]); sfx(tS+0.15,'click',1.2)
+# 이송 길 + 상자(도면 PDF + 금형 부품)
+VX=QX+900
+path=curve_line([(QX,-120,8),(VX,-120,8)],bevel=4,rgb=(0.3,0.34,0.42)); show(path,T(6)+2.4)
+for i,(nm,x,c_) in enumerate((('가공업체',VX,COL['sky']),('현장',QX+520,COL['die']))):
+    hs=box((220,160,140),(x,60,70),c_,bevel=6); show(hs,T(6)+0.3+i*0.2)
+    rf=box((240,170,20),(x,60,150),(0.3,0.33,0.4)); show(rf,T(6)+0.4+i*0.2)
+    t=text(nm,34,(x,-26,75),rgb=COL['ink']); show(t,T(6)+0.5+i*0.2)
+crate=empty('crate',(QX,-120,40))
+cb=box((90,70,50),(0,0,0),(0.72,0.55,0.32),bevel=3); cb.parent=crate
+pp=box((60,4,40),(0,-37,6),(0.9,0.2,0.2)); pp.parent=crate
+pt_=text('PDF',12,(0,-40,6),rgb=COL['white']); pt_.parent=crate
+mp=revolve(PUNCH,'mini',rgb=COL['punch']); mp.scale=(0.8,0.8,0.8); mp.parent=crate; mp.location=(15,0,25)
+md2=revolve(DIE_P,'minid',rgb=COL['die']); md2.scale=(0.7,0.7,0.7); md2.parent=crate; md2.location=(-22,0,25)
+tc=T(6)+2.7
+keyv(crate,'scale',[(0,(0,0,0)),(tc-0.2,(0,0,0)),(tc,(1,1,1))])
+keyv(crate,'location',[(tc,(QX,-120,40)),(E(6)-0.4,(VX-60,-120,40)),(E(6)-0.1,(VX,-40,40))]); sfx(tc,'whoosh',0.7)
+sh_=box((60,6,80),(0,0,0),COL['paper'],bevel=3,name='sheet2')
+keyv(sh_,'location',[(0,(QX+205,0,200)),(tc+0.3,(QX+205,0,200)),(tc+1.4,(QX+520,-30,220))]); keyv(sh_,'scale',[(0,(0,0,0)),(tc+0.29,(0,0,0)),(tc+0.4,(1,1,1)),(tc+1.4,(1,1,1)),(tc+1.6,(0,0,0))])
+fl=text('PDF + 금형 부품 → 가공업체',24,(VX-300,-130,170),rgb=COL['accent']); show(fl,tc+0.3,E(6)+0.3)
 # 모델 수정 → 도면 다시
 MX=-900
 p2=revolve(PUNCH,'p2',rgb=COL['punch']); p2.scale=(S,)*3; p2.location=(MX,0,10)
@@ -82,8 +110,25 @@ orbit(cam,tgt,T(1)+2,T(2)+3.0,(0,0,90),620,260,-125,-60,n=8)
 cam_keys(cam,tgt,[(T(2)+5.0,(120,-1050,260),(120,0,200)),(E(2),(120,-1000,250),(120,0,200))])
 cam_keys(cam,tgt,[(T(3)+1.2,(60,-820,260),(60,0,240)),(T(4)+0.3,(380,-720,150),(370,0,110)),(E(4),(390,-700,150),(380,0,110))])
 cam_keys(cam,tgt,[(T(5)+0.6,(PX-350,-1400,420),(PX-350,0,200)),(E(5),(PX-100,-1200,380),(PX,0,200))])
-cam_keys(cam,tgt,[(T(6)+0.8,(PX+500,-1500,520),(PX+500,0,170)),(E(6),(PX+520,-1450,500),(PX+500,0,170))])
+cam_keys(cam,tgt,[(T(6)+0.5,(QX,-1000,360),(QX,0,240)),(T(6)+2.4,(QX+80,-950,330),(QX+40,0,230)),(E(6),(QX+620,-1350,460),(QX+520,0,150))])
 cam_keys(cam,tgt,[(T(7)+1.3,(MX+220,-1000,320),(MX+220,0,150)),(DUR,(MX+200,-950,300),(MX+220,0,150))])
-sfx(T(2)+3.0,'whoosh',0.7); sfx(T(5)+3.0,'whoosh',0.7); sfx(T(6)+1.2,'whoosh',0.7); sfx(T(7)+0.4,'whoosh',0.8)
+sfx(T(2)+3.0,'whoosh',0.7); sfx(T(5)+3.0,'whoosh',0.7); sfx(T(7)+0.4,'whoosh',0.8)
+# 2D 도면에서 만들어지는 파일들 (펀치 둘레, 늘 카메라를 봄)
+FILES=[('DXF','2D 캐드 도면',(0.95,0.95,0.97)),('PDF','인쇄 · 공유',(0.90,0.25,0.22)),('STEP','정밀 3D · CAD/CAM',(0.35,0.62,1.0)),
+       ('STL','3D 메쉬 · 확인',(0.95,0.70,0.25)),('BLEND','블렌더 보기',(0.98,0.55,0.15)),('NC','가공 기계 명령',(0.4,1,0.5))]
+for i,(ext,ds,col) in enumerate(FILES):
+    a_=math.radians(90+i*60); p=(230*math.cos(a_),230*math.sin(a_),95+(i%2)*60)
+    g=empty('file%d'%i,p)
+    b=box((120,74,6),(0,0,0),(0.10,0.13,0.18),bevel=4); b.parent=g
+    stp_=box((120,14,7),(0,30,0.5),col); stp_.parent=g
+    t1=text(ext,26,(0,4,4),rot=(0,0,0),rgb=col); t1.parent=g
+    t2=text(ds,12,(0,-22,4),rot=(0,0,0),rgb=COL['white'],bold=False); t2.parent=g
+    tr=g.constraints.new('TRACK_TO'); tr.target=cam; tr.track_axis='TRACK_Z'; tr.up_axis='UP_Y'
+    ti=T(1)+0.4+i*0.55
+    keyv(g,'scale',[(0,(0,0,0)),(ti,(0,0,0)),(ti+0.2,(1.12,1.12,1.12)),(ti+0.35,(1,1,1)),(T(2)-0.3,(1,1,1)),(T(2),(0,0,0))])
+    keyv(g,'location',[(T(2)-0.4,p),(T(2),(p[0]*2.2,p[1]*2.2,p[2]+120))])
+    sfx(ti,'pop',0.5)
+fh=text('2D 도면에서 만들어지는 파일',28,(0,-80,245),rgb=COL['accent']); show(fh,T(1)+0.2,T(2)-0.2)
+sfx(T(2)-0.4,'whoosh',0.7)
 handheld(cam,0.5)
 finish('ch4',DUR)

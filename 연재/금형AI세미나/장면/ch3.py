@@ -88,8 +88,8 @@ for k,sp_ in enumerate(secs):
     o=revolve(sp_,'sec%d'%k,rgb=(0.72,0.74,0.80)); o.scale=(S,)*3
     dz=(-80,0,80)[k]
     keyv(o,'location',[(0,(WX,WY,2)),(tX0+0.3,(WX,WY,2)),(tX0+0.9,(WX,WY,2+dz)),(tX1-0.5,(WX,WY,2+dz)),(tX1,(WX,WY,2))])
-    keyv(o,'scale',[(0,(0,0,0)),(tX0,(0,0,0)),(tX0+0.01,(S,S,S)),(tX1,(S,S,S)),(tX1+0.01,(0,0,0))])
-keyv(sol,'scale',[(tX0,(S,S,S)),(tX0+0.01,(0,0,0)),(tX1,(0,0,0)),(tX1+0.01,(S,S,S))])
+    keyv(o,'scale',[(0,(0,0,0)),(tX0,(0,0,0)),(tX0+0.05,(S,S,S)),(tX1,(S,S,S)),(tX1+0.05,(0,0,0))])
+keyv(sol,'scale',[(tX0,(S,S,S)),(tX0+0.05,(0,0,0)),(tX1,(0,0,0)),(tX1+0.05,(S,S,S))])
 tx=text('분해도',22,(WX+140,WY-20,PZc+40),rgb=COL['accent']); show(tx,tX0+0.6,tX1-0.3)
 # 다른 프로그램으로 넘기기
 for i,(nm,c_) in enumerate((('CATIA',(0.25,0.55,0.95)),('PowerMill',(0.95,0.45,0.25)))):
