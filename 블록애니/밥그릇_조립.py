@@ -44,6 +44,8 @@ for sh in shots:
     d=os.path.join(fdir,sh['name']); n=round((sh['t1']-sh['t0'])*sh['fps']); o=os.path.join(work,sh['name']+'.mp4')
     src=d
     fx=rain_frame if sh.get('rain') else snow_frame if sh.get('snow') else night_frame if sh.get('night') else None
+    if sh.get('night') and (sh.get('rain') or sh.get('snow')):   # 밤 + 비/눈: 어둡게 한 뒤 빗줄기·눈송이 (《마지막 잎새》)
+        fx2=fx; fx=lambda im,k,fx2=fx2: fx2(night_frame(im,k),k)
     if fx:   # 비·눈 장면: 사진마다 빗줄기·눈송이를 그려 넣음
         src=os.path.join(work,sh['name']+('_비' if sh.get('rain') else '_눈' if sh.get('snow') else '_밤')); os.makedirs(src,exist_ok=True)
         for i in range(n):
