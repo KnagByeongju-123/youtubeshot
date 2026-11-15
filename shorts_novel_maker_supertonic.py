@@ -8048,8 +8048,10 @@ SUPERTONIC_VOICES = ([{"short": f"supertonic:M{i}", "gender": "Male", "locale": 
                         "name": f"Supertonic M{i} (남성, 무료 로컬) [supertonic:M{i}]"} for i in range(1, 6)]
                      + [{"short": f"supertonic:F{i}", "gender": "Female", "locale": "ko-KR",
                          "name": f"Supertonic F{i} (여성, 무료 로컬) [supertonic:F{i}]"} for i in range(1, 6)]
-                     + [{"short": "supertonic:F6", "gender": "Female", "locale": "ko-KR",      # 목소리 색깔 입힌 성우 (F6_목소리.py)
-                         "name": "Supertonic F6 (여성, KSS·비상업용만) [supertonic:F6]"},
+                     + [{"short": "supertonic:F7", "gender": "Female", "locale": "ko-KR",      # 목소리 색깔 입힌 성우 (F6_목소리.py)
+                         "name": "Supertonic F7 (여성, KSS·비상업용만) [supertonic:F7]"},
+                        {"short": "supertonic:M7", "gender": "Male", "locale": "ko-KR",
+                         "name": "Supertonic M7 (남성, M1+KSS·비상업용만) [supertonic:M7]"},
                         {"short": "supertonic:M6", "gender": "Male", "locale": "ko-KR",
                          "name": "Supertonic M6 (남성, 원래 M1 목소리) [supertonic:M6]"}]
                      + [{"short": f"supertonic:F{i}", "gender": "Female", "locale": "ko-KR",      # Zeroth-Korean(CC BY 4.0) 색깔
@@ -8067,10 +8069,10 @@ def voice_code(voice_name):
     """설정에 적힌 성우 이름 → 음성 코드. '[supertonic:M2]' '[openai:nova]' '[gemini:Kore]' 형식이면 괄호 안을 씀"""
     if voice_name in TTS_VOICES:
         return TTS_VOICES[voice_name]
-    m = re.search(r"\[((?:openai|gemini):[A-Za-z]+|supertonic:(?:M(?:10|[1-6]|[89])|F(?:10|[1-6]|[89])))\]", voice_name or "")
+    m = re.search(r"\[((?:openai|gemini):[A-Za-z]+|supertonic:(?:M(?:10|[1-9])|F(?:10|[1-57-9])))\]", voice_name or "")
     if m:
         return m.group(1)
-    if re.fullmatch(r"supertonic:(?:M(?:10|[1-6]|[89])|F(?:10|[1-6]|[89]))", (voice_name or "").strip()):
+    if re.fullmatch(r"supertonic:(?:M(?:10|[1-9])|F(?:10|[1-57-9]))", (voice_name or "").strip()):
         return voice_name.strip()
     return "supertonic:M2"     # 성우 미지정·옛 마이크로소프트 온라인 성우 이름 → 남자 성우 2 (기본)
 

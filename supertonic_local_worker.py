@@ -36,7 +36,8 @@ _F6 = {}
 # 목소리 색깔을 입히는 성우: 코드 → (바탕 Supertonic 성우, 입힐 목소리). F6_목소리.py 와 같은 표 (사용자 결정 2026-11-15)
 #   tgt = KSS(비상업용만) · zeroth_<번호> = Zeroth-Korean 사람 번호(CC BY 4.0, 상업 사용 가능·출처 표시) · None = 바탕 그대로
 MIX_VOICES = {
-    "F6": ("F1", "tgt"), "M6": ("M1", None),
+    "F7": ("F1", "tgt"), "M7": ("M1", "tgt"),        # KSS(비상업용만). 예전 이름 F6 → F7 (사용자 결정 2026-11-15)
+    "M6": ("M1", None),
     "F8": ("F1", "zeroth_105"), "F9": ("F1", "zeroth_121"), "F10": ("F1", "zeroth_147"),
     "M8": ("M1", "zeroth_104"), "M9": ("M1", "zeroth_149"), "M10": ("M1", "zeroth_118"),
 }
@@ -50,10 +51,10 @@ def _f6conf():
         return {}
 
 
-def f6_base(voice="F6"):
+def f6_base(voice="F7"):
     """바탕 성우 (F6.json 의 "<코드>" 가 있으면 그것, 옛 형식 {"base"} 는 F6)"""
     d = _f6conf()
-    return d.get(voice) or (d.get("base") if voice == "F6" else None) or MIX_VOICES[voice][0]
+    return d.get(voice) or (d.get("base") if voice == "F7" else None) or MIX_VOICES[voice][0]
 
 
 def voice_tgt(voice):
@@ -67,7 +68,7 @@ def kss_on(voice):
     return voice_tgt(voice) is not None
 
 
-def f6_convert(src, out, voice="F6"):
+def f6_convert(src, out, voice="F7"):
     """F6 = 바탕 성우 소리 → OpenVoice 로 목소리 색깔을 KSS 쪽으로 (F6_목소리.py 를 .sd_venv 에서 띄움)"""
     p = _F6.get("proc")
     if p is None or p.poll() is not None:
@@ -81,13 +82,13 @@ def f6_convert(src, out, voice="F6"):
                              encoding="utf-8", bufsize=1)
         r = json.loads(p.stdout.readline())
         if not r.get("ok"):
-            raise RuntimeError("F6 준비 실패: " + str(r))
+            raise RuntimeError("목소리 색깔 준비 실패: " + str(r))
         _F6["proc"] = p
     p.stdin.write(json.dumps({"src": str(src), "out": str(out), "base": f6_base(voice), "tgt": voice_tgt(voice)}, ensure_ascii=False) + "\n")
     p.stdin.flush()
     r = json.loads(p.stdout.readline())
     if not r.get("ok"):
-        raise RuntimeError("F6 바꾸기 실패: " + str(r.get("error")))
+        raise RuntimeError("목소리 색깔 바꾸기 실패: " + str(r.get("error")))
 
 
 def main():

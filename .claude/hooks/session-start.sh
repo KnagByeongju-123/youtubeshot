@@ -74,7 +74,7 @@ if [ ! -f models/FLUX2_klein_4B/transformer/diffusion_pytorch_model.safetensors 
   "$SDV/bin/python" -m gdown "https://drive.google.com/drive/folders/$KLEIN_GDRIVE_FOLDER" -O models/FLUX2_klein_4B \
     || echo "구글 드라이브에서도 못 받음 (폴더 공유 설정 확인)" >&2
 fi
-# 목소리 색깔을 입힌 성우 F6·F8~F10·M8~M10 (기본 나레이션 M10·F8, F6_목소리.py — OpenVoice V2 MIT·Zeroth CC BY 4.0·KSS 비상업)
+# 목소리 색깔을 입힌 성우 F7·M7·F8~F10·M8~M10 (기본 나레이션 M10·F8, F6_목소리.py — OpenVoice V2 MIT·Zeroth CC BY 4.0·KSS 비상업)
 if [ -x "$SDV/bin/python" ] && [ ! -f models/openvoice/F6_se.pth ]; then
   "$SDV/bin/python" -m pip install -q --disable-pip-version-check librosa soundfile pyarrow wavmark || true
   "$SDV/bin/python" -X utf8 F6_목소리.py 준비 || echo "F6_목소리 준비 실패 — M10·F8 성우를 쓰려면 다시 실행" >&2

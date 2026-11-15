@@ -31,9 +31,10 @@
 - 목소리 색깔을 입힌 성우(`F6_목소리.py`, OpenVoice V2·MIT로 공개 녹음 자료의 목소리 색깔을 Supertonic 바탕 성우에 입힘. 표는 `supertonic_local_worker.py` 의 MIX_VOICES):
   · **F8·F9·F10 = F1 바탕 + Zeroth 105·121·147번, M8·M9·M10 = M1 바탕 + Zeroth 104·149·118번** (사용자 결정 2026-11-15, 후보 샘플 여1~3·남1~3 순서 그대로).
     Zeroth-Korean = CC BY 4.0 → 수익 영상 가능, **영상 설명란에 출처 필수**: "목소리: Zeroth-Korean 음성 자료(Lucas Jo·Wonkyum Lee, CC BY 4.0)와 OpenVoice V2(MIT)로 만든 AI 성우"
-  · F6 = F1 바탕 + KSS(전문 여자 성우, CC BY-NC-SA 4.0) → **비상업용이라 수익 나는 영상에 쓰지 않음**(혼자 듣기·연습용). M6 = 원래 M1 목소리 그대로(상업 사용 가능). F7·M7 은 없음
+  · **F7 = F1 바탕 + KSS, M7 = M1 바탕 + KSS**(전문 여자 성우, CC BY-NC-SA 4.0, 사용자 결정 2026-11-15: 예전 이름 F6 → F7, M7 추가) → **비상업용이라 수익 나는 영상에 쓰지 않음**(혼자 듣기·연습용).
+    M6 = 원래 M1 목소리 그대로(상업 사용 가능). F6 은 없음
   · 실제 사람(방송인 등)의 목소리를 본떠 성우로 만들지 않음
-  · 새 서버·PC: `.sd_venv/bin/pip install librosa soundfile pyarrow wavmark` → `.sd_venv/bin/python -X utf8 F6_목소리.py 준비` (약 2분, 모델·자료는 models/ 에, 깃에 안 올림). F6 바탕 바꾸기: `F6_목소리.py 바탕 F3`
+  · 새 서버·PC: `.sd_venv/bin/pip install librosa soundfile pyarrow wavmark` → `.sd_venv/bin/python -X utf8 F6_목소리.py 준비` (약 2분, 모델·자료는 models/ 에, 깃에 안 올림). F7 바탕 바꾸기: `F6_목소리.py 바탕 F3`
 - 나레이션 쉼표 넣기(필수, 사용자 결정 2026-10-31 — **장문·쇼츠·연재·손으로 쓴 대본 모두**): 녹음 전에 긴 문장(쉼표 없이 25자 이상)에 쉼표를 넣어 성우가 숨 쉬듯 끊어 읽게 함 —
   오픈소스 한국어 형태소 분석기 Kiwi(kiwipiepy, Apache-2.0)로 연결어미(~고 ~며 ~면서 ~지만 ~는데 ~니까 ~어서 ~으나 ~다가 ~면) 뒤 어절 끝에 쉼표 (`나레이션_쉼표.py`).
   보조용언 앞·따옴표 안 대사·챕터 제목·[사진…] 줄은 그대로, 글자는 바꾸지 않음.

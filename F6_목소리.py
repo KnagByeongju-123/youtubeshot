@@ -1,19 +1,20 @@
-"""목소리 색깔을 입힌 성우 F6·M6·F8~F10·M8~M10 — 공개 한국어 녹음 자료의 목소리 색깔을 Supertonic 바탕 성우에 입힘
+"""목소리 색깔을 입힌 성우 F7·M7·M6·F8~F10·M8~M10 — 공개 한국어 녹음 자료의 목소리 색깔을 Supertonic 바탕 성우에 입힘
   · F8·F9·F10 / M8·M9·M10 (사용자 결정 2026-11-15, 나레이션 기본 = 남 M10·여 F8):
     Zeroth-Korean(CC BY 4.0 → 수익 영상 가능, 설명란에 출처 표시) 사람 번호 105·121·147 → F1 바탕, 104·149·118 → M1 바탕
     출처 문구: "목소리: Zeroth-Korean 음성 자료(Lucas Jo·Wonkyum Lee, CC BY 4.0)와 OpenVoice V2(MIT)로 만든 AI 성우"
   · KSS: 전문 여자 성우가 TTS 용으로 녹음해 공개한 자료 (Kyubyong Park, CC BY-NC-SA 4.0 → 비상업용만)
   · OpenVoice V2 목소리 색깔 바꾸기(tone color converter, MyShell, MIT)
-  · M6 = 원래 M1 목소리 그대로, KSS 색깔 없음 (사용자 결정 2026-11-15. F6.json 의 "M6_kss": true 면 KSS 색깔)
-  · 순서: Supertonic 바탕 성우(F6=F1, M6=M1)로 읽음 → OpenVoice 로 목소리 색깔만 KSS 쪽으로 바꿈 (말·속도·억양은 그대로)
+  · F7 = F1 + KSS, M7 = M1 + KSS (비상업용만. 예전 이름 F6 → F7, 사용자 결정 2026-11-15)
+  · M6 = 원래 M1 목소리 그대로 (상업 사용 가능)
+  · 순서: Supertonic 바탕 성우(F7=F1, M7=M1)로 읽음 → OpenVoice 로 목소리 색깔만 KSS 쪽으로 바꿈 (말·속도·억양은 그대로)
 
   .sd_venv/bin/python -X utf8 F6_목소리.py 준비          # 한 번: KSS·Zeroth·OpenVoice 받기 + 목소리 특징(F6_se.pth) 만들기 (약 2분)
-  .sd_venv/bin/python -X utf8 F6_목소리.py 바탕 F3                # F6 바탕 성우 바꾸기 (models/openvoice/F6.json, 기본 F1)
-  .sd_venv/bin/python -X utf8 F6_목소리.py 바탕 M6 M2             # M6(남자, KSS 색깔) 바탕 성우 바꾸기 (기본 M1)
+  .sd_venv/bin/python -X utf8 F6_목소리.py 바탕 F3                # F7 바탕 성우 바꾸기 (models/openvoice/F6.json, 기본 F1)
+  .sd_venv/bin/python -X utf8 F6_목소리.py 바탕 M7 M2             # M7 바탕 성우 바꾸기 (기본 M1)
   .sd_venv/bin/python -X utf8 F6_목소리.py 바꾸기 <들어감.wav> <나옴.wav>
-  .sd_venv/bin/python -X utf8 F6_목소리.py --worker       # supertonic_local_worker 가 F6 일 때 띄움 (한 줄 JSON 주고받기)
+  .sd_venv/bin/python -X utf8 F6_목소리.py --worker       # supertonic_local_worker 가 색깔 입힌 성우일 때 띄움 (한 줄 JSON 주고받기)
 
-※ KSS 가 비상업용이라 F6 으로 만든 소리는 수익 나는 유튜브 영상에 쓰지 않음 (혼자 듣기·연습용)
+※ KSS 가 비상업용이라 F7·M7 로 만든 소리는 수익 나는 유튜브 영상에 쓰지 않음 (혼자 듣기·연습용)
 """
 import json
 import os
@@ -184,7 +185,7 @@ class F6:
         soundfile.write(dst, a, sr)
 
 
-BASES = {"F6": "F1", "M6": "M1"}     # KSS 목소리 색깔을 입히는 성우 → 기본 바탕 성우
+BASES = {"F7": "F1", "M7": "M1"}     # KSS 목소리 색깔을 입히는 성우 → 기본 바탕 성우
 
 
 def _conf():
@@ -193,11 +194,11 @@ def _conf():
     except Exception:
         d = {}
     if "base" in d:                       # 예전 형식 {"base": "F1"}
-        d.setdefault("F6", d.pop("base"))
+        d.setdefault("F7", d.pop("base"))
     return {**BASES, **d}
 
 
-def chosen_base(voice="F6"):
+def chosen_base(voice="F7"):
     return _conf()[voice]
 
 
@@ -242,6 +243,6 @@ if __name__ == "__main__":
     elif a[:1] == ["제로스"] and len(a) >= 2:
         zeroth_se(a[1:])
     elif a[:1] == ["바탕"] and len(a) in (2, 3):         # 바탕 F3  /  바탕 M6 M2
-        set_base(*(a[1].upper(), a[2].upper()) if len(a) == 3 else ("F6", a[1].upper()))
+        set_base(*(a[1].upper(), a[2].upper()) if len(a) == 3 else ("F7", a[1].upper()))
     else:
         print(__doc__)
