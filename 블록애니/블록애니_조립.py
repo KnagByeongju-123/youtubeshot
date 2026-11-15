@@ -30,7 +30,14 @@ def pieces(text):
             if cur and len(cur)+len(w)>24: out.append(cur); cur=w
             else: cur=(cur+' '+w).strip()
         if cur: out.append(cur)
-    return out
+    # 쉼표 없이 긴 조각(27자 넘음)은 가운데에 가까운 띄어쓰기에서 둘로 (화면 밖으로 잘리지 않게)
+    res=[]
+    for p in out:
+        while len(p)>26 and ' ' in p:
+            sp=[i for i,ch in enumerate(p) if ch==' ']; k=min(sp,key=lambda i:abs(i-len(p)/2))
+            res.append(p[:k]); p=p[k+1:]
+        res.append(p)
+    return res
 F='NanumGothicExtraBold'
 ev=[]
 ev.append(f"Dialogue: 0,{ts(0.2)},{ts(3.2)},Title,,0,0,0,,{{\\fad(400,400)}}{esc(pj['title'])}")
