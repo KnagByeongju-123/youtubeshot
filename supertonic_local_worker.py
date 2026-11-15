@@ -33,15 +33,19 @@ def reply(ok, **data):
 _F6 = {}
 
 
-def f6_base():
-    """F6 의 바탕 성우 (models/openvoice/F6.json, 없으면 F1)"""
+KSS_VOICES = {"F6": "F1", "M6": "M1"}     # KSS 목소리 색깔을 입히는 성우 → 기본 바탕 성우
+
+
+def f6_base(voice="F6"):
+    """F6·M6 의 바탕 성우 (models/openvoice/F6.json, 없으면 F6=F1·M6=M1)"""
     try:
-        return json.load(open(Path(__file__).with_name("models") / "openvoice" / "F6.json", encoding="utf-8"))["base"]
+        d = json.load(open(Path(__file__).with_name("models") / "openvoice" / "F6.json", encoding="utf-8"))
+        return d.get(voice) or (d.get("base") if voice == "F6" else None) or KSS_VOICES[voice]
     except Exception:
-        return "F1"
+        return KSS_VOICES[voice]
 
 
-def f6_convert(src, out):
+def f6_convert(src, out, voice="F6"):
     """F6 = 바탕 성우 소리 → OpenVoice 로 목소리 색깔을 KSS 쪽으로 (F6_목소리.py 를 .sd_venv 에서 띄움)"""
     p = _F6.get("proc")
     if p is None or p.poll() is not None:
@@ -57,7 +61,7 @@ def f6_convert(src, out):
         if not r.get("ok"):
             raise RuntimeError("F6 준비 실패: " + str(r))
         _F6["proc"] = p
-    p.stdin.write(json.dumps({"src": str(src), "out": str(out), "base": f6_base()}, ensure_ascii=False) + "\n")
+    p.stdin.write(json.dumps({"src": str(src), "out": str(out), "base": f6_base(voice)}, ensure_ascii=False) + "\n")
     p.stdin.flush()
     r = json.loads(p.stdout.readline())
     if not r.get("ok"):
@@ -91,15 +95,15 @@ def main():
             if any(0xD800 <= ord(ch) <= 0xDFFF for ch in text):
                 raise ValueError("잘못된 문자 인코딩이 포함되어 있습니다. UTF-8 통신 설정을 확인하세요.")
             voice = str(req.get("voice", "M1"))
-            if voice not in {f"M{i}" for i in range(1,6)} | {f"F{i}" for i in range(1,7)}:
+            if voice not in {f"M{i}" for i in range(1,7)} | {f"F{i}" for i in range(1,7)}:
                 raise ValueError("잘못된 성우 ID: " + voice)
             if not text:
                 raise ValueError("빈 나레이션")
             path = Path(req["out"]).resolve()
             path.parent.mkdir(parents=True, exist_ok=True)
             with contextlib.redirect_stdout(sys.stderr):
-                is_f6 = voice == "F6"
-                style = tts.get_voice_style(voice_name=f6_base() if is_f6 else voice)
+                is_f6 = voice in KSS_VOICES
+                style = tts.get_voice_style(voice_name=f6_base(voice) if is_f6 else voice)
                 audio, duration = tts.synthesize(text=text, voice_style=style,
                                                  lang=str(req.get("lang", "ko")),
                                                  speed=max(.70, min(2.0, float(req.get("speed", 1.0)))),
@@ -108,7 +112,7 @@ def main():
                 if is_f6:
                     raw = path.with_name(path.stem + "_f6base.wav")
                     tts.save_audio(audio, str(raw))
-                    f6_convert(raw, path)
+                    f6_convert(raw, path, voice)
                     raw.unlink(missing_ok=True)
                 else:
                     tts.save_audio(audio, str(path))

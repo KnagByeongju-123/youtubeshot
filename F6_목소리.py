@@ -1,10 +1,12 @@
-"""여자 성우 F6 — 공개 한국어 녹음 자료(KSS)의 목소리 색깔을 Supertonic 여자 성우에 입힘
+"""여자 성우 F6·남자 성우 M6 — 공개 한국어 녹음 자료(KSS)의 목소리 색깔을 Supertonic 여자 성우에 입힘
   · KSS: 전문 여자 성우가 TTS 용으로 녹음해 공개한 자료 (Kyubyong Park, CC BY-NC-SA 4.0 → 비상업용만)
   · OpenVoice V2 목소리 색깔 바꾸기(tone color converter, MyShell, MIT)
-  · 순서: Supertonic F6_BASE 로 읽음 → OpenVoice 로 목소리 색깔만 KSS 쪽으로 바꿈 (말·속도·억양은 그대로)
+  · M6 = M1 바탕에 같은 KSS 색깔 (사용자 결정 2026-11-15, 들어 보고 등록)
+  · 순서: Supertonic 바탕 성우(F6=F1, M6=M1)로 읽음 → OpenVoice 로 목소리 색깔만 KSS 쪽으로 바꿈 (말·속도·억양은 그대로)
 
   .sd_venv/bin/python -X utf8 F6_목소리.py 준비          # 한 번: KSS·OpenVoice 받기 + 목소리 특징(F6_se.pth) 만들기
-  .sd_venv/bin/python -X utf8 F6_목소리.py 바탕 F3                # 바탕 성우 바꾸기 (models/openvoice/F6.json, 기본 F1)
+  .sd_venv/bin/python -X utf8 F6_목소리.py 바탕 F3                # F6 바탕 성우 바꾸기 (models/openvoice/F6.json, 기본 F1)
+  .sd_venv/bin/python -X utf8 F6_목소리.py 바탕 M6 M2             # M6(남자, KSS 색깔) 바탕 성우 바꾸기 (기본 M1)
   .sd_venv/bin/python -X utf8 F6_목소리.py 바꾸기 <들어감.wav> <나옴.wav>
   .sd_venv/bin/python -X utf8 F6_목소리.py --worker       # supertonic_local_worker 가 F6 일 때 띄움 (한 줄 JSON 주고받기)
 
@@ -112,7 +114,7 @@ def base_clips(base):
     return paths
 
 
-def prepare(bases=("F1", "F2", "F3", "F4", "F5")):
+def prepare(bases=("F1", "F2", "F3", "F4", "F5", "M1")):
     import torch
     download()
     c = converter()
@@ -147,17 +149,29 @@ class F6:
         soundfile.write(dst, a, sr)
 
 
-def chosen_base():
+BASES = {"F6": "F1", "M6": "M1"}     # KSS 목소리 색깔을 입히는 성우 → 기본 바탕 성우
+
+
+def _conf():
     try:
-        return json.load(open(os.path.join(OV, "F6.json"), encoding="utf-8"))["base"]
+        d = json.load(open(os.path.join(OV, "F6.json"), encoding="utf-8"))
     except Exception:
-        return F6_BASE
+        d = {}
+    if "base" in d:                       # 예전 형식 {"base": "F1"}
+        d.setdefault("F6", d.pop("base"))
+    return {**BASES, **d}
 
 
-def set_base(b):
+def chosen_base(voice="F6"):
+    return _conf()[voice]
+
+
+def set_base(voice, b):
+    d = _conf()
+    d[voice] = b
     with open(os.path.join(OV, "F6.json"), "w", encoding="utf-8") as f:
-        json.dump({"base": b}, f)
-    print("F6 바탕 성우 =", b)
+        json.dump(d, f)
+    print(voice, "바탕 성우 =", b)
 
 
 def worker():
@@ -190,7 +204,7 @@ if __name__ == "__main__":
         prepare(*([tuple(a[1:])] if a[1:] else []))
     elif a[:1] == ["바꾸기"] and len(a) >= 3:
         F6().convert(a[1], a[2], a[3] if len(a) > 3 else None)
-    elif a[:1] == ["바탕"] and len(a) == 2:
-        set_base(a[1].upper())
+    elif a[:1] == ["바탕"] and len(a) in (2, 3):         # 바탕 F3  /  바탕 M6 M2
+        set_base(*(a[1].upper(), a[2].upper()) if len(a) == 3 else ("F6", a[1].upper()))
     else:
         print(__doc__)
