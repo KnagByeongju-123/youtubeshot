@@ -127,20 +127,48 @@ def prepare(bases=("F1", "F2", "F3", "F4", "F5", "M1")):
     print("F6 목소리 특징 저장:", SE_PATH, sorted(old))
 
 
+ZEROTH = os.path.join(HERE, "models", "zeroth")
+
+
+def zeroth_se(speakers):
+    """Zeroth-Korean(CC BY 4.0, 상업 사용 가능·출처 표시) 시험 묶음에서 사람 번호별 목소리 특징 → 'zeroth_<번호>'"""
+    import io
+    import pyarrow.parquet as pq
+    import soundfile
+    import torch
+    _get(f"{HF}/datasets/kresnik/zeroth_korean/resolve/main/data/test-00000-of-00001.parquet",
+         os.path.join(ZEROTH, "k_test.parquet"))
+    rows = pq.read_table(os.path.join(ZEROTH, "k_test.parquet"), columns=["speaker_id", "audio"]).to_pylist()
+    c = converter()
+    se = torch.load(SE_PATH) if os.path.exists(SE_PATH) else {}
+    for spk in speakers:
+        d = os.path.join(ZEROTH, "clips", str(spk))
+        os.makedirs(d, exist_ok=True)
+        paths = []
+        for i, r in enumerate(x for x in rows if x["speaker_id"] == int(spk)):
+            p = os.path.join(d, f"{i:03d}.wav")
+            a, sr = soundfile.read(io.BytesIO(r["audio"]["bytes"]), dtype="float32")
+            soundfile.write(p, a, sr)
+            paths.append(p)
+        se[f"zeroth_{spk}"] = c.extract_se(paths)
+        print("목소리 특징:", spk, len(paths), "개", flush=True)
+    torch.save(se, SE_PATH)
+
+
 class F6:
     def __init__(self):
         import torch
         self.c = converter()
         self.se = torch.load(SE_PATH)
 
-    def convert(self, src, dst, base=None, tau=TAU):
+    def convert(self, src, dst, base=None, tau=TAU, tgt="tgt"):
         """바탕 소리 → F6. 크기(소리 세기)·표본 주파수는 바탕 소리와 같게 맞춤"""
         import librosa
         import numpy as np
         import soundfile
         base = base or chosen_base()
         x, sr = soundfile.read(src, dtype="float32")
-        a = self.c.convert(src, self.se[base], self.se["tgt"], tau=tau)
+        a = self.c.convert(src, self.se[base], self.se[tgt], tau=tau)
         a = librosa.resample(a, orig_sr=self.c.hps.data.sampling_rate, target_sr=sr)
         rx, ra = np.sqrt(np.mean(x ** 2)), np.sqrt(np.mean(a ** 2))
         if ra > 1e-6:
@@ -190,7 +218,7 @@ def worker():
         try:
             r = json.loads(line)
             with contextlib.redirect_stdout(sys.stderr):
-                f6.convert(r["src"], r["out"], r.get("base"), float(r.get("tau", TAU)))
+                f6.convert(r["src"], r["out"], r.get("base"), float(r.get("tau", TAU)), r.get("tgt", "tgt"))
             say({"ok": True})
         except Exception as e:
             say({"ok": False, "error": f"{type(e).__name__}: {e}"})
@@ -202,8 +230,10 @@ if __name__ == "__main__":
         worker()
     elif a[:1] == ["준비"]:
         prepare(*([tuple(a[1:])] if a[1:] else []))
-    elif a[:1] == ["바꾸기"] and len(a) >= 3:
-        F6().convert(a[1], a[2], a[3] if len(a) > 3 else None)
+    elif a[:1] == ["바꾸기"] and len(a) >= 3:         # 바꾸기 in out [바탕] [목표: tgt(KSS)·zeroth_104]
+        F6().convert(a[1], a[2], a[3] if len(a) > 3 else None, TAU, a[4] if len(a) > 4 else "tgt")
+    elif a[:1] == ["제로스"] and len(a) >= 2:
+        zeroth_se(a[1:])
     elif a[:1] == ["바탕"] and len(a) in (2, 3):         # 바탕 F3  /  바탕 M6 M2
         set_base(*(a[1].upper(), a[2].upper()) if len(a) == 3 else ("F6", a[1].upper()))
     else:

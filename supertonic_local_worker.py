@@ -33,7 +33,22 @@ def reply(ok, **data):
 _F6 = {}
 
 
-KSS_VOICES = {"F6": "F1", "M6": "M1"}     # KSS 목소리 색깔을 입히는 성우 → 기본 바탕 성우
+KSS_VOICES = {"F6": "F1", "M6": "M1", "F7": "F1", "M7": "M1"}   # 목소리 색깔을 입히는 성우 → 기본 바탕 성우
+VOICE_TGT = {"F6": "tgt", "M6": "tgt"}    # 입힐 목소리 (tgt = KSS·비상업, zeroth_<번호> = Zeroth-Korean·CC BY 4.0). F7·M7 은 F6.json 의 "F7_tgt"
+
+
+def _f6conf():
+    try:
+        return json.load(open(Path(__file__).with_name("models") / "openvoice" / "F6.json", encoding="utf-8"))
+    except Exception:
+        return {}
+
+
+def voice_tgt(voice):
+    t = _f6conf().get(voice + "_tgt") or VOICE_TGT.get(voice)
+    if not t:
+        raise ValueError(voice + " 목소리가 아직 정해지지 않음 (F6.json 의 " + voice + "_tgt)")
+    return t
 
 
 def f6_base(voice="F6"):
@@ -70,7 +85,7 @@ def f6_convert(src, out, voice="F6"):
         if not r.get("ok"):
             raise RuntimeError("F6 준비 실패: " + str(r))
         _F6["proc"] = p
-    p.stdin.write(json.dumps({"src": str(src), "out": str(out), "base": f6_base(voice)}, ensure_ascii=False) + "\n")
+    p.stdin.write(json.dumps({"src": str(src), "out": str(out), "base": f6_base(voice), "tgt": voice_tgt(voice)}, ensure_ascii=False) + "\n")
     p.stdin.flush()
     r = json.loads(p.stdout.readline())
     if not r.get("ok"):
@@ -104,7 +119,7 @@ def main():
             if any(0xD800 <= ord(ch) <= 0xDFFF for ch in text):
                 raise ValueError("잘못된 문자 인코딩이 포함되어 있습니다. UTF-8 통신 설정을 확인하세요.")
             voice = str(req.get("voice", "M1"))
-            if voice not in {f"M{i}" for i in range(1,7)} | {f"F{i}" for i in range(1,7)}:
+            if voice not in {f"M{i}" for i in range(1,8)} | {f"F{i}" for i in range(1,8)}:
                 raise ValueError("잘못된 성우 ID: " + voice)
             if not text:
                 raise ValueError("빈 나레이션")
