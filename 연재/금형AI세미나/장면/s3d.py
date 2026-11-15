@@ -402,7 +402,8 @@ def cut(o,keep_deg):
     es=o.modifiers.get('es')
     if es: o.modifiers.remove(es)
     L=1000.0; me=bpy.data.meshes.new('cutter'); bm=bmesh.new()
-    a0=math.radians(keep_deg); a1=math.radians(360)
+    off=180.0/max(8,(md.steps if md else 96))     # 칼면을 반 칸 돌려 회전체 이음매·꼭짓점 줄과 겹치지 않게 (겹치면 계산이 아주 느림)
+    a0=math.radians(keep_deg+off); a1=math.radians(360+off)
     pts=[(0,0)]+[(L*math.cos(a0+(a1-a0)*k/8),L*math.sin(a0+(a1-a0)*k/8)) for k in range(9)]
     vb=[bm.verts.new((x,y,-L)) for x,y in pts]; vt=[bm.verts.new((x,y,L)) for x,y in pts]
     n=len(pts); bm.faces.new(vb[::-1]); bm.faces.new(vt)
