@@ -46,9 +46,35 @@ for j in range(220):
     cpath.append((LX+rr*S*math.cos(a),rr*S*math.sin(a),40+z*S))
 cp=curve_line(cpath,bevel=0.9,rgb=(0.4,1,0.5),name='cam'); draw_on(cp,T(2)+0.8,E(2)-0.3)
 keyv(cp,'scale',[(0,(1,1,1)),(E(2),(1,1,1)),(E(2)+0.3,(0,0,0))]); cp.location=(0,0,0)
-stp=empty('stp',(LX-280,0,260)); b=box((80,10,100),(0,0,0),COL['paper'],bevel=4); b.parent=stp; tx=text('STEP',20,(0,-8,0),rgb=COL['ink']); tx.parent=stp
+stp=empty('stp',(LX-210,0,270)); b=box((80,10,100),(0,0,0),COL['paper'],bevel=4); b.parent=stp; tx=text('STEP',20,(0,-8,0),rgb=COL['ink']); tx.parent=stp
 keyv(stp,'scale',[(0,(0,0,0)),(T(2)+0.1,(0,0,0)),(T(2)+0.4,(1,1,1)),(E(2),(1,1,1)),(E(2)+0.3,(0,0,0))])
-t2=text('CAM: 공구가 지나갈 길 계산',26,(LX,-80,290),rgb=(0.4,1,0.5)); show(t2,T(2)+0.6,E(2))
+t2=text('CAM: 공구가 지나갈 길 계산',26,(LX,-80,290),rgb=(0.4,1,0.5)); show(t2,T(2)+0.6,E(2)-2.6)
+# 2-1) NC 파일 → 블록으로 흩어져 CNC 선반 제어함 안으로
+import random
+random.seed(7)
+CB=(LX+340,60,150)
+cab=box((170,120,260),CB,(0.30,0.33,0.40),bevel=4,name='cab'); show(cab,T(2)+0.2)
+scr=box((110,4,70),(CB[0],CB[1]-61,CB[2]+60),(0.08,0.10,0.13),name='cabscr'); show(scr,T(2)+0.3)
+slot=box((90,4,10),(CB[0],CB[1]-61,CB[2]-20),(0.02,0.02,0.03),name='slot'); show(slot,T(2)+0.3)
+ct=text('CNC',22,(CB[0],CB[1]-64,CB[2]+60),rgb=(0.4,1,0.5)); show(ct,T(2)+0.4)
+NCP=(LX-210,-30,150)
+nc=empty('nccard',NCP); nb=box((80,10,100),(0,0,0),(0.10,0.13,0.18),bevel=4); nb.parent=nc
+nt=text('NC',30,(0,-8,10),rgb=(0.4,1,0.5)); nt.parent=nc
+t_card=E(2)-3.0; t_burst=E(2)-2.4
+keyv(nc,'scale',[(0,(0,0,0)),(t_card,(0,0,0)),(t_card+0.3,(1.1,1.1,1.1)),(t_card+0.5,(1,1,1)),(t_burst,(1,1,1)),(t_burst+0.1,(0,0,0))])
+codes=['G21','G90','G00 X40.','T0101','M03 S1200','G01 Z-2.','X36. F0.2','Z-54.','X30.','G02 X16. Z0 R7.','G00 X50.','M08','G96 S180','G01 X30.0','Z-60.','M09','G28 U0','M05','M30','N10','N20','N30','N40','N50']
+for i,cd in enumerate(codes):
+    g=empty('nc%d'%i,NCP)
+    b=box((44,5,14),(0,0,0),(0.12,0.16,0.22),bevel=1.5); b.parent=g
+    tx=text(cd,5.5,(0,-3.2,0),rgb=(0.45,1,0.55),bold=False); tx.parent=g
+    sp=(NCP[0]+random.uniform(-110,110),NCP[1]+random.uniform(-90,-20),NCP[2]+random.uniform(-80,110))
+    tf=t_burst+0.6+i*0.055
+    keyv(g,'location',[(0,NCP),(t_burst,NCP),(t_burst+0.45,sp),(tf,sp),(tf+0.7,(CB[0],CB[1]-70,CB[2]-20))])
+    keyv(g,'rotation_euler',[(t_burst,(0,0,0)),(t_burst+0.45,(random.uniform(-0.5,0.5),0,random.uniform(-0.6,0.6))),(tf,(random.uniform(-0.3,0.3),0,random.uniform(-0.3,0.3))),(tf+0.7,(0,0,0))])
+    keyv(g,'scale',[(0,(0,0,0)),(t_burst-0.01,(0,0,0)),(t_burst+0.2,(1,1,1)),(tf+0.55,(1,1,1)),(tf+0.72,(0,0,0))])
+glow=box((96,6,14),(CB[0],CB[1]-63,CB[2]-20),(0.4,1,0.5),name='glow')
+keyv(glow,'scale',[(0,(0,0,0)),(t_burst+1.2,(0,0,0)),(t_burst+1.4,(1,1,1)),(t_burst+2.4,(1,1,1)),(t_burst+2.7,(0,0,0))])
+ntx=text('NC 파일 → 가공 설비로',24,(LX+80,-80,250),rgb=(0.4,1,0.5)); show(ntx,t_burst+0.3,E(2)+0.2)
 # 3) 머시닝센터: 판에 구멍
 MX=800
 plate=box((440,200,40),(MX,0,20),COL['plate'],bevel=2,name='plate'); show(plate,T(4)-0.3)
@@ -103,7 +129,7 @@ for i,s_ in enumerate(rows):
 # 카메라
 cam,tgt=camera(35)
 cam_keys(cam,tgt,[(0,(LX-200,-900,520),(LX,0,140)),(T(1)+2,(LX-120,-760,360),(LX,0,140))])
-cam_keys(cam,tgt,[(T(2)+0.6,(LX+150,-720,330),(LX,0,150)),(E(2),(LX+220,-660,300),(LX,0,150))])
+cam_keys(cam,tgt,[(T(2)+0.6,(LX+80,-760,330),(LX+60,0,160)),(E(2),(LX+120,-760,300),(LX+70,0,160))])
 cam_keys(cam,tgt,[(T(3)+0.4,(LX+120,-620,240),(LX,0,140)),(E(3)-2.0,(LX+60,-600,240),(LX,0,140)),(E(3),(LX-80,-620,250),(LX-60,0,150))])
 cam_keys(cam,tgt,[(T(4)+0.6,(MX-100,-700,420),(MX,0,80)),(E(4)+0.4,(MX+80,-680,400),(MX,0,80))])
 cam_keys(cam,tgt,[(T(5)+0.6,(WX-150,-620,380),(WX,0,90)),(E(5),(WX+120,-600,360),(WX,0,90))])
