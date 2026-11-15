@@ -364,3 +364,19 @@ def view_modes(parts,seq):
             if w: w.show_render=w.show_viewport=(m=='wire')
         sh=scene.display.shading; sh.show_xray=(m=='xray'); sh.xray_alpha=0.28
     bpy.app.handlers.frame_change_pre.append(h)
+
+def tile_plane(path,i,j,nx,ny,width,loc,rot=(math.radians(90),0,0),name='tile'):
+    """그림을 nx×ny 로 나눈 (i,j) 조각 (i=가로, j=세로 아래부터)"""
+    img=bpy.data.images.load(path,check_existing=True); w,h=img.size
+    tw=width/nx; th=width*h/w/ny
+    bpy.ops.mesh.primitive_plane_add(size=1,location=loc,rotation=rot); o=bpy.context.object; o.name=name
+    o.scale=(tw,th,1); bpy.ops.object.transform_apply(location=False,rotation=False,scale=True)
+    uv=o.data.uv_layers.active.data
+    for li,lp in enumerate(o.data.loops):
+        u,v=uv[li].uv; uv[li].uv=((i+u)/nx,(j+v)/ny)
+    mname='tilemat_'+os.path.basename(path)
+    m=bpy.data.materials.get(mname)
+    if not m:
+        m=bpy.data.materials.new(mname); m.use_nodes=True; nt=m.node_tree; bsdf=nt.nodes['Principled BSDF']
+        tex=nt.nodes.new('ShaderNodeTexImage'); tex.image=img; nt.links.new(tex.outputs['Color'],bsdf.inputs['Base Color']); m.diffuse_color=(1,1,1,1)
+    o.data.materials.append(m); o.select_set(False); return o,tw,th

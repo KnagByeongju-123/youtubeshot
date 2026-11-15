@@ -79,7 +79,7 @@ ntx=text('NC 파일 → 가공 설비로',24,(LX+80,-80,250),rgb=(0.4,1,0.5)); s
 MX=800
 plate=box((440,200,40),(MX,0,20),COL['plate'],bevel=1,name='plate'); show(plate,T(4)-0.4)
 for (x,y,d) in ((-170,-70,8.5),(170,-70,8.5),(-170,70,8.5),(170,70,8.5)): cyl(d,1,(MX+x,y,40.3),(0.10,0.11,0.14),seg=32)
-GX0,GX1=MX-170,MX+150; tg0=T(4)+0.5; tg1=E(4)+0.9
+GX0,GX1=MX-170,MX+150; tg0=T(4)+0.4; tg1=E(4)-0.2
 me=bpy.data.meshes.new('groove'); bm=bmesh.new()
 bmesh.ops.create_cube(bm,size=1.0); 
 for v in bm.verts: v.co.x+=0.5
@@ -129,10 +129,10 @@ for fc_ in wire.animation_data.action.fcurves:
     if fc_.data_path=='location':
         for kp in fc_.keyframe_points: kp.interpolation='LINEAR'
 cut=curve_line([(WX+rr*math.cos(2*math.pi*j/96),rr*math.sin(2*math.pi*j/96),90.2) for j in range(97)],bevel=1.7,rgb=(0.03,0.03,0.04),name='cut'); draw_on(cut,tW0,tW1)
-for i in range(70):
-    ti=tW0+(tW1-tW0)*i/70; a_=2*math.pi*(ti-tW0)/(tW1-tW0)
+for i in range(140):
+    ti=tW0+(tW1-tW0)*i/140; a_=2*math.pi*(ti-tW0)/(tW1-tW0)
     zz=random.uniform(30,95); px=(WX+rr*math.cos(a_)+random.uniform(-3,3),rr*math.sin(a_)+random.uniform(-3,3),zz)
-    spk=sphere(random.uniform(1.0,2.0),px,(1.0,0.92,0.45),name='spark')
+    spk=sphere(random.uniform(2.2,4.0),px,(1.0,0.92,0.45),name='spark')
     keyv(spk,'scale',[(0,(0,0,0)),(ti-0.01,(0,0,0)),(ti+0.03,(1,1,1)),(ti+0.16,(0,0,0))])
 slug=cyl(rr-1.5,86,(WX,0,45),(0.20,0.62,0.30),seg=64,name='slug')
 keyv(slug,'location',[(0,(WX,0,45)),(tW1+0.2,(WX,0,45)),(tW1+1.0,(WX,0,-80))])

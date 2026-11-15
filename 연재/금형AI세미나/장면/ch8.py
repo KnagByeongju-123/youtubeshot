@@ -21,8 +21,8 @@ for k,(rr,c_) in enumerate([(70,(0.1,0.2,0.75)),(52,(0.2,0.7,0.9)),(36,(1,0.85,0
 s2=loop_obj(seal_profile(),'seal',COL['sheet'],angle=360,seg=96,loc=(xs[5],0,60),scale=2.2); spin(s2,0,DUR,0.5)
 cyl(12,80,(xs[6],0,95),COL['post']); cyl(4,30,(xs[6],0,45),COL['white']); box((140,90,24),(xs[6],0,28),COL['plate'],bevel=2)
 # 사람이 마지막 확인
-hm=text('반복은 AI · 마지막 확인은 사람',44,(2000,-150,560),rgb=COL['white']); show(hm,T(5)+0.5,E(5)+0.4)
-okk=text('OK',90,(2000,-150,470),rgb=(0.4,1,0.5)); show(okk,T(5)+2.8,E(5)+0.4)
+hm=text('반복은 AI · 마지막 확인은 사람',44,(2000,-150,680),rgb=COL['white']); show(hm,T(5)+0.5,E(5)+0.4)
+okk=text('OK',90,(2000,-150,590),rgb=(0.4,1,0.5)); show(okk,T(5)+2.8,E(5)+0.4)
 # 마지막: 금형 세트
 DXS=2000
 parts,up,root=die_set((DXS,0,145))
@@ -44,7 +44,7 @@ for i,o in enumerate(puns):
 strips=[o for o,g in parts if g=='strip']
 for o in strips:
     keyv(o,'location',[(0,(-760,0,0)),(tM1-1.2,(-760,0,0)),(tM1+0.2,(0,0,0))])
-mt=text('가공을 마친 부품 → 금형에 장착',40,(2000,-150,640),rgb=COL['white']); show(mt,tM0+0.2,T(5)+0.2)
+mt=text('가공을 마친 부품 → 금형에 장착',40,(2000,-150,680),rgb=COL['white']); show(mt,tM0+0.2,T(5)+0.2)
 SXc=DXS; ZC=145+38
 ti=text('AI로 금형 만들기',64,(DXS,-150,480),rgb=COL['accent']); show(ti,T(7)+0.6)
 ty=text('들어 주셔서 감사합니다',40,(DXS,-150,410),rgb=COL['white']); show(ty,T(7)+0.9)
@@ -53,7 +53,7 @@ cam,tgt=camera(35)
 cam_keys(cam,tgt,[(0,(0,-2000,1100),(0,0,80)),(T(2)-0.3,(xs[0]-200,-700,420),(xs[0],0,100))])
 for i in range(7):
     cam_keys(cam,tgt,[(lit[i]+0.6,(xs[i]+80,-560,300),(xs[i],0,100))])
-cam_keys(cam,tgt,[(tM0+0.6,(DXS-350,-1150,520),(DXS,0,250)),(half,(DXS-120,-900,380),(DXS,0,230)),(tM1,(DXS+200,-950,470),(DXS,0,300)),(E(5),(DXS+120,-1100,560),(DXS,0,380))])
+cam_keys(cam,tgt,[(tM0+0.6,(DXS-350,-1450,480),(DXS,0,290)),(half,(DXS-150,-1300,420),(DXS,0,280)),(tM1,(DXS+200,-1350,480),(DXS,0,300)),(E(5),(DXS+120,-1400,560),(DXS,0,360))])
 cam_keys(cam,tgt,[(T(6)+0.3,(SXc-80,-560,ZC+60),(SXc,0,ZC)),(T(6)+1.2,(SXc,-95,ZC+8),(SXc,0,ZC))])
 cam.data.lens=35; cam.data.keyframe_insert('lens',frame=F(T(6)+0.3)); cam.data.lens=18; cam.data.keyframe_insert('lens',frame=F(T(6)+1.2))
 orbit(cam,tgt,T(6)+1.2,T(7)-0.1,(SXc,0,ZC),95,8,-90,190,n=12)
