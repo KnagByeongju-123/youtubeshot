@@ -32,7 +32,7 @@ def band(p0,p1,name,strain):
     o=bpy.data.objects.new(name,me); link(o); o.location=(0,0,ztop+t*S); o.scale=(S,)*3; o.rotation_euler=(0,0,math.radians(-45))
     o.shape_key_add(name='Basis'); sk=o.shape_key_add(name='burr')
     for i,(r,z) in enumerate(p1): sk.data[i].co=(r,0,z)
-    md=o.modifiers.new('screw','SCREW'); md.axis='Z'; md.angle=math.radians(270); md.steps=72; md.render_steps=72; md.use_merge_vertices=True
+    md=o.modifiers.new('screw','SCREW'); md.axis='Z'; md.angle=math.radians(360); md.steps=72; md.render_steps=72; md.use_merge_vertices=True; cut(o,270)
     m=bpy.data.materials.new(name); m.diffuse_color=(*COL['sheet'],1); m.roughness=1; m.specular_intensity=0
     o.data.materials.append(m); o.data.materials.append(wmat)
     wf=o.modifiers.new('wf','WIREFRAME'); wf.thickness=0.035; wf.use_replace=False; wf.material_offset=1; wf.use_even_offset=True

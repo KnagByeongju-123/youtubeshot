@@ -83,7 +83,7 @@ t3d=text('3D 모델',30,(CX2,-60,250),rgb=COL['sky']); show(t3d,tD+3.0,E(6)+0.3)
 spin(p3,tD+3.4,E(6)+1,turns=0.5)
 # 다이(초록) · 판재(주황) 등장
 die=revolve(DIE_P,'die',rgb=COL['die'],angle=270); die.scale=(S,)*3; die.rotation_euler=(0,0,math.radians(-45))
-sheet,sk=burr_sheet(Ro=40,Rh=12.6,scale=S); sheet.modifiers['screw'].angle=math.radians(270); sheet.rotation_euler=(0,0,math.radians(-45))
+sheet,sk=burr_sheet(Ro=40,Rh=12.6,scale=S); cut(sheet,270); sheet.rotation_euler=(0,0,math.radians(-45))
 keyk(sk,[(0,1)])
 key(pu,'location',0,(0,0,0)); key(pu,'location',T(7)-0.2,(0,0,0)); key(pu,'location',T(7)+1.2,(0,0,30*S+0.6*S-5.6*S+60))
 ztop=30*S+0.6*S

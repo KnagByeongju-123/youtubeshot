@@ -7,7 +7,7 @@ floor(extent=1600)
 PX=-700
 S=3.0
 die=revolve(DIE_P,'die',rgb=COL['die'],loc=(PX,0,0),angle=270); die.rotation_euler=(0,0,math.radians(-45)); die.scale=(S,)*3
-sheet,sk=burr_sheet(Ro=40,Rh=12.6,loc=(PX,0,30*S+0.6*S),scale=S); sheet.modifiers['screw'].angle=math.radians(270); sheet.rotation_euler=(0,0,math.radians(-45))
+sheet,sk=burr_sheet(Ro=40,Rh=12.6,loc=(PX,0,30*S+0.6*S),scale=S); cut(sheet,270); sheet.rotation_euler=(0,0,math.radians(-45))
 punch=revolve(PUNCH,'punch',rgb=COL['punch'],loc=(PX,0,0),angle=270); punch.rotation_euler=(0,0,math.radians(-45)); punch.scale=(S,)*3
 ztop=30*S+0.6*S
 keyv(punch,'location',[(0,(PX,0,ztop+90)),(T(1)+0.5,(PX,0,ztop+90)),(T(1)+2.0,(PX,0,ztop+2)),(T(2)+0.3,(PX,0,ztop+2)),(T(2)+3.3,(PX,0,ztop-5.6*S)),(E(2)-0.3,(PX,0,ztop-5.6*S)),(E(2)+1.2,(PX,0,ztop+90))])

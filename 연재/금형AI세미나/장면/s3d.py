@@ -48,7 +48,8 @@ def link(o,parent=None):
 def empty(name='E',loc=(0,0,0)):
     e=bpy.data.objects.new(name,None); e.location=loc; return link(e)
 
-def revolve(profile,name='rev',seg=96,angle=360.0,rgb=COL['punch'],loc=(0,0,0),closed=False):
+def revolve(profile,name='rev',seg=96,angle=360.0,rgb=COL['punch'],loc=(0,0,0),closed=None):
+    if closed is None: closed=profile[0][0]>0.01 and profile[-1][0]>0.01
     """profile = [(r,z)...] 반쪽 단면 (열린 선) → Z축 회전체. 같은 메쉬에 Screw 수정자(angle 키 가능)"""
     me=bpy.data.meshes.new(name); bm=bmesh.new()
     vs=[bm.verts.new((r,0,z)) for r,z in profile]
@@ -58,7 +59,9 @@ def revolve(profile,name='rev',seg=96,angle=360.0,rgb=COL['punch'],loc=(0,0,0),c
     o=bpy.data.objects.new(name,me); link(o); o.location=loc
     m=o.modifiers.new('screw','SCREW'); m.axis='Z'; m.angle=math.radians(angle); m.steps=seg; m.render_steps=seg
     m.use_merge_vertices=True; m.merge_threshold=0.01; m.use_normal_calculate=True; m.use_smooth_shade=False
-    paint(o,rgb); smooth(o); return o
+    paint(o,rgb); smooth(o)
+    if 89<angle<359: cut(o,angle)
+    return o
 def apply_mods(o):
     dg=bpy.context.evaluated_depsgraph_get(); me=bpy.data.meshes.new_from_object(o.evaluated_get(dg))
     o.modifiers.clear(); o.data=me; smooth(o); return o
@@ -353,7 +356,9 @@ def loop_obj(pts,name,rgb,angle=270,seg=96,loc=(0,0,0),scale=1.0):
     bm.to_mesh(me); bm.free()
     o=bpy.data.objects.new(name,me); link(o); o.location=loc; o.scale=(scale,)*3
     md=o.modifiers.new('screw','SCREW'); md.axis='Z'; md.angle=math.radians(angle); md.steps=seg; md.render_steps=seg; md.use_merge_vertices=True
-    paint(o,rgb); smooth(o); o.rotation_euler=(0,0,math.radians(-45)); return o
+    paint(o,rgb); smooth(o); o.rotation_euler=(0,0,math.radians(-45))
+    if 89<angle<359: cut(o,angle)
+    return o
 def add_key(o,name,pts):
     if not o.data.shape_keys: o.shape_key_add(name='Basis')
     sk=o.shape_key_add(name=name)
@@ -388,3 +393,22 @@ def tile_plane(path,i,j,nx,ny,width,loc,rot=(math.radians(90),0,0),name='tile'):
         m=bpy.data.materials.new(mname); m.use_nodes=True; nt=m.node_tree; bsdf=nt.nodes['Principled BSDF']
         tex=nt.nodes.new('ShaderNodeTexImage'); tex.image=img; nt.links.new(tex.outputs['Color'],bsdf.inputs['Base Color']); m.diffuse_color=(1,1,1,1)
     o.data.materials.append(m); o.select_set(False); return o,tw,th
+
+
+def cut(o,keep_deg):
+    """완전한 회전체(360°)에서 나머지 각도(keep_deg~360°)를 불리언으로 잘라 냄 → 잘린 면이 단면처럼 막힘 (얇은 껍데기 지글거림 방지)"""
+    md=o.modifiers.get('screw')
+    if md: md.angle=math.radians(360)
+    es=o.modifiers.get('es')
+    if es: o.modifiers.remove(es)
+    L=1000.0; me=bpy.data.meshes.new('cutter'); bm=bmesh.new()
+    a0=math.radians(keep_deg); a1=math.radians(360)
+    pts=[(0,0)]+[(L*math.cos(a0+(a1-a0)*k/8),L*math.sin(a0+(a1-a0)*k/8)) for k in range(9)]
+    vb=[bm.verts.new((x,y,-L)) for x,y in pts]; vt=[bm.verts.new((x,y,L)) for x,y in pts]
+    n=len(pts); bm.faces.new(vb[::-1]); bm.faces.new(vt)
+    for i in range(n):
+        j=(i+1)%n; bm.faces.new((vb[i],vb[j],vt[j],vt[i]))
+    bm.normal_update(); bm.to_mesh(me); bm.free()
+    c=bpy.data.objects.new(o.name+'_cut',me); link(c); c.parent=o; c.hide_render=True; c.display_type='WIRE'
+    b=o.modifiers.new('cut','BOOLEAN'); b.operation='DIFFERENCE'; b.object=c; b.solver='EXACT'
+    smooth(o); return o
