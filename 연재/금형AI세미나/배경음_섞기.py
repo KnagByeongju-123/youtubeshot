@@ -44,7 +44,8 @@ def pop():
     n=int(0.09*SR); tt=np.arange(n)/SR; y=np.sin(2*np.pi*(600+3000*tt)*tt)*np.exp(-tt*45); return np.stack([y,y],1)*0.12
 GEN={'whoosh':whoosh,'slow':slow,'click':click,'pop':pop}
 ev=[]
-for f in sorted(glob.glob(os.path.join(HERE,'장면','_sfx','*.json'))): ev+=json.load(open(f))
+if '--효과음' in sys.argv:      # 효과음은 기본으로 넣지 않음 (사용자 결정 2026-11-15)
+    for f in sorted(glob.glob(os.path.join(HERE,'장면','_sfx','*.json'))): ev+=json.load(open(f))
 for e in ev:
     w=GEN[e['kind']]()*float(e.get('vol',1)); i0=int(e['t']*SR)
     if 0<=i0<n: seg=w[:n-i0]; out[i0:i0+len(seg)]+=seg
