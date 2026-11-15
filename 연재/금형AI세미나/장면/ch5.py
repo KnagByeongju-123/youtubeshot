@@ -131,7 +131,7 @@ for k in range(3):
     arc_=curve_line([(70*math.cos(a0_+j*0.08),0,70*math.sin(a0_+j*0.08)) for j in range(22)],bevel=3,rgb=COL['accent']); arc_.parent=cyc
 keyv(cyc,'scale',[(0,(0,0,0)),(T(10)+1.2,(0,0,0)),(T(10)+1.5,(1,1,1))])
 keyv(cyc,'rotation_euler',[(T(10)+1.2,(0,0,0)),(DUR,(0,math.radians(-540),0))])
-cam_keys(cam,tgt,[(T(10)+0.6,(DX_-60,-620,300),(DX_+60,0,140)),(T(10)+2.6,(DX_-100,-420,230),(DX_-40,0,150)),(DUR,(DX_-60,-560,280),(DX_+60,0,150))])
+cam_keys(cam,tgt,[(T(10)+0.6,(DX_-40,-980,330),(DX_+90,0,180)),(T(10)+2.6,(DX_-60,-900,300),(DX_+70,0,170)),(DUR,(DX_-20,-950,320),(DX_+90,0,180))])
 sfx(T(10)+0.2,'whoosh',0.9); sfx(T(10)+3.6,'pop',0.8)
 sfx(T(5)+0.4,'whoosh',0.8); sfx(T(7)+0.3,'whoosh',0.8); sfx(T(9)+0.9,'click',1.0)
 handheld(cam,0.5)

@@ -89,7 +89,7 @@ g2=text('ESG Smart Factory: PDF 자동 등록',18,(GX-340,-60,GZ-30),rgb=(0.4,1,
 b2=empty('bar2',(GX-340,-60,GZ-60)); bb2=box((1,20,26),(0.5,0,0),(0.30,0.80,0.45)); bb2.parent=b2
 keyv(b2,'scale',[(0,(0,1,1)),(T(7)+0.4,(0,1,1)),(T(7)+0.9,(120,1,1)),(E(7),(120,1,1)),(E(7)+0.3,(0,1,1))])
 sv=text('시간 절약',40,(GX-80,-70,GZ-60),rgb=COL['accent']); show(sv,T(7)+1.8,E(7)+0.3); sfx(T(7)+1.8,'pop',0.8)
-st_=text('발주',70,(QX+250,20,300),rot=(math.radians(90),math.radians(-12),0),rgb=COL['red'])
+st_=text('발주',70,(QX+250,-5,300),rot=(math.radians(90),math.radians(-12),0),rgb=COL['red'])
 tS=T(7)+2.6
 keyv(st_,'scale',[(0,(0,0,0)),(tS-0.05,(0,0,0)),(tS,(2.2,2.2,2.2)),(tS+0.18,(1,1,1))]); sfx(tS+0.15,'click',1.2)
 VX=QX+900
