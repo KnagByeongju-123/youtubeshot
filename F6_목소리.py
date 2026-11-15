@@ -1,7 +1,7 @@
 """여자 성우 F6·남자 성우 M6 — 공개 한국어 녹음 자료(KSS)의 목소리 색깔을 Supertonic 여자 성우에 입힘
   · KSS: 전문 여자 성우가 TTS 용으로 녹음해 공개한 자료 (Kyubyong Park, CC BY-NC-SA 4.0 → 비상업용만)
   · OpenVoice V2 목소리 색깔 바꾸기(tone color converter, MyShell, MIT)
-  · M6 = M1 바탕에 같은 KSS 색깔 (사용자 결정 2026-11-15, 들어 보고 등록)
+  · M6 = 원래 M1 목소리 그대로, KSS 색깔 없음 (사용자 결정 2026-11-15. F6.json 의 "M6_kss": true 면 KSS 색깔)
   · 순서: Supertonic 바탕 성우(F6=F1, M6=M1)로 읽음 → OpenVoice 로 목소리 색깔만 KSS 쪽으로 바꿈 (말·속도·억양은 그대로)
 
   .sd_venv/bin/python -X utf8 F6_목소리.py 준비          # 한 번: KSS·OpenVoice 받기 + 목소리 특징(F6_se.pth) 만들기

@@ -45,6 +45,15 @@ def f6_base(voice="F6"):
         return KSS_VOICES[voice]
 
 
+def kss_on(voice):
+    """F6.json 의 "<성우>_kss": false 면 KSS 색깔 없이 바탕 성우 그대로 (M6 기본 = 원래 M1, 2026-11-15)"""
+    try:
+        d = json.load(open(Path(__file__).with_name("models") / "openvoice" / "F6.json", encoding="utf-8"))
+    except Exception:
+        d = {}
+    return bool(d.get(voice + "_kss", voice != "M6"))
+
+
 def f6_convert(src, out, voice="F6"):
     """F6 = 바탕 성우 소리 → OpenVoice 로 목소리 색깔을 KSS 쪽으로 (F6_목소리.py 를 .sd_venv 에서 띄움)"""
     p = _F6.get("proc")
@@ -109,7 +118,7 @@ def main():
                                                  speed=max(.70, min(2.0, float(req.get("speed", 1.0)))),
                                                  total_steps=max(2, min(12, int(req.get("steps", 5)))),
                                                  verbose=False)
-                if is_f6:
+                if is_f6 and kss_on(voice):
                     raw = path.with_name(path.stem + "_f6base.wav")
                     tts.save_audio(audio, str(raw))
                     f6_convert(raw, path, voice)

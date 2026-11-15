@@ -8050,7 +8050,7 @@ SUPERTONIC_VOICES = ([{"short": f"supertonic:M{i}", "gender": "Male", "locale": 
                      + [{"short": "supertonic:F6", "gender": "Female", "locale": "ko-KR",      # KSS 목소리 색깔 (F6_목소리.py)
                          "name": "Supertonic F6 (여성, KSS·비상업용만) [supertonic:F6]"},
                         {"short": "supertonic:M6", "gender": "Male", "locale": "ko-KR",
-                         "name": "Supertonic M6 (남성, M1+KSS 색깔·비상업용만) [supertonic:M6]"}])
+                         "name": "Supertonic M6 (남성, 원래 M1 목소리) [supertonic:M6]"}])
 
 
 def ai_voice_list():
