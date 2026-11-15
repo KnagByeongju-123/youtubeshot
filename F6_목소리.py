@@ -1,10 +1,13 @@
-"""여자 성우 F6·남자 성우 M6 — 공개 한국어 녹음 자료(KSS)의 목소리 색깔을 Supertonic 여자 성우에 입힘
+"""목소리 색깔을 입힌 성우 F6·M6·F8~F10·M8~M10 — 공개 한국어 녹음 자료의 목소리 색깔을 Supertonic 바탕 성우에 입힘
+  · F8·F9·F10 / M8·M9·M10 (사용자 결정 2026-11-15, 나레이션 기본 = 남 M10·여 F8):
+    Zeroth-Korean(CC BY 4.0 → 수익 영상 가능, 설명란에 출처 표시) 사람 번호 105·121·147 → F1 바탕, 104·149·118 → M1 바탕
+    출처 문구: "목소리: Zeroth-Korean 음성 자료(Lucas Jo·Wonkyum Lee, CC BY 4.0)와 OpenVoice V2(MIT)로 만든 AI 성우"
   · KSS: 전문 여자 성우가 TTS 용으로 녹음해 공개한 자료 (Kyubyong Park, CC BY-NC-SA 4.0 → 비상업용만)
   · OpenVoice V2 목소리 색깔 바꾸기(tone color converter, MyShell, MIT)
   · M6 = 원래 M1 목소리 그대로, KSS 색깔 없음 (사용자 결정 2026-11-15. F6.json 의 "M6_kss": true 면 KSS 색깔)
   · 순서: Supertonic 바탕 성우(F6=F1, M6=M1)로 읽음 → OpenVoice 로 목소리 색깔만 KSS 쪽으로 바꿈 (말·속도·억양은 그대로)
 
-  .sd_venv/bin/python -X utf8 F6_목소리.py 준비          # 한 번: KSS·OpenVoice 받기 + 목소리 특징(F6_se.pth) 만들기
+  .sd_venv/bin/python -X utf8 F6_목소리.py 준비          # 한 번: KSS·Zeroth·OpenVoice 받기 + 목소리 특징(F6_se.pth) 만들기 (약 2분)
   .sd_venv/bin/python -X utf8 F6_목소리.py 바탕 F3                # F6 바탕 성우 바꾸기 (models/openvoice/F6.json, 기본 F1)
   .sd_venv/bin/python -X utf8 F6_목소리.py 바탕 M6 M2             # M6(남자, KSS 색깔) 바탕 성우 바꾸기 (기본 M1)
   .sd_venv/bin/python -X utf8 F6_목소리.py 바꾸기 <들어감.wav> <나옴.wav>
@@ -114,6 +117,9 @@ def base_clips(base):
     return paths
 
 
+ZEROTH_SPEAKERS = (105, 121, 147, 104, 149, 118)     # F8 F9 F10 M8 M9 M10
+
+
 def prepare(bases=("F1", "F2", "F3", "F4", "F5", "M1")):
     import torch
     download()
@@ -124,7 +130,8 @@ def prepare(bases=("F1", "F2", "F3", "F4", "F5", "M1")):
     old = torch.load(SE_PATH) if os.path.exists(SE_PATH) else {}
     old.update(se)
     torch.save(old, SE_PATH)
-    print("F6 목소리 특징 저장:", SE_PATH, sorted(old))
+    zeroth_se(ZEROTH_SPEAKERS)
+    print("목소리 특징 저장:", SE_PATH, sorted(torch.load(SE_PATH)))
 
 
 ZEROTH = os.path.join(HERE, "models", "zeroth")

@@ -33,8 +33,14 @@ def reply(ok, **data):
 _F6 = {}
 
 
-KSS_VOICES = {"F6": "F1", "M6": "M1", "F7": "F1", "M7": "M1"}   # 목소리 색깔을 입히는 성우 → 기본 바탕 성우
-VOICE_TGT = {"F6": "tgt", "M6": "tgt"}    # 입힐 목소리 (tgt = KSS·비상업, zeroth_<번호> = Zeroth-Korean·CC BY 4.0). F7·M7 은 F6.json 의 "F7_tgt"
+# 목소리 색깔을 입히는 성우: 코드 → (바탕 Supertonic 성우, 입힐 목소리). F6_목소리.py 와 같은 표 (사용자 결정 2026-11-15)
+#   tgt = KSS(비상업용만) · zeroth_<번호> = Zeroth-Korean 사람 번호(CC BY 4.0, 상업 사용 가능·출처 표시) · None = 바탕 그대로
+MIX_VOICES = {
+    "F6": ("F1", "tgt"), "M6": ("M1", None),
+    "F8": ("F1", "zeroth_105"), "F9": ("F1", "zeroth_121"), "F10": ("F1", "zeroth_147"),
+    "M8": ("M1", "zeroth_104"), "M9": ("M1", "zeroth_149"), "M10": ("M1", "zeroth_118"),
+}
+KSS_VOICES = MIX_VOICES        # 예전 이름
 
 
 def _f6conf():
@@ -44,29 +50,21 @@ def _f6conf():
         return {}
 
 
-def voice_tgt(voice):
-    t = _f6conf().get(voice + "_tgt") or VOICE_TGT.get(voice)
-    if not t:
-        raise ValueError(voice + " 목소리가 아직 정해지지 않음 (F6.json 의 " + voice + "_tgt)")
-    return t
-
-
 def f6_base(voice="F6"):
-    """F6·M6 의 바탕 성우 (models/openvoice/F6.json, 없으면 F6=F1·M6=M1)"""
-    try:
-        d = json.load(open(Path(__file__).with_name("models") / "openvoice" / "F6.json", encoding="utf-8"))
-        return d.get(voice) or (d.get("base") if voice == "F6" else None) or KSS_VOICES[voice]
-    except Exception:
-        return KSS_VOICES[voice]
+    """바탕 성우 (F6.json 의 "<코드>" 가 있으면 그것, 옛 형식 {"base"} 는 F6)"""
+    d = _f6conf()
+    return d.get(voice) or (d.get("base") if voice == "F6" else None) or MIX_VOICES[voice][0]
+
+
+def voice_tgt(voice):
+    if voice == "M6" and _f6conf().get("M6_kss"):
+        return "tgt"
+    return _f6conf().get(voice + "_tgt") or MIX_VOICES[voice][1]
 
 
 def kss_on(voice):
-    """F6.json 의 "<성우>_kss": false 면 KSS 색깔 없이 바탕 성우 그대로 (M6 기본 = 원래 M1, 2026-11-15)"""
-    try:
-        d = json.load(open(Path(__file__).with_name("models") / "openvoice" / "F6.json", encoding="utf-8"))
-    except Exception:
-        d = {}
-    return bool(d.get(voice + "_kss", voice != "M6"))
+    """목소리 색깔을 입히는지 (M6 = 원래 M1 그대로)"""
+    return voice_tgt(voice) is not None
 
 
 def f6_convert(src, out, voice="F6"):
@@ -119,7 +117,7 @@ def main():
             if any(0xD800 <= ord(ch) <= 0xDFFF for ch in text):
                 raise ValueError("잘못된 문자 인코딩이 포함되어 있습니다. UTF-8 통신 설정을 확인하세요.")
             voice = str(req.get("voice", "M1"))
-            if voice not in {f"M{i}" for i in range(1,8)} | {f"F{i}" for i in range(1,8)}:
+            if voice not in {f"M{i}" for i in range(1,6)} | {f"F{i}" for i in range(1,6)} | set(MIX_VOICES):
                 raise ValueError("잘못된 성우 ID: " + voice)
             if not text:
                 raise ValueError("빈 나레이션")
