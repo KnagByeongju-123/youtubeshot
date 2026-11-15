@@ -13,7 +13,7 @@ for i,v in enumerate(vals):
     z=130-i*55
     lb=text('실적 금형 %s'%'ABCDEF'[i],15,(-610,-4,z),rgb=COL['white'],align='LEFT'); pop(lb,T(2)+0.6+i*0.2)
     b=box((300*v,8,26),(-420+150*v,-2,z),COL['sky']); pop(b,T(3)+0.2+i*0.25)
-nv=[('공정 수','10'),('부품 수','192'),('판 크기','962 × 210'),('프레스','80 톤')]
+nv=[('공정 수','10'),('부품 수','192'),('판 크기','962 × 210'),('프레스','100 톤')]
 for i,(a,b) in enumerate(nv):
     c=card(a,b,(240,-40,190-i*80),COL['accent'],w=230,h=64,tsize=18,ssize=16); pop(c,T(4)+0.2+i*0.35)
 ar=text('비교 →',22,(-10,-30,40),rgb=COL['accent']); pop(ar,T(4)+1.6)

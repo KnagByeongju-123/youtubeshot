@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from matplotlib import font_manager as fm
 from PIL import Image
 H=os.path.dirname(os.path.abspath(__file__)); O=os.path.join(H,'자료')
-FEM='/home/user/mold_sold/parts/TEST_RETAINER_SPCC/burr_cell/reverse/iter2_d5.646'
+FEM='/home/user/mold_sold/parts/TEST_RETAINER_SPCC/burr_cell/reverse/iter2_d4.571'
 fp=fm.FontProperties(fname='/usr/share/fonts/truetype/nanum/NanumGothicBold.ttf')
 plt.rcParams['font.family']=fp.get_name(); fm.fontManager.addfont('/usr/share/fonts/truetype/nanum/NanumGothicBold.ttf')
 # 1) 가정 고객 도면 (요청 그대로: ID50 · OD60 · 버링 14 · 높이 4, 버링 지름 미지정)
@@ -34,9 +34,11 @@ fig.savefig(os.path.join(O,'고객도면.png')); plt.close(fig)
 # 2) 성형해석 장면: GIF 프레임에서 버링 주변(r 0~17 mm)만 잘라 크게
 for nm,fr in (('S2_burring',(0,4,8,12,16,22)),('S3_restrike',(13,))):
     im=Image.open(os.path.join(FEM,nm+'.gif'))
+    N=im.n_frames; base=23 if nm=='S2_burring' else 14
     for k in fr:
+        k0=k; k=min(N-1,round(k*(N-1)/(base-1)))
         im.seek(min(k,im.n_frames-1)); c=im.convert('RGB').crop((268,30,500,325)).resize((696,885),Image.LANCZOS)
-        c.save(os.path.join(O,'%s_%02d.png'%(nm,k)))
+        c.save(os.path.join(O,'%s_%02d.png'%(nm,k0)))
 s=Image.open(os.path.join(FEM,'S2_burring_summary.png')).convert('RGB')
 s.crop((205,400,752,765)).save(os.path.join(O,'얇아짐_확대.png'))
 s.crop((80,805,880,1195)).save(os.path.join(O,'얇아짐_그래프.png'))
