@@ -83,7 +83,8 @@ for i,(nm,kn,c_) in enumerate(bars):
     me=b.data
     for v in me.vertices: v.co.z+=h/2
     paint(b,c_); b.select_set(False)
-    keyv(b,'scale',[(0,(1,1,0)),(T(8)+0.2+i*1.6,(1,1,0)),(T(8)+1.4+i*1.6,(1,1,1))])
+    t0_=T(8)+0.2+i*1.6
+    keyv(b,'scale',[(0,(0,0,0)),(t0_-0.05,(0,0,0)),(t0_,(1,1,0.01)),(t0_+1.2,(1,1,1))])
     tl=text(nm,26,(x,-70,-0),rgb=COL['white']); tl.location=(x,-70,h+70); show(tl,T(8)+1.0+i*1.6)
     tv=text('%.0f kN'%round(kn),34,(x,-70,h+30),rgb=COL['accent']); show(tv,T(8)+1.2+i*1.6)
 ft=text('누르는 힘',36,(FX+110,-70,520),rgb=COL['white']); show(ft,T(7)+0.2)
