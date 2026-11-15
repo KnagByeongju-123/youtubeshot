@@ -67,29 +67,55 @@ for i,cd in enumerate(codes):
     g=empty('nc%d'%i,NCP)
     b=box((44,5,14),(0,0,0),(0.12,0.16,0.22),bevel=1.5); b.parent=g
     tx=text(cd,5.5,(0,-3.2,0),rgb=(0.45,1,0.55),bold=False); tx.parent=g
-    sp=(NCP[0]+random.uniform(-110,110),NCP[1]+random.uniform(-90,-20),NCP[2]+random.uniform(-80,110))
+    sp=(NCP[0]+random.uniform(-40,120),NCP[1]+random.uniform(-90,-20),NCP[2]+random.uniform(-60,120))
     tf=t_burst+0.6+i*0.055
-    keyv(g,'location',[(0,NCP),(t_burst,NCP),(t_burst+0.45,sp),(tf,sp),(tf+0.7,(CB[0],CB[1]-70,CB[2]-20))])
+    keyv(g,'location',[(0,NCP),(t_burst,NCP),(t_burst+0.45,sp),(tf,sp),(tf+0.35,(LX+150,-60,300)),(tf+0.7,(CB[0],CB[1]-70,CB[2]-20))])
     keyv(g,'rotation_euler',[(t_burst,(0,0,0)),(t_burst+0.45,(random.uniform(-0.5,0.5),0,random.uniform(-0.6,0.6))),(tf,(random.uniform(-0.3,0.3),0,random.uniform(-0.3,0.3))),(tf+0.7,(0,0,0))])
     keyv(g,'scale',[(0,(0,0,0)),(t_burst-0.01,(0,0,0)),(t_burst+0.2,(1,1,1)),(tf+0.55,(1,1,1)),(tf+0.72,(0,0,0))])
 glow=box((96,6,14),(CB[0],CB[1]-63,CB[2]-20),(0.4,1,0.5),name='glow')
 keyv(glow,'scale',[(0,(0,0,0)),(t_burst+1.2,(0,0,0)),(t_burst+1.4,(1,1,1)),(t_burst+2.4,(1,1,1)),(t_burst+2.7,(0,0,0))])
 ntx=text('NC 파일 → 가공 설비로',24,(LX+80,-80,250),rgb=(0.4,1,0.5)); show(ntx,t_burst+0.3,E(2)+0.2)
-# 3) 머시닝센터: 판에 구멍
+# 3) 머시닝센터(고속가공) 근접: 엔드밀이 홈을 파 나감 + 칩
 MX=800
-plate=box((440,200,40),(MX,0,20),COL['plate'],bevel=2,name='plate'); show(plate,T(4)-0.3)
-HOLES=[(-120,0,31),(0,0,37),(120,0,31),(-170,-70,8.5),(170,-70,8.5),(-170,70,8.5),(170,70,8.5)]
-mill=empty('mill',(MX,0,300))
-sp=cyl(30,90,(0,0,60),(0.5,0.52,0.58)); sp.parent=mill
-em=cyl(8,70,(0,0,-15),COL['post']); em.parent=mill
-keyv(mill,'scale',[(0,(0,0,0)),(T(4)-0.3,(0,0,0)),(T(4),(1,1,1))])
-order=[3,4,0,1,2,5,6]
-tA4=T(4)+0.3; dt=(E(4)+0.8-tA4)/len(order)
-for k,i in enumerate(order):
-    x,y,d=HOLES[i]; t0=tA4+k*dt
-    key(mill,'location',t0,(MX+x,y,140)); key(mill,'location',t0+dt*0.45,(MX+x,y,75)); key(mill,'location',t0+dt*0.9,(MX+x,y,140))
-    h=cyl(d,42,(MX+x,y,21),(0.10,0.11,0.14),seg=48,name='hole'); keyv(h,'scale',[(0,(0,0,0)),(t0+dt*0.3,(0,0,0)),(t0+dt*0.45,(1,1,1))])
-t4=text('머시닝센터: 구멍 · 홈',26,(MX,-80,260),rgb=COL['white']); show(t4,T(4)+0.1,E(4)+0.5)
+plate=box((440,200,40),(MX,0,20),COL['plate'],bevel=1,name='plate'); show(plate,T(4)-0.4)
+for (x,y,d) in ((-170,-70,8.5),(170,-70,8.5),(-170,70,8.5),(170,70,8.5)): cyl(d,1,(MX+x,y,40.3),(0.10,0.11,0.14),seg=32)
+GX0,GX1=MX-170,MX+150; tg0=T(4)+0.5; tg1=E(4)+0.9
+me=bpy.data.meshes.new('groove'); bm=bmesh.new()
+bmesh.ops.create_cube(bm,size=1.0); 
+for v in bm.verts: v.co.x+=0.5
+bm.to_mesh(me); bm.free()
+gr=bpy.data.objects.new('groove',me); link(gr); paint(gr,(0.16,0.17,0.20)); gr.location=(GX0,0,36.1)
+keyv(gr,'scale',[(0,(0.01,16,8)),(tg0,(0.01,16,8)),(tg1,(GX1-GX0,16,8))])
+for fc_ in gr.animation_data.action.fcurves:
+    for kp in fc_.keyframe_points: kp.interpolation='LINEAR'
+# 바닥 공구 자국(줄무늬)
+for k in range(-3,4):
+    ln=curve_line([(GX0,k*2.2,40.25),(GX1,k*2.2,40.25)],bevel=0.25,rgb=(0.32,0.34,0.38)); ln.location=(0,0,-8.2)
+    keyv(ln,'scale',[(0,(0,1,1)),(tg0,(0,1,1)),(tg1,(1,1,1))]); ln.location=(0,0,-8.2)
+mill=empty('mill',(GX0,0,40))
+sp=cyl(30,90,(0,0,115),(0.5,0.52,0.58)); sp.parent=mill
+holder=cyl(14,30,(0,0,60),(0.70,0.72,0.76)); holder.parent=mill
+em=empty('em',(0,0,0)); em.parent=mill
+flute=cyl(8,44,(0,0,22),(0.88,0.88,0.92),seg=6); flute.parent=em
+for k in range(3):
+    fl=box((2.5,17,40),(0,0,22),(0.55,0.57,0.62)); fl.rotation_euler=(0,0,k*math.pi/3); fl.parent=em
+spin(em,T(4)-0.4,E(4)+1.2,turns=40)
+keyv(mill,'scale',[(0,(0,0,0)),(T(4)-0.4,(0,0,0)),(T(4)-0.1,(1,1,1))])
+keyv(mill,'location',[(T(4)-0.1,(GX0,0,70)),(tg0,(GX0,0,32)),(tg1,(GX1,0,32)),(tg1+0.3,(GX1,0,80))])
+for fc_ in mill.animation_data.action.fcurves:
+    if fc_.data_path=='location':
+        for kp in fc_.keyframe_points:
+            if F(tg0)-1<=kp.co.x<=F(tg1)+1: kp.interpolation='LINEAR'
+import random
+random.seed(3)
+for i in range(46):
+    ti=tg0+(tg1-tg0)*i/46; x=GX0+(GX1-GX0)*(ti-tg0)/(tg1-tg0)
+    ch_=box((3,2,1.2),(0,0,0),(0.85,0.62,0.30),name='chip')
+    p0=(x+6,random.uniform(-6,6),41); p1=(x-random.uniform(10,60),random.uniform(-70,40),41+random.uniform(15,70))
+    keyv(ch_,'location',[(0,p0),(ti,p0),(ti+0.55,p1)])
+    keyv(ch_,'rotation_euler',[(ti,(0,0,0)),(ti+0.55,(random.uniform(0,6),random.uniform(0,6),0))])
+    keyv(ch_,'scale',[(0,(0,0,0)),(ti-0.01,(0,0,0)),(ti+0.02,(1,1,1)),(ti+0.45,(1,1,1)),(ti+0.55,(0,0,0))])
+t4=text('고속가공: 홈 파기',22,(MX,-110,150),rgb=COL['white']); show(t4,T(4)+0.1,E(4)+0.8)
 # 4) 와이어 방전: 다이 구멍
 WX=1600
 blk=box((260,260,90),(WX,0,45),COL['die'],bevel=2,name='blk'); show(blk,T(5)-0.4)
@@ -102,7 +128,12 @@ for j in range(25):
 for fc_ in wire.animation_data.action.fcurves:
     if fc_.data_path=='location':
         for kp in fc_.keyframe_points: kp.interpolation='LINEAR'
-cut=curve_line([(WX+rr*math.cos(2*math.pi*j/96),rr*math.sin(2*math.pi*j/96),91) for j in range(97)],bevel=1.6,rgb=COL['red'],name='cut'); draw_on(cut,tW0,tW1)
+cut=curve_line([(WX+rr*math.cos(2*math.pi*j/96),rr*math.sin(2*math.pi*j/96),90.2) for j in range(97)],bevel=1.7,rgb=(0.03,0.03,0.04),name='cut'); draw_on(cut,tW0,tW1)
+for i in range(70):
+    ti=tW0+(tW1-tW0)*i/70; a_=2*math.pi*(ti-tW0)/(tW1-tW0)
+    zz=random.uniform(30,95); px=(WX+rr*math.cos(a_)+random.uniform(-3,3),rr*math.sin(a_)+random.uniform(-3,3),zz)
+    spk=sphere(random.uniform(1.0,2.0),px,(1.0,0.92,0.45),name='spark')
+    keyv(spk,'scale',[(0,(0,0,0)),(ti-0.01,(0,0,0)),(ti+0.03,(1,1,1)),(ti+0.16,(0,0,0))])
 slug=cyl(rr-1.5,86,(WX,0,45),(0.20,0.62,0.30),seg=64,name='slug')
 keyv(slug,'location',[(0,(WX,0,45)),(tW1+0.2,(WX,0,45)),(tW1+1.0,(WX,0,-80))])
 hole2=cyl(rr,1,(WX,0,90.6),(0.08,0.09,0.11),seg=64); keyv(hole2,'scale',[(0,(0,0,0)),(tW1+0.3,(0,0,0)),(tW1+0.6,(1,1,1))])
@@ -131,8 +162,15 @@ cam,tgt=camera(35)
 cam_keys(cam,tgt,[(0,(LX-200,-900,520),(LX,0,140)),(T(1)+2,(LX-120,-760,360),(LX,0,140))])
 cam_keys(cam,tgt,[(T(2)+0.6,(LX+80,-760,330),(LX+60,0,160)),(E(2),(LX+120,-760,300),(LX+70,0,160))])
 cam_keys(cam,tgt,[(T(3)+0.4,(LX+120,-620,240),(LX,0,140)),(E(3)-2.0,(LX+60,-600,240),(LX,0,140)),(E(3),(LX-80,-620,250),(LX-60,0,150))])
-cam_keys(cam,tgt,[(T(4)+0.6,(MX-100,-700,420),(MX,0,80)),(E(4)+0.4,(MX+80,-680,400),(MX,0,80))])
-cam_keys(cam,tgt,[(T(5)+0.6,(WX-150,-620,380),(WX,0,90)),(E(5),(WX+120,-600,360),(WX,0,90))])
+cam_keys(cam,tgt,[(T(4)-0.2,(MX-120,-560,260),(GX0,0,60))])
+cam_keys(cam,tgt,[(tg0,(GX0-40,-150,85),(GX0,0,45)),(tg1,(GX1-40,-150,85),(GX1,0,45))])
+for fc_ in cam.animation_data.action.fcurves:
+    for kp in fc_.keyframe_points:
+        if F(tg0)<=kp.co.x<=F(tg1): kp.interpolation='LINEAR'
+cam_keys(cam,tgt,[(T(5)+0.6,(WX-150,-620,380),(WX,0,90))])
+for j in range(13):
+    tt=tW0+0.9+(tW1-tW0-0.9)*j/12; a_=2*math.pi*(tt-tW0)/(tW1-tW0)
+    key(cam,'location',tt,(WX+(rr+70)*math.cos(a_-0.5),(rr+70)*math.sin(a_-0.5),118)); key(tgt,'location',tt,(WX+rr*math.cos(a_),rr*math.sin(a_),82))
 cam_keys(cam,tgt,[(T(6)+0.6,(CX-20,-700,300),(CX,0,230)),(T(6)+2.4,(CX+40,-330,190),(CX+70,0,170)),(E(6),(CX+50,-320,185),(CX+75,0,165))])
 cam_keys(cam,tgt,[(T(7)+0.7,(AX,-820,260),(AX,0,240)),(DUR,(AX+40,-860,270),(AX,0,240))])
 handheld(cam,0.5)

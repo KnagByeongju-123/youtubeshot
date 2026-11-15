@@ -60,8 +60,6 @@ for i,(o,g) in enumerate(order):
 LIFT=140; ZG=145
 keyv(up,'location',[(0,(0,0,0)),(T(9)-0.2,(0,0,0)),(T(9)+1.2,(0,0,LIFT))])
 SXc=DXS-108; ZC=ZG+38      # 버링 스테이션 중심 (스트립 위, 매달린 펀치 아래)
-r1=text('부품 101개 · 서로 겹침 0',11,(SXc,62,ZC+18),rgb=(0.4,1,0.5)); show(r1,E(9)-2.2,E(9)+0.6)
-r2=text('금형 안 · 버링 스테이션',9,(SXc,62,ZC+2),rgb=COL['accent']); show(r2,T(9)+2.6,E(9)+0.6)
 # 보기 바꾸기: 솔리드 → 와이어 → 엑스레이 (보여 주고 확인하는 용도)
 tv=T(10)
 view_modes(parts,[(0,'solid'),(tv+2.0,'wire'),(tv+4.6,'xray')])
