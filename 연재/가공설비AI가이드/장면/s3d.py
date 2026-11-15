@@ -20,7 +20,7 @@ def setup(bg=(0.055,0.07,0.10), res=(1920,1080), texture=False, outline=True):
     sh.show_shadows=True; sh.shadow_intensity=0.35; sh.show_cavity=True; sh.cavity_type='WORLD'; sh.cavity_ridge_factor=0.6; sh.cavity_valley_factor=0.8
     sh.show_specular_highlight=False; sh.show_object_outline=outline; sh.object_outline_color=(0.02,0.02,0.03); sh.show_xray=False
     sc.display.shadow_focus=0.6; sc.display.light_direction=(0.45,-0.35,0.82)
-    sc.display.render_aa='5'
+    sc.display.render_aa='FXAA'
     w=bpy.data.worlds.new('W'); sc.world=w; w.color=bg
     sc.render.image_settings.file_format='PNG'; sc.render.image_settings.color_mode='RGB'
     sc.view_settings.view_transform='Standard'
