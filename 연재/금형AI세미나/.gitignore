@@ -6,3 +6,5 @@
 장면/__pycache__/
 장면/_sfx/
 _성우샘플/
+*.jpg
+장면/_thumb_*.png
