@@ -30,6 +30,40 @@ def reply(ok, **data):
     sys.stdout.flush()
 
 
+_F6 = {}
+
+
+def f6_base():
+    """F6 의 바탕 성우 (models/openvoice/F6.json, 없으면 F1)"""
+    try:
+        return json.load(open(Path(__file__).with_name("models") / "openvoice" / "F6.json", encoding="utf-8"))["base"]
+    except Exception:
+        return "F1"
+
+
+def f6_convert(src, out):
+    """F6 = 바탕 성우 소리 → OpenVoice 로 목소리 색깔을 KSS 쪽으로 (F6_목소리.py 를 .sd_venv 에서 띄움)"""
+    p = _F6.get("proc")
+    if p is None or p.poll() is not None:
+        import subprocess
+        here = Path(__file__).resolve().parent
+        py = here / ".sd_venv" / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
+        if not py.exists():
+            raise RuntimeError("F6 은 .sd_venv(torch) 가 있어야 함 — F6_목소리.py 설명 참고")
+        p = subprocess.Popen([str(py), "-X", "utf8", "-u", str(here / "F6_목소리.py"), "--worker"],
+                             stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+                             encoding="utf-8", bufsize=1)
+        r = json.loads(p.stdout.readline())
+        if not r.get("ok"):
+            raise RuntimeError("F6 준비 실패: " + str(r))
+        _F6["proc"] = p
+    p.stdin.write(json.dumps({"src": str(src), "out": str(out), "base": f6_base()}, ensure_ascii=False) + "\n")
+    p.stdin.flush()
+    r = json.loads(p.stdout.readline())
+    if not r.get("ok"):
+        raise RuntimeError("F6 바꾸기 실패: " + str(r.get("error")))
+
+
 def main():
     arg = argparse.ArgumentParser()
     arg.add_argument("--model-dir", type=Path, required=True)
@@ -57,20 +91,27 @@ def main():
             if any(0xD800 <= ord(ch) <= 0xDFFF for ch in text):
                 raise ValueError("잘못된 문자 인코딩이 포함되어 있습니다. UTF-8 통신 설정을 확인하세요.")
             voice = str(req.get("voice", "M1"))
-            if voice not in {f"M{i}" for i in range(1,6)} | {f"F{i}" for i in range(1,6)}:
+            if voice not in {f"M{i}" for i in range(1,6)} | {f"F{i}" for i in range(1,7)}:
                 raise ValueError("잘못된 성우 ID: " + voice)
             if not text:
                 raise ValueError("빈 나레이션")
             path = Path(req["out"]).resolve()
             path.parent.mkdir(parents=True, exist_ok=True)
             with contextlib.redirect_stdout(sys.stderr):
-                style = tts.get_voice_style(voice_name=voice)
+                is_f6 = voice == "F6"
+                style = tts.get_voice_style(voice_name=f6_base() if is_f6 else voice)
                 audio, duration = tts.synthesize(text=text, voice_style=style,
                                                  lang=str(req.get("lang", "ko")),
                                                  speed=max(.70, min(2.0, float(req.get("speed", 1.0)))),
                                                  total_steps=max(2, min(12, int(req.get("steps", 5)))),
                                                  verbose=False)
-                tts.save_audio(audio, str(path))
+                if is_f6:
+                    raw = path.with_name(path.stem + "_f6base.wav")
+                    tts.save_audio(audio, str(raw))
+                    f6_convert(raw, path)
+                    raw.unlink(missing_ok=True)
+                else:
+                    tts.save_audio(audio, str(path))
             reply(True, status="generated", file=str(path))
         except Exception as ex:
             traceback.print_exc(file=sys.stderr)
