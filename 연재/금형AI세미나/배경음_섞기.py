@@ -17,7 +17,9 @@ pad=m.build_audio(r,dict(s,narr_volume=0),'잔잔한 패드')
 ten=m.build_audio(r,dict(s,narr_volume=0,bgm_style='긴장 펄스'),'긴장 펄스')
 n=min(len(pad),len(ten)); t=np.arange(n)/m.SR
 T=lambda i: tim[i]['t0']
-zones=[(T(27),T(30)),(T(48),T(58)),(T(62),T(66))]      # 2장 '금형 한 벌'~끝, 5장 전체, 6장 반복 계산
+def Fd(w): return next(i for i,x in enumerate(tim) if w in x['text'])
+zones=[(T(Fd('같은 방법으로 펀치와 다이')),T(Fd('3. 프리캐드'))),(T(Fd('5. 성형해석')),T(Fd('6. 역설계'))),(T(Fd('그래서 구멍 크기를 정해')),T(Fd('이렇게 정한 값으로')))]   # 2장 조립·금형 내부, 5장 전체, 6장 반복 계산
+print('긴장 구간',[(round(a,1),round(b,1)) for a,b in zones])
 w=np.zeros(n,np.float32)
 for a,b in zones: w=np.maximum(w,np.clip(np.minimum((t-a)/2.0+0.5,(b-t)/2.0+0.5),0,1))
 out=pad[:n]*(1-w)[:,None]+ten[:n]*(0.9*w)[:,None]
