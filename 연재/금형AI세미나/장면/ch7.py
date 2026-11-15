@@ -246,7 +246,7 @@ cam_keys(cam,tgt,[(T(5)+0.6,(WX-150,-620,380),(WX,0,90))])
 for j in range(13):
     tt=tW0+0.9+(tW1-tW0-0.9)*j/12; a_=2*math.pi*(tt-tW0)/(tW1-tW0)
     key(cam,'location',tt,(WX+(rr+70)*math.cos(a_-0.5),(rr+70)*math.sin(a_-0.5),118)); key(tgt,'location',tt,(WX+rr*math.cos(a_),rr*math.sin(a_),82))
-cam_keys(cam,tgt,[(T(6)+0.6,(CX-20,-700,300),(CX,0,230)),(T(6)+2.4,(CX+40,-330,190),(CX+70,0,170)),(E(6),(CX+50,-320,185),(CX+75,0,165))])
+cam_keys(cam,tgt,[(T(6)+0.6,(CX-20,-700,300),(CX,0,230)),(T(6)+2.4,(CX+90,-470,210),(CX+110,0,190)),(E(6),(CX+100,-460,205),(CX+115,0,190))])
 cam_keys(cam,tgt,[(T(7)+0.4,(QX+120,-640,QZ+90),(QX+160,0,QZ)),(t3,(QX+60,-520,QZ+40),(QX+160,0,QZ-30)),(t5,(QX+260,-520,QZ+40),(QX+160,0,QZ-20)),(t6+0.5,(AX-60,-900,280),(AX-40,0,240)),(DUR,(AX,-880,270),(AX,0,240))])
 sfx(t_burst,'whoosh',0.8); sfx(tg0-0.4,'whoosh',0.9); sfx(BT0,'slow',1.0); sfx(BT1,'whoosh',0.9)
 sfx(T(5)+0.5,'whoosh',0.7); sfx(T(6)+1.0,'click',0.8); sfx(t2,'click',0.9); sfx(t5,'click',1.0); sfx(t6+0.3,'whoosh',0.7)
