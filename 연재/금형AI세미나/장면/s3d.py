@@ -285,7 +285,7 @@ def panel(w,h,loc,rgb=(0.12,0.15,0.2),rot=(math.radians(90),0,0),name='panel',ed
     return o
 
 UPPER_KEYS=('upper_shoe','punch_backing','punch_plate','stripper','guide_bush','_punch','pilot_','pilot_pierce')
-def die_set(loc=(0,0,0),skip_springs=False):
+def die_set(loc=(0,0,0),skip_springs=False,wire=False):
     """시험용 베어링 씰 금형 세트 STL 101개 → (부품 목록[(obj,'upper'|'lower'|'strip')], 상형 묶음 empty)"""
     root=empty('dieset',loc); up=empty('upper',(0,0,0)); up.parent=root
     parts=[]
@@ -293,7 +293,7 @@ def die_set(loc=(0,0,0),skip_springs=False):
         n=os.path.basename(f)[:-4]
         if n=='product_out': continue
         if skip_springs and 'spring' in n: continue
-        if n.startswith('strip'): rgb=COL['sheet']; g='strip'
+        if n=='strip' or n.startswith('strip_part'): rgb=COL['sheet']; g='strip'
         elif 'punch' in n and 'plate' not in n and 'backing' not in n: rgb=COL['punch']; g='upper'
         elif n.endswith('_die') or '_die_' in n or n.endswith('_pad'): rgb=COL['die']; g='lower'
         elif 'shoe' in n or 'parallel' in n: rgb=COL['shoe']; g='upper' if 'upper' in n else 'lower'
@@ -304,6 +304,11 @@ def die_set(loc=(0,0,0),skip_springs=False):
         elif 'backing' in n: rgb=COL['plate2']; g='upper' if 'punch' in n or 'stripper' in n else 'lower'
         else: rgb=COL['plate']; g='upper' if any(k in n for k in ('punch_plate','stripper')) else 'lower'
         o=stl(f,rgb,n); o.parent=up if g=='upper' else root
+        if wire and any(k in n for k in ('shoe','plate','backing','parallel')) and 'punch_' not in n.replace('punch_plate','').replace('punch_backing',''):
+            me=o.data; bm=bmesh.new(); bm.from_mesh(me)
+            bmesh.ops.dissolve_limit(bm,angle_limit=math.radians(1),verts=bm.verts,edges=bm.edges); bm.to_mesh(me); bm.free()
+            wm=o.modifiers.new('wire','WIREFRAME'); wm.thickness=1.2; wm.use_replace=True; wm.use_even_offset=True; wm.show_render=False; wm.show_viewport=False
+            o['plate']=1
         parts.append((o,g))
     return parts,up,root
 
@@ -346,3 +351,16 @@ def add_key(o,name,pts):
     sk=o.shape_key_add(name=name)
     for i,(r,z) in enumerate(pts): sk.data[i].co=(r,0,z)
     return sk
+
+def view_modes(parts,seq):
+    """seq=[(시각,'solid'|'wire'|'xray')...]  와이어 = 판만 1.2 mm 와이어(안쪽 부품은 솔리드), 엑스레이 = 전체 반투명"""
+    seq=sorted(seq); plates=[o for o,g in parts if o.get('plate')]
+    def h(scene,*a):
+        t=(scene.frame_current-1)/FPS; m='solid'
+        for tt,mm in seq:
+            if t>=tt: m=mm
+        for o in plates:
+            w=o.modifiers.get('wire')
+            if w: w.show_render=w.show_viewport=(m=='wire')
+        sh=scene.display.shading; sh.show_xray=(m=='xray'); sh.xray_alpha=0.28
+    bpy.app.handlers.frame_change_pre.append(h)
