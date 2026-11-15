@@ -228,7 +228,7 @@ def burr_sheet_profile(k,H=4.0,t=0.6,Ro=30.0,Rh=12.6,Ri=15.0,R=1.4):
         pts_top.append((r,z))
     return pts_top
 
-def floor(size=30000,z=0,rgb=(0.09,0.11,0.15),grid=True,step=50,gz=0.05,grgb=(0.16,0.19,0.25),extent=None):
+def floor(size=30000,z=0,rgb=(0.09,0.11,0.15),grid=True,step=50,gz=0.5,grgb=(0.16,0.19,0.25),extent=None):
     bpy.ops.mesh.primitive_plane_add(size=size,location=(0,0,z)); o=bpy.context.object; o.name='floor'; paint(o,rgb); o.select_set(False)
     if grid:
         e=extent or size/2
