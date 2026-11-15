@@ -122,17 +122,17 @@ hot.rotation_euler=(0,0,0)
 show(hot,T(10)+0.2,base=(1,1,1))
 for t_,c_ in ((T(10)+0.3,(0.95,0.2,0.15)),(T(10)+1.6,(0.95,0.2,0.15)),(T(10)+3.4,(1,0.85,0.2)),(T(10)+4.6,(0.3,0.9,0.4))):
     hm_.diffuse_color=(*c_,1); hm_.keyframe_insert('diffuse_color',frame=F(t_))
-rt_=text(' ',30,(DX_,-180,260),rgb=COL['accent']); text_seq(rt_,[(T(10)+0.4,'다이 모서리 R 0.8'),(T(10)+2.4,'다이 모서리 R 0.8 → 2.5'),(DUR+1,' ')])
-ex=text('(예시)',16,(DX_+230,-180,260),rgb=(0.7,0.75,0.85)); show(ex,T(10)+0.4)
-lp_=text('해석 → 설계 수정 → 재해석',24,(DX_,-180,215),rgb=COL['white']); show(lp_,T(10)+1.2)
-th_=text(' ',22,(DX_,-180,175),rgb=(0.4,1,0.5)); text_seq(th_,[(T(10)+3.6,'얇아짐 줄어듦 → 설계 확정'),(DUR+1,' ')])
+rt_=text(' ',30,(DX_,-180,360),rgb=COL['accent']); text_seq(rt_,[(T(10)+0.4,'다이 모서리 R 0.8'),(T(10)+2.4,'다이 모서리 R 0.8 → 2.5'),(DUR+1,' ')])
+ex=text('(예시)',16,(DX_+230,-180,360),rgb=(0.7,0.75,0.85)); show(ex,T(10)+0.4)
+lp_=text('해석 → 설계 수정 → 재해석',24,(DX_,-180,315),rgb=COL['white']); show(lp_,T(10)+1.2)
+th_=text(' ',22,(DX_,-180,275),rgb=(0.4,1,0.5)); text_seq(th_,[(T(10)+3.6,'얇아짐 줄어듦 → 설계 확정'),(DUR+1,' ')])
 cyc=empty('cyc',(DX_+260,-120,120))
 for k in range(3):
     a0_=k*2*math.pi/3
     arc_=curve_line([(70*math.cos(a0_+j*0.08),0,70*math.sin(a0_+j*0.08)) for j in range(22)],bevel=3,rgb=COL['accent']); arc_.parent=cyc
 keyv(cyc,'scale',[(0,(0,0,0)),(T(10)+1.2,(0,0,0)),(T(10)+1.5,(1,1,1))])
 keyv(cyc,'rotation_euler',[(T(10)+1.2,(0,0,0)),(DUR,(0,math.radians(-540),0))])
-cam_keys(cam,tgt,[(T(10)+0.6,(DX_-40,-980,330),(DX_+90,0,180)),(T(10)+2.6,(DX_-60,-900,300),(DX_+70,0,170)),(DUR,(DX_-20,-950,320),(DX_+90,0,180))])
+cam_keys(cam,tgt,[(T(10)+0.6,(DX_-40,-1050,380),(DX_+90,0,210)),(T(10)+2.6,(DX_-60,-980,360),(DX_+70,0,205)),(DUR,(DX_-20,-1020,370),(DX_+90,0,210))])
 sfx(T(10)+0.2,'whoosh',0.9); sfx(T(10)+3.6,'pop',0.8)
 sfx(T(5)+0.4,'whoosh',0.8); sfx(T(7)+0.3,'whoosh',0.8); sfx(T(9)+0.9,'click',1.0)
 handheld(cam,0.5)
