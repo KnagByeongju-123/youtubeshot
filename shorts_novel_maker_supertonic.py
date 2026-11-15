@@ -145,7 +145,8 @@ def find_font(bold=False):
     return ""
 
 
-DEFAULT_VOICE = "Supertonic M1 (남성, 무료 로컬) [supertonic:M1]"   # 성우를 따로 정하지 않으면 이 목소리 (기본 = 남자 성우 1, 톤 -1.5, 사용자 결정 2026-11-01: '창' 발음 샘플 비교에서 M1 선택. 예전 M4)
+DEFAULT_VOICE = "Supertonic M10 (남성, Zeroth·출처 표시) [supertonic:M10]"   # 성우를 따로 정하지 않으면 이 목소리 (사용자 결정 2026-11-15: 남 M10·여 F8. 예전 M1, 그전 M4)
+DEFAULT_VOICE_F = "Supertonic F8 (여성, Zeroth·출처 표시) [supertonic:F8]"   # 여자 나레이션 기본
 TTS_VOICES = {   # 마이크로소프트 온라인(Edge) 음성은 쓰지 않음. 옛 설정에 적힌 Edge 이름은 voice_code 가 DEFAULT_VOICE 로 바꿈
     "윈도우 내장 음성": "sapi",
 }
@@ -8046,7 +8047,17 @@ GEMINI_VOICES = [("Zephyr", "여성, 밝음"), ("Puck", "남성, 경쾌"), ("Cha
 SUPERTONIC_VOICES = ([{"short": f"supertonic:M{i}", "gender": "Male", "locale": "ko-KR",
                         "name": f"Supertonic M{i} (남성, 무료 로컬) [supertonic:M{i}]"} for i in range(1, 6)]
                      + [{"short": f"supertonic:F{i}", "gender": "Female", "locale": "ko-KR",
-                         "name": f"Supertonic F{i} (여성, 무료 로컬) [supertonic:F{i}]"} for i in range(1, 6)])
+                         "name": f"Supertonic F{i} (여성, 무료 로컬) [supertonic:F{i}]"} for i in range(1, 6)]
+                     + [{"short": "supertonic:F7", "gender": "Female", "locale": "ko-KR",      # 목소리 색깔 입힌 성우 (F6_목소리.py)
+                         "name": "Supertonic F7 (여성, KSS·비상업용만) [supertonic:F7]"},
+                        {"short": "supertonic:M7", "gender": "Male", "locale": "ko-KR",
+                         "name": "Supertonic M7 (남성, M1+KSS·비상업용만) [supertonic:M7]"},
+                        {"short": "supertonic:M6", "gender": "Male", "locale": "ko-KR",
+                         "name": "Supertonic M6 (남성, 원래 M1 목소리) [supertonic:M6]"}]
+                     + [{"short": f"supertonic:F{i}", "gender": "Female", "locale": "ko-KR",      # Zeroth-Korean(CC BY 4.0) 색깔
+                         "name": f"Supertonic F{i} (여성, Zeroth·출처 표시) [supertonic:F{i}]"} for i in (8, 9, 10)]
+                     + [{"short": f"supertonic:M{i}", "gender": "Male", "locale": "ko-KR",
+                         "name": f"Supertonic M{i} (남성, Zeroth·출처 표시) [supertonic:M{i}]"} for i in (8, 9, 10)])
 
 
 def ai_voice_list():
@@ -8058,10 +8069,10 @@ def voice_code(voice_name):
     """설정에 적힌 성우 이름 → 음성 코드. '[supertonic:M2]' '[openai:nova]' '[gemini:Kore]' 형식이면 괄호 안을 씀"""
     if voice_name in TTS_VOICES:
         return TTS_VOICES[voice_name]
-    m = re.search(r"\[((?:openai|gemini):[A-Za-z]+|supertonic:[MF][1-5])\]", voice_name or "")
+    m = re.search(r"\[((?:openai|gemini):[A-Za-z]+|supertonic:(?:M(?:10|[1-9])|F(?:10|[1-57-9])))\]", voice_name or "")
     if m:
         return m.group(1)
-    if re.fullmatch(r"supertonic:[MF][1-5]", (voice_name or "").strip()):
+    if re.fullmatch(r"supertonic:(?:M(?:10|[1-9])|F(?:10|[1-57-9]))", (voice_name or "").strip()):
         return voice_name.strip()
     return "supertonic:M2"     # 성우 미지정·옛 마이크로소프트 온라인 성우 이름 → 남자 성우 2 (기본)
 
@@ -8406,7 +8417,7 @@ _FALLBACK_SAID = set()
 def fallback_voice(voice, text):
     """AI 음성 한도가 끝났을 때 대신 쓸 무료 로컬 성우(Supertonic) - 남/여에 맞춤 (언어는 Supertonic 이 글자를 보고 고름)"""
     male = voice.split(":", 1)[-1].lower() in AI_VOICE_MALE
-    return "supertonic:M2" if male else "supertonic:F2"
+    return "supertonic:M10" if male else "supertonic:F8"
 
 
 LAST_TTS = {"voice": ""}   # 마지막으로 실제 읽은 성우 (대체됐는지 확인용)
