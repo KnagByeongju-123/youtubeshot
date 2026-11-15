@@ -9,8 +9,8 @@ ppl=[]
 for i,(nm,c,p) in enumerate(ROLES):
     pg=person(p,c,name='p%d'%i,scale=1.4); keyv(pg,'scale',[(0,(0,0,0)),(T(1)+0.4+i*0.25,(0,0,0)),(T(1)+0.7+i*0.25,(1.4,1.4,1.4))]); pedestal(p,r=90,h=8)
     t=text(nm,28,(p[0],p[1]-60,250),rgb=c); show(t,T(1)+0.6+i*0.25); ppl.append((pg,p))
-l1=text('AI: 초안 · 계산 · 검사',34,(0,200,520),rgb=COL['accent']); show(l1,T(1)+0.3)
-l2=text('사람: 결정 · 확인',34,(0,200,470),rgb=COL['white']); show(l2,T(1)+1.6)
+l1=text('AI: 초안 · 계산 · 검사',34,(0,200,520),rgb=COL['accent']); show(l1,T(1)+0.3,T(6))
+l2=text('사람: 결정 · 확인',34,(0,200,470),rgb=COL['white']); show(l2,T(1)+1.6,T(6))
 # 강조 고리 + 할 일 카드
 tasks=[(0,T(2),['공정안 · 금형 치수','작업지시서 발행']),(1,T(3),['공구 · 조건 · 경로','충돌 검사']),(2,T(4),['셋업 · 첫 가공']),(3,T(4)+2.2,['치수 측정','보정값 돌려줌'])]
 for i,t0,ls in tasks:
