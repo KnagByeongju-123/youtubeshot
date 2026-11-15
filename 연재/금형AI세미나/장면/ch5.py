@@ -103,7 +103,36 @@ cam_keys(cam,tgt,[(T(4)+0.8,(-40,-700,330),(0,0,ztop+40)),(E(4),(0,-680,320),(0,
 cam_keys(cam,tgt,[(T(5)+1.0,(-30,-370,ztop+60),(40,-64,ztop+5)),(E(5),(-10,-360,ztop+55),(45,-64,ztop+5))])
 cam_keys(cam,tgt,[(T(6)+0.6,(-40,-700,ztop+260),(0,0,ztop+150)),(E(6),(-20,-680,ztop+250),(0,0,ztop+150))])
 cam_keys(cam,tgt,[(T(7)+0.9,(FX+110,-1150,300),(FX+110,0,230)),(E(8),(FX+130,-1100,400),(FX+110,0,260))])
-cam_keys(cam,tgt,[(T(9)+0.8,(FX+110,-1500,560),(FX+110,0,330)),(DUR,(FX+130,-1550,580),(FX+110,0,330))])
+cam_keys(cam,tgt,[(T(9)+0.8,(FX+110,-1500,560),(FX+110,0,330)),(E(9),(FX+130,-1550,580),(FX+110,0,330))])
+# 설계에 해석 쓰기: 다이 모서리 R 키우기 → 재해석 → 얇아짐 줄어듦 (예시)
+DX_=-1300; SD=5.0
+def die_prof(R):
+    return [(15.6+R,0+0),(24,0),(24,30)]+[(15.6+R-R*math.sin(a),30-R+R*math.cos(a)) for a in [math.radians(90*k/8) for k in range(9)]][::-1][:-1]+[(15.6,30-R)] if False else \
+           [(15.6,0),(24,0),(24,30)]+[(15.6+R+R*math.cos(math.radians(90+90*k/8)),30-R+R*math.sin(math.radians(90+90*k/8))) for k in range(9)]
+dA=die_prof(0.8); dB=die_prof(2.5)
+dd=loop_obj(dA,'rdie',COL['die'],angle=270,seg=96,loc=(DX_,0,0),scale=SD)
+kR=add_key(dd,'R',dB)
+keyk(kR,[(0,0),(T(10)+1.6,0),(T(10)+3.2,1)])
+show(dd,T(10)-0.3,base=(SD,SD,SD))
+# 판 꺾이는 곳 표시 고리: 빨강 → 노랑 → 초록
+bpy.ops.mesh.primitive_torus_add(major_radius=16.2*SD,minor_radius=0.9*SD,location=(DX_,0,30*SD+0.3*SD)); hot=bpy.context.object; hot.name='hot'; hot.select_set(False)
+hm_=bpy.data.materials.new('hot'); hm_.diffuse_color=(0.95,0.2,0.15,1); hot.data.materials.append(hm_)
+hot.rotation_euler=(0,0,0)
+show(hot,T(10)+0.2,base=(1,1,1))
+for t_,c_ in ((T(10)+0.3,(0.95,0.2,0.15)),(T(10)+1.6,(0.95,0.2,0.15)),(T(10)+3.4,(1,0.85,0.2)),(T(10)+4.6,(0.3,0.9,0.4))):
+    hm_.diffuse_color=(*c_,1); hm_.keyframe_insert('diffuse_color',frame=F(t_))
+rt_=text(' ',30,(DX_,-180,260),rgb=COL['accent']); text_seq(rt_,[(T(10)+0.4,'다이 모서리 R 0.8'),(T(10)+2.4,'다이 모서리 R 0.8 → 2.5'),(DUR+1,' ')])
+ex=text('(예시)',16,(DX_+230,-180,260),rgb=(0.7,0.75,0.85)); show(ex,T(10)+0.4)
+lp_=text('해석 → 설계 수정 → 재해석',24,(DX_,-180,215),rgb=COL['white']); show(lp_,T(10)+1.2)
+th_=text(' ',22,(DX_,-180,175),rgb=(0.4,1,0.5)); text_seq(th_,[(T(10)+3.6,'얇아짐 줄어듦 → 설계 확정'),(DUR+1,' ')])
+cyc=empty('cyc',(DX_+260,-120,120))
+for k in range(3):
+    a0_=k*2*math.pi/3
+    arc_=curve_line([(70*math.cos(a0_+j*0.08),0,70*math.sin(a0_+j*0.08)) for j in range(22)],bevel=3,rgb=COL['accent']); arc_.parent=cyc
+keyv(cyc,'scale',[(0,(0,0,0)),(T(10)+1.2,(0,0,0)),(T(10)+1.5,(1,1,1))])
+keyv(cyc,'rotation_euler',[(T(10)+1.2,(0,0,0)),(DUR,(0,math.radians(-540),0))])
+cam_keys(cam,tgt,[(T(10)+0.6,(DX_-60,-620,300),(DX_+60,0,140)),(T(10)+2.6,(DX_-100,-420,230),(DX_-40,0,150)),(DUR,(DX_-60,-560,280),(DX_+60,0,150))])
+sfx(T(10)+0.2,'whoosh',0.9); sfx(T(10)+3.6,'pop',0.8)
 sfx(T(5)+0.4,'whoosh',0.8); sfx(T(7)+0.3,'whoosh',0.8); sfx(T(9)+0.9,'click',1.0)
 handheld(cam,0.5)
 finish('ch5',DUR)
