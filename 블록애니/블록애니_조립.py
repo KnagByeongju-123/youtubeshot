@@ -1,5 +1,5 @@
 """블록 애니 조립: 샷 프레임 → 24fps 영상 + 나레이션 소리 + 자막(한 줄씩) + 챕터 제목 + 숫자 상자
-사용: python 블록애니_조립.py <프로젝트.json> <샷목록.json> <프레임폴더> <소리.mp3> <결과.mp4> [--숫자 숫자.json]"""
+사용: python 블록애니_조립.py <프로젝트.json> <샷목록.json> <프레임폴더> <소리.mp3> <결과.mp4> [--숫자 숫자.json] [--자막없음]"""
 import json, os, re, subprocess, sys
 pj_path, shot_path, fdir, audio, out = sys.argv[1:6]
 pj=json.load(open(pj_path,encoding='utf-8')); shots=json.load(open(shot_path,encoding='utf-8'))['shots']
@@ -45,6 +45,7 @@ for sg in tim['segs']:
     t0,dur,txt=sg['t0'],sg['dur'],sg['text']
     if sg['kind']=='chapter':
         ev.append(f"Dialogue: 0,{ts(t0)},{ts(t0+dur+1.2)},Chap,,0,0,0,,{{\\fad(300,400)}}{esc(txt)}"); continue
+    if '--자막없음' in sys.argv: continue      # 나레이션 자막 빼기 (장 제목·숫자 상자는 그대로)
     ps=pieces(txt.replace('\n',' ')); tot=sum(len(p) for p in ps) or 1; speak=max(0.5,dur-0.35); t=t0
     for p in ps:
         d=speak*len(p)/tot; ev.append(f"Dialogue: 0,{ts(t)},{ts(t+d)},Sub,,0,0,0,,{esc(p)}"); t+=d
