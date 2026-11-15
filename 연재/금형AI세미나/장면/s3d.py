@@ -167,11 +167,19 @@ def chapter(ch):
     idx=[i for i,s in enumerate(segs) if s['kind']=='chapter']
     a=idx[ch]; b=idx[ch+1] if ch+1<len(idx) else len(segs)
     cs=segs[a:b]; T0=0.0 if ch==0 else cs[0]['t0']; end=segs[b]['t0'] if b<len(segs) else tim['duration']
+    global _T0; _T0=T0
     T=lambda i: cs[i]['t0']-T0
     E=lambda i: cs[i]['t0']+cs[i]['dur']-T0
     return T,E,end-T0,cs
+SFX=[]; _T0=0.0
+def sfx(t,kind='whoosh',vol=1.0):
+    """효과음 자리 (장 안의 시각): whoosh=휙 · slow=불릿 타임 · click=딸깍 · pop=톡"""
+    SFX.append({'t':round(_T0+t,3),'kind':kind,'vol':vol})
 def finish(name,dur):
     sc=bpy.context.scene; sc.frame_start=1; sc.frame_end=F(dur)
+    os.makedirs(os.path.join(HERE,'_sfx'),exist_ok=True)
+    json.dump(SFX,open(os.path.join(HERE,'_sfx',name+'.json'),'w'),indent=0)
+    if '--sfx' in ARGS: return
     a=ARGS
     if '--save' in a: bpy.ops.wm.save_as_mainfile(filepath=os.path.join(HERE,name+'.blend'))
     if '--test' in a:

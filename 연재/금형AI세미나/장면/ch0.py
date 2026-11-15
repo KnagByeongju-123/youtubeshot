@@ -47,9 +47,15 @@ cam_keys(cam,tgt,[(0,(0,-700,520),(0,0,40)),(T(1)+3,(0,-360,190),(0,0,50))])
 orbit(cam,tgt,T(1)+3,E(3)-1,(0,0,55),360,140,-90,-55,n=8)
 cam_keys(cam,tgt,[(E(3)+0.4,(250,-650,320),(500,0,90))])
 stops=[T(4)+1.0,T(4)+4.0,T(5)+1.5,T(6)+1.5,T(7)+0.8,T(7)+3.6,T(8)+0.6,T(8)+2.8]
-for i,t in enumerate(stops[1:]):
+st_=stops[1:]
+for i,t in enumerate(st_):
     x=icons[min(i,6)]
-    cam_keys(cam,tgt,[(t,(x+60,-420,230),(x,0,100))])
+    arr=max(t-0.4,st_[i-1]+0.1) if i else t
+    cam_keys(cam,tgt,[(arr,(x+60,-420,230),(x,0,100))])
+    if i: sfx(arr-0.4,'whoosh',0.8)
+    nxt=st_[i+1]-0.45 if i+1<len(st_) else E(8)-0.5
+    if nxt>arr+0.3: cam_keys(cam,tgt,[(nxt,(x+95,-385,215),(x+12,0,100))])
 cam_keys(cam,tgt,[(E(8)-0.2,(X0+3*DX,-1700,900),(X0+3*DX,0,60),None),(DUR,(X0+3*DX,-1750,920),(X0+3*DX,0,60))])
+sfx(E(3)-0.2,'whoosh',0.9); sfx(E(8)-0.5,'whoosh',0.9)
 handheld(cam,0.6)
 finish('ch0',DUR)

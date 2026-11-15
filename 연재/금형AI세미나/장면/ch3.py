@@ -86,7 +86,7 @@ secs=[[(0,0),(8,0)]+arcpts(8,7,7,-90,0)[1:]+[(0,7)],[(0,7),(15,7),(15,54),(0,54)
 tX0=T(8)+2.6; tX1=E(8)-0.6
 for k,sp_ in enumerate(secs):
     o=revolve(sp_,'sec%d'%k,rgb=(0.72,0.74,0.80)); o.scale=(S,)*3
-    dz=(-45,0,45)[k]
+    dz=(-80,0,80)[k]
     keyv(o,'location',[(0,(WX,WY,2)),(tX0+0.3,(WX,WY,2)),(tX0+0.9,(WX,WY,2+dz)),(tX1-0.5,(WX,WY,2+dz)),(tX1,(WX,WY,2))])
     keyv(o,'scale',[(0,(0,0,0)),(tX0,(0,0,0)),(tX0+0.01,(S,S,S)),(tX1,(S,S,S)),(tX1+0.01,(0,0,0))])
 keyv(sol,'scale',[(tX0,(S,S,S)),(tX0+0.01,(0,0,0)),(tX1,(0,0,0)),(tX1+0.01,(S,S,S))])
@@ -117,5 +117,6 @@ orbit(cam,tgt,E(5),E(6),(WX,WY,130),660,230,-95,-60,n=6)
 cam_keys(cam,tgt,[(T(7)+0.4,(WX,WY-600,260),(WX,WY,150)),(E(7),(WX-40,WY-580,240),(WX,WY,150))])
 cam_keys(cam,tgt,[(T(8)+0.6,(WX-180,WY-900,300),(WX-180,WY,170)),(E(8),(WX-150,WY-880,290),(WX-170,WY,170))])
 cam_keys(cam,tgt,[(T(9)+0.8,(WX+250,WY-1050,420),(WX+300,WY,110)),(DUR,(WX+280,WY-1100,440),(WX+300,WY,110))])
+sfx(T(3)+1.9,'click',1.0); sfx(tX0+0.3,'whoosh',0.6); sfx(T(9)+0.4,'whoosh',0.9)
 handheld(cam,0.5)
 finish('ch3',DUR)

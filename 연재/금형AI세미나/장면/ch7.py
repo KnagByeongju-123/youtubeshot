@@ -85,13 +85,22 @@ bmesh.ops.create_cube(bm,size=1.0);
 for v in bm.verts: v.co.x+=0.5
 bm.to_mesh(me); bm.free()
 gr=bpy.data.objects.new('groove',me); link(gr); paint(gr,(0.16,0.17,0.20)); gr.location=(GX0,0,36.1)
-keyv(gr,'scale',[(0,(0.01,16,8)),(tg0,(0.01,16,8)),(tg1,(GX1-GX0,16,8))])
+# 진행률 p(실제 시각): 빠르게(0→0.45) → 불릿 타임(0.45→0.5, 아주 느리게) → 빠르게(0.5→1)
+BT0=tg0+0.7; BT1=tg1-0.7
+def P(t):
+    if t<=tg0: return 0.0
+    if t<=BT0: return 0.45*(t-tg0)/(BT0-tg0)
+    if t<=BT1: return 0.45+0.05*(t-BT0)/(BT1-BT0)
+    if t<=tg1: return 0.5+0.5*(t-BT1)/(tg1-BT1)
+    return 1.0
+TS=[tg0+k*0.05 for k in range(int((tg1-tg0)/0.05)+2)]
+keyv(gr,'scale',[(0,(0.01,16,8))]+[(t,(max(0.01,(GX1-GX0)*P(t)),16,8)) for t in TS])
 for fc_ in gr.animation_data.action.fcurves:
     for kp in fc_.keyframe_points: kp.interpolation='LINEAR'
 # 바닥 공구 자국(줄무늬)
 for k in range(-3,4):
     ln=curve_line([(GX0,k*2.2,40.25),(GX1,k*2.2,40.25)],bevel=0.25,rgb=(0.32,0.34,0.38)); ln.location=(0,0,-8.2)
-    keyv(ln,'scale',[(0,(0,1,1)),(tg0,(0,1,1)),(tg1,(1,1,1))]); ln.location=(0,0,-8.2)
+    keyv(ln,'scale',[(0,(0,1,1))]+[(t,(max(0.001,P(t)),1,1)) for t in TS[::4]]); ln.location=(0,0,-8.2)
 mill=empty('mill',(GX0,0,40))
 sp=cyl(30,90,(0,0,115),(0.5,0.52,0.58)); sp.parent=mill
 holder=cyl(14,30,(0,0,60),(0.70,0.72,0.76)); holder.parent=mill
@@ -101,20 +110,26 @@ for k in range(3):
     fl=box((2.5,17,40),(0,0,22),(0.55,0.57,0.62)); fl.rotation_euler=(0,0,k*math.pi/3); fl.parent=em
 spin(em,T(4)-0.4,E(4)+1.2,turns=40)
 keyv(mill,'scale',[(0,(0,0,0)),(T(4)-0.4,(0,0,0)),(T(4)-0.1,(1,1,1))])
-keyv(mill,'location',[(T(4)-0.1,(GX0,0,70)),(tg0,(GX0,0,32)),(tg1,(GX1,0,32)),(tg1+0.3,(GX1,0,80))])
+keyv(mill,'location',[(T(4)-0.1,(GX0,0,70))]+[(t,(GX0+(GX1-GX0)*P(t),0,32)) for t in TS]+[(tg1+0.3,(GX1,0,80))])
 for fc_ in mill.animation_data.action.fcurves:
     if fc_.data_path=='location':
         for kp in fc_.keyframe_points:
             if F(tg0)-1<=kp.co.x<=F(tg1)+1: kp.interpolation='LINEAR'
 import random
 random.seed(3)
-for i in range(46):
-    ti=tg0+(tg1-tg0)*i/46; x=GX0+(GX1-GX0)*(ti-tg0)/(tg1-tg0)
+for i in range(60):
+    pi=i/60; x=GX0+(GX1-GX0)*pi
     ch_=box((3,2,1.2),(0,0,0),(0.85,0.62,0.30),name='chip')
     p0=(x+6,random.uniform(-6,6),41); p1=(x-random.uniform(10,60),random.uniform(-70,40),41+random.uniform(15,70))
-    keyv(ch_,'location',[(0,p0),(ti,p0),(ti+0.55,p1)])
-    keyv(ch_,'rotation_euler',[(ti,(0,0,0)),(ti+0.55,(random.uniform(0,6),random.uniform(0,6),0))])
-    keyv(ch_,'scale',[(0,(0,0,0)),(ti-0.01,(0,0,0)),(ti+0.02,(1,1,1)),(ti+0.45,(1,1,1)),(ti+0.55,(0,0,0))])
+    r1=(random.uniform(0,6),random.uniform(0,6),0)
+    keyv(ch_,'scale',[(0,(0,0,0))])
+    for t in TS+[tg1+0.3,tg1+0.6]:
+        q=P(t) if t<=tg1 else 1.0+(t-tg1)/(tg1-tg0)
+        life=(q-pi)/0.12          # 행동 진행 0.12 동안 날아감
+        if life<0: s_=0.0; pos=p0; life=0
+        elif life>1: s_=0.0; pos=p1; life=1
+        else: s_=1.0; pos=tuple(p0[k]+(p1[k]-p0[k])*life for k in range(3))
+        key(ch_,'scale',t,(s_,s_,s_)); key(ch_,'location',t,pos); key(ch_,'rotation_euler',t,tuple(v*life for v in r1))
 t4=text('고속가공: 홈 파기',22,(MX,-110,150),rgb=COL['white']); show(t4,T(4)+0.1,E(4)+0.8)
 # 4) 와이어 방전: 다이 구멍
 WX=1600
@@ -149,29 +164,91 @@ gap2=text('한쪽 약 0.05 mm',18,(CX+175,-80,222),rgb=COL['white']); show(gap2,
 for x in (CX+75,CX+83): 
     l=curve_line([(x,-62,150),(x,-62,165)],bevel=0.8,rgb=COL['red']); show(l,T(6)+1.5)
 ar=curve_line([(CX+40,-62,160),(CX+118,-62,160)],bevel=1.2,rgb=COL['red']); show(ar,T(6)+1.5)
-# 6) AI 작업표
-AX=3200
-pnl=box((520,6,380),(AX,10,230),(0.12,0.15,0.20),bevel=4,name='sheet'); show(pnl,T(7)-0.3)
-ht=text('AI 가 정리한 작업표',30,(AX,0,385),rgb=COL['accent']); show(ht,T(7))
+# 6) 자동 공구 교환(ATC) → AI 작업표 점검
+QX=3200; QZ=260
+def tool(kind,name):
+    g=empty(name,(0,0,0))
+    h=cyl(16,26,(0,0,0),(0.70,0.72,0.76),seg=32); h.parent=g           # 홀더
+    cn=cyl(11,16,(0,0,-21),(0.6,0.62,0.66),seg=32); cn.parent=g
+    if kind=='mill':
+        c_=cyl(6,40,(0,0,-49),(0.85,0.86,0.90),seg=6); c_.parent=g
+    else:
+        c_=cyl(4,48,(0,0,-53),(0.95,0.78,0.25),seg=12); c_.parent=g
+        tp=cyl(4,8,(0,0,-81),(0.95,0.78,0.25),seg=12); tp.parent=g; tp.scale=(1,1,1)
+    return g
+spdl=cyl(32,120,(QX,0,QZ+75),(0.50,0.53,0.60)); show(spdl,T(7)-0.4)
+lamp=cyl(34,6,(QX,0,QZ+18),(0.4,1,0.5)); show(lamp,T(7)-0.4)
+MC=(QX+320,0,QZ+40)
+mag=empty('mag',MC); ring=cyl(150,24,(0,0,30),(0.38,0.42,0.48),seg=64); ring.parent=mag
+pockets=[]
+for k in range(8):
+    a_=2*math.pi*k/8-math.pi
+    tt_=tool('drill' if k==0 else ('mill' if k%2 else 'drill'),'mt%d'%k); tt_.parent=mag; tt_.location=(130*math.cos(a_-math.pi/8),130*math.sin(a_-math.pi/8),0)
+    pockets.append(tt_)
+keyv(mag,'scale',[(0,(0,0,0)),(T(7)-0.4,(0,0,0)),(T(7)-0.1,(1,1,1))])
+t0_=T(7)+0.2
+keyv(mag,'rotation_euler',[(t0_,(0,0,0)),(t0_+0.7,(0,0,math.pi/8))])
+newt=pockets[0]
+oldt=tool('mill','spindletool')
+S_=(QX,0,QZ); M_=(QX+190,0,QZ+40-0)   # 매거진 앞 포켓(회전 뒤) 자리
+# 매거진 앞 포켓이 놓이는 곳 = 링 반지름 130, 각도 -pi → x = MC-130
+M_=(MC[0]-130,0,MC[2])
+Cp=((S_[0]+M_[0])/2,0,(S_[2]+M_[2])/2)
+arm=empty('arm',(Cp[0],0,Cp[2]+40))
+bar=box((M_[0]-S_[0],16,14),(0,0,0),COL['accent'],bevel=3); bar.parent=arm
+for sx in (-1,1):
+    gp=box((20,40,30),(sx*(M_[0]-S_[0])/2,0,-10),COL['accent'],bevel=3); gp.parent=arm
+keyv(arm,'scale',[(0,(0,0,0)),(T(7)-0.4,(0,0,0)),(T(7)-0.1,(1,1,1))])
+t1=t0_+0.9; t2=t1+0.5; t3=t2+0.5; t4=t3+0.8; t5=t4+0.5; t6=t5+0.5
+keyv(arm,'rotation_euler',[(0,(0,0,math.pi/2)),(t1,(0,0,math.pi/2)),(t2,(0,0,0)),(t3,(0,0,0)),(t4,(0,0,math.pi)),(t5,(0,0,math.pi)),(t6,(0,0,math.pi*1.5))])
+keyv(arm,'location',[(t2,(Cp[0],0,Cp[2]+40)),(t3,(Cp[0],0,Cp[2]-30)),(t4,(Cp[0],0,Cp[2]-30)),(t5,(Cp[0],0,Cp[2]+40))])
+# 공구 움직임: 잡기 전 제자리 → 내려감 → 180° 돌아 바뀜 → 올라가 꽂힘
+L=(M_[0]-S_[0])/2
+def swap_keys(o,start_ang,parent_free=True):
+    keys=[]
+    for k in range(9):
+        t=t3+(t4-t3)*k/8; ang=start_ang+math.pi*k/8
+        keys.append((t,(Cp[0]+L*math.cos(ang),L*math.sin(ang),Cp[2]-70)))
+    return keys
+oldt.location=S_
+keyv(oldt,'location',[(0,S_),(t2,S_),(t3,(S_[0],0,S_[2]-70))]+swap_keys(oldt,math.pi)+[(t5,(M_[0],0,M_[2]))])
+newt.parent=None
+keyv(newt,'location',[(0,(0,0,-900)),(t2-0.01,(0,0,-900)),(t2,M_),(t3,(M_[0],0,M_[2]-70))]+swap_keys(newt,0)+[(t5,(S_[0],0,S_[2]))])
+keyv(newt,'scale',[(0,(0,0,0)),(t2-0.01,(0,0,0)),(t2,(1,1,1))])
+pockets[0].hide_render=False
+# 매거진 안 원래 공구(앞 포켓)는 잡을 때 숨김 → newt 가 대신
+ghost=tool('drill','ghost'); ghost.parent=mag; ghost.location=pockets[0].location.copy()
+keyv(ghost,'scale',[(0,(1,1,1)),(t2-0.02,(1,1,1)),(t2,(0,0,0))])
+lt=text('자동 공구 교환  T01 → T05',24,(QX+160,-180,QZ+190),rgb=COL['accent']); show(lt,T(7)+0.1,t6+0.6)
+for t_,k_ in ((t2,'click'),(t5,'click')): pass
+# 작업표 (오른쪽)
+AX=QX+900
+pnl=box((520,6,380),(AX,10,230),(0.12,0.15,0.20),bevel=4,name='sheet'); show(pnl,T(7)+0.2)
+ht=text('AI 가 정리한 작업표',30,(AX,0,385),rgb=COL['accent']); show(ht,T(7)+0.3)
 rows=['1  선반 · 바깥 깎기','2  연삭 · Ø30 h6 맞춤','3  머시닝센터 · 구멍 · 홈','4  와이어 방전 · 다이 구멍','5  공구 · 조건 점검']
 for i,s_ in enumerate(rows):
-    o=text(s_,24,(AX-230,0,320-i*55),rgb=COL['white'],bold=False,align='LEFT'); show(o,T(7)+0.4+i*0.6)
-    okk=text('OK',22,(AX+200,0,320-i*55),rgb=(0.4,1,0.5)); show(okk,T(7)+2.6+i*0.7)
+    o=text(s_,24,(AX-230,0,320-i*55),rgb=COL['white'],bold=False,align='LEFT'); show(o,T(7)+0.5+i*0.3)
+    okk=text('OK',22,(AX+200,0,320-i*55),rgb=(0.4,1,0.5)); show(okk,t6+0.9+i*0.35)
 # 카메라
 cam,tgt=camera(35)
 cam_keys(cam,tgt,[(0,(LX-200,-900,520),(LX,0,140)),(T(1)+2,(LX-120,-760,360),(LX,0,140))])
 cam_keys(cam,tgt,[(T(2)+0.6,(LX+80,-760,330),(LX+60,0,160)),(E(2),(LX+120,-760,300),(LX+70,0,160))])
 cam_keys(cam,tgt,[(T(3)+0.4,(LX+120,-620,240),(LX,0,140)),(E(3)-2.0,(LX+60,-600,240),(LX,0,140)),(E(3),(LX-80,-620,250),(LX-60,0,150))])
 cam_keys(cam,tgt,[(T(4)-0.2,(MX-120,-560,260),(GX0,0,60))])
-cam_keys(cam,tgt,[(tg0,(GX0-40,-150,85),(GX0,0,45)),(tg1,(GX1-40,-150,85),(GX1,0,45))])
-for fc_ in cam.animation_data.action.fcurves:
-    for kp in fc_.keyframe_points:
-        if F(tg0)<=kp.co.x<=F(tg1): kp.interpolation='LINEAR'
+XB=GX0+(GX1-GX0)*0.47
+cam_keys(cam,tgt,[(tg0,(GX0-40,-150,85),(GX0,0,45)),(BT0,(XB-40,-150,85),(XB,0,45))])
+for k in range(1,9):
+    a_=math.radians(-90-180*k/8); t=BT0+(BT1-BT0)*k/8
+    key(cam,'location',t,(XB+130*math.cos(a_),130*math.sin(a_),80)); key(tgt,'location',t,(XB,0,45))
+cam_keys(cam,tgt,[(tg1,(GX1+60,90,85),(GX1,0,45))])
+bt=text('불릿 타임',18,(XB,60,115),rot=(math.radians(90),0,math.radians(180)),rgb=COL['accent']); show(bt,BT0+0.6,BT1-0.2)
 cam_keys(cam,tgt,[(T(5)+0.6,(WX-150,-620,380),(WX,0,90))])
 for j in range(13):
     tt=tW0+0.9+(tW1-tW0-0.9)*j/12; a_=2*math.pi*(tt-tW0)/(tW1-tW0)
     key(cam,'location',tt,(WX+(rr+70)*math.cos(a_-0.5),(rr+70)*math.sin(a_-0.5),118)); key(tgt,'location',tt,(WX+rr*math.cos(a_),rr*math.sin(a_),82))
 cam_keys(cam,tgt,[(T(6)+0.6,(CX-20,-700,300),(CX,0,230)),(T(6)+2.4,(CX+40,-330,190),(CX+70,0,170)),(E(6),(CX+50,-320,185),(CX+75,0,165))])
-cam_keys(cam,tgt,[(T(7)+0.7,(AX,-820,260),(AX,0,240)),(DUR,(AX+40,-860,270),(AX,0,240))])
+cam_keys(cam,tgt,[(T(7)+0.4,(QX+120,-640,QZ+90),(QX+160,0,QZ)),(t3,(QX+60,-520,QZ+40),(QX+160,0,QZ-30)),(t5,(QX+260,-520,QZ+40),(QX+160,0,QZ-20)),(t6+0.5,(AX-60,-900,280),(AX-40,0,240)),(DUR,(AX,-880,270),(AX,0,240))])
+sfx(t_burst,'whoosh',0.8); sfx(tg0-0.4,'whoosh',0.9); sfx(BT0,'slow',1.0); sfx(BT1,'whoosh',0.9)
+sfx(T(5)+0.5,'whoosh',0.7); sfx(T(6)+1.0,'click',0.8); sfx(t2,'click',0.9); sfx(t5,'click',1.0); sfx(t6+0.3,'whoosh',0.7)
 handheld(cam,0.5)
 finish('ch7',DUR)

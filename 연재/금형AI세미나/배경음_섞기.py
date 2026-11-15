@@ -21,6 +21,32 @@ zones=[(T(27),T(30)),(T(48),T(58)),(T(62),T(66))]      # 2장 '금형 한 벌'~�
 w=np.zeros(n,np.float32)
 for a,b in zones: w=np.maximum(w,np.clip(np.minimum((t-a)/2.0+0.5,(b-t)/2.0+0.5),0,1))
 out=pad[:n]*(1-w)[:,None]+ten[:n]*(0.9*w)[:,None]
+# 효과음 (장면 프로그램이 남긴 _sfx/*.json): 직접 합성 — 휙·불릿 타임·딸깍·톡
+import glob
+SR=m.SR; rng=np.random.default_rng(1)
+def bandnoise(n,lo,hi):
+    x=rng.standard_normal(n); X=np.fft.rfft(x); f=np.fft.rfftfreq(n,1/SR); X[(f<lo)|(f>hi)]=0; y=np.fft.irfft(X,n); return y/(np.abs(y).max()+1e-9)
+def whoosh():
+    n=int(0.75*SR); tt=np.arange(n)/SR; y=bandnoise(n,250,2600)
+    env=np.sin(np.pi*np.clip(tt/0.75,0,1))**2.5
+    pan=np.clip(tt/0.75,0,1); return np.stack([y*env*(1-0.6*pan),y*env*(0.4+0.6*pan)],1)*0.22
+def slow():
+    n=int(1.6*SR); tt=np.arange(n)/SR; f=110*np.exp(-tt*1.1)+35; ph=2*np.pi*np.cumsum(f)/SR
+    y=np.sin(ph)*np.exp(-tt*1.2)*0.5+bandnoise(n,80,900)*np.clip(tt/0.3,0,1)*np.exp(-tt*2.2)*0.35
+    return np.stack([y,y],1)*0.5
+def click():
+    n=int(0.12*SR); tt=np.arange(n)/SR
+    y=sum(np.sin(2*np.pi*fr*tt)*a for fr,a in ((2200,1),(3700,.6),(5100,.4)))*np.exp(-tt*55)+bandnoise(n,2000,8000)*np.exp(-tt*200)*0.5
+    return np.stack([y,y],1)*0.16
+def pop():
+    n=int(0.09*SR); tt=np.arange(n)/SR; y=np.sin(2*np.pi*(600+3000*tt)*tt)*np.exp(-tt*45); return np.stack([y,y],1)*0.12
+GEN={'whoosh':whoosh,'slow':slow,'click':click,'pop':pop}
+ev=[]
+for f in sorted(glob.glob(os.path.join(HERE,'장면','_sfx','*.json'))): ev+=json.load(open(f))
+for e in ev:
+    w=GEN[e['kind']]()*float(e.get('vol',1)); i0=int(e['t']*SR)
+    if 0<=i0<n: seg=w[:n-i0]; out[i0:i0+len(seg)]+=seg
+print('효과음',len(ev),'개')
 vol=float(s.get('narr_volume',1.0))
 for st,clip in r.narr_at:
     i0=int(st*m.SR); seg=clip[:max(0,n-i0)]
