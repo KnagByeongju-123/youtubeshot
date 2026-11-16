@@ -475,7 +475,7 @@ def main():
             cur = {"주제": topic, "소재": genre, "시작": time.strftime("%Y-%m-%d %H:%M"), "메모": cur_memo, "소재탐색_폴더": cur_folder}
             save_state()
             ci = dict(c, 주제=topic, 소재=genre, 기획메모=cur.get("메모", ""), 소재탐색_폴더=cur_folder)
-        ci["배경음"] = m.SOUND_BY_TOPIC.get(ci["소재"], c.get("배경음") or "잔잔한 패드")
+        ci["배경음"] = m.SOUND_BY_TOPIC.get(ci["소재"], c.get("배경음") or "은은한 멜로디")
         if TRUE_STORY and not HISTORY and str(c.get("장문_배경음", DEFAULT["장문_배경음"]) or "").strip():   # 실화 장문 다큐: 은은한 멜로디 (사용자 결정 2026-11-16)
             ci["배경음"] = str(c.get("장문_배경음", DEFAULT["장문_배경음"])).strip()
         res = run_doc(m, app, ci, gate)
