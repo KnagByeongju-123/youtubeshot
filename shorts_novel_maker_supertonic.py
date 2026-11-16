@@ -145,7 +145,7 @@ def find_font(bold=False):
     return ""
 
 
-DEFAULT_VOICE = "Supertonic M10 (남성, Zeroth·출처 표시) [supertonic:M10]"   # 성우를 따로 정하지 않으면 이 목소리 (사용자 결정 2026-11-15: 남 M10·여 F8. 예전 M1, 그전 M4)
+DEFAULT_VOICE = "Supertonic M7 (남성, M1+KSS·비상업용만) [supertonic:M7]"   # 성우를 따로 정하지 않으면 이 목소리 (사용자 결정 2026-11-16: 남 M7(비상업)·여 F8. 예전 M10, M1, 그전 M4)
 DEFAULT_VOICE_F = "Supertonic F8 (여성, Zeroth·출처 표시) [supertonic:F8]"   # 여자 나레이션 기본
 TTS_VOICES = {   # 마이크로소프트 온라인(Edge) 음성은 쓰지 않음. 옛 설정에 적힌 Edge 이름은 voice_code 가 DEFAULT_VOICE 로 바꿈
     "윈도우 내장 음성": "sapi",
@@ -8417,7 +8417,7 @@ _FALLBACK_SAID = set()
 def fallback_voice(voice, text):
     """AI 음성 한도가 끝났을 때 대신 쓸 무료 로컬 성우(Supertonic) - 남/여에 맞춤 (언어는 Supertonic 이 글자를 보고 고름)"""
     male = voice.split(":", 1)[-1].lower() in AI_VOICE_MALE
-    return "supertonic:M10" if male else "supertonic:F8"
+    return "supertonic:M7" if male else "supertonic:F8"
 
 
 LAST_TTS = {"voice": ""}   # 마지막으로 실제 읽은 성우 (대체됐는지 확인용)
