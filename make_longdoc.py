@@ -770,6 +770,7 @@ def run_doc(m, app, c, gate):
     ch_ = m._YP.vary_settings(s, title, log)     # 규칙: 영상마다 강조색·자막 효과·배경음을 다르게 (유튜브 '대량 생산 콘텐츠' 정책)
     if not str(c.get("배경음") or "").strip() or str(c.get("배경음")).startswith("자동"):
         c["배경음"] = ch_["bgm_style"]
+    s["bgm_style"] = c["배경음"]     # 프로젝트에도 실제로 쓴 배경음 (다양화가 고른 이름이 저장돼 다시 만들 때 바뀌던 것, 2026-11-16)
     trad_ = m.trad_from_memo(c.get("기획메모", "")) if HISTORY else ""   # 주제목록 메모의 '배경음: 중동 히자즈' / '음계: 우조'
     samguk_ = HISTORY and any(w_ in (str(c.get("주제", "")) + str(c.get("기획메모", "")) + title) for w_ in SAMGUK_WORDS)
     if trad_ or samguk_:
