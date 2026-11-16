@@ -174,7 +174,7 @@ def find_font_lang(lang, bold=False):
     return ""
 
 # 자체 합성 배경음 스타일 (아래 SOUND_STYLES 와 이름이 같아야 함)
-SOUND_STYLE_NAMES = ["노래 멜로디(오르골)", "잔잔한 패드", "슬픈 패드", "감성 오르골", "밝은 오르골", "긴장 펄스", "어두운 드론",
+SOUND_STYLE_NAMES = ["노래 멜로디(오르골)", "잔잔한 패드", "슬픈 패드", "감성 오르골", "밝은 오르골", "은은한 멜로디", "긴장 펄스", "어두운 드론",
                      "공포 심장박동", "비 오는 밤", "빗소리", "심해", "우주", "바람", "파도", "중국 현악(고쟁·얼후)",
                      "중국 현악 · 상조(차분)", "중국 현악 · 각조(신비)", "중국 현악 · 치조(활기)", "중국 현악 · 우조(애잔)"]
 # 권역별 전통악기 배경음 (전통악기/<권역>.py, 직접 합성 · 진짜 역사 기록관용, 사용자 결정 2026-10-31): (권역 파일, 이름 앞부분, 음계들)
@@ -7130,6 +7130,42 @@ def gen_musicbox(n, rng, mood="warm", bpm=72):
     return _norm(pad + _norm(reverb(mel, rng, 2.5, 0.35)) * 0.8)
 
 
+def gen_soft_melody(n, rng, bpm=None):
+    """은은한 멜로디 (장문 다큐 기본 배경음, 사용자 결정 2026-11-16: 패드 말고 은은한 멜로디).
+    패드 없이 부드러운 피아노 소리가 화음을 따라 한두 박마다 한 음씩 + 화음이 바뀔 때 낮은 음 하나.
+    영상마다 화음(따뜻·애잔·신비)·빠르기·멜로디 흐름이 달라짐 (rng, 유튜브 '대량 생산' 정책)"""
+    mood = ["warm", "sad", "space"][int(rng.integers(0, 3))]
+    prog, chord_sec = PROGS[mood], 8.0
+    beat = 60.0 / (bpm or float(rng.uniform(54, 66)))
+    out = np.zeros((n, 2), np.float32)
+    cache = {}
+
+    def piano(m_, dur=3.4):
+        if m_ not in cache:
+            f = midi_hz(m_)
+            t = np.arange(int(dur * SR)) / SR
+            s = (np.sin(2 * np.pi * f * t) + 0.22 * np.sin(4 * np.pi * f * t) * np.exp(-t / 0.7)
+                 + 0.07 * np.sin(6 * np.pi * f * t) * np.exp(-t / 0.3))
+            cache[m_] = (s * np.exp(-t / 1.2) * np.minimum(1, t / 0.015)).astype(np.float32)
+        return cache[m_]
+    walk = [0, 1, 2, 1, 2, 3, 2, 1] if rng.random() < 0.5 else [2, 1, 0, 1, 2, 3, 1, 0]
+    cs, k, idx = 0.6, 0, 0
+    while cs < n / SR - 3:
+        ch = prog[k % len(prog)]
+        place(out, piano(ch[0], 4.5) * 0.42, cs, 0.42)              # 왼손: 화음이 바뀔 때 낮은 음 하나
+        tones = sorted(set(x + 12 for x in ch[1:]))
+        t = cs + beat
+        while t < cs + chord_sec - 0.4:
+            if rng.random() > 0.3:                                    # 가끔 쉼 → 여백 있는 멜로디
+                m_ = tones[walk[idx % len(walk)] % len(tones)]
+                place(out, piano(m_) * float(rng.uniform(0.38, 0.62)), t, 0.5 + 0.2 * np.sin(idx * 0.9))
+            idx += 1
+            t += beat * (2 if rng.random() < 0.6 else 1)
+        cs += chord_sec
+        k += 1
+    return _norm(reverb(out, rng, 3.2, 0.42))
+
+
 def gen_pulse(n, rng, bpm=100):
     """긴장 펄스: 일정하게 뛰는 낮은 베이스 + 어두운 패드"""
     pad = gen_pad(n, rng, "dark", 8, 1400) * 0.4
@@ -7327,6 +7363,7 @@ SOUND_STYLES = {
     "슬픈 패드": lambda n, r: gen_pad(n, r, "sad"),
     "감성 오르골": lambda n, r: gen_musicbox(n, r, "sad", 66),
     "밝은 오르골": lambda n, r: gen_musicbox(n, r, "warm", 96),
+    "은은한 멜로디": gen_soft_melody,
     "긴장 펄스": gen_pulse,
     "어두운 드론": gen_drone,
     "공포 심장박동": lambda n, r: _norm(gen_drone(n, r) * 0.6 + heartbeat(n, r) * 0.9),
@@ -7424,7 +7461,7 @@ def make_music(s, style, n):
     return None
 
 
-BGM_STYLE_MUL = {"감성 오르골": 0.5, "밝은 오르골": 0.5, "노래 멜로디(오르골)": 0.5, "파도": 0.5}   # 사용자 결정 2026-11-01: 오르골·파도는 패드의 절반
+BGM_STYLE_MUL = {"감성 오르골": 0.5, "밝은 오르골": 0.5, "노래 멜로디(오르골)": 0.5, "파도": 0.5, "은은한 멜로디": 0.5}   # 사용자 결정 2026-11-01: 오르골·파도는 패드의 절반
 
 
 def bgm_level(music, s, style):
