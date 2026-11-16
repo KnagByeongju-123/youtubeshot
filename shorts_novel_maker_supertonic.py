@@ -1218,8 +1218,28 @@ DOC_FICTION_PACKAGE_SYSTEM = """너는 구독자 100만 유튜브 장편 낭독(
 반드시 JSON만 출력: {"titles": ["..."], "description": "...", "hashtags": "#... #...", "keywords": "...", "pinned_comment": "..."}"""
 
 
+VOICE_CREDITS = {   # 목소리 색깔을 입힌 성우의 설명란 출처 (CLAUDE.md 2장, 사용자 결정 2026-11-15·16)
+    "KSS": "※ 목소리: KSS 음성 자료(Kyubyong Park, CC BY-NC-SA 4.0)와 OpenVoice V2(MIT)로 만든 AI 성우",
+    "ZEROTH": "※ 목소리: Zeroth-Korean 음성 자료(Lucas Jo·Wonkyum Lee, CC BY 4.0)와 OpenVoice V2(MIT)로 만든 AI 성우"}
+
+
+def voice_credit_note(pkg, voice=None):
+    """설명란 끝에 나레이션 성우의 목소리 출처 (M7·F7 = KSS, M8~M10·F8~F10 = Zeroth). 다큐·이야기 모두"""
+    if not isinstance(pkg, dict):
+        return pkg
+    v = str(voice or (SCRIPT_ENGINE.get("s") or {}).get("narr_voice") or LAST_TTS.get("voice") or DEFAULT_VOICE)
+    code = (re.search(r"supertonic:([MF]\d+)", v) or re.search(r"\b([MF]\d+)\b", v))
+    code = code.group(1).upper() if code else ""
+    key = "KSS" if code in ("M7", "F7") else "ZEROTH" if code in ("M8", "M9", "M10", "F8", "F9", "F10") else ""
+    d = str(pkg.get("description", "")).rstrip()
+    if key and VOICE_CREDITS[key] not in d:
+        pkg["description"] = (d + "\n\n" + VOICE_CREDITS[key]).strip()
+    return pkg
+
+
 def doc_date_note(pkg, fiction=False):
-    """장문 다큐 업로드 문구 끝에 '이 영상은 ○년 ○월 기준 정보입니다' (이야기면 안 붙임)"""
+    """장문 다큐 업로드 문구 끝에 '이 영상은 ○년 ○월 기준 정보입니다' (이야기면 안 붙임) + 목소리 출처(성우가 M7·F8 등이면)"""
+    voice_credit_note(pkg)
     if fiction or not isinstance(pkg, dict):
         return pkg
     note = f"※ 이 영상은 {time.strftime('%Y년 %m월').replace(' 0', ' ')} 기준 정보입니다. 이후 새로운 연구로 내용이 바뀔 수 있습니다."
