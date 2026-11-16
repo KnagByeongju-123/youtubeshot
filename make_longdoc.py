@@ -30,6 +30,7 @@ DEFAULT = {
     "소재": "심해의 세계",
     "길이_분": 12,               # 규칙: 긴 영상은 10~15분
     "배경음": "심해",
+    "장문_배경음": "은은한 멜로디",   # 사용자 결정 2026-11-16: 실화 장문 다큐 배경음은 패드 말고 은은한 멜로디 (비우면 예전처럼 소재에 맞춰 자동)
     "배경음_크기": 0.03,      # 0~2 (0.03 = 거의 안 들림, 목소리가 또렷하게)
     "성우_프리셋": "",         # 🎤 성우 선택 창에서 ⭐ 새 성우로 저장한 이름 (비우면 기본: 남자 성우 2)
     "웹조사": True,
@@ -475,6 +476,8 @@ def main():
             save_state()
             ci = dict(c, 주제=topic, 소재=genre, 기획메모=cur.get("메모", ""), 소재탐색_폴더=cur_folder)
         ci["배경음"] = m.SOUND_BY_TOPIC.get(ci["소재"], c.get("배경음") or "잔잔한 패드")
+        if TRUE_STORY and not HISTORY and str(c.get("장문_배경음", DEFAULT["장문_배경음"]) or "").strip():   # 실화 장문 다큐: 은은한 멜로디 (사용자 결정 2026-11-16)
+            ci["배경음"] = str(c.get("장문_배경음", DEFAULT["장문_배경음"])).strip()
         res = run_doc(m, app, ci, gate)
         done_list.append({"종류": kind, "주제": ci["주제"], "소재": ci["소재"], "제목": res.get("title", ""), "완료": time.strftime("%Y-%m-%d %H:%M")})
         cur = None
