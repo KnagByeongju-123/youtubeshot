@@ -6961,8 +6961,13 @@ PROGS = {
 }
 
 
+NO_PAD = True   # 사용자 결정 2026-11-16: 패드(길게 깔리는 화음)는 앞으로 쓰지 않음 → gen_pad 는 소리 없음, '…패드' 배경음은 은은한 멜로디로
+
+
 def gen_pad(n, rng, mood="warm", chord_sec=8.0, bright=3400):
-    """화음이 천천히 바뀌는 부드러운 패드"""
+    """화음이 천천히 바뀌는 부드러운 패드 (NO_PAD 면 소리 없음 — 오르골·펄스·명상 음악 등에 깔리던 패드도 빠짐)"""
+    if NO_PAD:
+        return np.zeros((n, 2), np.float32)
     prog, fade = PROGS[mood], 3.0
     seg = int((chord_sec + fade) * SR)
     t = np.arange(seg) / SR
@@ -7095,7 +7100,7 @@ def bell(freq, dur=2.5):
 
 def gen_space(n, rng):
     """우주: 넓은 패드 + 반짝이는 종소리"""
-    pad = gen_pad(n, rng, "space", 10, 1800) * 0.7
+    pad = gen_soft_melody(n, rng, mood="space") * 0.45 if NO_PAD else gen_pad(n, rng, "space", 10, 1800) * 0.7   # 패드 대신 은은한 멜로디 (2026-11-16)
     tw = np.zeros((n, 2), np.float32)
     pos = rng.uniform(1, 3)
     while pos < n / SR - 3:
@@ -7130,11 +7135,11 @@ def gen_musicbox(n, rng, mood="warm", bpm=72):
     return _norm(pad + _norm(reverb(mel, rng, 2.5, 0.35)) * 0.8)
 
 
-def gen_soft_melody(n, rng, bpm=None):
+def gen_soft_melody(n, rng, bpm=None, mood=None):
     """은은한 멜로디 (장문 다큐 기본 배경음, 사용자 결정 2026-11-16: 패드 말고 은은한 멜로디).
     패드 없이 부드러운 피아노 소리가 화음을 따라 한두 박마다 한 음씩 + 화음이 바뀔 때 낮은 음 하나.
     영상마다 화음(따뜻·애잔·신비)·빠르기·멜로디 흐름이 달라짐 (rng, 유튜브 '대량 생산' 정책)"""
-    mood = ["warm", "sad", "space"][int(rng.integers(0, 3))]
+    mood = mood or ["warm", "sad", "space"][int(rng.integers(0, 3))]
     prog, chord_sec = PROGS[mood], 8.0
     beat = 60.0 / (bpm or float(rng.uniform(54, 66)))
     out = np.zeros((n, 2), np.float32)
@@ -7359,15 +7364,15 @@ def _china():
 
 SOUND_STYLES = {
     "노래 멜로디(오르골)": lambda n, r: gen_melody_box(n, r, CURRENT_MELODY.get("melody", ""), CURRENT_MELODY.get("bpm", 90)),
-    "잔잔한 패드": lambda n, r: gen_pad(n, r, "warm"),
-    "슬픈 패드": lambda n, r: gen_pad(n, r, "sad"),
+    "잔잔한 패드": lambda n, r: gen_soft_melody(n, r, mood="warm") if NO_PAD else gen_pad(n, r, "warm"),   # 패드 안 씀(2026-11-16) → 은은한 멜로디 (예전 프로젝트 이름 그대로 열리게)
+    "슬픈 패드": lambda n, r: gen_soft_melody(n, r, mood="sad") if NO_PAD else gen_pad(n, r, "sad"),
     "감성 오르골": lambda n, r: gen_musicbox(n, r, "sad", 66),
     "밝은 오르골": lambda n, r: gen_musicbox(n, r, "warm", 96),
     "은은한 멜로디": gen_soft_melody,
     "긴장 펄스": gen_pulse,
     "어두운 드론": gen_drone,
     "공포 심장박동": lambda n, r: _norm(gen_drone(n, r) * 0.6 + heartbeat(n, r) * 0.9),
-    "비 오는 밤": lambda n, r: _norm(gen_rain(n, r) * 0.8 + gen_pad(n, r, "sad") * 0.35),
+    "비 오는 밤": lambda n, r: _norm(gen_rain(n, r) * 0.8 + (gen_soft_melody(n, r, mood="sad") * 0.3 if NO_PAD else gen_pad(n, r, "sad") * 0.35)),
     "빗소리": gen_rain,
     "심해": gen_sea,
     "우주": gen_space,
@@ -7461,7 +7466,8 @@ def make_music(s, style, n):
     return None
 
 
-BGM_STYLE_MUL = {"감성 오르골": 0.5, "밝은 오르골": 0.5, "노래 멜로디(오르골)": 0.5, "파도": 0.5, "은은한 멜로디": 0.5}   # 사용자 결정 2026-11-01: 오르골·파도는 패드의 절반
+BGM_STYLE_MUL = {"감성 오르골": 0.5, "밝은 오르골": 0.5, "노래 멜로디(오르골)": 0.5, "파도": 0.5, "은은한 멜로디": 0.5,
+                 "잔잔한 패드": 0.5, "슬픈 패드": 0.5}   # 패드 이름은 이제 은은한 멜로디 소리 (2026-11-16)   # 사용자 결정 2026-11-01: 오르골·파도는 패드의 절반
 
 
 def bgm_level(music, s, style):
