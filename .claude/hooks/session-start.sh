@@ -2,7 +2,7 @@
 # 클라우드(폰에서 쓰는 Claude Code) 세션이 시작될 때 영상 제작 준비를 자동으로 함
 #  - 한글 글꼴, 화면 부품(tkinter), 가상 모니터(xvfb)
 #  - .supertonic_venv : 파이썬 3.12 실행 환경 (프로그램 + Supertonic 성우)
-#  - supertonic_assets : Supertonic 3 목소리 모델 (기본 성우 = 남자 성우 2, M2)
+#  - supertonic_assets : Supertonic 3 목소리 모델 (기본 나레이션 = M10·F8: M1·F1 + 목소리 색깔, F6_목소리.py)
 #  - .sd_venv + models/FLUX2_klein_4B : 만화·그림 장면을 그리는 그림 모델 (캐릭터 시트 기준·부분 수정)
 # PC(윈도우)에서는 실행되지 않음. 여러 번 실행해도 이미 된 것은 건너뜀.
 set -euo pipefail
@@ -73,6 +73,11 @@ if [ ! -f models/FLUX2_klein_4B/transformer/diffusion_pytorch_model.safetensors 
 "$SDV/bin/python" -c "import rapidocr_onnxruntime" 2>/dev/null || "$SDV/bin/python" -m pip install -q --disable-pip-version-check rapidocr_onnxruntime || true
   "$SDV/bin/python" -m gdown "https://drive.google.com/drive/folders/$KLEIN_GDRIVE_FOLDER" -O models/FLUX2_klein_4B \
     || echo "구글 드라이브에서도 못 받음 (폴더 공유 설정 확인)" >&2
+fi
+# 목소리 색깔을 입힌 성우 F7·M7·F8~F10·M8~M10 (기본 나레이션 M10·F8, F6_목소리.py — OpenVoice V2 MIT·Zeroth CC BY 4.0·KSS 비상업)
+if [ -x "$SDV/bin/python" ] && [ ! -f models/openvoice/F6_se.pth ]; then
+  "$SDV/bin/python" -m pip install -q --disable-pip-version-check librosa soundfile pyarrow wavmark || true
+  "$SDV/bin/python" -X utf8 F6_목소리.py 준비 || echo "F6_목소리 준비 실패 — M10·F8 성우를 쓰려면 다시 실행" >&2
 fi
 rm -rf /root/.cache/pip /root/.cache/huggingface/hub 2>/dev/null || true     # 받은 뒤 남는 임시 파일(수 GB)은 지움
 
