@@ -79,6 +79,10 @@ if [ -x "$SDV/bin/python" ] && [ ! -f models/openvoice/F6_se.pth ]; then
   "$SDV/bin/python" -m pip install -q --disable-pip-version-check librosa soundfile pyarrow wavmark || true
   "$SDV/bin/python" -X utf8 F6_목소리.py 준비 || echo "F6_목소리 준비 실패 — M10·F8 성우를 쓰려면 다시 실행" >&2
 fi
+# 나레이션 겹침검사(wav2vec2)용 torchaudio: PyPI 판은 그래픽카드(CUDA)용이라 이 서버에서 안 열림(libcudart) → CPU 판으로 (2026-11-16)
+if [ -x "$SDV/bin/python" ] && ! "$SDV/bin/python" -c "import torchaudio" 2>/dev/null; then
+  "$SDV/bin/python" -m pip install -q --disable-pip-version-check --no-deps --force-reinstall "torchaudio==2.11.1+cpu" --index-url https://download.pytorch.org/whl/cpu || true
+fi
 rm -rf /root/.cache/pip /root/.cache/huggingface/hub 2>/dev/null || true     # 받은 뒤 남는 임시 파일(수 GB)은 지움
 
 # 5) 이 세션에서 python = 위 실행 환경
