@@ -129,7 +129,7 @@ def main():
                 return f"[사진: {path} | {r_['title']} | 직접 제작(정보 카드)]"
         for ph in reversed(croppable[-3:]):
             k = crop_n.get(ph[0], 0)
-            if k >= 4:
+            if k >= 2:      # 한 사진은 최대 2곳만 (같은 사진 확대가 연달아 나오면 지루함)
                 continue
             src = ph[0] if os.path.isabs(ph[0]) else os.path.join(HERE, ph[0])
             cp = crops(src, os.path.join(media_dir, os.path.splitext(os.path.basename(src))[0]), k) if os.path.exists(src) else []
