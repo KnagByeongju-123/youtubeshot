@@ -18,7 +18,8 @@ def ai_orb(loc,r=50,name='ai'):
 def card(title,sub,loc,col=COL['accent'],w=150,h=90,name='card',tsize=24,ssize=12,face=None):
     g=empty(name,loc)
     b=box((w,6,h),(0,0,0),(0.10,0.13,0.18),bevel=4); b.parent=g
-    st=box((w,7,12),(0,-0.5,h/2-6),col); st.parent=g
+    sh=min(12.0,max(2.5,h*0.16))      # 띠 높이: 작은 카드에서 띠가 같은 색 제목을 덮지 않게
+    st=box((w,7,sh),(0,-0.5,h/2-sh/2),col); st.parent=g
     t1=text(title,tsize,(0,-5,h*0.08),rgb=col); t1.parent=g
     if sub:
         t2=text(sub,ssize,(0,-5,-h*0.28),rgb=COL['white'],bold=False); t2.parent=g

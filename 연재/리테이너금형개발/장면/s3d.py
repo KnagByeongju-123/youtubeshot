@@ -69,6 +69,7 @@ def apply_mods(o):
 
 def stl(path,rgb,name=None):
     bpy.ops.wm.stl_import(filepath=path); o=bpy.context.selected_objects[0]
+    bm=bmesh.new(); bm.from_mesh(o.data); bmesh.ops.remove_doubles(bm,verts=bm.verts,dist=1e-4); bm.to_mesh(o.data); bm.free()   # 삼각형 조각 → 이어진 면 (그림자 · 속도)
     if name: o.name=name
     paint(o,rgb); smooth(o); o.select_set(False); return o
 
