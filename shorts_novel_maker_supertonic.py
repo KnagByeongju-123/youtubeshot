@@ -8259,10 +8259,13 @@ def tts_sapi(text, rate_pct, out_wav):
         raise RuntimeError("윈도우 음성 실패: " + (p.stderr or "")[-200:])
 
 
+MIX_VOICE_REV = {"supertonic:F8": "mix211_20", "supertonic:F9": "mix193_20", "supertonic:F10": "mix211_30"}   # 목소리 색깔을 바꾼 성우 (2026-11-17) → 예전 색깔로 녹음한 캐시를 다시 쓰지 않게
+
+
 def tts_key(voice, rate_pct, pitch_hz, text):
     import hashlib
     if not (voice == "sapi" or voice.startswith(("openai:", "gemini:"))):
-        voice = "e2|" + voice     # 캐시 이름 구분용 (바꾸면 이미 만들어 둔 Supertonic 음성 캐시를 다시 만들어야 함)
+        voice = "e2|" + voice + ("|" + MIX_VOICE_REV[voice] if voice in MIX_VOICE_REV else "")     # 캐시 이름 구분용 (바꾸면 이미 만들어 둔 Supertonic 음성 캐시를 다시 만들어야 함)
     return hashlib.md5(f"{voice}|{float(rate_pct)}|{float(pitch_hz)}|{text}".encode("utf-8")).hexdigest()[:16]
 
 

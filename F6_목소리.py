@@ -1,5 +1,7 @@
 """목소리 색깔을 입힌 성우 F7·M7·M6·F8~F10·M8~M10 — 공개 한국어 녹음 자료의 목소리 색깔을 Supertonic 바탕 성우에 입힘
-  · F8·F9·F10 / M8·M9·M10 (사용자 결정 2026-11-15, 나레이션 기본 = 남 M10·여 F8):
+  · F8·F9·F10 (사용자 결정 2026-11-17): F7(KSS)과 닮은 음색 — F1 목소리 특징에 Zeroth 211번 20%·193번 20%·211번 30% 를 섞은 색깔(F6_목소리색깔.json, 깃에 있음)
+    F7 소리와 닮은 정도 0.93·0.93·0.92 (예전 105·121·147번 그대로는 0.64). KSS 는 쓰지 않아 상업 사용 가능·출처 표시는 Zeroth 문구
+  · M8·M9·M10 (사용자 결정 2026-11-15):
     Zeroth-Korean(CC BY 4.0 → 수익 영상 가능, 설명란에 출처 표시) 사람 번호 105·121·147 → F1 바탕, 104·149·118 → M1 바탕
     출처 문구: "목소리: Zeroth-Korean 음성 자료(Lucas Jo·Wonkyum Lee, CC BY 4.0)와 OpenVoice V2(MIT)로 만든 AI 성우"
   · KSS: 전문 여자 성우가 TTS 용으로 녹음해 공개한 자료 (Kyubyong Park, CC BY-NC-SA 4.0 → 비상업용만)
@@ -132,10 +134,23 @@ def prepare(bases=("F1", "F2", "F3", "F4", "F5", "M1")):
     old.update(se)
     torch.save(old, SE_PATH)
     zeroth_se(ZEROTH_SPEAKERS)
+    mix_se()
     print("목소리 특징 저장:", SE_PATH, sorted(torch.load(SE_PATH)))
 
 
 ZEROTH = os.path.join(HERE, "models", "zeroth")
+MIX_JSON = os.path.join(HERE, "F6_목소리색깔.json")
+
+
+def mix_se():
+    """F8·F9·F10 색깔(F6_목소리색깔.json, 미리 계산해 깃에 둔 특징 벡터) → F6_se.pth 에 넣음 (새 서버도 같은 목소리)"""
+    import torch
+    se = torch.load(SE_PATH) if os.path.exists(SE_PATH) else {}
+    d = json.load(open(MIX_JSON, encoding="utf-8"))
+    for k, v in d.items():
+        if k.startswith("mix_"):
+            se[k] = torch.tensor(v["data"], dtype=torch.float32).reshape(v["shape"])
+    torch.save(se, SE_PATH)
 
 
 def zeroth_se(speakers):
@@ -168,6 +183,9 @@ class F6:
         import torch
         self.c = converter()
         self.se = torch.load(SE_PATH)
+        if not any(k.startswith("mix_") for k in self.se) and os.path.exists(MIX_JSON):   # 예전에 준비한 서버·PC: F8~F10 새 색깔을 바로 넣음
+            mix_se()
+            self.se = torch.load(SE_PATH)
 
     def convert(self, src, dst, base=None, tau=TAU, tgt="tgt"):
         """바탕 소리 → F6. 크기(소리 세기)·표본 주파수는 바탕 소리와 같게 맞춤"""
