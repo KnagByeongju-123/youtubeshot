@@ -145,7 +145,7 @@ def find_font(bold=False):
     return ""
 
 
-DEFAULT_VOICE = "Supertonic M7 (남성, M1+KSS·비상업용만) [supertonic:M7]"   # 성우를 따로 정하지 않으면 이 목소리 (사용자 결정 2026-11-16: 남 M7(비상업)·여 F8. 예전 M10, M1, 그전 M4)
+DEFAULT_VOICE = "Supertonic F8 (여성, Zeroth·출처 표시) [supertonic:F8]"   # 성우를 따로 정하지 않으면 이 목소리 (사용자 결정 2026-11-17: 모든 영상 여자 F8. 예전 M7, M10, M1, 그전 M4)
 DEFAULT_VOICE_F = "Supertonic F8 (여성, Zeroth·출처 표시) [supertonic:F8]"   # 여자 나레이션 기본
 TTS_VOICES = {   # 마이크로소프트 온라인(Edge) 음성은 쓰지 않음. 옛 설정에 적힌 Edge 이름은 voice_code 가 DEFAULT_VOICE 로 바꿈
     "윈도우 내장 음성": "sapi",
@@ -12811,6 +12811,10 @@ class App(tk.Tk):
                 st_.update(narr_tone_f=0.0, narr_tone_m=0.0, narr_bright_f="off", narr_breath_cut="on")
         if best and not best.get("doc_len_v2") and best.get("category") == DOC_CATEGORY and str(best.get("length", "")).strip() == "30":
             best["length"] = "10"                       # 장문 기본 길이 30분 → 10분 (부담 적게)
+        if best and not best.get("voice_f8_v1"):     # 사용자 결정 2026-11-17: 모든 영상 기본 성우 F8 → 예전 기본 성우(M1·M4·M7·M10)가 저장돼 있으면 한 번 바꿈 (일부러 고른 다른 성우는 그대로)
+            st_ = best.get("settings")
+            if isinstance(st_, dict) and re.search(r"supertonic:(M1|M4|M7|M10)\]", str(st_.get("narr_voice") or "")):
+                st_["narr_voice"] = DEFAULT_VOICE
         if best and not best.get("progress_bar_v2"):  # 위쪽 진행바는 한 번 끔 (필요하면 효과 탭에서 다시 켬)
             st_ = best.get("settings")
             if isinstance(st_, dict):
@@ -12818,7 +12822,7 @@ class App(tk.Tk):
         return best
 
     def project_dict(self):
-        return {"ver": 7, "voice_fx_v2": True, "progress_bar_v2": True, "doc_len_v2": True, "model": self.model_var.get(), "category": self.cat_var.get(), "topic": self.topic_var.get(), "genre": self.genre_var.get(),
+        return {"ver": 7, "voice_fx_v2": True, "progress_bar_v2": True, "doc_len_v2": True, "voice_f8_v1": True, "model": self.model_var.get(), "category": self.cat_var.get(), "topic": self.topic_var.get(), "genre": self.genre_var.get(),
                 "sources": getattr(self, "sources", []), "notes": getattr(self, "notes", ""),
                 "song": getattr(self, "song", None), "melody": getattr(self, "melody", ""), "bpm": getattr(self, "bpm", 90),
                 "artwork": getattr(self, "artwork", None),
