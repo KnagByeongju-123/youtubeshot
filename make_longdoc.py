@@ -339,7 +339,14 @@ def ask_batch_plan(c):
 def main():
     if not os.path.exists(CFG):
         json.dump(DEFAULT, open(CFG, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
-    c = dict(DEFAULT, **json.load(open(CFG, encoding="utf-8")))
+    raw_ = json.load(open(CFG, encoding="utf-8"))
+    if not raw_.get("_기본값_2026-11-16"):     # 사용자 결정 2026-11-16: 장문 다큐 기본 = 성우 M7 · 배경음 은은한 멜로디 → 예전 기본값이 적힌 PC 설정을 한 번만 바꿈 (일부러 고른 다른 성우는 그대로)
+        if str(raw_.get("나레이션_성우") or "").strip() in ("", "M1", "M4", "M10"):
+            raw_["나레이션_성우"] = "M7"
+        raw_.setdefault("장문_배경음", DEFAULT["장문_배경음"])
+        raw_["_기본값_2026-11-16"] = True
+        json.dump(raw_, open(CFG, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+    c = dict(DEFAULT, **raw_)
     global CHANNEL_NOTE
     CHANNEL_NOTE = str(c.get("채널_소개") or DEFAULT["채널_소개"])
     if HISTORY:        # 역사 채널 모드: 기록으로 보는 진짜 역사만, 주제는 역사\주제목록.txt 부터
