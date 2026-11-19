@@ -123,6 +123,9 @@
   끝나면 `python 그림_점검표.py <프로젝트.json 또는 그림 폴더>` → `output/점검/<이름>_점검_N.jpg`(번호 붙은 40칸씩) 전부를 한꺼번에 보내고, 사용자가 번호로 알려 준 그림만 다시 그림.
 - 크기 검사(필수, 2026-10-31: 화면 형식이 세로로 잘못 저장돼 보강 그림 7장이 9:16으로 그려진 일): 그림을 새로 그리거나 보강한 뒤 영상 전에
   프로젝트의 모든 그림 크기를 재서 가로 영상인데 세로(높이>너비) 그림이 있으면 가로 16:9로 다시 그림. 그리기 전에 settings 의 `format` 이 `롱폼 가로(1920×1080)` 인지 먼저 확인
+- 사실적 3D 그림(사진 같은 제품 · 물건 · 소품 정지 그림, 썸네일)은 **LuxCoreRender**(오픈소스 Apache 2.0, `luxcore_render.py`) (사용자 결정 2026-11-19):
+  STL + 재질(wood_v · wood_h · fabric:#색 · matte:#색 · plastic:#색 · metal · glass)을 장면.json 에 적으면 스튜디오 배경 · 조명 · 카메라 자동, 노이즈 제거(OIDN).
+  설치 `.supertonic_venv/bin/pip install pyluxcore` → `.supertonic_venv/bin/python -I luxcore_render.py <장면.json> <결과.png> [--초 240] [--크기 1920x1080]`. 한 장 2~5분 → 영상(카메라 무빙)엔 쓰지 않음
 - 테두리 규칙(필수): 영상 그림에는 종이 여백·검은 만화 테두리가 없어야 함. klein_worker 가 새 그림마다 자동으로 잘라냄(crop_border, 기본 켬),
   주문서에 "full-bleed image, no border, no frame, no paper edges". 검수 때 가장자리 테두리·여백·검은 띠·칸 나눔은 불합격 (캐릭터 시트·썸네일 그림은 상관없음)
 
