@@ -1,0 +1,100 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><style>html,body{margin:0;background:#000}canvas{display:block}</style>
+<script type="importmap">{"imports":{"three":"./node_modules/three/build/three.module.js","three/addons/":"./node_modules/three/examples/jsm/","@pixiv/three-vrm":"./node_modules/@pixiv/three-vrm/lib/three-vrm.module.js"}}</script>
+</head><body>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { VRMLoaderPlugin, VRMUtils } from '@pixiv/three-vrm';
+
+const W = 1280, H = 720, FPS = 24;
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setSize(W, H); renderer.setPixelRatio(1);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+// 애니풍 하늘: 위는 진한 파랑 → 아래는 밝은 하늘색 (그라데이션 그림)
+const sky = document.createElement('canvas'); sky.width = 16; sky.height = 256;
+const g = sky.getContext('2d'); const gr = g.createLinearGradient(0, 0, 0, 256);
+gr.addColorStop(0, '#3d7fd9'); gr.addColorStop(0.55, '#8cc6f2'); gr.addColorStop(1, '#e6f4ff');
+g.fillStyle = gr; g.fillRect(0, 0, 16, 256);
+const skyTex = new THREE.CanvasTexture(sky); skyTex.colorSpace = THREE.SRGBColorSpace; scene.background = skyTex;
+
+// 셀 애니처럼 2~3단 그림자 (툰 재질용 단계 그림)
+const steps = new Uint8Array([90, 170, 255]); const grad = new THREE.DataTexture(steps, 3, 1, THREE.RedFormat);
+grad.minFilter = grad.magFilter = THREE.NearestFilter; grad.needsUpdate = true;
+const toon = (c) => new THREE.MeshToonMaterial({ color: c, gradientMap: grad });
+const inkMat = new THREE.MeshBasicMaterial({ color: 0x2a2228, side: THREE.BackSide });
+function ink(mesh, k = 1.04) {            // 애니풍 먹선: 뒷면만 보이는 조금 큰 검은 껍질 (inverted hull)
+  const o = new THREE.Mesh(mesh.geometry, inkMat); o.scale.setScalar(k); mesh.add(o); return mesh;
+}
+
+scene.add(new THREE.AmbientLight(0xffffff, 0.9));
+const sun = new THREE.DirectionalLight(0xfff3e0, 1.6); sun.position.set(2, 4, 3); scene.add(sun);
+
+// 땅·언덕·나무·구름 (직접 만든 단순한 배경)
+const ground = new THREE.Mesh(new THREE.CircleGeometry(60, 64), toon(0x7cc45a)); ground.rotation.x = -Math.PI / 2; scene.add(ground);
+for (const [x, z, r, c] of [[-9, -18, 9, 0x5fae4a], [8, -22, 11, 0x6ab852], [0, -30, 14, 0x4f9a40]]) {
+  const h = new THREE.Mesh(new THREE.SphereGeometry(r, 32, 16), toon(c)); h.scale.y = 0.45; h.position.set(x, 0, z); scene.add(ink(h, 1.01));
+}
+function tree(x, z, s = 1) {
+  const t = new THREE.Group();
+  const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.12 * s, 0.16 * s, 1.4 * s, 12), toon(0x8a5a3a)); trunk.position.y = 0.7 * s; t.add(ink(trunk, 1.08));
+  for (const [dx, dy, r] of [[0, 1.9, 0.75], [-0.45, 1.55, 0.55], [0.5, 1.6, 0.55]]) {
+    const c = new THREE.Mesh(new THREE.SphereGeometry(r * s, 20, 14), toon(0x3f8f3a)); c.position.set(dx * s, dy * s, 0); t.add(ink(c, 1.03));
+  }
+  t.position.set(x, 0, z); scene.add(t);
+}
+tree(-2.4, -2.5, 1.3); tree(3.2, -5, 1.6); tree(-6, -9, 2);
+const clouds = [];
+for (const [x, y, z, s] of [[-6, 6.5, -20, 1.6], [5, 7.5, -24, 2.1], [12, 6, -26, 1.4]]) {
+  const cl = new THREE.Group();
+  for (const [dx, dy, r] of [[0, 0, 1], [-1.1, -0.2, 0.75], [1.1, -0.15, 0.8], [0.4, 0.45, 0.7]]) {
+    const b = new THREE.Mesh(new THREE.SphereGeometry(r * s, 16, 12), new THREE.MeshBasicMaterial({ color: 0xffffff })); b.position.set(dx * s, dy * s, 0); cl.add(b);
+  }
+  cl.position.set(x, y, z); scene.add(cl); clouds.push(cl);
+}
+
+const camera = new THREE.PerspectiveCamera(30, W / H, 0.1, 200);
+let vrm = null;
+const loader = new GLTFLoader(); loader.register((p) => new VRMLoaderPlugin(p));
+loader.load('../models/vrm/seed-san.vrm', (gltf) => {
+  vrm = gltf.userData.vrm; VRMUtils.rotateVRM0(vrm);
+    scene.add(vrm.scene); window.READY = true;
+});
+
+const ease = (a, b, t) => { const x = Math.min(1, Math.max(0, (t - a) / (b - a))); return x * x * (3 - 2 * x); };
+const bone = (n) => vrm.humanoid.getNormalizedBoneNode(n);
+function pose(t) {
+  // 차렷 → 숨쉬기
+  const br = Math.sin(t * 2 * Math.PI / 3.2);
+  bone('spine').rotation.x = 0.03 * br; bone('chest').rotation.x = 0.02 * br;
+  bone('leftUpperArm').rotation.z = -1.2; bone('rightUpperArm').rotation.z = 1.2;
+  bone('leftLowerArm').rotation.z = -0.15; bone('rightLowerArm').rotation.z = 0.15;
+  // 고개: 옆을 보다가(0.4~1.3초) 카메라 쪽으로 돌아봄(1.8~2.4초)
+  const look = ease(0.4, 1.3, t) - ease(1.8, 2.4, t);
+  bone('neck').rotation.y = 0.55 * look; bone('head').rotation.y = 0.25 * look; bone('head').rotation.x = -0.05 * look;
+  // 손 흔들기 (2.6~5.6초): 오른팔을 들고 아래팔을 좌우로
+  const up = ease(2.6, 3.1, t) - ease(5.2, 5.7, t);
+  bone('rightUpperArm').rotation.z = 1.2 - 1.45 * up; bone('rightUpperArm').rotation.x = -0.35 * up;   // 위팔은 옆으로 조금 들고
+  bone('rightLowerArm').rotation.z = 0.15 - up * (1.45 + 0.32 * Math.sin((t - 2.6) * 2 * Math.PI * 1.6));   // 팔꿈치를 굽혀 손을 위로, 아래팔만 좌우로
+  bone('rightHand').rotation.z = -0.2 * up;
+  bone('head').rotation.z = 0.08 * up;                   // 고개를 살짝 갸웃
+  // 표정: 눈 깜빡임 + 웃음
+  const em = vrm.expressionManager;
+  const blink = (c) => Math.max(0, 1 - Math.abs(t - c) / 0.07);
+  em.setValue('blink', Math.max(blink(1.0), blink(3.6), blink(5.0)));
+  em.setValue('happy', 0.8 * ease(2.4, 2.9, t));
+}
+let last = -1;
+window.renderFrame = (i) => {
+  const t = i / FPS;
+  pose(t);
+  vrm.update(last < 0 ? 0 : 1 / FPS); last = i;          // 머리카락·옷 흔들림(스프링 본)이 1/24초씩 자연스럽게
+  for (const c of clouds) c.position.x += 0.01;
+  const k = ease(0, 6, t);                                // 카메라 천천히 다가감
+  camera.position.set(0.12 - 0.12 * k, 1.4, 2.3 - 0.6 * k); camera.lookAt(0, 1.3 - 0.05 * k, 0);
+  renderer.render(scene, camera);
+};
+</script></body></html>

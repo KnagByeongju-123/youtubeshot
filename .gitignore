@@ -89,3 +89,7 @@ _sam_job.json
 연재/마지막잎새/캐릭터시트/*_v[0-3].png
 연재/마지막잎새/_지글검사/
 연재/*/_지글검사/
+
+# three.js 애니(애니3D): 부품은 npm 으로 다시 받음
+애니3D/node_modules/
+애니3D/package-lock.json
