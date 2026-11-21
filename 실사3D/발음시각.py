@@ -1,7 +1,8 @@
 """나레이션에서 대본 음절마다 실제 발음 시각 찾기 (입 모양 타이밍용)
 한국어 받아쓰기 모델(wav2vec2 CTC, 나레이션_겹침검사.py 와 같은 kresnik/wav2vec2-large-xlsr-korean)이 글자를 처음 내는 칸(약 0.02초)을 그 글자의 시각으로 보고,
 받아 적은 글자와 대본 음절을 맞춰(difflib) 대본 음절마다 [음절, 시작초, 끝초] 를 적음. 못 맞춘 음절은 앞뒤 사이를 고르게 나눔.
-사용: .sd_venv/bin/python -X utf8 실사3D/발음시각.py <나레이션.mp3|wav> <대본.txt 또는 "글"> <결과.json>
+사용: .sd_venv/bin/python -X utf8 실사3D/발음시각.py <나레이션.mp3|wav|mp4> <대본.txt 또는 "글" 또는 -> <결과.json>
+  대본 자리에 - 를 주면 대본 없이 들리는 글자마다 [글자, 시작, 끝] (입모양_학습.py 용)
 → 사진아나운서.py 영상 --시각 <결과.json>, ditto_말하기.py --시각 <결과.json>
 """
 import difflib
@@ -17,7 +18,7 @@ ROOT = os.path.join(HERE, "..")
 
 def main():
     audio, text, out = sys.argv[1:4]
-    if os.path.exists(text):
+    if text != "-" and os.path.exists(text):
         text = open(text, encoding="utf-8").read()
     spec = importlib.util.spec_from_file_location("겹침", os.path.join(ROOT, "나레이션_겹침검사.py"))
     G = importlib.util.module_from_spec(spec)
@@ -53,6 +54,10 @@ def main():
                     heard.append([ch, off + k * step, off + (j + 1) * step])
             k = j + 1
     heard.sort(key=lambda h: h[1])
+    if text == "-":
+        json.dump([[c, round(a_, 3), round(b_, 3)] for c, a_, b_ in heard], open(out, "w", encoding="utf-8"), ensure_ascii=False)
+        print("들린 글자", len(heard), "개 →", out)
+        return
     syl = [c for c in text if "가" <= c <= "힣"]
     hs = "".join(h[0] for h in heard)
     st = [None] * len(syl)
