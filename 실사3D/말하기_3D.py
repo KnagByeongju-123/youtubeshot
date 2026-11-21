@@ -40,11 +40,28 @@ vals={k:np.zeros(N) for k in KEYS}
 for f in range(N):
     for k in KEYS:
         v=plan[f].get(k,0.0); vals[k][f]=v if k=='입_다묾' else v*min(1.0,0.35+rms[f])
-for k in KEYS:   # 부드럽게 (닫힘은 그대로 강하게)
-    sm=np.convolve(vals[k],[0.2,0.6,0.2],'same')
-    vals[k]=np.maximum(sm,vals[k]) if k=='입_다묾' else sm
+# 부드럽게: 열릴 때 0.035초·닫힐 때 0.05초 따라감 (Rhubarb 립싱크 예제의 attack/release 방식), 입술 닫힘은 그대로 강하게
+ATT,REL=opt.get('attack',0.035),opt.get('release',0.05)
+for k in KEYS:
+    if k=='입_다묾': continue
+    cur=0.0; sm=np.zeros(N)
+    for f in range(N):
+        tau=ATT if vals[k][f]>cur else REL; cur+=(vals[k][f]-cur)*(1-math.exp(-1/FPS/tau)); sm[f]=cur
+    vals[k]=sm
+shut=np.array([1.0 if plan[f].get('shut') else 0.0 for f in range(N)])
+for k in KEYS:
+    if k!='입_다묾': vals[k]*=(1-shut)                     # 닫히는 칸에선 다른 입 모양을 끔
 for f in range(N):
     for k in KEYS: kb[k].value=float(vals[k][f]); kb[k].keyframe_insert('value',frame=f+1)
+# 눈 깜빡임: 3.2~4.8초마다 0.17초 (눈감기_만들기 로 만든 '눈감기', 없으면 모델의 Blink)
+BK='눈감기' if '눈감기' in kb else ('Blink' if 'Blink' in kb else None)
+if BK and opt.get('blink',True):
+    rng=np.random.default_rng(7); t=1.2
+    while t<SEC:
+        f0=int(t*FPS)
+        for df,v in((-1,0),(0,0.6),(1,1),(2,1),(3,0.4),(4,0)):
+            if 0<=f0+df<N: kb[BK].value=v; kb[BK].keyframe_insert('value',frame=f0+df+1)
+        t+=rng.uniform(3.2,4.8)
 # 고개·몸 (작게)
 def key(bn,f,rot):
     pb=ar.pose.bones.get(bn)
