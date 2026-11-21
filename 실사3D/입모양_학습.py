@@ -88,7 +88,9 @@ def table(a):
     for npz, js in pairs:
         z = np.load(npz)
         exp, ok, t0 = z["exp"], z["ok"].astype(bool), float(z["t0"])
-        heard = json.load(open(js, encoding="utf-8"))
+        heard = sorted(json.load(open(js, encoding="utf-8")), key=lambda h: h[1])
+        # 받아쓰기는 글자를 한 칸(0.02초)에만 찍음 → 음절은 다음 음절이 시작될 때까지 (최대 0.35초)
+        heard = [[c, s_, min(heard[i + 1][1] if i + 1 < len(heard) else s_ + 0.25, s_ + 0.35)] for i, (c, s_, e_) in enumerate(heard)]
         n = len(exp)
         cls = [None] * n
         for ch, s, e in heard:
