@@ -19,7 +19,10 @@ bpy.ops.object.mode_set(mode='EDIT'); bpy.ops.mesh.select_all(action='SELECT'); 
 img=bpy.data.images.new("뼈대텍스처",4096,4096)
 d=bpy.data.materials.new("피부"); d.use_nodes=True; dn=d.node_tree; b=dn.nodes["Principled BSDF"]; t=dn.nodes.new('ShaderNodeTexImage'); t.image=img
 dn.links.new(t.outputs['Color'],b.inputs['Base Color']); b.inputs['Roughness'].default_value=0.7; dn.nodes.active=t
-dst.data.materials.clear(); dst.data.materials.append(d)
+dst.data.materials[0]=d                     # 첫 재질(몸)만 바꿈 — 입속 같은 다른 재질(Mouth_Interior_Dark)은 그대로
+for m2 in dst.data.materials[1:]:                # 굽기는 재질마다 '고른 그림'이 있어야 함 → 같은 그림을 고르기만 (색엔 안 씀)
+    if m2 and m2.use_nodes:
+        t2=m2.node_tree.nodes.new('ShaderNodeTexImage'); t2.image=img; m2.node_tree.nodes.active=t2
 src.select_set(True); dst.select_set(True); bpy.context.view_layer.objects.active=dst
 sc.render.engine='CYCLES'; sc.cycles.device='CPU'; sc.cycles.samples=1
 sc.render.bake.use_selected_to_active=True; sc.render.bake.cage_extrusion=0.02; sc.render.bake.max_ray_distance=0.05; sc.render.bake.margin=8
