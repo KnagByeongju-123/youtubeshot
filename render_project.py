@@ -14,9 +14,6 @@
   - --쇼츠 : 롱폼 완성 뒤 40~50초 세로 쇼츠도 함께 만듦 (기본은 쇼츠를 안 만듦, 쇼츠_자동.py)
   - --성우프리셋 "이름" : 🎤 성우 선택 창에서 '⭐ 새 성우로 저장'한 목소리(성우·속도·톤·감정·쉼)로 (장문_설정.json "성우_프리셋" 도 같음)
   - --성우 M1 : 프로젝트 파일은 그대로 두고 이번만 이 Supertonic 성우로 (보통 --suffix 성우1 과 같이)
-  - --미리보기 : 자막·그림 타이밍만 빨리 확인하는 영상 (사용자 결정 2026-11-21). 화면 크기·배치·글씨는 최종과 같고(1920×1080),
-               1초 8장·빠른 압축(crf 32)으로 만들어 몇 배 빠름. 대본은 고치지 않음(--대본그대로 --길이고정 --형식고정 과 같음),
-               결과 <제목>_미리보기.mp4, 업로드 문구·쇼츠·번역·폴더 정리는 안 함. 확인 뒤 --미리보기 없이 최종본
   - --vi : 한글 자막 위에 베트남어 자막을 함께 (자막 조각마다 번역해 프로젝트 파일에 저장, 다시 만들 때는 저장된 번역을 씀)
            결과 파일 이름 끝에 _베트남어자막
 
@@ -49,8 +46,6 @@ def main(a):
         print(__doc__)
         return 2
     proj_path = os.path.abspath(a[0])
-    if "--미리보기" in a:      # 대본·꾸밈은 그대로 두고 빠르게 (AI 가 대본을 고치지 않게)
-        a = list(a) + ["--대본그대로", "--길이고정", "--형식고정"]
     spec = importlib.util.spec_from_file_location("snm", os.path.join(HERE, "shorts_novel_maker_supertonic.py"))
     m = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(m)
@@ -122,12 +117,6 @@ def main(a):
             bgm = ch_["bgm_style"]
     out_root = os.path.join(s["out_dir"], "장문")
     suf = ("_" + a[a.index("--suffix") + 1]) if "--suffix" in a and a.index("--suffix") + 1 < len(a) else ""
-    if "--미리보기" in a:
-        suf += "_미리보기"
-        app.vars["fps"].set("8")         # 1초 8장: 자막·그림이 바뀌는 시각은 그대로, 만드는 장수는 1/3
-        app.vars["quality"].set("32")    # 빠르고 작게
-        s = app.get_settings()
-        log("👀 미리보기: 1초 8장·crf 32 (화면 배치·글씨는 최종과 같음)")
     work = m._load_korean_reading("콘텐츠_정리").find_work(out_root, m.safe_name(title)[:40] + suf, title)   # 정리된 콘텐츠면 그 폴더 안의 작업 폴더
     os.makedirs(work, exist_ok=True)
     m.SCRIPT_ENGINE["s"] = s
@@ -238,13 +227,13 @@ def main(a):
     with open(base + "_타임스탬프.txt", "w", encoding="utf-8") as f:
         f.write("\n".join(f"{m.hms(t)} {n}" for t, n in [(0, "오프닝")] + ch))
     log("MP4 완성: " + base + ".mp4")
-    if "--kit" in a and "--미리보기" not in a:
+    if "--kit" in a:
         log("📝 업로드 문구·설명란·유튜브 썸네일 만드는 중...")
         m.publish_kit(app.model_var.get().strip(), base, title, story, c.get("category") or m.DOC_CATEGORY, genre, s, ch,
                       c.get("sources") or [], c.get("notes", ""), log)
     log("✅ 전부 완료 → " + base + ".mp4")
     # 규칙: 쇼츠는 기본적으로 만들지 않음. --쇼츠 를 붙일 때만 롱폼 완성 뒤 40~50초 세로 쇼츠를 만듦 (쇼츠_자동.py). (예전 --쇼츠없음 은 그대로 둬도 됨)
-    if (c.get("category") or m.DOC_CATEGORY) == m.DOC_CATEGORY and "--쇼츠" in a and "--쇼츠없음" not in a and suf != "_쇼츠" and "--미리보기" not in a:
+    if (c.get("category") or m.DOC_CATEGORY) == m.DOC_CATEGORY and "--쇼츠" in a and "--쇼츠없음" not in a and suf != "_쇼츠":
         try:
             m._load_korean_reading("쇼츠_자동").make_shorts(m, app.model_var.get().strip(), base + "_프로젝트.json", log)
         except Exception as e:
@@ -253,7 +242,7 @@ def main(a):
     langs = a[a.index("--자막언어") + 1].split(",") if "--자막언어" in a and a.index("--자막언어") + 1 < len(a) else []
     if "--영어" in a and "영어" not in langs:
         langs.append("영어")
-    if langs and suf != "_쇼츠" and "--미리보기" not in a:
+    if langs and suf != "_쇼츠":
         try:
             tr = m._load_korean_reading("영어_번역")
             tr.make_translations(base + "_프로젝트.json", [tr.LANG_KO[x.strip()] for x in langs if x.strip() in tr.LANG_KO], log)
@@ -264,7 +253,7 @@ def main(a):
     except OSError:
         pass
     # 규칙: 다 만들면 콘텐츠(롱폼 + 쇼츠)를 output\장문\<제목>\ 폴더 하나로 정리 (콘텐츠_정리.py). 쇼츠 단독 실행은 롱폼 쪽에서 함께 정리
-    if (c.get("category") or m.DOC_CATEGORY) == m.DOC_CATEGORY and suf != "_쇼츠" and "--미리보기" not in a:
+    if (c.get("category") or m.DOC_CATEGORY) == m.DOC_CATEGORY and suf != "_쇼츠":
         try:
             m._load_korean_reading("콘텐츠_정리").organize(base + "_프로젝트.json", log, os.path.abspath(out_root))
         except Exception as e:
