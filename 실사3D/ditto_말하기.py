@@ -5,10 +5,11 @@
     Ditto 에 들어 있는 MediaPipe 얼굴 점(face_landmarker.task, Apache-2.0) 478개 중 68개를 골라 첫 얼굴 위치로 씀
   - 설정의 device 를 모두 cpu 로
 준비(한 번): bash 실사3D/ditto_준비.sh  → models/ditto (코드·.venv·checkpoints)
-사용: models/ditto/.venv/bin/python 실사3D/ditto_말하기.py <사진.png> <나레이션.wav|mp3> <결과.mp4> [--대본 <대본.txt 또는 "글">] [--단계 50] [--감정 4]
+사용: models/ditto/.venv/bin/python 실사3D/ditto_말하기.py <사진.png> <나레이션.wav|mp3> <결과.mp4> [--대본 <대본.txt 또는 "글">] [--시각 <발음시각.json>] [--단계 50] [--감정 4]
   --대본: 주면 한국어 입 모양 보정(아래 3번). 사진은 입을 다문 옅은 미소여야 함
   --단계: 움직임 만들기 단계 수(기본 50, 줄이면 빠르지만 거칠어짐) / --감정: Ditto 감정 번호(기본 4 = 보통)
 """
+import json
 import os
 import sys
 
@@ -106,13 +107,13 @@ def _fix_ko(x_d_info, x_s_info, *a):
 MS._fix_exp_for_x_d_info_v2 = _fix_ko
 
 
-def korean_plan(wav, text, n_frames, fps=25):
+def korean_plan(wav, text, n_frames, fps=25, timing=None):
     import importlib.util
     spec = importlib.util.spec_from_file_location("사진아나운서", os.path.join(HERE, "사진아나운서.py"))
     m = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(m)
     m.FPS = fps
-    shapes = m.plan_shapes(wav, text, n_frames)
+    shapes = m.plan_shapes(wav, text, n_frames, timing)
     g = np.array([GAIN[s] for s in shapes], np.float32)
     g = np.convolve(np.pad(g, 1, mode="edge"), [0.25, 0.5, 0.25], "valid")   # 갑자기 바뀌지 않게
     return g
@@ -145,7 +146,8 @@ def main():
             audio = wav
         w = wave.open(audio)
         n = math.ceil(w.getnframes() / w.getframerate() * 25)
-        KO["plan"] = korean_plan(audio, text, n)
+        tf = opt("--시각", None)
+        KO["plan"] = korean_plan(audio, text, n, timing=json.load(open(tf, encoding="utf-8")) if tf else None)
         print("한국어 입 모양 보정:", n, "장")
     SDK = StreamSDK(os.path.join(ck, "ditto_cfg", "v0.4_hubert_cfg_pytorch.pkl"), os.path.join(ck, "ditto_pytorch"))
     run(SDK, audio, src, out, {"setup_kwargs": {"sampling_timesteps": steps, "emo": emo}})

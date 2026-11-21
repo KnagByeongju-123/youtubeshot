@@ -7,7 +7,7 @@
    .sd_venv/bin/python -X utf8 klein_worker.py models/FLUX2_klein_4B <폴더>/job.json <폴더>
    → 다섯 장을 크게 열어 확인: 입 말고 얼굴이 바뀌었으면 그 장만 seed 를 바꿔 다시
 3) 영상 (나레이션은 겹침·받아쓰기 검사를 통과한 것)
-   .supertonic_venv/bin/python -X utf8 실사3D/사진아나운서.py 영상 <폴더> <나레이션.mp3> <대본.txt 또는 "글"> <결과.mp4> [--크기 1920x1080]
+   .supertonic_venv/bin/python -X utf8 실사3D/사진아나운서.py 영상 <폴더> <나레이션.mp3> <대본.txt 또는 "글"> <결과.mp4> [--크기 1920x1080] [--시각 <발음시각.json>]
 방법: 1/24초마다 소리 크기 → 작으면 다문 입, 크면 대본 음절의 모음대로 아(ㅏㅓ)·오(ㅗㅜ)·이(ㅔㅐㅣㅡ), 첫소리 ㅁㅂㅍ·받침 ㅁㅂ = 다문 입.
       입·눈 칸만 부드러운 테두리로 바꿔 끼우고 2장에 걸쳐 섞음(뚝뚝 끊기지 않게). 눈 깜빡임 약 3초마다, 화면은 천천히 다가가며 살짝 흔들림
 """
@@ -55,8 +55,8 @@ def prepare(a):
     print("준비 끝:", out)
 
 
-def plan_shapes(wav, text, n_frames):
-    """프레임마다 (입 모양, 세기). lipsync 과 같은 방법: 소리 크기 + 음절 모음"""
+def plan_shapes(wav, text, n_frames, timing=None):
+    """프레임마다 입 모양. 소리 크기 + 음절 모음. timing(발음시각.py 결과 [[음절, 시작, 끝]...])이 있으면 그 시각대로, 없으면 음절을 소리 난 구간에 고르게"""
     import wave
     w = wave.open(wav)
     sr = w.getframerate()
@@ -70,10 +70,16 @@ def plan_shapes(wav, text, n_frames):
     syl = [c for c in text if 0xAC00 <= ord(c) <= 0xD7A3]
     plan = {}
     per = len(voiced) / max(len(syl), 1)
+    if timing:
+        syl = [t[0] for t in timing]
     for j, ch in enumerate(syl):
         v = ord(ch) - 0xAC00
         cho, jung, jong = v // 588, (v % 588) // 28, v % 28
-        fr = voiced[int(j * per):max(int((j + 1) * per), int(j * per) + 1)]
+        if timing:
+            f0, f1 = int(timing[j][1] * FPS), int(round(timing[j][2] * FPS))
+            fr = list(range(f0, max(f1, f0 + 1)))
+        else:
+            fr = voiced[int(j * per):max(int((j + 1) * per), int(j * per) + 1)]
         for k, f in enumerate(fr):
             t = k / max(len(fr), 1)
             if (cho in (6, 7, 8, 17) and t < 0.3) or (jong in (16, 17) and t > 0.75):
@@ -112,7 +118,8 @@ def video(a):
     w = wave.open(tmp)
     dur = w.getnframes() / w.getframerate()
     N = int(dur * FPS) + 1
-    shapes = plan_shapes(tmp, text, N)
+    tf = opt(a, "--시각")
+    shapes = plan_shapes(tmp, text, N, json.load(open(tf, encoding="utf-8")) if tf else None)
     # 2장에 걸쳐 섞기: 입 칸 = 현재 모양 0.6 + 앞 모양 0.4 (바뀌는 순간만)
     bl_w = {}
     for s in np.arange(1.0, dur, 3.1):
