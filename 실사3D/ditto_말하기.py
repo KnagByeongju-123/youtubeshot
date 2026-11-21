@@ -124,8 +124,8 @@ def table_plan(table_path, timing, n_frames, fps=25):
         fr = [f for f in range(f0, max(f1, f0 + 1)) if 0 <= f < n_frames]
         for k, f in enumerate(fr):
             tt = k / max(len(fr), 1)
-            c = "닫음" if ((cho in (6, 7, 8, 17) and tt < 0.25) or (jong in (16, 17) and tt > 0.8)) else VOW.get(jung)
-            g[f] = gain.get(c, 1.0)
+            c = "닫음" if ((cho in (6, 7, 8, 17) and tt < 0.25) or (jong in (16, 17, 26) and tt > (0.15 if jung in (18, 19, 20) else 0.4))) else VOW.get(jung)   # 받침 ㅁㅂㅍ 은 일찍 입을 닫음(습니다=슴니다, 사용자 지적)
+            g[f] = 0.12 if c == "닫음" else gain.get(c, 1.0)   # 닫음은 사진의 다문 입에 더 가깝게
     return np.convolve(np.pad(g, 1, mode="edge"), [0.25, 0.5, 0.25], "valid")
 
 

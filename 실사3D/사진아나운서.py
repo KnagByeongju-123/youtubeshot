@@ -82,7 +82,7 @@ def plan_shapes(wav, text, n_frames, timing=None):
             fr = voiced[int(j * per):max(int((j + 1) * per), int(j * per) + 1)]
         for k, f in enumerate(fr):
             t = k / max(len(fr), 1)
-            if (cho in (6, 7, 8, 17) and t < 0.3) or (jong in (16, 17) and t > 0.75):
+            if (cho in (6, 7, 8, 17) and t < 0.3) or (jong in (16, 17, 26) and t > (0.15 if jung in (18, 19, 20) else 0.4)):   # 받침 ㅁㅂㅍ 은 일찍 닫음(습니다)
                 plan[f] = "다문입"
             else:
                 plan[f] = VOW.get(jung, "이")
