@@ -5,8 +5,9 @@
     Ditto 에 들어 있는 MediaPipe 얼굴 점(face_landmarker.task, Apache-2.0) 478개 중 68개를 골라 첫 얼굴 위치로 씀
   - 설정의 device 를 모두 cpu 로
 준비(한 번): bash 실사3D/ditto_준비.sh  → models/ditto (코드·.venv·checkpoints)
-사용: models/ditto/.venv/bin/python 실사3D/ditto_말하기.py <사진.png> <나레이션.wav|mp3> <결과.mp4> [--대본 <대본.txt 또는 "글">] [--시각 <발음시각.json>] [--단계 50] [--감정 4]
+사용: models/ditto/.venv/bin/python 실사3D/ditto_말하기.py <사진.png> <나레이션.wav|mp3> <결과.mp4> [--대본 <대본.txt 또는 "글">] [--시각 <발음시각.json>] [--입모양표 <표.json>] [--단계 50] [--감정 4]
   --대본: 주면 한국어 입 모양 보정(아래 3번). 사진은 입을 다문 옅은 미소여야 함
+  --입모양표: 입모양_학습.py 로 배운 표(--시각 필요). 아래 3번의 손으로 정한 배율 대신 실제 한국어 화자에게서 배운 배율 + 0.2초 앞당김
   --단계: 움직임 만들기 단계 수(기본 50, 줄이면 빠르지만 거칠어짐) / --감정: Ditto 감정 번호(기본 4 = 보통)
 """
 import json
@@ -65,16 +66,32 @@ MP68 = [162, 234, 93, 58, 172, 136, 149, 148, 152, 377, 378, 365, 397, 288, 323,
 _orig_crop = S.Source2Info._crop
 
 
-def _crop(self, img, last_lmk=None, **kw):
-    if last_lmk is None:
-        l478 = self.landmark478(img)
+def _find_face(self, img):
+    """MediaPipe 얼굴 점 478개(픽셀). 반신·전신처럼 얼굴이 작으면 전체에서 못 찾음 →
+    위쪽 가운데·격자 칸을 잘라 얼굴을 크게 보이게 해서 다시 찾고, 좌표를 원래 사진으로 되돌림 (사용자 요청 2026-11-21: 반신 리포터)"""
+    H, W = img.shape[:2]
+    wins = [(0, 0, W, H), (W // 4, 0, W * 3 // 4, H * 3 // 5), (W // 3, 0, W * 2 // 3, H * 2 // 5)]
+    for gy in range(3):
+        for gx in range(4):
+            wins.append((gx * W // 5, gy * H // 4, gx * W // 5 + W * 2 // 5, gy * H // 4 + H // 2))
+    for x0, y0, x1, y1 in wins:
+        sub = np.ascontiguousarray(img[y0:y1, x0:x1])
+        l478 = self.landmark478(sub)
         if l478 is None or len(l478) == 0 or l478.size == 0:
-            raise RuntimeError("사진에서 얼굴을 못 찾음 (MediaPipe)")
+            continue
         pts = l478[0][:, :2].copy()
         if pts.max() <= 1.5:                      # 0~1 비율 → 픽셀
-            pts[:, 0] *= img.shape[1]
-            pts[:, 1] *= img.shape[0]
-        last_lmk = pts[MP68]
+            pts[:, 0] *= sub.shape[1]
+            pts[:, 1] *= sub.shape[0]
+        pts[:, 0] += x0
+        pts[:, 1] += y0
+        return pts
+    raise RuntimeError("사진에서 얼굴을 못 찾음 (MediaPipe, 잘라서도 못 찾음)")
+
+
+def _crop(self, img, last_lmk=None, **kw):
+    if last_lmk is None:
+        last_lmk = _find_face(self, img)[MP68]
     return _orig_crop(self, img, last_lmk=last_lmk, **kw)
 
 
@@ -105,6 +122,27 @@ def _fix_ko(x_d_info, x_s_info, *a):
 
 
 MS._fix_exp_for_x_d_info_v2 = _fix_ko
+
+
+def table_plan(table_path, timing, n_frames, fps=25):
+    """배운 입모양표(입모양_학습.py, 실제 한국어 화자 영상) → 프레임마다 입술 움직임 배율.
+    배율 = 그 발음의 평균 입 벌림 / 말할 때 평균 (아 1.36 … 오 0.67·우 0.63), ㅁㅂ·쉼 = 0.25 (사진의 다문 입 쪽).
+    받아쓰기 시각은 실제 입보다 약 0.2초 늦음 → 표의 lag_frames(-5) 만큼 앞당김"""
+    t = json.load(open(table_path, encoding="utf-8"))
+    gain, lag = t["gain"], int(t.get("lag_frames", -5))
+    VOW = {0: "아", 2: "아", 9: "아", 4: "어", 6: "어", 14: "어", 8: "오", 12: "오", 10: "오", 11: "오",
+           13: "우", 17: "우", 15: "우", 16: "우", 18: "으", 19: "으", 20: "이", 1: "에", 3: "에", 5: "에", 7: "에"}
+    g = np.full(n_frames, 0.25, np.float32)               # 쉬는 곳: 다문 입
+    for ch, s0, e0 in timing:
+        v = ord(ch) - 0xAC00
+        cho, jung, jong = v // 588, (v % 588) // 28, v % 28
+        f0, f1 = int(s0 * fps) + lag, int(round(e0 * fps)) + lag
+        fr = [f for f in range(f0, max(f1, f0 + 1)) if 0 <= f < n_frames]
+        for k, f in enumerate(fr):
+            tt = k / max(len(fr), 1)
+            c = "닫음" if ((cho in (6, 7, 8, 17) and tt < 0.25) or (jong in (16, 17, 26) and tt > (0.15 if jung in (18, 19, 20) else 0.4))) else VOW.get(jung)   # 받침 ㅁㅂㅍ 은 일찍 입을 닫음(습니다=슴니다, 사용자 지적)
+            g[f] = 0.12 if c == "닫음" else gain.get(c, 1.0)   # 닫음은 사진의 다문 입에 더 가깝게
+    return np.convolve(np.pad(g, 1, mode="edge"), [0.25, 0.5, 0.25], "valid")
 
 
 def korean_plan(wav, text, n_frames, fps=25, timing=None):
@@ -147,7 +185,12 @@ def main():
         w = wave.open(audio)
         n = math.ceil(w.getnframes() / w.getframerate() * 25)
         tf = opt("--시각", None)
-        KO["plan"] = korean_plan(audio, text, n, timing=json.load(open(tf, encoding="utf-8")) if tf else None)
+        tb = opt("--입모양표", None)
+        if tb and tf:
+            KO["plan"] = table_plan(tb, json.load(open(tf, encoding="utf-8")), n)
+            print("배운 입모양표 사용:", tb)
+        else:
+            KO["plan"] = korean_plan(audio, text, n, timing=json.load(open(tf, encoding="utf-8")) if tf else None)
         print("한국어 입 모양 보정:", n, "장")
     SDK = StreamSDK(os.path.join(ck, "ditto_cfg", "v0.4_hubert_cfg_pytorch.pkl"), os.path.join(ck, "ditto_pytorch"))
     run(SDK, audio, src, out, {"setup_kwargs": {"sampling_timesteps": steps, "emo": emo}})
