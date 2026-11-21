@@ -1529,7 +1529,7 @@ def doc_add_paper_figures(model, title, story, sources, media_dir, log, max_n=No
     return story, max(0, n)
 
 
-def doc_add_photos(model, title, story, media_dir, log, cancel=None, sec=None, fiction=False, sources=None):
+def doc_add_photos(model, title, story, media_dir, log, cancel=None, sec=None, fiction=False, sources=None, ckpt=None):
     """이미 만든 장문 대본에 사진을 더 넣음: 오프닝·챕터마다 (나레이션 sec 초에 한 장) 목표보다 모자란 만큼만,
     사진이 없는 긴 구간에 배치. 이미 쓴 사진(출처 페이지)은 다시 고르지 않음. 반환: (새 대본, 더한 사진 수)"""
     paras = split_paras(story)
@@ -1550,12 +1550,36 @@ def doc_add_photos(model, title, story, media_dir, log, cancel=None, sec=None, f
     from concurrent.futures import ThreadPoolExecutor
     lock = _th.Lock()
     pcat = "허구 단편소설" if fiction else DOC_CATEGORY
+    # 중간 저장(ckpt): 찾기 한 번이 끝날 때마다 구간별 결과를 저장 → 꺼지거나 시간 한도에 걸려도 다시 실행하면 이어서 (2026-11-21: 2시간 보강이 저장 없이 날아감)
+    saved = {}
+    if ckpt and os.path.exists(ckpt):
+        try:
+            saved = json.load(open(ckpt, encoding="utf-8"))
+        except Exception:
+            saved = {}
+
+    def _key(blk):
+        return hashlib.md5(blk[0].encode("utf-8")).hexdigest()[:12]
+
+    def _save(blk, text, got, done=False):
+        if not ckpt:
+            return
+        with lock:
+            saved[_key(blk)] = {"text": text, "got": got, "done": done}
+            atomic_write_text(ckpt, json.dumps(saved, ensure_ascii=False, indent=1))
 
     def one_block(blk):
         """오프닝·챕터 하나: 사진 담당 AI가 찾고(필요 수 + 여유분) → 글과 맞는지 검사 → 모자라면 보충 AI가 다른 사진 창고에서 한 번 더"""
         text = "\n\n".join(blk)
         name = blk[0][3:] if blk[0].startswith("## ") else "오프닝"
         got = 0
+        sv = saved.get(_key(blk))
+        if sv:
+            text, got = sv["text"], int(sv.get("got") or 0)
+            if sv.get("done"):
+                log(f"  ↩ '{name}' 사진은 저장된 중간 결과를 그대로 씀")
+                return text, got
+            log(f"  ↩ '{name}' 저장된 중간 결과에서 이어서 (지금까지 {got}장 더함)")
         for rnd in range(1 + DOC_PHOTO_ROUNDS):
             if cancel is not None and cancel.is_set():
                 raise RuntimeError("취소됨")
@@ -1588,10 +1612,12 @@ def doc_add_photos(model, title, story, media_dir, log, cancel=None, sec=None, f
                 text = place_photos(text, ph)
                 text, n_drop, _ = check_photo_fit(model, text, log, fiction=fiction)
                 got += len(ph) - n_drop
+                _save(blk, text, got)
             except RuntimeError:
                 raise
             except Exception as e:
                 log(f"  '{name}' 사진 찾기 실패(그대로 둠): " + (str(e).splitlines() or [""])[0][:80])
+        _save(blk, text, got, done=True)
         return text, got
 
     todo = [bi for bi, blk in enumerate(blocks) if doc_photo_target("\n\n".join(blk), sec) > sum(1 for p in blk if parse_media(p))]
