@@ -2,7 +2,8 @@
 쓸 영상: CC BY·CC0·공공누리 1유형·직접 찍은 영상만 (실사3D.md '아나운서 발음 연습')
 
 1) 입술 움직임 뽑기 (Ditto 실행 환경, 1분에 약 3~6분)
-   models/ditto/.venv/bin/python 실사3D/입모양_학습.py 추출 <영상.mp4> <움직임.npz> [--시작 0] [--길이 300]
+   models/ditto/.venv/bin/python 실사3D/입모양_학습.py 추출 <영상.mp4> <움직임.npz> [--시작 0] [--길이 300] [--자르기 w:h:x:y]
+   (얼굴이 작으면 --자르기 로 얼굴 둘레만: 화면 높이의 절반 넘게 얼굴이 차지하면 잘 찾음)
    → 1초 25장마다 Ditto 움직임 분석기(motion_extractor)의 표정 값(exp, 21점×3) — 얼굴 위치는 MediaPipe 로 처음 찾고 그 뒤는 따라감
 2) 음절 시각 (받아쓰기 모델, 대본 없이 들리는 대로)
    .sd_venv/bin/python -X utf8 실사3D/발음시각.py <영상.mp4> - <받아쓰기.json>
@@ -32,6 +33,7 @@ def extract(a):
     import importlib.util
     video, out = a[0], a[1]
     t0, dur = float(opt(a, "--시작", 0)), float(opt(a, "--길이", 300))
+    crop = opt(a, "--자르기", "")          # 얼굴이 작은 영상: 얼굴 둘레만 잘라 키움 (w:h:x:y, ffmpeg crop)
     spec = importlib.util.spec_from_file_location("ditto_말하기", os.path.join(HERE, "ditto_말하기.py"))
     D = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(D)            # MediaPipe 얼굴 찾기·cpu 바꿔 끼우기가 여기서 적용됨
@@ -42,8 +44,10 @@ def extract(a):
     probe = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height",
                             "-of", "csv=p=0", video], capture_output=True, text=True).stdout.strip().split(",")
     w0, h0 = int(probe[0]), int(probe[1])
+    if crop:
+        w0, h0 = int(crop.split(":")[0]), int(crop.split(":")[1])
     H = int(round(h0 * W / w0 / 2) * 2)
-    p = subprocess.Popen(["ffmpeg", "-v", "error", "-ss", str(t0), "-t", str(dur), "-i", video, "-vf", f"fps={FPS},scale={W}:{H}",
+    p = subprocess.Popen(["ffmpeg", "-v", "error", "-ss", str(t0), "-t", str(dur), "-i", video, "-vf", (f"crop={crop}," if crop else "") + f"fps={FPS},scale={W}:{H}",
                           "-f", "rawvideo", "-pix_fmt", "rgb24", "-"], stdout=subprocess.PIPE)
     exps, poses, ok = [], [], []
     last = None
