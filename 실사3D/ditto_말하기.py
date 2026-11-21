@@ -5,7 +5,8 @@
     Ditto 에 들어 있는 MediaPipe 얼굴 점(face_landmarker.task, Apache-2.0) 478개 중 68개를 골라 첫 얼굴 위치로 씀
   - 설정의 device 를 모두 cpu 로
 준비(한 번): bash 실사3D/ditto_준비.sh  → models/ditto (코드·.venv·checkpoints)
-사용: models/ditto/.venv/bin/python 실사3D/ditto_말하기.py <사진.png> <나레이션.wav|mp3> <결과.mp4> [--단계 50] [--감정 4]
+사용: models/ditto/.venv/bin/python 실사3D/ditto_말하기.py <사진.png> <나레이션.wav|mp3> <결과.mp4> [--대본 <대본.txt 또는 "글">] [--단계 50] [--감정 4]
+  --대본: 주면 한국어 입 모양 보정(아래 3번). 사진은 입을 다문 옅은 미소여야 함
   --단계: 움직임 만들기 단계 수(기본 50, 줄이면 빠르지만 거칠어짐) / --감정: Ditto 감정 번호(기본 4 = 보통)
 """
 import os
@@ -78,6 +79,44 @@ def _crop(self, img, last_lmk=None, **kw):
 
 S.Source2Info._crop = _crop
 
+# 3) 한국어 입 모양 보정 (--대본 을 주면): Ditto 의 소리 해석은 주로 중국어·영어로 배워 한국어 입 모양이 약함 →
+#    사진아나운서.py 와 같은 음절 분석(소리 크기 + 모음)으로 프레임마다 입술 키포인트(6·12·14·17·19·20)의 움직임을
+#    아=1.5배·오=1.3배·이=1.05배로 키우고, 쉼·ㅁ·ㅂ 은 원래 사진(입 다문 얼굴) 쪽으로 당겨 입을 닫음.
+#    → 원래 사진은 입을 다문 옅은 미소여야 함 (이를 드러낸 웃음이면 닫을 수 없음)
+import core.atomic_components.motion_stitch as MS  # noqa: E402
+LIP = [6, 12, 14, 17, 19, 20]
+KO = {"plan": None, "i": 0}
+GAIN = {"아": 1.5, "오": 1.3, "이": 1.05, "다문입": 0.25}
+_orig_fix = MS._fix_exp_for_x_d_info_v2
+
+
+def _fix_ko(x_d_info, x_s_info, *a):
+    x_d_info = _orig_fix(x_d_info, x_s_info, *a)
+    plan = KO["plan"]
+    if plan is not None:
+        g = plan[min(KO["i"], len(plan) - 1)]
+        KO["i"] += 1
+        e, s = x_d_info["exp"], x_s_info["exp"]
+        e3, s3 = e.reshape(-1, 21, 3), s.reshape(-1, 21, 3)
+        e3[:, LIP] = s3[:, LIP] + g * (e3[:, LIP] - s3[:, LIP])
+        x_d_info["exp"] = e3.reshape(e.shape)
+    return x_d_info
+
+
+MS._fix_exp_for_x_d_info_v2 = _fix_ko
+
+
+def korean_plan(wav, text, n_frames, fps=25):
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("사진아나운서", os.path.join(HERE, "사진아나운서.py"))
+    m = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(m)
+    m.FPS = fps
+    shapes = m.plan_shapes(wav, text, n_frames)
+    g = np.array([GAIN[s] for s in shapes], np.float32)
+    g = np.convolve(np.pad(g, 1, mode="edge"), [0.25, 0.5, 0.25], "valid")   # 갑자기 바뀌지 않게
+    return g
+
 from inference import run  # noqa: E402
 from stream_pipeline_offline import StreamSDK  # noqa: E402
 
@@ -94,6 +133,20 @@ def main():
         wav = out + ".16k.wav"
         os.system(f'ffmpeg -loglevel error -y -i "{audio}" -ac 1 -ar 16000 "{wav}"')
         audio = wav
+    text = opt("--대본", None)
+    if text:
+        if os.path.exists(text):
+            text = open(text, encoding="utf-8").read()
+        import math
+        import wave
+        if not audio.lower().endswith(".wav") or wave.open(audio).getframerate() != 16000:
+            wav = out + ".16k.wav"
+            os.system(f'ffmpeg -loglevel error -y -i "{audio}" -ac 1 -ar 16000 "{wav}"')
+            audio = wav
+        w = wave.open(audio)
+        n = math.ceil(w.getnframes() / w.getframerate() * 25)
+        KO["plan"] = korean_plan(audio, text, n)
+        print("한국어 입 모양 보정:", n, "장")
     SDK = StreamSDK(os.path.join(ck, "ditto_cfg", "v0.4_hubert_cfg_pytorch.pkl"), os.path.join(ck, "ditto_pytorch"))
     run(SDK, audio, src, out, {"setup_kwargs": {"sampling_timesteps": steps, "emo": emo}})
     print("만듦", out)
