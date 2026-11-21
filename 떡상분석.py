@@ -71,8 +71,77 @@ def get_video(src, out_dir):
     for f in os.listdir(out_dir):
         if f.startswith("원본."):
             return os.path.join(out_dir, f)
-    tail = "\n".join(r.stderr.strip().splitlines()[-3:])
-    sys.exit("유튜브에서 영상을 받지 못했습니다(유튜브가 막음). 영상 파일(mp4)을 직접 올려 그 경로로 다시 실행하세요.\n" + tail)
+    tail = "\n".join(r.stderr.strip().splitlines()[-2:])
+    print("유튜브에서 영상을 받지 못함(유튜브가 막음) → 자막(대본)만으로 분석합니다. 컷·화면 글자·소리까지 보려면 mp4 를 올려 주세요.\n" + tail, flush=True)
+    return None
+
+
+# ───────── 1-1. 자막만 (영상을 못 받을 때) ─────────
+FIND_SUBS = os.path.join(HERE, "output", "떡상분석", "_찾기", "_자막")
+
+
+def get_subs(src, vid, out_dir):
+    """한국어 자막 json3 경로. 로컬 .json3 → 떡상찾기 가 받아 둔 것 → 새로 받기"""
+    if src.endswith(".json3") and os.path.exists(src):
+        return src
+    for d in (FIND_SUBS, out_dir):
+        p = os.path.join(d, vid + ".ko.json3")
+        if os.path.exists(p):
+            return p
+    print("자막 받는 중…", flush=True)
+    run([sys.executable, "-m", "yt_dlp", "--js-runtimes", "node", "--skip-download", "--ignore-no-formats-error",
+         "--write-subs", "--write-auto-subs", "--sub-langs", "ko", "--sub-format", "json3",
+         "-o", os.path.join(out_dir, "%(id)s"), src])
+    p = os.path.join(out_dir, vid + ".ko.json3")
+    return p if os.path.exists(p) else ""
+
+
+def parse_json3(path):
+    """유튜브 자막 → 문장 목록 [{start, end, text, words}] (낱말 시간은 자막 조각 시간)"""
+    j = json.load(open(path, encoding="utf-8"))
+    words = []
+    for e in j.get("events", []):
+        t0 = e.get("tStartMs", 0) / 1000
+        dur = e.get("dDurationMs", 0) / 1000
+        for sg in e.get("segs", []) or []:
+            w = (sg.get("utf8") or "").replace("\n", " ")
+            if not w.strip() or re.fullmatch(r"\s*\[[^\]]*\]\s*", w):      # [음악] 같은 표시는 뺌
+                continue
+            st = t0 + sg.get("tOffsetMs", 0) / 1000
+            words.append([round(st, 2), round(st, 2), (" " if not w.startswith(" ") else "") + w])
+        if words:
+            words[-1][1] = round(max(words[-1][1], t0 + dur), 2)
+    for i in range(len(words) - 1):
+        words[i][1] = max(words[i][1], min(words[i + 1][0], words[i][0] + 1.5))
+    out, cur = [], []
+    for w in words:
+        cur.append(tuple(w))
+        if re.search(r"(다|요|까|죠|니다|습니다)?[\.\?!]\s*$", w[2]) and re.search(r"[\.\?!]\s*$", w[2]):
+            out.append(_sent(cur))
+            cur = []
+    if cur:
+        out.append(_sent(cur))
+    for s_ in out:
+        s_["text"] = re.sub(r"\s+", " ", s_["text"]).replace(">>", "").strip()
+    return [s_ for s_ in out if s_["text"]]
+
+
+def text_metrics(speech, D):
+    """대본 구조 숫자: 물음·반전 말·숫자·'오늘' 안내 시점"""
+    D = max(D, 1)
+    full = " ".join(s["text"] for s in speech)
+    q = [s for s in speech if "?" in s["text"]]
+    turns = len(re.findall(r"그런데|하지만|그러나|그런데도|반면", full))
+    first60 = " ".join(s["text"] for s in speech if s["start"] < 60)
+    guide = next((s for s in speech if s["start"] < 240 and re.search(r"오늘|이번 영상|지금부터", s["text"])), None)
+    return {
+        "물음수": len(q), "분당물음": round(len(q) / D * 60, 2),
+        "분당반전말": round(turns / D * 60, 2),
+        "첫60초숫자": len(re.findall(r"\d+(?:[\.,]\d+)?|[일이삼사오육칠팔구십백천만억]+\s?(?:년|명|개|만|억|배|%|퍼센트)", first60)),
+        "첫60초물음": sum(1 for s in q if s["start"] < 60),
+        "안내문장초": round(guide["start"], 1) if guide else None,
+        "안내문장": guide["text"] if guide else "",
+    }
 
 
 def probe(path):
@@ -393,9 +462,14 @@ def flow_graph(path, D, db, step, shots, speech, events):
 
 
 # ───────── 7. 새 기획 (claude -p) ─────────
-def make_plan(md_path, topic, out_path):
+def make_plan(md_path, topic, out_path, history=False):
     with open(md_path, encoding="utf-8") as f:
         analysis = f.read()[:30000]
+    extra = ""
+    hp = os.path.join(HERE, "역사", "떡상구조.txt")
+    if history and os.path.exists(hp):     # 역사 편: 떡상 이야기 구조 원칙 + 수묵 담채 역사 형식
+        extra = ("\n- 우리 역사 편 형식: 수묵 담채 그림, 가로 영상, 실록·정사 같은 원전 기록만, 배경음은 전통악기.\n\n"
+                 + open(hp, encoding="utf-8").read().strip() + "\n")
     prompt = f"""아래는 조회수가 높은 영상 하나를 뜯어본 결과(컷 박자·말 빠르기·첫 3초·화면 글자·소리)다.
 이 영상의 **구조만** 빌려 새 영상 기획안을 써라. 새 주제: {topic}
 
@@ -404,7 +478,10 @@ def make_plan(md_path, topic, out_path):
 - 우리 제작 방식: 나레이션 성우 F8(1초에 약 8글자, 1분 ≈ 490자), 그림은 이 저장소 도구(klein 그림 또는 Blockbench 블록 애니), 자막 한 줄씩, 24fps.
 - 원본 말 빠르기가 1초 8글자보다 빠르면 대본 글자 수를 줄여 같은 길이에 맞춘다.
 - 겹쳐 읽히는 말(앞 낱말 끝 글자와 다음 낱말 첫 글자가 같은 소리), '유적', '~음' 메모 말투는 피한다.
-
+- 자막만 분석한 것(컷 정보 없음)이거나 5분이 넘는 장문이면: 장면표 대신 **챕터 구성표**(| 챕터 | 시간 | 하는 일 | 핵심 문장 |)와
+  `## 챕터 제목` 줄로 나눈 전체 대본을 쓴다. 그림은 문단마다 한 장(8~15초).
+- 역사·실화 주제면 사실은 기록(원전)에 있는 것만, 확인이 필요한 날짜·숫자에는 ⚠ 를 붙인다.
+{extra}
 출력(한국어 마크다운):
 1. 원본 구조 요약 (구간별: 몇 초~몇 초에 무엇을 하는지, 한 줄씩)
 2. 새 영상 제목 후보 3개
@@ -424,6 +501,44 @@ def make_plan(md_path, topic, out_path):
     return True
 
 
+def subs_only(a, name, out, base):
+    vid = (re.search(r"(?:v=|youtu\.be/|shorts/)([\w-]{6,})", a.src) or [None, name])[1]
+    sp = get_subs(a.src, vid, out)
+    if not sp:
+        sys.exit("자막도 받지 못했습니다(자막이 없거나 유튜브가 막음). 잠시 뒤 다시 하거나 mp4 를 올려 주세요.")
+    speech = parse_json3(sp)
+    D = speech[-1]["end"] if speech else 1
+    talk = sum(s["end"] - s["start"] for s in speech)
+    chars = sum(hangul_len(s["text"]) for s in speech)
+    S = {"형식": "자막만 분석(영상 없음 — 컷·화면 글자·소리는 모름)", "길이초": round(D, 1),
+         "첫말시작초": round(speech[0]["start"], 2) if speech else None, "첫문장": speech[0]["text"] if speech else "",
+         "문장수": len(speech), "문장평균초": round(talk / max(1, len(speech)), 1),
+         "말빠르기_전체초당글자": round(chars / D, 1), "글자수": chars}
+    S.update(text_metrics(speech, D))
+    md = base + "_분석.md"
+    L = [f"# 떡상 영상 대본 분석 — {name}", "", f"- 원본: {a.src}", "- 자막(유튜브 받아쓰기라 틀린 글자가 있음)만으로 분석",
+         "- ⚠️ 구조만 참고. 대사·문구·인물은 가져오지 않고 새로 쓴다", "", "## 한눈에 보기", "", "| 항목 | 값 |", "|---|---|"]
+    L += [f"| {k} | {v} |" for k, v in S.items()]
+    L += ["", "참고: 우리 F8 나레이션은 1분 ≈ 490자(쉼 포함). 원본 전체 글자 수를 이 속도로 나누면 우리 길이가 나옴.", "",
+          "## 구간별 흐름 (10등분, 각 구간 첫 문장)", ""]
+    for k in range(10):
+        seg = [s for s in speech if k * D / 10 <= s["start"] < (k + 1) * D / 10]
+        if seg:
+            q = sum(1 for s in seg if "?" in s["text"])
+            L.append(f"- {tfmt(k * D / 10)}~ (물음 {q}) {seg[0]['text'][:90]}")
+    L += ["", "## 문장별 시간", ""] + [f"- {tfmt(s['start'])}  {s['text']}" for s in speech]
+    open(md, "w", encoding="utf-8").write("\n".join(L) + "\n")
+    json.dump({"요약": S, "대사": [{k: v for k, v in s.items() if k != "words"} for s in speech]},
+              open(base + "_분석.json", "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+    print(f"\n분석 완료(자막만) → {md}", flush=True)
+    for k, v in S.items():
+        print(f"  {k}: {v}")
+    if a.topic:
+        print(f"\n④ 새 기획안 쓰는 중… ({a.topic})", flush=True)
+        if make_plan(md, a.topic, base + "_새기획.md", a.history):
+            print(f"  → {base}_새기획.md")
+
+
 # ───────── 실행 ─────────
 def main():
     ap = argparse.ArgumentParser(description="잘 된 영상의 구조(컷·말·자막·소리) 뜯어보기")
@@ -434,6 +549,7 @@ def main():
     ap.add_argument("--글자읽기", dest="ocr", default="on")
     ap.add_argument("--받아쓰기", dest="stt", default="on")
     ap.add_argument("--기획", dest="topic")
+    ap.add_argument("--역사", dest="history", action="store_true", help="기획안에 역사/떡상구조.txt 원칙과 역사 편 형식을 넣음")
     a = ap.parse_args()
 
     name = os.path.splitext(os.path.basename(a.src))[0] if os.path.exists(a.src) else \
@@ -443,6 +559,8 @@ def main():
     base = os.path.join(out, name)
 
     video = get_video(a.src, out)
+    if video is None or a.src.endswith(".json3"):
+        return subs_only(a, name, out, base)
     info = probe(video)
     print(f"영상: {info['width']}×{info['height']} {info['duration']:.1f}초", flush=True)
 
@@ -466,6 +584,7 @@ def main():
     attach(shots, speech, events)
 
     S = summarize(info, shots, speech, events, bgm, db, step)
+    S.update(text_metrics(speech, info["duration"]))
     sheets = contact_sheets(shots, base)
     graph = base + "_흐름.png"
     flow_graph(graph, info["duration"], db, step, shots, speech, events)
@@ -481,7 +600,7 @@ def main():
 
     if a.topic:
         print(f"\n④ 새 기획안 쓰는 중… ({a.topic})", flush=True)
-        if make_plan(md, a.topic, base + "_새기획.md"):
+        if make_plan(md, a.topic, base + "_새기획.md", a.history):
             print(f"  → {base}_새기획.md")
 
 
