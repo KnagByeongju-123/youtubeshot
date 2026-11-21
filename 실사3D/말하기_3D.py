@@ -5,7 +5,7 @@ import bpy,sys,json,math,wave,mathutils,numpy as np
 blend,wav,timing,out=sys.argv[1:5]; opt=json.loads(sys.argv[5]) if len(sys.argv)>5 else {}
 FPS=24
 bpy.ops.wm.open_mainfile(filepath=blend); sc=bpy.context.scene
-o=next(x for x in sc.objects if x.type=='MESH' and x.data.shape_keys); ar=next(x for x in sc.objects if x.type=='ARMATURE')
+o=max((x for x in sc.objects if x.type=='MESH' and x.data.shape_keys),key=lambda x:len(x.data.vertices)); ar=next(x for x in sc.objects if x.type=='ARMATURE')
 kb=o.data.shape_keys.key_blocks
 for k in list(kb)[1:]:
     if k.name in('Smile','Frown'): o.shape_key_remove(k)
@@ -53,7 +53,7 @@ for f in range(1,N+1,3):
     t=f/FPS
     key('Head',f,(1.8*math.sin(t*1.9)+0.8*math.sin(t*3.1),1.2*math.sin(t*0.9),1.5*math.sin(t*0.7)))
     key('Neck',f,(0.6*math.sin(t*1.3),0,0.5*math.sin(t*0.5)))
-    key('Spine1',f,(0.5*math.sin(t*1.1),0,0.6*math.sin(t*0.6)))
+    key('Spine1' if 'Spine1' in ar.pose.bones else 'Chest',f,(0.5*math.sin(t*1.1),0,0.6*math.sin(t*0.6)))
 # 조명 B + 카메라 (허리 위, 천천히 다가감)
 for x in list(sc.objects):
     if x.type in('CAMERA','LIGHT') or x.name.startswith('Icosphere'): bpy.data.objects.remove(x)
