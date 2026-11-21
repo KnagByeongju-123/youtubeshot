@@ -37,7 +37,8 @@ def write_shorts_script(m, model, title, story, notes, log=None):
     """롱폼 대본 → 쇼츠 대본 dict {title, genre, story}. 규칙에 안 맞으면 한 번 다시 요청"""
     body = re.sub(r"\[사진:[^\]]*\]\n*", "", story or "").strip()
     genres = list(m.cat_info(SHORTS_CATEGORY)[1].keys())
-    user = (f"[롱폼 제목] {title}\n\n[롱폼 대본]\n{body[:6000]}\n\n[사실 확인 메모]\n{notes or '(없음)'}\n\n[소재 목록]\n" + "\n".join(genres))
+    user = (f"[롱폼 제목] {title}\n\n[롱폼 대본]\n{body[:6000]}\n\n[사실 확인 메모]\n{notes or '(없음)'}\n\n[소재 목록]\n" + "\n".join(genres)
+            + m.hit_structure_text("쇼츠"))   # 떡상 쇼츠 구조 원칙 (떡상구조/쇼츠.txt)
     last = None
     for attempt in range(2):
         d = m.ask_script_json(model, SHORTS_SYSTEM, user if attempt == 0 else user + "\n\n[다시] 길이 180~230자, 존댓말, 마지막 줄 규칙을 꼭 지켜서 다시 써줘.")

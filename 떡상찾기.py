@@ -33,13 +33,18 @@ def run(cmd, timeout=120):
         return None
 
 
-def search(q, n):
-    r = run(YTDLP + ["--flat-playlist", "-j", f"ytsearch{n}:{q}"], timeout=180)
+def search(q, n, short=False):
+    if short:   # 쇼츠: 유튜브 '4분 미만' 거르기로 검색 (일반 검색엔 쇼츠가 거의 안 나옴)
+        import urllib.parse
+        url = "https://www.youtube.com/results?search_query=" + urllib.parse.quote(q) + "&sp=EgIYAQ%253D%253D"
+        r = run(YTDLP + ["--flat-playlist", "--playlist-items", f"1-{n}", "-j", url], timeout=180)
+    else:
+        r = run(YTDLP + ["--flat-playlist", "-j", f"ytsearch{n}:{q}"], timeout=180)
     out = []
     for l in (r.stdout if r else "").splitlines():
         try:
             j = json.loads(l)
-            out.append({"id": j["id"], "view_count": j.get("view_count") or 0, "duration": j.get("duration") or 0})
+            out.append({"id": j["id"], "view_count": j.get("view_count"), "duration": j.get("duration") or 0})
         except Exception:
             pass
     return out
@@ -77,6 +82,7 @@ def main():
     ap.add_argument("--개수", dest="n", type=int, default=30, help="검색어마다 볼 영상 수")
     ap.add_argument("--최소조회", dest="minv", type=int, default=50000)
     ap.add_argument("--최소분", dest="minm", type=float, default=4, help="이보다 짧은 영상 뺌 (쇼츠를 찾으려면 0)")
+    ap.add_argument("--최대분", dest="maxm", type=float, default=0, help="이보다 긴 영상 뺌 (쇼츠만: --최소분 0 --최대분 1.5)")
     ap.add_argument("--자막", dest="subs", type=int, default=0, help="배율 상위 N개의 자막을 받음")
     ap.add_argument("--쉼", dest="pause", type=float, default=2.0, help="영상마다 쉬는 초")
     a = ap.parse_args()
@@ -88,10 +94,11 @@ def main():
 
     found = {}
     for q in a.queries:
-        res = search(q, a.n)
+        res = search(q, a.n, short=bool(a.maxm and a.maxm <= 4))
         print(f"검색 '{q}': {len(res)}개", flush=True)
         for r in res:
-            if r["view_count"] >= a.minv and (r["duration"] >= a.minm * 60 or not r["duration"]):
+            if (r["view_count"] is None or r["view_count"] >= a.minv) and (r["duration"] >= a.minm * 60 or not r["duration"]) \
+                    and not (a.maxm and r["duration"] and r["duration"] > a.maxm * 60):
                 found.setdefault(r["id"], set()).add(q)
     print(f"조건에 맞는 영상 {len(found)}개 — 자세한 정보 받는 중 (영상마다 {a.pause}초 쉼)", flush=True)
 
@@ -102,9 +109,9 @@ def main():
         d = meta(vid, cache)
         if not cached:
             time.sleep(a.pause)
-        if not d or not d.get("view_count"):
+        if not d or not d.get("view_count") or d["view_count"] < a.minv:
             continue
-        if d.get("duration") and d["duration"] < a.minm * 60:
+        if d.get("duration") and (d["duration"] < a.minm * 60 or (a.maxm and d["duration"] > a.maxm * 60)):
             continue
         sub = d.get("channel_follower_count") or 0
         age = (today - datetime.datetime.strptime(d["upload_date"], "%Y%m%d").date()).days if d.get("upload_date") else 0
