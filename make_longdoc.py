@@ -723,7 +723,7 @@ def run_doc(m, app, c, gate):
     # 사진 보강 (장문_사진보강.bat): 이미 만든 대본에 사진을 더 넣고 영상만 다시 만듦
     done_flag = os.path.join(work, "사진보강_완료.txt")
     req_flag = os.path.join(work, "사진보강_요청.txt")      # 보강 중에 꺼져도 장문_만들기.bat 으로 이어지게
-    if MORE_PHOTOS and not BATCH and not os.path.exists(done_flag):
+    if MORE_PHOTOS and (not BATCH or ONE) and not os.path.exists(done_flag):   # --한편 이면 연속 제작 모드여도 보강 (2026-11-21: --실화 --한편 --more-photos 가 보강을 건너뛰던 것)
         m.atomic_write_text(req_flag, time.strftime("%Y-%m-%d %H:%M"))
     if os.path.exists(req_flag) and not os.path.exists(done_flag):
         bak = os.path.join(work, "대본_사진보강전.json")
@@ -732,7 +732,8 @@ def run_doc(m, app, c, gate):
         before = len(m.photo_credits(story))
         log(f"📷 사진 보강 시작: 지금 {before}장 → 나레이션 {m.DOC_PHOTO_SEC}초에 한 장 목표")
         story, n_add = m.doc_add_photos(model, title, story, os.path.join(out_root, "media"), log, gate,
-                                        fiction=m.doc_is_fiction(c["소재"]), sources=res.get("sources") or [])
+                                        fiction=m.doc_is_fiction(c["소재"]), sources=res.get("sources") or [],
+                                        ckpt=os.path.join(work, "사진보강_진행.json"))   # 중간 저장 → 다시 실행하면 이어서
         res["story"] = story
         m.atomic_write_text(script_json, json.dumps(res, ensure_ascii=False, indent=1))
         m.atomic_write_text(done_flag, f"{before} -> {before + n_add}")
