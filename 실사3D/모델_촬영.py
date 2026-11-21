@@ -1,14 +1,14 @@
 """받은 .blend 모델을 사진(한 장) 또는 빙 돌며 보는 영상으로 찍기 (블렌더 Cycles, 그래픽카드 없이)
-사용: .bpy_venv/bin/python -I 실사3D/모델_촬영.py <모델.blend> <결과.png>                 → 사진 1280×720
+사용: .bpy_venv/bin/python -I 실사3D/모델_촬영.py <모델.blend> <결과.png>                 → 사진 1024×576 (기본, 올릴 때 1920×1080 으로 키움)
       .bpy_venv/bin/python -I 실사3D/모델_촬영.py <모델.blend> <프레임폴더> --돌려보기 120 → f0000.png …
-      옵션 --샘플 64(사진 기본)·16(돌려보기 기본), --크기 1280x720, --부분 0 60 (60장씩 나눠 찍기)
+      옵션 --샘플 64(사진 기본)·16(돌려보기 기본), --크기 1024x576(기본), --부분 0 60 (60장씩 나눠 찍기)
       영상: ffmpeg -framerate 24 -i <폴더>/f%04d.png -c:v libx264 -pix_fmt yuv420p -crf 18 결과.mp4
 속도(CPU 4개·AMX 없음): 사진 64샘플 약 30초, 돌려보기 16샘플 한 장 약 12~15초 → 5초(120장) 약 25분
 """
 import bpy,sys,math,mathutils
 a=sys.argv[1:]; blend,out=a[0],a[1]
 def opt(k,d): return a[a.index(k)+1] if k in a else d
-N=int(opt("--돌려보기",0)); spp=int(opt("--샘플",16 if N else 64)); W,H=map(int,opt("--크기","1280x720").split("x"))
+N=int(opt("--돌려보기",0)); spp=int(opt("--샘플",16 if N else 64)); W,H=map(int,opt("--크기","1024x576").split("x"))
 start,end=(int(a[a.index("--부분")+1]),int(a[a.index("--부분")+2])) if "--부분" in a else (0,N)
 bpy.ops.wm.open_mainfile(filepath=blend)
 sc=bpy.context.scene

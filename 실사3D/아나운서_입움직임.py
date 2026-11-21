@@ -5,7 +5,7 @@
       <인물.blend> n.wav "<대본 글>" <프레임폴더> '{"samples":16}'
   → <프레임폴더>/f0001.png …  →  ffmpeg -framerate 24 -i <폴더>/f%04d.png -i 나레이션.mp3 -c:v libx264 -pix_fmt yuv420p -crf 18 -c:a aac -shortest 결과.mp4
   시험 한 장: '{"still":60}' → <폴더>/still.png
-  옵션: size "1280x720", lens 70, dist 1.7(카메라 거리 m), tz -0.03(보는 높이), gain 1.0(입 벌림 크기), frames(앞부분만)
+  옵션: size "1024x576"(기본), lens 70, dist 1.7(카메라 거리 m), tz -0.03(보는 높이), gain 1.0(입 벌림 크기), frames(앞부분만)
 방법: 소리 크기(1/24초마다) = 입 벌림 정도, 대본 음절을 소리 난 구간에 순서대로 나눠 모음마다 입 모양
       (ㅏ=aa, ㅓ=ah, ㅔㅐ=eh, ㅗ=ow, ㅜ=uw, ㅣㅡ=iy, 첫소리 ㅁㅂㅍ·받침 ㅁㅂ = 입 닫음). 눈 깜빡임 약 2.9초마다, 고개 살짝 끄덕임
 EEVEE 는 그래픽카드 없는 서버에서 안 됨 → Cycles 16샘플, 1280×720 한 장 약 10초 (7초 영상 약 30분)
@@ -94,7 +94,7 @@ cam.data.dof.use_dof=True; cam.data.dof.focus_distance=(hb-cam.location).length;
 sc.frame_start=1; sc.frame_end=int(opt.get("frames",N)); sc.render.fps=FPS
 sc.render.engine=opt.get("engine",'CYCLES')
 if sc.render.engine=='CYCLES': sc.cycles.device='CPU'; sc.cycles.samples=int(opt.get("samples",16)); sc.cycles.use_denoising=True
-rx,ry=map(int,opt.get("size","1280x720").split('x')); sc.render.resolution_x=rx; sc.render.resolution_y=ry
+rx,ry=map(int,opt.get("size","1024x576").split('x')); sc.render.resolution_x=rx; sc.render.resolution_y=ry
 sc.render.image_settings.file_format='PNG'; sc.render.filepath=out+"/f"
 if opt.get("still"):
     sc.frame_set(int(opt["still"])); sc.render.filepath=out+"/still.png"; bpy.ops.render.render(write_still=True)
