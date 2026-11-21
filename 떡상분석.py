@@ -121,6 +121,18 @@ def parse_json3(path):
             cur = []
     if cur:
         out.append(_sent(cur))
+    if out and (out[-1]["end"] - out[0]["start"]) / len(out) > 20:    # 자동 자막에 문장부호가 없음 → 끝말(~니다·~요)로 나눔
+        out, cur = [], []
+        for w in words:
+            cur.append(tuple(w))
+            if re.search(r"(니다|어요|에요|예요|까요|세요|죠|군요|네요|나요|데요)\s*$", w[2]):
+                out.append(_sent(cur))
+                cur = []
+        if cur:
+            out.append(_sent(cur))
+        for s_ in out:
+            if re.search(r"(까요|나요)\s*$", s_["text"]):
+                s_["text"] = s_["text"].rstrip() + "?"
     for s_ in out:
         s_["text"] = re.sub(r"\s+", " ", s_["text"]).replace(">>", "").strip()
     return [s_ for s_ in out if s_["text"]]
