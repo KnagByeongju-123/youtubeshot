@@ -66,16 +66,32 @@ MP68 = [162, 234, 93, 58, 172, 136, 149, 148, 152, 377, 378, 365, 397, 288, 323,
 _orig_crop = S.Source2Info._crop
 
 
-def _crop(self, img, last_lmk=None, **kw):
-    if last_lmk is None:
-        l478 = self.landmark478(img)
+def _find_face(self, img):
+    """MediaPipe 얼굴 점 478개(픽셀). 반신·전신처럼 얼굴이 작으면 전체에서 못 찾음 →
+    위쪽 가운데·격자 칸을 잘라 얼굴을 크게 보이게 해서 다시 찾고, 좌표를 원래 사진으로 되돌림 (사용자 요청 2026-11-21: 반신 리포터)"""
+    H, W = img.shape[:2]
+    wins = [(0, 0, W, H), (W // 4, 0, W * 3 // 4, H * 3 // 5), (W // 3, 0, W * 2 // 3, H * 2 // 5)]
+    for gy in range(3):
+        for gx in range(4):
+            wins.append((gx * W // 5, gy * H // 4, gx * W // 5 + W * 2 // 5, gy * H // 4 + H // 2))
+    for x0, y0, x1, y1 in wins:
+        sub = np.ascontiguousarray(img[y0:y1, x0:x1])
+        l478 = self.landmark478(sub)
         if l478 is None or len(l478) == 0 or l478.size == 0:
-            raise RuntimeError("사진에서 얼굴을 못 찾음 (MediaPipe)")
+            continue
         pts = l478[0][:, :2].copy()
         if pts.max() <= 1.5:                      # 0~1 비율 → 픽셀
-            pts[:, 0] *= img.shape[1]
-            pts[:, 1] *= img.shape[0]
-        last_lmk = pts[MP68]
+            pts[:, 0] *= sub.shape[1]
+            pts[:, 1] *= sub.shape[0]
+        pts[:, 0] += x0
+        pts[:, 1] += y0
+        return pts
+    raise RuntimeError("사진에서 얼굴을 못 찾음 (MediaPipe, 잘라서도 못 찾음)")
+
+
+def _crop(self, img, last_lmk=None, **kw):
+    if last_lmk is None:
+        last_lmk = _find_face(self, img)[MP68]
     return _orig_crop(self, img, last_lmk=last_lmk, **kw)
 
 
