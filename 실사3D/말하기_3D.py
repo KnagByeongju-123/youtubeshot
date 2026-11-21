@@ -97,9 +97,10 @@ else:
     # 두 번째 메시 AI 모델 뼈대(뼈마다 X=세계 X, Y=위, Z=세계 -Y): 다리 X- = 앞으로, 무릎 X+ = 굽힘, 팔 X+ = 뒤로, 왼팔 Z- / 오른팔 Z+ = 몸 쪽
     W=dict(dict(dist=2.8,stop=5.4,period=1.4,thigh=14,knee=24,arm=14,lens=50,cam_d=2.45,hand=15),**(WALK if isinstance(WALK,dict) else {}))   # 사용자 '걸음이 너무 빠름' → 한 걸음 0.7초·평균 0.58m/s
     FLOOR=min((o.matrix_world@mathutils.Vector(c)).z for c in o.bound_box)
+    STAND=W.get('stand',False)      # 서서 말하고 카메라가 다가감 (사용자 2026-11-21: '걷는 게 너무 어색 → 카메라가 서서히 다가가는 게 나음')
     def env(t):                     # 걷기 세기: 0→1(0.4초) … 1→0(멈추기 전 0.8초)
-        return max(0.0,min(1.0,t/0.4,(W['stop']-t)/0.8))
-    pos=0.0; ph=0.0; root=ar.pose.bones['Root']; root.rotation_mode='XYZ'
+        return 0.0 if STAND else max(0.0,min(1.0,t/0.4,(W['stop']-t)/0.8))
+    pos=W['dist'] if STAND else 0.0; ph=0.0; root=ar.pose.bones['Root']; root.rotation_mode='XYZ'
     sp=W['dist']/max(0.1,W['stop']-0.6)          # 평균 빠르기 (시작·멈춤 느린 것 보정)
     for f in range(1,N+1):
         t=(f-1)/FPS; e=env(t)
@@ -118,7 +119,10 @@ else:
         key('Hand.L',f,(0,0,-W['hand'])); key('Hand.R',f,(0,0,W['hand']))     # A 자세에서 바깥으로 꺾인 손목을 몸 쪽으로
         # 상체 (사용자 '상체가 뻣뻣함'): 골반은 다리 따라 돌고(Y) 옆으로 기울고(Z), 가슴은 반대로 돌아 어깨가 엇갈림, 고개는 앞을 보게 되돌림
         c2=math.sin(2*ph)
-        key('Hips',f,(0.6*c2*e,6*s1*e,2.2*s1*e)); key('Spine',f,(1.5*e+0.5*c2*e,-6*s1*e,-1.6*s1*e)); key('Chest',f,(0.8*e,-4*s1*e,-0.8*s1*e))
+        br=0.5-0.5*math.cos(2*math.pi*t/4.2)             # 숨 (4.2초)
+        iy,iz=1.2*math.sin(t*0.5),0.9*math.sin(t*0.37+1)  # 서 있을 때 몸무게 옮기듯 천천히
+        key('Hips',f,(0.6*c2*e,6*s1*e+iy*(1-e),2.2*s1*e+iz*(1-e))); key('Spine',f,(1.5*e+0.5*c2*e+0.6*br*(1-e),-6*s1*e-0.6*iy*(1-e),-1.6*s1*e-1.2*iz*(1-e)))
+        key('Chest',f,(0.8*e+0.8*br*(1-e),-4*s1*e,-0.8*s1*e))
         key('Head',f,(1.2*math.sin(t*1.9)+0.6*math.sin(t*3.1)-0.8*c2*e,1.0*math.sin(t*0.9)+4*s1*e,1.2*math.sin(t*0.7)+0.6*s1*e))
         key('Neck',f,(0.5*math.sin(t*1.3),0,0.4*math.sin(t*0.5)))
         # 앞으로(세계 -Y = Root 로컬 +Z) + 위아래 출렁임(로컬 Y)
@@ -133,18 +137,25 @@ else:
     fl.data.materials.append(m)
     bpy.ops.mesh.primitive_plane_add(size=30,location=(0,9,FLOOR+5),rotation=(math.radians(90),0,0)); wl=bpy.context.object
     m2=bpy.data.materials.new("벽"); m2.use_nodes=True; m2.node_tree.nodes["Principled BSDF"].inputs['Base Color'].default_value=(0.05,0.09,0.18,1); wl.data.materials.append(m2)
-    mid=mathutils.Vector((0,W['dist']*0.5,0.3))
+    mid=mathutils.Vector((0,0 if STAND else W['dist']*0.5,0.3))
     LS=W.get('light',0.55)       # 사용자 '조명이 너무 밝음' → 비교 3장 중 '가운데 조명'으로 결정(2026-11-21): 260·110·160 의 0.55배 = 조명 B 와 같은 얼굴 밝기
     light("key",(-1.8,-3.2,1.6),260*LS,3.5,mid); light("fill",(2.2,-3.0,0.6),110*LS,4,mid); light("rim",(0.8,2.5,1.8),160*LS,2.5,mid)
     cam.data.lens=W['lens']
     tg=bpy.data.objects.new("보는곳",None); sc.collection.objects.link(tg)
     c=cam.constraints.new('TRACK_TO'); c.target=tg; c.track_axis='TRACK_NEGATIVE_Z'; c.up_axis='UP_Y'
-    for f in range(1,N+1,4):
-        sc.frame_set(f); p=ar.matrix_world@ar.pose.bones['Hips'].head
-        k=min(1.0,max(0.0,(f/FPS)/W['stop']))
-        tg.location=(0,p.y,-0.12+0.62*k**1.3); tg.keyframe_insert('location',frame=f)   # 처음엔 발끝까지 보이게 낮게
-    cam.location=(0.15,-W['cam_d'],0.12); cam.keyframe_insert('location',frame=1)
-    cam.location=(0.05,-W['cam_d'],0.48); cam.keyframe_insert('location',frame=N)
+    if STAND:   # 전신(멀리) → 상반신(가까이), 천천히 시작해 천천히 멈춤
+        TD=W.get('dolly',SEC*0.9)
+        for f in range(1,N+1,2):
+            u=min(1.0,(f-1)/FPS/TD); k=u*u*(3-2*u)
+            cam.location=(0.15-0.1*k,-(W['cam_d']+W['dist']*(1-k)),0.12+0.36*k); cam.keyframe_insert('location',frame=f)
+            tg.location=(0,0,-0.12+0.62*k); tg.keyframe_insert('location',frame=f)
+    else:
+        for f in range(1,N+1,4):
+            sc.frame_set(f); p=ar.matrix_world@ar.pose.bones['Hips'].head
+            k=min(1.0,max(0.0,(f/FPS)/W['stop']))
+            tg.location=(0,p.y,-0.12+0.62*k**1.3); tg.keyframe_insert('location',frame=f)   # 처음엔 발끝까지 보이게 낮게
+        cam.location=(0.15,-W['cam_d'],0.12); cam.keyframe_insert('location',frame=1)
+        cam.location=(0.05,-W['cam_d'],0.48); cam.keyframe_insert('location',frame=N)
 sc.render.engine='CYCLES'; sc.cycles.device='CPU'; sc.cycles.samples=opt.get('samples',16); sc.cycles.use_denoising=True
 sc.view_settings.view_transform='Standard'
 sc.render.resolution_x,sc.render.resolution_y=1024,576; sc.frame_start,sc.frame_end,sc.render.fps=opt.get('from',1),N,FPS   # from: 고친 뒷부분만 다시 찍기
