@@ -85,7 +85,7 @@ def plan_shapes(wav, text, n_frames, timing=None):
             if (cho in (6, 7, 8, 17) and t < 0.3) or (jong in (16, 17) and t > 0.75):
                 plan[f] = "다문입"
             else:
-                plan[f] = VOW.get(jung, "으이" if jung in (18, 19, 20) else "이")   # ㅡ·ㅢ·ㅣ = 이가 거의 닿는 좁은 입(사용자 지적 2026-11-21 '니')
+                plan[f] = VOW.get(jung, "이")
     out = []
     for f in range(n_frames):
         lvl = min(1.0, rms[f] / peak * 1.2)
@@ -131,7 +131,7 @@ def video(a):
     sw, sh = base.size
     prev = "다문입"
     for f in range(N):
-        cur = "이" if shapes[f] == "으이" else shapes[f]   # 사진은 '이' 한 장으로 같이 씀
+        cur = shapes[f]
         mouth = img[cur] if cur == prev else img[cur] * 0.6 + img[prev] * 0.4
         prev = cur
         fr = B * (1 - mm) + mouth * mm
@@ -150,7 +150,7 @@ def video(a):
     ff.stdin.close()
     ff.wait()
     os.remove(tmp)
-    print("만듦", out, f"{dur:.1f}초", "입 모양:", {s: shapes.count(s) for s in SHAPES + ['으이']})
+    print("만듦", out, f"{dur:.1f}초", "입 모양:", {s: shapes.count(s) for s in SHAPES})
 
 
 if __name__ == "__main__":
