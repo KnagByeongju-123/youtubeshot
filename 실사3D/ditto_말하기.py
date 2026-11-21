@@ -5,9 +5,9 @@
     Ditto 에 들어 있는 MediaPipe 얼굴 점(face_landmarker.task, Apache-2.0) 478개 중 68개를 골라 첫 얼굴 위치로 씀
   - 설정의 device 를 모두 cpu 로
 준비(한 번): bash 실사3D/ditto_준비.sh  → models/ditto (코드·.venv·checkpoints)
-사용: models/ditto/.venv/bin/python 실사3D/ditto_말하기.py <사진.png> <나레이션.wav|mp3> <결과.mp4> [--대본 <대본.txt 또는 "글">] [--시각 <발음시각.json>] [--입모양표 <표.json> [--표세기 0.6]] [--단계 50] [--감정 4]
+사용: models/ditto/.venv/bin/python 실사3D/ditto_말하기.py <사진.png> <나레이션.wav|mp3> <결과.mp4> [--대본 <대본.txt 또는 "글">] [--시각 <발음시각.json>] [--입모양표 <표.json>] [--단계 50] [--감정 4]
   --대본: 주면 한국어 입 모양 보정(아래 3번). 사진은 입을 다문 옅은 미소여야 함
-  --입모양표: 입모양_학습.py 로 배운 표(--시각 필요). 음절마다 그 발음의 평균 입술 모양 쪽으로 --표세기 만큼 당김 (아래 3번의 배율 대신)
+  --입모양표: 입모양_학습.py 로 배운 표(--시각 필요). 아래 3번의 손으로 정한 배율 대신 실제 한국어 화자에게서 배운 배율 + 0.2초 앞당김
   --단계: 움직임 만들기 단계 수(기본 50, 줄이면 빠르지만 거칠어짐) / --감정: Ditto 감정 번호(기본 4 = 보통)
 """
 import json
@@ -94,16 +94,6 @@ _orig_fix = MS._fix_exp_for_x_d_info_v2
 
 def _fix_ko(x_d_info, x_s_info, *a):
     x_d_info = _orig_fix(x_d_info, x_s_info, *a)
-    if KO.get("table") is not None:           # 배운 입모양표: 그 음절의 평균 입술 모양 쪽으로 당김
-        Dl, Wt = KO["table"]
-        i = min(KO["i"], len(Dl) - 1)
-        KO["i"] += 1
-        e, s = x_d_info["exp"], x_s_info["exp"]
-        e3, s3 = e.reshape(-1, 21, 3), s.reshape(-1, 21, 3)
-        w = Wt[i]
-        e3[:, LIP] = e3[:, LIP] * (1 - w) + (s3[:, LIP] + Dl[i][None]) * w
-        x_d_info["exp"] = e3.reshape(e.shape)
-        return x_d_info
     plan = KO["plan"]
     if plan is not None:
         g = plan[min(KO["i"], len(plan) - 1)]
@@ -118,29 +108,25 @@ def _fix_ko(x_d_info, x_s_info, *a):
 MS._fix_exp_for_x_d_info_v2 = _fix_ko
 
 
-def table_plan(table_path, timing, n_frames, fps=25, strength=0.6):
-    """입모양표(입모양_학습.py) + 음절 시각 → 프레임마다 (입술 움직임, 당기는 세기). 쉬는 곳은 사진의 입(다문 입)으로"""
-    t = json.load(open(table_path, encoding="utf-8"))["classes"]
+def table_plan(table_path, timing, n_frames, fps=25):
+    """배운 입모양표(입모양_학습.py, 실제 한국어 화자 영상) → 프레임마다 입술 움직임 배율.
+    배율 = 그 발음의 평균 입 벌림 / 말할 때 평균 (아 1.36 … 오 0.67·우 0.63), ㅁㅂ·쉼 = 0.25 (사진의 다문 입 쪽).
+    받아쓰기 시각은 실제 입보다 약 0.2초 늦음 → 표의 lag_frames(-5) 만큼 앞당김"""
+    t = json.load(open(table_path, encoding="utf-8"))
+    gain, lag = t["gain"], int(t.get("lag_frames", -5))
     VOW = {0: "아", 2: "아", 9: "아", 4: "어", 6: "어", 14: "어", 8: "오", 12: "오", 10: "오", 11: "오",
            13: "우", 17: "우", 15: "우", 16: "우", 18: "으", 19: "으", 20: "이", 1: "에", 3: "에", 5: "에", 7: "에"}
-    Dl = np.zeros((n_frames, len(LIP), 3), np.float32)
-    Wt = np.full(n_frames, strength, np.float32)          # 기본: 쉬는 입(사진) 쪽으로
+    g = np.full(n_frames, 0.25, np.float32)               # 쉬는 곳: 다문 입
     for ch, s0, e0 in timing:
         v = ord(ch) - 0xAC00
         cho, jung, jong = v // 588, (v % 588) // 28, v % 28
-        f0, f1 = int(s0 * fps), int(round(e0 * fps))
+        f0, f1 = int(s0 * fps) + lag, int(round(e0 * fps)) + lag
         fr = [f for f in range(f0, max(f1, f0 + 1)) if 0 <= f < n_frames]
         for k, f in enumerate(fr):
             tt = k / max(len(fr), 1)
             c = "닫음" if ((cho in (6, 7, 8, 17) and tt < 0.25) or (jong in (16, 17) and tt > 0.8)) else VOW.get(jung)
-            if c in t:
-                Dl[f] = np.array(t[c]["mean"], np.float32)
-            else:
-                Wt[f] = 0.0                                   # 표에 없는 모양은 Ditto 그대로
-    k = np.array([0.25, 0.5, 0.25], np.float32)               # 갑자기 바뀌지 않게
-    Dl = np.stack([np.convolve(np.pad(Dl[:, i, j], 1, mode="edge"), k, "valid") for i in range(len(LIP)) for j in range(3)], 1).reshape(n_frames, len(LIP), 3)
-    Wt = np.convolve(np.pad(Wt, 1, mode="edge"), k, "valid")
-    return Dl, Wt
+            g[f] = gain.get(c, 1.0)
+    return np.convolve(np.pad(g, 1, mode="edge"), [0.25, 0.5, 0.25], "valid")
 
 
 def korean_plan(wav, text, n_frames, fps=25, timing=None):
@@ -185,7 +171,7 @@ def main():
         tf = opt("--시각", None)
         tb = opt("--입모양표", None)
         if tb and tf:
-            KO["table"] = table_plan(tb, json.load(open(tf, encoding="utf-8")), n, strength=float(opt("--표세기", 0.6)))
+            KO["plan"] = table_plan(tb, json.load(open(tf, encoding="utf-8")), n)
             print("배운 입모양표 사용:", tb)
         else:
             KO["plan"] = korean_plan(audio, text, n, timing=json.load(open(tf, encoding="utf-8")) if tf else None)
