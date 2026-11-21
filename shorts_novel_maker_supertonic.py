@@ -2659,15 +2659,29 @@ def commons_search(query, limit=6, log=None, fresh=True):
     return out
 
 
+_wiki_cool = [0.0]   # 위키미디어 429 뒤 쉬는 시각
+
+
 def download_image(url, media_dir, stem=None):
     """사진 내려받기. 위키미디어 429(너무 자주 요청)면 잠시 기다렸다 최대 3번 재시도"""
     import urllib.request, urllib.error
     target = fix_image_url(url)
+    cache_p = os.path.join(media_dir, "_받은사진.json")     # 같은 주소는 다시 받지 않음 (2026-11-21: 보강이 끊겨 124장을 다시 받아야 했음)
+    try:
+        cache = json.load(open(cache_p, encoding="utf-8")) if os.path.exists(cache_p) else {}
+    except Exception:
+        cache = {}
+    old = cache.get(url) or cache.get(target)
+    if old and os.path.exists(old if os.path.isabs(old) else os.path.join(BASE, old)):
+        return old
     data = None
+    wiki = "wikimedia.org" in target or "wikipedia.org" in target
     for attempt in range(3):
+        if wiki and time.time() < _wiki_cool[0]:        # 위키미디어가 막은 직후엔 기다렸다가 (바로 다시 요청하면 더 오래 막힘)
+            time.sleep(min(90.0, _wiki_cool[0] - time.time()))
         gap = time.time() - _last_dl[0]
-        if gap < 1.0:                      # 요청 사이 최소 1초 간격
-            time.sleep(1.0 - gap)
+        if gap < (2.0 if wiki else 1.0):   # 요청 사이 최소 간격 (위키미디어 2초)
+            time.sleep((2.0 if wiki else 1.0) - gap)
         _last_dl[0] = time.time()
         req = urllib.request.Request(target, headers={"User-Agent": UA, "Accept": "image/*,*/*;q=0.8"})
         try:
@@ -2675,6 +2689,8 @@ def download_image(url, media_dir, stem=None):
                 data = r.read(25 * 1024 * 1024 + 1)
             break
         except urllib.error.HTTPError as e:
+            if e.code in (429, 503) and wiki:
+                _wiki_cool[0] = time.time() + 45.0 * (attempt + 1)
             if e.code in (429, 503) and attempt < 2:
                 wait = 3.0 * (attempt + 1)
                 try:
@@ -2699,7 +2715,14 @@ def download_image(url, media_dir, stem=None):
     im.load()
     if im.width < 200 or im.height < 150:
         raise ValueError("사진이 너무 작음")
-    return save_media_image(im, media_dir, stem)
+    path = save_media_image(im, media_dir, stem)
+    try:
+        cache[url] = path
+        cache[target] = path
+        atomic_write_text(cache_p, json.dumps(cache, ensure_ascii=False, indent=1))
+    except Exception:
+        pass
+    return path
 
 
 def fetch_photos(items, media_dir, log, limit=3):
