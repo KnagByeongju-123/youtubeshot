@@ -110,6 +110,11 @@ def main(a):
         for k_, v_ in {"head_show": "안 보임(제목 카드만)", "sub_split": "한 줄씩(문장·쉼표로 나눠 차례로)", "img_label": "off", "img_depth": "off"}.items():
             app.vars[k_].set(v_)
         s = app.get_settings()
+    if not str(s.get("format", "")).startswith("세로"):   # 화면 규칙(필수, CLAUDE.md 4장): 가로 영상은 위 큰 제목·왼쪽 위 작은 제목 숨김 — 프로젝트에 '보임'이 남아 있어도
+        for k_, v_ in {"head_show": "안 보임(제목 카드만)", "head_pos": "숨김"}.items():   # (2026-11-21: 다시 만들 때 왼쪽 위 제목이 나타남)
+            if k_ in app.vars:
+                app.vars[k_].set(v_)
+        s = app.get_settings()
     title, story = app.title_var.get().strip() or "제목 없음", app.get_story()
     if "--형식고정" not in a:    # 규칙: 영상마다 강조색·자막 효과·배경음을 다르게 (유튜브 '대량 생산 콘텐츠' 정책, 유튜브_정책.py)
         ch_ = m._YP.vary_settings(s, title, log)
