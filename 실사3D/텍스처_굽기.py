@@ -95,8 +95,16 @@ def fit(a):
             return xs.min(), ys.min(), xs.max(), ys.max()
         sx0, sy0, sx1, sy1 = box(sil)
         ix0, iy0, ix1, iy1 = box(fg)
-        kx, ky = (sx1 - sx0) / max(1, ix1 - ix0), (sy1 - sy0) / max(1, iy1 - iy0)
-        M = np.float32([[kx, 0, sx0 - ix0 * kx], [0, ky, sy0 - iy0 * ky]])
+        k = (sy1 - sy0) / max(1, iy1 - iy0)                  # 가로세로 같은 배율 (그림이 찌그러지지 않게)
+
+        def mid(m, y0, y1):                                  # 몸통 띠(서류·팔 말고 가운데 몸)의 가로 가운데
+            band = m[int(y0 + (y1 - y0) * 0.35):int(y0 + (y1 - y0) * 0.6)]
+            xs = np.where(band.any(0))[0]
+            cols = band.sum(0)
+            return float((np.arange(len(cols)) * cols).sum() / max(1, cols.sum()))
+        cs, ci = mid(sil, sy0, sy1), mid(fg, iy0, iy1)
+        kx = ky = k
+        M = np.float32([[k, 0, cs - ci * k], [0, k, sy0 - iy0 * k]])
         warp = cv2.warpAffine(im, M, (IW, IH), flags=cv2.INTER_LINEAR, borderValue=(255, 255, 255))
         m = cv2.warpAffine(fg * 255, M, (IW, IH)) > 128
         m = cv2.erode(m.astype(np.uint8), np.ones((3, 3), np.uint8))
@@ -113,114 +121,124 @@ def fit(a):
 
 
 def bake(a):
+    """방향마다 ① 그 그림을 비춘 색(P) ② 그 방향에서 실제로 보이는 정도(M: 그 방향 햇빛의 직접광, 가려진 곳은 0)를 따로 구운 뒤
+    색 = Σ M^3·우선순위·P / Σ ... 로 섞음 → 서류 뒤·허벅지 안쪽처럼 그 방향에서 안 보이는 곳에 앞의 색이 묻지 않음"""
     import bpy
     import mathutils
+    import numpy as np
     folder = os.path.abspath(a[0])
     size = int(opt(a, "--크기", 2048))
     bpy.ops.wm.open_mainfile(filepath=os.path.join(folder, "base.blend"))
     sc = bpy.context.scene
+    sc.render.film_transparent = False
     ob = next(o for o in sc.objects if o.type == 'MESH')
+    bpy.context.view_layer.objects.active = ob
+    ob.select_set(True)
+    for o in [o for o in sc.objects if o.type == 'LIGHT']:
+        bpy.data.objects.remove(o)
+    w0 = bpy.data.worlds.new("검정")
+    sc.world = w0
+    w0.use_nodes = True
+    w0.node_tree.nodes["Background"].inputs[1].default_value = 0.0
+    sc.render.engine = 'CYCLES'
+    sc.cycles.device = 'CPU'
+    sc.cycles.samples = 4
+    sc.render.bake.margin = 0
     names = [nm for nm in VIEWS if os.path.exists(os.path.join(folder, f"fit_{nm}.png"))]
-    m = bpy.data.materials.new("구움")
-    m.use_nodes = True
-    nt = m.node_tree
-    nt.nodes.clear()
-    outn = nt.nodes.new('ShaderNodeOutputMaterial')
-    emit = nt.nodes.new('ShaderNodeEmission')
-    nt.links.new(emit.outputs[0], outn.inputs['Surface'])
-    geo = nt.nodes.new('ShaderNodeNewGeometry')
-    acc_c, acc_w = None, None
+
+    def target_mat(make_surface):
+        m = bpy.data.materials.new("tmp")
+        m.use_nodes = True
+        nt = m.node_tree
+        nt.nodes.clear()
+        outn = nt.nodes.new('ShaderNodeOutputMaterial')
+        make_surface(nt, outn)
+        img = bpy.data.images.new("t", size, size, float_buffer=True)
+        tgt = nt.nodes.new('ShaderNodeTexImage')
+        tgt.image = img
+        nt.nodes.active = tgt
+        ob.data.materials.clear()
+        ob.data.materials.append(m)
+        ob.data.uv_layers.active = ob.data.uv_layers["bake"]
+        return img
+
+    def pix(img):
+        a_ = np.empty(size * size * 4, np.float32)
+        img.pixels.foreach_get(a_)
+        return a_.reshape(size, size, 4)
+
+    acc = np.zeros((size, size, 3), np.float32)
+    accw = np.zeros((size, size), np.float32)
     for nm in names:
         uvname = "p_" + nm
         if uvname not in ob.data.uv_layers:
             ob.data.uv_layers.new(name=uvname)
-        md = ob.modifiers.new("uvp_" + nm, 'UV_PROJECT')
+        for md in list(ob.modifiers):
+            ob.modifiers.remove(md)
+        md = ob.modifiers.new("uvp", 'UV_PROJECT')
         md.uv_layer = uvname
         md.projector_count = 1
         md.projectors[0].object = bpy.data.objects["cam_" + nm]
         md.aspect_x, md.aspect_y = IW, IH
-        tex = nt.nodes.new('ShaderNodeTexImage')
-        tex.image = bpy.data.images.load(os.path.join(folder, f"fit_{nm}.png"))
-        tex.extension = 'EXTEND'
-        uv = nt.nodes.new('ShaderNodeUVMap')
-        uv.uv_map = uvname
-        nt.links.new(uv.outputs[0], tex.inputs[0])
-        dot = nt.nodes.new('ShaderNodeVectorMath')
-        dot.operation = 'DOT_PRODUCT'
-        nt.links.new(geo.outputs['Normal'], dot.inputs[0])
-        dot.inputs[1].default_value = VIEWS[nm]                      # 표면이 이 카메라 쪽을 볼수록 큼
-        mx = nt.nodes.new('ShaderNodeMath')
-        mx.operation = 'MAXIMUM'
-        mx.inputs[1].default_value = 0.0
-        nt.links.new(dot.outputs['Value'], mx.inputs[0])
-        pw = nt.nodes.new('ShaderNodeMath')
-        pw.operation = 'POWER'
-        pw.inputs[1].default_value = 4.0                              # 비스듬한 면은 덜 (번짐 줄이기)
-        nt.links.new(mx.outputs[0], pw.inputs[0])
-        wt = nt.nodes.new('ShaderNodeMath')
-        wt.operation = 'MULTIPLY'
-        wt.inputs[1].default_value = PRIORITY[nm]
-        nt.links.new(pw.outputs[0], wt.inputs[0])
-        cw = nt.nodes.new('ShaderNodeMix')
-        cw.data_type = 'RGBA'
-        cw.blend_type = 'MULTIPLY'
-        cw.inputs['Factor'].default_value = 1.0
-        nt.links.new(tex.outputs['Color'], cw.inputs[6])
-        cmb = nt.nodes.new('ShaderNodeCombineColor')
-        for i in range(3):
-            nt.links.new(wt.outputs[0], cmb.inputs[i])
-        nt.links.new(cmb.outputs[0], cw.inputs[7])
-        if acc_c is None:
-            acc_c, acc_w = cw.outputs[2], wt.outputs[0]
-        else:
-            ac = nt.nodes.new('ShaderNodeMix')
-            ac.data_type = 'RGBA'
-            ac.blend_type = 'ADD'
-            ac.inputs['Factor'].default_value = 1.0
-            nt.links.new(acc_c, ac.inputs[6])
-            nt.links.new(cw.outputs[2], ac.inputs[7])
-            aw = nt.nodes.new('ShaderNodeMath')
-            aw.operation = 'ADD'
-            nt.links.new(acc_w, aw.inputs[0])
-            nt.links.new(wt.outputs[0], aw.inputs[1])
-            acc_c, acc_w = ac.outputs[2], aw.outputs[0]
-    eps = nt.nodes.new('ShaderNodeMath')
-    eps.operation = 'MAXIMUM'
-    eps.inputs[1].default_value = 1e-4
-    nt.links.new(acc_w, eps.inputs[0])
-    dv = nt.nodes.new('ShaderNodeMix')
-    dv.data_type = 'RGBA'
-    dv.blend_type = 'DIVIDE'
-    dv.inputs['Factor'].default_value = 1.0
-    nt.links.new(acc_c, dv.inputs[6])
-    cmb = nt.nodes.new('ShaderNodeCombineColor')
-    for i in range(3):
-        nt.links.new(eps.outputs[0], cmb.inputs[i])
-    nt.links.new(cmb.outputs[0], dv.inputs[7])
-    nt.links.new(dv.outputs[2], emit.inputs['Color'])
-    img = bpy.data.images.new("텍스처", size, size)
-    tgt = nt.nodes.new('ShaderNodeTexImage')
-    tgt.image = img
-    nt.nodes.active = tgt
-    ob.data.materials.clear()
-    ob.data.materials.append(m)
-    ob.data.uv_layers.active = ob.data.uv_layers["bake"]
-    bpy.context.view_layer.objects.active = ob
-    ob.select_set(True)
-    sc.render.engine = 'CYCLES'
-    sc.cycles.device = 'CPU'
-    sc.cycles.samples = 1
-    sc.render.bake.margin = 8
-    bpy.ops.object.bake(type='EMIT')
-    tpath = os.path.join(folder, "텍스처.png")
-    img.filepath_raw = tpath
-    img.file_format = 'PNG'
-    img.save()
-    # 완성 재질: 구운 그림 하나
+
+        def col(nt, outn, nm=nm, uvname=uvname):
+            emit = nt.nodes.new('ShaderNodeEmission')
+            tex = nt.nodes.new('ShaderNodeTexImage')
+            tex.image = bpy.data.images.load(os.path.join(folder, f"fit_{nm}.png"))
+            tex.extension = 'EXTEND'
+            uv = nt.nodes.new('ShaderNodeUVMap')
+            uv.uv_map = uvname
+            nt.links.new(uv.outputs[0], tex.inputs[0])
+            nt.links.new(tex.outputs['Color'], emit.inputs['Color'])
+            nt.links.new(emit.outputs[0], outn.inputs['Surface'])
+        img = target_mat(col)
+        bpy.ops.object.bake(type='EMIT')
+        P = pix(img)[..., :3]
+
+        def vis(nt, outn):
+            d = nt.nodes.new('ShaderNodeBsdfDiffuse')
+            d.inputs['Color'].default_value = (1, 1, 1, 1)
+            nt.links.new(d.outputs[0], outn.inputs['Surface'])
+        img2 = target_mat(vis)
+        sun = bpy.data.objects.new("sun", bpy.data.lights.new("sun", "SUN"))
+        sun.data.energy = 3.14159
+        sun.data.angle = math.radians(2)
+        sun.rotation_euler = mathutils.Vector(VIEWS[nm]).to_track_quat('Z', 'Y').to_euler()   # 해가 카메라 쪽에서 비춤
+        sc.collection.objects.link(sun)
+        sc.render.bake.use_pass_direct, sc.render.bake.use_pass_indirect, sc.render.bake.use_pass_color = True, False, False
+        bpy.ops.object.bake(type='DIFFUSE', pass_filter={'DIRECT'})
+        bpy.data.objects.remove(sun)
+        Mv = np.clip(pix(img2)[..., 0], 0, 1)
+        wgt = (Mv ** 3) * PRIORITY[nm]
+        acc += P * wgt[..., None]
+        accw += wgt
+        print(nm, "보이는 칸", int((Mv > 0.05).sum()))
     for md in list(ob.modifiers):
         ob.modifiers.remove(md)
     for nm in names:
-        ob.data.uv_layers.remove(ob.data.uv_layers["p_" + nm])
+        if "p_" + nm in ob.data.uv_layers:
+            ob.data.uv_layers.remove(ob.data.uv_layers["p_" + nm])
+    out = acc / np.maximum(accw, 1e-6)[..., None]
+    hole = accw < 1e-3                                       # 어느 방향에서도 안 보인 곳: 주변 색으로 채움
+    filled = out.copy()
+    known = ~hole
+    for _ in range(64):
+        if known.all():
+            break
+        sh = [np.roll(filled * known[..., None], (dy, dx), (0, 1)) for dy, dx in ((1, 0), (-1, 0), (0, 1), (0, -1))]
+        kn = [np.roll(known, (dy, dx), (0, 1)) for dy, dx in ((1, 0), (-1, 0), (0, 1), (0, -1))]
+        ssum = sum(sh)
+        ksum = sum(k_.astype(np.float32) for k_ in kn)
+        newk = (~known) & (ksum > 0)
+        filled[newk] = ssum[newk] / ksum[newk][..., None]
+        known = known | newk
+    tex_img = bpy.data.images.new("텍스처", size, size, float_buffer=True)
+    rgba = np.concatenate([filled, np.ones((size, size, 1), np.float32)], -1)
+    tex_img.pixels.foreach_set(rgba.ravel())
+    tpath = os.path.join(folder, "텍스처.png")
+    tex_img.filepath_raw = tpath
+    tex_img.file_format = 'PNG'
+    tex_img.save()
     f = bpy.data.materials.new("피부")
     f.use_nodes = True
     b = f.node_tree.nodes["Principled BSDF"]
@@ -238,13 +256,14 @@ def bake(a):
     sc.world = w
     w.use_nodes = True
     w.node_tree.nodes["Background"].inputs[0].default_value = (0.85, 0.86, 0.9, 1)
-    w.node_tree.nodes["Background"].inputs[1].default_value = 0.9
-    L = bpy.data.objects.new("key", bpy.data.lights.new("key", "AREA"))
-    L.data.energy = 150
-    L.data.size = 2
-    L.location = center + mathutils.Vector((-1.5, -2.5, 1.5))
-    L.rotation_euler = (center - L.location).to_track_quat('-Z', 'Y').to_euler()
-    sc.collection.objects.link(L)
+    w.node_tree.nodes["Background"].inputs[1].default_value = 0.7
+    for nm_, loc, en in (("key", (-1.5, -2.5, 1.5), 120), ("fill", (1.8, -1.5, 0.8), 50), ("back", (0.5, 2.5, 1.5), 60)):
+        L = bpy.data.objects.new(nm_, bpy.data.lights.new(nm_, "AREA"))
+        L.data.energy = en
+        L.data.size = 2
+        L.location = center + mathutils.Vector(loc)
+        L.rotation_euler = (center - L.location).to_track_quat('-Z', 'Y').to_euler()
+        sc.collection.objects.link(L)
     cam = bpy.data.objects.new("cam", bpy.data.cameras.new("cam"))
     sc.collection.objects.link(cam)
     sc.camera = cam
