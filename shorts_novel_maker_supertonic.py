@@ -822,6 +822,15 @@ FACT_RULES = """[사실 기반 콘텐츠 규칙 - 반드시 지킬 것]
 
 # 채널 인기 공식: 우리 채널에서 잘 된 실화 다큐의 제목·썸네일에서 뽑은 우선순위 (제목·썸네일을 만드는 모든 AI 주문서에 들어감).
 # 중괄호를 쓰지 않음 (DOC_OUTLINE_SYSTEM 이 .format 으로 채워지므로)
+def hit_structure_text(kind):
+    """떡상구조/<kind>.txt (비슷한 떡상 영상 대본에서 뽑은 구조 원칙, CLAUDE.md 6장) → 대본 주문서 끝에 붙일 글. 없으면 빈 글"""
+    p = os.path.join(os.path.dirname(os.path.abspath(__file__)), "떡상구조", kind + ".txt")
+    try:
+        return "\n\n" + open(p, encoding="utf-8").read().strip() if os.path.exists(p) else ""
+    except Exception:
+        return ""
+
+
 HIT_RULE = """[채널 인기 공식 - 실화·과학·역사 다큐의 제목·썸네일 우선순위]
 우리 채널에서 잘 된 영상: '1,700년 잠든 쿠샨 문자, 2026년 새로 밝혀진 해독의 반전은 😱' / '4천 년 동안 아무도 못 읽던 문자, 은잔에 새긴 왕의 이름이 풀어낸 선형 엘람 문자'.
 잘 된 이유: 큰 숫자에 놀라 누르고, '아무도 못 했다'에 궁금해지고, '풀렸다'는 약속 때문에 끝까지 본다(클릭률·시청 지속률이 함께 오름).
@@ -15125,7 +15134,7 @@ class App(tk.Tk):
             txt += ("\n\n[근거 사진] 아래 사진을 그 사실을 말하는 문단 바로 앞에 '[사진1]' 처럼 한 줄로 넣어라(사진 → 글). "
                     "사진끼리 붙이지 않는다.\n"
                     + "\n".join(f"사진{i + 1}: {p.get('caption', '')} ({p.get('after', '')})" for i, p in enumerate(photos)))
-        return txt
+        return txt + hit_structure_text("쇼츠")
 
     def generate_story(self, model, category, topic, genre, sec, judge, log, research=False, autophoto=False,
                        reference="", media_dir=None):
