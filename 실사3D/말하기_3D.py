@@ -114,13 +114,17 @@ else:
         # 팔: 같은 쪽 다리와 반대로 앞뒤 (X+ = 뒤), 앞으로 갈 때 팔꿈치가 조금 더 굽음, 뒤로 갈 때 덜
         aL,aR=W['arm']*s1*e,-W['arm']*s1*e
         key('UpperArm.L',f,(aL,0,-15)); key('UpperArm.R',f,(aR,0,15))
-        key('ForeArm.L',f,(-5-8*max(0,-aL/W['arm'])*e,0,0)); key('ForeArm.R',f,(-5-8*max(0,-aR/W['arm'])*e,0,0))
+        key('ForeArm.L',f,(-3-5*max(0,-aL/W['arm'])*e,0,0)); key('ForeArm.R',f,(-3-5*max(0,-aR/W['arm'])*e,0,0))
         key('Hand.L',f,(0,0,-W['hand'])); key('Hand.R',f,(0,0,W['hand']))     # A 자세에서 바깥으로 꺾인 손목을 몸 쪽으로
-        key('Hips',f,(0,4*s1*e,1.2*s1*e)); key('Spine',f,(1.0*e,-3*s1*e,-1.0*s1*e))
-        key('Head',f,(1.2*math.sin(t*1.9)+0.6*math.sin(t*3.1),1.0*math.sin(t*0.9)+1.5*s1*e,1.2*math.sin(t*0.7)))
+        # 상체 (사용자 '상체가 뻣뻣함'): 골반은 다리 따라 돌고(Y) 옆으로 기울고(Z), 가슴은 반대로 돌아 어깨가 엇갈림, 고개는 앞을 보게 되돌림
+        c2=math.sin(2*ph)
+        key('Hips',f,(0.6*c2*e,6*s1*e,2.2*s1*e)); key('Spine',f,(1.5*e+0.5*c2*e,-6*s1*e,-1.6*s1*e)); key('Chest',f,(0.8*e,-4*s1*e,-0.8*s1*e))
+        key('Head',f,(1.2*math.sin(t*1.9)+0.6*math.sin(t*3.1)-0.8*c2*e,1.0*math.sin(t*0.9)+4*s1*e,1.2*math.sin(t*0.7)+0.6*s1*e))
         key('Neck',f,(0.5*math.sin(t*1.3),0,0.4*math.sin(t*0.5)))
         # 앞으로(세계 -Y = Root 로컬 +Z) + 위아래 출렁임(로컬 Y)
         root.location=(0, -0.012*abs(math.cos(ph))*e, pos-W['dist']); root.keyframe_insert('location',frame=f)
+    for md in o.modifiers:                         # 팔꿈치·어깨가 가늘어지는 것 막기 (사용자 '팔 가운데가 너무 가늘어짐') — 부피 유지(이중 쿼터니언)
+        if md.type=='ARMATURE': md.use_deform_preserve_volume=True
     if '손_오므림' in kb:                          # 손가락 살짝 오므림 (손오므림_만들기)
         kb['손_오므림'].value=W.get('curl',0.8); kb['손_오므림'].keyframe_insert('value',frame=1)
     # 무대: 바닥(살짝 반사) + 뒤 벽 + 큰 부드러운 조명
@@ -130,7 +134,7 @@ else:
     bpy.ops.mesh.primitive_plane_add(size=30,location=(0,9,FLOOR+5),rotation=(math.radians(90),0,0)); wl=bpy.context.object
     m2=bpy.data.materials.new("벽"); m2.use_nodes=True; m2.node_tree.nodes["Principled BSDF"].inputs['Base Color'].default_value=(0.05,0.09,0.18,1); wl.data.materials.append(m2)
     mid=mathutils.Vector((0,W['dist']*0.5,0.3))
-    LS=W.get('light',0.4)       # 사용자 '조명이 너무 밝음' → 비교 3장 중 '오른쪽 밝기'로 결정(2026-11-21): 260·110·160 의 0.4배 (조명 B 보다 조금 어두움)
+    LS=W.get('light',0.55)       # 사용자 '조명이 너무 밝음' → 비교 3장 중 '가운데 조명'으로 결정(2026-11-21): 260·110·160 의 0.55배 = 조명 B 와 같은 얼굴 밝기
     light("key",(-1.8,-3.2,1.6),260*LS,3.5,mid); light("fill",(2.2,-3.0,0.6),110*LS,4,mid); light("rim",(0.8,2.5,1.8),160*LS,2.5,mid)
     cam.data.lens=W['lens']
     tg=bpy.data.objects.new("보는곳",None); sc.collection.objects.link(tg)
