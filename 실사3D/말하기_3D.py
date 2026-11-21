@@ -130,7 +130,8 @@ else:
     bpy.ops.mesh.primitive_plane_add(size=30,location=(0,9,FLOOR+5),rotation=(math.radians(90),0,0)); wl=bpy.context.object
     m2=bpy.data.materials.new("벽"); m2.use_nodes=True; m2.node_tree.nodes["Principled BSDF"].inputs['Base Color'].default_value=(0.05,0.09,0.18,1); wl.data.materials.append(m2)
     mid=mathutils.Vector((0,W['dist']*0.5,0.3))
-    light("key",(-1.8,-3.2,1.6),260,3.5,mid); light("fill",(2.2,-3.0,0.6),110,4,mid); light("rim",(0.8,2.5,1.8),160,2.5,mid)
+    LS=W.get('light',0.55)       # 사용자 '조명이 너무 밝음'(2026-11-21) → 조명 B 와 같은 얼굴 밝기가 되도록 (거리 보정한 B 의 약 2.4배 = 260·110·160 의 0.55배)
+    light("key",(-1.8,-3.2,1.6),260*LS,3.5,mid); light("fill",(2.2,-3.0,0.6),110*LS,4,mid); light("rim",(0.8,2.5,1.8),160*LS,2.5,mid)
     cam.data.lens=W['lens']
     tg=bpy.data.objects.new("보는곳",None); sc.collection.objects.link(tg)
     c=cam.constraints.new('TRACK_TO'); c.target=tg; c.track_axis='TRACK_NEGATIVE_Z'; c.up_axis='UP_Y'
