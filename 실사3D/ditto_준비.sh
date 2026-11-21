@@ -8,7 +8,7 @@ cd ditto
 if [ ! -x .venv/bin/python ]; then
   python3.11 -m venv .venv
   .venv/bin/pip -q install torch --index-url https://download.pytorch.org/whl/cpu
-  .venv/bin/pip -q install librosa tqdm filetype imageio imageio-ffmpeg opencv-python-headless scikit-image cython colored onnxruntime mediapipe "numpy<2.3"
+  .venv/bin/pip -q install librosa tqdm filetype imageio imageio-ffmpeg opencv-python-headless scikit-image cython colored einops onnxruntime mediapipe "numpy<2.3"
 fi
 mkdir -p checkpoints && cd checkpoints
 for f in ditto_cfg/v0.4_hubert_cfg_pytorch.pkl ditto_pytorch/aux_models/face_landmarker.task ditto_pytorch/aux_models/hubert_streaming_fix_kv.onnx \
