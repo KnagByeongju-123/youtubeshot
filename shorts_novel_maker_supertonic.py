@@ -2659,6 +2659,21 @@ def commons_search(query, limit=6, log=None, fresh=True):
     return out
 
 
+def _latin_plain(t):
+    """라틴 악센트 글자만 기본 글자로 (한글 글꼴에 없어 빈칸으로 보임: 'László' → 'L szl', 2026-11-21). 한글은 그대로"""
+    import unicodedata
+    sp = {"æ": "ae", "Æ": "AE", "ø": "o", "Ø": "O", "ß": "ss", "ł": "l", "Ł": "L", "đ": "d", "Đ": "D"}
+    out = []
+    for ch in str(t or ""):
+        if ch in sp:
+            out.append(sp[ch])
+        elif 0x00C0 <= ord(ch) <= 0x024F:
+            out.append("".join(x for x in unicodedata.normalize("NFKD", ch) if not unicodedata.combining(x)))
+        else:
+            out.append(ch)
+    return "".join(out)
+
+
 _wiki_cool = [0.0]   # 위키미디어 429 뒤 쉬는 시각
 
 
@@ -6023,6 +6038,18 @@ class SubtitleRenderer:
                     fit = fit.filter(ImageFilter.UnsharpMask(radius=1.0, percent=70, threshold=2))
                 big = Image.new("RGB", (cw_, ch_), im.getpixel((0, 0)))
                 big.paste(fit, ((cw_ - fit.width) // 2, (ch_ - fit.height) // 2))
+            elif self.full and (im.width / im.height) < (bw / bh) * 0.7:
+                # 세로·네모 사진(초상화·조각상)을 꽉 채우면 머리·발이 잘림 (사용자 지적 2026-11-21) →
+                # 사진 전체를 가운데에, 양옆은 같은 사진을 흐리고 어둡게 깔아 채움. 움직임이 있어도 잘리지 않게 높이 78%
+                cw_, ch_ = int(bw * 1.32) + 1, int(bh * 1.32) + 1
+                k = max(cw_ / im.width, ch_ / im.height)
+                bgi = im.resize((max(1, int(im.width * k / 10)) + 1, max(1, int(im.height * k / 10)) + 1), Image.BILINEAR)
+                bgi = bgi.filter(ImageFilter.GaussianBlur(3)).resize((int(bgi.width * 10), int(bgi.height * 10)), Image.BILINEAR)
+                l_, t_ = (bgi.width - cw_) // 2, (bgi.height - ch_) // 2
+                big = Image.fromarray((np.asarray(bgi.crop((l_, t_, l_ + cw_, t_ + ch_))).astype(np.float32) * 0.45).astype(np.uint8))
+                sc = min(bh * 0.78 / im.height, bw * 0.9 / im.width)
+                fg = im.resize((max(1, int(im.width * sc)), max(1, int(im.height * sc))), Image.LANCZOS)
+                big.paste(fg, ((cw_ - fg.width) // 2, (ch_ - fg.height) // 2))
             else:
                 sc = max(bw / im.width, bh / im.height) * 1.32
                 big = im.resize((max(bw, int(im.width * sc) + 1), max(bh, int(im.height * sc) + 1)), Image.LANCZOS)
@@ -6523,7 +6550,7 @@ class SubtitleRenderer:
             return None
         cache = self.__dict__.setdefault("_cred_cache", {})
         if idx not in cache:
-            c = re.sub(r"\s+", " ", str(creds[idx] or "")).strip(" ·-")
+            c = _latin_plain(re.sub(r"\s+", " ", str(creds[idx] or "")).strip(" ·-"))   # 한글 글꼴에 없는 악센트 글자(László → Laszlo)
             if not c or "AI 생성" in c or "원작 부분 확대" in c:
                 cache[idx] = None
             else:
