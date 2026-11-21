@@ -34,6 +34,18 @@ def _cpu(o):
 
 C.load_pkl = lambda p: _cpu(_orig_load(p))
 
+# 움직임 모델(LMDM)은 설정의 device 를 안 받고 기본값 'cuda' 를 씀 → cpu 로 고정
+import core.models.modules.LMDM as _LM  # noqa: E402
+_orig_lmdm_init = _LM.LMDM.__init__
+
+
+def _lmdm_init(self, *a, **k):
+    k["device"] = "cpu"
+    _orig_lmdm_init(self, *a, **k)
+
+
+_LM.LMDM.__init__ = _lmdm_init
+
 
 # 2) InsightFace 대신 MediaPipe 478점 → 68점 (dlib 68점 순서에 맞춘 널리 쓰는 대응표)
 class _NoInsightFace:
