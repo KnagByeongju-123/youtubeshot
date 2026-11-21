@@ -95,7 +95,7 @@ if not WALK:
 else:
     # 걸어오며 말하기 (사용자 요청 2026-11-21: 전신이 보이는 곳에서 걸어오며 나레이션)
     # 두 번째 메시 AI 모델 뼈대(뼈마다 X=세계 X, Y=위, Z=세계 -Y): 다리 X- = 앞으로, 무릎 X+ = 굽힘, 팔 X+ = 뒤로, 왼팔 Z- / 오른팔 Z+ = 몸 쪽
-    W=dict(dict(dist=2.8,stop=5.4,period=1.4,thigh=14,knee=24,arm=7,lens=50,cam_d=2.45,hand=15),**(WALK if isinstance(WALK,dict) else {}))   # 사용자 '걸음이 너무 빠름' → 한 걸음 0.7초·평균 0.58m/s
+    W=dict(dict(dist=2.8,stop=5.4,period=1.4,thigh=14,knee=24,arm=14,lens=50,cam_d=2.45,hand=15),**(WALK if isinstance(WALK,dict) else {}))   # 사용자 '걸음이 너무 빠름' → 한 걸음 0.7초·평균 0.58m/s
     FLOOR=min((o.matrix_world@mathutils.Vector(c)).z for c in o.bound_box)
     def env(t):                     # 걷기 세기: 0→1(0.4초) … 1→0(멈추기 전 0.8초)
         return max(0.0,min(1.0,t/0.4,(W['stop']-t)/0.8))
@@ -111,14 +111,18 @@ else:
         key('UpperLeg.L',f,(thL,0,0)); key('UpperLeg.R',f,(thR,0,0))
         key('LowerLeg.L',f,(knL,0,0)); key('LowerLeg.R',f,(knR,0,0))
         key('Foot.L',f,(-(thL+knL)*0.5,0,0)); key('Foot.R',f,(-(thR+knR)*0.5,0,0))
-        key('UpperArm.L',f,(W['arm']*s1*e,0,-15)); key('UpperArm.R',f,(-W['arm']*s1*e,0,15))
-        key('ForeArm.L',f,(-4-3*e,0,0)); key('ForeArm.R',f,(-4-3*e,0,0))
+        # 팔: 같은 쪽 다리와 반대로 앞뒤 (X+ = 뒤), 앞으로 갈 때 팔꿈치가 조금 더 굽음, 뒤로 갈 때 덜
+        aL,aR=W['arm']*s1*e,-W['arm']*s1*e
+        key('UpperArm.L',f,(aL,0,-15)); key('UpperArm.R',f,(aR,0,15))
+        key('ForeArm.L',f,(-5-8*max(0,-aL/W['arm'])*e,0,0)); key('ForeArm.R',f,(-5-8*max(0,-aR/W['arm'])*e,0,0))
         key('Hand.L',f,(0,0,-W['hand'])); key('Hand.R',f,(0,0,W['hand']))     # A 자세에서 바깥으로 꺾인 손목을 몸 쪽으로
         key('Hips',f,(0,4*s1*e,1.2*s1*e)); key('Spine',f,(1.0*e,-3*s1*e,-1.0*s1*e))
         key('Head',f,(1.2*math.sin(t*1.9)+0.6*math.sin(t*3.1),1.0*math.sin(t*0.9)+1.5*s1*e,1.2*math.sin(t*0.7)))
         key('Neck',f,(0.5*math.sin(t*1.3),0,0.4*math.sin(t*0.5)))
         # 앞으로(세계 -Y = Root 로컬 +Z) + 위아래 출렁임(로컬 Y)
         root.location=(0, -0.012*abs(math.cos(ph))*e, pos-W['dist']); root.keyframe_insert('location',frame=f)
+    if '손_오므림' in kb:                          # 손가락 살짝 오므림 (손오므림_만들기)
+        kb['손_오므림'].value=W.get('curl',0.8); kb['손_오므림'].keyframe_insert('value',frame=1)
     # 무대: 바닥(살짝 반사) + 뒤 벽 + 큰 부드러운 조명
     bpy.ops.mesh.primitive_plane_add(size=30,location=(0,6,FLOOR-0.001)); fl=bpy.context.object
     m=bpy.data.materials.new("바닥"); m.use_nodes=True; b=m.node_tree.nodes["Principled BSDF"]; b.inputs['Base Color'].default_value=(0.06,0.07,0.09,1); b.inputs['Roughness'].default_value=0.35
