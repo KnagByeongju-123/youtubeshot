@@ -256,8 +256,8 @@ def bake(a):
     sc.world = w
     w.use_nodes = True
     w.node_tree.nodes["Background"].inputs[0].default_value = (0.85, 0.86, 0.9, 1)
-    w.node_tree.nodes["Background"].inputs[1].default_value = 0.7
-    for nm_, loc, en in (("key", (-1.5, -2.5, 1.5), 120), ("fill", (1.8, -1.5, 0.8), 50), ("back", (0.5, 2.5, 1.5), 60)):
+    w.node_tree.nodes["Background"].inputs[1].default_value = 0.35   # 밝으면 얼굴이 하얗게 날아감 (사용자 지적 2026-11-21)
+    for nm_, loc, en in (("key", (-1.5, -2.5, 1.5), 60), ("fill", (1.8, -1.5, 0.8), 25), ("back", (0.5, 2.5, 1.5), 40)):
         L = bpy.data.objects.new(nm_, bpy.data.lights.new(nm_, "AREA"))
         L.data.energy = en
         L.data.size = 2
