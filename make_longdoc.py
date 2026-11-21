@@ -76,12 +76,12 @@ TRUE_STORY_GENRES = ["[실화] 과학이 밝혀낸 미스터리", "[실화] 최�
                      "[실화] 믿기 힘든 우연", "[실화] 희대의 사기와 범죄", "[실화] 평범한 사람의 위대한 순간", "[실화] 재난에서 살아남은 날",
                      "[실화] 불가능에 도전한 사람들"]
 HISTORY_GENRES = ["[실화] 기록으로 보는 진짜 역사"]
-HIT_STRUCT = os.path.join(HERE, "역사", "떡상구조.txt")   # 떡상 역사 다큐 대본 분석에서 뽑은 이야기 구조 (사용자 결정 2026-11-21)
+HIT_STRUCT = os.path.join(HERE, "역사" if HISTORY else "실화", "떡상구조.txt")   # 비슷한 떡상 영상 대본에서 뽑은 이야기 구조 (사용자 결정 2026-11-21)
 
 
 def hit_structure():
-    """역사 편이면 떡상 구조 원칙을 대본 참고자료 끝에 붙임 (파일이 없으면 빈 글)"""
-    if not HISTORY or not os.path.exists(HIT_STRUCT):
+    """떡상 구조 원칙(역사 편 = 역사/떡상구조.txt, 장문 다큐 = 실화/떡상구조.txt)을 대본 참고자료 끝에 붙임 (파일이 없으면 빈 글)"""
+    if not os.path.exists(HIT_STRUCT):
         return ""
     return "\n\n" + open(HIT_STRUCT, encoding="utf-8").read().strip()
 
