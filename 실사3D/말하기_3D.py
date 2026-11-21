@@ -95,7 +95,7 @@ if not WALK:
 else:
     # 걸어오며 말하기 (사용자 요청 2026-11-21: 전신이 보이는 곳에서 걸어오며 나레이션)
     # 두 번째 메시 AI 모델 뼈대(뼈마다 X=세계 X, Y=위, Z=세계 -Y): 다리 X- = 앞으로, 무릎 X+ = 굽힘, 팔 X+ = 뒤로, 왼팔 Z- / 오른팔 Z+ = 몸 쪽
-    W=dict(dict(dist=3.4,stop=5.2,period=1.1,thigh=17,knee=28,arm=9,lens=50,cam_d=2.45),**(WALK if isinstance(WALK,dict) else {}))
+    W=dict(dict(dist=2.8,stop=5.4,period=1.4,thigh=14,knee=24,arm=7,lens=50,cam_d=2.45,hand=15),**(WALK if isinstance(WALK,dict) else {}))   # 사용자 '걸음이 너무 빠름' → 한 걸음 0.7초·평균 0.58m/s
     FLOOR=min((o.matrix_world@mathutils.Vector(c)).z for c in o.bound_box)
     def env(t):                     # 걷기 세기: 0→1(0.4초) … 1→0(멈추기 전 0.8초)
         return max(0.0,min(1.0,t/0.4,(W['stop']-t)/0.8))
@@ -113,6 +113,7 @@ else:
         key('Foot.L',f,(-(thL+knL)*0.5,0,0)); key('Foot.R',f,(-(thR+knR)*0.5,0,0))
         key('UpperArm.L',f,(W['arm']*s1*e,0,-15)); key('UpperArm.R',f,(-W['arm']*s1*e,0,15))
         key('ForeArm.L',f,(-4-3*e,0,0)); key('ForeArm.R',f,(-4-3*e,0,0))
+        key('Hand.L',f,(0,0,-W['hand'])); key('Hand.R',f,(0,0,W['hand']))     # A 자세에서 바깥으로 꺾인 손목을 몸 쪽으로
         key('Hips',f,(0,4*s1*e,1.2*s1*e)); key('Spine',f,(1.0*e,-3*s1*e,-1.0*s1*e))
         key('Head',f,(1.2*math.sin(t*1.9)+0.6*math.sin(t*3.1),1.0*math.sin(t*0.9)+1.5*s1*e,1.2*math.sin(t*0.7)))
         key('Neck',f,(0.5*math.sin(t*1.3),0,0.4*math.sin(t*0.5)))
@@ -132,8 +133,8 @@ else:
     for f in range(1,N+1,4):
         sc.frame_set(f); p=ar.matrix_world@ar.pose.bones['Hips'].head
         k=min(1.0,max(0.0,(f/FPS)/W['stop']))
-        tg.location=(0,p.y,0.05+0.45*k**1.3); tg.keyframe_insert('location',frame=f)
-    cam.location=(0.15,-W['cam_d'],0.25); cam.keyframe_insert('location',frame=1)
+        tg.location=(0,p.y,-0.12+0.62*k**1.3); tg.keyframe_insert('location',frame=f)   # 처음엔 발끝까지 보이게 낮게
+    cam.location=(0.15,-W['cam_d'],0.12); cam.keyframe_insert('location',frame=1)
     cam.location=(0.05,-W['cam_d'],0.48); cam.keyframe_insert('location',frame=N)
 sc.render.engine='CYCLES'; sc.cycles.device='CPU'; sc.cycles.samples=opt.get('samples',16); sc.cycles.use_denoising=True
 sc.view_settings.view_transform='Standard'
