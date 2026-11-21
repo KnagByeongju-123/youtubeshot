@@ -133,6 +133,7 @@ def table_plan(table_path, timing, n_frames, fps=25):
     VOW = {0: "아", 2: "아", 9: "아", 4: "어", 6: "어", 14: "어", 8: "오", 12: "오", 10: "오", 11: "오",
            13: "우", 17: "우", 15: "우", 16: "우", 18: "으", 19: "으", 20: "이", 1: "에", 3: "에", 5: "에", 7: "에"}
     g = np.full(n_frames, 0.25, np.float32)               # 쉬는 곳: 다문 입
+    shut = np.zeros(n_frames, bool)                       # 입술을 꼭 다무는 장면 (섞지 않음)
     for ch, s0, e0 in timing:
         v = ord(ch) - 0xAC00
         cho, jung, jong = v // 588, (v % 588) // 28, v % 28
@@ -141,8 +142,14 @@ def table_plan(table_path, timing, n_frames, fps=25):
         for k, f in enumerate(fr):
             tt = k / max(len(fr), 1)
             c = "닫음" if ((cho in (6, 7, 8, 17) and tt < 0.25) or (jong in (16, 17, 26) and tt > (0.15 if jung in (18, 19, 20) else 0.4))) else VOW.get(jung)   # 받침 ㅁㅂㅍ 은 일찍 입을 닫음(습니다=슴니다, 사용자 지적)
-            g[f] = 0.12 if c == "닫음" else gain.get(c, 1.0)   # 닫음은 사진의 다문 입에 더 가깝게
-    return np.convolve(np.pad(g, 1, mode="edge"), [0.25, 0.5, 0.25], "valid")
+            g[f] = gain.get(c, 1.0)
+            if c == "닫음":
+                shut[f] = True
+        if jong in (16, 17, 26) and fr and fr[-1] + 1 < n_frames:
+            shut[fr[-1] + 1] = True                       # 받침 ㅁㅂㅍ: 다음 음절 첫 장면까지 다문 입 ([슴니다])
+    g = np.convolve(np.pad(g, 1, mode="edge"), [0.25, 0.5, 0.25], "valid")
+    g[shut] = 0.0                                         # 꼭 다문 입 = 사진(입 다문 얼굴) 그대로, 앞뒤와 섞지 않음 (사용자 지적 2026-11-21 '습')
+    return g
 
 
 def korean_plan(wav, text, n_frames, fps=25, timing=None):
