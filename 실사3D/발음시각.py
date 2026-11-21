@@ -65,6 +65,13 @@ def main():
     for b in sm.get_matching_blocks():
         for i in range(b.size):
             st[b.a + i] = heard[b.b + i][1]
+    # 잘못 맞춘 음절 버리기 (2026-11-21 립싱크 검사: '감사드립니다'의 '다'를 못 듣고 1.2초 뒤 배경음악 소리에 맞춰, 말 끝난 뒤 입이 벌어짐)
+    # 낱말 안(띄어쓰기·문장부호 없이 이어진 음절)에서 앞 음절보다 0.6초 넘게 늦으면 못 맞춘 것으로
+    pos = [i for i, c in enumerate(text) if "가" <= c <= "힣"]
+    for i in range(1, len(syl)):
+        if st[i] is not None and st[i - 1] is not None and st[i] - st[i - 1] > 0.6:
+            if not text[pos[i - 1] + 1:pos[i]]:
+                st[i] = None
     # 못 맞춘 음절: 앞뒤 맞춘 시각 사이를 고르게
     known = [i for i, v in enumerate(st) if v is not None]
     if not known:

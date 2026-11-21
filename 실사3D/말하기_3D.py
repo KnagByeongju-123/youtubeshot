@@ -1,3 +1,4 @@
+# 걸어오며: 설정에 "walk":true (또는 {"dist":3.4,"stop":5.2,...}) — 전신에서 시작해 걸어와 상반신에서 멈춤
 # 사용: .bpy_venv/bin/python -I 실사3D/말하기_3D.py <입모양_만들기 결과.blend> <나레이션.wav> <발음시각.json> <프레임폴더> [{"still":40,"tz":-0.06,"d0":2.5,"d1":2.25}]
 #  → ffmpeg -framerate 24 -i 폴더/f%04d.png -i 나레이션.wav ... 결과.mp4
 # Meshy 3D 아나운서가 나레이션에 맞춰 말하기 (새 입 모양 + 고개·몸 + 조명 B)
@@ -66,29 +67,77 @@ if BK and opt.get('blink',True):
 def key(bn,f,rot):
     pb=ar.pose.bones.get(bn)
     if pb: pb.rotation_mode='XYZ'; pb.rotation_euler=[math.radians(r) for r in rot]; pb.keyframe_insert('rotation_euler',frame=f)
-for f in range(1,N+1,3):
-    t=f/FPS
-    key('Head',f,(1.8*math.sin(t*1.9)+0.8*math.sin(t*3.1),1.2*math.sin(t*0.9),1.5*math.sin(t*0.7)))
-    key('Neck',f,(0.6*math.sin(t*1.3),0,0.5*math.sin(t*0.5)))
-    key('Spine1' if 'Spine1' in ar.pose.bones else 'Chest',f,(0.5*math.sin(t*1.1),0,0.6*math.sin(t*0.6)))
-# 조명 B + 카메라 (허리 위, 천천히 다가감)
 for x in list(sc.objects):
     if x.type in('CAMERA','LIGHT') or x.name.startswith('Icosphere'): bpy.data.objects.remove(x)
+if ar.animation_data: ar.animation_data.action=None
 hd=ar.matrix_world@ar.data.bones['Head'].head_local
 wd=sc.world or bpy.data.worlds.new("w"); sc.world=wd; wd.use_nodes=True; bg=wd.node_tree.nodes["Background"]; bg.inputs[0].default_value=(0.05,0.08,0.15,1); bg.inputs[1].default_value=0.35
-def light(nm,loc,en,size):
-    L=bpy.data.objects.new(nm,bpy.data.lights.new(nm,"AREA")); L.data.energy=en; L.data.size=size; L.location=hd+mathutils.Vector(loc)
-    L.rotation_euler=(hd-L.location).to_track_quat('-Z','Y').to_euler(); sc.collection.objects.link(L)
-light("key",(-1.2,-2.2,0.8),60,1.5); light("fill",(1.4,-2.0,0.2),25,2); light("rim",(0.5,1.6,1.0),40,1)
-cam=bpy.data.objects.new("cam",bpy.data.cameras.new("cam")); sc.collection.objects.link(cam); sc.camera=cam; cam.data.lens=opt.get('lens',85)
-tgt=hd+mathutils.Vector((0,0,opt.get('tz',-0.18)))
-d0,d1=opt.get('d0',2.6),opt.get('d1',2.35)
-for f,d,xo in((1,d0,0.08),(N,d1,-0.04)):
-    cam.location=tgt+mathutils.Vector((xo,-d,0.03)); cam.keyframe_insert('location',frame=f)
-cam.rotation_euler=(math.radians(89),0,0)
+def light(nm,loc,en,size,base=None):
+    base=base or hd
+    L=bpy.data.objects.new(nm,bpy.data.lights.new(nm,"AREA")); L.data.energy=en; L.data.size=size; L.location=base+mathutils.Vector(loc)
+    L.rotation_euler=(base-L.location).to_track_quat('-Z','Y').to_euler(); sc.collection.objects.link(L)
+cam=bpy.data.objects.new("cam",bpy.data.cameras.new("cam")); sc.collection.objects.link(cam); sc.camera=cam
+WALK=opt.get('walk')
+if not WALK:
+    for f in range(1,N+1,3):
+        t=f/FPS
+        key('Head',f,(1.8*math.sin(t*1.9)+0.8*math.sin(t*3.1),1.2*math.sin(t*0.9),1.5*math.sin(t*0.7)))
+        key('Neck',f,(0.6*math.sin(t*1.3),0,0.5*math.sin(t*0.5)))
+        key('Spine1' if 'Spine1' in ar.pose.bones else 'Chest',f,(0.5*math.sin(t*1.1),0,0.6*math.sin(t*0.6)))
+    # 조명 B + 카메라 (허리 위, 천천히 다가감)
+    light("key",(-1.2,-2.2,0.8),60,1.5); light("fill",(1.4,-2.0,0.2),25,2); light("rim",(0.5,1.6,1.0),40,1)
+    cam.data.lens=opt.get('lens',85)
+    tgt=hd+mathutils.Vector((0,0,opt.get('tz',-0.18)))
+    d0,d1=opt.get('d0',2.6),opt.get('d1',2.35)
+    for f,d,xo in((1,d0,0.08),(N,d1,-0.04)):
+        cam.location=tgt+mathutils.Vector((xo,-d,0.03)); cam.keyframe_insert('location',frame=f)
+    cam.rotation_euler=(math.radians(89),0,0)
+else:
+    # 걸어오며 말하기 (사용자 요청 2026-11-21: 전신이 보이는 곳에서 걸어오며 나레이션)
+    # 두 번째 메시 AI 모델 뼈대(뼈마다 X=세계 X, Y=위, Z=세계 -Y): 다리 X- = 앞으로, 무릎 X+ = 굽힘, 팔 X+ = 뒤로, 왼팔 Z- / 오른팔 Z+ = 몸 쪽
+    W=dict(dict(dist=3.4,stop=5.2,period=1.1,thigh=17,knee=28,arm=9,lens=50,cam_d=2.45),**(WALK if isinstance(WALK,dict) else {}))
+    FLOOR=min((o.matrix_world@mathutils.Vector(c)).z for c in o.bound_box)
+    def env(t):                     # 걷기 세기: 0→1(0.4초) … 1→0(멈추기 전 0.8초)
+        return max(0.0,min(1.0,t/0.4,(W['stop']-t)/0.8))
+    pos=0.0; ph=0.0; root=ar.pose.bones['Root']; root.rotation_mode='XYZ'
+    sp=W['dist']/max(0.1,W['stop']-0.6)          # 평균 빠르기 (시작·멈춤 느린 것 보정)
+    for f in range(1,N+1):
+        t=(f-1)/FPS; e=env(t)
+        ph+=2*math.pi/W['period']/FPS*(0.3+0.7*e) if e>0 else 0
+        pos+=sp/FPS*e
+        s1,c1=math.sin(ph),math.cos(ph)
+        thL,thR=-W['thigh']*s1*e, W['thigh']*s1*e
+        knL=W['knee']*max(0,c1)**2*e; knR=W['knee']*max(0,-c1)**2*e
+        key('UpperLeg.L',f,(thL,0,0)); key('UpperLeg.R',f,(thR,0,0))
+        key('LowerLeg.L',f,(knL,0,0)); key('LowerLeg.R',f,(knR,0,0))
+        key('Foot.L',f,(-(thL+knL)*0.5,0,0)); key('Foot.R',f,(-(thR+knR)*0.5,0,0))
+        key('UpperArm.L',f,(W['arm']*s1*e,0,-15)); key('UpperArm.R',f,(-W['arm']*s1*e,0,15))
+        key('ForeArm.L',f,(-4-3*e,0,0)); key('ForeArm.R',f,(-4-3*e,0,0))
+        key('Hips',f,(0,4*s1*e,1.2*s1*e)); key('Spine',f,(1.0*e,-3*s1*e,-1.0*s1*e))
+        key('Head',f,(1.2*math.sin(t*1.9)+0.6*math.sin(t*3.1),1.0*math.sin(t*0.9)+1.5*s1*e,1.2*math.sin(t*0.7)))
+        key('Neck',f,(0.5*math.sin(t*1.3),0,0.4*math.sin(t*0.5)))
+        # 앞으로(세계 -Y = Root 로컬 +Z) + 위아래 출렁임(로컬 Y)
+        root.location=(0, -0.012*abs(math.cos(ph))*e, pos-W['dist']); root.keyframe_insert('location',frame=f)
+    # 무대: 바닥(살짝 반사) + 뒤 벽 + 큰 부드러운 조명
+    bpy.ops.mesh.primitive_plane_add(size=30,location=(0,6,FLOOR-0.001)); fl=bpy.context.object
+    m=bpy.data.materials.new("바닥"); m.use_nodes=True; b=m.node_tree.nodes["Principled BSDF"]; b.inputs['Base Color'].default_value=(0.06,0.07,0.09,1); b.inputs['Roughness'].default_value=0.35
+    fl.data.materials.append(m)
+    bpy.ops.mesh.primitive_plane_add(size=30,location=(0,9,FLOOR+5),rotation=(math.radians(90),0,0)); wl=bpy.context.object
+    m2=bpy.data.materials.new("벽"); m2.use_nodes=True; m2.node_tree.nodes["Principled BSDF"].inputs['Base Color'].default_value=(0.05,0.09,0.18,1); wl.data.materials.append(m2)
+    mid=mathutils.Vector((0,W['dist']*0.5,0.3))
+    light("key",(-1.8,-3.2,1.6),260,3.5,mid); light("fill",(2.2,-3.0,0.6),110,4,mid); light("rim",(0.8,2.5,1.8),160,2.5,mid)
+    cam.data.lens=W['lens']
+    tg=bpy.data.objects.new("보는곳",None); sc.collection.objects.link(tg)
+    c=cam.constraints.new('TRACK_TO'); c.target=tg; c.track_axis='TRACK_NEGATIVE_Z'; c.up_axis='UP_Y'
+    for f in range(1,N+1,4):
+        sc.frame_set(f); p=ar.matrix_world@ar.pose.bones['Hips'].head
+        k=min(1.0,max(0.0,(f/FPS)/W['stop']))
+        tg.location=(0,p.y,0.05+0.45*k**1.3); tg.keyframe_insert('location',frame=f)
+    cam.location=(0.15,-W['cam_d'],0.25); cam.keyframe_insert('location',frame=1)
+    cam.location=(0.05,-W['cam_d'],0.48); cam.keyframe_insert('location',frame=N)
 sc.render.engine='CYCLES'; sc.cycles.device='CPU'; sc.cycles.samples=opt.get('samples',16); sc.cycles.use_denoising=True
 sc.view_settings.view_transform='Standard'
-sc.render.resolution_x,sc.render.resolution_y=1024,576; sc.frame_start,sc.frame_end,sc.render.fps=1,N,FPS
+sc.render.resolution_x,sc.render.resolution_y=1024,576; sc.frame_start,sc.frame_end,sc.render.fps=opt.get('from',1),N,FPS   # from: 고친 뒷부분만 다시 찍기
 if opt.get('still'):
     sc.frame_set(opt['still']); sc.render.filepath=out+"/still.png"; bpy.ops.render.render(write_still=True)
 else:
