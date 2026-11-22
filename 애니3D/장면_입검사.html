@@ -31,6 +31,7 @@ const ease = (a, b, t) => { const x = Math.min(1, Math.max(0, (t - a) / (b - a))
 const on = (a, b, t, r = 0.3) => ease(a, a + r, t) - ease(b - r, b, t);
 const bone = (n) => human.humanoid.getNormalizedBoneNode(n);
 const em = human.expressionManager;
+const CY = Q.get('cy') !== null ? +Q.get('cy') : 0.02;   // 카메라 높이(머리 뼈 기준, m) — 얼굴마다 입이 화면 가운데 아래에 오게
 window.renderFrame = (i) => {
   const t = i / FPS;
   let open = 0, wide = 0, round = 0, jaw = 0;
@@ -46,7 +47,7 @@ window.renderFrame = (i) => {
   bone('head').rotation.x = talk * 0.025 * Math.sin(t * 1.7); bone('head').rotation.y = talk * 0.03 * Math.sin(t * 0.9 + 1);
   bone('chest').rotation.x = 0.012 * Math.sin(t * 2 * Math.PI / 3.6);
   human.update();
-  camera.position.set(headPos.x + 0.05, headPos.y + 0.03, headPos.z + 0.75); camera.lookAt(headPos.x, headPos.y + 0.02, headPos.z);
+  camera.position.set(headPos.x + 0.05, headPos.y + CY + 0.01, headPos.z + 0.75); camera.lookAt(headPos.x, headPos.y + CY, headPos.z);
   renderer.render(scene, camera);
 };
 </script></body></html>

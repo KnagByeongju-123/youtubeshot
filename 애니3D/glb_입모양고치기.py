@@ -26,13 +26,23 @@ COMP = {5126: np.float32, 5125: np.uint32, 5123: np.uint16, 5121: np.uint8}; K =
 
 
 def get(i):
-    ac = j["accessors"][i]; dt = np.dtype(COMP[ac["componentType"]])
-    assert "sparse" not in ac, "드문드문(sparse) 모양 키는 아직 못 다룸"
-    return np.frombuffer(views[ac["bufferView"]], dt, ac["count"] * K[ac["type"]], ac.get("byteOffset", 0)).reshape(-1, K[ac["type"]]).astype(float)
+    """접근자 자료를 꽉 찬 배열로 (sparse = 움직이는 점만 적어 둔 모양 키도 펼침)"""
+    ac = j["accessors"][i]; dt = np.dtype(COMP[ac["componentType"]]); k = K[ac["type"]]
+    if "bufferView" in ac: out = np.frombuffer(views[ac["bufferView"]], dt, ac["count"] * k, ac.get("byteOffset", 0)).reshape(-1, k).astype(float)
+    else: out = np.zeros((ac["count"], k))
+    sp = ac.get("sparse")
+    if sp:
+        si = np.frombuffer(views[sp["indices"]["bufferView"]], np.dtype(COMP[sp["indices"]["componentType"]]), sp["count"], sp["indices"].get("byteOffset", 0))
+        sv = np.frombuffer(views[sp["values"]["bufferView"]], dt, sp["count"] * k, sp["values"].get("byteOffset", 0)).reshape(-1, k)
+        out[si.astype(int)] = sv
+    return out
 
 
 def put(i, arr):
-    ac = j["accessors"][i]; assert ac.get("byteOffset", 0) == 0
+    ac = j["accessors"][i]
+    if "sparse" in ac or "bufferView" not in ac:      # 꽉 찬 자료로 새로 씀
+        ac.pop("sparse", None); views.append(b""); j["bufferViews"].append({"buffer": 0, "byteLength": 0}); ac["bufferView"] = len(j["bufferViews"]) - 1; ac.pop("byteOffset", None)
+    assert ac.get("byteOffset", 0) == 0
     views[ac["bufferView"]] = np.asarray(arr, np.float32).tobytes()
     ac["min"] = [float(v) for v in arr.min(0)]; ac["max"] = [float(v) for v in arr.max(0)]
 
@@ -89,7 +99,7 @@ def sstep(t): t = np.clip(t, 0, 1); return t * t * (3 - 2 * t)
 
 x, y, z = P[:, 0], P[:, 1], P[:, 2]
 front = z > P[face][:, 2].max() - 0.07                                # 얼굴 앞쪽(뒤통수·목 뒤 아님)
-lat = 1 - sstep((np.abs(x) - HW * 0.5) / (HW * 0.45))                 # 입 가운데 1 → 입꼬리(틈 끝)에서 0
+lat = 1 - sstep((np.abs(x) - HW * 0.45) / (HW * 0.42))                # 입 가운데 1 → 입꼬리(틈 끝)에서 0 (입꼬리 살이 찢기지 않게)
 lat_chin = 1 - sstep((np.abs(x) - HW) / 0.035)                        # 턱은 조금 더 넓게
 dy = y - ly(x)                                                        # 입술선에서 위(+)·아래(-)
 chin_y = LY0 - 0.045
@@ -117,6 +127,11 @@ new = {"MouthOpen": D_open, "MouthWide": D_wide, "MouthRound": D_round}
 for t_, nm in enumerate(names):
     if nm in new:
         put(pr["targets"][t_]["POSITION"], new[nm]); print(f"  {nm}: 새로 만듦 (움직이는 점 {(np.linalg.norm(new[nm], axis=1) > 1e-4).sum()}개)")
+# 예전 입 안 메시(이름에 Mouth 가 든 다른 메시)는 엉뚱한 자리(코 밑)에 있어 장면에서 뺌 — 새 입 안을 아래에서 더함
+sc_nodes = j["scenes"][j.get("scene", 0)]["nodes"]
+for ni_, nd_ in enumerate(j["nodes"]):
+    if "mesh" in nd_ and j["meshes"][nd_["mesh"]] is not mesh and "mouth" in j["meshes"][nd_["mesh"]].get("name", "").lower() and ni_ in sc_nodes:
+        sc_nodes.remove(ni_); print(f"  예전 입 안 '{j['meshes'][nd_['mesh']]['name']}' 을 장면에서 뺌")
 # 다른 메시(입 안 등)에도 같은 이름 키가 있으면 0 으로 (어긋난 자리에서 움직이지 않게)
 for m in j["meshes"]:
     if m is mesh: continue
@@ -128,7 +143,7 @@ for m in j["meshes"]:
 # ── 입 틈: 입꼬리 사이 입술선을 가로지르는 삼각형을 없앰 → 벌리면 실제로 갈라짐 (닫으면 얇은 어두운 선) ──
 I_acc = pr["indices"]; I = np.frombuffer(views[j["accessors"][I_acc]["bufferView"]], np.dtype(COMP[j["accessors"][I_acc]["componentType"]]),
                                           j["accessors"][I_acc]["count"]).reshape(-1, 3).copy()
-zone = front & (np.abs(x) < HW * 0.95) & (np.abs(dy) < 0.012)
+zone = front & (np.abs(x) < HW * 0.9) & (np.abs(dy) < 0.012)
 side_ = np.where(dy < 0, 1, 2) * zone
 tri_s = side_[I]
 cross = (tri_s == 1).any(1) & (tri_s == 2).any(1)
@@ -145,8 +160,8 @@ lip_z = float(np.median(z[front & (np.abs(x) < 0.01) & (np.abs(dy) < 0.004)]))
 head_j = None
 for k_, nd_i in enumerate(j["skins"][0]["joints"]):
     if j["nodes"][nd_i].get("name") == "Head": head_j = k_
-def add_mesh(name, pos, idx, color):
-    """새 메시(머리 뼈 100%)를 GLB 에 붙임"""
+def add_mesh(name, pos, idx, color, open_disp=None):
+    """새 메시(머리 뼈 100%)를 GLB 에 붙임. open_disp = MouthOpen 모양 키(입을 벌릴 때 점마다 움직임)"""
     nrm = np.zeros_like(pos); nrm[:, 2] = 1
     def acc_(arr, ctype, typ, target=None, mm=False):
         views.append(arr.tobytes()); bv = {"buffer": 0, "byteLength": len(arr.tobytes())}
@@ -161,7 +176,11 @@ def add_mesh(name, pos, idx, color):
                            "JOINTS_0": acc_(jn, 5121, "VEC4", 34962), "WEIGHTS_0": acc_(wt, 5126, "VEC4", 34962)},
             "indices": acc_(idx.astype(np.uint32).reshape(-1), 5125, "SCALAR", 34963), "material": len(j["materials"])}
     j["materials"].append({"name": name, "doubleSided": True, "pbrMetallicRoughness": {"baseColorFactor": color, "metallicFactor": 0, "roughnessFactor": 0.8}})
-    j["meshes"].append({"name": name, "primitives": [prim]})
+    m_ = {"name": name, "primitives": [prim]}
+    if open_disp is not None:          # 입을 벌리면 같이 움직임 (아랫니·입 안 아래쪽)
+        prim["targets"] = [{"POSITION": acc_(open_disp.astype(np.float32), 5126, "VEC3", 34962, True)}]
+        m_["extras"] = {"targetNames": ["MouthOpen"]}; m_["weights"] = [0.0]
+    j["meshes"].append(m_)
     j["nodes"].append({"name": name, "mesh": len(j["meshes"]) - 1, "skin": 0})
     j["scenes"][j.get("scene", 0)]["nodes"].append(len(j["nodes"]) - 1)
 def bowl(cx, cy, cz, rx, ry, rz, nu=24, nv=10):
@@ -178,19 +197,26 @@ def bowl(cx, cy, cz, rx, ry, rz, nu=24, nv=10):
             idx += [[a_, a_ + 1, b_], [a_ + 1, b_ + 1, b_]]
     return np.array(pts), np.array(idx)
 if head_j is not None:
-    bp, bi = bowl(0.0, LY0 - 0.004, lip_z - 0.016, HW * 0.92, 0.012, 0.028)
-    for k_ in range(len(bp)):            # 얼굴 겉면보다 6mm 넘게 뒤에 있게 (볼·턱이 들어간 곳에서 그릇 테두리가 살 밖으로 나오지 않게)
-        mm_ = front & (np.abs(x - bp[k_, 0]) < 0.003) & (np.abs(y - bp[k_, 1]) < 0.003)
-        if mm_.any(): bp[k_, 2] = min(bp[k_, 2], z[mm_].max() - 0.006)      # 입술 안쪽에 쏙 들어가게 (턱·볼 살 밖으로 안 나오게)
-    add_mesh("Mouth_Inside", bp, bi, [0.26, 0.07, 0.07, 1.0])
-    tw_, th_ = HW * 0.42, 0.0032                                        # 윗니: 입술선 바로 위·안쪽, 벌렸을 때만 보이게 (가운데가 조금 앞으로 둥글게)
+    bp, bi = bowl(0.0, LY0 - 0.003, lip_z - 0.004, HW * 0.84, 0.014, 0.03)      # 입 틈(0.9) 안쪽까지만 — 입꼬리 살 뒤로 테두리가 비치지 않게
+    # 그릇 점마다 가장 가까운 얼굴 점(앞에서 본 x·y)을 찾아 ① 그 겉면보다 2.5mm 뒤에 두고 ② 입을 벌릴 때 그 점과 똑같이 움직임
+    #   → 테두리가 입술·턱 살 밖으로 나오지 않음 (입술 바로 뒤라 메시 안쪽 접힌 면도 가림)
+    FM = np.where(front & (np.abs(x) < HW * 1.5) & (np.abs(y - LY0) < 0.04))[0]
+    def nearest(pt):        # 3mm 안 점 가운데 가장 앞(겉 살) — 없으면 가장 가까운 점
+        d2 = (x[FM] - pt[0]) ** 2 + (y[FM] - pt[1]) ** 2; c_ = FM[d2 < 0.003 ** 2]
+        return c_[np.argmax(z[c_])] if len(c_) else FM[np.argmin(d2)]
+    near_i = np.array([nearest(q_) for q_ in bp])
+    bp[:, 2] = np.minimum(bp[:, 2], z[near_i] - 0.0025)
+    bd = D_open[near_i].copy(); bd[:, 2] = np.minimum(bd[:, 2], 0)
+    add_mesh("Mouth_Inside", bp, bi, [0.26, 0.07, 0.07, 1.0], bd)
+    tw_, th_ = HW * 0.36, 0.0032                                        # 윗니: 입술선 바로 위·안쪽, 벌렸을 때만 보이게 (가운데가 조금 앞으로 둥글게)
     tx = np.linspace(-tw_, tw_, 13); tp, ti = [], []
     for k_, xx in enumerate(tx):
         zz = lip_z - 0.011 - 0.010 * (xx / tw_) ** 2
         tp += [[xx, LY0 + 0.0035, zz], [xx, LY0 + 0.0035 - th_, zz]]
         if k_: a_ = 2 * (k_ - 1); ti += [[a_, a_ + 1, a_ + 2], [a_ + 1, a_ + 3, a_ + 2]]
     add_mesh("Teeth_Upper", np.array(tp), np.array(ti), [0.78, 0.75, 0.70, 1.0])
-    print(f"  입 안(어두운 그릇)·윗니 띠 더함 (입술 앞면 z {lip_z:.3f})")
+    # 아랫니는 넣지 않음: 말할 때 대부분 아랫입술에 가려지고, 모양 키로 따라 움직이면 늘어나 이 하나처럼 보였음 (2026-11-22)
+    print(f"  입 안(어두운 그릇, 아랫입술과 함께 벌어짐)·윗니 더함 (입술 앞면 z {lip_z:.3f})")
 
 out = bytearray()
 for i, v in enumerate(j["bufferViews"]):
