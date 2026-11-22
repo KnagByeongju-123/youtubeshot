@@ -66,10 +66,10 @@ def main():
         for i in range(b.size):
             st[b.a + i] = heard[b.b + i][1]
     # 잘못 맞춘 음절 버리기 (2026-11-21 립싱크 검사: '감사드립니다'의 '다'를 못 듣고 1.2초 뒤 배경음악 소리에 맞춰, 말 끝난 뒤 입이 벌어짐)
-    # 낱말 안(띄어쓰기·문장부호 없이 이어진 음절)에서 앞 음절보다 0.6초 넘게 늦으면 못 맞춘 것으로
+    # 낱말 안(띄어쓰기·문장부호 없이 이어진 음절)에서 앞 음절보다 0.45초 넘게 늦으면 못 맞춘 것으로
     pos = [i for i, c in enumerate(text) if "가" <= c <= "힣"]
     for i in range(1, len(syl)):
-        if st[i] is not None and st[i - 1] is not None and st[i] - st[i - 1] > 0.6:
+        if st[i] is not None and st[i - 1] is not None and st[i] - st[i - 1] > 0.45:
             if not text[pos[i - 1] + 1:pos[i]]:
                 st[i] = None
     # 못 맞춘 음절: 앞뒤 맞춘 시각 사이를 고르게
@@ -85,7 +85,15 @@ def main():
             elif hi is None:
                 st[i] = min(dur, st[lo] + 0.12 * (i - lo))
             else:
-                st[i] = st[lo] + (st[hi] - st[lo]) * (i - lo) / (hi - lo)
+                # 같은 낱말(띄어쓰기·문장부호 없이 붙은 음절)이면 그 낱말의 맞춘 음절 바로 옆에 둠 — 문장 끝 '다'가 쉼 한가운데로 가던 문제 (2026-11-22)
+                glued = lambda a, b: all(not text[pos[k] + 1:pos[k + 1]] for k in range(a, b))
+                lin = st[lo] + (st[hi] - st[lo]) * (i - lo) / (hi - lo)
+                if glued(lo, i):
+                    st[i] = min(lin, st[lo] + 0.15 * (i - lo))
+                elif glued(i, hi):
+                    st[i] = max(lin, st[hi] - 0.15 * (hi - i))
+                else:
+                    st[i] = lin
     res = []
     for i, c in enumerate(syl):
         nxt = st[i + 1] if i + 1 < len(syl) else st[i] + 0.25
