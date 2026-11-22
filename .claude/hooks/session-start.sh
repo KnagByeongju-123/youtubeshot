@@ -76,7 +76,10 @@ if [ ! -f models/FLUX2_klein_4B/transformer/diffusion_pytorch_model.safetensors 
 fi
 # 목소리 색깔을 입힌 성우 F7·M7·F8~F10·M8~M10 (기본 나레이션 M10·F8, F6_목소리.py — OpenVoice V2 MIT·Zeroth CC BY 4.0·KSS 비상업)
 if [ -x "$SDV/bin/python" ] && [ ! -f models/openvoice/F6_se.pth ]; then
-  "$SDV/bin/python" -m pip install -q --disable-pip-version-check librosa soundfile pyarrow wavmark || true
+  "$SDV/bin/python" -m pip install -q --disable-pip-version-check librosa soundfile pyarrow || true
+  # wavmark 는 --no-deps: 함께 깔리는 torchaudio(그래픽카드용)가 torch(CPU)와 안 맞아 transformers(겹침 검사)가 깨짐 (2026-11-21)
+  "$SDV/bin/python" -m pip install -q --disable-pip-version-check --no-deps wavmark || true
+  "$SDV/bin/python" -m pip uninstall -y -q torchaudio 2>/dev/null || true
   "$SDV/bin/python" -X utf8 F6_목소리.py 준비 || echo "F6_목소리 준비 실패 — M10·F8 성우를 쓰려면 다시 실행" >&2
 fi
 rm -rf /root/.cache/pip /root/.cache/huggingface/hub 2>/dev/null || true     # 받은 뒤 남는 임시 파일(수 GB)은 지움

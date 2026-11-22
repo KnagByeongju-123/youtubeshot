@@ -76,6 +76,15 @@ TRUE_STORY_GENRES = ["[실화] 과학이 밝혀낸 미스터리", "[실화] 최�
                      "[실화] 믿기 힘든 우연", "[실화] 희대의 사기와 범죄", "[실화] 평범한 사람의 위대한 순간", "[실화] 재난에서 살아남은 날",
                      "[실화] 불가능에 도전한 사람들"]
 HISTORY_GENRES = ["[실화] 기록으로 보는 진짜 역사"]
+HIT_STRUCT = os.path.join(HERE, "역사" if HISTORY else "실화", "떡상구조.txt")   # 비슷한 떡상 영상 대본에서 뽑은 이야기 구조 (사용자 결정 2026-11-21)
+
+
+def hit_structure():
+    """떡상 구조 원칙(역사 편 = 역사/떡상구조.txt, 장문 다큐 = 실화/떡상구조.txt)을 대본 참고자료 끝에 붙임 (파일이 없으면 빈 글)"""
+    if not os.path.exists(HIT_STRUCT):
+        return ""
+    return "\n\n" + open(HIT_STRUCT, encoding="utf-8").read().strip()
+
 SAMGUK_WORDS = ["삼국", "정사", "연의", "관우", "조조", "유비", "제갈량", "주유", "여포", "손견", "손권", "화웅", "동탁", "초선", "조운", "조자룡", "맹획", "적벽", "진수", "배송지"]   # 삼국지 편 알아보는 말
 HISTORY_CHANNEL_NOTE = ("기록으로 보는 진짜 역사 - 사극과 소설(삼국지연의)로 알려진 장면을 조선왕조실록·정사 『삼국지』의 실제 기록과 맞대어 보는 "
                         "10~30분 역사 다큐 채널. 시청자는 역사를 좋아하는 중장년층")
@@ -705,7 +714,7 @@ def run_doc(m, app, c, gate):
         if m.DEFER_DRAW["on"]:
             log("🎙 나레이션 먼저: 대본 → 나레이션(문단 시간 기록) → 그 시간에 맞춰 그림 → 배경음·자막과 합치기")
         res = app.generate_longdoc(model, c["주제"], c["소재"], c["길이_분"], log, research=c["웹조사"], autophoto=c["챕터별_사진"],
-                                   reference=str(c.get("기획메모") or ""), media_dir=os.path.join(out_root, "media"),
+                                   reference=str(c.get("기획메모") or "") + hit_structure(), media_dir=os.path.join(out_root, "media"),
                                    state_path=os.path.join(work, "대본_진행.json"), gate=gate)
         m.atomic_write_text(script_json, json.dumps(res, ensure_ascii=False, indent=1))
         log(f"대본 완성: {res['title']} | {res['note']}")
@@ -714,7 +723,7 @@ def run_doc(m, app, c, gate):
     # 사진 보강 (장문_사진보강.bat): 이미 만든 대본에 사진을 더 넣고 영상만 다시 만듦
     done_flag = os.path.join(work, "사진보강_완료.txt")
     req_flag = os.path.join(work, "사진보강_요청.txt")      # 보강 중에 꺼져도 장문_만들기.bat 으로 이어지게
-    if MORE_PHOTOS and not BATCH and not os.path.exists(done_flag):
+    if MORE_PHOTOS and (not BATCH or ONE) and not os.path.exists(done_flag):   # --한편 이면 연속 제작 모드여도 보강 (2026-11-21: --실화 --한편 --more-photos 가 보강을 건너뛰던 것)
         m.atomic_write_text(req_flag, time.strftime("%Y-%m-%d %H:%M"))
     if os.path.exists(req_flag) and not os.path.exists(done_flag):
         bak = os.path.join(work, "대본_사진보강전.json")
@@ -723,7 +732,8 @@ def run_doc(m, app, c, gate):
         before = len(m.photo_credits(story))
         log(f"📷 사진 보강 시작: 지금 {before}장 → 나레이션 {m.DOC_PHOTO_SEC}초에 한 장 목표")
         story, n_add = m.doc_add_photos(model, title, story, os.path.join(out_root, "media"), log, gate,
-                                        fiction=m.doc_is_fiction(c["소재"]), sources=res.get("sources") or [])
+                                        fiction=m.doc_is_fiction(c["소재"]), sources=res.get("sources") or [],
+                                        ckpt=os.path.join(work, "사진보강_진행.json"))   # 중간 저장 → 다시 실행하면 이어서
         res["story"] = story
         m.atomic_write_text(script_json, json.dumps(res, ensure_ascii=False, indent=1))
         m.atomic_write_text(done_flag, f"{before} -> {before + n_add}")

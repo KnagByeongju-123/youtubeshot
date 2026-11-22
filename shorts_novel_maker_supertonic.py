@@ -822,6 +822,15 @@ FACT_RULES = """[사실 기반 콘텐츠 규칙 - 반드시 지킬 것]
 
 # 채널 인기 공식: 우리 채널에서 잘 된 실화 다큐의 제목·썸네일에서 뽑은 우선순위 (제목·썸네일을 만드는 모든 AI 주문서에 들어감).
 # 중괄호를 쓰지 않음 (DOC_OUTLINE_SYSTEM 이 .format 으로 채워지므로)
+def hit_structure_text(kind):
+    """떡상구조/<kind>.txt (비슷한 떡상 영상 대본에서 뽑은 구조 원칙, CLAUDE.md 6장) → 대본 주문서 끝에 붙일 글. 없으면 빈 글"""
+    p = os.path.join(os.path.dirname(os.path.abspath(__file__)), "떡상구조", kind + ".txt")
+    try:
+        return "\n\n" + open(p, encoding="utf-8").read().strip() if os.path.exists(p) else ""
+    except Exception:
+        return ""
+
+
 HIT_RULE = """[채널 인기 공식 - 실화·과학·역사 다큐의 제목·썸네일 우선순위]
 우리 채널에서 잘 된 영상: '1,700년 잠든 쿠샨 문자, 2026년 새로 밝혀진 해독의 반전은 😱' / '4천 년 동안 아무도 못 읽던 문자, 은잔에 새긴 왕의 이름이 풀어낸 선형 엘람 문자'.
 잘 된 이유: 큰 숫자에 놀라 누르고, '아무도 못 했다'에 궁금해지고, '풀렸다'는 약속 때문에 끝까지 본다(클릭률·시청 지속률이 함께 오름).
@@ -1520,7 +1529,7 @@ def doc_add_paper_figures(model, title, story, sources, media_dir, log, max_n=No
     return story, max(0, n)
 
 
-def doc_add_photos(model, title, story, media_dir, log, cancel=None, sec=None, fiction=False, sources=None):
+def doc_add_photos(model, title, story, media_dir, log, cancel=None, sec=None, fiction=False, sources=None, ckpt=None):
     """이미 만든 장문 대본에 사진을 더 넣음: 오프닝·챕터마다 (나레이션 sec 초에 한 장) 목표보다 모자란 만큼만,
     사진이 없는 긴 구간에 배치. 이미 쓴 사진(출처 페이지)은 다시 고르지 않음. 반환: (새 대본, 더한 사진 수)"""
     paras = split_paras(story)
@@ -1541,12 +1550,36 @@ def doc_add_photos(model, title, story, media_dir, log, cancel=None, sec=None, f
     from concurrent.futures import ThreadPoolExecutor
     lock = _th.Lock()
     pcat = "허구 단편소설" if fiction else DOC_CATEGORY
+    # 중간 저장(ckpt): 찾기 한 번이 끝날 때마다 구간별 결과를 저장 → 꺼지거나 시간 한도에 걸려도 다시 실행하면 이어서 (2026-11-21: 2시간 보강이 저장 없이 날아감)
+    saved = {}
+    if ckpt and os.path.exists(ckpt):
+        try:
+            saved = json.load(open(ckpt, encoding="utf-8"))
+        except Exception:
+            saved = {}
+
+    def _key(blk):
+        return hashlib.md5(blk[0].encode("utf-8")).hexdigest()[:12]
+
+    def _save(blk, text, got, done=False):
+        if not ckpt:
+            return
+        with lock:
+            saved[_key(blk)] = {"text": text, "got": got, "done": done}
+            atomic_write_text(ckpt, json.dumps(saved, ensure_ascii=False, indent=1))
 
     def one_block(blk):
         """오프닝·챕터 하나: 사진 담당 AI가 찾고(필요 수 + 여유분) → 글과 맞는지 검사 → 모자라면 보충 AI가 다른 사진 창고에서 한 번 더"""
         text = "\n\n".join(blk)
         name = blk[0][3:] if blk[0].startswith("## ") else "오프닝"
         got = 0
+        sv = saved.get(_key(blk))
+        if sv:
+            text, got = sv["text"], int(sv.get("got") or 0)
+            if sv.get("done"):
+                log(f"  ↩ '{name}' 사진은 저장된 중간 결과를 그대로 씀")
+                return text, got
+            log(f"  ↩ '{name}' 저장된 중간 결과에서 이어서 (지금까지 {got}장 더함)")
         for rnd in range(1 + DOC_PHOTO_ROUNDS):
             if cancel is not None and cancel.is_set():
                 raise RuntimeError("취소됨")
@@ -1579,10 +1612,12 @@ def doc_add_photos(model, title, story, media_dir, log, cancel=None, sec=None, f
                 text = place_photos(text, ph)
                 text, n_drop, _ = check_photo_fit(model, text, log, fiction=fiction)
                 got += len(ph) - n_drop
+                _save(blk, text, got)
             except RuntimeError:
                 raise
             except Exception as e:
                 log(f"  '{name}' 사진 찾기 실패(그대로 둠): " + (str(e).splitlines() or [""])[0][:80])
+        _save(blk, text, got, done=True)
         return text, got
 
     todo = [bi for bi, blk in enumerate(blocks) if doc_photo_target("\n\n".join(blk), sec) > sum(1 for p in blk if parse_media(p))]
@@ -2624,15 +2659,44 @@ def commons_search(query, limit=6, log=None, fresh=True):
     return out
 
 
+def _latin_plain(t):
+    """라틴 악센트 글자만 기본 글자로 (한글 글꼴에 없어 빈칸으로 보임: 'László' → 'L szl', 2026-11-21). 한글은 그대로"""
+    import unicodedata
+    sp = {"æ": "ae", "Æ": "AE", "ø": "o", "Ø": "O", "ß": "ss", "ł": "l", "Ł": "L", "đ": "d", "Đ": "D"}
+    out = []
+    for ch in str(t or ""):
+        if ch in sp:
+            out.append(sp[ch])
+        elif 0x00C0 <= ord(ch) <= 0x024F:
+            out.append("".join(x for x in unicodedata.normalize("NFKD", ch) if not unicodedata.combining(x)))
+        else:
+            out.append(ch)
+    return "".join(out)
+
+
+_wiki_cool = [0.0]   # 위키미디어 429 뒤 쉬는 시각
+
+
 def download_image(url, media_dir, stem=None):
     """사진 내려받기. 위키미디어 429(너무 자주 요청)면 잠시 기다렸다 최대 3번 재시도"""
     import urllib.request, urllib.error
     target = fix_image_url(url)
+    cache_p = os.path.join(media_dir, "_받은사진.json")     # 같은 주소는 다시 받지 않음 (2026-11-21: 보강이 끊겨 124장을 다시 받아야 했음)
+    try:
+        cache = json.load(open(cache_p, encoding="utf-8")) if os.path.exists(cache_p) else {}
+    except Exception:
+        cache = {}
+    old = cache.get(url) or cache.get(target)
+    if old and os.path.exists(old if os.path.isabs(old) else os.path.join(BASE, old)):
+        return old
     data = None
+    wiki = "wikimedia.org" in target or "wikipedia.org" in target
     for attempt in range(3):
+        if wiki and time.time() < _wiki_cool[0]:        # 위키미디어가 막은 직후엔 기다렸다가 (바로 다시 요청하면 더 오래 막힘)
+            time.sleep(min(90.0, _wiki_cool[0] - time.time()))
         gap = time.time() - _last_dl[0]
-        if gap < 1.0:                      # 요청 사이 최소 1초 간격
-            time.sleep(1.0 - gap)
+        if gap < (2.0 if wiki else 1.0):   # 요청 사이 최소 간격 (위키미디어 2초)
+            time.sleep((2.0 if wiki else 1.0) - gap)
         _last_dl[0] = time.time()
         req = urllib.request.Request(target, headers={"User-Agent": UA, "Accept": "image/*,*/*;q=0.8"})
         try:
@@ -2640,6 +2704,8 @@ def download_image(url, media_dir, stem=None):
                 data = r.read(25 * 1024 * 1024 + 1)
             break
         except urllib.error.HTTPError as e:
+            if e.code in (429, 503) and wiki:
+                _wiki_cool[0] = time.time() + 45.0 * (attempt + 1)
             if e.code in (429, 503) and attempt < 2:
                 wait = 3.0 * (attempt + 1)
                 try:
@@ -2664,7 +2730,14 @@ def download_image(url, media_dir, stem=None):
     im.load()
     if im.width < 200 or im.height < 150:
         raise ValueError("사진이 너무 작음")
-    return save_media_image(im, media_dir, stem)
+    path = save_media_image(im, media_dir, stem)
+    try:
+        cache[url] = path
+        cache[target] = path
+        atomic_write_text(cache_p, json.dumps(cache, ensure_ascii=False, indent=1))
+    except Exception:
+        pass
+    return path
 
 
 def fetch_photos(items, media_dir, log, limit=3):
@@ -5965,6 +6038,18 @@ class SubtitleRenderer:
                     fit = fit.filter(ImageFilter.UnsharpMask(radius=1.0, percent=70, threshold=2))
                 big = Image.new("RGB", (cw_, ch_), im.getpixel((0, 0)))
                 big.paste(fit, ((cw_ - fit.width) // 2, (ch_ - fit.height) // 2))
+            elif self.full and (im.width / im.height) < (bw / bh) * 0.7:
+                # 세로·네모 사진(초상화·조각상)을 꽉 채우면 머리·발이 잘림 (사용자 지적 2026-11-21) →
+                # 사진 전체를 가운데에, 양옆은 같은 사진을 흐리고 어둡게 깔아 채움. 움직임이 있어도 잘리지 않게 높이 78%
+                cw_, ch_ = int(bw * 1.32) + 1, int(bh * 1.32) + 1
+                k = max(cw_ / im.width, ch_ / im.height)
+                bgi = im.resize((max(1, int(im.width * k / 10)) + 1, max(1, int(im.height * k / 10)) + 1), Image.BILINEAR)
+                bgi = bgi.filter(ImageFilter.GaussianBlur(3)).resize((int(bgi.width * 10), int(bgi.height * 10)), Image.BILINEAR)
+                l_, t_ = (bgi.width - cw_) // 2, (bgi.height - ch_) // 2
+                big = Image.fromarray((np.asarray(bgi.crop((l_, t_, l_ + cw_, t_ + ch_))).astype(np.float32) * 0.45).astype(np.uint8))
+                sc = min(bh * 0.78 / im.height, bw * 0.9 / im.width)
+                fg = im.resize((max(1, int(im.width * sc)), max(1, int(im.height * sc))), Image.LANCZOS)
+                big.paste(fg, ((cw_ - fg.width) // 2, (ch_ - fg.height) // 2))
             else:
                 sc = max(bw / im.width, bh / im.height) * 1.32
                 big = im.resize((max(bw, int(im.width * sc) + 1), max(bh, int(im.height * sc) + 1)), Image.LANCZOS)
@@ -6465,7 +6550,7 @@ class SubtitleRenderer:
             return None
         cache = self.__dict__.setdefault("_cred_cache", {})
         if idx not in cache:
-            c = re.sub(r"\s+", " ", str(creds[idx] or "")).strip(" ·-")
+            c = _latin_plain(re.sub(r"\s+", " ", str(creds[idx] or "")).strip(" ·-"))   # 한글 글꼴에 없는 악센트 글자(László → Laszlo)
             if not c or "AI 생성" in c or "원작 부분 확대" in c:
                 cache[idx] = None
             else:
@@ -15125,7 +15210,7 @@ class App(tk.Tk):
             txt += ("\n\n[근거 사진] 아래 사진을 그 사실을 말하는 문단 바로 앞에 '[사진1]' 처럼 한 줄로 넣어라(사진 → 글). "
                     "사진끼리 붙이지 않는다.\n"
                     + "\n".join(f"사진{i + 1}: {p.get('caption', '')} ({p.get('after', '')})" for i, p in enumerate(photos)))
-        return txt
+        return txt + hit_structure_text("쇼츠")
 
     def generate_story(self, model, category, topic, genre, sec, judge, log, research=False, autophoto=False,
                        reference="", media_dir=None):
