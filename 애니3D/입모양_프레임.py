@@ -9,7 +9,7 @@
    - 첫소리 ㅁㅂㅃㅍ = 입술을 꼭 다묾(조금 눌러 오므림 0), 받침 ㅁㅂㅍ = 끝에서 다묾, 받침 ㄴㄷㄹ·ㅇ 은 조금 덜 벌림. 0.15초 넘는 쉼은 닫음
    - 받아쓰기 모델의 글자 시각은 실제 입보다 약 0.2초 늦음 → --앞당김 (실사3D 사용자 확인 2026-11-21)
    - --시작: 영상에서 소리가 시작하는 초 (그만큼 뒤로 밀어 둠), --세기: 전체 벌림 배율
-   결과: {"fps":24, "frames":[[open, wide, round], ...]}  → 장면_입검사.html ?lip=<결과.json>"""
+   결과: {"fps":24, "frames":[[open, wide, round, aa, ih, ou, ee, oh], ...]}  (앞 셋 = GLB 모양 키, 뒤 다섯 = VRM 입 모양)  → 장면_입검사.html ?lip=<결과.json>"""
 import json, os, subprocess, sys
 import numpy as np
 
@@ -41,7 +41,12 @@ CLOSE_JONG = {16, 17, 18, 26, 10, 11, 14}  # ㅁ ㅂ ㅄ ㅍ ㄻ ㄼ ㄿ
 SOFT_JONG = {4, 7, 8, 21}                  # ㄴ ㄷ ㄹ ㅇ : 끝에서 조금 덜 벌림
 
 
-def shape(v, k=1.0): return np.array([OPEN[v] * k, WIDE[v], ROUND[v]])
+# VRM(VRoid) 캐릭터용 다섯 입 모양 aa(아)·ih(이)·ou(우)·ee(에)·oh(오) 섞는 양 — VRoid 입 모양은 벌림이 이미 들어 있음
+VIS = {"아": [1, 0, 0, 0, 0], "이": [0, 1, 0, 0, 0], "우": [0, 0, 1, 0, 0], "에": [0, 0, 0, 1, 0], "오": [0, 0, 0, 0, 1],
+       "어": [0.55, 0, 0, 0, 0.35], "으": [0, 0.45, 0.15, 0, 0]}
+
+
+def shape(v, k=1.0): return np.array([OPEN[v] * k, WIDE[v], ROUND[v]] + [w_ * min(k, 1.15) * 0.9 for w_ in VIS[v]])
 
 
 # 소리 크기: 음절 구간의 소리 세기(RMS)를 중간값 대비로
@@ -66,7 +71,7 @@ for k, (ch, t0, t1) in enumerate(syl):
     else: g2 = g
     items.append((t0 + START - LEAD, t1 + START - LEAD, cho in CLOSE_CHO, jong, shape(v1, g), shape(v2, g2)))
 
-Z = np.zeros(3)
+Z = np.zeros(8)
 keys = [(0.0, Z)]
 for n_, (t0, t1, close0, jong, s1, s2) in enumerate(items):
     d = max(t1 - t0, 0.06)
@@ -87,9 +92,9 @@ keys += [(last + 0.12, Z)]
 keys.sort(key=lambda k: k[0])
 ts = np.array([k[0] for k in keys]); vs = np.array([k[1] for k in keys], float)
 n = int(np.ceil((ts[-1] + 0.5) * FPS)); tt = np.arange(n) / FPS
-fr = np.stack([np.interp(tt, ts, vs[:, j]) for j in range(3)], 1)
+fr = np.stack([np.interp(tt, ts, vs[:, j]) for j in range(vs.shape[1])], 1)
 ker = np.array([1, 2, 1]) / 4.0
-fr = np.stack([np.convolve(np.pad(fr[:, j], 1, mode="edge"), ker, "valid") for j in range(3)], 1)
+fr = np.stack([np.convolve(np.pad(fr[:, j], 1, mode="edge"), ker, "valid") for j in range(fr.shape[1])], 1)
 fr = np.clip(fr, 0, 1.2)
 json.dump({"fps": FPS, "frames": np.round(fr, 3).tolist()}, open(a[1], "w"))
 print(f"입 모양 {n}장 ({n / FPS:.1f}초), 음절 {len(items)}개, 앞당김 {LEAD}초{', 소리 크기 반영' if loud is not None else ''} → {a[1]}")
