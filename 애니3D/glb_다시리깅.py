@@ -20,7 +20,7 @@ import json, struct, sys
 import numpy as np
 
 a = sys.argv[1:]
-opt = {"--치마끝": -0.33, "--머리": 0.6, "--몸통폭": 0.215, "--허리": 0.15, "--발높이": -0.78, "--발가름": 0.006}
+opt = {"--치마끝": None, "--머리": 0.6, "--몸통폭": 0.215, "--허리": 0.15, "--발높이": None, "--발가름": None}   # None = 모양을 보고 자동
 check = None
 if "--확인" in a: i = a.index("--확인"); check = a[i + 1]; del a[i:i + 2]
 for k in list(opt):
@@ -52,8 +52,19 @@ def put(i, arr):
 
 
 nodes = j["nodes"]
+for nd in nodes:          # 회전 없음(0,0,0,1)·단위 행렬은 괜찮음 — 지우고 위치만으로 다룸
+    r_ = nd.pop("rotation", None); m_ = nd.pop("matrix", None); sc_ = nd.pop("scale", None)
+    assert r_ is None or np.allclose(r_, [0, 0, 0, 1], atol=1e-6), "회전이 있는 뼈는 아직 못 다룸"
+    assert m_ is None or np.allclose(m_, np.eye(4).reshape(-1), atol=1e-6), "행렬로 옮긴 노드는 아직 못 다룸"
+    assert sc_ is None or np.allclose(sc_, 1), "크기를 바꾼 뼈는 아직 못 다룸"
+# 뼈 이름 두 방식: 'UpperArm.L' 식 그대로 / 'LeftUpperArm' 식은 안에서만 'UpperArm.L' 로 바꿔 쓰고 저장할 때 원래 이름으로 (다른 도구가 이름을 씀)
+_names = {nd.get("name") for nd in nodes}
+STYLE_B = "LeftUpperArm" in _names
 for nd in nodes:
-    assert "rotation" not in nd and "matrix" not in nd and "scale" not in nd, "회전·크기가 있는 뼈는 아직 못 다룸"
+    nm = nd.get("name") or ""
+    for S_, s_ in (("Left", "L"), ("Right", "R")):
+        if STYLE_B and nm.startswith(S_) and nm[len(S_):] in ("Shoulder", "UpperArm", "ForeArm", "Hand", "UpperLeg", "LowerLeg", "Foot", "Toe"):
+            nd["_orig"] = nm; nd["name"] = f"{nm[len(S_):]}.{s_}"
 parent = {c: i for i, nd in enumerate(nodes) for c in nd.get("children", [])}
 NI = {nd.get("name"): i for i, nd in enumerate(nodes)}
 
@@ -68,6 +79,42 @@ W = {nm: wpos(i) for nm, i in NI.items() if nm}          # 뼈 세계 위치 (�
 body = j["meshes"][0]["primitives"][0]
 P = get(body["attributes"]["POSITION"])[:, :3].astype(float)
 
+
+HEIGHT = P[:, 1].max() - P[:, 1].min(); FLOOR = P[:, 1].min()
+def center_slice(yy):
+    """그 높이 가운데(|x|<6cm)의 가장 큰 좌우 틈(m)과, 가운데(|x|<1.5cm) 점들의 앞뒤 폭(m)"""
+    q = P[np.abs(P[:, 1] - yy) < 0.003]
+    xs = np.sort(q[np.abs(q[:, 0]) < 0.06][:, 0]); gap = np.diff(xs).max() if len(xs) > 1 else 1.0
+    c = q[np.abs(q[:, 0]) < 0.015]; depth = (c[:, 2].max() - c[:, 2].min()) if len(c) > 1 else 0.0
+    return gap, depth
+
+
+def depth_at(yy, cx=None):
+    q = P[np.abs(P[:, 1] - yy) < 0.003]
+    if cx is not None: q = q[np.abs(q[:, 0]) < cx]
+    return (q[:, 2].max() - q[:, 2].min()) if len(q) > 1 else 0.0
+
+
+SKIRT_MODE = None
+if SKIRT is None:
+    ys_scan = np.arange(FLOOR + 0.55 * HEIGHT, FLOOR + 0.2 * HEIGHT, -0.01)
+    dep = np.array([depth_at(yy) for yy in ys_scan])
+    for i_ in range(len(ys_scan) - 3):      # ① 치마 끝: 몸 앞뒤 두께가 3cm 안에서 25% 넘게 줄어드는 곳
+        if dep[i_ + 3] < 0.75 * dep[i_]:
+            SKIRT = float(ys_scan[i_ + 1]); SKIRT_MODE = True; break
+    if SKIRT is None:                       # ② 바지 가랑이: 가운데 솔기 두께가 몸 두께의 절반 아래로 3번 잇달아
+        run = 0
+        for yy, d_ in zip(ys_scan, dep):
+            run = run + 1 if depth_at(yy, 0.015) < 0.5 * d_ else 0
+            if run == 3: SKIRT = float(yy + 0.02); SKIRT_MODE = False; break
+    assert SKIRT is not None, "치마 끝·가랑이를 못 찾음 — --치마끝 <높이> 로 알려 주세요"
+if SKIRT_MODE is None: SKIRT_MODE = depth_at(SKIRT + 0.03) > 1.3 * depth_at(SKIRT - 0.03)
+if FEET_Y is None: FEET_Y = FLOOR + 0.09 * HEIGHT
+if FEET_X is None:     # 두 발 사이: 발 높이에서 가운데 ±4cm 안 점이 가장 적은 x
+    q = P[(P[:, 1] < FEET_Y) & (np.abs(P[:, 0]) < 0.014)][:, 0]
+    h_, e_ = np.histogram(q, bins=np.arange(-0.014, 0.0141, 0.002)); h_ = np.convolve(h_, [1, 1, 1], "same")   # 이웃과 합쳐 매끄럽게
+    i_ = int(np.argmin(h_[1:-1])) + 1; FEET_X = float((e_[i_] + e_[i_ + 1]) / 2)
+print(f"  {'치마 끝' if SKIRT_MODE else '바지 가랑이'} 높이 {SKIRT:.3f} · 발 가르는 x {FEET_X:+.3f} (발 높이 {FEET_Y:.3f} 아래)")
 
 # 겨드랑이 아래 몸통↔팔 빈틈: 높이 1cm 마다 x 로 정렬해 가장 큰 틈(1.2cm 넘음)의 가운데 = 가르는 선. 틈이 없어지는 높이 = 겨드랑이
 GAP = {}
@@ -100,9 +147,8 @@ def center_at(sel, y, band=0.012):
 
 moved = []
 for s, sg in (("L", 1), ("R", -1)):
-    arm = P[:, 0] * sg > TORSO                                # 팔꿈치·손목 높이: 몸통 바깥 = 팔
     for nm, y in ((f"ForeArm.{s}", W[f"ForeArm.{s}"][1]), (f"Hand.{s}", W[f"Hand.{s}"][1] + 0.03)):
-        c = center_at(arm, y)
+        c = center_at(P[:, 0] * sg > np.interp(y, *GAP[s]) + 0.003, y)      # 그 높이 몸통·팔 가르는 선 바깥 = 팔
         if c is not None: moved.append((nm, W[nm].copy(), c)); W[nm] = c
     side = (P[:, 0] > FEET_X) if s == "L" else (P[:, 0] <= FEET_X)
     # 다리 굵기(높이 1cm 마다 앞뒤 깊이 + 옆 폭)로 관절 높이 찾기 — 자동 리깅은 무릎을 종아리 한가운데, 발목을 신발 안에 둠
@@ -119,7 +165,9 @@ for s, sg in (("L", 1), ("R", -1)):
     calf = ys2[up][np.argmax(dz[up])]
     kn = (ys2 > calf + 0.02) & (ys2 < SKIRT - 0.005)
     knee = ys2[kn][np.argmin(dz[kn])] if kn.sum() >= 2 else calf + 0.07
-    hip = knee + 1.2 * (knee - ank)
+    hip = knee + 1.2 * (knee - ank) if SKIRT_MODE else SKIRT + 0.05 * HEIGHT     # 바지: 가랑이 + 키 5%
+    if not SKIRT_MODE and not (ank + 0.38 * (hip - ank) < knee < ank + 0.6 * (hip - ank)):
+        knee = ank + 0.47 * (hip - ank)                  # 헐렁한 바지라 무릎을 못 찾으면 비율로
     print(f"  다리 {s}: 무릎 높이 {knee:.2f} · 종아리 {calf:.2f} · 발목 {ank:.2f} → 엉덩관절 {hip:.2f}")
     for nm, y in ((f"LowerLeg.{s}", knee), (f"Foot.{s}", ank)):
         c = center_at(side & (P[:, 1] < SKIRT), y)
@@ -132,7 +180,6 @@ if W["Hips"][1] < min(W["UpperLeg.L"][1], W["UpperLeg.R"][1]):      # 골반 뼈
     moved.append((nm, W[nm].copy(), new)); W[nm] = new
 # 어깨 관절: 자동 리깅은 어깨 바깥 끝·꼭대기에 둠(팔이 몸에서 떨어져 돌아 옷이 찢어짐) → 사람 비율로
 #   높이 = 겨드랑이 + 키의 6.8%(어른 겨드랑이~어깨 관절 약 11cm), 옆 = 그 높이 몸 바깥 끝 - 위팔 반지름, 앞뒤 = 위팔 단면 가운데
-HEIGHT = P[:, 1].max() - P[:, 1].min()
 for s, sg in (("L", 1), ("R", -1)):
     ys_, bd_ = GAP[s]
     arm_y = ys_[-1] - 0.05                                     # 겨드랑이 조금 아래 위팔 단면
@@ -143,7 +190,11 @@ for s, sg in (("L", 1), ("R", -1)):
     edge = (P[(np.abs(P[:, 1] - y_s) < 0.005) & (np.abs(P[:, 2] - zc) < 0.06)][:, 0] * sg).max()
     nm = f"UpperArm.{s}"; new = np.array([sg * (edge - rad), y_s, zc])
     moved.append((nm, W[nm].copy(), new)); W[nm] = new
-for b_ in ("UpperArm", "ForeArm", "Hand", "UpperLeg", "LowerLeg", "Foot"):     # 왼·오른쪽 똑같이 (모델이 조금 비뚤어도 사람 뼈대는 대칭)
+for s, sg in (("L", 1), ("R", -1)):      # 빗장뼈가 있는 모델: 가슴 가운데 위 → 어깨 관절
+    if f"Shoulder.{s}" in W:
+        ua = W[f"UpperArm.{s}"]; new = np.array([0.3 * ua[0], ua[1] + 0.02, ua[2]]); moved.append((f"Shoulder.{s}", W[f"Shoulder.{s}"].copy(), new)); W[f"Shoulder.{s}"] = new
+for b_ in ("Shoulder", "UpperArm", "ForeArm", "Hand", "UpperLeg", "LowerLeg", "Foot", "Toe"):
+    if f"{b_}.L" not in W: continue     # 왼·오른쪽 똑같이 (모델이 조금 비뚤어도 사람 뼈대는 대칭)
     l_, r_ = W[f"{b_}.L"], W[f"{b_}.R"]; m_ = (np.abs(l_) + np.abs(r_)) / 2
     W[f"{b_}.L"] = np.array([m_[0], (l_[1] + r_[1]) / 2, (l_[2] + r_[2]) / 2]); W[f"{b_}.R"] = np.array([-m_[0], (l_[1] + r_[1]) / 2, (l_[2] + r_[2]) / 2])
 moved = [(nm, o, W[nm]) for nm, o, _ in moved]
@@ -155,64 +206,99 @@ FINGERS = ["Thumb", "Index", "Middle", "Ring", "Little"]
 
 
 def find_fingers(s, sg):
-    """손 점들에서 손가락 다섯 개의 마디 위치(뿌리·가운데·끝마디·끝)를 찾음. 손은 아래(-y)로 늘어진 A 자세, 엄지가 앞(+z)이라고 가정"""
-    wr = W[f"Hand.{s}"]
-    H = P[(P[:, 0] * sg > TORSO + 0.06) & (P[:, 1] < wr[1])]
-
-    # 손가락 뿌리 높이 ≈ 손목에서 가장 긴 손가락 끝까지의 46% (손 모양 비율)
-    tip_y = H[:, 1].min(); knuckle = wr[1] + 0.46 * (tip_y - wr[1])
-    # 뿌리 아래 점을 앞뒤(z)로 5 묶음(1차원 k-평균): 뒤에서부터 새끼·약지·중지·검지, 가장 앞 = 엄지
-    zz = H[H[:, 1] < knuckle][:, 2]
-    cen = np.quantile(zz, [0.08, 0.3, 0.5, 0.7, 0.95])
-    for _ in range(50):
-        lab = np.argmin(np.abs(zz[:, None] - cen[None]), axis=1)
-        cen = np.array([zz[lab == c].mean() if (lab == c).any() else cen[c] for c in range(5)])
-    cen = np.sort(cen)
-    edges = [zz.min() - 0.01] + [(cen[c] + cen[c + 1]) / 2 for c in range(4)] + [zz.max() + 0.01]
-    low = H[H[:, 1] < knuckle]
+    """손가락 다섯 개의 마디 위치(뿌리·가운데·끝마디·끝)와 손목 높이를 찾음.
+       손은 아래(-y)로 늘어진 A 자세, 손가락은 앞뒤(z)로 나란하고 엄지가 가장 앞(+z)이라고 가정.
+       방법: 손 점들을 앞뒤(z) 1.5mm 칸으로 나눠 칸마다 '가장 낮은 높이'를 잼 → 손가락 끝 = 움푹 내려간 곳,
+             손가락 사이 = 솟은 곳(손가락이 갈라지는 높이). 뒤에서부터 새끼·약지·중지·검지, 그 앞 = 엄지"""
+    hy = W[f"Hand.{s}"][1]
+    H = P[(P[:, 0] * sg > TORSO + 0.06) & (P[:, 1] < hy + 0.06)]
+    zb = np.arange(H[:, 2].min(), H[:, 2].max() + 0.0015, 0.0015)
+    idx = np.clip(np.digitize(H[:, 2], zb) - 1, 0, len(zb) - 1)
+    ymin = np.full(len(zb), np.nan)
+    for i_ in range(len(zb)):
+        m_ = idx == i_
+        if m_.any(): ymin[i_] = H[m_, 1].min()
+    ok_ = ~np.isnan(ymin); ymin = np.interp(np.arange(len(zb)), np.where(ok_)[0], ymin[ok_])
+    ys = np.convolve(np.pad(ymin, 1, mode="edge"), [1 / 3] * 3, "valid")
+    # 움푹한 곳(끝) 찾기: 양옆으로 솟은 곳보다 1cm 넘게 낮은 곳만
+    mins = [i_ for i_ in range(1, len(ys) - 1) if ys[i_] <= ys[i_ - 1] and ys[i_] < ys[i_ + 1]]
+    tips = []
+    for i_ in mins:
+        lo = ys[:i_].max() if i_ > 0 else ys[i_]; hi = ys[i_ + 1:].max() if i_ < len(ys) - 1 else ys[i_]
+        if min(lo, hi) - ys[i_] > 0.003:
+            if tips and i_ - tips[-1] < 6:                    # 9mm 안에 둘이면 더 낮은 것만
+                if ys[i_] < ys[tips[-1]]: tips[-1] = i_
+            else: tips.append(i_)
+    # 이웃 끝 사이에서 다시 '양옆보다 1cm' 확인 (전체 최대가 아니라 사이 고개로)
+    good = []
+    for k_, i_ in enumerate(tips):
+        l_ = ys[tips[k_ - 1]:i_ + 1].max() if k_ > 0 else ys[:i_ + 1].max()
+        r_ = ys[i_:tips[k_ + 1] + 1].max() if k_ < len(tips) - 1 else ys[i_:].max()
+        if min(l_, r_) - ys[i_] > 0.003: good.append(i_)
+    tips = good
+    assert len(tips) >= 4, f"손가락 끝을 4개 넘게 못 찾음({len(tips)})"
+    fing = tips[:4]; th_tip = tips[4] if len(tips) >= 5 else None
+    cols = [fing[k_] + int(np.argmax(ys[fing[k_]:fing[k_ + 1] + 1])) for k_ in range(3)]       # 손가락 사이 고개
+    zb_c = zb + 0.00075
+    # 손목 = 손끝 위 ~ 아래팔 사이에서 앞뒤(z) 폭이 가장 좁은 높이 (소매 끝·손바닥보다 가늚)
+    tip_mean = float(np.mean(ys[fing]))
+    A = P[(P[:, 0] * sg > TORSO + 0.03)]
+    best = None
+    est = tip_mean + 0.072 * HEIGHT                 # 손 길이 ≈ 키의 7.2% (손끝 평균 → 손목)
+    for yy in np.arange(est - 0.025, est + 0.025, 0.003):
+        q = A[np.abs(A[:, 1] - yy) < 0.002]
+        if len(q) < 10: continue
+        wz = q[:, 2].max() - q[:, 2].min()
+        if best is None or wz < best[1]: best = (yy, wz)
+    wrist_y = best[0]
+    # 손가락 뿌리(첫 마디 관절) = 손목→손끝 평균의 35% (손 비율; 메시에서 손가락이 뿌리 쪽 몇 cm 붙어 있어 틈으로는 못 잼)
+    knuckle = wrist_y - 0.35 * (wrist_y - tip_mean)
+    edges = [zb_c[0] - 0.01] + [zb_c[c_] for c_ in cols]
+    if th_tip is not None:
+        c4 = fing[3] + int(np.argmax(ys[fing[3]:th_tip + 1])); edges.append(zb_c[c4])
+    else:
+        edges.append(zb_c[min(len(zb_c) - 1, fing[3] + (fing[3] - cols[2]))])
     out = {}
-    for k, nm in enumerate(["Little", "Ring", "Middle", "Index"]):
-        # 손가락 따라가기: 뿌리에서 3mm 씩 내려가며, 그 높이 단면에서 바로 앞 가운데와 가까운(8mm 안) 점들의 가운데로 이동
-        #   단면을 손가락 사이 빈틈(1.5mm 넘는 z 틈)으로 덩어리로 나누고, 지금 자리가 든 덩어리의 가운데로 (한 걸음 0.6mm 까지).
-        #   두 손가락이 붙어 한 덩어리(폭 2.2cm 넘음)면 자리를 그대로 둠
-        zc = cen[k]; xc = None; path = []
-        for yy in np.arange(knuckle - 0.004, tip_y - 0.01, -0.003):
-            sl = low[np.abs(low[:, 1] - yy) < 0.002]
-            if xc is not None: sl = sl[np.abs(sl[:, 0] - xc) < 0.015]
-            if len(sl) < 4: break
-            o_ = np.argsort(sl[:, 2]); zs = sl[o_, 2]; cut_ = np.where(np.diff(zs) > 0.0015)[0] + 1
-            bl = [(sl[o_][a_:b_]) for a_, b_ in zip(np.r_[0, cut_], np.r_[cut_, len(zs)]) if b_ - a_ >= 3]
-            if not bl: break
-            dist = [0 if q_[:, 2].min() <= zc <= q_[:, 2].max() else min(abs(q_[:, 2].min() - zc), abs(q_[:, 2].max() - zc)) for q_ in bl]
-            bi = int(np.argmin(dist))
-            if dist[bi] > 0.005: break                       # 가까운 덩어리가 없음 = 손가락 끝을 지남
-            q_ = bl[bi]; wdt = q_[:, 2].max() - q_[:, 2].min()
-            if wdt < 0.022: zc += float(np.clip((q_[:, 2].min() + q_[:, 2].max()) / 2 - zc, -0.0006, 0.0006))
-            near = q_[np.abs(q_[:, 2] - zc) < 0.007]
-            xm = float(np.median((near if len(near) else q_)[:, 0])); xc = xm if xc is None else xc + float(np.clip(xm - xc, -0.003, 0.003))
-            path.append((xc, yy, zc))
-        tipc = np.array(path[-1]); q = low[(low[:, 2] > edges[k]) & (low[:, 2] <= edges[k + 1])]
-        top = q[q[:, 1] > knuckle - 0.008]
-        root = np.array([top[:, 0].mean(), knuckle, (edges[k] + edges[k + 1]) / 2])
-        d = tipc - root; L = np.linalg.norm(d); u = d / L
-        root = root - u * L * 0.2                    # 손가락 관절은 갈라지는 곳보다 조금 안쪽(손바닥)
+    for k_, nm in enumerate(["Little", "Ring", "Middle", "Index"]):
+        band = H[(H[:, 2] > edges[k_]) & (H[:, 2] <= edges[k_ + 1])]
+        tq = band[band[:, 1] < ys[fing[k_]] + 0.006]
+        tipc = np.array([np.median(tq[:, 0]), ys[fing[k_]], np.median(tq[:, 2])])
+        top = band[np.abs(band[:, 1] - knuckle) < 0.004]
+        root = np.array([np.median(top[:, 0]), knuckle, (edges[k_] + edges[k_ + 1]) / 2]) if len(top) > 3 else np.array([tipc[0], knuckle, tipc[2]])
         L = np.linalg.norm(tipc - root); u = (tipc - root) / L
+        out[nm] = [root, tipc]
+    # 손가락 뿌리 x(앞에서 본 옆 위치)가 다른 손가락들의 기울기와 1cm 가까이 어긋나면(엄지 뿌리 살이 섞임) 다른 손가락 기울기로 맞춤
+    dx = {nm: out[nm][0][0] - out[nm][1][0] for nm in out}
+    for nm in list(out):
+        others = np.median([dx[o] for o in dx if o != nm])
+        if abs(dx[nm] - others) > 0.008: out[nm][0][0] = out[nm][1][0] + others
+    for nm in list(out):
+        root, tipc = out[nm]; L = np.linalg.norm(tipc - root); u = (tipc - root) / L
         out[nm] = [root, root + u * L * 0.45, root + u * L * 0.73, tipc]        # 마디 길이 비율 45:28:27
-    # 엄지: 검지 덩어리보다 앞(z 큰 쪽)에 있는 점
-    T = H[(H[:, 2] > edges[4]) & (H[:, 1] < wr[1] - 0.015)]
-    tip = T[np.argmin(T[:, 1] - 0.8 * T[:, 2])]             # 아래·앞으로 가장 먼 점 = 엄지 끝
+    # 엄지: 검지 앞쪽 점들. 끝 = 그 가운데 가장 낮고 앞으로 먼 곳, 뿌리 = 손목 아래 손바닥 앞쪽
+    T = H[(H[:, 2] > edges[4]) & (H[:, 1] < wrist_y - 0.01)]
+    if len(T) < 20: T = H[(H[:, 2] > edges[3] + 0.6 * (edges[3] - edges[2])) & (H[:, 1] < wrist_y - 0.01)]
+    tip = T[np.argmin(T[:, 1] - 0.8 * T[:, 2])]
     tipc = T[np.linalg.norm(T - tip, axis=1) < 0.008].mean(0)
-    base = np.array([W[f"Hand.{s}"][0] + 0.004 * sg, wr[1] - 0.02, edges[4] - 0.006])
-    print(f"    손 {s} 앞뒤 가름선 z:", np.round(edges[1:5], 3), "엄지 끝", np.round(tipc, 3))
+    base = np.array([np.median(H[np.abs(H[:, 1] - (wrist_y - 0.02)) < 0.005][:, 0]), wrist_y - 0.02, edges[4] - 0.006])
     L = np.linalg.norm(tipc - base); u = (tipc - base) / L
     out["Thumb"] = [base, base + u * L * 0.4, base + u * L * 0.72, tipc]
-    return out, knuckle
+    print(f"    손 {s}: 손가락 사이 z {np.round(edges[1:5], 3)} · 손가락 끝 {len(tips)}개 · 손목 {wrist_y:.3f} · 손가락 뿌리 {knuckle:.3f}")
+    return out, knuckle, wrist_y
 
 
-finger = {}
+finger = {}; wrists = {}
 for s, sg in (("L", 1), ("R", -1)):
-    f, kn = find_fingers(s, sg); finger[s] = f
+    f, kn, wy = find_fingers(s, sg); finger[s] = f; wrists[s] = wy
     print(f"  손 {s}: 손가락 뿌리 높이 {kn:.3f}, " + ", ".join(f"{k} {np.linalg.norm(v[3] - v[0]) * 100:.1f}cm" for k, v in f.items()))
+
+# 손목(Hand 뼈)을 찾은 손목 높이의 팔 단면 가운데로 (자동 리깅은 손바닥 한가운데에 두기도 함), 왼·오른 대칭
+wy = (wrists["L"] + wrists["R"]) / 2
+for s, sg in (("L", 1), ("R", -1)):
+    c = center_at(P[:, 0] * sg > np.interp(wy, *GAP[s]) + 0.003, wy)
+    if c is not None: print(f"  Hand.{s}: {np.round(W[f'Hand.{s}'], 3)} → {np.round(c, 3)}"); W[f"Hand.{s}"] = c
+m_ = (np.abs(W["Hand.L"]) + np.abs(W["Hand.R"])) / 2
+W["Hand.L"] = np.array([m_[0], wy, (W["Hand.L"][2] + W["Hand.R"][2]) / 2]); W["Hand.R"] = np.array([-m_[0], wy, W["Hand.L"][2]])
 
 # ── 뼈대 새로 쓰기: 위치만 바꾸고(번역 = 내 세계 위치 - 부모 세계 위치), 손가락 뼈 노드 추가 ──
 skin = j["skins"][0]
@@ -244,7 +330,11 @@ for s in "LR":
     knuck = np.mean([finger[s][f][0] for f in FINGERS[1:]], axis=0)
     SEG += [(f"UpperArm.{s}", ua, fa, "arm" + s), (f"ForeArm.{s}", fa, hd, "arm" + s), (f"Hand.{s}", hd, knuck, "palm" + s),
             (f"UpperLeg.{s}", ul, ll, "leg" + s), (f"LowerLeg.{s}", ll, ft, "leg" + s),
-            (f"Foot.{s}", ft, ft + np.array([0, -0.06, 0.12]) * shin / 0.28, "leg" + s)]
+            (f"Foot.{s}", ft, W[f"Toe.{s}"] if f"Toe.{s}" in W else ft + np.array([0, -0.06, 0.12]) * shin / 0.28, "leg" + s)]
+    if f"Toe.{s}" in W:          # 발가락 뼈가 있는 모델: 발끝까지
+        SEG.append((f"Toe.{s}", W[f"Toe.{s}"], W[f"Toe.{s}"] + (W[f"Toe.{s}"] - ft) * 0.6, "leg" + s))
+    if f"Shoulder.{s}" in W:     # 빗장뼈: 몸통 무리 (어깨 위쪽 살)
+        SEG.append((f"Shoulder.{s}", W[f"Shoulder.{s}"], ua, "body"))
     for fn in FINGERS:
         c = finger[s][fn]
         for k in range(3): SEG.append((f"{fn}{k + 1}.{s}", c[k], c[k + 1], f"f{fn}{s}"))
@@ -296,10 +386,10 @@ def reskin(Q):
     # 어깨(겨드랑이 위 ~ 어깨 위 10cm): 가슴과 위팔 사이를 가운데에서 바깥으로 갈수록 위팔 쪽으로 부드럽게
     for s, sg in (("L", 1), ("R", -1)):
         ax_ = Q[:, 0] * sg; sh = W[f"UpperArm.{s}"]
-        m = (Q[:, 1] > GAP[s][0][-1]) & (Q[:, 1] < sh[1] + 0.1) & (ax_ > 0.12) & (ax_ < sh[0] * sg + 0.04) \
+        m = (Q[:, 1] > GAP[s][0][-1]) & (Q[:, 1] < sh[1] + 0.1) & (ax_ > sh[0] * sg - 0.06) & (ax_ < sh[0] * sg + 0.04) \
             & np.isin(SEG_G[o[:, 0]], ["body", "arm" + s])
-        u = np.clip((ax_[m] - 0.13) / (sh[0] * sg + 0.03 - 0.13), 0, 1); u = u * u * (3 - 2 * u)
-        j1[m] = J_OF[f"UpperArm.{s}"]; j2[m] = J_OF["Chest"]; w1[m] = u; w2[m] = 1 - u
+        u = np.clip((ax_[m] - (sh[0] * sg - 0.05)) / 0.08, 0, 1); u = u * u * (3 - 2 * u)   # 어깨 관절 안쪽 5cm → 바깥 3cm 사이에서만 섞음 (목 쪽 옷깃은 가슴에)
+        j1[m] = J_OF[f"UpperArm.{s}"]; j2[m] = J_OF[f"Shoulder.{s}" if f"Shoulder.{s}" in J_OF else "Chest"]; w1[m] = u; w2[m] = 1 - u
     return j1, j2, w1, w2
 
 
@@ -363,6 +453,14 @@ for i, v in enumerate(j["bufferViews"]):
     v["byteOffset"] = len(out); v["byteLength"] = len(views[i]); out += views[i]
 while len(out) % 4: out += b"\0"
 j["buffers"][0]["byteLength"] = len(out)
+for nd in nodes:          # 이름 되돌리기 ('LeftUpperArm' 식 모델은 원래 이름, 손가락도 'LeftIndex1' 식으로)
+    if "_orig" in nd: nd["name"] = nd.pop("_orig")
+    elif STYLE_B:
+        nm = nd.get("name") or ""
+        for fn in FINGERS:
+            for s_, S_ in (("L", "Left"), ("R", "Right")):
+                for k_ in "123":
+                    if nm == f"{fn}{k_}.{s_}": nd["name"] = f"{S_}{fn}{k_}"
 js = json.dumps(j, ensure_ascii=False, separators=(",", ":")).encode()
 while len(js) % 4: js += b" "
 glb = struct.pack("<III", 0x46546C67, 2, 12 + 8 + len(js) + 8 + len(out)) + struct.pack("<II", len(js), 0x4E4F534A) + js \
@@ -392,9 +490,11 @@ if check:     # 손가락 뼈 확인 그림: 옆(z-y)·앞(x-y)에서 손 점 + 
         cx = 300 + half * 600
         f = lambda p: (cx + p[ax] * sc, 50 + (top - p[1]) * sc)
         for p in P[::25]: d.point(f(p), fill=(185, 185, 185))
+        CAN = {i_: nm_ for nm_, i_ in NI.items()}          # 안에서 쓴 이름 (저장할 때 원래 이름으로 돌려 놓았으므로)
         for nm, i in NI.items():
-            if nm in W and i in parent and nodes[parent[i]].get("name") in W and not any(nm.startswith(fn) for fn in FINGERS):
-                d.line([f(W[nodes[parent[i]]["name"]]), f(W[nm])], fill="red", width=3)
+            pn = CAN.get(parent.get(i))
+            if nm in W and pn in W and not any(nm.startswith(fn) for fn in FINGERS):
+                d.line([f(W[pn]), f(W[nm])], fill="red", width=3)
         for nm in W:
             if not any(nm.startswith(fn) for fn in FINGERS) and nm in NI:
                 d.ellipse([f(W[nm])[0] - 4, f(W[nm])[1] - 4, f(W[nm])[0] + 4, f(W[nm])[1] + 4], fill="blue")
