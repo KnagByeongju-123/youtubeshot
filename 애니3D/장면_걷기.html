@@ -95,7 +95,7 @@ function walk(t) {
   bone('leftFoot').rotation.x = -FOOT * s; bone('rightFoot').rotation.x = FOOT * s;
   // 팔: 다리와 반대로 흔듦, 팔꿈치는 살짝 굽힘
   if (ARM_DOWN) {         // 팔이 이미 아래로 내려온 모델: 앞뒤로만 흔들고 팔꿈치는 앞으로 살짝
-    bone('leftUpperArm').rotation.set(0.32 * s, 0, 0.12); bone('rightUpperArm').rotation.set(-0.32 * s, 0, -0.12);
+    bone('leftUpperArm').rotation.set(0.32 * s, 0, -0.06); bone('rightUpperArm').rotation.set(-0.32 * s, 0, 0.06);   // 팔을 몸 쪽으로 살짝 붙임
     bone('leftLowerArm').rotation.set(-0.25 - 0.1 * Math.max(0, -s), 0, 0); bone('rightLowerArm').rotation.set(-0.25 - 0.1 * Math.max(0, s), 0, 0);
   } else {
     bone('leftUpperArm').rotation.set(0.38 * s, 0, -1.2); bone('rightUpperArm').rotation.set(-0.38 * s, 0, 1.2);
