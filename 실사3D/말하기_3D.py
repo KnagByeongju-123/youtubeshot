@@ -123,8 +123,9 @@ else:
             #   팔을 들 때 소매가 박쥐 날개처럼 늘어나면 먼저 팔가중치_고치기.py
             g=0.0
             for g0,g1 in W.get('gestures',[]):
-                g=max(g,min(1.0,max(0.0,(t-g0)/0.6),max(0.0,(g1-t)/0.6)))
-            g=g*g*(3-2*g); wob=1.5*math.sin(t*2.3)*g
+                RP=W.get('gesture_ramp',1.2)    # 펴고 접는 데 걸리는 초 (사용자 '1회만, 천천히 부드럽게' 2026-11-22: 0.6 → 1.2)
+                g=max(g,min(1.0,max(0.0,(t-g0)/RP),max(0.0,(g1-t)/RP)))
+            g=g*g*(3-2*g); wob=W.get('gesture_wob',0.6)*math.sin(t*1.6)*g
             lerp=lambda a,b:tuple(x+(y-x)*g for x,y in zip(a,b))
             key('UpperArm.L',f,lerp((-12-b2,0,-7),(-22+wob,0,38))); key('UpperArm.R',f,(-12-b2,0,7))
             key('ForeArm.L',f,lerp((-17,0,-74),(-12,0,-5))); key('ForeArm.R',f,(-17,0,74))
