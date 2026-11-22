@@ -7,15 +7,20 @@
 //         human.humanoid.getNormalizedBoneNode('leftUpperArm').rotation.x = -1;  human.curl('leftIndex', 1.2);  human.update()
 import * as THREE from 'three';
 
-const NAME = {
-  hips: 'Hips', spine: 'Spine', chest: 'Chest', neck: 'Neck', head: 'Head', jaw: 'Jaw',
-  leftUpperArm: 'UpperArmL', leftLowerArm: 'ForeArmL', leftHand: 'HandL', rightUpperArm: 'UpperArmR', rightLowerArm: 'ForeArmR', rightHand: 'HandR',
-  leftUpperLeg: 'UpperLegL', leftLowerLeg: 'LowerLegL', leftFoot: 'FootL', rightUpperLeg: 'UpperLegR', rightLowerLeg: 'LowerLegR', rightFoot: 'FootR',
+// VRM 이름 → 모델 뼈 이름 후보 (three.js 는 이름의 '.' 을 지움). 두 가지 이름 방식: 'UpperArm.L' 식 / 'LeftUpperArm' 식
+const BASE = {
+  hips: ['Hips'], spine: ['Spine'], chest: ['Chest'], neck: ['Neck'], head: ['Head'], jaw: ['Jaw'],
+  leftShoulder: ['ShoulderL', 'LeftShoulder'], rightShoulder: ['ShoulderR', 'RightShoulder'],
+  leftUpperArm: ['UpperArmL', 'LeftUpperArm'], leftLowerArm: ['ForeArmL', 'LeftForeArm'], leftHand: ['HandL', 'LeftHand'],
+  rightUpperArm: ['UpperArmR', 'RightUpperArm'], rightLowerArm: ['ForeArmR', 'RightForeArm'], rightHand: ['HandR', 'RightHand'],
+  leftUpperLeg: ['UpperLegL', 'LeftUpperLeg'], leftLowerLeg: ['LowerLegL', 'LeftLowerLeg'], leftFoot: ['FootL', 'LeftFoot'], leftToes: ['ToeL', 'LeftToe'],
+  rightUpperLeg: ['UpperLegR', 'RightUpperLeg'], rightLowerLeg: ['LowerLegR', 'RightLowerLeg'], rightFoot: ['FootR', 'RightFoot'], rightToes: ['ToeR', 'RightToe'],
 };
 const FINGERS = { Thumb: ['Metacarpal', 'Proximal', 'Distal'], Index: ['Proximal', 'Intermediate', 'Distal'], Middle: ['Proximal', 'Intermediate', 'Distal'],
   Ring: ['Proximal', 'Intermediate', 'Distal'], Little: ['Proximal', 'Intermediate', 'Distal'] };
-for (const [side, S] of [['left', 'L'], ['right', 'R']])
-  for (const [f, parts] of Object.entries(FINGERS)) parts.forEach((p, k) => { NAME[`${side}${f}${p}`] = `${f}${k + 1}${S}`; });   // three.js 는 이름의 '.' 을 지움
+const NAME = { ...BASE };
+for (const [side, S, Side] of [['left', 'L', 'Left'], ['right', 'R', 'Right']])
+  for (const [f, parts] of Object.entries(FINGERS)) parts.forEach((p, k) => { NAME[`${side}${f}${p}`] = [`${f}${k + 1}${S}`, `${Side}${f}${k + 1}`]; });
 const EXPR = { blink: 'Blink', aa: 'MouthOpen', ih: 'MouthWide', ou: 'MouthRound', ee: 'MouthWide', oh: 'MouthRound' };
 
 export function loadHuman(loader, url, opts = {}) {
@@ -26,8 +31,9 @@ export function loadHuman(loader, url, opts = {}) {
     root.scale.setScalar(k); root.position.y = -box.min.y * k;
     const holder = new THREE.Group(); holder.add(root); holder.updateMatrixWorld(true);
     const prox = {};
-    for (const [n, bn] of Object.entries(NAME)) {
-      const b = root.getObjectByName(bn); if (!b) continue;
+    for (const [n, cands] of Object.entries(NAME)) {
+      let b = null; for (const c of cands) { b = root.getObjectByName(c); if (b) break; }
+      if (!b || !b.isBone) continue;
       const Pw = b.parent.getWorldQuaternion(new THREE.Quaternion());
       prox[n] = { b, rest: b.quaternion.clone(), restPos: b.position.clone(), P: Pw, Pi: Pw.clone().invert(),
         rotation: new THREE.Euler(), quaternion: new THREE.Quaternion(), position: new THREE.Vector3(),
