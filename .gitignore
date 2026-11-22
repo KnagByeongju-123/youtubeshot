@@ -82,3 +82,6 @@ _sam_job.json
 
 # 실사 3D(블렌더 파이썬 모듈) — 실사3D/준비.sh 로 다시 설치
 .bpy_venv/
+# three.js 애니(애니3D): 부품은 npm 으로 다시 받음
+애니3D/node_modules/
+애니3D/package-lock.json
