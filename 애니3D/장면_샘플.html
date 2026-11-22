@@ -59,7 +59,7 @@ for (const [x, y, z, s] of [[-6, 6.5, -20, 1.6], [5, 7.5, -24, 2.1], [12, 6, -26
 const camera = new THREE.PerspectiveCamera(30, W / H, 0.1, 200);
 let vrm = null;
 const loader = new GLTFLoader(); loader.register((p) => new VRMLoaderPlugin(p));
-loader.load('../models/vrm/seed-san.vrm', (gltf) => {
+loader.load('../models/vrm/' + (new URLSearchParams(location.search).get('model') || 'seed-san') + '.vrm', (gltf) => {
   vrm = gltf.userData.vrm; VRMUtils.rotateVRM0(vrm);
     scene.add(vrm.scene); window.READY = true;
 });

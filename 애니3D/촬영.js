@@ -9,7 +9,7 @@ const srv=http.createServer((q,r)=>{const p=path.join(ROOT,decodeURIComponent(q.
   if(!p.startsWith(ROOT)||!fs.existsSync(p)||fs.statSync(p).isDirectory()){r.writeHead(404);return r.end();}
   r.writeHead(200,{'Content-Type':TYPES[path.extname(p)]||'application/octet-stream'}); fs.createReadStream(p).pipe(r);});
 srv.listen(0,'127.0.0.1',async()=>{
- const url=`http://127.0.0.1:${srv.address().port}/${path.relative(ROOT,path.resolve(page)).split(path.sep).map(encodeURIComponent).join('/')}`;
+ const url=`http://127.0.0.1:${srv.address().port}/${path.relative(ROOT,path.resolve(page)).split(path.sep).map(encodeURIComponent).join('/')}${process.env.MODEL?'?model='+process.env.MODEL:''}`;
  fs.mkdirSync(out,{recursive:true});
  const b=await chromium.launch({args:['--use-gl=swiftshader','--enable-unsafe-swiftshader']});
  const p=await b.newPage({viewport:{width:1280,height:720}});
