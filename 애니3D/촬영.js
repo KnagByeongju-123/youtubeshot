@@ -9,11 +9,11 @@ const srv=http.createServer((q,r)=>{const p=path.join(ROOT,decodeURIComponent(q.
   if(!p.startsWith(ROOT)||!fs.existsSync(p)||fs.statSync(p).isDirectory()){r.writeHead(404);return r.end();}
   r.writeHead(200,{'Content-Type':TYPES[path.extname(p)]||'application/octet-stream'}); fs.createReadStream(p).pipe(r);});
 srv.listen(0,'127.0.0.1',async()=>{
- const url=`http://127.0.0.1:${srv.address().port}/${path.relative(ROOT,path.resolve(page)).split(path.sep).map(encodeURIComponent).join('/')}${process.env.MODEL?'?model='+process.env.MODEL:''}`;
+ const url=`http://127.0.0.1:${srv.address().port}/${path.relative(ROOT,path.resolve(page)).split(path.sep).map(encodeURIComponent).join('/')}${process.env.MODEL?'?'+(process.env.MODEL.includes('=')?process.env.MODEL:'model='+process.env.MODEL):''}`;
  fs.mkdirSync(out,{recursive:true});
  const b=await chromium.launch({args:['--use-gl=swiftshader','--enable-unsafe-swiftshader']});
  const p=await b.newPage({viewport:{width:1280,height:720}});
- p.on('pageerror',e=>console.log('ERR',e.message));
+ p.on('pageerror',e=>console.log('ERR',e.message)); if(process.env.LOG) p.on('console',m=>console.log(m.text()));
  await p.goto(url); await p.waitForFunction(()=>window.READY,{timeout:180000});
  const want=only?new Set(only.split(',').map(Number)):null;
  for(let i=0;i<+n;i++){ await p.evaluate(i=>window.renderFrame(i),i);
