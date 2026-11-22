@@ -4034,6 +4034,7 @@ def publish_kit(model, base, title, story, category, genre, s, chapters=None, so
             if cav and cav not in str(pkg.get("description", "")):
                 pkg["description"] = (str(pkg.get("description", "")).rstrip() + "\n\n※ " + cav.lstrip("※ ")).strip()
         pkg.update(sources=list(sources or []), chapters=list(chapters or []), notes=notes or "")
+        voice_credit_note(pkg, s.get("narr_voice") if isinstance(s, dict) else None)   # 규칙: F8 등 목소리 색깔 성우면 모든 영상(쇼츠 포함) 설명란에 출처 (2026-11-22: 쇼츠에서 빠졌음)
         med_note(pkg, story, notes)          # 규칙: 의학·건강 영상이면 '의학적 조언 아님' + 연구비 출처
         write_package(base, title, story, pkg)
         try:     # 규칙: 업로드 전 정책 체크리스트 (AI 그림 표시·건강 주제 경고·형식 반복 주의)
@@ -6038,7 +6039,8 @@ class SubtitleRenderer:
                     fit = fit.filter(ImageFilter.UnsharpMask(radius=1.0, percent=70, threshold=2))
                 big = Image.new("RGB", (cw_, ch_), im.getpixel((0, 0)))
                 big.paste(fit, ((cw_ - fit.width) // 2, (ch_ - fit.height) // 2))
-            elif self.full and (im.width / im.height) < (bw / bh) * 0.7:
+            elif self.full and ((im.width / im.height) < (bw / bh) * 0.7 or (bh > bw and (im.width / im.height) > (bw / bh) * 1.6)):
+                # 세로 쇼츠의 가로 그림(지도·도해)도 꽉 채우면 가운데만 크게 잘려 알아볼 수 없음 → 같은 방식 (사용자 지적 2026-11-22)
                 # 세로·네모 사진(초상화·조각상)을 꽉 채우면 머리·발이 잘림 (사용자 지적 2026-11-21) →
                 # 사진 전체를 가운데에, 양옆은 같은 사진을 흐리고 어둡게 깔아 채움. 움직임이 있어도 잘리지 않게 높이 78%
                 cw_, ch_ = int(bw * 1.32) + 1, int(bh * 1.32) + 1
@@ -6047,7 +6049,7 @@ class SubtitleRenderer:
                 bgi = bgi.filter(ImageFilter.GaussianBlur(3)).resize((int(bgi.width * 10), int(bgi.height * 10)), Image.BILINEAR)
                 l_, t_ = (bgi.width - cw_) // 2, (bgi.height - ch_) // 2
                 big = Image.fromarray((np.asarray(bgi.crop((l_, t_, l_ + cw_, t_ + ch_))).astype(np.float32) * 0.45).astype(np.uint8))
-                sc = min(bh * 0.78 / im.height, bw * 0.9 / im.width)
+                sc = min(bh * 1.0 / im.height, bw * 1.15 / im.width)   # 큰 판(1.32배) 위 크기 → 화면에서 높이 약 76%·폭 약 87%
                 fg = im.resize((max(1, int(im.width * sc)), max(1, int(im.height * sc))), Image.LANCZOS)
                 big.paste(fg, ((cw_ - fg.width) // 2, (ch_ - fg.height) // 2))
             else:
