@@ -3,8 +3,8 @@
 <script type="importmap">{"imports":{"three":"./node_modules/three/build/three.module.js","three/addons/":"./node_modules/three/examples/jsm/"}}</script>
 </head><body>
 <script type="module">
-// 리깅 검사 장면 (16초): 팔 앞으로 들기 → 옆으로 들기(T) → 팔꿈치 굽히기 → 오른손 흔들기 → 주먹 쥐기·펴기 → 검지 가리키기 → 엄지 척
-//   사용: MODEL=glb=announcer_rig node 애니3D/촬영.js 애니3D/장면_동작검사.html <폴더> 384
+// 리깅 검사 장면 (21초): 팔 앞으로 들기 → 옆으로 들기(T) → 팔꿈치 굽히기 → 오른손 흔들기 → 주먹 쥐기·펴기 → 검지 가리키기 → 엄지 척 → 무릎 들기(왼·오른)
+//   사용: MODEL=glb=announcer_rig node 애니3D/촬영.js 애니3D/장면_동작검사.html <폴더> 504
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { loadHuman } from './glb_사람.js';
@@ -27,7 +27,7 @@ const ease = (a, b, t) => { const x = Math.min(1, Math.max(0, (t - a) / (b - a))
 const on = (a, b, t, r = 0.5) => ease(a, a + r, t) - ease(b - r, b, t);       // a~b 동안 켜졌다 꺼짐
 const bone = (n) => human.humanoid.getNormalizedBoneNode(n);
 const LABELS = [[0, '쉬는 자세'], [1, '팔 앞으로'], [3.2, '팔 옆으로(T)'], [5.4, '팔꿈치 굽히기'], [7.6, '오른손 흔들기'],
-  [10, '주먹 쥐기·펴기'], [12.4, '검지 가리키기'], [14.2, '엄지 척']];
+  [10, '주먹 쥐기·펴기'], [12.4, '검지 가리키기'], [14.2, '엄지 척'], [16.2, '무릎 들기']];
 
 window.renderFrame = (i) => {
   const t = i / FPS;
@@ -57,13 +57,21 @@ window.renderFrame = (i) => {
   if (pt > 0) for (const s of ['left', 'right']) { for (const f of ['Thumb', 'Middle', 'Ring', 'Little']) human.curl(s + f, 1.35 * pt * (f === 'Thumb' ? 0.7 : 1)); }
   const up = on(14.2, 16, t);           // 엄지 척: 네 손가락 쥐고 엄지는 폄
   if (up > 0) for (const s of ['left', 'right']) { for (const f of ['Index', 'Middle', 'Ring', 'Little']) human.curl(s + f, 1.35 * up); human.curl(s + 'Thumb', -0.3 * up); }
+  // 16.2~20.8초: 무릎 들기 (허벅지 앞으로, 무릎 굽힘) — 엉덩관절·무릎 위치 검사
+  for (const n of ['leftUpperLeg', 'rightUpperLeg', 'leftLowerLeg', 'rightLowerLeg']) bone(n).rotation.set(0, 0, 0);
+  const kl = on(16.4, 18.4, t), kr = on(18.6, 20.6, t);
+  bone('leftUpperLeg').rotation.x = -1.2 * kl; bone('leftLowerLeg').rotation.x = 1.4 * kl;
+  bone('rightUpperLeg').rotation.x = -1.2 * kr; bone('rightLowerLeg').rotation.x = 1.4 * kr;
+  const back = ease(15.9, 16.4, t);           // 손을 내림
+  for (const n of ['leftUpperArm', 'rightUpperArm', 'leftLowerArm', 'rightLowerArm']) bone(n).rotation.x *= (1 - back);
   // 숨쉬기·눈 깜빡임
   bone('chest').rotation.x = 0.015 * Math.sin(t * 2 * Math.PI / 3.5);
   human.expressionManager.setValue('blink', Math.max(0, 1 - Math.abs(t - 2.5) / 0.08, 1 - Math.abs(t - 8.7) / 0.08));
   human.update();
   // 카메라: 0~9.8초 전신 앞(조금 비스듬히), 그 뒤 손 가까이
-  const c = ease(9.8, 10.6, t);
-  camera.position.set(0.9 - 0.6 * c, 1.15 - 0.05 * c, 3.4 - 2.3 * c); camera.lookAt(0, 1.05 - 0.05 * c, 0);
+  const c = ease(9.8, 10.6, t) - ease(15.9, 16.4, t);   // 16초 뒤 다시 전신 (옆에서 조금 더 비스듬히)
+  const sd = ease(15.9, 16.4, t);
+  camera.position.set(0.9 - 0.6 * c + 1.4 * sd, 1.15 - 0.05 * c - 0.2 * sd, 3.4 - 2.3 * c - 0.4 * sd); camera.lookAt(0, 1.05 - 0.05 * c - 0.2 * sd, 0);
   renderer.render(scene, camera);
   let lab = ''; for (const [s, l] of LABELS) if (t >= s) lab = l; document.title = lab;
 };
