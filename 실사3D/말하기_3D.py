@@ -113,13 +113,20 @@ else:
         key('LowerLeg.L',f,(knL,0,0)); key('LowerLeg.R',f,(knR,0,0))
         key('Foot.L',f,(-(thL+knL)*0.5,0,0)); key('Foot.R',f,(-(thR+knR)*0.5,0,0))
         # 팔: 같은 쪽 다리와 반대로 앞뒤 (X+ = 뒤), 앞으로 갈 때 팔꿈치가 조금 더 굽음, 뒤로 갈 때 덜
+        br=0.5-0.5*math.cos(2*math.pi*t/4.2)             # 숨 (4.2초)
         aL,aR=W['arm']*s1*e,-W['arm']*s1*e
-        key('UpperArm.L',f,(aL,0,-15)); key('UpperArm.R',f,(aR,0,15))
-        key('ForeArm.L',f,(-3-5*max(0,-aL/W['arm'])*e,0,0)); key('ForeArm.R',f,(-3-5*max(0,-aR/W['arm'])*e,0,0))
-        key('Hand.L',f,(0,0,-W['hand'])); key('Hand.R',f,(0,0,W['hand']))     # A 자세에서 바깥으로 꺾인 손목을 몸 쪽으로
+        if STAND and W.get('clasp',True):
+            # 두 손을 배 앞에 모음 (사용자 2026-11-21) — 손목이 (±4.5cm, 앞 17cm, 높이 0.1) 에 오게 찾은 각도, 숨 따라 아주 조금
+            b2=0.6*br
+            key('UpperArm.L',f,(-12-b2,0,-7)); key('UpperArm.R',f,(-12-b2,0,7))
+            key('ForeArm.L',f,(-17,0,-74)); key('ForeArm.R',f,(-17,0,74))
+            key('Hand.L',f,(0,0,0)); key('Hand.R',f,(0,0,0))
+        else:
+            key('UpperArm.L',f,(aL,0,-15)); key('UpperArm.R',f,(aR,0,15))
+            key('ForeArm.L',f,(-3-5*max(0,-aL/W['arm'])*e,0,0)); key('ForeArm.R',f,(-3-5*max(0,-aR/W['arm'])*e,0,0))
+            key('Hand.L',f,(0,0,-W['hand'])); key('Hand.R',f,(0,0,W['hand']))     # A 자세에서 바깥으로 꺾인 손목을 몸 쪽으로
         # 상체 (사용자 '상체가 뻣뻣함'): 골반은 다리 따라 돌고(Y) 옆으로 기울고(Z), 가슴은 반대로 돌아 어깨가 엇갈림, 고개는 앞을 보게 되돌림
         c2=math.sin(2*ph)
-        br=0.5-0.5*math.cos(2*math.pi*t/4.2)             # 숨 (4.2초)
         iy,iz=1.2*math.sin(t*0.5),0.9*math.sin(t*0.37+1)  # 서 있을 때 몸무게 옮기듯 천천히
         key('Hips',f,(0.6*c2*e,6*s1*e+iy*(1-e),2.2*s1*e+iz*(1-e))); key('Spine',f,(1.5*e+0.5*c2*e+0.6*br*(1-e),-6*s1*e-0.6*iy*(1-e),-1.6*s1*e-1.2*iz*(1-e)))
         key('Chest',f,(0.8*e+0.8*br*(1-e),-4*s1*e,-0.8*s1*e))
