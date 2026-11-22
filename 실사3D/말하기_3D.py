@@ -171,7 +171,7 @@ else:
         cam.location=(0.05,-W['cam_d'],0.48); cam.keyframe_insert('location',frame=N)
 sc.render.engine='CYCLES'; sc.cycles.device='CPU'; sc.cycles.samples=opt.get('samples',16); sc.cycles.use_denoising=True
 sc.view_settings.view_transform='Standard'
-sc.render.resolution_x,sc.render.resolution_y=map(int,opt.get('size','1024x576').split('x')); sc.frame_start,sc.frame_end,sc.render.fps=opt.get('from',1),N,FPS   # from: 고친 뒷부분만 다시 찍기
+sc.render.resolution_x,sc.render.resolution_y=map(int,opt.get('size','1024x576').split('x')); sc.frame_start,sc.frame_end,sc.render.fps=opt.get('from',1),opt.get('to',N),FPS   # from: 고친 뒷부분만 다시 찍기
 if opt.get('still'):
     sc.frame_set(opt['still']); sc.render.filepath=out+"/still.png"; bpy.ops.render.render(write_still=True)
 else:
