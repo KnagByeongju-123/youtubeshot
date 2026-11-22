@@ -115,13 +115,22 @@ else:
         key('Foot.L',f,(-(thL+knL)*0.5,0,0)); key('Foot.R',f,(-(thR+knR)*0.5,0,0))
         # 팔: 같은 쪽 다리와 반대로 앞뒤 (X+ = 뒤), 앞으로 갈 때 팔꿈치가 조금 더 굽음, 뒤로 갈 때 덜
         br=0.5-0.5*math.cos(2*math.pi*t/4.2)             # 숨 (4.2초)
-        aL,aR=W['arm']*s1*e,-W['arm']*s1*e
+        aL,aR=W['arm']*s1*e,-W['arm']*s1*e; GH=0.0
         if STAND and W.get('clasp',True):
             # 두 손을 배 앞에 모음 (사용자 2026-11-21) — 손목이 (±4.5cm, 앞 17cm, 높이 0.1) 에 오게 찾은 각도, 숨 따라 아주 조금
             b2=0.6*br
-            key('UpperArm.L',f,(-12-b2,0,-7)); key('UpperArm.R',f,(-12-b2,0,7))
-            key('ForeArm.L',f,(-17,0,-74)); key('ForeArm.R',f,(-17,0,74))
-            key('Hand.L',f,(0,0,0)); key('Hand.R',f,(0,0,0))
+            # 소개 손짓(사용자 2026-11-22): gestures=[[시작초,끝초],...] 동안 왼팔을 옆(금형 쪽)으로 펴고 손바닥을 살짝 펼침, 고개도 조금 따라감
+            #   팔을 들 때 소매가 박쥐 날개처럼 늘어나면 먼저 팔가중치_고치기.py
+            g=0.0
+            for g0,g1 in W.get('gestures',[]):
+                g=max(g,min(1.0,max(0.0,(t-g0)/0.6),max(0.0,(g1-t)/0.6)))
+            g=g*g*(3-2*g); wob=1.5*math.sin(t*2.3)*g
+            lerp=lambda a,b:tuple(x+(y-x)*g for x,y in zip(a,b))
+            key('UpperArm.L',f,lerp((-12-b2,0,-7),(-22+wob,0,38))); key('UpperArm.R',f,(-12-b2,0,7))
+            key('ForeArm.L',f,lerp((-17,0,-74),(-12,0,-5))); key('ForeArm.R',f,(-17,0,74))
+            key('Hand.L',f,lerp((0,0,0),(0,45,0))); key('Hand.R',f,(0,0,0))
+            if '손_오므림' in kb: kb['손_오므림'].value=W.get('curl',0.8)-0.4*g; kb['손_오므림'].keyframe_insert('value',frame=f)
+            GH=6*g
         else:
             key('UpperArm.L',f,(aL,0,-15)); key('UpperArm.R',f,(aR,0,15))
             key('ForeArm.L',f,(-3-5*max(0,-aL/W['arm'])*e,0,0)); key('ForeArm.R',f,(-3-5*max(0,-aR/W['arm'])*e,0,0))
@@ -131,13 +140,13 @@ else:
         iy,iz=1.2*math.sin(t*0.5),0.9*math.sin(t*0.37+1)  # 서 있을 때 몸무게 옮기듯 천천히
         key('Hips',f,(0.6*c2*e,6*s1*e+iy*(1-e),2.2*s1*e+iz*(1-e))); key('Spine',f,(1.5*e+0.5*c2*e+0.6*br*(1-e),-6*s1*e-0.6*iy*(1-e),-1.6*s1*e-1.2*iz*(1-e)))
         key('Chest',f,(0.8*e+0.8*br*(1-e),-4*s1*e,-0.8*s1*e))
-        key('Head',f,(1.2*math.sin(t*1.9)+0.6*math.sin(t*3.1)-0.8*c2*e,1.0*math.sin(t*0.9)+4*s1*e,1.2*math.sin(t*0.7)+0.6*s1*e))
+        key('Head',f,(1.2*math.sin(t*1.9)+0.6*math.sin(t*3.1)-0.8*c2*e,1.0*math.sin(t*0.9)+4*s1*e+GH,1.2*math.sin(t*0.7)+0.6*s1*e))
         key('Neck',f,(0.5*math.sin(t*1.3),0,0.4*math.sin(t*0.5)))
         # 앞으로(세계 -Y = Root 로컬 +Z) + 위아래 출렁임(로컬 Y)
         root.location=(0, -0.012*abs(math.cos(ph))*e, pos-W['dist']); root.keyframe_insert('location',frame=f)
     for md in o.modifiers:                         # 팔꿈치·어깨가 가늘어지는 것 막기 (사용자 '팔 가운데가 너무 가늘어짐') — 부피 유지(이중 쿼터니언)
         if md.type=='ARMATURE': md.use_deform_preserve_volume=True
-    if '손_오므림' in kb:                          # 손가락 살짝 오므림 (손오므림_만들기)
+    if '손_오므림' in kb and not (STAND and W.get('clasp',True)):   # 손가락 살짝 오므림 (손오므림_만들기)
         kb['손_오므림'].value=W.get('curl',0.8); kb['손_오므림'].keyframe_insert('value',frame=1)
     # 무대: 바닥(살짝 반사) + 뒤 벽 + 큰 부드러운 조명
     bpy.ops.mesh.primitive_plane_add(size=30,location=(0,6,FLOOR-0.001)); fl=bpy.context.object
