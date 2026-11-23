@@ -7,14 +7,16 @@
      · MouthWide  : 입꼬리를 옆으로·조금 위로
      · MouthRound : 입술을 가운데로 모으고 앞으로 내밈
      · Blink 등 다른 키는 그대로
-   사용: python 애니3D/glb_입모양고치기.py <입력.glb> <결과.glb> [--벌림 0.012] [--확인 <그림.png>]
+   사용: python 애니3D/glb_입모양고치기.py <입력.glb> <결과.glb> [--벌림 0.012] [--확인 <그림.png>] [--입술칠]
+     --입술칠: 입술선 바로 위·아래 띠를 겉면 그림에서 아랫입술 색으로 칠함 (입을 벌리면 윗입술 안쪽이 살색·흰 점으로 보일 때, 여자 아나운서 2026-11-23)
    (모양 키 이름이 MouthOpen/MouthWide/MouthRound 인 모델. 정점 수·순서는 그대로라 리깅과 함께 써도 됨)"""
 import io, json, struct, sys
 import numpy as np
 from PIL import Image
 
 a = sys.argv[1:]
-OPEN = 0.012; check = None
+OPEN = 0.012; check = None; PAINT = False
+if "--입술칠" in a: a.remove("--입술칠"); PAINT = True
 if "--벌림" in a: i = a.index("--벌림"); OPEN = float(a[i + 1]); del a[i:i + 2]
 if "--확인" in a: i = a.index("--확인"); check = a[i + 1]; del a[i:i + 2]
 src, dst = a
@@ -211,6 +213,12 @@ cross = (tri_s == 1).any(1) & (tri_s == 2).any(1) & (tri_s > 0).all(1)      # �
 # 틈 가장자리 점을 입술선 위로 모음 → 다물면 한 줄로 딱 닫힘 (들쭉날쭉한 가장자리를 곧게, 가장자리 점은 몇 mm 만 움직임)
 edge = np.unique(I[cross].reshape(-1)); edge = edge[zone[edge]]
 P2 = P.copy(); P2[edge, 1] = ly(x[edge])
+# 같은 자리에 겹친 점(겉면 그림 이음매로 갈라진 점)은 함께 끌어옴 — 하나만 끌면 틈이 벌어져 흰 V 자처럼 보였음 (여자 아나운서 2026-11-23)
+_, gsnap = np.unique(np.round(P * 2e4).astype(np.int64), axis=0, return_inverse=True); gsnap = gsnap.reshape(-1)
+same = np.isin(gsnap, gsnap[edge]) & ~np.isin(np.arange(len(P)), edge)
+gy = np.zeros(gsnap.max() + 1); gy[gsnap[edge]] = P2[edge, 1]
+P2[same, 1] = gy[gsnap[same]]
+print(f"  같은 자리 겹친 점 {int(same.sum())}개도 함께 입술선으로")
 put(pr["attributes"]["POSITION"], P2)
 # 펴거나 모은 점 둘레의 면 방향(법선)을 다시 계산 → 예전 볼록한 그늘이 남지 않게
 if "NORMAL" in pr["attributes"]:
@@ -333,6 +341,25 @@ if head_j is not None:
     print(f"  입 안 주머니: 입술 가장자리 점 {n_r}개(윗 {len(U)}·아래 {len(L)})에 붙임")
     # 이는 넣지 않음 (사용자 2026-11-23: '이빨은 없애줘' — 단순한 흰 띠라 어색했음)
     print(f"  입 안 주머니 더함 (이 없음) (입술 앞면 z {lip_z:.3f})")
+
+if PAINT:     # 입술선 둘레 띠를 아랫입술 색으로 (겉면 그림에서 삼각형을 칠하고 가장자리는 흐리게)
+    from PIL import ImageDraw, ImageFilter
+    ax_ = np.abs(x - XC)
+    samp = front & (ax_ < 0.012) & (dy < -0.0025) & (dy > -0.0055)
+    lipc = np.median(color(samp), 0) * 0.97
+    wv = np.where((dy > -0.0015) & (dy < 0.0035) & front, 1 - sstep((dy - 0.0012) / 0.0023), 0) * (1 - sstep((ax_ - hw(x) * 0.95) / (hw(x) * 0.25)))
+    alpha = Image.new("L", (tw, th), 0); da = ImageDraw.Draw(alpha)
+    for t3 in I:
+        if t3[0] == t3[1]: continue
+        w3 = wv[t3]
+        if w3.max() <= 0.02: continue
+        uv = [(float(UV[k_, 0] * tw), float(UV[k_, 1] * th)) for k_ in t3]
+        da.polygon(uv, fill=int(255 * 0.9 * w3.mean()))
+    al = np.asarray(alpha.filter(ImageFilter.GaussianBlur(2)), float)[:, :, None] / 255
+    newtex = TEX * (1 - al) + lipc[None, None, :] * al
+    bio = io.BytesIO(); Image.fromarray(np.clip(newtex, 0, 255).astype(np.uint8)).save(bio, "JPEG" if img.get("mimeType") == "image/jpeg" else "PNG", quality=95)
+    views[img["bufferView"]] = bio.getvalue()
+    print(f"  입술칠: 입술선 둘레를 아랫입술 색 {lipc.astype(int)} 로 (겉면 그림 칠한 칸 {int((al > 0.05).sum())}개)")
 
 out = bytearray()
 for i, v in enumerate(j["bufferViews"]):
