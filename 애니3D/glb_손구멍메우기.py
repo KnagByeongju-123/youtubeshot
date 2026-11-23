@@ -4,13 +4,13 @@
    (여자 아나운서 오른손, 2026-11-23 손가락 검사: 화면 점을 찍어 보니 '뒷면' = 구멍)
    → 자르기 전 모델에서 그 삼각형을 되살림. 손가락 첫 마디 관절에서 손가락 끝 쪽으로 --여유(기본 0.012) 넘게 나간 곳은
      손가락 사이라 그대로 떼어 둠 (구부릴 때 손가락이 서로 붙어 늘어나지 않게)
-   사용: python 애니3D/glb_손구멍메우기.py <자르기 전.glb> <입력.glb> <결과.glb> [--여유 0.012]
+   사용: python 애니3D/glb_손구멍메우기.py <자르기 전.glb> <입력.glb> <결과.glb> [--여유 0.025]  (여자 아나운서는 0.025 가 가장 깔끔)
      (삼각형 순서가 같은 모델끼리만: 입모양 고치기·얼룩 칠하기는 삼각형 순서를 바꾸지 않음)"""
 import json, struct, sys
 import numpy as np
 
 a = sys.argv[1:]
-MARGIN = 0.012
+MARGIN = 0.025
 if "--여유" in a: i = a.index("--여유"); MARGIN = float(a[i + 1]); del a[i:i + 2]
 orig, src, dst = a
 
@@ -49,6 +49,31 @@ for s in ("L", "R"):
     far = (P[I0] - w0) @ dv                                         # 세 꼭짓점 모두 손가락 뿌리 + 여유 안쪽이면 되살림
     back |= gone & near & (far.max(1) < knuckle + MARGIN)
 I[back] = I0[back]
+# 손가락 뿌리(손등 마디) 둘레 무게 부드럽게: 손가락 첫 마디 뼈만 100% 따라가던 손등 점을 손 뼈와 섞음
+#   → 손가락을 굽힐 때 손등 마디가 접혀 찢어진 듯 보이던 것(되살린 삼각형이 꺾임) 줄임
+jac = j["accessors"][pr["attributes"]["JOINTS_0"]]; wac = j["accessors"][pr["attributes"]["WEIGHTS_0"]]
+Jt = get(j, views, pr["attributes"]["JOINTS_0"]).astype(np.int64).copy(); Wt = get(j, views, pr["attributes"]["WEIGHTS_0"]).astype(float).copy()
+wmax = 255.0 if wac["componentType"] == 5121 else 65535.0 if wac["componentType"] == 5123 else 1.0
+Wt /= wmax
+JI = {nm: k for k, nm in enumerate(names)}; n_w = 0
+for s in ("L", "R"):
+    if f"Hand.{s}" not in JP: continue
+    w0 = JP[f"Hand.{s}"]; fr = [f for f in ("Index", "Middle", "Ring", "Little") if f"{f}1.{s}" in JP]
+    dv = np.mean([JP[f"{f}1.{s}"] for f in fr], 0) - w0; dv /= np.linalg.norm(dv)
+    for f in fr:
+        k1 = JI[f"{f}1.{s}"]; kh = JI[f"Hand.{s}"]; kn = float((JP[f"{f}1.{s}"] - w0) @ dv)
+        dom = Jt[np.arange(len(Jt)), Wt.argmax(1)] == k1
+        pr_ = (P - w0) @ dv
+        sel = dom & (np.linalg.norm(P - w0, axis=1) < 0.2) & (pr_ < kn + 0.006)
+        t = np.clip((pr_[sel] - (kn - 0.022)) / 0.028, 0, 1); t = t * t * (3 - 2 * t)    # 마디 2.2cm 앞 = 손 100%, 마디 0.6cm 뒤 = 손가락 100%
+        Jt[sel] = 0; Wt[sel] = 0; Jt[sel, 0] = k1; Jt[sel, 1] = kh; Wt[sel, 0] = t; Wt[sel, 1] = 1 - t
+        n_w += int(sel.sum())
+print(f"손등 마디 둘레 점 {n_w}개 무게를 손 뼈와 섞음")
+if wmax > 1: Wq = np.round(Wt * wmax); Wq[:, 0] += wmax - Wq.sum(1)
+else: Wq = Wt
+for acc_, arr in ((jac, Jt), (wac, Wq)):
+    dt_ = np.dtype(COMP[acc_["componentType"]]); b_ = arr.reshape(-1).astype(dt_).tobytes(); vi_ = acc_["bufferView"]; o_ = acc_.get("byteOffset", 0)
+    bb = bytearray(views[vi_]); assert j["bufferViews"][vi_].get("byteStride") in (None, len(b_) // acc_["count"]); bb[o_:o_ + len(b_)] = b_; views[vi_] = bytes(bb)
 print(f"손에서 잘려 나간 삼각형 {int((gone & (np.linalg.norm(cen - JP.get('Hand.R', cen[0]), axis=1) < 0.2)).sum() + (gone & (np.linalg.norm(cen - JP.get('Hand.L', cen[0]), axis=1) < 0.2)).sum())}개 중 손등·손바닥 {int(back.sum())}개 되살림")
 dt = np.dtype(COMP[iac["componentType"]])
 nb = I.reshape(-1).astype(dt).tobytes(); vi = iac["bufferView"]; off = iac.get("byteOffset", 0)
