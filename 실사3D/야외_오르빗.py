@@ -106,7 +106,7 @@ if arm is not None and "--자세없음" not in a:
         if not (h and i1 and l1): continue
         n = (W(i1) - W(h)).cross(W(l1) - W(h)).normalized()
         t3 = B(f"Thumb3.{side}")
-        if t3 is not None and n.dot(W(t3) - W(h)) < 0: n = -n        # 손바닥 쪽 = 엄지 끝이 있는 쪽 (손을 내린 기본 자세에도 맞음)
+        if t3 is not None and n.dot(W(t3) - W(h)) > 0: n = -n        # 손바닥 쪽 = 엄지 끝 반대쪽 (엄지 끝이 있는 쪽으로 굽혔더니 반대로 오므렸음, 2026-11-23 사용자 확인)
         elif t3 is None and n.z > 0: n = -n
         palm[side] = (h.matrix.to_3x3().inverted() @ MWi.to_3x3() @ n)
     def palm_now(side):
