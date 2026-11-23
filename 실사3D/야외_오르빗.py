@@ -105,7 +105,9 @@ if arm is not None and "--자세없음" not in a:
         h, i1, l1 = B(f"Hand.{side}"), B(f"Index1.{side}"), B(f"Little1.{side}")
         if not (h and i1 and l1): continue
         n = (W(i1) - W(h)).cross(W(l1) - W(h)).normalized()
-        if n.z > 0: n = -n
+        t3 = B(f"Thumb3.{side}")
+        if t3 is not None and n.dot(W(t3) - W(h)) < 0: n = -n        # 손바닥 쪽 = 엄지 끝이 있는 쪽 (손을 내린 기본 자세에도 맞음)
+        elif t3 is None and n.z > 0: n = -n
         palm[side] = (h.matrix.to_3x3().inverted() @ MWi.to_3x3() @ n)
     def palm_now(side):
         bpy.context.view_layer.update(); return (MW.to_3x3() @ B(f"Hand.{side}").matrix.to_3x3() @ palm[side]).normalized()
@@ -117,11 +119,14 @@ if arm is not None and "--자세없음" not in a:
             for k in (1, 2, 3):
                 pb = B(f"{f}{k}.{side}")
                 if pb is None: continue
-                n = palm_now(side); hd = MW @ pb.head; cur = ((MW @ pb.tail) - hd).normalized()
-                nn = n - cur * cur.dot(n)
-                if nn.length < 1e-6: continue
-                tgt = cur * math.cos(th) + nn.normalized() * math.sin(th)
-                q = cur.rotation_difference(tgt); R = (MWi.to_3x3() @ q.to_matrix() @ MW.to_3x3()).to_4x4()
+                # 손가락 방향 = 이 마디 → 다음 마디 (블렌더 뼈 꼬리 방향은 손가락 방향과 다를 수 있어 쓰지 않음; 끝 마디는 앞 마디 방향)
+                nx = B(f"{f}{k + 1}.{side}") if k < 3 else None
+                a0 = MW @ pb.head
+                if nx is not None: cur = ((MW @ nx.head) - a0).normalized()
+                else: cur = (a0 - (MW @ B(f"{f}{k - 1}.{side}").head)).normalized()
+                n = palm_now(side); ax = cur.cross(n)
+                if ax.length < 1e-6: continue
+                q = mathutils.Quaternion(ax.normalized(), th); R = (MWi.to_3x3() @ q.to_matrix() @ MW.to_3x3()).to_4x4()
                 T1 = mathutils.Matrix.Translation(pb.head); T0 = mathutils.Matrix.Translation(-pb.head)
                 pb.matrix = T1 @ R @ T0 @ pb.matrix; bpy.context.view_layer.update()
     mic_hand = None
