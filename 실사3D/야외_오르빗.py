@@ -203,14 +203,89 @@ if HANDVIEW and arm is not None:
     bpy.context.view_layer.update()
     hb_, mb_ = arm.pose.bones[f"Hand.{HANDVIEW}"], arm.pose.bones[f"Middle3.{HANDVIEW}"]
     HP = ((arm.matrix_world @ hb_.head) + (arm.matrix_world @ mb_.tail)) / 2
-def place(i):
+R1 = float(a[a.index("--끝거리") + 1]) if "--끝거리" in a else R          # 카메라가 뒤로 빠지는 끝 거리 (없으면 그대로)
+LOOK1 = float(a[a.index("--끝보기") + 1]) if "--끝보기" in a else LOOK
+HC1 = float(a[a.index("--끝높이") + 1]) if "--끝높이" in a else HC
+def place(i, who=None):
     s = i / max(1, N - 1); s = s * s * (3 - 2 * s); th = a0 + (a1 - a0) * s
-    cam.location = (R * math.sin(th), -R * math.cos(th), HC)
+    r_ = R + (R1 - R) * s; lk = LOOK + (LOOK1 - LOOK) * s; hc = HC + (HC1 - HC) * s
+    c0 = who if who is not None else mathutils.Vector((0, 0, 0))
+    cam.location = (c0.x + r_ * math.sin(th), c0.y - r_ * math.cos(th), hc)
+    if HP is None:
+        d = mathutils.Vector((c0.x, c0.y, lk)) - cam.location; cam.rotation_euler = d.to_track_quat("-Z", "Y").to_euler(); return
     if HP is not None:
         sx = 1 if HP.x > 0 else -1
         cam.location = HP + mathutils.Vector((sx * 0.22, -0.38, 0.05)); cam.data.lens = 50
         d = HP - cam.location; cam.rotation_euler = d.to_track_quat("-Z", "Y").to_euler(); return
     d = mathutils.Vector((0, 0, LOOK)) - cam.location; cam.rotation_euler = d.to_track_quat("-Z", "Y").to_euler()
+
+# ── 걷기(--걷기): 인물이 카메라 쪽(-y)으로 두어 걸음 걸어와 멈춤, 카메라는 뒤로 빠지며 돎 (사용자 결정 2026-11-23) ──
+#   발 자리를 시간마다 정하고(오른발 → 왼발 → 오른발을 모음), 골반은 두 발 가운데, 다리는 두 마디 IK(무릎은 앞으로), 발은 바닥과 평평하게.
+#   팔은 걷는 동안 반대쪽 다리와 함께 앞뒤로 조금 흔듦
+WALK = "--걷기" in a
+STEP = float(a[a.index("--보폭") + 1]) if "--보폭" in a else 0.40
+if WALK and arm is not None:
+    bpy.context.view_layer.update()
+    MW = arm.matrix_world.copy(); MWi = MW.inverted(); M3 = MW.to_3x3(); M3i = MWi.to_3x3()
+    PB = arm.pose.bones
+    base = {b.name: b.matrix_basis.copy() for b in PB}          # 차렷 자세(팔·손가락 굽힘 포함) 그대로 기억
+    hips0 = MW @ PB["Hips"].head
+    FOOT0 = {sd: PB[f"Foot.{sd}"].matrix.to_3x3().to_4x4() for sd in ("L", "R")}
+    leg = {}
+    for sd in ("L", "R"):
+        H = MW @ PB[f"UpperLeg.{sd}"].head; Kn = MW @ PB[f"LowerLeg.{sd}"].head; F = MW @ PB[f"Foot.{sd}"].head
+        leg[sd] = dict(H=H, L1=(Kn - H).length, L2=(F - Kn).length, F0=F.copy())
+    LL = (leg["L"]["L1"] + leg["L"]["L2"] + leg["R"]["L1"] + leg["R"]["L2"]) / 2
+    sm = lambda u: 0.0 if u <= 0 else 1.0 if u >= 1 else u * u * (3 - 2 * u)
+    T0 = 0.5; D1 = 0.62; D3 = 0.5                            # 걷기 시작 0.5초, 한 걸음 0.62초, 마지막 모으기 0.5초
+    def foot_y(sd, t):
+        if sd == "R":   # 오른발 먼저 한 걸음, 마지막에 왼발 옆으로 모음
+            return -STEP * sm((t - T0) / D1) - STEP * sm((t - T0 - 2 * D1) / D3)
+        return -2 * STEP * sm((t - T0 - D1) / D1)
+    def foot_lift(sd, t):
+        ph = [(T0, D1, 0.06), (T0 + 2 * D1, D3, 0.035)] if sd == "R" else [(T0 + D1, D1, 0.06)]
+        return sum(h * math.sin(math.pi * min(1, max(0, (t - s0) / d))) for s0, d, h in ph)
+    def set_world_aim(name, child_head_world, target_world):
+        pb = PB[name]; bpy.context.view_layer.update()
+        hd = MW @ pb.head; cur = (child_head_world() - hd).normalized()
+        q = cur.rotation_difference((target_world - hd).normalized()); R_ = (M3i @ q.to_matrix() @ M3).to_4x4()
+        T1 = mathutils.Matrix.Translation(pb.head); T0_ = mathutils.Matrix.Translation(-pb.head)
+        pb.matrix = T1 @ R_ @ T0_ @ pb.matrix; bpy.context.view_layer.update()
+    def walk(i):
+        t = i / 24.0
+        for b in PB: b.matrix_basis = base[b.name]    # 처음 자세(차렷)로 되돌림
+        bpy.context.view_layer.update()
+        fy = {sd: foot_y(sd, t) for sd in ("L", "R")}
+        gap = abs(fy["L"] - fy["R"])
+        drop = LL - math.sqrt(max(LL * LL - (gap / 2) ** 2, 1e-6)) + 0.004 * min(1, gap / STEP)
+        py_ = (fy["L"] + fy["R"]) / 2
+        sway = 0.012 * math.sin(math.pi * (fy["R"] - fy["L"]) / max(STEP, 1e-3))   # 몸무게를 디딘 발 쪽으로 살짝
+        off = mathutils.Vector((sway, py_, -drop))
+        hp = PB["Hips"]; hp.matrix = mathutils.Matrix.Translation(M3i @ off) @ hp.matrix; bpy.context.view_layer.update()
+        for sd in ("L", "R"):
+            g = leg[sd]; H = MW @ PB[f"UpperLeg.{sd}"].head
+            F = g["F0"] + mathutils.Vector((0, fy[sd], foot_lift(sd, t)))
+            d = F - H; dl = min(d.length, g["L1"] + g["L2"] - 1e-4)
+            ca = (g["L1"] ** 2 + dl ** 2 - g["L2"] ** 2) / (2 * g["L1"] * dl); ang = math.acos(max(-1, min(1, ca)))
+            dn = d.normalized(); fwd = mathutils.Vector((0, -1, 0)); side = dn.cross(fwd).normalized(); perp = side.cross(dn).normalized()
+            if perp.dot(fwd) < 0: perp = -perp
+            knee = H + (dn * math.cos(ang) + perp * math.sin(ang)) * g["L1"]
+            set_world_aim(f"UpperLeg.{sd}", lambda sd=sd: MW @ PB[f"LowerLeg.{sd}"].head, knee)
+            set_world_aim(f"LowerLeg.{sd}", lambda sd=sd: MW @ PB[f"Foot.{sd}"].head, F)
+            fb = PB[f"Foot.{sd}"]; rot = FOOT0[sd]                                # 발은 처음 방향 그대로 (바닥과 평평)
+            fb.matrix = mathutils.Matrix.Translation(fb.matrix.translation) @ rot; bpy.context.view_layer.update()
+        # 팔 흔들기: 오른다리가 앞이면 왼팔이 앞
+        sw = 0.22 * (fy["R"] - fy["L"]) / max(STEP, 1e-3)
+        for sd in ("L", "R"):
+            ub = f"UpperArm.{sd}"
+            if ub not in PB: continue
+            sgn = 1 if (MW @ PB[ub].head).x > 0 else -1
+            s_ = sw if sd == "L" else -sw                                     # +면 앞(-y)으로
+            tgt = (MW @ PB[ub].head) + mathutils.Vector((sgn * CH_U, -0.03 + s_ * 0.9, -1.0))
+            set_world_aim(ub, lambda sd=sd: MW @ PB[f"ForeArm.{sd}"].head, tgt)
+        return mathutils.Vector((0, py_, 0))
+else:
+    walk = lambda i: mathutils.Vector((0, 0, 0))
 
 # ── 입·눈 ──
 lip = json.load(open(opt["--입"])) if opt["--입"] else {"frames": []}
@@ -238,6 +313,6 @@ if "--찍점" in a:      # 검사용: 화면 점(x,y) 아래에 무엇이 있는
     sys.exit(0)
 frames = [int(opt["--미리보기"])] if opt["--미리보기"] else range(int(opt["--시작장"]), N if int(opt["--끝장"]) < 0 else int(opt["--끝장"]))
 for i in frames:
-    place(i); face(i)
+    who = walk(i); place(i, who * 0.6); face(i)     # 카메라는 인물을 반쯤 따라감 (나머지는 인물이 다가오는 느낌)
     sc.render.filepath = os.path.join(os.path.abspath(folder), f"f{i:04d}.png"); bpy.ops.render.render(write_still=True)
 print("찍음:", len(list(frames)), "장 →", folder)
