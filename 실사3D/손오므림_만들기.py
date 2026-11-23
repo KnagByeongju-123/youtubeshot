@@ -8,7 +8,8 @@ o=max((x for x in bpy.data.objects if x.type=='MESH' and x.data.shape_keys),key=
 me=o.data; n=len(me.vertices); co=np.zeros(n*3,np.float32); me.vertices.foreach_get('co',co); co=co.reshape(n,3); new=co.copy()
 for side,sg in(('L',1),('R',-1)):
     gi=o.vertex_groups['Hand.'+side].index
-    idx=np.array([v.index for v in me.vertices if v.co.x*sg>0.3 and any(g.group==gi and g.weight>0.5 for g in v.groups)])
+    hg={g.index for g in o.vertex_groups if g.name.endswith('.'+side) and g.name.split('.')[0].rstrip('0123456789') in('Hand','Thumb','Index','Middle','Ring','Little')}   # 손가락 뼈가 있는 모델도
+    idx=np.array([v.index for v in me.vertices if v.co.x*sg>0.3 and sum(g.weight for g in v.groups if g.group in hg)>0.5])
     wr=np.array(ar.matrix_world@ar.data.bones['Hand.'+side].head_local)          # 손목
     p=co[idx]; far=p[np.argsort(-np.linalg.norm(p-wr,axis=1))[:200]].mean(0)
     d=(far-wr)/np.linalg.norm(far-wr)                                              # 손목 → 손끝

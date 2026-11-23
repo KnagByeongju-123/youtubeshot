@@ -8,7 +8,8 @@ o=max((x for x in bpy.data.objects if x.type=='MESH' and x.data.shape_keys),key=
 names={g.index:g.name for g in o.vertex_groups}
 fixed=0
 for side,sg in(('L',1),('R',-1)):
-    arm={i for i,nm in names.items() if nm.endswith('.'+side) and nm.split('.')[0] in('UpperArm','ForeArm','Hand')}
+    # 손가락 뼈(Thumb1·Index2…)가 있는 모델도 손으로 셈
+    arm={i for i,nm in names.items() if nm.endswith('.'+side) and nm.split('.')[0].rstrip('0123456789') in('UpperArm','ForeArm','Hand','Thumb','Index','Middle','Ring','Little')}
     for v in o.data.vertices:
         if v.co.x*sg>XMIN and v.co.z<ZMAX:
             other=[g for g in v.groups if g.group not in arm]
