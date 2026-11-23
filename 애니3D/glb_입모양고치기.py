@@ -162,7 +162,7 @@ P_ORIG = P.copy(); P = P.copy(); P[:, 2] -= dz; z = P[:, 2]
 moved_n = int((dz > 1e-4).sum())
 print(f"  코 밑 두툼한 곳: 높이 {Y_LO:.3f}~{Y_HI:.3f}, 점 {moved_n}개를 최대 {dz.max() * 1000:.1f}mm 뒤로")
 FLAT_DZ = dz
-lat = 1 - sstep((np.abs(x - XC) - hw(x) * 0.25) / (hw(x) * 0.6))                 # 가운데 1 → 입꼬리(틈 끝 0.85)에서 0 — 렌즈처럼 끝으로 갈수록 부드럽게 가늘어짐
+lat = np.clip(1 - (np.abs(x - XC) / (hw(x) * 0.86)) ** 2, 0, 1) ** 0.75          # 타원 모양: 가운데에서 입꼬리까지 고르게 줄어듦 (평평하다 갑자기 줄면 아랫입술 가장자리가 꺾여 계단처럼 보였음)
 lat_chin = 1 - sstep((np.abs(x - XC) - HW) / 0.035)                        # 턱은 조금 더 넓게
 dy = y - ly(x)                                                        # 입술선에서 위(+)·아래(-)
 chin_y = LY0 - 0.045
@@ -267,9 +267,20 @@ for nm_, D_ in new.items():
         avg = np.where(c_[:, None] > 0, sm / np.maximum(c_, 1)[:, None], dg)
         dg = np.where(inside[:, None], 0.5 * dg + 0.5 * avg, dg)
     D_[:] = dg[gid2]
+# 틈 가장자리(윗·아랫입술 따로)는 왼→오 차례로 늘어놓고 움직임을 7칸 평균 → 벌렸을 때 가장자리가 계단·톱니 없이 매끈한 곡선 (사용자 2026-11-23)
+for side_m in (dy[edge] >= 0, dy[edge] < 0):
+    ids = edge[side_m]
+    if len(ids) < 5: continue
+    ids = ids[np.argsort(x[ids])]
+    for D_ in new.values():
+        v_ = D_[ids]; k_ = 7; pad = np.pad(v_, ((k_ // 2, k_ // 2), (0, 0)), mode="edge")
+        sm_ = np.stack([np.convolve(pad[:, c_], np.ones(k_) / k_, "valid") for c_ in range(3)], 1)
+        D_[ids] = sm_
+        same_ = np.isin(gid2, gid2[ids]) & ~np.isin(np.arange(len(D_)), ids)          # 같은 자리 겹친 점도 같게
+        gv = np.zeros((gid2.max() + 1, 3)); gv[gid2[ids]] = sm_; D_[same_] = gv[gid2[same_]]
 for t_, nm in enumerate(names):
     if nm in new: put(pr["targets"][t_]["POSITION"], new[nm])
-print("  입 모양 움직임을 이웃끼리 고르게 (8번)")
+print("  입 모양 움직임을 이웃끼리 고르게 (8번) + 입술 가장자리는 왼→오 7칸 평균")
 
 # ── 입 안: 입술 바로 뒤에 어두운 둥근 면(입 안) + 윗니 띠 — 머리 뼈를 따라감 ──
 lip_z = float(np.median(z[front & (np.abs(x - XC) < 0.01) & (np.abs(dy) < 0.004)]))
@@ -347,13 +358,15 @@ if PAINT:     # 입술선 둘레 띠를 아랫입술 색으로 (겉면 그림에
     ax_ = np.abs(x - XC)
     samp = front & (ax_ < 0.012) & (dy < -0.0025) & (dy > -0.0055)
     lipc = np.median(color(samp), 0) * 0.97
-    wv = np.where((dy > -0.0015) & (dy < 0.0035) & front, 1 - sstep((dy - 0.0012) / 0.0023), 0) * (1 - sstep((ax_ - hw(x) * 0.95) / (hw(x) * 0.25)))
+    wv = np.where((dy > -0.0035) & (dy < 0.0035) & front, np.where(dy >= 0, 1 - sstep((dy - 0.0012) / 0.0023), 1 - sstep((-dy - 0.002) / 0.0015)), 0) * (1 - sstep((ax_ - hw(x) * 0.78) / (hw(x) * 0.2)))      # 윗입술 안쪽 + 아랫입술 가장자리 3mm, 입꼬리 쪽으로 옅어짐
     alpha = Image.new("L", (tw, th), 0); da = ImageDraw.Draw(alpha)
     for t3 in I:
         if t3[0] == t3[1]: continue
         w3 = wv[t3]
         if w3.max() <= 0.02: continue
         uv = [(float(UV[k_, 0] * tw), float(UV[k_, 1] * th)) for k_ in t3]
+        us_, vs_ = [q_[0] for q_ in uv], [q_[1] for q_ in uv]
+        if max(us_) - min(us_) > 30 or max(vs_) - min(vs_) > 30: continue       # 겉면 그림 이음매를 건너는 큰 삼각형은 칠하지 않음 (볼까지 줄무늬로 번졌음)
         da.polygon(uv, fill=int(255 * 0.9 * w3.mean()))
     al = np.asarray(alpha.filter(ImageFilter.GaussianBlur(2)), float)[:, :, None] / 255
     newtex = TEX * (1 - al) + lipc[None, None, :] * al
