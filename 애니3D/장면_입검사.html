@@ -35,6 +35,7 @@ if (Q.get('model')) {
   human = await loadHuman(new GLTFLoader(), '../models/glb/' + (Q.get('glb') || 'model2_rig_lip') + '.glb', { height: +Q.get('height') || 1.75 });
   scene.add(human.scene); human.update(); human.scene.updateMatrixWorld(true);
 }
+if (Q.get('hide')) human.scene.traverse((o) => { if (o.name && Q.get('hide').split(',').some((h) => o.name.startsWith(h))) o.visible = false; });   // 검사용: 이름으로 숨김
 const lip = Q.get('lip') ? await (await fetch('../' + Q.get('lip'))).json() : { frames: [] };
 const headPos = human.prox.head.b.getWorldPosition(new THREE.Vector3());
 for (const s of ['left', 'right']) for (const f of ['Index', 'Middle', 'Ring', 'Little', 'Thumb']) human.curl(s + f, f === 'Thumb' ? 0.15 : 0.3);
