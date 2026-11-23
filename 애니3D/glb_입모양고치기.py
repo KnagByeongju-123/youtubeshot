@@ -318,15 +318,8 @@ if head_j is not None:
     for k_ in range(n_r): bi += [[3 * n_r + k_, 3 * n_r + (k_ + 1) % n_r, cidx]]
     add_mesh("Mouth_Inside", bp, np.array(bi), [0.26, 0.07, 0.07, 1.0], targets={nm_: np.concatenate(tg[nm_]) for nm_ in new})
     print(f"  입 안 주머니: 입술 가장자리 점 {n_r}개(윗 {len(U)}·아래 {len(L)})에 붙임")
-    tw_, th_ = HW * 0.36, 0.0032                                        # 윗니: 입술선 바로 위·안쪽, 벌렸을 때만 보이게 (가운데가 조금 앞으로 둥글게)
-    tx = np.linspace(-tw_, tw_, 13); tp, ti = [], []
-    for k_, xx in enumerate(tx):
-        zz = lip_z - 0.007 - 0.008 * (xx / tw_) ** 2
-        tp += [[xx, LY0 + 0.0015, zz], [xx, LY0 + 0.0015 - th_, zz]]
-        if k_: a_ = 2 * (k_ - 1); ti += [[a_, a_ + 1, a_ + 2], [a_ + 1, a_ + 3, a_ + 2]]
-    add_mesh("Teeth_Upper", np.array(tp), np.array(ti), [0.78, 0.75, 0.70, 1.0])
-    # 아랫니는 넣지 않음: 말할 때 대부분 아랫입술에 가려지고, 모양 키로 따라 움직이면 늘어나 이 하나처럼 보였음 (2026-11-22)
-    print(f"  입 안(어두운 그릇, 아랫입술과 함께 벌어짐)·윗니 더함 (입술 앞면 z {lip_z:.3f})")
+    # 이는 넣지 않음 (사용자 2026-11-23: '이빨은 없애줘' — 단순한 흰 띠라 어색했음)
+    print(f"  입 안 주머니 더함 (이 없음) (입술 앞면 z {lip_z:.3f})")
 
 out = bytearray()
 for i, v in enumerate(j["bufferViews"]):
