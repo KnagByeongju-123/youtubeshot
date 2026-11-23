@@ -75,9 +75,10 @@ for r in roots:
     r.location.x -= (min(p.x for p in pts) + max(p.x for p in pts)) / 2; r.location.y -= (min(p.y for p in pts) + max(p.y for p in pts)) / 2
     r.location.z -= min(p.z for p in pts)
 # ── 자세: 기본 = 차렷(팔을 몸 옆에 자연스럽게 내림, 사용자 결정 2026-11-23), --자세 모음 = 손을 허리 앞에 모음 — 뼈 방향을 목표 방향으로 돌림 ──
-POSE = a[a.index('--자세') + 1] if '--자세' in a else '마이크'     # 마이크(보도, 기본) / 차렷 / 모음
+POSE = a[a.index('--자세') + 1] if '--자세' in a else '차렷'     # 차렷(기본, 사용자 결정 2026-11-23: 마이크 없이 자연스러운 팔) / 마이크 / 모음
 MIC_SIDE = a[a.index('--마이크손') + 1] if '--마이크손' in a else 'R'
-MIC_F = (0.30, 0.45, 0.85); MIC_CURL = 1.25; FIST = float(a[a.index('--주먹') + 1]) if '--주먹' in a else 0.55   # 주먹 = 마디마다 굽힘(라디안)
+HAND_S = float(a[a.index('--손굵기') + 1]) if '--손굵기' in a else 0.82
+MIC_F = (0.30, 0.45, 0.85); MIC_CURL = 1.25; FIST = float(a[a.index('--주먹') + 1]) if '--주먹' in a else 0.32   # 주먹 = 마디마다 굽힘(라디안)
 CH_U, CH_F = (float(v) for v in (a[a.index('--팔벌림') + 1] if '--팔벌림' in a else '0.12,0.10').split(','))   # 차렷 팔이 몸에서 떨어진 정도(위팔,아래팔)
 arm = next((o for o in objs if o.type == "ARMATURE"), None)
 if arm is not None and "--자세없음" not in a:
@@ -142,7 +143,10 @@ if arm is not None and "--자세없음" not in a:
         else:
             aim_bone(ub, (sgn * CH_U, -0.03, -1.0), fb)        # 위팔: 곧게 아래로, 엉덩이에 닿지 않게 살짝 바깥
             aim_bone(fb, (sgn * CH_F, -0.10, -1.0), hb)        # 아래팔: 아래로, 팔꿈치를 아주 살짝 굽혀 자연스럽게
-            curl(side, FIST, thumb=FIST * 0.4)                 # 살짝 주먹 (손가락을 편 채 늘어뜨리면 어색함)
+            curl(side, FIST, thumb=FIST * 0.4)                 # 손가락을 살짝 굽혀 힘을 뺀 손 (편 채 늘어뜨리면 어색함)
+        hpb = next((arm.pose.bones[n] for n in hb if n in arm.pose.bones), None)
+        if hpb is not None and HAND_S != 1:                    # 손이 너무 굵다는 지적(2026-11-23) → 손 두께·폭만 줄임(뼈 길이 방향 y 는 조금만)
+            hpb.scale = (HAND_S, 0.5 + 0.5 * HAND_S, HAND_S)
     # 무선 마이크: 손 안(손바닥 쪽)에 세워 쥐고, 머리(공 모양 망)는 입 쪽으로
     if mic_hand:
         bpy.context.view_layer.update(); bpy.ops.object.mode_set(mode="OBJECT")
@@ -188,9 +192,19 @@ bpy.ops.object.camera_add(); cam = bpy.context.object; sc.camera = cam; cam.data
 a0, a1 = (math.radians(float(v)) for v in opt["--각도"].split(","))
 R, HC, LOOK = float(opt["--거리"]), float(opt["--높이"]), float(opt["--보기"])
 N = int(opt["--장수"])
+HANDVIEW = a[a.index('--손보기') + 1] if '--손보기' in a else None   # 검사용: 손 가까이 찍기 (R 또는 L)
+HP = None
+if HANDVIEW and arm is not None:
+    bpy.context.view_layer.update()
+    hb_, mb_ = arm.pose.bones[f"Hand.{HANDVIEW}"], arm.pose.bones[f"Middle3.{HANDVIEW}"]
+    HP = ((arm.matrix_world @ hb_.head) + (arm.matrix_world @ mb_.tail)) / 2
 def place(i):
     s = i / max(1, N - 1); s = s * s * (3 - 2 * s); th = a0 + (a1 - a0) * s
     cam.location = (R * math.sin(th), -R * math.cos(th), HC)
+    if HP is not None:
+        sx = 1 if HP.x > 0 else -1
+        cam.location = HP + mathutils.Vector((sx * 0.22, -0.38, 0.05)); cam.data.lens = 50
+        d = HP - cam.location; cam.rotation_euler = d.to_track_quat("-Z", "Y").to_euler(); return
     d = mathutils.Vector((0, 0, LOOK)) - cam.location; cam.rotation_euler = d.to_track_quat("-Z", "Y").to_euler()
 
 # ── 입·눈 ──
