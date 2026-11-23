@@ -74,7 +74,9 @@ bpy.context.view_layer.update(); pts = bbox()
 for r in roots:
     r.location.x -= (min(p.x for p in pts) + max(p.x for p in pts)) / 2; r.location.y -= (min(p.y for p in pts) + max(p.y for p in pts)) / 2
     r.location.z -= min(p.z for p in pts)
-# ── 자세: 팔을 내려 손을 허리 앞에 모음 (방송 리포터처럼) — 뼈 방향을 목표 방향으로 돌림 ──
+# ── 자세: 기본 = 차렷(팔을 몸 옆에 자연스럽게 내림, 사용자 결정 2026-11-23), --자세 모음 = 손을 허리 앞에 모음 — 뼈 방향을 목표 방향으로 돌림 ──
+POSE = a[a.index('--자세') + 1] if '--자세' in a else '차렷'
+CH_U, CH_F = (float(v) for v in (a[a.index('--팔벌림') + 1] if '--팔벌림' in a else '0.12,0.10').split(','))   # 차렷 팔이 몸에서 떨어진 정도(위팔,아래팔)
 arm = next((o for o in objs if o.type == "ARMATURE"), None)
 if arm is not None and "--자세없음" not in a:
     bpy.context.view_layer.objects.active = arm; bpy.ops.object.mode_set(mode="POSE")
@@ -98,8 +100,12 @@ if arm is not None and "--자세없음" not in a:
         pb = next((arm.pose.bones[n] for n in ub if n in arm.pose.bones), None)
         if pb is None: continue
         sgn = 1 if (MW @ pb.head).x > 0 else -1
-        aim_bone(ub, (sgn * 0.14, -0.22, -0.96), fb)       # 위팔: 아래로, 몸에 붙여 살짝 앞
-        aim_bone(fb, (-sgn * 0.62, -0.72, -0.30), hb)      # 아래팔: 앞·안쪽으로 → 손이 허리 앞에서 모임
+        if POSE == '모음':
+            aim_bone(ub, (sgn * 0.14, -0.22, -0.96), fb)       # 위팔: 아래로, 몸에 붙여 살짝 앞
+            aim_bone(fb, (-sgn * 0.62, -0.72, -0.30), hb)      # 아래팔: 앞·안쪽으로 → 손이 허리 앞에서 모임
+        else:
+            aim_bone(ub, (sgn * CH_U, -0.03, -1.0), fb)        # 위팔: 곧게 아래로, 엉덩이에 닿지 않게 살짝 바깥
+            aim_bone(fb, (sgn * CH_F, -0.10, -1.0), hb)        # 아래팔: 아래로, 팔꿈치를 아주 살짝 굽혀 자연스럽게
     bpy.ops.object.mode_set(mode="OBJECT")
 # 모양 키(입·눈) 모으기
 keyed = [o for o in objs if o.type == "MESH" and o.data.shape_keys]
