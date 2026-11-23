@@ -206,11 +206,16 @@ if HANDVIEW and arm is not None:
 R1 = float(a[a.index("--끝거리") + 1]) if "--끝거리" in a else R          # 카메라가 뒤로 빠지는 끝 거리 (없으면 그대로)
 LOOK1 = float(a[a.index("--끝보기") + 1]) if "--끝보기" in a else LOOK
 HC1 = float(a[a.index("--끝높이") + 1]) if "--끝높이" in a else HC
+WHO = [mathutils.Vector((0, 0, 0))]
 def place(i, who=None):
     s = i / max(1, N - 1); s = s * s * (3 - 2 * s); th = a0 + (a1 - a0) * s
     r_ = R + (R1 - R) * s; lk = LOOK + (LOOK1 - LOOK) * s; hc = HC + (HC1 - HC) * s
     c0 = who if who is not None else mathutils.Vector((0, 0, 0))
     cam.location = (c0.x + r_ * math.sin(th), c0.y - r_ * math.cos(th), hc)
+    if "--카메라" in a:      # 검사용: 카메라 자리·보는 곳을 직접 (x,y,z,보는x,보는y,보는z — 인물이 걸어온 만큼 같이 옮김)
+        v6 = [float(q) for q in a[a.index("--카메라") + 1].split(",")]; wv = WHO[0]
+        cam.location = mathutils.Vector(v6[:3]) + wv; d = mathutils.Vector(v6[3:]) + wv - cam.location
+        cam.rotation_euler = d.to_track_quat("-Z", "Y").to_euler(); return
     if HP is None:
         d = mathutils.Vector((c0.x, c0.y, lk)) - cam.location; cam.rotation_euler = d.to_track_quat("-Z", "Y").to_euler(); return
     if HP is not None:
@@ -298,7 +303,7 @@ def face(i):
 os.makedirs(folder, exist_ok=True)
 if "--찍점" in a:      # 검사용: 화면 점(x,y) 아래에 무엇이 있는지 (물체·재질·겉면 그림 좌표)
     px, py = (float(v) for v in a[a.index("--찍점") + 1].split(","))
-    sc.frame_set(int(opt["--미리보기"] or 0)); place(int(opt["--미리보기"] or 0)); bpy.context.view_layer.update()
+    fi_ = int(opt["--미리보기"] or 0); sc.frame_set(fi_); place(fi_, walk(fi_) * 0.6); bpy.context.view_layer.update()
     dg = bpy.context.evaluated_depsgraph_get(); fr = cam.data.view_frame(scene=sc)
     tr, br, bl, tl = [cam.matrix_world @ v for v in fr]; u, v = px / W_, py / H_
     tgt = tl + (tr - tl) * u + (bl - tl) * v; o = cam.matrix_world.translation; d = (tgt - o).normalized()
@@ -313,6 +318,6 @@ if "--찍점" in a:      # 검사용: 화면 점(x,y) 아래에 무엇이 있는
     sys.exit(0)
 frames = [int(opt["--미리보기"])] if opt["--미리보기"] else range(int(opt["--시작장"]), N if int(opt["--끝장"]) < 0 else int(opt["--끝장"]))
 for i in frames:
-    who = walk(i); place(i, who * 0.6); face(i)     # 카메라는 인물을 반쯤 따라감 (나머지는 인물이 다가오는 느낌)
+    who = walk(i); WHO[0] = who; place(i, who * 0.6); face(i)     # 카메라는 인물을 반쯤 따라감 (나머지는 인물이 다가오는 느낌)
     sc.render.filepath = os.path.join(os.path.abspath(folder), f"f{i:04d}.png"); bpy.ops.render.render(write_still=True)
 print("찍음:", len(list(frames)), "장 →", folder)
