@@ -51,7 +51,7 @@ nt.links.new(tc.outputs["Generated"], mp.inputs["Vector"])
 e_cam = nt.nodes.new("ShaderNodeTexEnvironment"); e_cam.image = bpy.data.images.load(os.path.join(A, f"{PLACE}.jpg"))
 e_lit = nt.nodes.new("ShaderNodeTexEnvironment"); e_lit.image = bpy.data.images.load(os.path.join(A, f"{PLACE}_1k.hdr"))
 for e in (e_cam, e_lit): nt.links.new(mp.outputs["Vector"], e.inputs["Vector"])
-b_cam = nt.nodes.new("ShaderNodeBackground"); b_lit = nt.nodes.new("ShaderNodeBackground"); b_lit.inputs["Strength"].default_value = 1.0
+b_cam = nt.nodes.new("ShaderNodeBackground"); b_lit = nt.nodes.new("ShaderNodeBackground"); b_lit.inputs["Strength"].default_value = float(a[a.index("--세상빛") + 1]) if "--세상빛" in a else 0.6   # 사진에서 오는 빛 세기 (인물 밝기)
 nt.links.new(e_cam.outputs["Color"], b_cam.inputs["Color"]); nt.links.new(e_lit.outputs["Color"], b_lit.inputs["Color"])
 lp = nt.nodes.new("ShaderNodeLightPath"); mix = nt.nodes.new("ShaderNodeMixShader"); outw = nt.nodes.new("ShaderNodeOutputWorld")
 nt.links.new(lp.outputs["Is Camera Ray"], mix.inputs["Fac"]); nt.links.new(b_lit.outputs["Background"], mix.inputs[1]); nt.links.new(b_cam.outputs["Background"], mix.inputs[2])
@@ -75,7 +75,9 @@ for r in roots:
     r.location.x -= (min(p.x for p in pts) + max(p.x for p in pts)) / 2; r.location.y -= (min(p.y for p in pts) + max(p.y for p in pts)) / 2
     r.location.z -= min(p.z for p in pts)
 # ── 자세: 기본 = 차렷(팔을 몸 옆에 자연스럽게 내림, 사용자 결정 2026-11-23), --자세 모음 = 손을 허리 앞에 모음 — 뼈 방향을 목표 방향으로 돌림 ──
-POSE = a[a.index('--자세') + 1] if '--자세' in a else '차렷'
+POSE = a[a.index('--자세') + 1] if '--자세' in a else '마이크'     # 마이크(보도, 기본) / 차렷 / 모음
+MIC_SIDE = a[a.index('--마이크손') + 1] if '--마이크손' in a else 'R'
+MIC_F = (0.30, 0.45, 0.85); MIC_CURL = 1.25; FIST = float(a[a.index('--주먹') + 1]) if '--주먹' in a else 0.55   # 주먹 = 마디마다 굽힘(라디안)
 CH_U, CH_F = (float(v) for v in (a[a.index('--팔벌림') + 1] if '--팔벌림' in a else '0.12,0.10').split(','))   # 차렷 팔이 몸에서 떨어진 정도(위팔,아래팔)
 arm = next((o for o in objs if o.type == "ARMATURE"), None)
 if arm is not None and "--자세없음" not in a:
@@ -93,7 +95,36 @@ if arm is not None and "--자세없음" not in a:
         hd = pb.head.copy(); T1 = mathutils.Matrix.Translation(hd); T0 = mathutils.Matrix.Translation(-hd)
         pb.matrix = T1 @ R @ T0 @ pb.matrix
         bpy.context.view_layer.update()
-    for side, sx in (("L", None), ("R", None)):
+    def B(n): return arm.pose.bones.get(n)
+    def W(pb): return MW @ pb.head
+    # 손바닥 방향: 처음 자세(팔을 옆으로 편)에서 손바닥은 아래(-z) → 손 뼈 기준 방향으로 기억해 두고, 팔을 돌린 뒤 다시 계산
+    palm = {}
+    bpy.context.view_layer.update()
+    for side in ("L", "R"):
+        h, i1, l1 = B(f"Hand.{side}"), B(f"Index1.{side}"), B(f"Little1.{side}")
+        if not (h and i1 and l1): continue
+        n = (W(i1) - W(h)).cross(W(l1) - W(h)).normalized()
+        if n.z > 0: n = -n
+        palm[side] = (h.matrix.to_3x3().inverted() @ MWi.to_3x3() @ n)
+    def palm_now(side):
+        bpy.context.view_layer.update(); return (MW.to_3x3() @ B(f"Hand.{side}").matrix.to_3x3() @ palm[side]).normalized()
+    def curl(side, amt, thumb=None):
+        """손가락을 손바닥 쪽으로 굽힘 (amt = 마디마다 굽히는 각도, 라디안)"""
+        if side not in palm: return
+        for f in ("Index", "Middle", "Ring", "Little", "Thumb"):
+            th = (thumb if thumb is not None else amt * 0.5) if f == "Thumb" else amt
+            for k in (1, 2, 3):
+                pb = B(f"{f}{k}.{side}")
+                if pb is None: continue
+                n = palm_now(side); hd = MW @ pb.head; cur = ((MW @ pb.tail) - hd).normalized()
+                nn = n - cur * cur.dot(n)
+                if nn.length < 1e-6: continue
+                tgt = cur * math.cos(th) + nn.normalized() * math.sin(th)
+                q = cur.rotation_difference(tgt); R = (MWi.to_3x3() @ q.to_matrix() @ MW.to_3x3()).to_4x4()
+                T1 = mathutils.Matrix.Translation(pb.head); T0 = mathutils.Matrix.Translation(-pb.head)
+                pb.matrix = T1 @ R @ T0 @ pb.matrix; bpy.context.view_layer.update()
+    mic_hand = None
+    for side in ("L", "R"):
         ub = [f"UpperArm.{side}", f"{'Left' if side == 'L' else 'Right'}UpperArm"]
         fb = [f"ForeArm.{side}", f"{'Left' if side == 'L' else 'Right'}ForeArm"]
         hb = [f"Hand.{side}", f"{'Left' if side == 'L' else 'Right'}Hand"]
@@ -103,10 +134,37 @@ if arm is not None and "--자세없음" not in a:
         if POSE == '모음':
             aim_bone(ub, (sgn * 0.14, -0.22, -0.96), fb)       # 위팔: 아래로, 몸에 붙여 살짝 앞
             aim_bone(fb, (-sgn * 0.62, -0.72, -0.30), hb)      # 아래팔: 앞·안쪽으로 → 손이 허리 앞에서 모임
+        elif POSE == '마이크' and side == MIC_SIDE:
+            aim_bone(ub, (sgn * 0.10, -0.30, -0.95), fb)       # 위팔: 아래로, 팔꿈치는 몸 옆 살짝 앞
+            aim_bone(fb, (-sgn * MIC_F[0], -MIC_F[1], MIC_F[2]), hb)   # 아래팔: 가슴 앞으로 들어 올림
+            aim_bone(hb, (-sgn * 0.30, -0.55, 0.78), [f"Middle1.{side}"])   # 손: 손가락이 앞·위를 향하게 (마이크를 세워 쥠)
+            curl(side, MIC_CURL, thumb=0.45); mic_hand = side
         else:
             aim_bone(ub, (sgn * CH_U, -0.03, -1.0), fb)        # 위팔: 곧게 아래로, 엉덩이에 닿지 않게 살짝 바깥
             aim_bone(fb, (sgn * CH_F, -0.10, -1.0), hb)        # 아래팔: 아래로, 팔꿈치를 아주 살짝 굽혀 자연스럽게
-    bpy.ops.object.mode_set(mode="OBJECT")
+            curl(side, FIST, thumb=FIST * 0.4)                 # 살짝 주먹 (손가락을 편 채 늘어뜨리면 어색함)
+    # 무선 마이크: 손 안(손바닥 쪽)에 세워 쥐고, 머리(공 모양 망)는 입 쪽으로
+    if mic_hand:
+        bpy.context.view_layer.update(); bpy.ops.object.mode_set(mode="OBJECT")
+        h, m1, i1, l1 = (W(B(f"{n}.{mic_hand}")) for n in ("Hand", "Middle1", "Index1", "Little1"))
+        n = palm_now(mic_hand)
+        grip = (h + m1) / 2 * 0.35 + m1 * 0.65 + n * 0.022                 # 손바닥 안쪽, 손가락이 감싸는 자리
+        axis = (i1 - l1).normalized()                                       # 마이크 방향 = 새끼→검지 (주먹 안을 지나는 방향)
+        if axis.z < 0: axis = -axis
+        axis = (axis + mathutils.Vector((0, -0.15, 0))).normalized()
+        def mat(nm, col, rough, metal):
+            m = bpy.data.materials.new(nm); m.use_nodes = True; bs = m.node_tree.nodes["Principled BSDF"]
+            bs.inputs["Base Color"].default_value = (*col, 1); bs.inputs["Roughness"].default_value = rough; bs.inputs["Metallic"].default_value = metal; return m
+        rot = mathutils.Vector((0, 0, 1)).rotation_difference(axis).to_euler()
+        L_ = 0.20; base = grip - axis * 0.07                                 # 손 아래로 7cm 나옴
+        bpy.ops.mesh.primitive_cylinder_add(vertices=32, radius=0.017, depth=L_, location=base + axis * (L_ / 2), rotation=rot)
+        body = bpy.context.object; body.data.materials.append(mat("마이크몸통", (0.02, 0.02, 0.022), 0.35, 0.3)); bpy.ops.object.shade_smooth()
+        bpy.ops.mesh.primitive_cylinder_add(vertices=32, radius=0.021, depth=0.025, location=base + axis * (L_ - 0.005), rotation=rot)
+        ring = bpy.context.object; ring.data.materials.append(mat("마이크고리", (0.55, 0.56, 0.6), 0.25, 1.0)); bpy.ops.object.shade_smooth()
+        bpy.ops.mesh.primitive_uv_sphere_add(segments=32, ring_count=16, radius=0.029, location=base + axis * (L_ + 0.022))
+        head_ = bpy.context.object; head_.data.materials.append(mat("마이크망", (0.12, 0.12, 0.13), 0.55, 0.9)); bpy.ops.object.shade_smooth()
+        print("마이크 머리 위치", tuple(round(v, 3) for v in head_.location))
+    if bpy.context.object and bpy.context.object.mode != "OBJECT": bpy.ops.object.mode_set(mode="OBJECT")
 # 모양 키(입·눈) 모으기
 keyed = [o for o in objs if o.type == "MESH" and o.data.shape_keys]
 def set_shape(name, v, frame=None):
@@ -120,9 +178,10 @@ def set_shape(name, v, frame=None):
 def area(loc, power, size, color):
     bpy.ops.object.light_add(type="AREA", location=loc); l = bpy.context.object; l.data.energy = power; l.data.size = size; l.data.color = color
     d = mathutils.Vector((0, 0, 1.45)) - l.location; l.rotation_euler = d.to_track_quat("-Z", "Y").to_euler(); return l
-area((-1.6, -2.0, 2.4), 160, 1.5, (1.0, 0.95, 0.9))
-area((1.8, -1.6, 1.8), 60, 1.5, (0.9, 0.93, 1.0))
-area((0.3, 1.8, 2.4), 120, 1.0, (0.8, 0.85, 1.0))       # 뒤 윤곽광 (도시 빛과 어울리게 살짝 푸름)
+LG = float(a[a.index('--조명') + 1]) if '--조명' in a else 0.12     # 얼굴 조명 세기 배율 (1 = 예전, 얼굴이 너무 밝다는 지적 2026-11-23 → 0.12)
+area((-1.6, -2.0, 2.4), 160 * LG, 1.5, (1.0, 0.95, 0.9))
+area((1.8, -1.6, 1.8), 60 * LG, 1.5, (0.9, 0.93, 1.0))
+area((0.3, 1.8, 2.4), 120 * LG, 1.0, (0.8, 0.85, 1.0))       # 뒤 윤곽광 (도시 빛과 어울리게 살짝 푸름)
 
 # ── 카메라: 인물 둘레를 돎 ──
 bpy.ops.object.camera_add(); cam = bpy.context.object; sc.camera = cam; cam.data.lens = 40
