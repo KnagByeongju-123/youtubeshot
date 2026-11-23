@@ -46,6 +46,11 @@ const on = (a, b, t, r = 0.3) => ease(a, a + r, t) - ease(b - r, b, t);
 const bone = (n) => human.humanoid.getNormalizedBoneNode(n);
 const em = human.expressionManager;
 const CY = Q.get('cy') !== null ? +Q.get('cy') : 0.02;   // 카메라 높이(머리 뼈 기준, m) — 얼굴마다 입이 화면 가운데 아래에 오게
+window.pick = (px, py) => {      // 검사용: 화면 점(px,py) 아래 면의 위치·겉면 그림 좌표(uv)·메시 이름
+  const rc = new THREE.Raycaster(); rc.setFromCamera(new THREE.Vector2(px / W * 2 - 1, -(py / H * 2 - 1)), camera);
+  const hit = rc.intersectObject(human.scene, true)[0];
+  return hit ? { mesh: hit.object.name, p: hit.point.toArray(), uv: hit.uv && hit.uv.toArray(), face: hit.face && [hit.face.a, hit.face.b, hit.face.c] } : null;
+};
 window.renderFrame = (i) => {
   const t = i / FPS;
   let open = 0, wide = 0, round = 0, jaw = 0;
