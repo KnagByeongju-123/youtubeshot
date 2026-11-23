@@ -90,15 +90,19 @@ lipm = red > skin_red + 0.5 * (red.max() - skin_red)                  # 붉은 �
 HW = max(0.018, float(np.abs(xs[lipm]).max()))
 HWP = max(0.016, float(xs[lipm & (xs > 0)].max())) if (lipm & (xs > 0)).any() else HW      # 왼·오른쪽 입꼬리를 따로 (얼굴이 조금 비뚤어도 입꼬리 밖으로 틈이 나가지 않게)
 HWN = max(0.016, float(-xs[lipm & (xs < 0)].min())) if (lipm & (xs < 0)).any() else HW
+XC = (HWP - HWN) / 2; HWH = (HWP + HWN) / 2          # 입 가운데·반너비 = 그려진 두 입꼬리의 가운데·반 (얼굴이 x=0 에서 몇 mm 비켜 있기도 함, 남자 아나운서 -7mm)
 HWP, HWN = max(HWP, 0.8 * HW), max(HWN, 0.8 * HW)                           # 한쪽만 너무 좁게 재지면(그늘 탓) 입이 비뚤게 벌어지므로 80% 아래로는 안 줄임
 ys = np.convolve(np.pad(ys, 2, mode="edge"), np.ones(5) / 5, "valid")         # 입술선을 살짝 매끈하게
-print(f"코끝 높이 {nose_y:.3f} · 입술선 가운데 {LY0:.3f} (코끝 아래 {100 * (nose_y - LY0):.1f}cm) · 입 반너비 {100 * HW:.1f}cm (왼 {100 * HWP:.1f} · 오른 {100 * HWN:.1f})")
+print(f"코끝 높이 {nose_y:.3f} · 입술선 가운데 {LY0:.3f} (코끝 아래 {100 * (nose_y - LY0):.1f}cm) · 입 가운데 x {100 * XC:+.1f}cm · 반너비 {100 * HWH:.1f}cm")
 
 
 def ly(x): return np.interp(x, xs, ys)
 
 
-def hw(x): return np.where(x >= 0, HWP, HWN)      # 그쪽 입꼬리까지 거리
+HWS = HWH
+
+
+def hw(x): return np.full(np.shape(x), HWS)      # 입꼬리까지 거리 — 왼·오른쪽 같게 (따로 재면 한쪽만 크게 벌어져 비뚤어 보였음, 사용자 2026-11-23)
 
 
 def sstep(t): t = np.clip(t, 0, 1); return t * t * (3 - 2 * t)
@@ -128,17 +132,17 @@ def row_z(yy):
         if m.any(): gz[k_] = z[m].max()
     ok_ = ~np.isnan(gz); return gx, np.interp(gx, gx[ok_], gz[ok_])
 gx, zlo = row_z(Y_LO); _, zhi = row_z(Y_HI)
-reg = front & (y > Y_LO) & (y < Y_HI) & (np.abs(x) < HW * 1.9)
+reg = front & (y > Y_LO) & (y < Y_HI) & (np.abs(x - XC) < HW * 2.6)
 s_ = np.clip((y - Y_LO) / (Y_HI - Y_LO), 0, 1)
-zt = np.interp(x, gx, zlo) + (np.interp(x, gx, zhi) - np.interp(x, gx, zlo)) * s_ ** 1.4 - 0.0015 * np.sin(np.pi * s_) * (1 - sstep((np.abs(x) - 0.006) / 0.01))   # 가운데는 살짝 오목(인중)
-wgt = reg * (1 - sstep((np.abs(x) - HW * 1.4) / (HW * 0.5))) * sstep(np.minimum(y - Y_LO, Y_HI - y) / 0.003 + 0.25)
+zt = np.interp(x, gx, zlo) + (np.interp(x, gx, zhi) - np.interp(x, gx, zlo)) * s_ ** 1.4 - 0.0015 * np.sin(np.pi * s_) * (1 - sstep((np.abs(x - XC) - 0.006) / 0.01))   # 가운데는 살짝 오목(인중)
+wgt = reg * (1 - sstep((np.abs(x - XC) - HW * 1.2) / (HW * 1.4))) * sstep(np.minimum(y - Y_LO, Y_HI - y) / 0.003 + 0.25)
 dz = np.where(reg, np.maximum(0, z - zt), 0) * wgt
 # 미는 양을 이웃 점끼리 여러 번 고르게 (점마다 들쭉날쭉 밀면 면이 울퉁불퉁해져 얼룩 그늘이 생겼음)
 #   같은 자리 점(겉면 그림 이음매로 갈라진 점)은 하나로 묶어 함께 움직임
 _Ia = pr["indices"]; _I = np.frombuffer(views[j["accessors"][_Ia]["bufferView"]], np.dtype(COMP[j["accessors"][_Ia]["componentType"]]),
                                        j["accessors"][_Ia]["count"]).reshape(-1, 3).astype(np.int64)
 _, gid = np.unique(np.round(P * 2e4).astype(np.int64), axis=0, return_inverse=True); gid = gid.reshape(-1)
-near_mouth = front & (np.abs(x) < HW * 2.4) & (y > LY0 - 0.01) & (y < Y_HI + 0.012)
+near_mouth = front & (np.abs(x - XC) < HW * 3.0) & (y > LY0 - 0.01) & (y < Y_HI + 0.015)
 tri_m = near_mouth[_I].all(1); E = np.concatenate([_I[tri_m][:, [0, 1]], _I[tri_m][:, [1, 2]], _I[tri_m][:, [2, 0]]])
 Eg = gid[E]; ng = gid.max() + 1
 dzg = np.zeros(ng); np.maximum.at(dzg, gid, dz)
@@ -156,28 +160,28 @@ P_ORIG = P.copy(); P = P.copy(); P[:, 2] -= dz; z = P[:, 2]
 moved_n = int((dz > 1e-4).sum())
 print(f"  코 밑 두툼한 곳: 높이 {Y_LO:.3f}~{Y_HI:.3f}, 점 {moved_n}개를 최대 {dz.max() * 1000:.1f}mm 뒤로")
 FLAT_DZ = dz
-lat = 1 - sstep((np.abs(x) - hw(x) * 0.25) / (hw(x) * 0.6))                 # 가운데 1 → 입꼬리(틈 끝 0.85)에서 0 — 렌즈처럼 끝으로 갈수록 부드럽게 가늘어짐
-lat_chin = 1 - sstep((np.abs(x) - HW) / 0.035)                        # 턱은 조금 더 넓게
+lat = 1 - sstep((np.abs(x - XC) - hw(x) * 0.25) / (hw(x) * 0.6))                 # 가운데 1 → 입꼬리(틈 끝 0.85)에서 0 — 렌즈처럼 끝으로 갈수록 부드럽게 가늘어짐
+lat_chin = 1 - sstep((np.abs(x - XC) - HW) / 0.035)                        # 턱은 조금 더 넓게
 dy = y - ly(x)                                                        # 입술선에서 위(+)·아래(-)
 chin_y = LY0 - 0.045
 # 벌림: 아랫입술 1 → 턱 끝 0.55 → 목 0
 below = (dy < 0) & front
 f_low = np.where(dy < 0, np.where(y > chin_y, 1 - 0.45 * sstep(-dy / (LY0 - chin_y)), 0.55 * (1 - sstep((chin_y - y) / 0.02))), 0)
 f_low *= np.maximum(lat, 0.55 * lat_chin * sstep(-dy / 0.015)) * front      # 입꼬리 옆 살은 입술선 바로 아래에선 안 움직임
-f_up = np.where((dy >= 0) & front, np.exp(-dy / 0.005) * lat, 0)     # 윗입술 아주 조금 위로
+f_up = np.where((dy >= 0) & front, np.exp(-dy / 0.008) * lat, 0)     # 윗입술도 조금 위로 (아랫입술만 내려가면 균형이 안 맞음)
 D_open = np.zeros_like(P)
-D_open[:, 1] = -OPEN * f_low + 0.12 * OPEN * f_up
+D_open[:, 1] = -0.85 * OPEN * f_low + 0.32 * OPEN * f_up
 D_open[:, 2] = -0.35 * OPEN * f_low
 # 옆으로: 입술선 ±1.2cm 안, 입꼬리 쪽일수록
 near = np.exp(-(dy / 0.008) ** 2) * front
-side = sstep(np.abs(x) / HW) * (1 - sstep((np.abs(x) - HW) / 0.02))
+side = sstep(np.abs(x - XC) / HW) * (1 - sstep((np.abs(x - XC) - HW) / 0.02))
 D_wide = np.zeros_like(P)
-D_wide[:, 0] = np.sign(x) * 0.006 * side * near
+D_wide[:, 0] = np.sign(x - XC) * 0.006 * side * near
 D_wide[:, 1] = 0.0015 * side * near
 # 오므림: 입술을 가운데로 모으고 앞으로
-lipzone = np.exp(-(dy / 0.010) ** 2) * front * (1 - sstep((np.abs(x) - HW) / 0.02))
+lipzone = np.exp(-(dy / 0.010) ** 2) * front * (1 - sstep((np.abs(x - XC) - HW) / 0.02))
 D_round = np.zeros_like(P)
-D_round[:, 0] = -np.sign(x) * 0.0055 * sstep(np.abs(x) / HW) * lipzone
+D_round[:, 0] = -np.sign(x - XC) * 0.0055 * sstep(np.abs(x - XC) / HW) * lipzone
 D_round[:, 2] = 0.005 * lipzone * lat
 D_round[:, 1] = -0.002 * np.where(dy < 0, lipzone, 0)                 # 아랫입술 조금 내려 'O'
 new = {"MouthOpen": D_open, "MouthWide": D_wide, "MouthRound": D_round}
@@ -200,10 +204,10 @@ for m in j["meshes"]:
 # ── 입 틈: 입꼬리 사이 입술선을 가로지르는 삼각형을 없앰 → 벌리면 실제로 갈라짐 (닫으면 얇은 어두운 선) ──
 I_acc = pr["indices"]; I = np.frombuffer(views[j["accessors"][I_acc]["bufferView"]], np.dtype(COMP[j["accessors"][I_acc]["componentType"]]),
                                           j["accessors"][I_acc]["count"]).reshape(-1, 3).copy()
-zone = front & (np.abs(x) < hw(x) * 0.88) & (np.abs(dy) < 0.012)
+zone = front & (np.abs(x - XC) < hw(x) * 0.88) & (np.abs(dy) < 0.004)      # 입술선에서 4mm 안 점만 (멀리 있는 점을 선으로 끌면 옆 삼각형이 뒤집혀 배경이 비쳤음)
 side_ = np.where(dy < 0, 1, 2) * zone
 tri_s = side_[I]
-cross = (tri_s == 1).any(1) & (tri_s == 2).any(1)
+cross = (tri_s == 1).any(1) & (tri_s == 2).any(1) & (tri_s > 0).all(1)      # 세 점 모두 틈 범위 안일 때만 (입꼬리에 구멍이 남지 않게)
 # 틈 가장자리 점을 입술선 위로 모음 → 다물면 한 줄로 딱 닫힘 (들쭉날쭉한 가장자리를 곧게, 가장자리 점은 몇 mm 만 움직임)
 edge = np.unique(I[cross].reshape(-1)); edge = edge[zone[edge]]
 P2 = P.copy(); P2[edge, 1] = ly(x[edge])
@@ -224,7 +228,16 @@ if "NORMAL" in pr["attributes"]:
     # 원래 면 방향은 그대로 두고, 펴기 전·후 계산값의 '차이'만 더함 (원래의 매끈한 그늘을 지키면서 볼록한 그늘만 없앰)
     sub = np.where(near_chg)[0]
     before, after = vnorm(P_ORIG), vnorm(P2)
-    nn = NR[sub] + (after[sub] - before[sub]); nn /= np.maximum(np.linalg.norm(nn, axis=1, keepdims=True), 1e-12)
+    # 펴진 곳: 새 면 방향을 이웃끼리 3번 고르게 → 원래 값과 '펴진 정도'에 따라 섞음 (가장자리는 원래 그대로, 얼룩·경계선 없게)
+    _, gidn = np.unique(np.round(P2 * 2e4).astype(np.int64), axis=0, return_inverse=True); gidn = gidn.reshape(-1)
+    okn = Ifull[:, 0] != Ifull[:, 1]
+    En = gidn[np.concatenate([Ifull[okn][:, [0, 1]], Ifull[okn][:, [1, 2]], Ifull[okn][:, [2, 0]]])]
+    ngn = gidn.max() + 1; an = np.zeros((ngn, 3)); np.add.at(an, gidn, after)
+    for _ in range(3):
+        sm_ = np.zeros((ngn, 3)); np.add.at(sm_, En[:, 0], an[En[:, 1]]); np.add.at(sm_, En[:, 1], an[En[:, 0]]); an = 0.5 * an + 0.5 * sm_ / np.maximum(np.linalg.norm(sm_, axis=1, keepdims=True), 1e-12)
+    an /= np.maximum(np.linalg.norm(an, axis=1, keepdims=True), 1e-12)
+    mix = np.clip(FLAT_DZ / 0.0015, 0, 1)[sub][:, None]
+    nn = (1 - mix) * (NR[sub] + (after[sub] - before[sub])) + mix * an[gidn[sub]]; nn /= np.maximum(np.linalg.norm(nn, axis=1, keepdims=True), 1e-12)
     NR[sub] = nn; put(pr["attributes"]["NORMAL"], NR)
     print(f"  면 방향 다시 계산: 점 {int(near_chg.sum())}개")
 I[cross] = I[cross][:, :1]
@@ -232,7 +245,7 @@ views[j["accessors"][I_acc]["bufferView"]] = I.astype(np.dtype(COMP[j["accessors
 print(f"  입 틈: 입술선을 가로지르는 삼각형 {int(cross.sum())}개 없앰")
 # 입 모양 움직임을 이웃 점끼리 고르게 (가장자리가 톱니처럼 들쭉날쭉하지 않고 매끈한 곡선) — 틈 낸 뒤의 이웃(윗·아랫입술은 서로 이웃 아님)
 _, gid2 = np.unique(np.round(P * 2e4).astype(np.int64), axis=0, return_inverse=True); gid2 = gid2.reshape(-1)
-mz = front & (np.abs(x) < HW * 1.6) & (np.abs(dy) < 0.05)
+mz = front & (np.abs(x - XC) < HW * 1.6) & (np.abs(dy) < 0.05)
 ok_t = (I[:, 0] != I[:, 1]) & mz[I].all(1)
 E2 = gid2[np.concatenate([I[ok_t][:, [0, 1]], I[ok_t][:, [1, 2]], I[ok_t][:, [2, 0]]])]
 E2 = E2[E2[:, 0] != E2[:, 1]]; ng2 = gid2.max() + 1
@@ -251,7 +264,7 @@ for t_, nm in enumerate(names):
 print("  입 모양 움직임을 이웃끼리 고르게 (8번)")
 
 # ── 입 안: 입술 바로 뒤에 어두운 둥근 면(입 안) + 윗니 띠 — 머리 뼈를 따라감 ──
-lip_z = float(np.median(z[front & (np.abs(x) < 0.01) & (np.abs(dy) < 0.004)]))
+lip_z = float(np.median(z[front & (np.abs(x - XC) < 0.01) & (np.abs(dy) < 0.004)]))
 head_j = None
 for k_, nd_i in enumerate(j["skins"][0]["joints"]):
     if j["nodes"][nd_i].get("name") == "Head": head_j = k_
@@ -300,14 +313,14 @@ if head_j is not None:
     U = uniq(edge[dy[edge] >= 0]); L = uniq(edge[dy[edge] < 0])
     U = U[np.argsort(x[U])]; L = L[np.argsort(-x[L])]
     ring = np.concatenate([U, L]); n_r = len(ring)
-    R0 = P2[ring]; ctr = np.array([0.0, LY0, lip_z])
+    R0 = P2[ring]; ctr = np.array([XC, LY0, lip_z])
     Ds = {nm_: new[nm_][ring] for nm_ in new}
     pts = [R0]; tg = {nm_: [Ds[nm_]] for nm_ in new}
     for sc_, dd_, w_ in ((0.88, 0.004, 0.9), (0.65, 0.010, 0.7), (0.35, 0.016, 0.45)):
         q_ = ctr + (R0 - ctr) * [sc_, sc_, 0]; q_[:, 2] = R0[:, 2] - dd_ - (1 - sc_) * 0.004
         pts.append(q_)
         for nm_ in new: tg[nm_].append(Ds[nm_] * w_)
-    back = np.array([[0.0, LY0, lip_z - 0.022]]); pts.append(back)
+    back = np.array([[XC, LY0, lip_z - 0.022]]); pts.append(back)
     for nm_ in new: tg[nm_].append(np.mean(Ds[nm_], 0, keepdims=True) * 0.3)
     bp = np.concatenate(pts); bi = []
     for r_ in range(3):
@@ -337,7 +350,9 @@ if check:     # 확인 그림: 얼굴 앞 점들(겉면 색) + 찾은 입술선(
     im = Image.new("RGB", (700, 700), "white"); d = ImageDraw.Draw(im); sc = 7000
     m = front & (np.abs(x) < 0.05) & (np.abs(y - LY0) < 0.05)
     cs = color(m)
-    for (px_, py_), c in zip(P[m][:, :2], cs): d.point((350 + px_ * sc, 350 - (py_ - LY0) * sc), fill=tuple(int(v) for v in c))
+    for (px_, py_), c in zip(P[m][:, :2], cs):
+        u_, v_ = 350 + px_ * sc, 350 - (py_ - LY0) * sc; d.rectangle([u_ - 2, v_ - 2, u_ + 2, v_ + 2], fill=tuple(int(v) for v in c))
+    for xx_ in (XC - hw(0.0) * 0.88, XC + hw(0.0) * 0.88): d.line([(350 + xx_ * sc, 0), (350 + xx_ * sc, 700)], fill="green")     # 틈 끝(입꼬리)
     d.line([(350 + a_ * sc, 350 - (b_ - LY0) * sc) for a_, b_ in zip(xs, ys)], fill="red", width=2)
     d.line([(0, 350 - (nose_y - LY0) * sc), (700, 350 - (nose_y - LY0) * sc)], fill="blue")
     im.save(check); print("확인 그림:", check)
