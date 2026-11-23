@@ -444,6 +444,15 @@ for mesh in j["meshes"]:
             gt = g[I]; kill = np.zeros(len(I), bool)
             for a_, b_ in ((0, 1), (1, 2), (0, 2)):
                 kill |= np.fromiter((frozenset((x, y)) in BAD for x, y in zip(gt[:, a_], gt[:, b_])), bool, len(I))
+            # 손가락끼리 이어진 삼각형이라도 손등·손바닥(손가락 뿌리 관절 + 1.2cm 안쪽)은 자르지 않음 — 잘랐더니 손등에 구멍(검은 얼룩)이 났음 (2026-11-23)
+            for s_ in "LR":
+                if f"Hand.{s_}" not in W: continue
+                w0 = np.asarray(W[f"Hand.{s_}"], float); rts = [np.asarray(W[f"{f}1.{s_}"], float) for f in ("Index", "Middle", "Ring", "Little") if f"{f}1.{s_}" in W]
+                if not rts: continue
+                dv = np.mean(rts, 0) - w0; dv /= np.linalg.norm(dv); kn = max(float((r - w0) @ dv) for r in rts)
+                fing = np.array([str(x).startswith("f") for x in gt.reshape(-1)]).reshape(-1, 3).all(1)
+                palm_ = fing & (((Q[I] - w0) @ dv).max(1) < kn + 0.012) & (np.linalg.norm(Q[I].mean(1) - w0, axis=1) < 0.2)
+                kill &= ~palm_
             I[kill] = I[kill][:, :1]; n_cut += int(kill.sum()); put(pr["indices"], I.reshape(-1, 1))
 
 # ── GLB 다시 쓰기 (bufferView 를 차례로 4바이트 맞춰 이어 붙임) ──

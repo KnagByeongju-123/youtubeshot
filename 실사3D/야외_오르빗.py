@@ -221,6 +221,21 @@ def face(i):
     set_shape("Blink", max([0.0] + [max(0.0, 1 - abs(t - c) / 0.07) for c in blinks]))
 
 os.makedirs(folder, exist_ok=True)
+if "--찍점" in a:      # 검사용: 화면 점(x,y) 아래에 무엇이 있는지 (물체·재질·겉면 그림 좌표)
+    px, py = (float(v) for v in a[a.index("--찍점") + 1].split(","))
+    sc.frame_set(int(opt["--미리보기"] or 0)); place(int(opt["--미리보기"] or 0)); bpy.context.view_layer.update()
+    dg = bpy.context.evaluated_depsgraph_get(); fr = cam.data.view_frame(scene=sc)
+    tr, br, bl, tl = [cam.matrix_world @ v for v in fr]; u, v = px / W_, py / H_
+    tgt = tl + (tr - tl) * u + (bl - tl) * v; o = cam.matrix_world.translation; d = (tgt - o).normalized()
+    for _ in range(4):
+        hit, loc, nor, fi, ob, mw = sc.ray_cast(dg, o, d)
+        if not hit: print("찍점: 없음"); break
+        me = ob.evaluated_get(dg).data; poly = me.polygons[fi]
+        uvl = me.uv_layers.active; uv = [tuple(round(c, 4) for c in uvl.data[li].uv) for li in poly.loop_indices] if uvl else None
+        print("찍점:", ob.name, "재질", me.materials[poly.material_index].name if me.materials else None, "면", fi, "위치", tuple(round(c, 3) for c in loc),
+              "앞면" if nor.dot(d) < 0 else "뒷면", "uv", uv)
+        o = loc + d * 1e-4
+    sys.exit(0)
 frames = [int(opt["--미리보기"])] if opt["--미리보기"] else range(int(opt["--시작장"]), N if int(opt["--끝장"]) < 0 else int(opt["--끝장"]))
 for i in frames:
     place(i); face(i)
