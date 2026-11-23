@@ -93,3 +93,4 @@ _sam_job.json
 # three.js 애니(애니3D): 부품은 npm 으로 다시 받음
 애니3D/node_modules/
 애니3D/package-lock.json
+.bpy_venv/
