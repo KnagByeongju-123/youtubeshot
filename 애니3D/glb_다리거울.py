@@ -37,6 +37,16 @@ def put(i, arr):
 pr = j["meshes"][0]["primitives"][0]; at = pr["attributes"]
 P = get(at["POSITION"]).astype(float); I = get(pr["indices"]).reshape(-1, 3).astype(np.int64)
 NV = len(P)
+# 치마(어두운 천)는 다리가 아님: 치마 아랫단(바닥에서 키의 32%)보다 위에서는 겉면 그림이 밝은(살색) 삼각형만 다리로 봄
+#   (이음매를 치마 속으로 숨기려고 --높이 를 치마 안까지 올릴 때, 치마까지 뒤집히지 않게)
+import io as _io
+from PIL import Image as _Im
+_mat = j["materials"][pr["material"]]; _img = j["images"][j["textures"][_mat["pbrMetallicRoughness"]["baseColorTexture"]["index"]]["source"]]
+_TX = np.asarray(_Im.open(_io.BytesIO(views[_img["bufferView"]])).convert("RGB")).astype(float); _th, _tw = _TX.shape[:2]
+_UV = get(at["TEXCOORD_0"]).astype(float)
+_vl = _TX[np.clip((_UV[:, 1] * _th).astype(int), 0, _th - 1), np.clip((_UV[:, 0] * _tw).astype(int), 0, _tw - 1)].mean(1)
+_hem = P[:, 1].min() + 0.32 * (P[:, 1].max() - P[:, 1].min())
+LEGT = (P[I][:, :, 1].max(1) < _hem) | (_vl[I].min(1) > 90)
 ok = (I[:, 0] != I[:, 1]) & (I[:, 1] != I[:, 2]) & (I[:, 0] != I[:, 2])
 cen = P[I].mean(1)
 keepT = np.ones(len(I), bool); newT = []; src_v = []; newX = []; SEAM = []; SNAP = {}
@@ -54,10 +64,10 @@ for sd, sgn in (("L", 1), ("R", -1)):
     tri_side = (cen[:, 0] * sgn > -0.004)
     low = P[I][:, :, 1].max(1) < YTOP
     xin = (P[I][:, :, 0] * sgn) < cfun(P[I][:, :, 1]) - 0.0005
-    kill = ok & tri_side & low & xin.any(1)
+    kill = ok & tri_side & low & xin.any(1) & LEGT
     keepT &= ~kill
     # 복사할 것: 이 다리 쪽, 높이 아래, 세 점 모두 가운데 면 바깥(또는 위)
-    cp = ok & tri_side & low & ~xin.any(1) & (cen[:, 0] * sgn > 0.004)
+    cp = ok & tri_side & low & ~xin.any(1) & (cen[:, 0] * sgn > 0.004) & LEGT
     T = I[cp]; vid, inv = np.unique(T, return_inverse=True)
     q = P[vid]; c_ = cfun(q[:, 1])
     # 가운데 면 이음매: 복사할 조각의 가장자리(같은 자리끼리 묶어 한 삼각형에만 쓰이는 모서리) 중 위쪽 끝이 아닌 것 = 가운데 면을 따라가는 자른 선
