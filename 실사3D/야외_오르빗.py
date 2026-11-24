@@ -149,6 +149,20 @@ HAND_S = float(a[a.index('--손굵기') + 1]) if '--손굵기' in a else 1.0    
 MIC_F = (0.30, 0.45, 0.85); MIC_CURL = 1.25; FIST = float(a[a.index('--주먹') + 1]) if '--주먹' in a else 0.32   # 주먹 = 마디마다 굽힘(라디안)
 CH_U, CH_F = (float(v) for v in (a[a.index('--팔벌림') + 1] if '--팔벌림' in a else '0.12,0.10').split(','))   # 차렷 팔이 몸에서 떨어진 정도(위팔,아래팔)
 arm = next((o for o in objs if o.type == "ARMATURE"), None)
+SHRUG = float(a[a.index('--어깨들기') + 1]) if '--어깨들기' in a else 0.35   # 팔을 들 때 어깨 뼈가 같이 드는 비율 (어깨 뼈가 있는 모델만, glb_어깨뼈.py)
+def shrug(sd, arm_dir_world):
+    """어깨 뼈(Shoulder.L/R)를 팔 방향 쪽으로 '팔이 수평 아래 50° 를 넘어 든 만큼 × SHRUG' 돌림 — 어깨선이 팔과 이어지게"""
+    if arm is None or f"Shoulder.{sd}" not in arm.pose.bones: return
+    pb = arm.pose.bones[f"Shoulder.{sd}"]; bpy.context.view_layer.update()
+    MW_ = arm.matrix_world; d = mathutils.Vector(arm_dir_world).normalized(); down = mathutils.Vector((0, 0, -1))
+    elev = down.angle(d)                                                        # 0 = 팔이 곧게 아래, 90° = 수평
+    amt = max(0.0, elev - math.radians(40)) * SHRUG
+    if amt < 1e-4: return
+    ax = down.cross(d)
+    if ax.length < 1e-6: return
+    R_ = (MW_.inverted().to_3x3() @ mathutils.Matrix.Rotation(amt, 3, ax.normalized()) @ MW_.to_3x3()).to_4x4()
+    T1 = mathutils.Matrix.Translation(pb.head); T0 = mathutils.Matrix.Translation(-pb.head)
+    pb.matrix = T1 @ R_ @ T0 @ pb.matrix; bpy.context.view_layer.update()
 if arm is not None and "--자세없음" not in a:
     bpy.context.view_layer.objects.active = arm; bpy.ops.object.mode_set(mode="POSE")
     MW = arm.matrix_world; MWi = MW.inverted()
@@ -157,6 +171,7 @@ if arm is not None and "--자세없음" not in a:
         pb = next((arm.pose.bones[n] for n in name_cands if n in arm.pose.bones), None)
         ch = next((arm.pose.bones[n] for n in child_cands if n in arm.pose.bones), None)
         if pb is None or ch is None: return
+        if pb.name.startswith("UpperArm."): shrug(pb.name[-1], target_dir_world)
         bpy.context.view_layer.update()
         head = MW @ pb.head; cur = ((MW @ ch.head) - head).normalized()
         q = cur.rotation_difference(mathutils.Vector(target_dir_world).normalized())
@@ -388,6 +403,7 @@ if (WALK or DANCE) and arm is not None:
         ph = [(T0, D1, LIFT), (T0 + 2 * D1, D3, LIFT * 0.6)] if sd == "R" else [(T0 + D1, D1, LIFT)]
         return sum(h * math.sin(math.pi * min(1, max(0, (t - s0) / d))) for s0, d, h in ph)
     def set_world_aim(name, child_head_world, target_world):
+        if name.startswith("UpperArm."): bpy.context.view_layer.update(); shrug(name[-1], target_world - (MW @ PB[name].head))
         pb = PB[name]; bpy.context.view_layer.update()
         hd = MW @ pb.head; cur = (child_head_world() - hd).normalized()
         q = cur.rotation_difference((target_world - hd).normalized()); R_ = (M3i @ q.to_matrix() @ M3).to_4x4()
