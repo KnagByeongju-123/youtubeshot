@@ -47,6 +47,7 @@ _UV = get(at["TEXCOORD_0"]).astype(float)
 _vl = _TX[np.clip((_UV[:, 1] * _th).astype(int), 0, _th - 1), np.clip((_UV[:, 0] * _tw).astype(int), 0, _tw - 1)].mean(1)
 _hem = P[:, 1].min() + 0.32 * (P[:, 1].max() - P[:, 1].min())
 LEGT = (P[I][:, :, 1].max(1) < _hem) | (_vl[I].min(1) > 90)
+SKV = (P[:, 1] < _hem) | (_vl > 90)
 ok = (I[:, 0] != I[:, 1]) & (I[:, 1] != I[:, 2]) & (I[:, 0] != I[:, 2])
 cen = P[I].mean(1)
 keepT = np.ones(len(I), bool); newT = []; src_v = []; newX = []; SEAM = []; SNAP = {}
@@ -55,7 +56,7 @@ for sd, sgn in (("L", 1), ("R", -1)):
     # 높이별 가운데 면: 붙어 있던 가운데(|x|<1.5cm)는 빼고 바깥 끝·안쪽 끝 가운데, 높이 방향으로 고르게
     ys = np.arange(P[leg, 1].min(), YTOP + 0.06, 0.01); cs = []
     for y0 in ys:
-        m = leg & (np.abs(P[:, 1] - y0) < 0.008) & (P[:, 0] * sgn > 0.015)
+        m = leg & SKV & (np.abs(P[:, 1] - y0) < 0.008) & (P[:, 0] * sgn > 0.015)   # 치마 천 점은 빼고 다리 살만 (치마를 넣으면 가운데가 바깥으로 밀려 무릎이 튀어나왔음)
         cs.append((np.percentile(P[m, 0] * sgn, 99.5) + np.percentile(P[m, 0] * sgn, 0.5)) / 2 if m.sum() > 20 else np.nan)
     cs = np.array(cs); good = ~np.isnan(cs); cs = np.interp(ys, ys[good], cs[good])
     cs = np.convolve(np.pad(cs, 3, mode="edge"), np.ones(7) / 7, mode="valid")
