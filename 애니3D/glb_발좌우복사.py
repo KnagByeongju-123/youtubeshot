@@ -42,6 +42,16 @@ def put(i, arr):
 pr = j["meshes"][0]["primitives"][0]; at = pr["attributes"]
 P = get(at["POSITION"]).astype(float); UV = get(at["TEXCOORD_0"]).astype(float); I = get(pr["indices"]).reshape(-1, 3).astype(np.int64)
 NV = len(P); ymin = P[:, 1].min()
+# 치마(어두운 천)는 다리가 아님: 치마 아랫단(바닥에서 키의 32%)보다 위에서는 겉면 그림이 밝은(살색) 삼각형만 다리로 봄
+#   (이음매를 치마 속으로 숨기려고 --높이 를 치마 안까지 올릴 때, 치마까지 뒤집히지 않게)
+import io as _io
+from PIL import Image as _Im
+_mat = j["materials"][pr["material"]]; _img = j["images"][j["textures"][_mat["pbrMetallicRoughness"]["baseColorTexture"]["index"]]["source"]]
+_TX = np.asarray(_Im.open(_io.BytesIO(views[_img["bufferView"]])).convert("RGB")).astype(float); _th, _tw = _TX.shape[:2]
+_UV = get(at["TEXCOORD_0"]).astype(float)
+_vl = _TX[np.clip((_UV[:, 1] * _th).astype(int), 0, _th - 1), np.clip((_UV[:, 0] * _tw).astype(int), 0, _tw - 1)].mean(1)
+_hem = P[:, 1].min() + 0.32 * (P[:, 1].max() - P[:, 1].min())
+LEGT = (P[I][:, :, 1].max(1) < _hem) | (_vl[I].min(1) > 90)
 ok = (I[:, 0] != I[:, 1]) & (I[:, 1] != I[:, 2]) & (I[:, 0] != I[:, 2]); cen = P[I].mean(1)
 names = [j["nodes"][q]["name"] for q in j["skins"][0]["joints"]]; JI = {nm: k for k, nm in enumerate(names)}
 remap = np.arange(len(names))
@@ -86,7 +96,10 @@ if HEELSRC:
     ok = (I[:, 0] != I[:, 1]) & (I[:, 1] != I[:, 2]) & (I[:, 0] != I[:, 2]); cen = P[I].mean(1)
     print(f"굽이 온전한 모델에서 오른 구두 굽 삼각형 {int(hz.sum())}개(점 {len(hv)}개)를 가져와 넣음")
 low = P[I][:, :, 1].max(1) < YTOP
-R_t = ok & low & (cen[:, 0] < 0); L_t = ok & low & (cen[:, 0] > 0)
+_UV = get(at["TEXCOORD_0"]).astype(float)
+_vl = _TX[np.clip((_UV[:, 1] * _th).astype(int), 0, _th - 1), np.clip((_UV[:, 0] * _tw).astype(int), 0, _tw - 1)].mean(1)
+LEGT = (P[I][:, :, 1].max(1) < _hem) | (_vl[I].min(1) > 90)                 # 굽을 넣어 점·삼각형이 바뀌었으니 다시
+R_t = ok & low & (cen[:, 0] < 0) & LEGT; L_t = ok & low & (cen[:, 0] > 0) & LEGT
 # ① 오른발 굽: 바닥에서 HEELH 아래 + 오른발 뒤꿈치 쪽 5cm
 zminR = P[I[R_t]].reshape(-1, 3)[:, 2].min()
 heel = R_t & ((P[I][:, :, 1] < ymin + HEELH) & (P[I][:, :, 2] < zminR + 0.05)).all(1)

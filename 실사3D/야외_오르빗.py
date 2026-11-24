@@ -74,6 +74,29 @@ bpy.context.view_layer.update(); pts = bbox()
 for r in roots:
     r.location.x -= (min(p.x for p in pts) + max(p.x for p in pts)) / 2; r.location.y -= (min(p.y for p in pts) + max(p.y for p in pts)) / 2
     r.location.z -= min(p.z for p in pts)
+# ── 다리 구멍 메우기(기본 켬, --구멍그대로 면 끔): 다리를 거울로 다시 세운 모델의 이음매에 남은 작은 구멍을 블렌더 '구멍 채우기'로 막음 ──
+#   같은 자리 점을 합친 뒤(그림 좌표는 면 모서리마다 따로라 그대로), 허리 아래 열린 모서리 고리를 채우고 새 면의 그림 좌표는 이웃 면에서 가져옴
+if "--구멍그대로" not in a:
+    import bmesh
+    body_ = max((o for o in objs if o.type == "MESH"), key=lambda o: len(o.data.vertices))
+    me_ = body_.data; bm = bmesh.new(); bm.from_mesh(me_)
+    bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-5)
+    mw_ = body_.matrix_world; ztop = 0.52 * float(opt["--키"])          # 허리 아래(다리)만
+    bnd = [e for e in bm.edges if e.is_boundary and all((mw_ @ v.co).z < ztop for v in e.verts)]
+    res = bmesh.ops.holes_fill(bm, edges=bnd, sides=0)
+    uvl = bm.loops.layers.uv.active; nf = 0
+    for f in res["faces"]:
+        nf += 1
+        f.smooth = True
+        if f.material_index == 0 and len(f.verts) and f.verts[0].link_faces:
+            src = next((g for g in f.verts[0].link_faces if g is not f), None)
+            if src is not None: f.material_index = src.material_index
+        if uvl is not None:
+            for lp in f.loops:
+                other = next((l2 for l2 in lp.vert.link_loops if l2.face is not f and l2.face not in res["faces"]), None)
+                if other is not None: lp[uvl].uv = other[uvl].uv
+    bm.to_mesh(me_); bm.free(); me_.update()
+    print(f"다리 구멍 {nf}개 채움 (열린 모서리 {len(bnd)}개)")
 # ── 따로 된 구두(--구두 <폴더>, 애니3D/glb_구두떼기.py 결과): 각 발 뼈에 붙임 — 원래 몸 구두는 그 안에 가려짐 (사용자 결정 2026-11-24) ──
 if "--구두" in a:
     import numpy as np
@@ -287,12 +310,32 @@ if WALK and arm is not None:
     LL = (leg["L"]["L1"] + leg["L"]["L2"] + leg["R"]["L1"] + leg["R"]["L2"]) / 2
     sm = lambda u: 0.0 if u <= 0 else 1.0 if u >= 1 else u * u * (3 - 2 * u)
     T0 = 0.5; D1 = 0.62; D3 = 0.5                            # 걷기 시작 0.5초, 한 걸음 0.62초, 마지막 모으기 0.5초
+    # 걷기 분석(2026-11-24 사용자 '걸어가는 샷 분석해서 수정')에서 고친 것:
+    #   발을 6cm 들어 무릎이 계단 오르듯 높이 올라감 → 3.5cm · 골반이 두 발 가운데를 따라 걸음마다 멈칫 → 처음부터 끝까지 고르게 앞으로
+    #   발이 늘 평평 → 뗄 때 뒤꿈치 들고(14°) 디딜 때 앞꿈치 살짝 듦 · 몸통이 막대처럼 → 골반 좌우 돌림·기울임, 가슴은 반대로, 살짝 앞으로 숙임
+    #   팔 흔들림이 거의 없음 → 크게, 앞으로 갈 때 팔꿈치 살짝 굽힘
+    LIFT = 0.035; TEND = T0 + 2 * D1 + D3
+    def foot_u(sd, t):                                       # 이 발이 지금 몇 번째 걸음의 어디쯤(0~1)인지, 걸음 길이
+        segs = [(T0, D1), (T0 + 2 * D1, D3)] if sd == "R" else [(T0 + D1, D1)]
+        for s0, d in segs:
+            if s0 <= t <= s0 + d: return (t - s0) / d
+        return None
+    def foot_pitch(u):                                       # +면 뒤꿈치가 들림 (라디안)
+        if u is None: return 0.0
+        if u < 0.35: return math.radians(14) * math.sin(math.pi * u / 0.35 * 0.5 + 0.0) * (1 - u / 0.35) * 2
+        if u > 0.75: return -math.radians(6) * math.sin(math.pi * (u - 0.75) / 0.25)
+        return 0.0
+    def rot_world(name, axis, ang):
+        pb = PB[name]; bpy.context.view_layer.update()
+        R_ = (M3i @ mathutils.Matrix.Rotation(ang, 3, axis) @ M3).to_4x4()
+        T1 = mathutils.Matrix.Translation(pb.head); T0_ = mathutils.Matrix.Translation(-pb.head)
+        pb.matrix = T1 @ R_ @ T0_ @ pb.matrix; bpy.context.view_layer.update()
     def foot_y(sd, t):
         if sd == "R":   # 오른발 먼저 한 걸음, 마지막에 왼발 옆으로 모음
             return -STEP * sm((t - T0) / D1) - STEP * sm((t - T0 - 2 * D1) / D3)
         return -2 * STEP * sm((t - T0 - D1) / D1)
     def foot_lift(sd, t):
-        ph = [(T0, D1, 0.06), (T0 + 2 * D1, D3, 0.035)] if sd == "R" else [(T0 + D1, D1, 0.06)]
+        ph = [(T0, D1, LIFT), (T0 + 2 * D1, D3, LIFT * 0.6)] if sd == "R" else [(T0 + D1, D1, LIFT)]
         return sum(h * math.sin(math.pi * min(1, max(0, (t - s0) / d))) for s0, d, h in ph)
     def set_world_aim(name, child_head_world, target_world):
         pb = PB[name]; bpy.context.view_layer.update()
@@ -307,13 +350,21 @@ if WALK and arm is not None:
         fy = {sd: foot_y(sd, t) for sd in ("L", "R")}
         gap = abs(fy["L"] - fy["R"])
         drop = LL - math.sqrt(max(LL * LL - (gap / 2) ** 2, 1e-6)) + 0.004 * min(1, gap / STEP)
-        py_ = (fy["L"] + fy["R"]) / 2
+        def smoother(u): u = min(1.0, max(0.0, u)); return u * u * u * (u * (6 * u - 15) + 10)
+        py_ = -2 * STEP * smoother((t - T0 + 0.1) / (TEND - T0 + 0.05))        # 골반은 고르게 앞으로 (걸음마다 멈칫 없게)
+        lead = (fy["R"] - fy["L"]) / max(STEP, 1e-3)                            # -1: 오른발이 앞, +1: 왼발이 앞
         sway = 0.012 * math.sin(math.pi * (fy["R"] - fy["L"]) / max(STEP, 1e-3))   # 몸무게를 디딘 발 쪽으로 살짝
         off = mathutils.Vector((sway, py_, -drop))
         hp = PB["Hips"]; hp.matrix = mathutils.Matrix.Translation(M3i @ off) @ hp.matrix; bpy.context.view_layer.update()
+        walking = 1.0 if T0 - 0.1 < t < TEND + 0.1 else 0.0
+        rot_world("Hips", (0, 0, 1), -0.07 * lead * walking)                   # 골반: 앞으로 나간 다리 쪽이 앞으로 돌아감
+        rot_world("Hips", (0, 1, 0), 0.03 * math.sin(math.pi * lead) * walking)  # 골반 좌우 기울임 (디딘 쪽이 올라감)
+        if "Chest" in PB: rot_world("Chest", (0, 0, 1), 0.10 * lead * walking)  # 가슴은 반대로 (골반 돌림을 되돌리고 조금 더)
+        if "Spine" in PB: rot_world("Spine", (1, 0, 0), -0.05 * smoother((t - T0) / 0.3) * (1 - smoother((t - TEND) / 0.4)))   # 걸을 때 살짝 앞으로
         for sd in ("L", "R"):
             g = leg[sd]; H = MW @ PB[f"UpperLeg.{sd}"].head
-            F = g["F0"] + mathutils.Vector((0, fy[sd], foot_lift(sd, t)))
+            pit = foot_pitch(foot_u(sd, t))
+            F = g["F0"] + mathutils.Vector((0, fy[sd], foot_lift(sd, t) + 0.14 * math.sin(max(pit, 0.0))))   # 뒤꿈치를 들면 발목도 그만큼 올라감
             d = F - H; dl = min(d.length, g["L1"] + g["L2"] - 1e-4)
             ca = (g["L1"] ** 2 + dl ** 2 - g["L2"] ** 2) / (2 * g["L1"] * dl); ang = math.acos(max(-1, min(1, ca)))
             dn = d.normalized(); fwd = mathutils.Vector((0, -1, 0)); side = dn.cross(fwd).normalized(); perp = side.cross(dn).normalized()
@@ -323,8 +374,9 @@ if WALK and arm is not None:
             set_world_aim(f"LowerLeg.{sd}", lambda sd=sd: MW @ PB[f"Foot.{sd}"].head, F)
             fb = PB[f"Foot.{sd}"]; rot = FOOT0[sd]                                # 발은 처음 방향 그대로 (바닥과 평평)
             fb.matrix = mathutils.Matrix.Translation(fb.matrix.translation) @ rot; bpy.context.view_layer.update()
+            if abs(pit) > 1e-4: rot_world(f"Foot.{sd}", (1, 0, 0), pit)
         # 팔 흔들기: 오른다리가 앞이면 왼팔이 앞
-        sw = 0.22 * (fy["R"] - fy["L"]) / max(STEP, 1e-3)
+        sw = 0.34 * lead * walking
         for sd in ("L", "R"):
             ub = f"UpperArm.{sd}"
             if ub not in PB: continue
@@ -332,6 +384,9 @@ if WALK and arm is not None:
             s_ = sw if sd == "L" else -sw                                     # +면 앞(-y)으로
             tgt = (MW @ PB[ub].head) + mathutils.Vector((sgn * CH_U, -0.03 + s_ * 0.9, -1.0))
             set_world_aim(ub, lambda sd=sd: MW @ PB[f"ForeArm.{sd}"].head, tgt)
+            fa = f"ForeArm.{sd}"
+            if fa in PB and s_ > 0:                                             # 앞으로 갈 때 팔꿈치 살짝 굽힘
+                rot_world(fa, (1, 0, 0), -0.5 * s_)
         return mathutils.Vector((0, py_, 0))
 else:
     walk = lambda i: mathutils.Vector((0, 0, 0))

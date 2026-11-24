@@ -37,27 +37,38 @@ def put(i, arr):
 pr = j["meshes"][0]["primitives"][0]; at = pr["attributes"]
 P = get(at["POSITION"]).astype(float); I = get(pr["indices"]).reshape(-1, 3).astype(np.int64)
 NV = len(P)
+# 치마(어두운 천)는 다리가 아님: 치마 아랫단(바닥에서 키의 32%)보다 위에서는 겉면 그림이 밝은(살색) 삼각형만 다리로 봄
+#   (이음매를 치마 속으로 숨기려고 --높이 를 치마 안까지 올릴 때, 치마까지 뒤집히지 않게)
+import io as _io
+from PIL import Image as _Im
+_mat = j["materials"][pr["material"]]; _img = j["images"][j["textures"][_mat["pbrMetallicRoughness"]["baseColorTexture"]["index"]]["source"]]
+_TX = np.asarray(_Im.open(_io.BytesIO(views[_img["bufferView"]])).convert("RGB")).astype(float); _th, _tw = _TX.shape[:2]
+_UV = get(at["TEXCOORD_0"]).astype(float)
+_vl = _TX[np.clip((_UV[:, 1] * _th).astype(int), 0, _th - 1), np.clip((_UV[:, 0] * _tw).astype(int), 0, _tw - 1)].mean(1)
+_hem = P[:, 1].min() + 0.32 * (P[:, 1].max() - P[:, 1].min())
+LEGT = (P[I][:, :, 1].max(1) < _hem) | (_vl[I].min(1) > 90)
+SKV = (P[:, 1] < _hem) | (_vl > 90)
 ok = (I[:, 0] != I[:, 1]) & (I[:, 1] != I[:, 2]) & (I[:, 0] != I[:, 2])
 cen = P[I].mean(1)
-keepT = np.ones(len(I), bool); newT = []; src_v = []; newX = []; SEAM = []
+keepT = np.ones(len(I), bool); newT = []; src_v = []; newX = []; SEAM = []; SNAP = {}
 for sd, sgn in (("L", 1), ("R", -1)):
     leg = (P[:, 1] < YTOP + 0.06) & (P[:, 0] * sgn > 0.0)
     # 높이별 가운데 면: 붙어 있던 가운데(|x|<1.5cm)는 빼고 바깥 끝·안쪽 끝 가운데, 높이 방향으로 고르게
     ys = np.arange(P[leg, 1].min(), YTOP + 0.06, 0.01); cs = []
     for y0 in ys:
-        m = leg & (np.abs(P[:, 1] - y0) < 0.008) & (P[:, 0] * sgn > 0.015)
+        m = leg & SKV & (np.abs(P[:, 1] - y0) < 0.008) & (P[:, 0] * sgn > 0.015)   # 치마 천 점은 빼고 다리 살만 (치마를 넣으면 가운데가 바깥으로 밀려 무릎이 튀어나왔음)
         cs.append((np.percentile(P[m, 0] * sgn, 99.5) + np.percentile(P[m, 0] * sgn, 0.5)) / 2 if m.sum() > 20 else np.nan)
     cs = np.array(cs); good = ~np.isnan(cs); cs = np.interp(ys, ys[good], cs[good])
     cs = np.convolve(np.pad(cs, 3, mode="edge"), np.ones(7) / 7, mode="valid")
-    cfun = lambda y: np.interp(y, ys, cs)
+    cfun = lambda y, z=None: np.interp(y, ys, cs)
     # 지울 것: 이 다리 쪽, 높이 아래, 가운데 면 안쪽(삼각형 한 점이라도 안쪽) + 가운데 덩어리
     tri_side = (cen[:, 0] * sgn > -0.004)
     low = P[I][:, :, 1].max(1) < YTOP
     xin = (P[I][:, :, 0] * sgn) < cfun(P[I][:, :, 1]) - 0.0005
-    kill = ok & tri_side & low & xin.any(1)
+    kill = ok & tri_side & low & xin.any(1) & LEGT
     keepT &= ~kill
     # 복사할 것: 이 다리 쪽, 높이 아래, 세 점 모두 가운데 면 바깥(또는 위)
-    cp = ok & tri_side & low & ~xin.any(1) & (cen[:, 0] * sgn > 0.004)
+    cp = ok & tri_side & low & ~xin.any(1) & (cen[:, 0] * sgn > 0.004) & LEGT
     T = I[cp]; vid, inv = np.unique(T, return_inverse=True)
     q = P[vid]; c_ = cfun(q[:, 1])
     # 가운데 면 이음매: 복사할 조각의 가장자리(같은 자리끼리 묶어 한 삼각형에만 쓰이는 모서리) 중 위쪽 끝이 아닌 것 = 가운데 면을 따라가는 자른 선
@@ -68,7 +79,8 @@ for sd, sgn in (("L", 1), ("R", -1)):
     for t in gid[T]:
         for e in ((t[0], t[1]), (t[1], t[2]), (t[2], t[0])): ec[(min(e), max(e))] += 1
     bg = set(x for e, c in ec.items() if c == 1 for x in e)
-    seam = np.array([gid[v] in bg for v in vid]) & (q[:, 1] < YTOP - 0.004) & ((q[:, 0] * sgn - c_) < 0.012)
+    isb = np.array([gid[v] in bg for v in vid])
+    seam = isb & (q[:, 1] < YTOP - 0.004) & ((q[:, 0] * sgn - c_) < 0.012)
     P[vid[seam], 0] = sgn * c_[seam]; q = P[vid]
     SEAM.extend(vid[seam].tolist())
     on_plane = seam | ((q[:, 0] * sgn - c_) < 0.0015)                          # 가운데 면에 붙은 점은 원래 점을 그대로 같이 씀(이음매 없게)
@@ -77,6 +89,24 @@ for sd, sgn in (("L", 1), ("R", -1)):
     nnew = int((~on_plane).sum()); base = NV + len(src_v)
     idmap[~on_plane] = base + np.arange(nnew)
     src_v.extend(vid[~on_plane].tolist()); newX.extend(nx[~on_plane].tolist())
+    # 위쪽 이음매: 거울 쪽 위 끝 점을 남겨 둔 원래 안쪽의 아래 끝 점에 맞춤 (정강이에 검은 틈 자국이 났었음)
+    kt = I[keepT & ok & (cen[:, 0] * sgn > -0.004)]
+    ec2 = Counter()
+    for t in gid[kt]:
+        for e in ((t[0], t[1]), (t[1], t[2]), (t[2], t[0])): ec2[(min(e), max(e))] += 1
+    kb = np.array(sorted(set(x for e, c in ec2.items() if c == 1 for x in e)))
+    rep_ = np.zeros(gid.max() + 1, np.int64); rep_[gid] = np.arange(len(gid))
+    KB = P[rep_[kb]] if len(kb) else np.zeros((0, 3))
+    selk = (np.abs(KB[:, 1] - YTOP) < 0.03) & (KB[:, 0] * sgn < cfun(KB[:, 1], KB[:, 2]) + 0.004) if len(KB) else np.zeros(0, bool)
+    KB = KB[selk]
+    top_new = isb & ~on_plane & (q[:, 1] >= YTOP - 0.02)
+    n_snap = 0
+    if len(KB) and top_new.any():
+        tgt = np.stack([nx, q[:, 1], q[:, 2]], 1)[top_new]
+        d2 = ((tgt[:, None] - KB[None]) ** 2).sum(2); nn = d2.argmin(1); okd = d2[np.arange(len(nn)), nn] < 0.025 ** 2
+        idx_new = np.where(top_new)[0][okd]
+        SNAP.update({int(idmap[k]): KB[nn[okd][m_]] for m_, k in enumerate(idx_new)}); n_snap = len(idx_new)
+    print(f"   위쪽 이음매 점 {n_snap}개 맞춤")
     T2 = idmap[inv.reshape(-1, 3)][:, ::-1]                                    # 뒤집었으니 삼각형 방향도 뒤집음
     newT.append(T2)
     print(f"{sd} 다리: 안쪽 삼각형 {int(kill.sum())}개 지움, 바깥쪽 {len(T)}개를 거울로 붙임 (새 점 {nnew}개), 가운데 x {cs.min() * sgn:+.3f}~{cs.max() * sgn:+.3f}")
