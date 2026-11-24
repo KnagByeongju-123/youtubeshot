@@ -149,7 +149,7 @@ HAND_S = float(a[a.index('--손굵기') + 1]) if '--손굵기' in a else 1.0    
 MIC_F = (0.30, 0.45, 0.85); MIC_CURL = 1.25; FIST = float(a[a.index('--주먹') + 1]) if '--주먹' in a else 0.32   # 주먹 = 마디마다 굽힘(라디안)
 CH_U, CH_F = (float(v) for v in (a[a.index('--팔벌림') + 1] if '--팔벌림' in a else '0.12,0.10').split(','))   # 차렷 팔이 몸에서 떨어진 정도(위팔,아래팔)
 arm = next((o for o in objs if o.type == "ARMATURE"), None)
-SHRUG = float(a[a.index('--어깨들기') + 1]) if '--어깨들기' in a else 0.35   # 팔을 들 때 어깨 뼈가 같이 드는 비율 (어깨 뼈가 있는 모델만, glb_어깨뼈.py)
+SHRUG = float(a[a.index('--어깨들기') + 1]) if '--어깨들기' in a else 0.7    # 팔을 들 때 어깨 뼈가 같이 드는 비율 (어깨 뼈가 있는 모델만, glb_어깨뼈.py)
 def shrug(sd, arm_dir_world):
     """어깨 뼈(Shoulder.L/R)를 팔 방향 쪽으로 '팔이 수평 아래 50° 를 넘어 든 만큼 × SHRUG' 돌림 — 어깨선이 팔과 이어지게"""
     if arm is None or f"Shoulder.{sd}" not in arm.pose.bones: return
