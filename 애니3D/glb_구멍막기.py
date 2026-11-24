@@ -189,6 +189,14 @@ if len(N_):
                 N_ = np.concatenate([N_, I[sqf]]); cols = np.concatenate([cols, np.zeros((sqf.sum(), 3, 3))])
                 dark = np.concatenate([dark, P[I[sqf]][:, :, 1].max(1) < shoe_top]); I[sqf] = I[sqf][:, :1]; MAIN_CHANGED[0] = True
                 print(f"  눌러 붙인 면 {int(sqf.sum())}개: 발목은 살색, 구두는 구두색 한 가지로")
+        # 맨다리 구간(구두 윗선 ~ 치마 아랫단)에서 겉면 그림이 어두운 면 = 다리 그림 옆 치마·구두 칸을 잘못 집은 면 → 살색 묶음으로 (다리에 검은 점)
+        hem_ = P[:, 1].min() + 0.32 * (P[:, 1].max() - P[:, 1].min())
+        lumv = TEX[np.clip((UV[:, 1] * th).astype(int), 0, th - 1), np.clip((UV[:, 0] * tw).astype(int), 0, tw - 1)].mean(1)
+        bare = (I[:, 0] != I[:, 1]) & (P[I][:, :, 1].min(1) > shoe_top + 0.01) & (P[I][:, :, 1].max(1) < hem_ - 0.03) & (lumv[I].min(1) < 80) & ~inner
+        if bare.any():
+            N_ = np.concatenate([N_, I[bare]]); cols = np.concatenate([cols, np.zeros((bare.sum(), 3, 3))]); dark = np.concatenate([dark, np.zeros(bare.sum(), bool)])
+            I[bare] = I[bare][:, :1]; MAIN_CHANGED[0] = True
+            print(f"  맨다리에서 어두운 그림을 집은 면 {int(bare.sum())}개를 살색으로")
         if inner.any():
             N_ = np.concatenate([N_, I[inner]]); cols = np.concatenate([cols, np.zeros((inner.sum(), 3, 3))]); dark = np.concatenate([dark, np.ones(inner.sum(), bool)])
             I[inner] = I[inner][:, :1]; MAIN_CHANGED[0] = True

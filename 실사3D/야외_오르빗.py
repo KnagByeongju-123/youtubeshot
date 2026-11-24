@@ -74,6 +74,29 @@ bpy.context.view_layer.update(); pts = bbox()
 for r in roots:
     r.location.x -= (min(p.x for p in pts) + max(p.x for p in pts)) / 2; r.location.y -= (min(p.y for p in pts) + max(p.y for p in pts)) / 2
     r.location.z -= min(p.z for p in pts)
+# ── 다리 구멍 메우기(기본 켬, --구멍그대로 면 끔): 다리를 거울로 다시 세운 모델의 이음매에 남은 작은 구멍을 블렌더 '구멍 채우기'로 막음 ──
+#   같은 자리 점을 합친 뒤(그림 좌표는 면 모서리마다 따로라 그대로), 허리 아래 열린 모서리 고리를 채우고 새 면의 그림 좌표는 이웃 면에서 가져옴
+if "--구멍그대로" not in a:
+    import bmesh
+    body_ = max((o for o in objs if o.type == "MESH"), key=lambda o: len(o.data.vertices))
+    me_ = body_.data; bm = bmesh.new(); bm.from_mesh(me_)
+    bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-5)
+    mw_ = body_.matrix_world; ztop = 0.52 * float(opt["--키"])          # 허리 아래(다리)만
+    bnd = [e for e in bm.edges if e.is_boundary and all((mw_ @ v.co).z < ztop for v in e.verts)]
+    res = bmesh.ops.holes_fill(bm, edges=bnd, sides=0)
+    uvl = bm.loops.layers.uv.active; nf = 0
+    for f in res["faces"]:
+        nf += 1
+        f.smooth = True
+        if f.material_index == 0 and len(f.verts) and f.verts[0].link_faces:
+            src = next((g for g in f.verts[0].link_faces if g is not f), None)
+            if src is not None: f.material_index = src.material_index
+        if uvl is not None:
+            for lp in f.loops:
+                other = next((l2 for l2 in lp.vert.link_loops if l2.face is not f and l2.face not in res["faces"]), None)
+                if other is not None: lp[uvl].uv = other[uvl].uv
+    bm.to_mesh(me_); bm.free(); me_.update()
+    print(f"다리 구멍 {nf}개 채움 (열린 모서리 {len(bnd)}개)")
 # ── 따로 된 구두(--구두 <폴더>, 애니3D/glb_구두떼기.py 결과): 각 발 뼈에 붙임 — 원래 몸 구두는 그 안에 가려짐 (사용자 결정 2026-11-24) ──
 if "--구두" in a:
     import numpy as np
