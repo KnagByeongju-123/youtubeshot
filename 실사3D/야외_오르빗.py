@@ -22,7 +22,7 @@ for k in list(opt):
 PLACE = opt["--장소"]; A = os.path.join(ROOT, "models", "polyhaven", "_hdri"); os.makedirs(A, exist_ok=True)
 
 
-def fetch():
+def fetch(PLACE=PLACE):
     o = urllib.request.build_opener(); o.addheaders = [("User-Agent", "asset-fetcher/1.0")]; urllib.request.install_opener(o)
     f = None
     for name, key in ((f"{PLACE}.jpg", "tonemapped"), (f"{PLACE}_1k.hdr", "hdr")):
@@ -34,6 +34,10 @@ def fetch():
 
 
 fetch()
+# 배경 바꾸기(--장소2 <HDRI> --방향2 0.5 --전환 4.0,4.9): 전환 시간 동안 사진(카메라에 보이는 것·빛 모두)이 두 번째 장소로 부드럽게 바뀜 (사용자 2026-11-24 '정면으로 돌 때 해변으로')
+PLACE2 = a[a.index("--장소2") + 1] if "--장소2" in a else None
+XF_T = [float(v) for v in a[a.index("--전환") + 1].split(",")] if "--전환" in a else [4.0, 4.9]
+if PLACE2: fetch(PLACE2)
 bpy.ops.wm.read_factory_settings(use_empty=True)
 sc = bpy.context.scene
 W_, H_ = (int(v) for v in opt["--크기"].split("x"))
@@ -52,7 +56,25 @@ e_cam = nt.nodes.new("ShaderNodeTexEnvironment"); e_cam.image = bpy.data.images.
 e_lit = nt.nodes.new("ShaderNodeTexEnvironment"); e_lit.image = bpy.data.images.load(os.path.join(A, f"{PLACE}_1k.hdr"))
 for e in (e_cam, e_lit): nt.links.new(mp.outputs["Vector"], e.inputs["Vector"])
 b_cam = nt.nodes.new("ShaderNodeBackground"); b_lit = nt.nodes.new("ShaderNodeBackground"); b_lit.inputs["Strength"].default_value = float(a[a.index("--세상빛") + 1]) if "--세상빛" in a else 0.6   # 사진에서 오는 빛 세기 (인물 밝기)
-nt.links.new(e_cam.outputs["Color"], b_cam.inputs["Color"]); nt.links.new(e_lit.outputs["Color"], b_lit.inputs["Color"])
+XF = None
+if PLACE2:
+    mp2 = nt.nodes.new("ShaderNodeMapping"); nt.links.new(tc.outputs["Generated"], mp2.inputs["Vector"])
+    mp2.inputs["Rotation"].default_value = (0, 0, math.radians((float(a[a.index("--방향2") + 1] if "--방향2" in a else 0.5) - 0.75) * 360))
+    e_cam2 = nt.nodes.new("ShaderNodeTexEnvironment"); e_cam2.image = bpy.data.images.load(os.path.join(A, f"{PLACE2}.jpg"))
+    e_lit2 = nt.nodes.new("ShaderNodeTexEnvironment"); e_lit2.image = bpy.data.images.load(os.path.join(A, f"{PLACE2}_1k.hdr"))
+    for e in (e_cam2, e_lit2): nt.links.new(mp2.outputs["Vector"], e.inputs["Vector"])
+    XF = nt.nodes.new("ShaderNodeValue"); XF.outputs[0].default_value = 0.0
+    mixes = []
+    for e1, e2, dst_ in ((e_cam, e_cam2, b_cam), (e_lit, e_lit2, b_lit)):
+        mx = nt.nodes.new("ShaderNodeMix"); mx.data_type = "RGBA"
+        nt.links.new(XF.outputs[0], mx.inputs["Factor"]); nt.links.new(e1.outputs["Color"], mx.inputs[6]); nt.links.new(e2.outputs["Color"], mx.inputs[7])
+        nt.links.new(mx.outputs[2], dst_.inputs["Color"])
+else:
+    nt.links.new(e_cam.outputs["Color"], b_cam.inputs["Color"]); nt.links.new(e_lit.outputs["Color"], b_lit.inputs["Color"])
+def set_xf(i):
+    if XF is None: return
+    t = i / 24.0; u = min(1.0, max(0.0, (t - XF_T[0]) / max(XF_T[1] - XF_T[0], 1e-6)))
+    XF.outputs[0].default_value = u * u * (3 - 2 * u)
 lp = nt.nodes.new("ShaderNodeLightPath"); mix = nt.nodes.new("ShaderNodeMixShader"); outw = nt.nodes.new("ShaderNodeOutputWorld")
 nt.links.new(lp.outputs["Is Camera Ray"], mix.inputs["Fac"]); nt.links.new(b_lit.outputs["Background"], mix.inputs[1]); nt.links.new(b_cam.outputs["Background"], mix.inputs[2])
 nt.links.new(mix.outputs["Shader"], outw.inputs["Surface"])
@@ -331,7 +353,7 @@ GAMECAM_KEYS = [(0.0, -40, 3.4, 0.45, 0.85, 30), (2.2, 30, 2.6, 0.55, 0.95, 34),
                 (5.1, 60, 2.6, 0.6, 0.88, 32), (6.6, 105, 2.8, 0.65, 0.9, 32), (7.3, 150, 3.3, 2.5, 0.95, 28), (9.0, 250, 3.6, 1.7, 0.95, 30),
                 (12.0, 360, 3.6, 1.4, 0.95, 32)]
 if "--트래킹오르빗" in a:   # 전진 트래킹(정면에서 곧게 다가감) → 멈추지 않고 인물 둘레를 돎 (사용자 2026-11-24)
-    GAMECAM_KEYS = [(0.0, 0, 7.0, 1.55, 1.25, 35), (2.6, 0, 2.7, 1.45, 1.3, 40), (6.2, 115, 2.7, 1.5, 1.3, 40), (9.0, 140, 2.8, 1.5, 1.3, 40)]
+    GAMECAM_KEYS = [(0.0, 0, 7.0, 1.55, 1.25, 35), (2.6, 0, 2.7, 1.45, 1.3, 40), (6.0, 180, 2.7, 1.5, 1.3, 40), (9.0, 180, 2.7, 1.5, 1.3, 40)]   # 180° 까지 (사용자 2026-11-24)
 def place(i, who=None):
     s = i / max(1, N - 1); s = s * s * (3 - 2 * s); th = a0 + (a1 - a0) * s
     r_ = R + (R1 - R) * s; lk = LOOK + (LOOK1 - LOOK) * s; hc = HC + (HC1 - HC) * s
@@ -572,6 +594,6 @@ if "--찍점" in a:      # 검사용: 화면 점(x,y) 아래에 무엇이 있는
     sys.exit(0)
 frames = [int(opt["--미리보기"])] if opt["--미리보기"] else range(int(opt["--시작장"]), N if int(opt["--끝장"]) < 0 else int(opt["--끝장"]))
 for i in frames:
-    who = walk(i); WHO[0] = who; place(i, who * 0.6); face(i)     # 카메라는 인물을 반쯤 따라감 (나머지는 인물이 다가오는 느낌)
+    set_xf(i); who = walk(i); WHO[0] = who; place(i, who * 0.6); face(i)     # 카메라는 인물을 반쯤 따라감 (나머지는 인물이 다가오는 느낌)
     sc.render.filepath = os.path.join(os.path.abspath(folder), f"f{i:04d}.png"); bpy.ops.render.render(write_still=True)
 print("찍음:", len(list(frames)), "장 →", folder)
