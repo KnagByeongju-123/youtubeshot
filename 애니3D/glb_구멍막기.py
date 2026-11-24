@@ -93,6 +93,33 @@ for s in list(nxt):
         if np.cross(q1 - q0, q2 - q0) @ nrm < 0: tri = (tri[0], tri[2], tri[1])   # 고리 방향과 같은 쪽을 보게
         new.append(tri)
     n_loop += 1
+# 이어 돌지 못한 작은 구멍(모서리가 꼬인 곳): 남은 열린 모서리를 이어진 덩어리로 묶어, 작은 것(점 40개 이하)은
+#   덩어리 평면에서 각도 순서로 점을 늘어놓고 부채꼴로 막음 (다리 거울 이음매 정강이 세모 구멍, 2026-11-24)
+left = {}
+for (x, y), c in cnt.items():
+    if c == 1 and x not in used and y not in used:
+        left.setdefault(x, set()).add(y); left.setdefault(y, set()).add(x)
+seen = set(); n_small = 0
+for s0 in list(left):
+    if s0 in seen: continue
+    comp = []; st = [s0]; seen.add(s0)
+    while st:
+        u = st.pop(); comp.append(u)
+        for w in left[u]:
+            if w not in seen: seen.add(w); st.append(w)
+    if len(comp) < 3 or len(comp) > 40: continue
+    Q = pos[comp]; c = Q.mean(0)
+    want = c[1] < YMAX or any(np.linalg.norm(c - h) < 0.15 for h in hand_c)
+    if not want or any(v not in rep for v in comp): continue
+    w_, V_ = np.linalg.eigh(np.cov((Q - c).T)); ax, ay, nrm = V_[:, 2], V_[:, 1], V_[:, 0]
+    ang = np.arctan2((Q - c) @ ay, (Q - c) @ ax); order = np.argsort(ang); L = [rep[comp[k]] for k in order]
+    # 둘레 삼각형이 보는 쪽과 맞춤: 바깥(몸 가운데에서 먼 쪽)을 보게
+    W_ = [comp[k] for k in order]; m_ = len(W_)
+    fw = sum(((W_[k], W_[(k + 1) % m_]) in dire) for k in range(m_)); bw = sum(((W_[(k + 1) % m_], W_[k]) in dire) for k in range(m_))
+    if fw > bw: L = L[::-1]                                                     # 둘레 삼각형과 반대 방향으로 돌아야 겉면이 바깥
+    for k in range(1, len(L) - 1): new.append((L[0], L[k], L[k + 1]))
+    n_small += 1
+if n_small: print(f"  꼬인 작은 구멍 {n_small}개를 부채꼴로 막음")
 print(f"틈 고리 {n_loop}개 막음 (삼각형 {len(new)}개 추가){', 못 이은 고리 ' + str(skipped) + '개' if skipped else ''}")
 # 두 구두가 붙어 있던 가운데 덩어리(x≈0, 폭 2cm): 리깅에서 한쪽 발(오른발)에 통째로 붙어, 걸을 때 그 구두 옆에 검은 판(버)처럼 따라다님
 #   (2026-11-24 사용자 지적 '걸을 때 오른쪽 구두에 버') → 발 높이에서 가운데를 넘어온 점을 그 발 안쪽 면(x = ±SLAB)으로 납작하게 눌러 붙임
@@ -106,7 +133,20 @@ try:
         side = np.char.endswith(domn, suf) & lowf
         if side.sum() < 50 or np.median(P[side, 0]) * sgn <= 0: continue
         m = side & (P[:, 0] * sgn < SLAB)
+        # 평평하게 누르면 발목 안쪽이 칼로 자른 벽처럼 보임 → 같은 높이의 바깥쪽 반(멀쩡한 곳)으로 발목 단면(타원)을 재서 안쪽을 둥글게
+        good = side & (P[:, 0] * sgn > SLAB + 0.006)
         for v in np.where(m)[0]: SQ[v] = sgn * SLAB
+        ys = np.arange(P[side, 1].min(), P[side, 1].max() + 0.004, 0.004)
+        for y0 in ys:
+            gb = good & (np.abs(P[:, 1] - y0) < 0.004); mb = m & (P[:, 1] >= y0 - 0.002) & (P[:, 1] < y0 + 0.002)
+            if gb.sum() < 12 or not mb.any(): continue
+            xo = np.percentile(P[gb, 0] * sgn, 99); z0, z1 = np.percentile(P[gb, 2], [1, 99])
+            zc, rz = (z0 + z1) / 2, max((z1 - z0) / 2, 1e-4)
+            cx = max(xo - rz * 0.95, SLAB + 0.004)                      # 발목 가운데: 바깥 끝에서 앞뒤 반지름만큼 안쪽 (둥근 단면)
+            rx = xo - cx
+            for v in np.where(mb)[0]:
+                u = min(1.0, abs(P[v, 2] - zc) / rz)
+                SQ[v] = sgn * max(cx - rx * np.sqrt(max(0.0, 1 - u * u)), SLAB)
     if SQ: print(f"  구두 사이 가운데 덩어리 점 {len(SQ)}개를 각 구두 안쪽 면으로 눌러 붙임 (버 없애기)")
 except KeyError:
     pass

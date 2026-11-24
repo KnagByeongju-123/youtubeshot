@@ -102,6 +102,21 @@ if "--구두" in a:
             mw = ob.matrix_world.copy(); ob.parent = arm0; ob.parent_type = "BONE"; ob.parent_bone = f"Foot.{sdn}"
             bpy.context.view_layer.update(); ob.matrix_world = mw
         objs.append(ob)
+        if "capP" in z_.files and len(z_["capP"]):
+            cm_ = z_["capSide"] == k_; cidx = np.where(cm_)[0]; crm = -np.ones(len(cm_), int); crm[cidx] = np.arange(len(cidx))
+            CT = crm[z_["capI"][np.isin(z_["capI"], cidx).all(1)]]
+            me2 = bpy.data.meshes.new(f"발등.{sdn}"); me2.from_pydata([(float(x), float(-zz), float(y)) for x, y, zz in z_["capP"][cidx]], [], [tuple(int(v) for v in t) for t in CT]); me2.update()
+            for poly in me2.polygons: poly.use_smooth = True
+            if "발등살" not in bpy.data.materials:
+                fm = bpy.data.materials.new("발등살"); fm.use_nodes = True; fb = fm.node_tree.nodes["Principled BSDF"]
+                sk = [float(c) for c in z_["skin"]]; lin = [((c + 0.055) / 1.055) ** 2.4 if c > 0.04045 else c / 12.92 for c in sk]
+                fb.inputs["Base Color"].default_value = (*lin, 1); fb.inputs["Roughness"].default_value = 0.55
+            me2.materials.append(bpy.data.materials["발등살"])
+            ob2 = bpy.data.objects.new(f"발등.{sdn}", me2); bpy.context.collection.objects.link(ob2); ob2.matrix_world = body.matrix_world.copy()
+            if arm0 is not None and f"Foot.{sdn}" in arm0.pose.bones:
+                mw2 = ob2.matrix_world.copy(); ob2.parent = arm0; ob2.parent_type = "BONE"; ob2.parent_bone = f"Foot.{sdn}"
+                bpy.context.view_layer.update(); ob2.matrix_world = mw2
+            objs.append(ob2)
     print("구두 붙임:", sd_)
 # ── 자세: 기본 = 차렷(팔을 몸 옆에 자연스럽게 내림, 사용자 결정 2026-11-23), --자세 모음 = 손을 허리 앞에 모음 — 뼈 방향을 목표 방향으로 돌림 ──
 POSE = a[a.index('--자세') + 1] if '--자세' in a else '차렷'     # 차렷(기본, 사용자 결정 2026-11-23: 마이크 없이 자연스러운 팔) / 마이크 / 모음
