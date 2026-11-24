@@ -182,8 +182,10 @@ if arm is not None and "--자세없음" not in a:
         """손가락을 손바닥 쪽으로 굽힘 (amt = 마디마다 굽히는 각도, 라디안)"""
         if side not in palm: return
         for f in ("Index", "Middle", "Ring", "Little", "Thumb"):
-            th = (thumb if thumb is not None else amt * 0.5) if f == "Thumb" else amt
+            th0 = (thumb if thumb is not None else amt * 0.5) if f == "Thumb" else amt
+            fm = {"Index": 0.92, "Middle": 1.0, "Ring": 1.05, "Little": 1.1, "Thumb": 1.0}[f]   # 새끼 쪽일수록 조금 더 (실제 주먹처럼)
             for k in (1, 2, 3):
+                th = th0 * fm * ((0.85, 1.2, 0.8) if f != "Thumb" else (0.5, 1.0, 1.0))[k - 1]     # 가운데 마디를 가장 많이, 엄지 뿌리는 조금만
                 pb = B(f"{f}{k}.{side}")
                 if pb is None: continue
                 # 손가락 방향 = 이 마디 → 다음 마디 (블렌더 뼈 꼬리 방향은 손가락 방향과 다를 수 있어 쓰지 않음; 끝 마디는 앞 마디 방향)
@@ -270,6 +272,7 @@ a0, a1 = (math.radians(float(v)) for v in opt["--각도"].split(","))
 R, HC, LOOK = float(opt["--거리"]), float(opt["--높이"]), float(opt["--보기"])
 N = int(opt["--장수"])
 HANDVIEW = a[a.index('--손보기') + 1] if '--손보기' in a else None   # 검사용: 손 가까이 찍기 (R 또는 L)
+HANDSIDE = -1 if '--손안쪽' in a else 1                             # --손안쪽: 손바닥 쪽(몸 안쪽)에서
 HP = None
 if HANDVIEW and arm is not None:
     bpy.context.view_layer.update()
@@ -311,7 +314,8 @@ def place(i, who=None):
         d = mathutils.Vector((c0.x, c0.y, lk)) - cam.location; cam.rotation_euler = d.to_track_quat("-Z", "Y").to_euler(); return
     if HP is not None:
         sx = 1 if HP.x > 0 else -1
-        cam.location = HP + mathutils.Vector((sx * 0.22, -0.38, 0.05)); cam.data.lens = 50
+        side_ = HANDSIDE * sx
+        cam.location = HP + mathutils.Vector((side_ * 0.22, -0.38, 0.05)); cam.data.lens = 50
         d = HP - cam.location; cam.rotation_euler = d.to_track_quat("-Z", "Y").to_euler(); return
     d = mathutils.Vector((0, 0, LOOK)) - cam.location; cam.rotation_euler = d.to_track_quat("-Z", "Y").to_euler()
 
@@ -472,7 +476,7 @@ if (WALK or DANCE) and arm is not None:
                 return V((sgn * 0.55, -0.30 - 0.20 * w, -0.75 + 0.22 * w)), V((sgn * 0.05, -0.75, 0.55 + 0.22 * w))   # 흔드는 폭을 줄여 팔이 휙휙 움직이지 않게
             if name == "손뼉":
                 c = math.sin(math.pi * ph_ / 2) ** 2                              # 1·3박(=2·4번째 박)에 손이 만남
-                return V((sgn * 0.30, -0.65, -0.70)), V((-sgn * (0.2 + 0.75 * c), -0.75 + 0.25 * c, 0.45 - 0.15 * c))
+                return V((sgn * 0.30, -0.65, -0.70)), V((-sgn * (0.15 + 0.56 * c), -0.80 + 0.14 * c, 0.50 - 0.05 * c))   # 손이 가운데에서 딱 만나고 넘어가지 않게
             if name == "엉덩이":
                 return V((sgn * 0.65, 0.20, -0.75)), V((-sgn * 0.55, -0.05, -0.65))   # 팔꿈치를 옆으로, 손은 허리에
             if name == "돌기":
