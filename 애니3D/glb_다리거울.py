@@ -42,27 +42,40 @@ cen = P[I].mean(1)
 keepT = np.ones(len(I), bool); newT = []; src_v = []; newX = []; SEAM = []
 for sd, sgn in (("L", 1), ("R", -1)):
     leg = (P[:, 1] < YTOP + 0.06) & (P[:, 0] * sgn > 0.0)
-    # 높이별 가운데 면: 붙어 있던 가운데(|x|<1.5cm)는 빼고 바깥 끝·안쪽 끝 가운데, 높이 방향으로 고르게
-    ys = np.arange(P[leg, 1].min(), YTOP + 0.06, 0.01); cs = []
-    for y0 in ys:
-        m = leg & (np.abs(P[:, 1] - y0) < 0.008) & (P[:, 0] * sgn > 0.015)
-        cs.append((np.percentile(P[m, 0] * sgn, 99.5) + np.percentile(P[m, 0] * sgn, 0.5)) / 2 if m.sum() > 20 else np.nan)
-    cs = np.array(cs); good = ~np.isnan(cs); cs = np.interp(ys, ys[good], cs[good])
-    cs = np.convolve(np.pad(cs, 3, mode="edge"), np.ones(7) / 7, mode="valid")
-    cfun = lambda y: np.interp(y, ys, cs)
+    # 가운데 면 c(y,z): 높이(1cm)·앞뒤(1.5cm) 칸마다 붙어 있던 가운데(|x|<1.5cm)를 뺀 바깥 끝·안쪽 끝의 가운데
+    #   (높이만으로 재면 뒷굽·뒤꿈치 쪽 가운데가 발끝 쪽에 끌려가 뒷굽 안쪽이 파였음) → 빈 칸은 이웃으로 채우고 고르게
+    ys = np.arange(P[leg, 1].min(), YTOP + 0.07, 0.01); zs = np.arange(P[leg, 2].min() - 0.01, P[leg, 2].max() + 0.025, 0.015)
+    C = np.full((len(ys), len(zs)), np.nan)
+    for a_, y0 in enumerate(ys):
+        my = leg & (np.abs(P[:, 1] - y0) < 0.008) & (P[:, 0] * sgn > 0.015)
+        for b_, z0 in enumerate(zs):
+            m = my & (np.abs(P[:, 2] - z0) < 0.012)
+            if m.sum() >= 12: C[a_, b_] = (np.percentile(P[m, 0] * sgn, 98) + np.percentile(P[m, 0] * sgn, 2)) / 2
+    for _ in range(60):                                                        # 빈 칸 채우기 (이웃 평균)
+        nanm = np.isnan(C)
+        if not nanm.any(): break
+        Cp = np.pad(C, 1, constant_values=np.nan); st = np.stack([Cp[:-2, 1:-1], Cp[2:, 1:-1], Cp[1:-1, :-2], Cp[1:-1, 2:]])
+        cnt = (~np.isnan(st)).sum(0); avg = np.nansum(st, 0) / np.maximum(cnt, 1)
+        C = np.where(nanm & (cnt > 0), avg, C)
+    C = np.where(np.isnan(C), np.nanmean(C), C)
+    for _ in range(3):                                                         # 고르게 (접힘 없게)
+        Cp = np.pad(C, 1, mode="edge"); C = (Cp[1:-1, 1:-1] * 2 + Cp[:-2, 1:-1] + Cp[2:, 1:-1] + Cp[1:-1, :-2] + Cp[1:-1, 2:]) / 6
+    from scipy.ndimage import map_coordinates as _mc
+    def cfun(y, z=None):
+        y = np.asarray(y, float); z = np.zeros_like(y) + (P[leg, 2].mean() if z is None else np.asarray(z, float))
+        fy = np.clip((y - ys[0]) / 0.01, 0, len(ys) - 1); fz = np.clip((z - zs[0]) / 0.015, 0, len(zs) - 1)
+        return _mc(C, [fy.ravel(), fz.ravel()], order=1, mode="nearest").reshape(y.shape)
+    cs = C
     # 지울 것: 이 다리 쪽, 높이 아래, 가운데 면 안쪽(삼각형 한 점이라도 안쪽) + 가운데 덩어리
     tri_side = (cen[:, 0] * sgn > -0.004)
     low = P[I][:, :, 1].max(1) < YTOP
-    xin = (P[I][:, :, 0] * sgn) < cfun(P[I][:, :, 1]) - 0.0005
-    # 구두 뒷굽(바닥에서 4.8cm 아래·뒤쪽 5cm): 발 가운데 면보다 안쪽에 있어 지워졌었음 → 원래 모양 그대로 둠 (두 뒷굽은 처음부터 떨어져 있음)
-    zmin_ = P[leg, 2].min(); ymin_ = P[:, 1].min()
-    heel = ((P[I][:, :, 1] < ymin_ + 0.048) & (P[I][:, :, 2] < zmin_ + 0.05)).all(1)
-    kill = ok & tri_side & low & xin.any(1) & ~heel
+    xin = (P[I][:, :, 0] * sgn) < cfun(P[I][:, :, 1], P[I][:, :, 2]) - 0.0005
+    kill = ok & tri_side & low & xin.any(1)
     keepT &= ~kill
     # 복사할 것: 이 다리 쪽, 높이 아래, 세 점 모두 가운데 면 바깥(또는 위)
-    cp = ok & tri_side & low & ~xin.any(1) & (cen[:, 0] * sgn > 0.004) & ~heel
+    cp = ok & tri_side & low & ~xin.any(1) & (cen[:, 0] * sgn > 0.004)
     T = I[cp]; vid, inv = np.unique(T, return_inverse=True)
-    q = P[vid]; c_ = cfun(q[:, 1])
+    q = P[vid]; c_ = cfun(q[:, 1], q[:, 2])
     # 가운데 면 이음매: 복사할 조각의 가장자리(같은 자리끼리 묶어 한 삼각형에만 쓰이는 모서리) 중 위쪽 끝이 아닌 것 = 가운데 면을 따라가는 자른 선
     #   → 그 점들을 가운데 면 위로 옮기고 원래 점을 거울 쪽과 같이 씀 (안 그러면 앞·뒤로 검은 틈 줄이 생겼음)
     from collections import Counter
