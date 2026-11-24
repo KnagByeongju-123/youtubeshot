@@ -136,11 +136,19 @@ if len(N_):
     if (feet & (vl < 70)).sum() > 50:
         shoe_top = float(np.percentile(P[feet & (vl < 70), 1], 90))
         cy = P[N_].mean(1)[:, 1]; low = cy < P[:, 1].min() + 0.25 * (P[:, 1].max() - P[:, 1].min())
-        dark = np.where(low, cy < shoe_top, dark)
+        dark = np.where(low, P[N_][:, :, 1].max(1) < shoe_top, dark)     # 세 점 모두 구두 윗선 아래여야 구두색 (길게 걸친 면이 발목에 검은 줄로 보였음)
         print(f"  구두 윗선 높이 {shoe_top:.3f}")
         # 두 구두가 붙어 있던 안쪽 면(가운데 x≈0 둘레)은 겉면 그림이 살색이라 걸으면 구두 옆에 살색 판이 보임 → 구두색 묶음으로 옮김
         cen0 = P[I].mean(1); tl = TEX[np.clip((UV[I, 1] * th).astype(int), 0, th - 1), np.clip((UV[I, 0] * tw).astype(int), 0, tw - 1)].mean(2).mean(1)
         inner = (I[:, 0] != I[:, 1]) & (cen0[:, 1] < shoe_top) & (np.abs(cen0[:, 0]) < INNER) & (tl >= 70)
+        # 눌러 붙인 가운데 덩어리 면(SQ): 구두 윗선 위(발목)는 살색, 아래는 구두색 한 가지로 — 그림이 납작하게 늘어나 검은 줄무늬로 보였음
+        if SQ:
+            sqm = np.zeros(len(P), bool); sqm[list(SQ)] = True
+            sqf = (I[:, 0] != I[:, 1]) & sqm[I].all(1) & ~inner
+            if sqf.any():
+                N_ = np.concatenate([N_, I[sqf]]); cols = np.concatenate([cols, np.zeros((sqf.sum(), 3, 3))])
+                dark = np.concatenate([dark, P[I[sqf]][:, :, 1].max(1) < shoe_top]); I[sqf] = I[sqf][:, :1]; MAIN_CHANGED[0] = True
+                print(f"  눌러 붙인 면 {int(sqf.sum())}개: 발목은 살색, 구두는 구두색 한 가지로")
         if inner.any():
             N_ = np.concatenate([N_, I[inner]]); cols = np.concatenate([cols, np.zeros((inner.sum(), 3, 3))]); dark = np.concatenate([dark, np.ones(inner.sum(), bool)])
             I[inner] = I[inner][:, :1]; MAIN_CHANGED[0] = True

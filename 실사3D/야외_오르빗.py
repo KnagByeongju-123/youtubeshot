@@ -74,6 +74,35 @@ bpy.context.view_layer.update(); pts = bbox()
 for r in roots:
     r.location.x -= (min(p.x for p in pts) + max(p.x for p in pts)) / 2; r.location.y -= (min(p.y for p in pts) + max(p.y for p in pts)) / 2
     r.location.z -= min(p.z for p in pts)
+# ── 따로 된 구두(--구두 <폴더>, 애니3D/glb_구두떼기.py 결과): 각 발 뼈에 붙임 — 원래 몸 구두는 그 안에 가려짐 (사용자 결정 2026-11-24) ──
+if "--구두" in a:
+    import numpy as np
+    sd_ = a[a.index("--구두") + 1]; z_ = np.load(os.path.join(sd_, "구두.npz"))
+    arm0 = next((o for o in objs if o.type == "ARMATURE"), None)
+    body = max((o for o in objs if o.type == "MESH"), key=lambda o: len(o.data.vertices))
+    bpy.context.view_layer.update()
+    smat = bpy.data.materials.new("구두"); smat.use_nodes = True; bsdf = smat.node_tree.nodes["Principled BSDF"]
+    tx = smat.node_tree.nodes.new("ShaderNodeTexImage"); tx.image = bpy.data.images.load(os.path.abspath(os.path.join(sd_, "구두_그림.png")))
+    smat.node_tree.links.new(tx.outputs["Color"], bsdf.inputs["Base Color"]); bsdf.inputs["Roughness"].default_value = 0.3
+    for k_, sdn in ((0, "L"), (1, "R")):
+        m_ = z_["side"] == k_
+        if not m_.any(): continue
+        idx = np.where(m_)[0]; remap = -np.ones(len(m_), int); remap[idx] = np.arange(len(idx))
+        T_ = z_["I"][np.isin(z_["I"], idx).all(1)]; T_ = remap[T_]
+        Pg = z_["P"][idx]; Pb = [(float(x), float(-zz), float(y)) for x, y, zz in Pg]          # GLB(y 위) → 블렌더(z 위)
+        me = bpy.data.meshes.new(f"구두.{sdn}"); me.from_pydata(Pb, [], [tuple(int(v) for v in t) for t in T_]); me.update()
+        uvl = me.uv_layers.new(name="UV"); U_ = z_["UV"][idx]
+        for poly in me.polygons:
+            for li in poly.loop_indices:
+                vi = me.loops[li].vertex_index; uvl.data[li].uv = (float(U_[vi, 0]), float(1 - U_[vi, 1]))
+        ob = bpy.data.objects.new(f"구두.{sdn}", me); bpy.context.collection.objects.link(ob); me.materials.append(smat)
+        for poly in me.polygons: poly.use_smooth = True
+        ob.matrix_world = body.matrix_world.copy()          # 몸과 같은 자리·크기
+        if arm0 is not None and f"Foot.{sdn}" in arm0.pose.bones:
+            mw = ob.matrix_world.copy(); ob.parent = arm0; ob.parent_type = "BONE"; ob.parent_bone = f"Foot.{sdn}"
+            bpy.context.view_layer.update(); ob.matrix_world = mw
+        objs.append(ob)
+    print("구두 붙임:", sd_)
 # ── 자세: 기본 = 차렷(팔을 몸 옆에 자연스럽게 내림, 사용자 결정 2026-11-23), --자세 모음 = 손을 허리 앞에 모음 — 뼈 방향을 목표 방향으로 돌림 ──
 POSE = a[a.index('--자세') + 1] if '--자세' in a else '차렷'     # 차렷(기본, 사용자 결정 2026-11-23: 마이크 없이 자연스러운 팔) / 마이크 / 모음
 MIC_SIDE = a[a.index('--마이크손') + 1] if '--마이크손' in a else 'R'
@@ -303,7 +332,7 @@ def face(i):
 os.makedirs(folder, exist_ok=True)
 if "--찍점" in a:      # 검사용: 화면 점(x,y) 아래에 무엇이 있는지 (물체·재질·겉면 그림 좌표)
     px, py = (float(v) for v in a[a.index("--찍점") + 1].split(","))
-    fi_ = int(opt["--미리보기"] or 0); sc.frame_set(fi_); place(fi_, walk(fi_) * 0.6); bpy.context.view_layer.update()
+    fi_ = int(opt["--미리보기"] or 0); sc.frame_set(fi_); WHO[0] = walk(fi_); place(fi_, WHO[0] * 0.6); bpy.context.view_layer.update()
     dg = bpy.context.evaluated_depsgraph_get(); fr = cam.data.view_frame(scene=sc)
     tr, br, bl, tl = [cam.matrix_world @ v for v in fr]; u, v = px / W_, py / H_
     tgt = tl + (tr - tl) * u + (bl - tl) * v; o = cam.matrix_world.translation; d = (tgt - o).normalized()
