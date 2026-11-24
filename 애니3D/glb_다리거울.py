@@ -39,7 +39,7 @@ P = get(at["POSITION"]).astype(float); I = get(pr["indices"]).reshape(-1, 3).ast
 NV = len(P)
 ok = (I[:, 0] != I[:, 1]) & (I[:, 1] != I[:, 2]) & (I[:, 0] != I[:, 2])
 cen = P[I].mean(1)
-keepT = np.ones(len(I), bool); newT = []; src_v = []; newX = []
+keepT = np.ones(len(I), bool); newT = []; src_v = []; newX = []; SEAM = []
 for sd, sgn in (("L", 1), ("R", -1)):
     leg = (P[:, 1] < YTOP + 0.06) & (P[:, 0] * sgn > 0.0)
     # 높이별 가운데 면: 붙어 있던 가운데(|x|<1.5cm)는 빼고 바깥 끝·안쪽 끝 가운데, 높이 방향으로 고르게
@@ -60,7 +60,18 @@ for sd, sgn in (("L", 1), ("R", -1)):
     cp = ok & tri_side & low & ~xin.any(1) & (cen[:, 0] * sgn > 0.004)
     T = I[cp]; vid, inv = np.unique(T, return_inverse=True)
     q = P[vid]; c_ = cfun(q[:, 1])
-    on_plane = (q[:, 0] * sgn - c_) < 0.0015                                  # 가운데 면에 붙은 점은 원래 점을 그대로 같이 씀(이음매 없게)
+    # 가운데 면 이음매: 복사할 조각의 가장자리(같은 자리끼리 묶어 한 삼각형에만 쓰이는 모서리) 중 위쪽 끝이 아닌 것 = 가운데 면을 따라가는 자른 선
+    #   → 그 점들을 가운데 면 위로 옮기고 원래 점을 거울 쪽과 같이 씀 (안 그러면 앞·뒤로 검은 틈 줄이 생겼음)
+    from collections import Counter
+    gk = np.round(P * 2e4).astype(np.int64); _, gid = np.unique(gk, axis=0, return_inverse=True); gid = gid.reshape(-1)
+    ec = Counter()
+    for t in gid[T]:
+        for e in ((t[0], t[1]), (t[1], t[2]), (t[2], t[0])): ec[(min(e), max(e))] += 1
+    bg = set(x for e, c in ec.items() if c == 1 for x in e)
+    seam = np.array([gid[v] in bg for v in vid]) & (q[:, 1] < YTOP - 0.004) & ((q[:, 0] * sgn - c_) < 0.012)
+    P[vid[seam], 0] = sgn * c_[seam]; q = P[vid]
+    SEAM.extend(vid[seam].tolist())
+    on_plane = seam | ((q[:, 0] * sgn - c_) < 0.0015)                          # 가운데 면에 붙은 점은 원래 점을 그대로 같이 씀(이음매 없게)
     nx = sgn * (2 * c_ - q[:, 0] * sgn)
     idmap = np.where(on_plane, vid, -1)
     nnew = int((~on_plane).sum()); base = NV + len(src_v)
@@ -72,8 +83,10 @@ for sd, sgn in (("L", 1), ("R", -1)):
 src_v = np.array(src_v, np.int64); newX = np.array(newX)
 # 점 자료 늘리기
 for name, ai in at.items():
-    arr = get(ai); add = arr[src_v].copy()
-    if name == "POSITION": add = add.astype(np.float32); add[:, 0] = newX
+    arr = get(ai)
+    if name == "POSITION": arr = P.astype(np.float32)                        # 이음매 점을 옮긴 위치
+    add = arr[src_v].copy()
+    if name == "POSITION": add[:, 0] = newX
     if name == "NORMAL": add[:, 0] = -add[:, 0]
     if name == "TANGENT": add[:, 0] = -add[:, 0]; add[:, 3] = -add[:, 3]
     put(ai, np.concatenate([arr, add]))
@@ -84,7 +97,7 @@ for t in pr.get("targets", []):
         put(ai, np.concatenate([arr, add]))
 I2 = np.concatenate([I[keepT]] + newT)
 put(pr["indices"], I2.reshape(-1, 1))
-print(f"삼각형 {len(I)} → {len(I2)}, 점 {NV} → {NV + len(src_v)}")
+print(f"삼각형 {len(I)} → {len(I2)}, 점 {NV} → {NV + len(src_v)}, 가운데 면 이음매 점 {len(SEAM)}개")
 out = bytearray()
 for i, v in enumerate(j["bufferViews"]):
     while len(out) % 4: out += b"\0"
