@@ -370,7 +370,8 @@ def place(i, who=None):
         (ta, *A), (tb, *Bk) = ks[k], ks[k + 1]
         u = min(1.0, max(0.0, (t - ta) / max(tb - ta, 1e-6)))
         ez = Bk[5] if len(Bk) > 5 else "부드럽게"                              # 이 구간 빠르기: 점점빠르게 / 점점느리게 / 부드럽게
-        u = u * u if ez == "점점빠르게" else 1 - (1 - u) ** 3 if ez == "점점느리게" else u * u * (3 - 2 * u)
+        # 점점빠르게 = u³, 점점느리게 = 1-(1-u)², 부드럽게 = smoothstep — 전진(4.3m/2.6초)이 끝날 때 빠르기와 돌기(반원 8.5m/3.4초)가 시작할 때 빠르기가 같아 이음매에서 덜컥이지 않음
+        u = u ** 3 if ez == "점점빠르게" else 1 - (1 - u) ** 2 if ez == "점점느리게" else u * u * (3 - 2 * u)
         ang, rad, hgt, lz, lens = [A[q] + (Bk[q] - A[q]) * u for q in range(5)]
         sh = 0.006 * math.sin(t * 7.3) + 0.004 * math.sin(t * 12.1)           # 손으로 든 듯한 아주 작은 흔들림
         th = math.radians(ang)
