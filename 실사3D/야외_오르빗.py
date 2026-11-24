@@ -38,7 +38,7 @@ bpy.ops.wm.read_factory_settings(use_empty=True)
 sc = bpy.context.scene
 W_, H_ = (int(v) for v in opt["--크기"].split("x"))
 sc.render.engine = "CYCLES"; sc.cycles.device = "CPU"; sc.cycles.samples = int(opt["--샘플"]); sc.cycles.use_denoising = True
-sc.render.resolution_x, sc.render.resolution_y = W_, H_; sc.render.film_transparent = False
+sc.render.resolution_x, sc.render.resolution_y = W_, H_; sc.render.film_transparent = "--투명" in a   # --투명: 배경 없이(인물만) 찍음 — 의상 바꾸기 기준 사진용
 sc.view_settings.view_transform = "Standard"; sc.cycles.max_bounces = 4
 sc.render.fps = 24
 
