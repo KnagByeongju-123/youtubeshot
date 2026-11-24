@@ -58,6 +58,31 @@ put_same(pr["attributes"]["POSITION"], Pn.astype(np.float32))
 if "NORMAL" in pr["attributes"]:
     Nold = get(pr["attributes"]["NORMAL"]).astype(float); ch = wgt[g] > 0
     Nold[ch] = gn[g[ch]]; put_same(pr["attributes"]["NORMAL"], Nold.astype(np.float32))
+# 무게(살이 어느 뼈를 따라가는지)도 고르게: 무릎을 굽힐 때 무게가 들쭉날쭉한 점이 혹처럼 튀어나왔음 (걷기에서 무릎 바깥)
+#   다리 높이(구두 윗선 ~ 치마 속 조금 위) 점마다 뼈별 무게를 이웃 평균으로 12번 고르게, 같은 자리 점은 같은 무게
+at_ = pr["attributes"]
+if "JOINTS_0" in at_ and "WEIGHTS_0" in at_:
+    J = get(at_["JOINTS_0"]).astype(np.int64); Wt = get(at_["WEIGHTS_0"]).astype(float)
+    wac = j["accessors"][at_["WEIGHTS_0"]]; wmax = 255.0 if wac["componentType"] == 5121 else 65535.0 if wac["componentType"] == 5123 else 1.0
+    Wt /= wmax
+    NJ = int(J.max()) + 1
+    wz = np.clip(np.minimum((yy - (ymin + 0.07 * H)) / 0.02, ((ymin + 0.36 * H) - yy) / 0.02), 0, 1); wz[np.abs(gp[:, 0]) > 0.2] = 0
+    sel_g = np.where(wz > 0)[0]
+    # 점 묶음별 무게 (뼈 수만큼 펼침)
+    D = np.zeros((G, NJ)); cntg = np.bincount(g, minlength=G).astype(float)
+    for k in range(4): np.add.at(D, (g, J[:, k]), Wt[:, k])
+    D /= np.maximum(cntg, 1)[:, None]
+    for _ in range(12):
+        sm_ = np.zeros_like(D); np.add.at(sm_, e[:, 0], D[e[:, 1]]); np.add.at(sm_, e[:, 1], D[e[:, 0]])
+        avg = np.where(deg[:, None] > 0, sm_ / np.maximum(deg, 1)[:, None], D)
+        D = D + (0.5 * wz)[:, None] * (avg - D)
+    ch = wz[g] > 0
+    top = np.argsort(-D[g[ch]], axis=1)[:, :4]; tw = np.take_along_axis(D[g[ch]], top, 1); tw /= np.maximum(tw.sum(1, keepdims=True), 1e-9)
+    J[ch] = top; Wt[ch] = tw
+    if wmax > 1: Wq = np.round(Wt * wmax); Wq[:, 0] += wmax - Wq.sum(1)
+    else: Wq = Wt
+    put_same(at_["JOINTS_0"], J); put_same(at_["WEIGHTS_0"], Wq)
+    print(f"다리 점 {int(ch.sum())}개의 뼈 무게를 고르게")
 out = bytearray()
 for i, v in enumerate(j["bufferViews"]):
     while len(out) % 4: out += b"\0"
