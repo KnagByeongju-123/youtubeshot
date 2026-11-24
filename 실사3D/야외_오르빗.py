@@ -401,6 +401,7 @@ if (WALK or DANCE) and arm is not None:
                 rot_world(fa, (1, 0, 0), -0.5 * s_)
         return mathutils.Vector((0, py_, 0))
     ROOT0 = {r.name: r.matrix_world.copy() for r in roots}
+    sm2_ = lambda u: u * u * (3 - 2 * u)
     def dance(i):
         """4박 한 마디씩 동작을 바꿈 (사용자 2026-11-24 '손뼉, 한 바퀴 돌기, 엉덩이 흔들기'):
            마디1 스텝 터치 → 마디2 손뼉(2·4박에 짝) → 마디3 엉덩이 흔들기 → 마디4 한 바퀴 돌기 → 다시 처음.
@@ -409,7 +410,7 @@ if (WALK or DANCE) and arm is not None:
         for b in PB: b.matrix_basis = base[b.name]
         for r in roots: r.matrix_world = ROOT0[r.name]
         bpy.context.view_layer.update()
-        on = min(1.0, max(0.0, (t - t0) / 0.3))
+        on = sm2_(min(1.0, max(0.0, (t - t0) / 0.8)))                       # 춤 시작도 0.8초에 걸쳐 천천히
         bt = max(0.0, (t - t0)) * BPM / 60.0
         bar = int(bt // 4) % len(ROUTINE); ph = bt % 4.0; mvname = ROUTINE[bar]
         sm2 = lambda u: u * u * (3 - 2 * u)
@@ -449,7 +450,7 @@ if (WALK or DANCE) and arm is not None:
             V = mathutils.Vector
             if name == "스텝":
                 w = math.sin(math.pi * (bt if True else 0) + (0 if sd == "L" else math.pi))
-                return V((sgn * 0.55, -0.30 - 0.30 * w, -0.75 + 0.35 * w)), V((sgn * 0.05, -0.75, 0.55 + 0.35 * w))
+                return V((sgn * 0.55, -0.30 - 0.20 * w, -0.75 + 0.22 * w)), V((sgn * 0.05, -0.75, 0.55 + 0.22 * w))   # 흔드는 폭을 줄여 팔이 휙휙 움직이지 않게
             if name == "손뼉":
                 c = math.sin(math.pi * ph_ / 2) ** 2                              # 1·3박(=2·4번째 박)에 손이 만남
                 return V((sgn * 0.30, -0.65, -0.70)), V((-sgn * (0.2 + 0.75 * c), -0.75 + 0.25 * c, 0.45 - 0.15 * c))
@@ -458,7 +459,7 @@ if (WALK or DANCE) and arm is not None:
             if name == "돌기":
                 return V((sgn * 0.85, -0.15, -0.50)), V((sgn * 0.85, -0.30, -0.25))   # 팔을 옆으로 벌려 돎
             return V((sgn * CH_U, -0.03, -1.0)), V((sgn * CH_F, -0.10, -1.0))
-        nxt = ROUTINE[(bar + 1) % len(ROUTINE)]; bl = sm2(min(1.0, max(0.0, (ph - 3.65) / 0.35)))
+        nxt = ROUTINE[(bar + 1) % len(ROUTINE)]; bl = sm2(min(1.0, max(0.0, (ph - 3.0) / 1.0)))   # 마디 마지막 1박 동안 천천히 다음 동작으로 (0.35박이면 팔이 순간 휙 바뀌었음, 사용자 2026-11-24)
         for sd in ("L", "R"):
             ub, fa, hb_ = f"UpperArm.{sd}", f"ForeArm.{sd}", f"Hand.{sd}"
             if ub not in PB or hb_ not in PB: continue
