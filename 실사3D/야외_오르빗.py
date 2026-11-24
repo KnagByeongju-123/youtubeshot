@@ -359,6 +359,9 @@ if WALK and arm is not None:
         py_ = -2 * STEP * smoother((t - T0 + 0.1) / (TEND - T0 + 0.05))        # 골반은 고르게 앞으로 (걸음마다 멈칫 없게)
         lead = (fy["R"] - fy["L"]) / max(STEP, 1e-3)                            # -1: 오른발이 앞, +1: 왼발이 앞
         sway = 0.012 * math.sin(math.pi * (fy["R"] - fy["L"]) / max(STEP, 1e-3))   # 몸무게를 디딘 발 쪽으로 살짝
+        # 골반 높이: 골반이 고르게 앞으로 가니 두 발 가운데가 아님 → 더 먼 발에 닿을 만큼만 낮춤 (가운데로 계산하면 너무 낮아 무릎이 굽은 채 걸었음)
+        far = max(abs(py_ - fy["L"]), abs(py_ - fy["R"]))
+        drop = LL - math.sqrt(max(LL * LL - far * far, 1e-6)) + 0.003 * min(1, gap / STEP)
         off = mathutils.Vector((sway, py_, -drop))
         hp = PB["Hips"]; hp.matrix = mathutils.Matrix.Translation(M3i @ off) @ hp.matrix; bpy.context.view_layer.update()
         walking = 1.0 if T0 - 0.1 < t < TEND + 0.1 else 0.0
