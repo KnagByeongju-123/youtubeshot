@@ -142,7 +142,7 @@ if "--구두" in a:
             objs.append(ob2)
     print("구두 붙임:", sd_)
 # ── 자세: 기본 = 차렷(팔을 몸 옆에 자연스럽게 내림, 사용자 결정 2026-11-23), --자세 모음 = 손을 허리 앞에 모음 — 뼈 방향을 목표 방향으로 돌림 ──
-POSE = a[a.index('--자세') + 1] if '--자세' in a else '차렷'     # 차렷(기본, 사용자 결정 2026-11-23: 마이크 없이 자연스러운 팔) / 마이크 / 모음
+POSE = a[a.index('--자세') + 1] if '--자세' in a else '차렷'     # 앞나란히 / 차렷(기본, 사용자 결정 2026-11-23: 마이크 없이 자연스러운 팔) / 마이크 / 모음
 MIC_SIDE = a[a.index('--마이크손') + 1] if '--마이크손' in a else 'R'
 HAND_S = float(a[a.index('--손굵기') + 1]) if '--손굵기' in a else 0.82
 MIC_F = (0.30, 0.45, 0.85); MIC_CURL = 1.25; FIST = float(a[a.index('--주먹') + 1]) if '--주먹' in a else 0.32   # 주먹 = 마디마다 굽힘(라디안)
@@ -207,6 +207,11 @@ if arm is not None and "--자세없음" not in a:
         if POSE == '모음':
             aim_bone(ub, (sgn * 0.14, -0.22, -0.96), fb)       # 위팔: 아래로, 몸에 붙여 살짝 앞
             aim_bone(fb, (-sgn * 0.62, -0.72, -0.30), hb)      # 아래팔: 앞·안쪽으로 → 손이 허리 앞에서 모임
+        elif POSE == '앞나란히':                                 # 두 팔을 어깨 높이로 앞으로 곧게 (사용자 2026-11-24 '앞으로 나란히')
+            aim_bone(ub, (sgn * 0.02, -1.0, 0.0), fb)          # 위팔: 곧게 앞으로, 어깨 너비 그대로
+            aim_bone(fb, (sgn * 0.0, -1.0, 0.0), hb)           # 아래팔: 위팔과 한 줄
+            aim_bone(hb, (0.0, -1.0, -0.02), [f"Middle1.{side}"])   # 손: 손끝이 앞으로, 손바닥은 안쪽
+            curl(side, 0.08, thumb=0.05)                       # 손가락은 거의 펴고 힘만 살짝 뺌
         elif POSE == '마이크' and side == MIC_SIDE:
             aim_bone(ub, (sgn * 0.10, -0.30, -0.95), fb)       # 위팔: 아래로, 팔꿈치는 몸 옆 살짝 앞
             aim_bone(fb, (-sgn * MIC_F[0], -MIC_F[1], MIC_F[2]), hb)   # 아래팔: 가슴 앞으로 들어 올림
@@ -295,8 +300,10 @@ def place(i, who=None):
 #   발 자리를 시간마다 정하고(오른발 → 왼발 → 오른발을 모음), 골반은 두 발 가운데, 다리는 두 마디 IK(무릎은 앞으로), 발은 바닥과 평평하게.
 #   팔은 걷는 동안 반대쪽 다리와 함께 앞뒤로 조금 흔듦
 WALK = "--걷기" in a
-STEP = float(a[a.index("--보폭") + 1]) if "--보폭" in a else 0.40
-if WALK and arm is not None:
+DANCE = "--춤" in a          # 가벼운 춤(스텝 터치): 옆으로 한 발 내딛고 모으기를 박자에 맞춰, 무릎 반동·골반·팔 흔들기 (사용자 2026-11-24 "약간의 댄스")
+BPM = float(a[a.index("--박자") + 1]) if "--박자" in a else 112
+STEP = float(a[a.index("--보폭") + 1]) if "--보폭" in a else 0.28     # 엉덩이~발목 0.55m·몸에 붙는 치마·굽 구두 → 작은 걸음 (0.40 이면 골반이 내려가 무릎 굽은 채 걸음)
+if (WALK or DANCE) and arm is not None:
     bpy.context.view_layer.update()
     MW = arm.matrix_world.copy(); MWi = MW.inverted(); M3 = MW.to_3x3(); M3i = MWi.to_3x3()
     PB = arm.pose.bones
@@ -351,9 +358,12 @@ if WALK and arm is not None:
         gap = abs(fy["L"] - fy["R"])
         drop = LL - math.sqrt(max(LL * LL - (gap / 2) ** 2, 1e-6)) + 0.004 * min(1, gap / STEP)
         def smoother(u): u = min(1.0, max(0.0, u)); return u * u * u * (u * (6 * u - 15) + 10)
-        py_ = -2 * STEP * smoother((t - T0 + 0.1) / (TEND - T0 + 0.05))        # 골반은 고르게 앞으로 (걸음마다 멈칫 없게)
+        py_ = 0.5 * (-2 * STEP * smoother((t - T0 + 0.1) / (TEND - T0 + 0.05))) + 0.5 * (fy['L'] + fy['R']) / 2   # 골반: 고르게 앞으로 + 두 발 가운데를 반씩 (멈칫도, 무릎 굽힘도 없게)
         lead = (fy["R"] - fy["L"]) / max(STEP, 1e-3)                            # -1: 오른발이 앞, +1: 왼발이 앞
         sway = 0.012 * math.sin(math.pi * (fy["R"] - fy["L"]) / max(STEP, 1e-3))   # 몸무게를 디딘 발 쪽으로 살짝
+        # 골반 높이: 골반이 고르게 앞으로 가니 두 발 가운데가 아님 → 더 먼 발에 닿을 만큼만 낮춤 (가운데로 계산하면 너무 낮아 무릎이 굽은 채 걸었음)
+        far = max(abs(py_ - fy["L"]), abs(py_ - fy["R"]))
+        drop = LL - math.sqrt(max(LL * LL - far * far, 1e-6)) + 0.003 * min(1, gap / STEP)
         off = mathutils.Vector((sway, py_, -drop))
         hp = PB["Hips"]; hp.matrix = mathutils.Matrix.Translation(M3i @ off) @ hp.matrix; bpy.context.view_layer.update()
         walking = 1.0 if T0 - 0.1 < t < TEND + 0.1 else 0.0
@@ -366,6 +376,7 @@ if WALK and arm is not None:
             pit = foot_pitch(foot_u(sd, t))
             F = g["F0"] + mathutils.Vector((0, fy[sd], foot_lift(sd, t) + 0.14 * math.sin(max(pit, 0.0))))   # 뒤꿈치를 들면 발목도 그만큼 올라감
             d = F - H; dl = min(d.length, g["L1"] + g["L2"] - 1e-4)
+            if os.environ.get('WALKDBG'): print('DBG', i, sd, round(d.length, 3), round(g['L1'] + g['L2'], 3), 'H', tuple(round(v, 3) for v in H), 'F', tuple(round(v, 3) for v in F), 'drop', round(drop, 3), 'py', round(py_, 3))
             ca = (g["L1"] ** 2 + dl ** 2 - g["L2"] ** 2) / (2 * g["L1"] * dl); ang = math.acos(max(-1, min(1, ca)))
             dn = d.normalized(); fwd = mathutils.Vector((0, -1, 0)); side = dn.cross(fwd).normalized(); perp = side.cross(dn).normalized()
             if perp.dot(fwd) < 0: perp = -perp
@@ -388,6 +399,59 @@ if WALK and arm is not None:
             if fa in PB and s_ > 0:                                             # 앞으로 갈 때 팔꿈치 살짝 굽힘
                 rot_world(fa, (1, 0, 0), -0.5 * s_)
         return mathutils.Vector((0, py_, 0))
+    def dance(i):
+        """스텝 터치: 4박이 한 묶음 — 1박 오른발 옆으로, 2박 왼발 모으기, 3박 왼발 옆으로, 4박 오른발 모으기.
+           박마다 무릎 반동(골반 살짝 내림), 몸무게 쪽으로 골반 이동·기울임, 가슴 반대로, 팔은 팔꿈치 굽혀 번갈아 흔들기, 고개 끄덕"""
+        t = i / 24.0; t0 = 0.4
+        for b in PB: b.matrix_basis = base[b.name]
+        bpy.context.view_layer.update()
+        on = min(1.0, max(0.0, (t - t0) / 0.3))                               # 춤 시작할 때 부드럽게
+        bt = max(0.0, (t - t0)) * BPM / 60.0                                    # 지금 몇 박째
+        ph = bt % 4.0; SW = 0.20                                               # 옆으로 내딛는 폭(m)
+        sm2 = lambda u: u * u * (3 - 2 * u)
+        # 발 옆 위치(+x = 왼쪽): 오른발(R)은 -x 쪽으로 나갔다 들어옴, 왼발은 +x 쪽으로
+        if ph < 1:   xR, xL = -SW * sm2(ph), 0.0;            mv = "R"; u = ph
+        elif ph < 2: xR, xL = -SW, -SW * sm2(ph - 1);        mv = "L"; u = ph - 1
+        elif ph < 3: xR, xL = -SW, -SW + 2 * SW * sm2(ph - 2) * 0.5; mv = "L"; u = ph - 2
+        else:        xR, xL = -SW + SW * sm2(ph - 3), 0.0;  mv = "R"; u = ph - 3
+        # 3박째 왼발이 왼쪽으로 SW 만큼 나가고(가운데 기준 +0) 4박째 오른발이 따라 모임 → 묶음 끝에 처음 자리
+        xR *= on; xL *= on
+        fx = {"R": xR, "L": xL}
+        bounce = 0.035 * (0.5 - 0.5 * math.cos(2 * math.pi * bt)) * on          # 박마다 무릎 반동
+        px = (xR + xL) / 2
+        hp = PB["Hips"]; off = mathutils.Vector((px, 0, -bounce - 0.006 * on))
+        hp.matrix = mathutils.Matrix.Translation(M3i @ off) @ hp.matrix; bpy.context.view_layer.update()
+        side = math.sin(math.pi * bt / 2)                                      # 오른쪽(-)·왼쪽(+)으로 흔들리는 정도
+        rot_world("Hips", (0, 1, 0), -0.10 * side * on)                       # 골반 기울임
+        rot_world("Hips", (0, 0, 1), 0.05 * side * on)
+        if "Chest" in PB: rot_world("Chest", (0, 1, 0), 0.12 * side * on); rot_world("Chest", (0, 0, 1), -0.14 * side * on)
+        if "Head" in PB: rot_world("Head", (1, 0, 0), 0.05 * math.sin(2 * math.pi * bt) * on)   # 고개 끄덕
+        for sd in ("L", "R"):
+            g = leg[sd]; H = MW @ PB[f"UpperLeg.{sd}"].head
+            lift = 0.03 * math.sin(math.pi * u) * on if sd == mv else 0.0
+            F = g["F0"] + mathutils.Vector((fx[sd], 0, lift))
+            d = F - H; dl = min(d.length, g["L1"] + g["L2"] - 1e-4)
+            ca = (g["L1"] ** 2 + dl ** 2 - g["L2"] ** 2) / (2 * g["L1"] * dl); ang = math.acos(max(-1, min(1, ca)))
+            dn = d.normalized(); fwd = mathutils.Vector((0, -1, 0)); sidev = dn.cross(fwd).normalized(); perp = sidev.cross(dn).normalized()
+            if perp.dot(fwd) < 0: perp = -perp
+            knee = H + (dn * math.cos(ang) + perp * math.sin(ang)) * g["L1"]
+            set_world_aim(f"UpperLeg.{sd}", lambda sd=sd: MW @ PB[f"LowerLeg.{sd}"].head, knee)
+            set_world_aim(f"LowerLeg.{sd}", lambda sd=sd: MW @ PB[f"Foot.{sd}"].head, F)
+            fb = PB[f"Foot.{sd}"]; fb.matrix = mathutils.Matrix.Translation(fb.matrix.translation) @ FOOT0[sd]; bpy.context.view_layer.update()
+        # 팔: 팔꿈치를 굽혀 몸 앞에서 번갈아 위아래로 (박에 맞춰)
+        for sd in ("L", "R"):
+            ub, fa = f"UpperArm.{sd}", f"ForeArm.{sd}"
+            if ub not in PB: continue
+            sgn = 1 if (MW @ PB[ub].head).x > 0 else -1
+            ph2 = math.sin(math.pi * bt + (0 if sd == "L" else math.pi))
+            up = (MW @ PB[ub].head); tgt = up + mathutils.Vector((sgn * 0.55, -0.30 - 0.30 * ph2 * on, -0.75 + 0.35 * ph2 * on))   # 팔을 옆으로 벌려 크게
+            set_world_aim(ub, lambda sd=sd: MW @ PB[fa].head, tgt)
+            el = MW @ PB[fa].head; hb_ = f"Hand.{sd}"
+            if hb_ in PB:
+                ftgt = el + mathutils.Vector((sgn * 0.05, -0.75, 0.55 + 0.35 * ph2)) * on + mathutils.Vector((sgn * CH_F, -0.10, -1.0)) * (1 - on)
+                set_world_aim(fa, lambda hb_=hb_: MW @ PB[hb_].head, ftgt)
+        return mathutils.Vector((0, 0, 0))
+    if DANCE: walk = dance
 else:
     walk = lambda i: mathutils.Vector((0, 0, 0))
 
