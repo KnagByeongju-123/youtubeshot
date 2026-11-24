@@ -105,31 +105,21 @@ try:
     for suf, sgn in ((".R", -1), (".L", 1)):
         side = np.char.endswith(domn, suf) & lowf
         if side.sum() < 50 or np.median(P[side, 0]) * sgn <= 0: continue
-        # 발목 아래 안쪽 반을 바깥쪽 반의 거울 모양으로 다시 세움 (평평하게 누르거나 둥글게 깎으면 뒤꿈치가 칼로 자른 쐐기처럼 보였음)
-        #   발 가운데 면 xc = 멀쩡한 점(가운데 덩어리 제외)의 바깥 끝·안쪽 끝 가운데. 안쪽 점마다 높이·앞뒤가 가장 가까운 바깥쪽 점을 찾아 x 만 뒤집음
-        good = side & (P[:, 0] * sgn > SLAB + 0.004)
-        xs_ = P[good, 0] * sgn; xc = (np.percentile(xs_, 99.5) + np.percentile(xs_, 0.5)) / 2
-        inner_ = np.where(side & (P[:, 0] * sgn < xc))[0]; outer_ = np.where(side & (P[:, 0] * sgn >= xc))[0]
-        if len(outer_) > 50:
-            OY = P[outer_][:, [1, 2]]
-            for k0 in range(0, len(inner_), 2000):
-                ch = inner_[k0:k0 + 2000]; d2 = ((P[ch][:, None, [1, 2]] - OY[None]) ** 2).sum(2); nn = outer_[d2.argmin(1)]
-                ytf = P[lowf, 1].max()
-                for v, o in zip(ch, nn):
-                    t_ = min(1.0, max(0.0, (P[v, 1] - (ytf - 0.015)) / 0.015)); t_ = t_ * t_ * (3 - 2 * t_)   # 위 1.5cm 는 원래 모양과 섞어 이음매 없게
-                    SQ[v] = sgn * (2 * xc - P[o, 0] * sgn) * (1 - t_) + P[v, 0] * t_
-            print(f"  {suf[1]}발: 발목 아래 안쪽 점 {len(inner_)}개를 바깥쪽 거울 모양으로 (가운데 x={xc * sgn:+.3f})")
-    # 거울로 세운 점은 가장 가까운 바깥 점을 따라 들쭉날쭉 → 이웃 점 평균으로 x 를 12번 고르게 (접힌 자국 없애기)
-    if SQ:
-        keys = np.array(sorted(SQ)); xv = P[:, 0].copy(); xv[keys] = [SQ[k] for k in keys]
-        gi = g[I]; okt = (gi[:, 0] != gi[:, 1])
-        gx = np.zeros(g.max() + 1); gc = np.zeros(g.max() + 1); np.add.at(gx, g, xv); np.add.at(gc, g, 1); gx /= np.maximum(gc, 1)
-        mov = np.zeros(g.max() + 1, bool); mov[g[keys]] = True
-        e_ = np.concatenate([gi[okt][:, [0, 1]], gi[okt][:, [1, 2]], gi[okt][:, [2, 0]]]); e_ = np.concatenate([e_, e_[:, ::-1]])
-        for _ in range(12):
-            sm_ = np.zeros_like(gx); cn_ = np.zeros_like(gx); np.add.at(sm_, e_[:, 0], gx[e_[:, 1]]); np.add.at(cn_, e_[:, 0], 1)
-            avg = np.where(cn_ > 0, sm_ / np.maximum(cn_, 1), gx); gx = np.where(mov, 0.5 * gx + 0.5 * avg, gx)
-        for k in keys: SQ[k] = float(gx[g[k]])
+        m = side & (P[:, 0] * sgn < SLAB)
+        # 평평하게 누르면 발목 안쪽이 칼로 자른 벽처럼 보임 → 같은 높이의 바깥쪽 반(멀쩡한 곳)으로 발목 단면(타원)을 재서 안쪽을 둥글게
+        good = side & (P[:, 0] * sgn > SLAB + 0.006)
+        for v in np.where(m)[0]: SQ[v] = sgn * SLAB
+        ys = np.arange(P[side, 1].min(), P[side, 1].max() + 0.004, 0.004)
+        for y0 in ys:
+            gb = good & (np.abs(P[:, 1] - y0) < 0.004); mb = m & (P[:, 1] >= y0 - 0.002) & (P[:, 1] < y0 + 0.002)
+            if gb.sum() < 12 or not mb.any(): continue
+            xo = np.percentile(P[gb, 0] * sgn, 99); z0, z1 = np.percentile(P[gb, 2], [1, 99])
+            zc, rz = (z0 + z1) / 2, max((z1 - z0) / 2, 1e-4)
+            cx = max(xo - rz * 0.95, SLAB + 0.004)                      # 발목 가운데: 바깥 끝에서 앞뒤 반지름만큼 안쪽 (둥근 단면)
+            rx = xo - cx
+            for v in np.where(mb)[0]:
+                u = min(1.0, abs(P[v, 2] - zc) / rz)
+                SQ[v] = sgn * max(cx - rx * np.sqrt(max(0.0, 1 - u * u)), SLAB)
     if SQ: print(f"  구두 사이 가운데 덩어리 점 {len(SQ)}개를 각 구두 안쪽 면으로 눌러 붙임 (버 없애기)")
 except KeyError:
     pass
@@ -166,7 +156,7 @@ if len(N_):
         inner = (I[:, 0] != I[:, 1]) & (cen0[:, 1] < shoe_top) & (np.abs(cen0[:, 0]) < INNER) & (tl >= 70)
         # 눌러 붙인 가운데 덩어리 면(SQ): 구두 윗선 위(발목)는 살색, 아래는 구두색 한 가지로 — 그림이 납작하게 늘어나 검은 줄무늬로 보였음
         if SQ:
-            sqm = np.zeros(len(P), bool); sqm[list(SQ)] = True; sqm &= np.abs(P[:, 0]) < SLAB      # 원래 가운데 덩어리였던 점만 (거울로 세운 안쪽 살은 원래 그림 그대로)
+            sqm = np.zeros(len(P), bool); sqm[list(SQ)] = True
             sqf = (I[:, 0] != I[:, 1]) & sqm[I].all(1) & ~inner
             if sqf.any():
                 N_ = np.concatenate([N_, I[sqf]]); cols = np.concatenate([cols, np.zeros((sqf.sum(), 3, 3))])
