@@ -61,7 +61,12 @@ if HEELSRC:
     pr2 = j2["meshes"][0]["primitives"][0]; P2 = get2(pr2["attributes"]["POSITION"]).astype(float); I0 = get2(pr2["indices"]).reshape(-1, 3).astype(np.int64)
     I0 = I0[(I0[:, 0] != I0[:, 1]) & (I0[:, 1] != I0[:, 2])]
     c0 = P2[I0].mean(1); y2 = P2[:, 1].min(); zr = P2[I0[c0[:, 0] < 0]].reshape(-1, 3)[:, 2].min()
-    hz = (c0[:, 0] < 0) & ((P2[I0][:, :, 1] < y2 + 0.05) & (P2[I0][:, :, 2] < zr + 0.05)).all(1)
+    zone = (c0[:, 0] < 0) & ((P2[I0][:, :, 1] < y2 + 0.11) & (P2[I0][:, :, 2] < zr + 0.06)).all(1)   # 굽 높이 전체(약 8cm)
+    # 이미 이 모델에 있는 구두 면(뒤꿈치 겉면)과 겹치는 삼각형은 빼고, 구두 밖으로 나온 굽만
+    from scipy.spatial import cKDTree
+    here = (P[:, 0] < 0) & (P[:, 1] < y2 + 0.12); tree = cKDTree(P[here])
+    dmin = np.stack([tree.query(P2[I0[zone]][:, k])[0] for k in range(3)], 1).max(1)
+    hz = zone.copy(); hz[np.where(zone)[0]] = dmin > 0.002
     hv, hinv = np.unique(I0[hz], return_inverse=True)
     for name, ai in at.items():
         arr = get(ai); add = get2(pr2["attributes"][name])[hv] if name in pr2["attributes"] else np.zeros((len(hv), arr.shape[1]), arr.dtype)
