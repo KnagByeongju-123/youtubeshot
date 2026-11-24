@@ -11,7 +11,7 @@ from collections import Counter, defaultdict
 import numpy as np
 
 a = sys.argv[1:]
-YMAX = -0.25; HAND = False; INNER = 0.012; MAIN_CHANGED = [False]
+YMAX = -0.25; HAND = False; INNER = 0.012; SLAB = 0.012; MAIN_CHANGED = [False]
 if "--높이" in a: i = a.index("--높이"); YMAX = float(a[i + 1]); del a[i:i + 2]
 if "--손" in a: a.remove("--손"); HAND = True
 if "--안쪽" in a: i = a.index("--안쪽"); INNER = float(a[i + 1]); del a[i:i + 2]
@@ -94,14 +94,31 @@ for s in list(nxt):
         new.append(tri)
     n_loop += 1
 print(f"틈 고리 {n_loop}개 막음 (삼각형 {len(new)}개 추가){', 못 이은 고리 ' + str(skipped) + '개' if skipped else ''}")
-if FLAT:
+# 두 구두가 붙어 있던 가운데 덩어리(x≈0, 폭 2cm): 리깅에서 한쪽 발(오른발)에 통째로 붙어, 걸을 때 그 구두 옆에 검은 판(버)처럼 따라다님
+#   (2026-11-24 사용자 지적 '걸을 때 오른쪽 구두에 버') → 발 높이에서 가운데를 넘어온 점을 그 발 안쪽 면(x = ±SLAB)으로 납작하게 눌러 붙임
+SQ = {}
+try:
+    sk_ = j["skins"][0]; nm_ = [j["nodes"][q]["name"] for q in sk_["joints"]]
+    Jt_ = get(pr["attributes"]["JOINTS_0"]).astype(np.int64); Wt_ = get(pr["attributes"]["WEIGHTS_0"]).astype(float)
+    domn = np.array([nm_[k] for k in Jt_[np.arange(len(Jt_)), Wt_.argmax(1)]])
+    lowf = P[:, 1] < P[:, 1].min() + 0.095 * (P[:, 1].max() - P[:, 1].min())        # 발목 아래 (키의 9.5%)
+    for suf, sgn in ((".R", -1), (".L", 1)):
+        side = np.char.endswith(domn, suf) & lowf
+        if side.sum() < 50 or np.median(P[side, 0]) * sgn <= 0: continue
+        m = side & (P[:, 0] * sgn < SLAB)
+        for v in np.where(m)[0]: SQ[v] = sgn * SLAB
+    if SQ: print(f"  구두 사이 가운데 덩어리 점 {len(SQ)}개를 각 구두 안쪽 면으로 눌러 붙임 (버 없애기)")
+except KeyError:
+    pass
+if FLAT or SQ:
     pac = j["accessors"][pr["attributes"]["POSITION"]]; P2 = P.astype(np.float32).copy()
     for gv, xm in FLAT.items(): P2[g == gv, 0] = xm
+    for v, xv in SQ.items(): P2[v, 0] = xv
     pb_ = P2.reshape(-1).tobytes(); vi_ = pac["bufferView"]; o_ = pac.get("byteOffset", 0)
     assert j["bufferViews"][vi_].get("byteStride") in (None, 12)
     bb = bytearray(views[vi_]); bb[o_:o_ + len(pb_)] = pb_; views[vi_] = bytes(bb)
     pac["min"] = [float(v) for v in P2.min(0)]; pac["max"] = [float(v) for v in P2.max(0)]
-    print(f"  다리 안쪽 잘린 가장자리 점 {sum(int((g == gv).sum()) for gv in FLAT)}개를 평평하게")
+    if FLAT: print(f"  다리 안쪽 잘린 가장자리 점 {sum(int((g == gv).sum()) for gv in FLAT)}개를 평평하게")
 # 막은 면은 둘레 점의 겉면 그림 좌표를 그대로 쓰면 살색·구두색이 섞여 엉뚱한 띠가 보임(걷기에서 뒷발 안쪽 살색 판)
 #   → 막은 삼각형마다 세 점의 그림 색을 재서 같은 색끼리 묶고, 묶음마다 그 색 한 가지(그림 없는 재질)로 칠한 따로 된 조각으로 넣음
 import io
