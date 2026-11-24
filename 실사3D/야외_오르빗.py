@@ -407,7 +407,7 @@ if (WALK or DANCE) and arm is not None:
         bpy.context.view_layer.update()
         on = min(1.0, max(0.0, (t - t0) / 0.3))                               # 춤 시작할 때 부드럽게
         bt = max(0.0, (t - t0)) * BPM / 60.0                                    # 지금 몇 박째
-        ph = bt % 4.0; SW = 0.11                                               # 옆으로 내딛는 폭(m)
+        ph = bt % 4.0; SW = 0.20                                               # 옆으로 내딛는 폭(m)
         sm2 = lambda u: u * u * (3 - 2 * u)
         # 발 옆 위치(+x = 왼쪽): 오른발(R)은 -x 쪽으로 나갔다 들어옴, 왼발은 +x 쪽으로
         if ph < 1:   xR, xL = -SW * sm2(ph), 0.0;            mv = "R"; u = ph
@@ -417,14 +417,14 @@ if (WALK or DANCE) and arm is not None:
         # 3박째 왼발이 왼쪽으로 SW 만큼 나가고(가운데 기준 +0) 4박째 오른발이 따라 모임 → 묶음 끝에 처음 자리
         xR *= on; xL *= on
         fx = {"R": xR, "L": xL}
-        bounce = 0.022 * (0.5 - 0.5 * math.cos(2 * math.pi * bt)) * on          # 박마다 무릎 반동
+        bounce = 0.035 * (0.5 - 0.5 * math.cos(2 * math.pi * bt)) * on          # 박마다 무릎 반동
         px = (xR + xL) / 2
         hp = PB["Hips"]; off = mathutils.Vector((px, 0, -bounce - 0.006 * on))
         hp.matrix = mathutils.Matrix.Translation(M3i @ off) @ hp.matrix; bpy.context.view_layer.update()
         side = math.sin(math.pi * bt / 2)                                      # 오른쪽(-)·왼쪽(+)으로 흔들리는 정도
-        rot_world("Hips", (0, 1, 0), -0.06 * side * on)                       # 골반 기울임
+        rot_world("Hips", (0, 1, 0), -0.10 * side * on)                       # 골반 기울임
         rot_world("Hips", (0, 0, 1), 0.05 * side * on)
-        if "Chest" in PB: rot_world("Chest", (0, 1, 0), 0.08 * side * on); rot_world("Chest", (0, 0, 1), -0.08 * side * on)
+        if "Chest" in PB: rot_world("Chest", (0, 1, 0), 0.12 * side * on); rot_world("Chest", (0, 0, 1), -0.14 * side * on)
         if "Head" in PB: rot_world("Head", (1, 0, 0), 0.05 * math.sin(2 * math.pi * bt) * on)   # 고개 끄덕
         for sd in ("L", "R"):
             g = leg[sd]; H = MW @ PB[f"UpperLeg.{sd}"].head
@@ -444,11 +444,11 @@ if (WALK or DANCE) and arm is not None:
             if ub not in PB: continue
             sgn = 1 if (MW @ PB[ub].head).x > 0 else -1
             ph2 = math.sin(math.pi * bt + (0 if sd == "L" else math.pi))
-            up = (MW @ PB[ub].head); tgt = up + mathutils.Vector((sgn * 0.35, -0.35 - 0.25 * ph2 * on, -0.85 + 0.15 * ph2 * on))
+            up = (MW @ PB[ub].head); tgt = up + mathutils.Vector((sgn * 0.55, -0.30 - 0.30 * ph2 * on, -0.75 + 0.35 * ph2 * on))   # 팔을 옆으로 벌려 크게
             set_world_aim(ub, lambda sd=sd: MW @ PB[fa].head, tgt)
             el = MW @ PB[fa].head; hb_ = f"Hand.{sd}"
             if hb_ in PB:
-                ftgt = el + mathutils.Vector((-sgn * 0.25, -0.85, 0.35 + 0.25 * ph2)) * on + mathutils.Vector((sgn * CH_F, -0.10, -1.0)) * (1 - on)
+                ftgt = el + mathutils.Vector((sgn * 0.05, -0.75, 0.55 + 0.35 * ph2)) * on + mathutils.Vector((sgn * CH_F, -0.10, -1.0)) * (1 - on)
                 set_world_aim(fa, lambda hb_=hb_: MW @ PB[hb_].head, ftgt)
         return mathutils.Vector((0, 0, 0))
     if DANCE: walk = dance
