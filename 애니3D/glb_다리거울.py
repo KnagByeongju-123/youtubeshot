@@ -54,10 +54,13 @@ for sd, sgn in (("L", 1), ("R", -1)):
     tri_side = (cen[:, 0] * sgn > -0.004)
     low = P[I][:, :, 1].max(1) < YTOP
     xin = (P[I][:, :, 0] * sgn) < cfun(P[I][:, :, 1]) - 0.0005
-    kill = ok & tri_side & low & xin.any(1)
+    # 구두 뒷굽(바닥에서 4.8cm 아래·뒤쪽 5cm): 발 가운데 면보다 안쪽에 있어 지워졌었음 → 원래 모양 그대로 둠 (두 뒷굽은 처음부터 떨어져 있음)
+    zmin_ = P[leg, 2].min(); ymin_ = P[:, 1].min()
+    heel = ((P[I][:, :, 1] < ymin_ + 0.048) & (P[I][:, :, 2] < zmin_ + 0.05)).all(1)
+    kill = ok & tri_side & low & xin.any(1) & ~heel
     keepT &= ~kill
     # 복사할 것: 이 다리 쪽, 높이 아래, 세 점 모두 가운데 면 바깥(또는 위)
-    cp = ok & tri_side & low & ~xin.any(1) & (cen[:, 0] * sgn > 0.004)
+    cp = ok & tri_side & low & ~xin.any(1) & (cen[:, 0] * sgn > 0.004) & ~heel
     T = I[cp]; vid, inv = np.unique(T, return_inverse=True)
     q = P[vid]; c_ = cfun(q[:, 1])
     # 가운데 면 이음매: 복사할 조각의 가장자리(같은 자리끼리 묶어 한 삼각형에만 쓰이는 모서리) 중 위쪽 끝이 아닌 것 = 가운데 면을 따라가는 자른 선
