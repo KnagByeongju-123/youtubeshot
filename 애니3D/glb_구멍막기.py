@@ -106,7 +106,20 @@ try:
         side = np.char.endswith(domn, suf) & lowf
         if side.sum() < 50 or np.median(P[side, 0]) * sgn <= 0: continue
         m = side & (P[:, 0] * sgn < SLAB)
+        # 평평하게 누르면 발목 안쪽이 칼로 자른 벽처럼 보임 → 같은 높이의 바깥쪽 반(멀쩡한 곳)으로 발목 단면(타원)을 재서 안쪽을 둥글게
+        good = side & (P[:, 0] * sgn > SLAB + 0.006)
         for v in np.where(m)[0]: SQ[v] = sgn * SLAB
+        ys = np.arange(P[side, 1].min(), P[side, 1].max() + 0.004, 0.004)
+        for y0 in ys:
+            gb = good & (np.abs(P[:, 1] - y0) < 0.004); mb = m & (P[:, 1] >= y0 - 0.002) & (P[:, 1] < y0 + 0.002)
+            if gb.sum() < 12 or not mb.any(): continue
+            xo = np.percentile(P[gb, 0] * sgn, 99); z0, z1 = np.percentile(P[gb, 2], [1, 99])
+            zc, rz = (z0 + z1) / 2, max((z1 - z0) / 2, 1e-4)
+            cx = max(xo - rz * 0.95, SLAB + 0.004)                      # 발목 가운데: 바깥 끝에서 앞뒤 반지름만큼 안쪽 (둥근 단면)
+            rx = xo - cx
+            for v in np.where(mb)[0]:
+                u = min(1.0, abs(P[v, 2] - zc) / rz)
+                SQ[v] = sgn * max(cx - rx * np.sqrt(max(0.0, 1 - u * u)), SLAB)
     if SQ: print(f"  구두 사이 가운데 덩어리 점 {len(SQ)}개를 각 구두 안쪽 면으로 눌러 붙임 (버 없애기)")
 except KeyError:
     pass

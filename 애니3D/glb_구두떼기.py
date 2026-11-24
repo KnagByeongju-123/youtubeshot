@@ -4,6 +4,7 @@
      안쪽까지 둥근 완전한 구두 한 짝을 만듦. 몸과 따로 된 물체라 각 발 뼈(Foot.L/R)에 붙이고, 다른 구두로 갈아 끼울 수도 있음
    결과: <폴더>/구두.npz (점·삼각형·겉면 그림 좌표, 모델 좌표 = GLB 그대로) + <폴더>/구두_그림.png
    사용: python 애니3D/glb_구두떼기.py <몸.glb> <결과 폴더> [--높이 0.075] [--키움 1.035] [--확인 <그림.png>]
+     --몸 <결과.glb>: 몸에서 원래 구두 면(어두운 구두 껍데기·두 발 사이를 막은 면)을 빼서 저장 — 새 구두 안에서 겹쳐 삐져나오지 않게 (발등 살은 남김)
      --높이: 구두로 볼 높이(키에 대한 비율, 바닥부터). --키움: 원래 몸 구두를 덮도록 살짝 크게
    붙이기: 실사3D/야외_오르빗.py ... --구두 <결과 폴더>"""
 import io, json, os, struct, sys
@@ -11,7 +12,8 @@ import numpy as np
 from PIL import Image
 
 a = sys.argv[1:]
-HR, GROW, check = 0.075, 1.035, None
+HR, GROW, check, BODY = 0.075, 1.035, None, None
+if "--몸" in a: i = a.index("--몸"); BODY = a[i + 1]; del a[i:i + 2]
 if "--높이" in a: i = a.index("--높이"); HR = float(a[i + 1]); del a[i:i + 2]
 if "--키움" in a: i = a.index("--키움"); GROW = float(a[i + 1]); del a[i:i + 2]
 if "--확인" in a: i = a.index("--확인"); check = a[i + 1]; del a[i:i + 2]
@@ -69,3 +71,32 @@ if check:      # 위·옆에서 본 점 그림
         X = Pa[:, ax0]; Y = Pa[:, ax1]; sx = 400 / (X.max() - X.min() + 1e-9); sy = 400 / (Y.max() - Y.min() + 1e-9); s_ = min(sx, sy)
         for x_, y_ in zip(X[::3], Y[::3]): d.point((25 + 450 * k_ + (x_ - X.min()) * s_, 425 - (y_ - Y.min()) * s_), fill="black")
     im.save(check); print("확인 그림:", check)
+
+if BODY:
+    # 몸에서 원래 구두 빼기: ① 본래 조각: 구두 껍데기(shell) + 구두 높이 아래 x≈0 안쪽 벽  ② 틈 막은 조각(틈막음_*): 구두 높이 아래 전부
+    n_rm = 0
+    for pi, prm in enumerate(j["meshes"][0]["primitives"]):
+        iac = j["accessors"][prm["indices"]]; Ii = get(prm["indices"]).reshape(-1, 3).astype(np.int64).copy()
+        below = P[Ii][:, :, 1].max(1) < ytop
+        mname = j["materials"][prm["material"]].get("name", "") if "material" in prm else ""
+        if pi == 0:
+            rm = shell | (below & (np.abs(P[Ii].mean(1)[:, 0]) < 0.016))
+        elif mname.startswith("틈막음"):
+            rm = below
+        else:
+            continue
+        rm &= Ii[:, 0] != Ii[:, 1]
+        Ii[rm] = Ii[rm][:, :1]; n_rm += int(rm.sum())
+        dt = np.dtype(COMP[iac["componentType"]]); nb = Ii.reshape(-1).astype(dt).tobytes(); vi = iac["bufferView"]; o_ = iac.get("byteOffset", 0)
+        bb = bytearray(views[vi]); bb[o_:o_ + len(nb)] = nb; views[vi] = bytes(bb)
+    out = bytearray()
+    for i, v in enumerate(j["bufferViews"]):
+        while len(out) % 4: out += b"\0"
+        v["byteOffset"] = len(out); v["byteLength"] = len(views[i]); out += views[i]
+    while len(out) % 4: out += b"\0"
+    j["buffers"][0]["byteLength"] = len(out)
+    js = json.dumps(j, ensure_ascii=False, separators=(",", ":")).encode()
+    while len(js) % 4: js += b" "
+    open(BODY, "wb").write(struct.pack("<III", 0x46546C67, 2, 28 + len(js) + len(out)) + struct.pack("<II", len(js), 0x4E4F534A) + js
+                           + struct.pack("<II", len(out), 0x004E4942) + bytes(out))
+    print(f"몸에서 원래 구두 면 {n_rm}개 뺌 → {BODY}")
