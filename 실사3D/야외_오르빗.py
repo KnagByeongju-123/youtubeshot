@@ -38,7 +38,7 @@ bpy.ops.wm.read_factory_settings(use_empty=True)
 sc = bpy.context.scene
 W_, H_ = (int(v) for v in opt["--크기"].split("x"))
 sc.render.engine = "CYCLES"; sc.cycles.device = "CPU"; sc.cycles.samples = int(opt["--샘플"]); sc.cycles.use_denoising = True
-sc.render.resolution_x, sc.render.resolution_y = W_, H_; sc.render.film_transparent = False
+sc.render.resolution_x, sc.render.resolution_y = W_, H_; sc.render.film_transparent = "--투명" in a   # --투명: 배경 없이(인물만) 찍음 — 의상 바꾸기 기준 사진용
 sc.view_settings.view_transform = "Standard"; sc.cycles.max_bounces = 4
 sc.render.fps = 24
 
@@ -144,7 +144,7 @@ if "--구두" in a:
 # ── 자세: 기본 = 차렷(팔을 몸 옆에 자연스럽게 내림, 사용자 결정 2026-11-23), --자세 모음 = 손을 허리 앞에 모음 — 뼈 방향을 목표 방향으로 돌림 ──
 POSE = a[a.index('--자세') + 1] if '--자세' in a else '차렷'     # 앞나란히 / 차렷(기본, 사용자 결정 2026-11-23: 마이크 없이 자연스러운 팔) / 마이크 / 모음
 MIC_SIDE = a[a.index('--마이크손') + 1] if '--마이크손' in a else 'R'
-HAND_S = float(a[a.index('--손굵기') + 1]) if '--손굵기' in a else 0.82
+HAND_S = float(a[a.index('--손굵기') + 1]) if '--손굵기' in a else 1.0     # 손 굵기는 모델에서 직접 가늘게 함(glb_손가늘게.py) — 뼈 크기로 줄이면 손가락 틈이 벌어졌음
 MIC_F = (0.30, 0.45, 0.85); MIC_CURL = 1.25; FIST = float(a[a.index('--주먹') + 1]) if '--주먹' in a else 0.32   # 주먹 = 마디마다 굽힘(라디안)
 CH_U, CH_F = (float(v) for v in (a[a.index('--팔벌림') + 1] if '--팔벌림' in a else '0.12,0.10').split(','))   # 차렷 팔이 몸에서 떨어진 정도(위팔,아래팔)
 arm = next((o for o in objs if o.type == "ARMATURE"), None)
@@ -182,8 +182,10 @@ if arm is not None and "--자세없음" not in a:
         """손가락을 손바닥 쪽으로 굽힘 (amt = 마디마다 굽히는 각도, 라디안)"""
         if side not in palm: return
         for f in ("Index", "Middle", "Ring", "Little", "Thumb"):
-            th = (thumb if thumb is not None else amt * 0.5) if f == "Thumb" else amt
+            th0 = (thumb if thumb is not None else amt * 0.5) if f == "Thumb" else amt
+            fm = {"Index": 0.92, "Middle": 1.0, "Ring": 1.05, "Little": 1.1, "Thumb": 1.0}[f]   # 새끼 쪽일수록 조금 더 (실제 주먹처럼)
             for k in (1, 2, 3):
+                th = th0 * fm * ((0.85, 1.2, 0.8) if f != "Thumb" else (0.5, 1.0, 1.0))[k - 1]     # 가운데 마디를 가장 많이, 엄지 뿌리는 조금만
                 pb = B(f"{f}{k}.{side}")
                 if pb is None: continue
                 # 손가락 방향 = 이 마디 → 다음 마디 (블렌더 뼈 꼬리 방향은 손가락 방향과 다를 수 있어 쓰지 않음; 끝 마디는 앞 마디 방향)
@@ -270,6 +272,7 @@ a0, a1 = (math.radians(float(v)) for v in opt["--각도"].split(","))
 R, HC, LOOK = float(opt["--거리"]), float(opt["--높이"]), float(opt["--보기"])
 N = int(opt["--장수"])
 HANDVIEW = a[a.index('--손보기') + 1] if '--손보기' in a else None   # 검사용: 손 가까이 찍기 (R 또는 L)
+HANDSIDE = -1 if '--손안쪽' in a else 1                             # --손안쪽: 손바닥 쪽(몸 안쪽)에서
 HP = None
 if HANDVIEW and arm is not None:
     bpy.context.view_layer.update()
@@ -279,6 +282,12 @@ R1 = float(a[a.index("--끝거리") + 1]) if "--끝거리" in a else R          
 LOOK1 = float(a[a.index("--끝보기") + 1]) if "--끝보기" in a else LOOK
 HC1 = float(a[a.index("--끝높이") + 1]) if "--끝높이" in a else HC
 WHO = [mathutils.Vector((0, 0, 0))]
+# 게임 카메라(--게임카메라): (초, 각도°, 거리, 높이, 보는 높이, 렌즈mm) — 춤 마디에 맞춰 구도가 바뀜 (사용자 2026-11-24 '게임 카메라무빙')
+#   스텝: 낮은 앵글로 크게 돌기 → 손뼉: 정면 상반신으로 밀고 들어감 → 엉덩이: 옆 낮은 높이로 쓸고 지나감 → 돌기: 높이 올라가며(크레인) 반대쪽으로 크게 돎
+GAMECAM = "--게임카메라" in a; GAMECAM_ROLL = 4.0
+GAMECAM_KEYS = [(0.0, -40, 3.4, 0.45, 0.85, 30), (2.2, 30, 2.6, 0.55, 0.95, 34), (3.0, 5, 1.9, 1.35, 1.25, 48), (4.5, -8, 1.8, 1.3, 1.22, 50),
+                (5.1, 60, 2.6, 0.6, 0.88, 32), (6.6, 105, 2.8, 0.65, 0.9, 32), (7.3, 150, 3.3, 2.5, 0.95, 28), (9.0, 250, 3.6, 1.7, 0.95, 30),
+                (12.0, 360, 3.6, 1.4, 0.95, 32)]
 def place(i, who=None):
     s = i / max(1, N - 1); s = s * s * (3 - 2 * s); th = a0 + (a1 - a0) * s
     r_ = R + (R1 - R) * s; lk = LOOK + (LOOK1 - LOOK) * s; hc = HC + (HC1 - HC) * s
@@ -288,11 +297,25 @@ def place(i, who=None):
         v6 = [float(q) for q in a[a.index("--카메라") + 1].split(",")]; wv = WHO[0]
         cam.location = mathutils.Vector(v6[:3]) + wv; d = mathutils.Vector(v6[3:]) + wv - cam.location
         cam.rotation_euler = d.to_track_quat("-Z", "Y").to_euler(); return
+    if GAMECAM and HP is None:                     # 게임 카메라: 동작마다 다른 구도로 부드럽게 날아다님
+        t = i / 24.0; ks = GAMECAM_KEYS
+        k = max(0, min(len(ks) - 2, next((n for n in range(len(ks) - 1) if ks[n + 1][0] > t), len(ks) - 2)))
+        (ta, *A), (tb, *Bk) = ks[k], ks[k + 1]
+        u = min(1.0, max(0.0, (t - ta) / max(tb - ta, 1e-6))); u = u * u * (3 - 2 * u)
+        ang, rad, hgt, lz, lens = [A[q] + (Bk[q] - A[q]) * u for q in range(5)]
+        sh = 0.006 * math.sin(t * 7.3) + 0.004 * math.sin(t * 12.1)           # 손으로 든 듯한 아주 작은 흔들림
+        th = math.radians(ang)
+        cam.location = (c0.x + rad * math.sin(th) + sh, c0.y - rad * math.cos(th), hgt + sh * 0.6)
+        cam.data.lens = lens
+        d = mathutils.Vector((c0.x, c0.y, lz)) - cam.location; cam.rotation_euler = d.to_track_quat("-Z", "Y").to_euler()
+        if GAMECAM_ROLL: cam.rotation_euler.rotate_axis("Z", math.radians(GAMECAM_ROLL * math.sin(math.pi * u) * (1 if k % 2 else -1)))
+        return
     if HP is None:
         d = mathutils.Vector((c0.x, c0.y, lk)) - cam.location; cam.rotation_euler = d.to_track_quat("-Z", "Y").to_euler(); return
     if HP is not None:
         sx = 1 if HP.x > 0 else -1
-        cam.location = HP + mathutils.Vector((sx * 0.22, -0.38, 0.05)); cam.data.lens = 50
+        side_ = HANDSIDE * sx
+        cam.location = HP + mathutils.Vector((side_ * 0.22, -0.38, 0.05)); cam.data.lens = 50
         d = HP - cam.location; cam.rotation_euler = d.to_track_quat("-Z", "Y").to_euler(); return
     d = mathutils.Vector((0, 0, LOOK)) - cam.location; cam.rotation_euler = d.to_track_quat("-Z", "Y").to_euler()
 
@@ -453,7 +476,7 @@ if (WALK or DANCE) and arm is not None:
                 return V((sgn * 0.55, -0.30 - 0.20 * w, -0.75 + 0.22 * w)), V((sgn * 0.05, -0.75, 0.55 + 0.22 * w))   # 흔드는 폭을 줄여 팔이 휙휙 움직이지 않게
             if name == "손뼉":
                 c = math.sin(math.pi * ph_ / 2) ** 2                              # 1·3박(=2·4번째 박)에 손이 만남
-                return V((sgn * 0.30, -0.65, -0.70)), V((-sgn * (0.2 + 0.75 * c), -0.75 + 0.25 * c, 0.45 - 0.15 * c))
+                return V((sgn * 0.30, -0.65, -0.70)), V((-sgn * (0.15 + 0.56 * c), -0.80 + 0.14 * c, 0.50 - 0.05 * c))   # 손이 가운데에서 딱 만나고 넘어가지 않게
             if name == "엉덩이":
                 return V((sgn * 0.65, 0.20, -0.75)), V((-sgn * 0.55, -0.05, -0.65))   # 팔꿈치를 옆으로, 손은 허리에
             if name == "돌기":
