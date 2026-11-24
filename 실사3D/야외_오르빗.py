@@ -144,6 +144,7 @@ if "--구두" in a:
 # ── 자세: 기본 = 차렷(팔을 몸 옆에 자연스럽게 내림, 사용자 결정 2026-11-23), --자세 모음 = 손을 허리 앞에 모음 — 뼈 방향을 목표 방향으로 돌림 ──
 POSE = a[a.index('--자세') + 1] if '--자세' in a else '차렷'     # 앞나란히 / 차렷(기본, 사용자 결정 2026-11-23: 마이크 없이 자연스러운 팔) / 마이크 / 모음
 MIC_SIDE = a[a.index('--마이크손') + 1] if '--마이크손' in a else 'R'
+ARMUP = float(a[a.index('--팔높이') + 1]) if '--팔높이' in a else 0.0   # 팔벌려: 0 = 수평, -0.3 = 살짝 아래
 HAND_S = float(a[a.index('--손굵기') + 1]) if '--손굵기' in a else 1.0     # 손 굵기는 모델에서 직접 가늘게 함(glb_손가늘게.py) — 뼈 크기로 줄이면 손가락 틈이 벌어졌음
 MIC_F = (0.30, 0.45, 0.85); MIC_CURL = 1.25; FIST = float(a[a.index('--주먹') + 1]) if '--주먹' in a else 0.32   # 주먹 = 마디마다 굽힘(라디안)
 CH_U, CH_F = (float(v) for v in (a[a.index('--팔벌림') + 1] if '--팔벌림' in a else '0.12,0.10').split(','))   # 차렷 팔이 몸에서 떨어진 정도(위팔,아래팔)
@@ -214,6 +215,11 @@ if arm is not None and "--자세없음" not in a:
             aim_bone(fb, (sgn * 0.0, -1.0, 0.0), hb)           # 아래팔: 위팔과 한 줄
             aim_bone(hb, (0.0, -1.0, -0.02), [f"Middle1.{side}"])   # 손: 손끝이 앞으로, 손바닥은 안쪽
             curl(side, 0.08, thumb=0.05)                       # 손가락은 거의 펴고 힘만 살짝 뺌
+        elif POSE == '팔벌려':                                  # 두 팔을 옆으로 어깨 높이까지 활짝 (사용자 2026-11-24 어깨 확인)
+            aim_bone(ub, (sgn * 1.0, 0.0, ARMUP), fb)           # 위팔: 옆으로 (ARMUP 0 = 수평)
+            aim_bone(fb, (sgn * 1.0, 0.0, ARMUP), hb)
+            aim_bone(hb, (sgn * 1.0, 0.0, ARMUP), [f"Middle1.{side}"])
+            curl(side, 0.12, thumb=0.05)
         elif POSE == '손바닥':                                   # 손바닥을 펴서 앞(카메라)으로 보여 줌 (사용자 2026-11-24)
             aim_bone(ub, (sgn * 0.45, -0.35, -0.82), fb)       # 위팔: 옆·아래로, 팔꿈치는 몸 옆
             aim_bone(fb, (sgn * 0.12, -0.35, 0.93), hb)        # 아래팔: 거의 곧게 위로 → 손이 어깨 높이
