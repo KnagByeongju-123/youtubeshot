@@ -8,7 +8,7 @@ import numpy as np
 
 a = sys.argv[1:]
 SH, SF = 0.86, 0.84
-SMOOTH = 20
+SMOOTH = 20; WSMOOTH = 15
 if "--손" in a: i = a.index("--손"); SH = float(a[i + 1]); del a[i:i + 2]
 if "--손가락" in a: i = a.index("--손가락"); SF = float(a[i + 1]); del a[i:i + 2]
 src, dst = a
@@ -72,6 +72,23 @@ for _ in range(SMOOTH):
     D = np.where((hg > 0)[:, None] & (deg > 0)[:, None], 0.5 * D + 0.5 * sm_ / np.maximum(deg, 1)[:, None], D)
 Pn = P + D[g]
 put_same(at["POSITION"], Pn.astype(np.float32))
+# 손가락 뿌리(손등 마디) 둘레 뼈 무게 고르게: 이웃한 두 손가락에 따로 붙은 점이 섞여 있으면 굽힐 때 마디에 주름·홈이 생김 (검지·중지 사이 검은 홈)
+wac = j["accessors"][at["WEIGHTS_0"]]; wmax = 255.0 if wac["componentType"] == 5121 else 65535.0 if wac["componentType"] == 5123 else 1.0
+NJ = int(J.max()) + 1; Dw = np.zeros((G, NJ)); np.add.at(Dw, (np.repeat(g, 4), J.reshape(-1)), W.reshape(-1)); Dw /= cnt[:, None]
+roots_ = [JP[f"{f}1.{s_}"] for s_ in ("L", "R") for f in ("Index", "Middle", "Ring", "Little") if f"{f}1.{s_}" in JP]
+gpos = np.zeros((G, 3)); np.add.at(gpos, g, P); gpos /= cnt[:, None]
+dmin = np.min(np.stack([np.linalg.norm(gpos - r_, axis=1) for r_ in roots_]), 0) if roots_ else np.full(G, 9.0)
+wz = np.clip((0.035 - dmin) / 0.015, 0, 1) * (hg > 0)
+for _ in range(WSMOOTH):
+    sm_ = np.zeros_like(Dw); np.add.at(sm_, e[:, 0], Dw[e[:, 1]])
+    Dw = Dw + (0.5 * wz)[:, None] * (np.where(deg[:, None] > 0, sm_ / np.maximum(deg, 1)[:, None], Dw) - Dw)
+ch = wz[g] > 0
+top = np.argsort(-Dw[g[ch]], axis=1)[:, :4]; tw = np.take_along_axis(Dw[g[ch]], top, 1); tw /= np.maximum(tw.sum(1, keepdims=True), 1e-9)
+J2 = J.copy(); W2 = W.copy(); J2[ch] = top; W2[ch] = tw
+Wq = np.round(W2 * wmax) if wmax > 1 else W2
+if wmax > 1: Wq[:, 0] += wmax - Wq.sum(1)
+put_same(at["JOINTS_0"], J2); put_same(at["WEIGHTS_0"], Wq)
+print(f"손가락 뿌리 둘레 점 {int(ch.sum())}개 뼈 무게 고르게")
 print(f"손·손가락 점 {moved}개를 가늘게 (손 {SH}, 손가락 {SF}), 가장 많이 옮긴 {np.linalg.norm(Pn - P, axis=1).max() * 1000:.1f}mm")
 out = bytearray()
 for i, v in enumerate(j["bufferViews"]):
