@@ -119,6 +119,17 @@ try:
                     t_ = min(1.0, max(0.0, (P[v, 1] - (ytf - 0.015)) / 0.015)); t_ = t_ * t_ * (3 - 2 * t_)   # 위 1.5cm 는 원래 모양과 섞어 이음매 없게
                     SQ[v] = sgn * (2 * xc - P[o, 0] * sgn) * (1 - t_) + P[v, 0] * t_
             print(f"  {suf[1]}발: 발목 아래 안쪽 점 {len(inner_)}개를 바깥쪽 거울 모양으로 (가운데 x={xc * sgn:+.3f})")
+    # 거울로 세운 점은 가장 가까운 바깥 점을 따라 들쭉날쭉 → 이웃 점 평균으로 x 를 12번 고르게 (접힌 자국 없애기)
+    if SQ:
+        keys = np.array(sorted(SQ)); xv = P[:, 0].copy(); xv[keys] = [SQ[k] for k in keys]
+        gi = g[I]; okt = (gi[:, 0] != gi[:, 1])
+        gx = np.zeros(g.max() + 1); gc = np.zeros(g.max() + 1); np.add.at(gx, g, xv); np.add.at(gc, g, 1); gx /= np.maximum(gc, 1)
+        mov = np.zeros(g.max() + 1, bool); mov[g[keys]] = True
+        e_ = np.concatenate([gi[okt][:, [0, 1]], gi[okt][:, [1, 2]], gi[okt][:, [2, 0]]]); e_ = np.concatenate([e_, e_[:, ::-1]])
+        for _ in range(12):
+            sm_ = np.zeros_like(gx); cn_ = np.zeros_like(gx); np.add.at(sm_, e_[:, 0], gx[e_[:, 1]]); np.add.at(cn_, e_[:, 0], 1)
+            avg = np.where(cn_ > 0, sm_ / np.maximum(cn_, 1), gx); gx = np.where(mov, 0.5 * gx + 0.5 * avg, gx)
+        for k in keys: SQ[k] = float(gx[g[k]])
     if SQ: print(f"  구두 사이 가운데 덩어리 점 {len(SQ)}개를 각 구두 안쪽 면으로 눌러 붙임 (버 없애기)")
 except KeyError:
     pass
