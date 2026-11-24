@@ -5,6 +5,7 @@
    결과: <폴더>/구두.npz (점·삼각형·겉면 그림 좌표, 모델 좌표 = GLB 그대로) + <폴더>/구두_그림.png
    사용: python 애니3D/glb_구두떼기.py <몸.glb> <결과 폴더> [--높이 0.075] [--키움 1.035] [--확인 <그림.png>]
      --몸 <결과.glb>: 몸에서 원래 구두 면(어두운 구두 껍데기·두 발 사이를 막은 면)을 빼서 저장 — 새 구두 안에서 겹쳐 삐져나오지 않게 (발등 살은 남김)
+     --폭 1.15: 구두 폭만 더 넓힘(가운데 기준)
      --높이: 구두로 볼 높이(키에 대한 비율, 바닥부터). --키움: 원래 몸 구두를 덮도록 살짝 크게
    붙이기: 실사3D/야외_오르빗.py ... --구두 <결과 폴더>"""
 import io, json, os, struct, sys
@@ -15,6 +16,8 @@ a = sys.argv[1:]
 HR, GROW, check, BODY = 0.075, 1.035, None, None
 if "--몸" in a: i = a.index("--몸"); BODY = a[i + 1]; del a[i:i + 2]
 if "--높이" in a: i = a.index("--높이"); HR = float(a[i + 1]); del a[i:i + 2]
+WID = 1.0
+if "--폭" in a: i = a.index("--폭"); WID = float(a[i + 1]); del a[i:i + 2]
 if "--키움" in a: i = a.index("--키움"); GROW = float(a[i + 1]); del a[i:i + 2]
 if "--확인" in a: i = a.index("--확인"); check = a[i + 1]; del a[i:i + 2]
 src, out_dir = a
@@ -57,8 +60,9 @@ for sd, sgn in (("L", 1), ("R", -1)):
     # 원래 몸 구두를 덮도록 구두 가운데 기준으로 살짝 키움 (바닥 높이는 그대로)
     c0 = np.array([xc * sgn, ymin, Pall[:, 2].mean()])
     Pall = c0 + (Pall - c0) * GROW
+    Pall[:, 0] = c0[0] + (Pall[:, 0] - c0[0]) * WID                       # 폭만 더 넓힘 (발 안쪽이 구두 밖으로 나오지 않게)
     outP.append(Pall); outUV.append(Uall); outI.append(Tall + base); side_.append(np.full(len(Pall), 0 if sd == "L" else 1)); base += len(Pall)
-    print(f"{sd} 구두: 바깥쪽 반 삼각형 {len(T2)}개 → 한 짝 {len(Tall)}개, 가운데 x={xc * sgn:+.3f}, 폭 {(outer - inner) * GROW:.3f}")
+    print(f"{sd} 구두: 바깥쪽 반 삼각형 {len(T2)}개 → 한 짝 {len(Tall)}개, 가운데 x={xc * sgn:+.3f}, 폭 {(outer - inner) * GROW * WID:.3f}")
 os.makedirs(out_dir, exist_ok=True)
 np.savez(os.path.join(out_dir, "구두.npz"), P=np.concatenate(outP).astype(np.float32), UV=np.concatenate(outUV).astype(np.float32),
          I=np.concatenate(outI).astype(np.int32), side=np.concatenate(side_).astype(np.int8))
