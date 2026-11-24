@@ -214,6 +214,19 @@ if arm is not None and "--자세없음" not in a:
             aim_bone(fb, (sgn * 0.0, -1.0, 0.0), hb)           # 아래팔: 위팔과 한 줄
             aim_bone(hb, (0.0, -1.0, -0.02), [f"Middle1.{side}"])   # 손: 손끝이 앞으로, 손바닥은 안쪽
             curl(side, 0.08, thumb=0.05)                       # 손가락은 거의 펴고 힘만 살짝 뺌
+        elif POSE == '손바닥':                                   # 손바닥을 펴서 앞(카메라)으로 보여 줌 (사용자 2026-11-24)
+            aim_bone(ub, (sgn * 0.45, -0.35, -0.82), fb)       # 위팔: 옆·아래로, 팔꿈치는 몸 옆
+            aim_bone(fb, (sgn * 0.12, -0.35, 0.93), hb)        # 아래팔: 거의 곧게 위로 → 손이 어깨 높이
+            aim_bone(hb, (sgn * 0.05, -0.15, 1.0), [f"Middle1.{side}"])   # 손가락이 위를 향하게
+            if side in palm:                                   # 손바닥이 앞(-y)을 보도록 손을 손가락 축으로 돌림
+                bpy.context.view_layer.update()
+                hpb_ = B(f"Hand.{side}"); ax_ = (W(B(f"Middle1.{side}")) - W(hpb_)).normalized()
+                n_ = palm_now(side); tgt_ = mathutils.Vector((0, -1, 0)); tgt_ = (tgt_ - ax_ * ax_.dot(tgt_)).normalized(); n_ = (n_ - ax_ * ax_.dot(n_)).normalized()
+                ang_ = math.atan2(ax_.dot(n_.cross(tgt_)), n_.dot(tgt_))
+                R_ = (MWi.to_3x3() @ mathutils.Matrix.Rotation(ang_, 3, ax_) @ MW.to_3x3()).to_4x4()
+                T1 = mathutils.Matrix.Translation(hpb_.head); T0 = mathutils.Matrix.Translation(-hpb_.head)
+                hpb_.matrix = T1 @ R_ @ T0 @ hpb_.matrix; bpy.context.view_layer.update()
+            curl(side, 0.05, thumb=0.0)                        # 손가락은 펴고 힘만 살짝 뺌
         elif POSE == '마이크' and side == MIC_SIDE:
             aim_bone(ub, (sgn * 0.10, -0.30, -0.95), fb)       # 위팔: 아래로, 팔꿈치는 몸 옆 살짝 앞
             aim_bone(fb, (-sgn * MIC_F[0], -MIC_F[1], MIC_F[2]), hb)   # 아래팔: 가슴 앞으로 들어 올림
