@@ -167,7 +167,7 @@ if "--구두" in a:
 POSE = a[a.index('--자세') + 1] if '--자세' in a else '차렷'     # 앞나란히 / 차렷(기본, 사용자 결정 2026-11-23: 마이크 없이 자연스러운 팔) / 마이크 / 모음
 MIC_SIDE = a[a.index('--마이크손') + 1] if '--마이크손' in a else 'R'
 POINT_SIDE = a[a.index('--가리킬손') + 1] if '--가리킬손' in a else 'R'
-CUP_SIDE = 'R'; SEAT_H = float(a[a.index('--의자높이') + 1]) if '--의자높이' in a else 0.46; CAFE_DY = 0.0                          # 커피: 컵 든 손, 의자 앉는 판 높이(m)   # 가리키기: 어느 손으로 (R/L)
+CUP_UP = -0.035; CUP_SIDE = 'R'; SEAT_H = float(a[a.index('--의자높이') + 1]) if '--의자높이' in a else 0.46; CAFE_DY = 0.0                          # 커피: 컵 든 손, 의자 앉는 판 높이(m)   # 가리키기: 어느 손으로 (R/L)
 ARMUP = float(a[a.index('--팔높이') + 1]) if '--팔높이' in a else 0.0   # 팔벌려: 0 = 수평, -0.3 = 살짝 아래
 HAND_S = float(a[a.index('--손굵기') + 1]) if '--손굵기' in a else 1.0     # 손 굵기는 모델에서 직접 가늘게 함(glb_손가늘게.py) — 뼈 크기로 줄이면 손가락 틈이 벌어졌음
 MIC_F = (0.30, 0.45, 0.85); MIC_CURL = 1.25; FIST = float(a[a.index('--주먹') + 1]) if '--주먹' in a else 0.32   # 주먹 = 마디마다 굽힘(라디안)
@@ -383,6 +383,14 @@ if arm is not None and "--자세없음" not in a:
         Rz_ = mathutils.Matrix.Translation(hc) @ mathutils.Matrix.Rotation(ang, 4, "Z") @ mathutils.Matrix.Translation(-hc)
         cup.matrix_world = Rz_ @ cup.matrix_world
         cup.matrix_world = mathutils.Matrix.Translation(thumb_pt - hc) @ cup.matrix_world
+        # 손가락 끝이 컵 안(그릇 속)으로 들어가지 않게 컵을 손가락 끝보다 살짝 위로 올림 — 손가락은 손잡이 아래·컵 옆을 감쌈
+        bpy.context.view_layer.update()
+        tips = [arm.matrix_world @ arm.pose.bones[f"{f_}3.{CUP_SIDE}"].tail for f_ in ("Index", "Middle", "Ring", "Little") if f"{f_}3.{CUP_SIDE}" in arm.pose.bones]
+        vw2 = [cup.matrix_world @ v.co for v in cup.data.vertices]; zc0 = min(v.z for v in vw2)
+        lift = max([0.0] + [t_.z - zc0 + CUP_UP for t_ in tips if True]) if tips else 0.0
+        lift = min(lift, 0.045)
+        cup.matrix_world = mathutils.Matrix.Translation((0, 0, lift)) @ cup.matrix_world
+        print(f"컵: 손가락 끝 위로 {lift * 100:.1f}cm 올림")
         grip = thumb_pt
         mw_ = cup.matrix_world.copy(); cup.parent = arm; cup.parent_type = "BONE"; cup.parent_bone = h_.name
         bpy.context.view_layer.update(); cup.matrix_world = mw_
