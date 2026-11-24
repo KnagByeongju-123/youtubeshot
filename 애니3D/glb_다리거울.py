@@ -108,11 +108,12 @@ for sd, sgn in (("L", 1), ("R", -1)):
     n_snap = 0
     if len(KB) and top_new.any():
         tgt = np.stack([nx, q[:, 1], q[:, 2]], 1)[top_new]
-        d2 = ((tgt[:, None] - KB[None]) ** 2).sum(2); nn = d2.argmin(1); okd = d2[np.arange(len(nn)), nn] < 0.015 ** 2
+        d2 = ((tgt[:, None] - KB[None]) ** 2).sum(2); nn = d2.argmin(1); okd = d2[np.arange(len(nn)), nn] < 0.025 ** 2
         idx_new = np.where(top_new)[0][okd]
         SNAP.update({int(idmap[k]): KB[nn[okd][m_]] for m_, k in enumerate(idx_new)}); n_snap = len(idx_new)
     print(f"   위쪽 이음매 점 {n_snap}개 맞춤")
     T2 = idmap[inv.reshape(-1, 3)][:, ::-1]                                    # 뒤집었으니 삼각형 방향도 뒤집음
+    T2 = T2[~on_plane[inv.reshape(-1, 3)].all(1)]                             # 세 점이 다 가운데 면 위면 거울 삼각형이 원래와 겹쳐 검게 깜빡임 → 빼기
     newT.append(T2)
     print(f"{sd} 다리: 안쪽 삼각형 {int(kill.sum())}개 지움, 바깥쪽 {len(T)}개를 거울로 붙임 (새 점 {nnew}개), 가운데 x {cs.min() * sgn:+.3f}~{cs.max() * sgn:+.3f}")
 src_v = np.array(src_v, np.int64); newX = np.array(newX)
