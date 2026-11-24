@@ -4,7 +4,8 @@
    ② --높이 아래 왼쪽 다리 삼각형을 모두 지우고, 오른쪽(굽 뺀 것)을 x → -x 로 뒤집어 붙임.
       이음매(--높이)에서 두 다리 단면 가운데가 맞도록 왼쪽으로 옮기고, 뼈는 .R → .L 로 바꿈
    ③ 위쪽 이음매는 남겨 둔 왼쪽 다리 아래 끝 점에 맞춤. 남은 틈은 glb_구멍막기.py 로
-   사용: python 애니3D/glb_발좌우복사.py <입력.glb> <결과.glb> <굽 폴더> [--높이 -0.60] [--굽높이 0.048]
+   사용: python 애니3D/glb_발좌우복사.py <입력.glb> <결과.glb> <굽 폴더> [--높이 -0.60] [--굽높이 0.048] [--굽가져오기 <다리 고치기 전.glb>]
+     사용자가 고른 방법(2026-11-24 "이게 깔끔했어"): 굽 없는 거울 다리(glb_다리거울 a1e4ad6 판) + --굽높이 0 --굽가져오기 lip4 = 오른발·구두에 원래 굽을 넣고 통째로 왼쪽에 뒤집어 붙임
    굽 붙이기: 실사3D/야외_오르빗.py ... --구두 <굽 폴더>"""
 import io, json, os, struct, sys
 from collections import Counter
@@ -15,6 +16,8 @@ a = sys.argv[1:]
 YTOP, HEELH = -0.60, 0.048
 if "--높이" in a: i = a.index("--높이"); YTOP = float(a[i + 1]); del a[i:i + 2]
 if "--굽높이" in a: i = a.index("--굽높이"); HEELH = float(a[i + 1]); del a[i:i + 2]
+HEELSRC = None
+if "--굽가져오기" in a: i = a.index("--굽가져오기"); HEELSRC = a[i + 1]; del a[i:i + 2]
 src, dst, heel_dir = a
 raw = open(src, "rb").read(); n = struct.unpack("<I", raw[12:16])[0]; j = json.loads(raw[20:20 + n]); b0 = 20 + n + 8
 BIN = raw[b0:b0 + struct.unpack("<I", raw[20 + n:24 + n])[0]]
@@ -45,6 +48,17 @@ remap = np.arange(len(names))
 for k, nm in enumerate(names):
     for a_, b_ in ((".R", ".L"), ("Right", "Left")):
         if a_ in nm and nm.replace(a_, b_) in JI: remap[k] = JI[nm.replace(a_, b_)]
+# 굽 가져오기(--굽가져오기 <다리 고치기 전 glb>): 거울로 세우며 굽이 없어진 모델에, 원래 모델의 오른 구두 굽 삼각형을 다시 넣음
+#   (점 번호는 앞부분이 같음 — glb_다리거울.py 는 점을 뒤에 덧붙이기만 함). 넣은 굽은 아래에서 오른발과 함께 왼쪽으로도 뒤집혀 붙음
+if HEELSRC:
+    r2 = open(HEELSRC, "rb").read(); n2 = struct.unpack("<I", r2[12:16])[0]; j2 = json.loads(r2[20:20 + n2]); B2 = r2[20 + n2 + 8:]
+    ac2 = j2["accessors"][j2["meshes"][0]["primitives"][0]["indices"]]; bv2 = j2["bufferViews"][ac2["bufferView"]]
+    I0 = np.frombuffer(B2, np.dtype(COMP[ac2["componentType"]]), ac2["count"], bv2.get("byteOffset", 0) + ac2.get("byteOffset", 0)).reshape(-1, 3).astype(np.int64)
+    I0 = I0[(I0 < NV).all(1) & (I0[:, 0] != I0[:, 1])]
+    c0 = P[I0].mean(1); zr = P[I0[c0[:, 0] < 0]].reshape(-1, 3)[:, 2].min()
+    hz = (c0[:, 0] < 0) & ((P[I0][:, :, 1] < ymin + 0.048) & (P[I0][:, :, 2] < zr + 0.05)).all(1)
+    I = np.concatenate([I, I0[hz]]); print(f"원래 오른 구두 굽 삼각형 {int(hz.sum())}개를 다시 넣음")
+    ok = (I[:, 0] != I[:, 1]) & (I[:, 1] != I[:, 2]) & (I[:, 0] != I[:, 2]); cen = P[I].mean(1)
 low = P[I][:, :, 1].max(1) < YTOP
 R_t = ok & low & (cen[:, 0] < 0); L_t = ok & low & (cen[:, 0] > 0)
 # ① 오른발 굽: 바닥에서 HEELH 아래 + 오른발 뒤꿈치 쪽 5cm
