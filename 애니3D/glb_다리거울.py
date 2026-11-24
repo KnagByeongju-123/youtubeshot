@@ -39,7 +39,7 @@ P = get(at["POSITION"]).astype(float); I = get(pr["indices"]).reshape(-1, 3).ast
 NV = len(P)
 ok = (I[:, 0] != I[:, 1]) & (I[:, 1] != I[:, 2]) & (I[:, 0] != I[:, 2])
 cen = P[I].mean(1)
-keepT = np.ones(len(I), bool); newT = []; src_v = []; newX = []; SEAM = []
+keepT = np.ones(len(I), bool); newT = []; src_v = []; newX = []; SEAM = []; SNAP = {}
 for sd, sgn in (("L", 1), ("R", -1)):
     leg = (P[:, 1] < YTOP + 0.06) & (P[:, 0] * sgn > 0.0)
     # 가운데 면 c(y,z): 높이(1cm)·앞뒤(1.5cm) 칸마다 붙어 있던 가운데(|x|<1.5cm)를 뺀 바깥 끝·안쪽 끝의 가운데
@@ -58,7 +58,7 @@ for sd, sgn in (("L", 1), ("R", -1)):
         cnt = (~np.isnan(st)).sum(0); avg = np.nansum(st, 0) / np.maximum(cnt, 1)
         C = np.where(nanm & (cnt > 0), avg, C)
     C = np.where(np.isnan(C), np.nanmean(C), C)
-    for _ in range(3):                                                         # 고르게 (접힘 없게)
+    for _ in range(8):                                                         # 고르게 (접힘 없게)
         Cp = np.pad(C, 1, mode="edge"); C = (Cp[1:-1, 1:-1] * 2 + Cp[:-2, 1:-1] + Cp[2:, 1:-1] + Cp[1:-1, :-2] + Cp[1:-1, 2:]) / 6
     from scipy.ndimage import map_coordinates as _mc
     def cfun(y, z=None):
@@ -84,7 +84,8 @@ for sd, sgn in (("L", 1), ("R", -1)):
     for t in gid[T]:
         for e in ((t[0], t[1]), (t[1], t[2]), (t[2], t[0])): ec[(min(e), max(e))] += 1
     bg = set(x for e, c in ec.items() if c == 1 for x in e)
-    seam = np.array([gid[v] in bg for v in vid]) & (q[:, 1] < YTOP - 0.004) & ((q[:, 0] * sgn - c_) < 0.012)
+    isb = np.array([gid[v] in bg for v in vid])
+    seam = isb & (q[:, 1] < YTOP - 0.02) & ((q[:, 0] * sgn - c_) < 0.03)
     P[vid[seam], 0] = sgn * c_[seam]; q = P[vid]
     SEAM.extend(vid[seam].tolist())
     on_plane = seam | ((q[:, 0] * sgn - c_) < 0.0015)                          # 가운데 면에 붙은 점은 원래 점을 그대로 같이 씀(이음매 없게)
@@ -93,6 +94,24 @@ for sd, sgn in (("L", 1), ("R", -1)):
     nnew = int((~on_plane).sum()); base = NV + len(src_v)
     idmap[~on_plane] = base + np.arange(nnew)
     src_v.extend(vid[~on_plane].tolist()); newX.extend(nx[~on_plane].tolist())
+    # 위쪽 이음매: 거울 쪽 위 끝 점을 남겨 둔 원래 안쪽의 아래 끝 점에 맞춤 (정강이에 검은 틈 자국이 났었음)
+    kt = I[keepT & ok & (cen[:, 0] * sgn > -0.004)]
+    ec2 = Counter()
+    for t in gid[kt]:
+        for e in ((t[0], t[1]), (t[1], t[2]), (t[2], t[0])): ec2[(min(e), max(e))] += 1
+    kb = np.array(sorted(set(x for e, c in ec2.items() if c == 1 for x in e)))
+    rep_ = np.zeros(gid.max() + 1, np.int64); rep_[gid] = np.arange(len(gid))
+    KB = P[rep_[kb]] if len(kb) else np.zeros((0, 3))
+    selk = (np.abs(KB[:, 1] - YTOP) < 0.03) & (KB[:, 0] * sgn < cfun(KB[:, 1], KB[:, 2]) + 0.004) if len(KB) else np.zeros(0, bool)
+    KB = KB[selk]
+    top_new = isb & ~on_plane & (q[:, 1] >= YTOP - 0.02)
+    n_snap = 0
+    if len(KB) and top_new.any():
+        tgt = np.stack([nx, q[:, 1], q[:, 2]], 1)[top_new]
+        d2 = ((tgt[:, None] - KB[None]) ** 2).sum(2); nn = d2.argmin(1); okd = d2[np.arange(len(nn)), nn] < 0.015 ** 2
+        idx_new = np.where(top_new)[0][okd]
+        SNAP.update({int(idmap[k]): KB[nn[okd][m_]] for m_, k in enumerate(idx_new)}); n_snap = len(idx_new)
+    print(f"   위쪽 이음매 점 {n_snap}개 맞춤")
     T2 = idmap[inv.reshape(-1, 3)][:, ::-1]                                    # 뒤집었으니 삼각형 방향도 뒤집음
     newT.append(T2)
     print(f"{sd} 다리: 안쪽 삼각형 {int(kill.sum())}개 지움, 바깥쪽 {len(T)}개를 거울로 붙임 (새 점 {nnew}개), 가운데 x {cs.min() * sgn:+.3f}~{cs.max() * sgn:+.3f}")
@@ -102,7 +121,9 @@ for name, ai in at.items():
     arr = get(ai)
     if name == "POSITION": arr = P.astype(np.float32)                        # 이음매 점을 옮긴 위치
     add = arr[src_v].copy()
-    if name == "POSITION": add[:, 0] = newX
+    if name == "POSITION":
+        add[:, 0] = newX
+        for k, pos_ in SNAP.items(): add[k - NV] = pos_
     if name == "NORMAL": add[:, 0] = -add[:, 0]
     if name == "TANGENT": add[:, 0] = -add[:, 0]; add[:, 3] = -add[:, 3]
     put(ai, np.concatenate([arr, add]))
