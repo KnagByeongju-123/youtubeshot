@@ -279,6 +279,12 @@ R1 = float(a[a.index("--끝거리") + 1]) if "--끝거리" in a else R          
 LOOK1 = float(a[a.index("--끝보기") + 1]) if "--끝보기" in a else LOOK
 HC1 = float(a[a.index("--끝높이") + 1]) if "--끝높이" in a else HC
 WHO = [mathutils.Vector((0, 0, 0))]
+# 게임 카메라(--게임카메라): (초, 각도°, 거리, 높이, 보는 높이, 렌즈mm) — 춤 마디에 맞춰 구도가 바뀜 (사용자 2026-11-24 '게임 카메라무빙')
+#   스텝: 낮은 앵글로 크게 돌기 → 손뼉: 정면 상반신으로 밀고 들어감 → 엉덩이: 옆 낮은 높이로 쓸고 지나감 → 돌기: 높이 올라가며(크레인) 반대쪽으로 크게 돎
+GAMECAM = "--게임카메라" in a; GAMECAM_ROLL = 4.0
+GAMECAM_KEYS = [(0.0, -40, 3.4, 0.45, 0.85, 30), (2.2, 30, 2.6, 0.55, 0.95, 34), (3.0, 5, 1.9, 1.35, 1.25, 48), (4.5, -8, 1.8, 1.3, 1.22, 50),
+                (5.1, 60, 2.6, 0.6, 0.88, 32), (6.6, 105, 2.8, 0.65, 0.9, 32), (7.3, 150, 3.3, 2.5, 0.95, 28), (9.0, 250, 3.6, 1.7, 0.95, 30),
+                (12.0, 360, 3.6, 1.4, 0.95, 32)]
 def place(i, who=None):
     s = i / max(1, N - 1); s = s * s * (3 - 2 * s); th = a0 + (a1 - a0) * s
     r_ = R + (R1 - R) * s; lk = LOOK + (LOOK1 - LOOK) * s; hc = HC + (HC1 - HC) * s
@@ -288,6 +294,19 @@ def place(i, who=None):
         v6 = [float(q) for q in a[a.index("--카메라") + 1].split(",")]; wv = WHO[0]
         cam.location = mathutils.Vector(v6[:3]) + wv; d = mathutils.Vector(v6[3:]) + wv - cam.location
         cam.rotation_euler = d.to_track_quat("-Z", "Y").to_euler(); return
+    if GAMECAM and HP is None:                     # 게임 카메라: 동작마다 다른 구도로 부드럽게 날아다님
+        t = i / 24.0; ks = GAMECAM_KEYS
+        k = max(0, min(len(ks) - 2, next((n for n in range(len(ks) - 1) if ks[n + 1][0] > t), len(ks) - 2)))
+        (ta, *A), (tb, *Bk) = ks[k], ks[k + 1]
+        u = min(1.0, max(0.0, (t - ta) / max(tb - ta, 1e-6))); u = u * u * (3 - 2 * u)
+        ang, rad, hgt, lz, lens = [A[q] + (Bk[q] - A[q]) * u for q in range(5)]
+        sh = 0.006 * math.sin(t * 7.3) + 0.004 * math.sin(t * 12.1)           # 손으로 든 듯한 아주 작은 흔들림
+        th = math.radians(ang)
+        cam.location = (c0.x + rad * math.sin(th) + sh, c0.y - rad * math.cos(th), hgt + sh * 0.6)
+        cam.data.lens = lens
+        d = mathutils.Vector((c0.x, c0.y, lz)) - cam.location; cam.rotation_euler = d.to_track_quat("-Z", "Y").to_euler()
+        if GAMECAM_ROLL: cam.rotation_euler.rotate_axis("Z", math.radians(GAMECAM_ROLL * math.sin(math.pi * u) * (1 if k % 2 else -1)))
+        return
     if HP is None:
         d = mathutils.Vector((c0.x, c0.y, lk)) - cam.location; cam.rotation_euler = d.to_track_quat("-Z", "Y").to_euler(); return
     if HP is not None:
