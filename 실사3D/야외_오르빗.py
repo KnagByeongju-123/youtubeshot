@@ -144,6 +144,7 @@ if "--구두" in a:
 # ── 자세: 기본 = 차렷(팔을 몸 옆에 자연스럽게 내림, 사용자 결정 2026-11-23), --자세 모음 = 손을 허리 앞에 모음 — 뼈 방향을 목표 방향으로 돌림 ──
 POSE = a[a.index('--자세') + 1] if '--자세' in a else '차렷'     # 앞나란히 / 차렷(기본, 사용자 결정 2026-11-23: 마이크 없이 자연스러운 팔) / 마이크 / 모음
 MIC_SIDE = a[a.index('--마이크손') + 1] if '--마이크손' in a else 'R'
+POINT_SIDE = a[a.index('--가리킬손') + 1] if '--가리킬손' in a else 'R'   # 가리키기: 어느 손으로 (R/L)
 ARMUP = float(a[a.index('--팔높이') + 1]) if '--팔높이' in a else 0.0   # 팔벌려: 0 = 수평, -0.3 = 살짝 아래
 HAND_S = float(a[a.index('--손굵기') + 1]) if '--손굵기' in a else 1.0     # 손 굵기는 모델에서 직접 가늘게 함(glb_손가늘게.py) — 뼈 크기로 줄이면 손가락 틈이 벌어졌음
 MIC_F = (0.30, 0.45, 0.85); MIC_CURL = 1.25; FIST = float(a[a.index('--주먹') + 1]) if '--주먹' in a else 0.32   # 주먹 = 마디마다 굽힘(라디안)
@@ -194,10 +195,10 @@ if arm is not None and "--자세없음" not in a:
         palm[side] = (h.matrix.to_3x3().inverted() @ MWi.to_3x3() @ n)
     def palm_now(side):
         bpy.context.view_layer.update(); return (MW.to_3x3() @ B(f"Hand.{side}").matrix.to_3x3() @ palm[side]).normalized()
-    def curl(side, amt, thumb=None):
-        """손가락을 손바닥 쪽으로 굽힘 (amt = 마디마다 굽히는 각도, 라디안)"""
+    def curl(side, amt, thumb=None, only=None):
+        """손가락을 손바닥 쪽으로 굽힘 (amt = 마디마다 굽히는 각도, 라디안). only: 이 손가락들만"""
         if side not in palm: return
-        for f in ("Index", "Middle", "Ring", "Little", "Thumb"):
+        for f in (only or ("Index", "Middle", "Ring", "Little", "Thumb")):
             th0 = (thumb if thumb is not None else amt * 0.5) if f == "Thumb" else amt
             fm = {"Index": 0.92, "Middle": 1.0, "Ring": 1.05, "Little": 1.1, "Thumb": 1.0}[f]   # 새끼 쪽일수록 조금 더 (실제 주먹처럼)
             for k in (1, 2, 3):
@@ -230,6 +231,13 @@ if arm is not None and "--자세없음" not in a:
             aim_bone(fb, (sgn * 0.0, -1.0, 0.0), hb)           # 아래팔: 위팔과 한 줄
             aim_bone(hb, (0.0, -1.0, -0.02), [f"Middle1.{side}"])   # 손: 손끝이 앞으로, 손바닥은 안쪽
             curl(side, 0.08, thumb=0.05)                       # 손가락은 거의 펴고 힘만 살짝 뺌
+        elif POSE == '가리키기' and side == POINT_SIDE:          # 한쪽 팔을 들어 검지로 앞을 가리킴 (사용자 2026-11-24)
+            aim_bone(ub, (sgn * 0.22, -1.0, 0.18), fb)          # 위팔: 앞으로, 어깨보다 살짝 위·바깥
+            aim_bone(fb, (sgn * 0.12, -1.0, 0.22), hb)          # 아래팔: 거의 곧게
+            aim_bone(hb, (sgn * 0.05, -1.0, 0.20), [f"Middle1.{side}"])
+            curl(side, 1.05, only=("Middle", "Ring", "Little"))   # 가운데·약지·새끼는 쥐고
+            curl(side, 0.0, thumb=0.95, only=("Thumb",))          # 엄지는 접어 가운데손가락 위로 (0.55 는 총 모양처럼 섰음)
+            curl(side, 0.06, only=("Index",))                     # 검지만 곧게 (힘 살짝 뺌)
         elif POSE == '팔벌려':                                  # 두 팔을 옆으로 어깨 높이까지 활짝 (사용자 2026-11-24 어깨 확인)
             aim_bone(ub, (sgn * 1.0, 0.0, ARMUP), fb)           # 위팔: 옆으로 (ARMUP 0 = 수평)
             aim_bone(fb, (sgn * 1.0, 0.0, ARMUP), hb)
@@ -318,10 +326,12 @@ HC1 = float(a[a.index("--끝높이") + 1]) if "--끝높이" in a else HC
 WHO = [mathutils.Vector((0, 0, 0))]
 # 게임 카메라(--게임카메라): (초, 각도°, 거리, 높이, 보는 높이, 렌즈mm) — 춤 마디에 맞춰 구도가 바뀜 (사용자 2026-11-24 '게임 카메라무빙')
 #   스텝: 낮은 앵글로 크게 돌기 → 손뼉: 정면 상반신으로 밀고 들어감 → 엉덩이: 옆 낮은 높이로 쓸고 지나감 → 돌기: 높이 올라가며(크레인) 반대쪽으로 크게 돎
-GAMECAM = "--게임카메라" in a; GAMECAM_ROLL = 4.0
+GAMECAM = "--게임카메라" in a or "--트래킹오르빗" in a; GAMECAM_ROLL = 0.0 if "--트래킹오르빗" in a else 4.0
 GAMECAM_KEYS = [(0.0, -40, 3.4, 0.45, 0.85, 30), (2.2, 30, 2.6, 0.55, 0.95, 34), (3.0, 5, 1.9, 1.35, 1.25, 48), (4.5, -8, 1.8, 1.3, 1.22, 50),
                 (5.1, 60, 2.6, 0.6, 0.88, 32), (6.6, 105, 2.8, 0.65, 0.9, 32), (7.3, 150, 3.3, 2.5, 0.95, 28), (9.0, 250, 3.6, 1.7, 0.95, 30),
                 (12.0, 360, 3.6, 1.4, 0.95, 32)]
+if "--트래킹오르빗" in a:   # 전진 트래킹(정면에서 곧게 다가감) → 멈추지 않고 인물 둘레를 돎 (사용자 2026-11-24)
+    GAMECAM_KEYS = [(0.0, 0, 7.0, 1.55, 1.25, 35), (2.6, 0, 2.7, 1.45, 1.3, 40), (6.2, 115, 2.7, 1.5, 1.3, 40), (9.0, 140, 2.8, 1.5, 1.3, 40)]
 def place(i, who=None):
     s = i / max(1, N - 1); s = s * s * (3 - 2 * s); th = a0 + (a1 - a0) * s
     r_ = R + (R1 - R) * s; lk = LOOK + (LOOK1 - LOOK) * s; hc = HC + (HC1 - HC) * s
