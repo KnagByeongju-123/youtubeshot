@@ -420,7 +420,7 @@ if (WALK or DANCE) and arm is not None:
             elif ph < 3: xR, xL = -SW, -SW * (1 - sm2(ph - 2)); mv, u = "L", ph - 2
             else:        xR = -SW * (1 - sm2(ph - 3));    mv, u = "R", ph - 3
         elif mvname == "엉덩이":
-            hipx = 0.06 * math.sin(math.pi * ph) * min(1.0, ph * 2, (4 - ph) * 2)   # 박마다 좌우로 크게
+            hipx = 0.09 * math.sin(math.pi * ph) * min(1.0, ph * 2, (4 - ph) * 2)   # 박마다 좌우로 크게
         xR *= on; xL *= on; fx = {"R": xR, "L": xL}
         bounce = (0.035 if mvname != "돌기" else 0.02) * (0.5 - 0.5 * math.cos(2 * math.pi * bt)) * on
         px = (xR + xL) / 2 + hipx * on
@@ -454,7 +454,7 @@ if (WALK or DANCE) and arm is not None:
                 c = math.sin(math.pi * ph_ / 2) ** 2                              # 1·3박(=2·4번째 박)에 손이 만남
                 return V((sgn * 0.30, -0.65, -0.70)), V((-sgn * (0.2 + 0.75 * c), -0.75 + 0.25 * c, 0.45 - 0.15 * c))
             if name == "엉덩이":
-                return V((sgn * 0.45, 0.10, -0.90)), V((-sgn * 0.35, -0.55, 0.15))   # 손을 허리에
+                return V((sgn * 0.65, 0.20, -0.75)), V((-sgn * 0.55, -0.05, -0.65))   # 팔꿈치를 옆으로, 손은 허리에
             if name == "돌기":
                 return V((sgn * 0.85, -0.15, -0.50)), V((sgn * 0.85, -0.30, -0.25))   # 팔을 옆으로 벌려 돎
             return V((sgn * CH_U, -0.03, -1.0)), V((sgn * CH_F, -0.10, -1.0))
