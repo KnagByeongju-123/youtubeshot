@@ -51,14 +51,28 @@ for k, nm in enumerate(names):
 # 굽 가져오기(--굽가져오기 <다리 고치기 전 glb>): 거울로 세우며 굽이 없어진 모델에, 원래 모델의 오른 구두 굽 삼각형을 다시 넣음
 #   (점 번호는 앞부분이 같음 — glb_다리거울.py 는 점을 뒤에 덧붙이기만 함). 넣은 굽은 아래에서 오른발과 함께 왼쪽으로도 뒤집혀 붙음
 if HEELSRC:
+    # 굽을 점째로 가져옴: 원본(굽이 온전한 모델)의 오른 구두 굽 삼각형과 그 점들(무게·그림 좌표 포함)을 이 모델 끝에 덧붙임
     r2 = open(HEELSRC, "rb").read(); n2 = struct.unpack("<I", r2[12:16])[0]; j2 = json.loads(r2[20:20 + n2]); B2 = r2[20 + n2 + 8:]
-    ac2 = j2["accessors"][j2["meshes"][0]["primitives"][0]["indices"]]; bv2 = j2["bufferViews"][ac2["bufferView"]]
-    I0 = np.frombuffer(B2, np.dtype(COMP[ac2["componentType"]]), ac2["count"], bv2.get("byteOffset", 0) + ac2.get("byteOffset", 0)).reshape(-1, 3).astype(np.int64)
-    I0 = I0[(I0 < NV).all(1) & (I0[:, 0] != I0[:, 1])]
-    c0 = P[I0].mean(1); zr = P[I0[c0[:, 0] < 0]].reshape(-1, 3)[:, 2].min()
-    hz = (c0[:, 0] < 0) & ((P[I0][:, :, 1] < ymin + 0.048) & (P[I0][:, :, 2] < zr + 0.05)).all(1)
-    I = np.concatenate([I, I0[hz]]); print(f"원래 오른 구두 굽 삼각형 {int(hz.sum())}개를 다시 넣음")
+    def get2(i):
+        ac = j2["accessors"][i]; dt = np.dtype(COMP[ac["componentType"]])
+        if "bufferView" not in ac: return np.zeros((ac["count"], K[ac["type"]]), dt)
+        bv = j2["bufferViews"][ac["bufferView"]]
+        return np.frombuffer(B2, dt, ac["count"] * K[ac["type"]], bv.get("byteOffset", 0) + ac.get("byteOffset", 0)).reshape(-1, K[ac["type"]]).copy()
+    pr2 = j2["meshes"][0]["primitives"][0]; P2 = get2(pr2["attributes"]["POSITION"]).astype(float); I0 = get2(pr2["indices"]).reshape(-1, 3).astype(np.int64)
+    I0 = I0[(I0[:, 0] != I0[:, 1]) & (I0[:, 1] != I0[:, 2])]
+    c0 = P2[I0].mean(1); y2 = P2[:, 1].min(); zr = P2[I0[c0[:, 0] < 0]].reshape(-1, 3)[:, 2].min()
+    hz = (c0[:, 0] < 0) & ((P2[I0][:, :, 1] < y2 + 0.05) & (P2[I0][:, :, 2] < zr + 0.05)).all(1)
+    hv, hinv = np.unique(I0[hz], return_inverse=True)
+    for name, ai in at.items():
+        arr = get(ai); add = get2(pr2["attributes"][name])[hv] if name in pr2["attributes"] else np.zeros((len(hv), arr.shape[1]), arr.dtype)
+        put(ai, np.concatenate([arr, add.astype(arr.dtype)]))
+    for t in pr.get("targets", []):
+        for name, ai in t.items():
+            arr = get(ai); put(ai, np.concatenate([arr, np.zeros((len(hv), arr.shape[1]), arr.dtype)]))
+    I = np.concatenate([I, NV + hinv.reshape(-1, 3)])
+    P = get(at["POSITION"]).astype(float); UV = get(at["TEXCOORD_0"]).astype(float); NV = len(P)
     ok = (I[:, 0] != I[:, 1]) & (I[:, 1] != I[:, 2]) & (I[:, 0] != I[:, 2]); cen = P[I].mean(1)
+    print(f"굽이 온전한 모델에서 오른 구두 굽 삼각형 {int(hz.sum())}개(점 {len(hv)}개)를 가져와 넣음")
 low = P[I][:, :, 1].max(1) < YTOP
 R_t = ok & low & (cen[:, 0] < 0); L_t = ok & low & (cen[:, 0] > 0)
 # ① 오른발 굽: 바닥에서 HEELH 아래 + 오른발 뒤꿈치 쪽 5cm
