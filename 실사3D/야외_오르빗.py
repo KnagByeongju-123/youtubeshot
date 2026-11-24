@@ -300,7 +300,7 @@ def place(i, who=None):
 #   발 자리를 시간마다 정하고(오른발 → 왼발 → 오른발을 모음), 골반은 두 발 가운데, 다리는 두 마디 IK(무릎은 앞으로), 발은 바닥과 평평하게.
 #   팔은 걷는 동안 반대쪽 다리와 함께 앞뒤로 조금 흔듦
 WALK = "--걷기" in a
-STEP = float(a[a.index("--보폭") + 1]) if "--보폭" in a else 0.40
+STEP = float(a[a.index("--보폭") + 1]) if "--보폭" in a else 0.28     # 엉덩이~발목 0.55m·몸에 붙는 치마·굽 구두 → 작은 걸음 (0.40 이면 골반이 내려가 무릎 굽은 채 걸음)
 if WALK and arm is not None:
     bpy.context.view_layer.update()
     MW = arm.matrix_world.copy(); MWi = MW.inverted(); M3 = MW.to_3x3(); M3i = MWi.to_3x3()
@@ -356,7 +356,7 @@ if WALK and arm is not None:
         gap = abs(fy["L"] - fy["R"])
         drop = LL - math.sqrt(max(LL * LL - (gap / 2) ** 2, 1e-6)) + 0.004 * min(1, gap / STEP)
         def smoother(u): u = min(1.0, max(0.0, u)); return u * u * u * (u * (6 * u - 15) + 10)
-        py_ = -2 * STEP * smoother((t - T0 + 0.1) / (TEND - T0 + 0.05))        # 골반은 고르게 앞으로 (걸음마다 멈칫 없게)
+        py_ = 0.5 * (-2 * STEP * smoother((t - T0 + 0.1) / (TEND - T0 + 0.05))) + 0.5 * (fy['L'] + fy['R']) / 2   # 골반: 고르게 앞으로 + 두 발 가운데를 반씩 (멈칫도, 무릎 굽힘도 없게)
         lead = (fy["R"] - fy["L"]) / max(STEP, 1e-3)                            # -1: 오른발이 앞, +1: 왼발이 앞
         sway = 0.012 * math.sin(math.pi * (fy["R"] - fy["L"]) / max(STEP, 1e-3))   # 몸무게를 디딘 발 쪽으로 살짝
         # 골반 높이: 골반이 고르게 앞으로 가니 두 발 가운데가 아님 → 더 먼 발에 닿을 만큼만 낮춤 (가운데로 계산하면 너무 낮아 무릎이 굽은 채 걸었음)
@@ -374,6 +374,7 @@ if WALK and arm is not None:
             pit = foot_pitch(foot_u(sd, t))
             F = g["F0"] + mathutils.Vector((0, fy[sd], foot_lift(sd, t) + 0.14 * math.sin(max(pit, 0.0))))   # 뒤꿈치를 들면 발목도 그만큼 올라감
             d = F - H; dl = min(d.length, g["L1"] + g["L2"] - 1e-4)
+            if os.environ.get('WALKDBG'): print('DBG', i, sd, round(d.length, 3), round(g['L1'] + g['L2'], 3), 'H', tuple(round(v, 3) for v in H), 'F', tuple(round(v, 3) for v in F), 'drop', round(drop, 3), 'py', round(py_, 3))
             ca = (g["L1"] ** 2 + dl ** 2 - g["L2"] ** 2) / (2 * g["L1"] * dl); ang = math.acos(max(-1, min(1, ca)))
             dn = d.normalized(); fwd = mathutils.Vector((0, -1, 0)); side = dn.cross(fwd).normalized(); perp = side.cross(dn).normalized()
             if perp.dot(fwd) < 0: perp = -perp
