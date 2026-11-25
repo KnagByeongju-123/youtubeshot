@@ -1,6 +1,6 @@
 """풍년 잔치 — 새로 지은 굿거리 가락 (사용자 요청 2026-11-25: 풍년가 악보를 구할 수 없어 같은 장단·음계로 새 곡)
   장단: 굿거리(12/8, 한 장단 12칸) · 음계: 솔·라·도·레·미 다섯 음(풍년가와 같은 평조풍, 솔로 맺음)
-  1절 = 태평소 가락 + 장구·꽹과리 굿거리 + 북·징 / 2절 = 아쟁이 한 옥타브 아래에서 같이 → 끝에 덩·갱·쿵·징
+  1절 = 태평소 가락 + 장구·꽹과리·북 굿거리 + 징 / 2절 = 아쟁이 한 옥타브 아래에서 같이, 북이 네 장단마다 몰아침 → 끝에 덩·갱·쿵·징
   소리: 태평소·아쟁·장구·꽹과리·북·징 모두 이 저장소의 직접 합성 소리 (저작권 걱정 없음)
 
 사용: python -X utf8 전통악기/풍년잔치.py [결과.mp3] [--칸 0.2] [--절 2]
@@ -103,10 +103,11 @@ def render(unit=0.2, verses=2, seed=5):
     cyc = 1 + verses * bars
     add(K.janggu_rhythm("굿거리", cyc, rng, end=False, unit=unit), 0.0, 0.42)
     add(K.kkwaenggwari_rhythm("굿거리", cyc, rng, unit=unit, end=False), 0.0, 0.6)
-    for c in range(cyc):                                                     # 북: 장단 첫 칸·가운데, 징: 네 장단마다(2절은 두 장단마다)
+    first = 1 + bars                                                         # 북 가락: 1절은 그대로, 2절은 네 장단마다 끝을 몰아침
+    add(K.buk_rhythm("굿거리", first, rng, unit=unit), 0.0, 0.9)
+    add(K.buk_rhythm("굿거리", cyc - first, rng, unit=unit, fill_every=4), first * bar, 0.95)
+    for c in range(cyc):                                                     # 징: 네 장단마다(2절은 두 장단마다)
         b = c * bar
-        K.place(buf, K.big_drum(62 * K.BUK_LOW, 1.0, rng), b, 0.32, -0.35)
-        K.place(buf, K.big_drum(62 * K.BUK_LOW, 0.7, rng), b + 6 * unit, 0.2, -0.35)
         if c % (2 if c > bars else 4) == 0:
             K.place(buf, K.gong(110, 3.0, bend=0.02, rng=rng), b, 0.2, 0.0)
     for v in range(verses):

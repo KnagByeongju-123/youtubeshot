@@ -365,6 +365,38 @@ def kkwaenggwari_rhythm(name, cycles=3, rng=None, unit=None, end=True, cells=Non
     return buf
 
 
+# 풍물 북 가락 12칸: 칸 → 세기 (사용자 2026-11-25: 북까지 들리게 하면 더 풍부) — 첫 박·가운데 박을 세게 '쿵', 나머지는 약하게
+BUK_RHYTHMS = {
+    "굿거리": {0: 1.0, 3: 0.55, 6: 0.85, 8: 0.45, 9: 0.6, 11: 0.5},
+    "자진모리": {0: 1.0, 3: 0.6, 6: 0.85, 9: 0.6, 10: 0.45},
+    "휘모리": {0: 1.0, 3: 0.7, 6: 0.9, 9: 0.7},
+    "세마치": {0: 1.0, 3: 0.7, 6: 0.6},
+}
+BUK_FILL = {9: 0.65, 10: 0.8, 11: 1.0}        # 장단 끝을 '쿵쿵쿵' 몰아침 (fill_every 장단마다)
+
+
+def buk_rhythm(name, cycles=3, rng=None, unit=None, swell=True, fill_every=0, cells=None):
+    """풍물 북 가락 → 스테레오 (왼쪽으로 조금). 세기(force)에 따라 크기와 울림 길이가 바뀜, swell: 네 장단마다 점점 세게,
+    fill_every: N 장단마다 끝 세 칸을 몰아침(BUK_FILL). 북 소리는 big_drum(낮고 탁하게, 폰에서도 치는 순간이 들림)"""
+    rng = rng or np.random.default_rng()
+    u0, c0, _ = JANGGU_RHYTHMS.get(name, (0.15, 12, None))
+    unit, cells = unit or u0, cells or c0
+    total = cycles * cells * unit
+    buf = np.zeros((int((total + 2.0) * SR), 2), np.float32)
+    for c in range(cycles):
+        pat = dict(BUK_RHYTHMS[name])
+        if fill_every and c % fill_every == fill_every - 1:
+            pat.update(BUK_FILL)
+        sw = KKW_SWELL[c % 4] if swell else 1.0
+        for i, f in pat.items():
+            if i >= cells:
+                continue
+            f = f * sw * (0.93 + 0.14 * rng.random())
+            snd = big_drum(62 * BUK_LOW, 1.2 if f > 0.75 else 0.7, rng)
+            place(buf, snd, max(0.0, (c * cells + i) * unit + rng.normal(0, 0.004)), min(f, 1.3) ** 1.4, -0.35)
+    return buf
+
+
 # 태평소(호적): 실제 호적 산조 녹음(1969년 LP)을 연주분석.py --최고Hz 1800 으로 잰 배음 세기 (2026-11-25)
 #   음역 MIDI 70~86(가운데 약 82) · 긴 음은 거의 곧게, 떨림 1초 4.7번·작게 · 밝기 무게중심 2400Hz
 TAEP_HARM_DB = [-6.4, 0.0, -10.5, -19.3, -26.9, -27.8, -31.4, -32.4, -37.3, -37.9, -44.5, -39.7]

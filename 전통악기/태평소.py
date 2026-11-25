@@ -44,8 +44,9 @@ def pungmul_drums(buf, unit, start, rng):
     bar = 12 * unit
     c, t = 0, start
     while t < len(buf) / SR - 1.0:
-        K.place(buf, K.big_drum(62 * K.BUK_LOW, 1.2, rng), t, 0.45, pan=-0.2)
-        K.place(buf, K.big_drum(62 * K.BUK_LOW, 0.8, rng), t + 6 * unit, 0.3, pan=-0.2)
+        bk = K.buk_rhythm("자진모리", 1, rng, unit=unit, swell=False, fill_every=1 if c % 4 == 3 else 0)   # 네 번째 장단마다 끝을 몰아침
+        bk = bk * K.KKW_SWELL[c % 4]
+        K.place(buf, (bk[:, 0] + bk[:, 1]) * 0.5, t, 0.85, pan=-0.3)
         if c % 2 == 0:
             K.place(buf, K.gong(110, 3.0, bend=0.02, rng=rng), t, 0.22, pan=0.25)
         kk = K.kkwaenggwari_rhythm("자진모리", 1, rng, unit=unit, end=False)              # 꽹과리 (2026-11-25)
