@@ -160,7 +160,9 @@ def gong(f0=110, dur=6.0, bend=-0.03, rng=None):
 def big_drum(f0=70, dur=2.2, rng=None):
     """큰 북 한 번 (북·다이코·팀파니·둠): 쿵 하고 음이 떨어지며 길게 울림.
     울림통을 크게 (사용자 결정 2026-11-25: 북은 울림통이 더 커야): 가죽의 여러 울림(원형 막 배음 1·1.59·2.14·2.30·2.65)이
-    따로 사라지고, 통 안 공기가 '우웅' 하고 울리며(낮은 잡음 띠), 나무 통이 소리를 되울림(짧은 되울림)"""
+    따로 사라지고, 통 안 공기가 '우웅' 하고 울리며(낮은 잡음 띠), 나무 통이 소리를 되울림(짧은 되울림).
+    가죽이 울리는 탁한 소리 (사용자 결정 2026-11-25: 북은 가죽을 울리니 탁해야 함 — 예전 '탁하지 않게'를 바꿈):
+    가죽 여러 울림을 키우고 더 보탬(2.92·3.16·3.50배), 울리는 동안 가죽이 떨며 내는 거친 잡음, 손바닥으로 '퍽' 치는 소리"""
     from scipy.signal import butter, lfilter
     rng = rng or np.random.default_rng()
     n = int(dur * SR)
@@ -168,11 +170,17 @@ def big_drum(f0=70, dur=2.2, rng=None):
     f = f0 * (1 + 0.45 * np.exp(-t / 0.05))
     ph = np.cumsum(2 * np.pi * f / SR)
     body = np.zeros(n)
-    for r, a, dec in [(1.0, 1.0, 0.8), (1.59, 0.7, 0.42), (2.14, 0.45, 0.24), (2.30, 0.3, 0.18), (2.65, 0.18, 0.12)]:
-        body += a * np.sin(r * ph + rng.random() * 6.28) * np.exp(-t / (dur * dec))
+    for r, a, dec in [(1.0, 1.0, 0.8), (1.59, 0.85, 0.42), (2.14, 0.7, 0.26), (2.30, 0.55, 0.2), (2.65, 0.45, 0.15),
+                      (2.92, 0.35, 0.12), (3.16, 0.3, 0.1), (3.50, 0.22, 0.08)]:
+        body += a * np.sin(r * ph * (1 + 0.004 * rng.standard_normal()) + rng.random() * 6.28) * np.exp(-t / (dur * dec))
     air = lfilter(*butter(2, [f0 * 0.9 / (SR / 2), f0 * 3.2 / (SR / 2)], "band"), rng.standard_normal(n))
     air = air / (np.abs(air).max() + 1e-6) * np.clip(t / 0.03, 0, 1) * np.exp(-t / (dur * 0.4)) * 0.8   # 통 안 공기 울림 ('우웅' 부풂)
-    skin = lfilter(*butter(2, 400 / (SR / 2)), rng.standard_normal(n)) * np.exp(-t / 0.02) * 0.15   # 가죽 소리는 아주 조금 (탁하지 않게)
+    slap = lfilter(*butter(2, [150 / (SR / 2), 1600 / (SR / 2)], "band"), rng.standard_normal(n))
+    slap = slap / (np.abs(slap).max() + 1e-6) * np.exp(-t / 0.035) * 0.9                 # 손바닥·채로 가죽을 '퍽' 치는 소리
+    bnorm = body / (np.abs(body).max() + 1e-6)
+    rattle = lfilter(*butter(2, [140 / (SR / 2), 1300 / (SR / 2)], "band"), rng.standard_normal(n))
+    rattle = rattle / (np.abs(rattle).max() + 1e-6) * (0.35 + 0.65 * np.abs(bnorm)) * np.exp(-t / (dur * 0.22)) * 0.75   # 울리는 동안 가죽이 떠는 거친 소리
+    skin = slap + rattle
     # 휴대폰에서도 들리게 (사용자 지적 2026-11-25: 폰 스피커는 150Hz 아래를 거의 못 냄 → 낮은 북이 안 들렸음):
     # 북채가 가죽을 치는 '둥' (120~500Hz 짧은 소리) + 눌러서 생긴 배음(2·3·4배) — 귀는 배음만 들어도 낮은 음을 느낌
     punch = lfilter(*butter(2, [120 / (SR / 2), 500 / (SR / 2)], "band"), rng.standard_normal(n))
