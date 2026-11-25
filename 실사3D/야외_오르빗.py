@@ -482,6 +482,12 @@ def place(i, who=None):
     r_ = R + (R1 - R) * s; lk = LOOK + (LOOK1 - LOOK) * s; hc = HC + (HC1 - HC) * s
     c0 = who if who is not None else mathutils.Vector((0, 0, 0))
     cam.location = (c0.x + r_ * math.sin(th), c0.y - r_ * math.cos(th), hc)
+    if "--고정카메라" in a:   # 카메라가 인물을 따라가지 않고 한 자리에 (x,y,z,보는x,보는y,보는z[,렌즈mm]) — 인물이 카메라 쪽으로 걸어오는 장면용
+        v7 = [float(q) for q in a[a.index("--고정카메라") + 1].split(",")]
+        cam.location = mathutils.Vector(v7[:3]); d = mathutils.Vector(v7[3:6]) - cam.location
+        cam.rotation_euler = d.to_track_quat("-Z", "Y").to_euler()
+        if len(v7) > 6: cam.data.lens = v7[6]
+        return
     if "--카메라" in a:      # 검사용: 카메라 자리·보는 곳을 직접 (x,y,z,보는x,보는y,보는z — 인물이 걸어온 만큼 같이 옮김)
         v6 = [float(q) for q in a[a.index("--카메라") + 1].split(",")]; wv = WHO[0]
         cam.location = mathutils.Vector(v6[:3]) + wv; d = mathutils.Vector(v6[3:]) + wv - cam.location
@@ -538,9 +544,14 @@ if (WALK or DANCE or SIP) and arm is not None:
     #   발을 6cm 들어 무릎이 계단 오르듯 높이 올라감 → 3.5cm · 골반이 두 발 가운데를 따라 걸음마다 멈칫 → 처음부터 끝까지 고르게 앞으로
     #   발이 늘 평평 → 뗄 때 뒤꿈치 들고(14°) 디딜 때 앞꿈치 살짝 듦 · 몸통이 막대처럼 → 골반 좌우 돌림·기울임, 가슴은 반대로, 살짝 앞으로 숙임
     #   팔 흔들림이 거의 없음 → 크게, 앞으로 갈 때 팔꿈치 살짝 굽힘
-    LIFT = 0.035; TEND = T0 + 2 * D1 + D3
+    LIFT = 0.035; NSTEP = int(a[a.index('--걸음수') + 1]) if '--걸음수' in a else 2; TEND = T0 + NSTEP * D1 + D3
+    # 걸음표: (시작, 길이, 발, 출발 y, 도착 y) — 오른발부터 번갈아, 첫 걸음은 반걸음, 마지막에 뒤 발을 모음 (--걸음수 N, 사용자 2026-11-25 카메라 쪽으로 걸어오기)
+    SCHED = []
+    for k_ in range(NSTEP):
+        SCHED.append((T0 + k_ * D1, D1, "R" if k_ % 2 == 0 else "L", -max(0, k_ - 1) * STEP if k_ > 0 else 0.0, -(k_ + 1) * STEP))
+    SCHED.append((T0 + NSTEP * D1, D3, "L" if NSTEP % 2 == 0 else "R", -(NSTEP - 1) * STEP, -NSTEP * STEP))
     def foot_u(sd, t):                                       # 이 발이 지금 몇 번째 걸음의 어디쯤(0~1)인지, 걸음 길이
-        segs = [(T0, D1), (T0 + 2 * D1, D3)] if sd == "R" else [(T0 + D1, D1)]
+        segs = [(s0, d) for s0, d, f_, _, _ in SCHED if f_ == sd]
         for s0, d in segs:
             if s0 <= t <= s0 + d: return (t - s0) / d
         return None
@@ -555,12 +566,14 @@ if (WALK or DANCE or SIP) and arm is not None:
         T1 = mathutils.Matrix.Translation(pb.head); T0_ = mathutils.Matrix.Translation(-pb.head)
         pb.matrix = T1 @ R_ @ T0_ @ pb.matrix; bpy.context.view_layer.update()
     def foot_y(sd, t):
-        if sd == "R":   # 오른발 먼저 한 걸음, 마지막에 왼발 옆으로 모음
-            return -STEP * sm((t - T0) / D1) - STEP * sm((t - T0 - 2 * D1) / D3)
-        return -2 * STEP * sm((t - T0 - D1) / D1)
+        y = 0.0
+        for s0, d, f_, y0, y1 in SCHED:
+            if f_ != sd: continue
+            if t >= s0 + d: y = y1
+            elif t > s0: y = y0 + (y1 - y0) * sm((t - s0) / d)
+        return y
     def foot_lift(sd, t):
-        ph = [(T0, D1, LIFT), (T0 + 2 * D1, D3, LIFT * 0.6)] if sd == "R" else [(T0 + D1, D1, LIFT)]
-        return sum(h * math.sin(math.pi * min(1, max(0, (t - s0) / d))) for s0, d, h in ph)
+        return sum((LIFT if k_ < len(SCHED) - 1 else LIFT * 0.6) * math.sin(math.pi * min(1, max(0, (t - s0) / d))) for k_, (s0, d, f_, _, _) in enumerate(SCHED) if f_ == sd)
     def set_world_aim(name, child_head_world, target_world):
         if name.startswith("UpperArm."): bpy.context.view_layer.update(); shrug(name[-1], target_world - (MW @ PB[name].head))
         pb = PB[name]; bpy.context.view_layer.update()
@@ -576,7 +589,7 @@ if (WALK or DANCE or SIP) and arm is not None:
         gap = abs(fy["L"] - fy["R"])
         drop = LL - math.sqrt(max(LL * LL - (gap / 2) ** 2, 1e-6)) + 0.004 * min(1, gap / STEP)
         def smoother(u): u = min(1.0, max(0.0, u)); return u * u * u * (u * (6 * u - 15) + 10)
-        py_ = 0.5 * (-2 * STEP * smoother((t - T0 + 0.1) / (TEND - T0 + 0.05))) + 0.5 * (fy['L'] + fy['R']) / 2   # 골반: 고르게 앞으로 + 두 발 가운데를 반씩 (멈칫도, 무릎 굽힘도 없게)
+        py_ = 0.5 * (-NSTEP * STEP * smoother((t - T0 + 0.1) / (TEND - T0 + 0.05))) + 0.5 * (fy['L'] + fy['R']) / 2   # 골반: 고르게 앞으로 + 두 발 가운데를 반씩 (멈칫도, 무릎 굽힘도 없게)
         lead = (fy["R"] - fy["L"]) / max(STEP, 1e-3)                            # -1: 오른발이 앞, +1: 왼발이 앞
         sway = 0.012 * math.sin(math.pi * (fy["R"] - fy["L"]) / max(STEP, 1e-3))   # 몸무게를 디딘 발 쪽으로 살짝
         # 골반 높이: 골반이 고르게 앞으로 가니 두 발 가운데가 아님 → 더 먼 발에 닿을 만큼만 낮춤 (가운데로 계산하면 너무 낮아 무릎이 굽은 채 걸었음)
