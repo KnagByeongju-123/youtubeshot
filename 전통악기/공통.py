@@ -265,10 +265,12 @@ JANGGU_RHYTHMS = {
 }
 
 
-def janggu_rhythm(name, cycles=3, rng=None, end=True, low=105.0, high=235.0):
-    """장구 장단을 cycles 번 치고(end 면 마지막에 '덩' 하나로 맺음) → 스테레오. 북편은 왼쪽, 채편은 오른쪽으로 조금"""
+def janggu_rhythm(name, cycles=3, rng=None, end=True, low=105.0, high=235.0, unit=None):
+    """장구 장단을 cycles 번 치고(end 면 마지막에 '덩' 하나로 맺음) → 스테레오. 북편은 왼쪽, 채편은 오른쪽으로 조금.
+    unit: 한 칸 초 (가락 빠르기에 맞출 때, 없으면 장단 기본값)"""
     rng = rng or np.random.default_rng()
-    unit, cells, pat = JANGGU_RHYTHMS[name]
+    unit0, cells, pat = JANGGU_RHYTHMS[name]
+    unit = unit or unit0
     total = cycles * cells * unit
     buf = np.zeros((int((total + 1.2) * SR), 2), np.float32)
     for c in range(cycles):
