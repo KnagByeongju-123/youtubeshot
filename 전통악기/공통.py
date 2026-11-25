@@ -157,17 +157,271 @@ def gong(f0=110, dur=6.0, bend=-0.03, rng=None):
     return (y / (np.abs(y).max() + 1e-6)).astype(np.float32)
 
 
-def big_drum(f0=70, dur=2.2, rng=None):
-    """큰 북 한 번 (북·다이코·팀파니·둠): 쿵 하고 음이 떨어지며 길게 울림"""
+def big_drum(f0=70, dur=2.2, rng=None, phone=True):
+    """큰 북 한 번 (북·다이코·팀파니·둠): '쿵' 하고 음이 살짝 떨어지며 울림통이 '우웅' 울리다 1초 안팎에 잦아듦.
+    사용자 결정 2026-11-25: 울림통 크게 · 낮게 · 가죽이 울리는 탁한 소리 · 폰에서도 들리게 · 현악기처럼 들리면 안 됨
+      - 가죽 울림: 원형 막의 가지런하지 않은 울림(1·1.59·2.14·2.30·2.65·2.92·3.16·3.50배)이 각자 빨리 사라짐
+        (가지런한 배음이 오래 남으면 줄 소리처럼 들림 → 짧은 되풀이 되울림(줄 소리 만드는 방법과 같음)은 쓰지 않음)
+      - 통 안 공기 '우웅', 가죽을 '퍽' 치는 소리, 울리는 동안 가죽이 떠는 거친 소리(탁함)
+      - 폰에서도 들리게: 치는 순간(0.2초)에만 눌러서 배음을 만듦 — 울림 꼬리는 깨끗한 낮은 소리 그대로
+    phone=False: 이어폰·스피커용 (낮은 울림만, 폰에서는 거의 안 들림)"""
     from scipy.signal import butter, lfilter
     rng = rng or np.random.default_rng()
     n = int(dur * SR)
     t = np.arange(n) / SR
-    f = f0 * (1 + 0.5 * np.exp(-t / 0.04))
+    k = min(1.0, dur / 2.5)                                  # 짧게 치는 작은 북은 울림도 짧게
+    f = f0 * (1 + 0.6 * np.exp(-t / 0.03))
     ph = np.cumsum(2 * np.pi * f / SR)
-    body = (np.sin(ph) + 0.25 * np.sin(1.5 * ph)) * np.exp(-t / (dur * 0.3))
-    skin = lfilter(*butter(2, 400 / (SR / 2)), rng.standard_normal(n)) * np.exp(-t / 0.02) * 0.15   # 가죽 소리는 아주 조금 (탁하지 않게)
-    y = body + skin
+    body = np.zeros(n)
+    for r, a, dec in [(1.0, 1.0, 0.95), (1.59, 0.6, 0.32), (2.14, 0.45, 0.18), (2.30, 0.35, 0.12), (2.65, 0.3, 0.09),
+                      (2.92, 0.25, 0.07), (3.16, 0.2, 0.06), (3.50, 0.15, 0.05)]:
+        body += a * np.sin(r * ph * (1 + 0.006 * rng.standard_normal()) + rng.random() * 6.28) * np.exp(-t / (dec * k))
+    air = lfilter(*butter(2, [f0 * 0.9 / (SR / 2), f0 * 3.0 / (SR / 2)], "band"), rng.standard_normal(n))
+    air = air / (np.abs(air).max() + 1e-6) * np.clip(t / 0.03, 0, 1) * np.exp(-t / (0.6 * k)) * 0.9   # 통 안 공기 '우웅'
+    slap = lfilter(*butter(2, [70 / (SR / 2), 450 / (SR / 2)], "band"), rng.standard_normal(n))
+    slap = slap / (np.abs(slap).max() + 1e-6) * np.exp(-t / 0.05) * 1.3                 # 가죽을 '퍽' 치는 소리
+    bnorm = body / (np.abs(body).max() + 1e-6)
+    rattle = lfilter(*butter(2, [60 / (SR / 2), 380 / (SR / 2)], "band"), rng.standard_normal(n))
+    rattle = rattle / (np.abs(rattle).max() + 1e-6) * (0.3 + 0.7 * np.abs(bnorm)) * np.exp(-t / (0.4 * k)) * 0.55   # 가죽이 떠는 거친 소리
+    y = body + air + slap + rattle
+    if not phone:
+        y = lfilter(*butter(2, 400 / (SR / 2)), body + air * 1.2 + (slap + rattle) * 0.6)
+    else:
+        y = y / (np.abs(y).max() + 1e-6)
+        w = np.exp(-t / 0.2)                                                     # 치는 순간에만 (꼬리는 깨끗하게)
+        y = y + w * (np.tanh(9.0 * y) + 1.0 * y ** 2 - y) * 1.0
+        y = lfilter(*butter(2, 1100 / (SR / 2)), y)
+    y = lfilter(*butter(1, 28 / (SR / 2), "high"), y) * np.clip((dur - t) / 0.3, 0, 1)
+    return (y / (np.abs(y).max() + 1e-6)).astype(np.float32)
+
+
+def _membrane(f0, n, rng, decs, amps=(1.0, 0.6, 0.45, 0.35, 0.28, 0.22), drop=0.25):
+    """가죽 한 장의 울림: 원형 막의 가지런하지 않은 울림(1·1.59·2.14·2.30·2.65·2.92배)이 각자 빨리 사라짐 (오래 남으면 줄 소리처럼 들림)"""
+    t = np.arange(n) / SR
+    ph = np.cumsum(2 * np.pi * f0 * (1 + drop * np.exp(-t / 0.02)) / SR)
+    y = np.zeros(n)
+    for r, a, dec in zip((1.0, 1.59, 2.14, 2.30, 2.65, 2.92), amps, decs):
+        y += a * np.sin(r * ph * (1 + 0.006 * rng.standard_normal()) + rng.random() * 6.28) * np.exp(-t / dec)
+    return y
+
+
+def _band_noise(n, lo, hi, rng):
+    from scipy.signal import butter, lfilter
+    x = lfilter(*butter(2, [lo / (SR / 2), hi / (SR / 2)], "band"), rng.standard_normal(n))
+    return x / (np.abs(x).max() + 1e-6)
+
+
+def _phone_attack(y, t, drive=7.0, sec=0.08, lp=2500):
+    """치는 순간에만 눌러서 배음을 만듦 (폰 스피커에서도 들리게), 꼬리는 깨끗하게"""
+    from scipy.signal import butter, lfilter
+    y = y / (np.abs(y).max() + 1e-6)
+    w = np.exp(-t / sec)
+    y = y + w * (np.tanh(drive * y) + 0.6 * y ** 2 - y)
+    return lfilter(*butter(2, lp / (SR / 2)), y)
+
+
+def janggu(kind, rng=None, low=105.0, high=235.0):
+    """장구 한 번 (사용자 요청 2026-11-25, 북에서 배운 것: 폰에서도 들리게 · 길게 고르게 울리지 않게 · 가죽의 탁한 소리)
+      쿵 = 북편(왼쪽, 두꺼운 가죽을 손바닥으로): 낮고 둔탁, 0.3초쯤 '웅' 울림
+      덕 = 채편(오른쪽, 얇은 가죽을 대나무 채로): 짧고 또렷한 '덕' — 날카롭지 않게 (사용자: 장구는 둔탁하게)
+      덩 = 둘 다 · 기 = 작은 덕 · 기덕 = 기 바로 뒤 덕 · 더러러러 = 채를 굴림(작은 덕 5번, 점점 작게)"""
+    from scipy.signal import butter, lfilter
+    rng = rng or np.random.default_rng()
+    if kind in ("기덕", "더러러러"):
+        parts = [("기", 0.0, 0.55), ("덕", 0.07, 1.0)] if kind == "기덕" else \
+                [("기", i * 0.05, 0.9 - 0.13 * i) for i in range(5)]
+        out = np.zeros(int(0.7 * SR))
+        for k, t0, g in parts:
+            h = janggu(k, rng, low, high) * g
+            i0 = int(t0 * SR)
+            out[i0:i0 + len(h)] += h[: len(out) - i0]
+        return (out / (np.abs(out).max() + 1e-6)).astype(np.float32)
+    n = int(0.7 * SR)
+    t = np.arange(n) / SR
+    y = np.zeros(n)
+    if kind in ("쿵", "덩"):
+        body = _membrane(low, n, rng, (0.30, 0.14, 0.09, 0.07, 0.05, 0.04))
+        palm = _band_noise(n, 90, 700, rng) * np.exp(-t / 0.03) * 0.9                  # 손바닥이 가죽을 덮치는 소리
+        rattle = _band_noise(n, 80, 450, rng) * np.abs(body / (np.abs(body).max() + 1e-6)) * np.exp(-t / 0.15) * 0.5
+        air = _band_noise(n, low * 0.8, low * 2.6, rng) * np.clip(t / 0.02, 0, 1) * np.exp(-t / 0.2) * 0.6   # 허리 잘록한 통 울림
+        k_ = _phone_attack(body + palm + rattle + air, t, drive=7.0, sec=0.1, lp=1400)
+        y += k_ / (np.abs(k_).max() + 1e-6)
+    if kind in ("덕", "덩", "기"):
+        skin = _membrane(high, n, rng, (0.10, 0.06, 0.045, 0.035, 0.03, 0.025), amps=(1.0, 0.7, 0.55, 0.45, 0.35, 0.3), drop=0.15)
+        stick = _band_noise(n, 700, 3200, rng) * np.exp(-t / 0.009) * 0.9                # 대나무 채 끝이 닿는 소리 (짧게)
+        wood = np.sin(2 * np.pi * 330 * t) * np.exp(-t / 0.04) * 0.6                     # 채·통의 나무 울림 (둔탁함)
+        d_ = _phone_attack(skin + stick + wood, t, drive=5.0, sec=0.05, lp=3500)
+        y += d_ / (np.abs(d_).max() + 1e-6) * (0.85 if kind == "덩" else 1.0)
+    y = lfilter(*butter(1, 40 / (SR / 2), "high"), y) * np.clip((0.7 - t) / 0.1, 0, 1)
+    return (y / (np.abs(y).max() + 1e-6) * (0.45 if kind == "기" else 1.0)).astype(np.float32)
+
+
+# 장구 장단: (한 칸 초, 칸 수, {칸: 소리}). 덩·쿵·덕·기덕·더러러러
+JANGGU_RHYTHMS = {
+    "굿거리": (0.21, 12, {0: "덩", 2: "기덕", 3: "쿵", 5: "더러러러", 6: "쿵", 8: "기덕", 9: "쿵", 11: "더러러러"}),
+    "자진모리": (0.15, 12, {0: "덩", 3: "덕", 5: "쿵", 6: "쿵", 8: "덕", 9: "쿵", 11: "덕"}),
+    "휘모리": (0.12, 12, {0: "덩", 3: "덕", 6: "쿵", 9: "덕"}),
+    "세마치": (0.19, 9, {0: "덩", 3: "덩", 5: "덕", 6: "쿵", 7: "덕"}),
+}
+
+
+def janggu_rhythm(name, cycles=3, rng=None, end=True, low=105.0, high=235.0, unit=None):
+    """장구 장단을 cycles 번 치고(end 면 마지막에 '덩' 하나로 맺음) → 스테레오. 북편은 왼쪽, 채편은 오른쪽으로 조금.
+    unit: 한 칸 초 (가락 빠르기에 맞출 때, 없으면 장단 기본값)"""
+    rng = rng or np.random.default_rng()
+    unit0, cells, pat = JANGGU_RHYTHMS[name]
+    unit = unit or unit0
+    total = cycles * cells * unit
+    buf = np.zeros((int((total + 1.2) * SR), 2), np.float32)
+    for c in range(cycles):
+        for i, k in pat.items():
+            g = (1.0 if i == 0 else 0.8) * (0.9 + 0.1 * rng.random())
+            pan = -0.25 if k == "쿵" else 0.25 if k in ("덕", "기덕", "더러러러") else 0.0
+            place(buf, janggu(k, rng, low, high), max(0.0, (c * cells + i) * unit + rng.normal(0, 0.004)), g, pan)
+    if end:
+        place(buf, janggu("덩", rng, low, high), total, 1.0, 0.0)
+    return buf
+
+
+# 꽹과리 (사용자 요청 2026-11-25): 쇳소리 높이 = 풍물 공연 녹음(2024 Lowell Folk Fest, KPAC, 인터넷 아카이브)에서 잰 봉우리
+#   705Hz 바탕 × 1·1.43·1.84·2.02·2.28·2.76·3.88·4.85·5.8·6.46·6.76 (쇠판 울림 간격과 맞음) — 녹음은 숫자만 재는 데 씀
+KKW_PARTIALS = [(1.0, 0.0), (1.43, -9.1), (1.84, -4.2), (2.02, -9.2), (2.28, -9.9), (2.76, -8.8), (3.88, -12.5), (4.85, -14.0),
+                (5.80, -14.1), (6.46, -13.8), (6.76, -12.2)]
+
+
+def kkwaenggwari(kind="갱", rng=None, f0=705.0, force=1.0):
+    """꽹과리 한 번: 갱 = 열고 쳐서 '갱~'(약 0.7초), 깨 = 반쯤 막아 짧게, 깻 = 스타카토(쨍한 채로 0.1초 안팎에 딱 끊김),
+    지 = 손가락으로 막아 둔한 '짓', 갠지갱 = 갱(짧게)·지·갱
+    force(0.3~1.2): 치는 세기 — 셀수록 크고 밝고(높은 울림·채 소리) 거칠게, 약하면 작고 둥글게 (사용자 2026-11-25: 강약)
+    쇠판의 가지런하지 않은 울림들(KKW_PARTIALS)이 각자 사라지고, 짝지은 울림이 살짝 어긋나 '와랑와랑' 맥놀이, 채 끝이 닿는 '딱'"""
+    from scipy.signal import butter, lfilter
+    rng = rng or np.random.default_rng()
+    if kind == "갠지갱":
+        out = np.zeros(int(1.0 * SR))
+        for k, t0, g in (("깨", 0.0, 0.85), ("지", 0.09, 0.6), ("갱", 0.18, 1.0)):
+            h = kkwaenggwari(k, rng, f0, force) * g
+            i0 = int(t0 * SR)
+            out[i0:i0 + len(h)] += h[: len(out) - i0]
+        return (out / (np.abs(out).max() + 1e-6) * min(1.0, force)).astype(np.float32)
+    damp = {"갱": 1.0, "깨": 0.3, "깻": 0.13, "지": 0.08}[kind]
+    damp *= 0.8 + 0.25 * force                                                    # 세게 치면 조금 더 오래
+    n = int((0.9 if kind == "갱" else 0.35) * SR)
+    t = np.arange(n) / SR
+    y = np.zeros(n)
+    f0 = f0 * (1 + 0.01 * rng.standard_normal())
+    tilt = 2.4 * (0.55 + 0.45 * force)                                            # 세게 = 높은 울림이 살아남 (쨍함)
+    for r, db in KKW_PARTIALS:
+        a = 10 ** ((db + tilt * (min(r, 6.0) - 1)) / 20)                       # 높은 쪽을 키워 '깽' 하고 쨍하게 (사용자: 꽹과리가 약함 2026-11-25)
+        dec = (0.55 / (1 + 0.25 * (r - 1))) * damp
+        beat = rng.uniform(1.5, 6.0)                                           # 짝 울림이 어긋나 생기는 맥놀이
+        y += a * np.sin(2 * np.pi * f0 * r * t + rng.random() * 6.28) * (1 + 0.35 * np.sin(2 * np.pi * beat * t)) * np.exp(-t / dec)
+    click = lfilter(*butter(2, [2500 / (SR / 2), 9000 / (SR / 2)], "band"), rng.standard_normal(n)) * np.exp(-t / 0.004)
+    y = y / (np.abs(y).max() + 1e-6) + (0.5 + 0.4 * force) * click / (np.abs(click).max() + 1e-6)
+    if kind != "지":                                                             # 살짝 찢어지는 쇳소리 (세게 친 맛)
+        drv = 1.2 + 1.4 * force
+        y = np.tanh(drv * y / (np.abs(y).max() + 1e-6)) / np.tanh(drv)
+    if kind == "지":                                                             # 손가락에 막힌 둔한 소리
+        y = y + 0.4 * lfilter(*butter(2, [300 / (SR / 2), 1200 / (SR / 2)], "band"), rng.standard_normal(n)) * np.exp(-t / 0.01)
+    if kind == "깻":                                                             # 손바닥으로 '딱' 막아 끊음 (끊기는 끝이 또렷하게)
+        y = y * np.clip((0.11 + 0.04 * force - t) / 0.015, 0, 1)
+    y = lfilter(*butter(1, 250 / (SR / 2), "high"), y) * np.clip((n / SR - t) / 0.05, 0, 1)
+    vol = (0.75 if kind == "지" else 1.0) * min(force, 1.3) ** 1.7               # 세기 차이를 크게 (센 박 1.2 ↔ 잔가락 0.5 = 약 4배)
+    return (y / (np.abs(y).max() + 1e-6) * vol).astype(np.float32)
+
+
+# 꽹과리 가락 12칸: 칸 → (소리, 세기). 풍물에서 흔한 느낌으로 단순하게 짠 것 — 실제 지역 가락 그대로는 아님
+#   스타카토 '깻'을 많이 (사용자 2026-11-25), 강약: 장단 첫 박 1.2 · 다른 박 0.8~0.9 · 박 사이 잔가락 0.4~0.6
+KKW_RHYTHMS = {
+    "휘모리": {0: ("갱", 1.2), 1: ("지", 0.45), 2: ("깻", 0.7), 3: ("갱", 0.8), 4: ("지", 0.45), 5: ("깻", 0.7),
+              6: ("갱", 0.85), 7: ("지", 0.45), 8: ("깻", 0.7), 9: ("깻", 0.85), 10: ("깻", 0.55), 11: ("깻", 0.75)},
+    "자진모리": {0: ("갱", 1.2), 2: ("깻", 0.5), 3: ("깻", 0.85), 5: ("지", 0.45), 6: ("갱", 0.85), 8: ("깻", 0.5),
+               9: ("깻", 0.85), 10: ("깻", 0.55), 11: ("지", 0.45)},
+    "굿거리": {0: ("갱", 1.2), 2: ("깻", 0.5), 3: ("깻", 0.8), 4: ("지", 0.4), 5: ("깻", 0.6), 6: ("갱", 0.85),
+              8: ("깻", 0.5), 9: ("깻", 0.8), 10: ("지", 0.4), 11: ("깻", 0.6)},
+    "세마치": {0: ("갱", 1.2), 2: ("깻", 0.5), 3: ("깻", 0.85), 5: ("지", 0.45), 6: ("깻", 0.8), 7: ("갱", 0.75)},
+}
+KKW_SWELL = [0.82, 0.9, 0.97, 1.08]           # 네 장단마다 점점 세게 (들썩이는 흐름)
+
+
+def kkwaenggwari_rhythm(name, cycles=3, rng=None, unit=None, end=True, cells=None, swell=True):
+    """꽹과리 가락을 cycles 번 (unit: 한 칸 초, 없으면 장구 장단의 값) → 스테레오 (오른쪽으로 조금)
+    swell: 네 장단마다 점점 세게 (KKW_SWELL), 치는 세기마다 소리도 바뀜(kkwaenggwari force)"""
+    rng = rng or np.random.default_rng()
+    u0, c0, _ = JANGGU_RHYTHMS.get(name, (0.15, 12, None))
+    unit, cells = unit or u0, cells or c0
+    pat = KKW_RHYTHMS[name]
+    total = cycles * cells * unit
+    buf = np.zeros((int((total + 1.5) * SR), 2), np.float32)
+    for c in range(cycles):
+        sw = KKW_SWELL[c % 4] if swell else 1.0
+        for i, v in pat.items():
+            if i >= cells:
+                continue
+            k, f = (v, 1.0 if i == 0 else 0.75) if isinstance(v, str) else v
+            f = f * sw * (0.93 + 0.14 * rng.random())                           # 사람 손처럼 세기가 조금씩 다름
+            place(buf, kkwaenggwari(k, rng, force=f), max(0.0, (c * cells + i) * unit + rng.normal(0, 0.003)), 1.0, 0.3)
+    if end:
+        place(buf, kkwaenggwari("갱", rng, force=1.15), total, 1.0, 0.3)
+    return buf
+
+
+# 풍물 북 가락 12칸: 칸 → 세기 (사용자 2026-11-25: 북까지 들리게 하면 더 풍부) — 첫 박·가운데 박을 세게 '쿵', 나머지는 약하게
+BUK_RHYTHMS = {
+    "굿거리": {0: 1.0, 3: 0.55, 6: 0.85, 8: 0.45, 9: 0.6, 11: 0.5},
+    "자진모리": {0: 1.0, 3: 0.6, 6: 0.85, 9: 0.6, 10: 0.45},
+    "휘모리": {0: 1.0, 3: 0.7, 6: 0.9, 9: 0.7},
+    "세마치": {0: 1.0, 3: 0.7, 6: 0.6},
+}
+BUK_FILL = {9: 0.65, 10: 0.8, 11: 1.0}        # 장단 끝을 '쿵쿵쿵' 몰아침 (fill_every 장단마다)
+
+
+def buk_rhythm(name, cycles=3, rng=None, unit=None, swell=True, fill_every=0, cells=None):
+    """풍물 북 가락 → 스테레오 (왼쪽으로 조금). 세기(force)에 따라 크기와 울림 길이가 바뀜, swell: 네 장단마다 점점 세게,
+    fill_every: N 장단마다 끝 세 칸을 몰아침(BUK_FILL). 북 소리는 big_drum(낮고 탁하게, 폰에서도 치는 순간이 들림)"""
+    rng = rng or np.random.default_rng()
+    u0, c0, _ = JANGGU_RHYTHMS.get(name, (0.15, 12, None))
+    unit, cells = unit or u0, cells or c0
+    total = cycles * cells * unit
+    buf = np.zeros((int((total + 2.0) * SR), 2), np.float32)
+    for c in range(cycles):
+        pat = dict(BUK_RHYTHMS[name])
+        if fill_every and c % fill_every == fill_every - 1:
+            pat.update(BUK_FILL)
+        sw = KKW_SWELL[c % 4] if swell else 1.0
+        for i, f in pat.items():
+            if i >= cells:
+                continue
+            f = f * sw * (0.93 + 0.14 * rng.random())
+            snd = big_drum(62 * BUK_LOW, 1.2 if f > 0.75 else 0.7, rng)
+            place(buf, snd, max(0.0, (c * cells + i) * unit + rng.normal(0, 0.004)), min(f, 1.3) ** 1.4, -0.35)
+    return buf
+
+
+# 태평소(호적): 실제 호적 산조 녹음(1969년 LP)을 연주분석.py --최고Hz 1800 으로 잰 배음 세기 (2026-11-25)
+#   음역 MIDI 70~86(가운데 약 82) · 긴 음은 거의 곧게, 떨림 1초 4.7번·작게 · 밝기 무게중심 2400Hz
+TAEP_HARM_DB = [-6.4, 0.0, -10.5, -19.3, -26.9, -27.8, -31.4, -32.4, -37.3, -37.9, -44.5, -39.7]
+
+
+def wind_tone(semis, amp, harm_db, rng, breath=0.05, buzz=0.18, bright_amp=0.06):
+    """겹서 관악기(태평소·피리) 소리: 잰 배음 세기대로 배음을 쌓음(세게 불수록 밝아짐) + 서(갈대 혀)가 떠는 거친 결(buzz) + 숨소리(breath)
+    semis: 음높이 곡선(MIDI 반음), amp: 세기 곡선"""
+    from scipy.signal import butter, lfilter
+    n = len(semis)
+    jit = lfilter(*butter(2, 15 / (SR / 2)), rng.standard_normal(n))
+    f = 440.0 * 2 ** ((semis - 69) / 12) * (1 + 0.0025 * jit / (np.abs(jit).max() + 1e-6))
+    ph = np.cumsum(f / SR)
+    nh = int(min(30, 10000 / max(100.0, float(f.min()))))
+    a_n = amp / (amp.max() + 1e-6)
+    y = np.zeros(n, np.float32)
+    for h in range(1, nh + 1):
+        db = harm_db[h - 1] if h <= len(harm_db) else harm_db[-1] - 3.0 * (h - len(harm_db))
+        g = 10 ** (db / 20) * (0.4 + 0.6 * a_n) ** (bright_amp * (h - 1))
+        y += (g * np.sin(2 * np.pi * h * ph + rng.uniform(0, 6.28))).astype(np.float32)
+    bz = lfilter(*butter(2, 90 / (SR / 2)), rng.standard_normal(n))
+    y = y * (1 + buzz * bz / (np.abs(bz).max() + 1e-6))                       # 서가 떠는 거친 결
+    nz = lfilter(*butter(2, [2000 / (SR / 2), 7000 / (SR / 2)], "band"), rng.standard_normal(n))
+    y = y / (np.abs(y).max() + 1e-6) + breath * nz / (np.abs(nz).max() + 1e-6)
+    y = lfilter(*butter(1, 120 / (SR / 2), "high"), y) * amp
     return (y / (np.abs(y).max() + 1e-6)).astype(np.float32)
 
 
@@ -319,6 +573,7 @@ class Region:
 
 
 OPEN_DELAY = 0.9          # 타악이 울리고 가락이 들어오기까지 (초)
+BUK_LOW = 0.68            # 북은 낮고 울림 있게 (사용자 결정 2026-11-25, '더 낮게'): 모든 북 높이를 0.68 배로 (권역 파일이 정한 높이에도)
 PERC_KINDS = ["징", "북", "연속북", "진군북", "난타"]   # 막을 여는 타악 (사용자 결정 2026-10-31: 섞지 말고 하나만, 긴장감용 연속 북·진군의 북소리·난타)
 
 
@@ -329,20 +584,20 @@ def perc(kind, rng, f0=None):
     if kind == "징":
         return opener([(lambda r: gong(f0 or 110, 6.0, bend=0.02, rng=r), 0.0, 1.0, 0.0)], rng), OPEN_DELAY
     if kind == "북":
-        return opener([(lambda r: big_drum(f0 or 62, 2.6, r), 0.0, 1.0, 0.0)], rng), OPEN_DELAY
+        return opener([(lambda r: big_drum((f0 or 62) * BUK_LOW, 4.0, r), 0.0, 1.0, 0.0)], rng), OPEN_DELAY
     if kind == "진군북":                        # 행진하듯 무거운 군대 북: 둥 · 둥 · 둥둥 둥 · (두 마디, 점점 크게) → 마지막 큰 북
-        f = f0 or 62
+        f = (f0 or 62) * BUK_LOW
         beat, hits = 60 / 100, []
         pat = [(0, 1.0, 1), (1, 0.7, 1), (2, 0.85, 1), (2.5, 0.6, 0), (3, 0.95, 1)]   # (박, 세기, 1=큰 북 0=작은 북)
         for bar in range(2):
             for b, g, big in pat:
                 t = (bar * 4 + b) * beat
                 gain = g * (0.55 + 0.25 * bar)
-                hits.append(((lambda r: big_drum(f, 1.6, r)) if big else (lambda r: big_drum(f * 1.9, 0.6, r)), t, gain, -0.1 if big else 0.2))
-        hits.append((lambda r: big_drum(f * 0.85, 3.0, r), 8 * beat, 1.0, 0.0))
-        return opener(hits, rng, sec=8 * beat + 3.2), 8 * beat + 0.4
+                hits.append(((lambda r: big_drum(f, 2.0, r)) if big else (lambda r: big_drum(f * 1.9, 0.6, r)), t, gain, -0.1 if big else 0.2))
+        hits.append((lambda r: big_drum(f * 0.85, 4.0, r), 8 * beat, 1.0, 0.0))
+        return opener(hits, rng, sec=8 * beat + 4.2), 8 * beat + 0.4
     if kind == "난타":                          # 여러 북이 빠르게 주고받다 한꺼번에 쾅
-        f = f0 or 70
+        f = (f0 or 70) * BUK_LOW
         hits, step = [], 60 / 130 / 2       # 8분음표
         seq = "X.x.Xxx.X.x.XxXx" + "XxXxXxXx"           # X=큰 북, x=작은 북, .=쉼
         for i, ch in enumerate(seq):
@@ -350,19 +605,19 @@ def perc(kind, rng, f0=None):
                 continue
             t = i * step
             g = (0.9 if ch == "X" else 0.55) * (0.6 + 0.4 * i / len(seq))
-            hits.append(((lambda r: big_drum(f, 1.2, r)) if ch == "X" else (lambda r: big_drum(f * 2.2, 0.4, r)), t, g, (-0.3 if i % 2 else 0.3)))
+            hits.append(((lambda r: big_drum(f, 1.5, r)) if ch == "X" else (lambda r: big_drum(f * 2.2, 0.4, r)), t, g, (-0.3 if i % 2 else 0.3)))
         end = len(seq) * step
-        hits.append((lambda r: big_drum(f * 0.8, 3.0, r), end, 1.0, -0.15))
-        hits.append((lambda r: big_drum(f * 1.3, 2.4, r), end, 0.8, 0.15))
-        return opener(hits, rng, sec=end + 3.2), end + 0.4
+        hits.append((lambda r: big_drum(f * 0.8, 4.0, r), end, 1.0, -0.15))
+        hits.append((lambda r: big_drum(f * 1.3, 3.0, r), end, 0.8, 0.15))
+        return opener(hits, rng, sec=end + 4.2), end + 0.4
     hits, t, gap = [], 0.0, 0.34                 # 연속북: 간격 0.34초 → 0.07초, 크기 0.25 → 0.8
     while t < 2.3:
         g = 0.25 + 0.55 * (t / 2.3)
-        hits.append((lambda r: big_drum(f0 or 70, 0.7, r), t, g, (-0.15 if len(hits) % 2 else 0.15)))
+        hits.append((lambda r: big_drum((f0 or 70) * BUK_LOW, 0.8, r), t, g, (-0.15 if len(hits) % 2 else 0.15)))
         t += gap
         gap = max(0.07, gap * 0.86)
-    hits.append((lambda r: big_drum((f0 or 70) * 0.85, 3.0, r), 2.45, 1.0, 0.0))
-    return opener(hits, rng, sec=6.0), 2.6
+    hits.append((lambda r: big_drum((f0 or 70) * BUK_LOW * 0.85, 4.0, r), 2.45, 1.0, 0.0))
+    return opener(hits, rng, sec=7.0), 2.6
 
 
 def with_opener(body, op):

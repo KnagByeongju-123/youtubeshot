@@ -1,0 +1,1 @@
+{"name":"anime3d","private":true,"description":"three.js + VRM 애니풍 3D 장면 촬영 (애니3D.md)","dependencies":{"three":"0.187.0","@pixiv/three-vrm":"3.5.5"}}
