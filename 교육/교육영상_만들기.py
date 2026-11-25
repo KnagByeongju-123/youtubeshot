@@ -40,6 +40,7 @@ for (si, pi), sg in zip(items, paras):
 DUR = tim["duration"]
 scene_t0 = {}
 for p in P: scene_t0.setdefault(p["si"], p["t0"])
+scene_t0[0] = 0.0          # 첫 장면은 영상 처음부터 (나레이션 전 제목 시간 포함)
 side_of = {}; flip = False; prev_ch = None
 for si, sc in enumerate(spec["장면"]):
     ch = sc.get("장", -1)
