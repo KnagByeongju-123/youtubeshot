@@ -100,6 +100,10 @@ bpy.context.view_layer.update(); pts = bbox()
 for r in roots:
     r.location.x -= (min(p.x for p in pts) + max(p.x for p in pts)) / 2; r.location.y -= (min(p.y for p in pts) + max(p.y for p in pts)) / 2
     r.location.z -= min(p.z for p in pts)
+if "--인물방향" in a:     # 인물을 제자리에서 돌림(도, + = 화면 오른쪽을 봄) — 사용자 2026-11-25 '아나운서는 오른쪽 방향을 보게'
+    Rz_ = mathutils.Matrix.Rotation(math.radians(float(a[a.index("--인물방향") + 1])), 4, "Z")
+    for r in roots: r.matrix_world = Rz_ @ r.matrix_world
+    bpy.context.view_layer.update()
 # ── 다리 구멍 메우기(기본 켬, --구멍그대로 면 끔): 다리를 거울로 다시 세운 모델의 이음매에 남은 작은 구멍을 블렌더 '구멍 채우기'로 막음 ──
 #   같은 자리 점을 합친 뒤(그림 좌표는 면 모서리마다 따로라 그대로), 허리 아래 열린 모서리 고리를 채우고 새 면의 그림 좌표는 이웃 면에서 가져옴
 if "--구멍그대로" not in a:
