@@ -436,6 +436,51 @@ if arm is not None and "--자세없음" not in a:
         mw_ = cup.matrix_world.copy(); cup.parent = arm; cup.parent_type = "BONE"; cup.parent_bone = h_.name
         bpy.context.view_layer.update(); cup.matrix_world = mw_
         print("카페: 탁자 높이", round(ttop, 3), "컵", tuple(round(v, 3) for v in grip))
+# ── 손 안내(--안내 t1,t2,...): 모음 자세에서 화면 왼쪽 손을 펴 옆(사진 쪽)으로 내밀었다가 돌아옴 — 사용자 2026-11-25 '아나운서가 손으로 안내'
+#   두 자세(모음 A·안내 B)의 뼈 값을 기억해 두고, 장면마다 섞음(0.6초 올림·2.2초 멈춤·0.7초 내림). 안내하는 동안 고개도 사진 쪽으로 살짝
+GUIDE_T = [float(v) for v in a[a.index("--안내") + 1].split(",")] if "--안내" in a else []
+GUIDE_POSE = None; GXN = [-1]
+if GUIDE_T and arm is not None:
+    PBg = arm.pose.bones; bpy.context.view_layer.update()
+    poseA = {b.name: b.matrix_basis.copy() for b in PBg}
+    GX = 1 if ("--안내쪽" in a and a[a.index("--안내쪽") + 1] == "오른") else -1   # 사진이 화면 오른쪽이면 오른쪽(+x) 손 (--안내쪽 오른, 사용자 2026-11-25 '왼쪽에 아나운서')
+    gs = next(sd for sd in ("L", "R") if f"UpperArm.{sd}" in PBg and (MW @ PBg[f"UpperArm.{sd}"].head).x * GX > 0)
+    for b in PBg:
+        if b.name.endswith("." + gs) and not b.name.startswith(("UpperLeg", "LowerLeg", "Foot")): b.matrix_basis = mathutils.Matrix.Identity(4)
+    bpy.context.view_layer.update()
+    GV = [float(v) for v in a[a.index("--안내팔") + 1].split(",")] if "--안내팔" in a else [0.35, -0.45, -0.82, 0.62, -0.72, 0.22, 0.70, -0.60, 0.30]
+    aim_bone([f"UpperArm.{gs}"], (GX * GV[0], GV[1], GV[2]), [f"ForeArm.{gs}"])
+    aim_bone([f"ForeArm.{gs}"], (GX * GV[3], GV[4], GV[5]), [f"Hand.{gs}"])
+    aim_bone([f"Hand.{gs}"], (GX * GV[6], GV[7], GV[8]), [f"Middle1.{gs}"])
+    if gs in palm:                                          # 손바닥이 위·앞(카메라 쪽)을 보게
+        bpy.context.view_layer.update()
+        hpb_ = B(f"Hand.{gs}"); ax_ = (W(B(f"Middle1.{gs}")) - W(hpb_)).normalized()
+        n_ = palm_now(gs); tg_ = mathutils.Vector((0, -0.55, 0.85)); tg_ = (tg_ - ax_ * ax_.dot(tg_)).normalized(); n_ = (n_ - ax_ * ax_.dot(n_)).normalized()
+        ang_ = math.atan2(ax_.dot(n_.cross(tg_)), n_.dot(tg_))
+        R_ = (MWi.to_3x3() @ mathutils.Matrix.Rotation(ang_, 3, ax_) @ MW.to_3x3()).to_4x4()
+        hpb_.matrix = mathutils.Matrix.Translation(hpb_.head) @ R_ @ mathutils.Matrix.Translation(-hpb_.head) @ hpb_.matrix; bpy.context.view_layer.update()
+    curl(gs, 0.10, thumb=0.02)                              # 손가락은 가지런히 펴고 힘만 살짝 뺌
+    poseB = {b.name: b.matrix_basis.copy() for b in PBg}; GXN[0] = GX
+    GUIDE_POSE = [(n, poseA[n].decompose(), poseB[n].decompose()) for n in poseA if poseA[n] != poseB[n]]
+    for b in PBg: b.matrix_basis = poseA[b.name]
+    bpy.context.view_layer.update()
+    print("안내: 손", gs, "뼈", len(GUIDE_POSE), "때", GUIDE_T)
+def guide_w(t):
+    w = 0.0
+    for t0 in GUIDE_T:
+        u = t - t0
+        if 0 <= u < 0.6: v = u / 0.6
+        elif 0.6 <= u < 2.8: v = 1.0
+        elif 2.8 <= u < 3.5: v = 1 - (u - 2.8) / 0.7
+        else: v = 0.0
+        w = max(w, v * v * (3 - 2 * v))
+    return w
+def guide_apply(i):
+    if not GUIDE_POSE: return 0.0
+    w = guide_w(i / 24.0); PBg = arm.pose.bones
+    for n, (la, ra, sa), (lb, rb, sb) in GUIDE_POSE:
+        PBg[n].matrix_basis = mathutils.Matrix.LocRotScale(la.lerp(lb, w), ra.slerp(rb, w), sa.lerp(sb, w))
+    bpy.context.view_layer.update(); return w
 # ── 이(치아, --이): 모델엔 입 안이 어두운 면뿐 → 윗니·아랫니를 곡선(치열궁)을 따라 가지런히 만들어 머리에 붙임 (2026-11-25)
 #   윗니는 머리에 고정, 아랫니는 '입 벌림' 모양 키로 아랫입술을 따라 내려감. 크기는 입 너비에 맞춰 늘고 줄음
 if "--이" in a and any(o.type == "MESH" and o.name.startswith("Teeth") for o in objs):
@@ -825,7 +870,7 @@ def _energy(i, w=10):
     seg = _lo[max(0, i - w): i + w + 1]; return sum(seg) / len(seg) if seg else 0.0
 _E = (sum(_lo) / len(_lo)) if _lo else 0.0
 HEAD_MOVE = bool(_lo) and "--고개고정" not in a and arm is not None and "Head" in arm.pose.bones
-_HB0 = {}
+_HB0 = {}; GWN = [0.0]
 def head_move(i):
     t = i / 24.0; PBh = arm.pose.bones
     static = not (WALK or DANCE or SIP)
@@ -836,7 +881,7 @@ def head_move(i):
             PBh[nm].matrix_basis = _HB0[nm].copy()
     bpy.context.view_layer.update()
     pitch = 0.9 * math.sin(1.3 * t + 0.3) + 0.5 * math.sin(2.9 * t + 1.0) + 9.0 * (_energy(i) - _E) - 0.6 * math.sin(math.pi * min(1, _energy(i, 3) * 1.2))
-    yaw = 2.0 * math.sin(0.55 * t + 0.5) + 0.9 * math.sin(1.37 * t + 2.0)
+    yaw = 2.0 * math.sin(0.55 * t + 0.5) + 0.9 * math.sin(1.37 * t + 2.0) + 13.0 * GWN[0] * GXN[0]      # 안내할 때 사진 쪽으로
     roll = 1.4 * math.sin(0.43 * t + 2.0) + 0.5 * math.sin(1.1 * t)
     MWa = arm.matrix_world; M3a = MWa.to_3x3(); M3ai = M3a.inverted()
     for nm, sh in (("Neck", 0.4), ("Head", 0.6)):
@@ -851,6 +896,7 @@ def face(i):
     t = i / 24.0; lf = lip["frames"][i] if i < len(lip["frames"]) else [0, 0, 0]
     set_shape("MouthOpen", lf[0]); set_shape("MouthWide", lf[1]); set_shape("MouthRound", lf[2])
     set_shape("Blink", blink_v(t))
+    GWN[0] = guide_apply(i)
     if HEAD_MOVE: head_move(i)
 
 os.makedirs(folder, exist_ok=True)
