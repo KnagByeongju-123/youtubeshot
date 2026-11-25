@@ -175,15 +175,15 @@ def big_drum(f0=70, dur=2.2, rng=None):
         body += a * np.sin(r * ph * (1 + 0.004 * rng.standard_normal()) + rng.random() * 6.28) * np.exp(-t / (dur * dec))
     air = lfilter(*butter(2, [f0 * 0.9 / (SR / 2), f0 * 3.2 / (SR / 2)], "band"), rng.standard_normal(n))
     air = air / (np.abs(air).max() + 1e-6) * np.clip(t / 0.03, 0, 1) * np.exp(-t / (dur * 0.4)) * 0.8   # 통 안 공기 울림 ('우웅' 부풂)
-    slap = lfilter(*butter(2, [150 / (SR / 2), 1600 / (SR / 2)], "band"), rng.standard_normal(n))
+    slap = lfilter(*butter(2, [110 / (SR / 2), 1100 / (SR / 2)], "band"), rng.standard_normal(n))
     slap = slap / (np.abs(slap).max() + 1e-6) * np.exp(-t / 0.035) * 0.9                 # 손바닥·채로 가죽을 '퍽' 치는 소리
     bnorm = body / (np.abs(body).max() + 1e-6)
-    rattle = lfilter(*butter(2, [140 / (SR / 2), 1300 / (SR / 2)], "band"), rng.standard_normal(n))
+    rattle = lfilter(*butter(2, [100 / (SR / 2), 900 / (SR / 2)], "band"), rng.standard_normal(n))
     rattle = rattle / (np.abs(rattle).max() + 1e-6) * (0.35 + 0.65 * np.abs(bnorm)) * np.exp(-t / (dur * 0.22)) * 0.75   # 울리는 동안 가죽이 떠는 거친 소리
     skin = slap + rattle
     # 휴대폰에서도 들리게 (사용자 지적 2026-11-25: 폰 스피커는 150Hz 아래를 거의 못 냄 → 낮은 북이 안 들렸음):
     # 북채가 가죽을 치는 '둥' (120~500Hz 짧은 소리) + 눌러서 생긴 배음(2·3·4배) — 귀는 배음만 들어도 낮은 음을 느낌
-    punch = lfilter(*butter(2, [120 / (SR / 2), 500 / (SR / 2)], "band"), rng.standard_normal(n))
+    punch = lfilter(*butter(2, [95 / (SR / 2), 400 / (SR / 2)], "band"), rng.standard_normal(n))
     punch = punch / (np.abs(punch).max() + 1e-6) * np.exp(-t / 0.09) * 1.3
     y = body + air + skin
     y = y / (np.abs(y).max() + 1e-6)
@@ -193,7 +193,7 @@ def big_drum(f0=70, dur=2.2, rng=None):
     fb = np.zeros(d + 1)
     fb[0], fb[d] = 1.0, -0.6
     y = lfilter([1.0], fb, y)
-    y = lfilter(*butter(2, 2200 / (SR / 2)), y)
+    y = lfilter(*butter(2, 1600 / (SR / 2)), y)
     y = lfilter(*butter(1, 28 / (SR / 2), "high"), y)                     # 들리지 않는 아주 낮은 울림은 빼서 소리 크기를 들리는 쪽에
     y = y * np.clip((dur - t) / 0.3, 0, 1)
     return (y / (np.abs(y).max() + 1e-6)).astype(np.float32)
@@ -347,7 +347,7 @@ class Region:
 
 
 OPEN_DELAY = 0.9          # 타악이 울리고 가락이 들어오기까지 (초)
-BUK_LOW = 0.85            # 북은 낮고 울림 있게 (사용자 결정 2026-11-25): 모든 북 높이를 0.85 배로 (권역 파일이 정한 높이에도)
+BUK_LOW = 0.68            # 북은 낮고 울림 있게 (사용자 결정 2026-11-25, '더 낮게'): 모든 북 높이를 0.68 배로 (권역 파일이 정한 높이에도)
 PERC_KINDS = ["징", "북", "연속북", "진군북", "난타"]   # 막을 여는 타악 (사용자 결정 2026-10-31: 섞지 말고 하나만, 긴장감용 연속 북·진군의 북소리·난타)
 
 
