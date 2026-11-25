@@ -239,34 +239,8 @@ def make_phrase_fast(p, rng, mel, k):
 
 
 def janggu_hit(kind, rng):
-    """장구 한 번: 쿵 = 북편(낮은 울림), 덕 = 채편(딱 하는 높은 소리), 덩 = 둘 다, 기 = 작은 덕, 르 = 빠른 굴림"""
-    from scipy.signal import butter, lfilter
-    if kind == "르":
-        out = np.zeros(int(0.5 * SR), np.float32)
-        for i in range(5):
-            h = janggu_hit("기", rng) * (0.5 + 0.1 * i)
-            i0 = int(i * 0.045 * SR)
-            out[i0:i0 + len(h)] += h[: len(out) - i0]
-        return out
-    n = int(0.9 * SR)
-    t = np.arange(n) / SR
-    y = np.zeros(n, np.float32)
-    if kind in ("쿵", "덩"):     # 북편: 큰 울림통 — 낮은 바탕음(68Hz→60Hz로 처짐) + 통 울림(130·205Hz) + 가죽 치는 둔탁한 첫소리
-        f = 60 * (1 + 0.35 * np.exp(-t / 0.04))
-        ph = np.cumsum(f) / SR
-        body = (np.sin(2 * np.pi * ph) * np.exp(-t / 0.38)
-                + 0.45 * np.sin(2 * np.pi * 2.17 * ph) * np.exp(-t / 0.20)
-                + 0.22 * np.sin(2 * np.pi * 3.4 * ph) * np.exp(-t / 0.10))
-        thud = lfilter(*butter(2, [90 / (SR / 2), 600 / (SR / 2)], "band"), rng.standard_normal(n)) * np.exp(-t / 0.025)
-        y += body + 0.9 * thud / (np.abs(thud).max() + 1e-6)
-    if kind in ("덕", "덩", "기"):  # 채편: 대나무 채가 가죽을 치는 둔탁한 '턱' — 낮춘 잡음 띠 + 나무 울림(310Hz) + 작은 통 울림
-        nz = lfilter(*butter(2, [500 / (SR / 2), 2600 / (SR / 2)], "band"), rng.standard_normal(n))
-        tick = (nz / (np.abs(nz).max() + 1e-6) * np.exp(-t / 0.03)
-                + 0.9 * np.sin(2 * np.pi * 310 * t) * np.exp(-t / 0.06)
-                + 0.4 * np.sin(2 * np.pi * 150 * t) * np.exp(-t / 0.12))
-        y += tick * (0.4 if kind == "기" else 0.85)
-    y = np.tanh(1.6 * y / (np.abs(y).max() + 1e-6)) / np.tanh(1.6)       # 살짝 눌러 두툼하게
-    return (y * (0.5 if kind == "기" else 1.0)).astype(np.float32)
+    """장구 한 번 — 공통.py 의 janggu (사용자가 확인한 장구 소리, 2026-11-25). 르 = 채 굴림(더러러러)"""
+    return K.janggu({"르": "더러러러"}.get(kind, kind), rng)
 
 
 def bed(sec, p, seed=7):
