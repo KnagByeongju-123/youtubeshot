@@ -283,6 +283,70 @@ def janggu_rhythm(name, cycles=3, rng=None, end=True, low=105.0, high=235.0, uni
     return buf
 
 
+# 꽹과리 (사용자 요청 2026-11-25): 쇳소리 높이 = 풍물 공연 녹음(2024 Lowell Folk Fest, KPAC, 인터넷 아카이브)에서 잰 봉우리
+#   705Hz 바탕 × 1·1.43·1.84·2.02·2.28·2.76·3.88·4.85·5.8·6.46·6.76 (쇠판 울림 간격과 맞음) — 녹음은 숫자만 재는 데 씀
+KKW_PARTIALS = [(1.0, 0.0), (1.43, -9.1), (1.84, -4.2), (2.02, -9.2), (2.28, -9.9), (2.76, -8.8), (3.88, -12.5), (4.85, -14.0),
+                (5.80, -14.1), (6.46, -13.8), (6.76, -12.2)]
+
+
+def kkwaenggwari(kind="갱", rng=None, f0=705.0):
+    """꽹과리 한 번: 갱 = 열고 쳐서 '갱~'(약 0.7초), 깨 = 반쯤 막아 짧게, 지 = 손가락으로 막아 '짓'(바로 끊김), 갠지갱 = 갱(짧게)·지·갱
+    쇠판의 가지런하지 않은 울림들(KKW_PARTIALS)이 각자 사라지고, 짝지은 울림이 살짝 어긋나 '와랑와랑' 맥놀이, 채 끝이 닿는 '딱'"""
+    from scipy.signal import butter, lfilter
+    rng = rng or np.random.default_rng()
+    if kind == "갠지갱":
+        out = np.zeros(int(1.0 * SR))
+        for k, t0, g in (("깨", 0.0, 0.85), ("지", 0.09, 0.6), ("갱", 0.18, 1.0)):
+            h = kkwaenggwari(k, rng, f0) * g
+            i0 = int(t0 * SR)
+            out[i0:i0 + len(h)] += h[: len(out) - i0]
+        return (out / (np.abs(out).max() + 1e-6)).astype(np.float32)
+    damp = {"갱": 1.0, "깨": 0.3, "지": 0.08}[kind]
+    n = int((0.9 if kind == "갱" else 0.35) * SR)
+    t = np.arange(n) / SR
+    y = np.zeros(n)
+    f0 = f0 * (1 + 0.01 * rng.standard_normal())
+    for r, db in KKW_PARTIALS:
+        a = 10 ** ((db + 1.6 * (min(r, 6.0) - 1)) / 20)                       # 높은 쪽을 키워 '깽' 하고 쨍하게 (녹음 구간 밝기 약 1900Hz)
+        dec = (0.55 / (1 + 0.25 * (r - 1))) * damp
+        beat = rng.uniform(1.5, 6.0)                                           # 짝 울림이 어긋나 생기는 맥놀이
+        y += a * np.sin(2 * np.pi * f0 * r * t + rng.random() * 6.28) * (1 + 0.35 * np.sin(2 * np.pi * beat * t)) * np.exp(-t / dec)
+    click = lfilter(*butter(2, [2500 / (SR / 2), 9000 / (SR / 2)], "band"), rng.standard_normal(n)) * np.exp(-t / 0.004)
+    y = y / (np.abs(y).max() + 1e-6) + 0.5 * click / (np.abs(click).max() + 1e-6)
+    if kind == "지":                                                             # 손가락에 막힌 둔한 소리
+        y = y + 0.4 * lfilter(*butter(2, [300 / (SR / 2), 1200 / (SR / 2)], "band"), rng.standard_normal(n)) * np.exp(-t / 0.01)
+    y = lfilter(*butter(1, 250 / (SR / 2), "high"), y) * np.clip((n / SR - t) / 0.05, 0, 1)
+    return (y / (np.abs(y).max() + 1e-6) * (0.75 if kind == "지" else 1.0)).astype(np.float32)
+
+
+# 꽹과리 가락 12칸 (풍물에서 흔한 느낌으로 단순하게 짠 것 — 실제 지역 가락 그대로는 아님)
+KKW_RHYTHMS = {
+    "휘모리": {0: "갱", 1: "지", 2: "갱", 3: "갱", 4: "지", 5: "갱", 6: "갱", 7: "지", 8: "갱", 9: "갱", 10: "지", 11: "갱"},
+    "자진모리": {0: "갱", 2: "지", 3: "갱", 5: "지", 6: "갱", 8: "지", 9: "갱", 10: "깨", 11: "지"},
+    "굿거리": {0: "갱", 2: "지", 3: "갱", 6: "갱", 8: "지", 9: "갱"},
+    "세마치": {0: "갱", 2: "지", 3: "갱", 5: "지", 6: "깨", 7: "갱"},
+}
+
+
+def kkwaenggwari_rhythm(name, cycles=3, rng=None, unit=None, end=True, cells=None):
+    """꽹과리 가락을 cycles 번 (unit: 한 칸 초, 없으면 장구 장단의 값) → 스테레오 (오른쪽으로 조금)"""
+    rng = rng or np.random.default_rng()
+    u0, c0, _ = JANGGU_RHYTHMS.get(name, (0.15, 12, None))
+    unit, cells = unit or u0, cells or c0
+    pat = KKW_RHYTHMS[name]
+    total = cycles * cells * unit
+    buf = np.zeros((int((total + 1.5) * SR), 2), np.float32)
+    for c in range(cycles):
+        for i, k in pat.items():
+            if i >= cells:
+                continue
+            g = (1.0 if i == 0 else 0.75) * (0.9 + 0.1 * rng.random())
+            place(buf, kkwaenggwari(k, rng), max(0.0, (c * cells + i) * unit + rng.normal(0, 0.003)), g, 0.3)
+    if end:
+        place(buf, kkwaenggwari("갱", rng), total, 1.0, 0.3)
+    return buf
+
+
 # 태평소(호적): 실제 호적 산조 녹음(1969년 LP)을 연주분석.py --최고Hz 1800 으로 잰 배음 세기 (2026-11-25)
 #   음역 MIDI 70~86(가운데 약 82) · 긴 음은 거의 곧게, 떨림 1초 4.7번·작게 · 밝기 무게중심 2400Hz
 TAEP_HARM_DB = [-6.4, 0.0, -10.5, -19.3, -26.9, -27.8, -31.4, -32.4, -37.3, -37.9, -44.5, -39.7]

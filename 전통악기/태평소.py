@@ -4,7 +4,7 @@
 가락 짜기·꾸밈(농현·퇴성·추성·꾸밈음)은 아쟁.py 의 것을 그대로 쓰고 소리만 태평소로 (timbre='태평소')
 
 사용: python -X utf8 전통악기/태평소.py [결과폴더]
-  → 1_태평소_독주.mp3 · 2_태평소_풍물자진모리.mp3(장구·북·징) · 3_태평소_아리랑.mp3(장구 세마치) · 태평소_전체듣기.mp3
+  → 1_태평소_독주.mp3 · 2_태평소_풍물자진모리.mp3(장구·북·징·꽹과리) · 3_태평소_아리랑.mp3(장구 세마치) · 태평소_전체듣기.mp3
 """
 import importlib.util
 import os
@@ -40,7 +40,7 @@ PRESETS = {
 
 
 def pungmul_drums(buf, unit, start, rng):
-    """풍물 받침: 장단 첫 칸마다 북, 두 장단마다 징 (장구는 아쟁.bed 가 자진모리로 침)"""
+    """풍물 받침: 장단 첫 칸마다 북, 두 장단마다 징, 꽹과리 자진모리 (장구는 아쟁.bed 가 자진모리로 침)"""
     bar = 12 * unit
     c, t = 0, start
     while t < len(buf) / SR - 1.0:
@@ -48,6 +48,8 @@ def pungmul_drums(buf, unit, start, rng):
         K.place(buf, K.big_drum(62 * K.BUK_LOW, 0.8, rng), t + 6 * unit, 0.3, pan=-0.2)
         if c % 2 == 0:
             K.place(buf, K.gong(110, 3.0, bend=0.02, rng=rng), t, 0.22, pan=0.25)
+        kk = K.kkwaenggwari_rhythm("자진모리", 1, rng, unit=unit, end=False)              # 꽹과리 (2026-11-25)
+        K.place(buf, kk[:, 0] + kk[:, 1], t, 0.18, pan=0.35)
         c += 1
         t += bar
 
