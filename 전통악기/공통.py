@@ -157,7 +157,7 @@ def gong(f0=110, dur=6.0, bend=-0.03, rng=None):
     return (y / (np.abs(y).max() + 1e-6)).astype(np.float32)
 
 
-def big_drum(f0=70, dur=2.2, rng=None):
+def big_drum(f0=70, dur=2.2, rng=None, phone=True):
     """큰 북 한 번 (북·다이코·팀파니·둠): 쿵 하고 음이 떨어지며 길게 울림.
     울림통을 크게 (사용자 결정 2026-11-25: 북은 울림통이 더 커야): 가죽의 여러 울림(원형 막 배음 1·1.59·2.14·2.30·2.65)이
     따로 사라지고, 통 안 공기가 '우웅' 하고 울리며(낮은 잡음 띠), 나무 통이 소리를 되울림(짧은 되울림).
@@ -186,6 +186,10 @@ def big_drum(f0=70, dur=2.2, rng=None):
     punch = lfilter(*butter(2, [95 / (SR / 2), 400 / (SR / 2)], "band"), rng.standard_normal(n))
     punch = punch / (np.abs(punch).max() + 1e-6) * np.exp(-t / 0.09) * 1.3
     y = body + air + skin
+    if not phone:                      # 이어폰·스피커용: 폰에서 들리게 하는 치는 소리·배음 없이 낮은 울림만 (폰에서는 거의 안 들림)
+        y = lfilter(*butter(2, 400 / (SR / 2)), body + air * 1.2 + skin * 0.6)
+        y = lfilter(*butter(1, 25 / (SR / 2), "high"), y) * np.clip((dur - t) / 0.3, 0, 1)
+        return (y / (np.abs(y).max() + 1e-6)).astype(np.float32)
     y = y / (np.abs(y).max() + 1e-6)
     sat = np.tanh(4.0 * y) + 0.5 * (y ** 2 - np.mean(y ** 2))          # 홀수 배음(tanh) + 짝수 배음(제곱)
     y = 0.35 * y + 0.95 * sat + punch
