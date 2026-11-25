@@ -438,7 +438,9 @@ if arm is not None and "--자세없음" not in a:
         print("카페: 탁자 높이", round(ttop, 3), "컵", tuple(round(v, 3) for v in grip))
 # ── 이(치아, --이): 모델엔 입 안이 어두운 면뿐 → 윗니·아랫니를 곡선(치열궁)을 따라 가지런히 만들어 머리에 붙임 (2026-11-25)
 #   윗니는 머리에 고정, 아랫니는 '입 벌림' 모양 키로 아랫입술을 따라 내려감. 크기는 입 너비에 맞춰 늘고 줄음
-if "--이" in a:
+if "--이" in a and any(o.type == "MESH" and o.name.startswith("Teeth") for o in objs):
+    print("이: GLB 에 이미 있음(애니3D/glb_이넣기.py) → 그대로 씀")
+elif "--이" in a:
     import bmesh
     body_ = max((o for o in objs if o.type == "MESH"), key=lambda o: len(o.data.vertices))
     mi_ = next(o for o in objs if o.type == "MESH" and o.name.startswith("Mouth_Inside"))
