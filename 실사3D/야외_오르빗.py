@@ -45,6 +45,10 @@ sc.render.engine = "CYCLES"; sc.cycles.device = "CPU"; sc.cycles.samples = int(o
 sc.render.resolution_x, sc.render.resolution_y = W_, H_; sc.render.film_transparent = "--투명" in a   # --투명: 배경 없이(인물만) 찍음 — 의상 바꾸기 기준 사진용
 sc.view_settings.view_transform = "Standard"; sc.cycles.max_bounces = 4
 sc.render.fps = 24
+if "--영역" in a:   # 이 칸만 찍음(x0,y0,x1,y1 화면 비율, 위가 0) — 몸이 가만히 있고 입·눈만 움직이는 장면은 얼굴 칸만 찍어 한 장에 붙이면 몇 배 빠름 (교육 영상, 2026-11-25)
+    bx0, by0, bx1, by1 = (float(v) for v in a[a.index("--영역") + 1].split(","))
+    sc.render.use_border = True; sc.render.use_crop_to_border = True
+    sc.render.border_min_x, sc.render.border_max_x = bx0, bx1; sc.render.border_min_y, sc.render.border_max_y = 1 - by1, 1 - by0
 
 # ── 세상: 카메라에는 고화질 사진, 빛은 HDR ──
 w = bpy.data.worlds.new("세상"); sc.world = w; w.use_nodes = True; nt = w.node_tree; nt.nodes.clear()
