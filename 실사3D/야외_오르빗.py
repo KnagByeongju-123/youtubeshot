@@ -45,6 +45,10 @@ sc.render.engine = "CYCLES"; sc.cycles.device = "CPU"; sc.cycles.samples = int(o
 sc.render.resolution_x, sc.render.resolution_y = W_, H_; sc.render.film_transparent = "--투명" in a   # --투명: 배경 없이(인물만) 찍음 — 의상 바꾸기 기준 사진용
 sc.view_settings.view_transform = "Standard"; sc.cycles.max_bounces = 4
 sc.render.fps = 24
+if "--영역" in a:   # 이 칸만 찍음(x0,y0,x1,y1 화면 비율, 위가 0) — 몸이 가만히 있고 입·눈만 움직이는 장면은 얼굴 칸만 찍어 한 장에 붙이면 몇 배 빠름 (교육 영상, 2026-11-25)
+    bx0, by0, bx1, by1 = (float(v) for v in a[a.index("--영역") + 1].split(","))
+    sc.render.use_border = True; sc.render.use_crop_to_border = True
+    sc.render.border_min_x, sc.render.border_max_x = bx0, bx1; sc.render.border_min_y, sc.render.border_max_y = 1 - by1, 1 - by0
 
 # ── 세상: 카메라에는 고화질 사진, 빛은 HDR ──
 w = bpy.data.worlds.new("세상"); sc.world = w; w.use_nodes = True; nt = w.node_tree; nt.nodes.clear()
@@ -432,8 +436,69 @@ if arm is not None and "--자세없음" not in a:
         mw_ = cup.matrix_world.copy(); cup.parent = arm; cup.parent_type = "BONE"; cup.parent_bone = h_.name
         bpy.context.view_layer.update(); cup.matrix_world = mw_
         print("카페: 탁자 높이", round(ttop, 3), "컵", tuple(round(v, 3) for v in grip))
+# ── 이(치아, --이): 모델엔 입 안이 어두운 면뿐 → 윗니·아랫니를 곡선(치열궁)을 따라 가지런히 만들어 머리에 붙임 (2026-11-25)
+#   윗니는 머리에 고정, 아랫니는 '입 벌림' 모양 키로 아랫입술을 따라 내려감. 크기는 입 너비에 맞춰 늘고 줄음
+if "--이" in a:
+    import bmesh
+    body_ = max((o for o in objs if o.type == "MESH"), key=lambda o: len(o.data.vertices))
+    mi_ = next(o for o in objs if o.type == "MESH" and o.name.startswith("Mouth_Inside"))
+    mi2 = next((o for o in objs if o.type == "MESH" and o.name.startswith("Mouth_Interior")), mi_)
+    bw = [mi_.matrix_world @ mathutils.Vector(c) for c in mi_.bound_box]; bw2 = [mi2.matrix_world @ mathutils.Vector(c) for c in mi2.bound_box]
+    S = (max(v.x for v in bw) - min(v.x for v in bw)) / 0.0417               # 입(입술 사이 구멍) 너비 4.2cm 기준 비율
+    cx = (max(v.x for v in bw) + min(v.x for v in bw)) / 2                   # 입 가운데 (얼굴 가운데보다 살짝 옆)
+    yfront = min(v.y for v in bw); zline = min(v.z for v in bw)                # 입술이 만나는 선(앞쪽)
+    kbs = body_.data.shape_keys.key_blocks; mwb = body_.matrix_world; R3 = mwb.to_3x3()
+    best = mathutils.Vector((0, 0, 0))
+    for v0, v1 in zip(kbs["Basis"].data, kbs["MouthOpen"].data):          # 아랫입술 가운데가 입 벌림 때 움직이는 양
+        w = mwb @ v0.co
+        if abs(w.x - cx) < 0.004 * S and zline - 0.008 * S < w.z < zline:
+            d = R3 @ (v1.co - v0.co)
+            if d.length > best.length: best = d
+    IA = float(a[a.index("--이밝기") + 1]) if "--이밝기" in a else 0.92
+    mat = bpy.data.materials.new("이"); mat.use_nodes = True; bs = mat.node_tree.nodes["Principled BSDF"]
+    bs.inputs["Base Color"].default_value = (0.86 * IA, 0.84 * IA, 0.78 * IA, 1); bs.inputs["Roughness"].default_value = 0.32
+    def row(name, widths, front, c, z_edge, height, up):
+        # widths: 가운데부터 한쪽 이 너비들 (좌우 대칭). 이 하나 = 둥근 모서리 상자, 곡선 y = front + c·x²
+        bm = bmesh.new(); xs = []; x = 0.0; gap = 0.00012 * S
+        for i, w in enumerate(widths):
+            for sg in (1, -1): xs.append((sg * (x + w / 2), w, i))   # 입 가운데 cx 기준
+            x += w + gap
+        for xc, w, i in xs:
+            yc = front + c * xc * xc; ang = math.atan(2 * c * xc)      # 입술 안쪽 곡선을 따라 뒤로 휨
+            h = height[i]; ze = z_edge + 0.00025 * S * i * (1 if up else -1)        # 이 끝선은 가지런하게, 옆으로 갈수록 아주 조금 올라감
+            th = 0.0042 * S * (1 - 0.1 * i)
+            r = bmesh.ops.create_cube(bm, size=1.0)["verts"]
+            for v in r:
+                lx, ly, lz = v.co.x * (w - gap), v.co.y * th, v.co.z * h
+                lx *= 1 - 0.18 * (lz / h + 0.5 if up else 0.5 - lz / h)     # 잇몸 쪽으로 살짝 좁게
+                px = cx + xc + lx * math.cos(ang) - ly * math.sin(ang); py = yc + ly * math.cos(ang) + lx * math.sin(ang)
+                pz = (ze + h / 2 + lz) if up else (ze - h / 2 + lz)
+                v.co = mathutils.Vector((px, py + th / 2, pz))
+        me = bpy.data.meshes.new(name); bm.to_mesh(me); bm.free()
+        ob = bpy.data.objects.new(name, me); bpy.context.scene.collection.objects.link(ob)
+        inv = mwb.inverted()
+        for v in me.vertices: v.co = inv @ v.co
+        ob.parent = body_.parent; ob.matrix_parent_inverse = body_.matrix_parent_inverse.copy(); ob.matrix_basis = body_.matrix_basis.copy()
+        me.materials.append(mat)
+        bv = ob.modifiers.new("둥글게", "BEVEL"); bv.width = 0.0005 * S / max(body_.matrix_world.to_scale()); bv.segments = 3; bv.limit_method = "NONE"
+        am = next((m for m in body_.modifiers if m.type == "ARMATURE"), None)
+        if am:
+            vg = ob.vertex_groups.new(name="Head"); vg.add(list(range(len(me.vertices))), 1.0, "REPLACE")
+            m2 = ob.modifiers.new("Armature", "ARMATURE"); m2.object = am.object
+        for poly in me.polygons: poly.use_smooth = True
+        objs.append(ob); return ob
+    C = 31.0 / S                                                              # 입술 안쪽 곡선 y = 앞 + C·x² (모델에서 잰 값)
+    up = row("윗니", [0.0056 * S, 0.0046 * S, 0.0046 * S, 0.0038 * S], yfront + 0.0030 * S, C * 1.15,
+             zline - 0.0014 * S, [0.0080 * S, 0.0070 * S, 0.0075 * S, 0.0065 * S], True)
+    lo = row("아랫니", [0.0040 * S, 0.0042 * S, 0.0045 * S, 0.0040 * S], yfront + 0.0055 * S, C * 1.3,
+             zline + 0.0003 * S, [0.0045 * S, 0.0045 * S, 0.0046 * S, 0.0042 * S], False)      # 짧게·뒤로: 길면 턱 피부를 뚫고 나왔음
+    lo.shape_key_add(name="Basis"); kk = lo.shape_key_add(name="MouthOpen", from_mix=False)
+    dl = mwb.to_3x3().inverted() @ (best * 0.85)
+    for v in kk.data: v.co = v.co + dl
+    print(f"이: 입 너비 비율 {S:.2f}, 입술선 z {zline:.4f}, 아랫입술 벌림 {best.length * 100:.2f}cm")
 # 모양 키(입·눈) 모으기
 keyed = [o for o in objs if o.type == "MESH" and o.data.shape_keys]
+for o in keyed: o.data.shape_keys.animation_data_clear()   # GLB 의 Idle 동작이 모양 키(입·눈)를 매 장면 0 으로 되돌려 립싱크가 안 됐음 (2026-11-25)
 def set_shape(name, v, frame=None):
     for o in keyed:
         kb = o.data.shape_keys.key_blocks.get(name)
@@ -738,11 +803,53 @@ else:
 
 # ── 입·눈 ──
 lip = json.load(open(opt["--입"])) if opt["--입"] else {"frames": []}
-blinks = [1.3, 4.2, 7.0, 9.8, 12.6]
+# 눈 깜빡임: 영상 끝까지 2.2~5초 간격으로 불규칙하게 (예전엔 13초까지 5번뿐), 가끔 두 번 연달아 — 사용자 2026-11-25 '말할 때 눈도 깜빡이고'
+import random as _rnd
+_rg = _rnd.Random(7); blinks = []; _tb = 1.1
+while _tb < N / 24.0 + 1:
+    blinks.append(_tb)
+    if _rg.random() < 0.15: blinks.append(_tb + 0.32)
+    _tb += _rg.uniform(2.2, 5.0)
+def blink_v(t):                                   # 빨리 감고(0.06초) 조금 천천히 뜸(0.11초)
+    v = 0.0
+    for c in blinks:
+        d = t - c
+        if -0.06 < d <= 0: v = max(v, 1 + d / 0.06)
+        elif 0 < d < 0.11: v = max(v, 1 - d / 0.11)
+    return v
+# 말할 때 고개: 천천히 좌우·기울임 + 말 세기(입 벌림)에 따라 살짝 끄덕임 (--고개고정 이면 끔) — 사용자 2026-11-25 '얼굴 방향도 조금씩'
+_lo = [f[0] for f in lip["frames"]]
+def _energy(i, w=10):
+    seg = _lo[max(0, i - w): i + w + 1]; return sum(seg) / len(seg) if seg else 0.0
+_E = (sum(_lo) / len(_lo)) if _lo else 0.0
+HEAD_MOVE = bool(_lo) and "--고개고정" not in a and arm is not None and "Head" in arm.pose.bones
+_HB0 = {}
+def head_move(i):
+    t = i / 24.0; PBh = arm.pose.bones
+    static = not (WALK or DANCE or SIP)
+    for nm in ("Neck", "Head"):
+        if nm not in PBh: continue
+        if static:
+            if nm not in _HB0: _HB0[nm] = PBh[nm].matrix_basis.copy()
+            PBh[nm].matrix_basis = _HB0[nm].copy()
+    bpy.context.view_layer.update()
+    pitch = 0.9 * math.sin(1.3 * t + 0.3) + 0.5 * math.sin(2.9 * t + 1.0) + 9.0 * (_energy(i) - _E) - 0.6 * math.sin(math.pi * min(1, _energy(i, 3) * 1.2))
+    yaw = 2.0 * math.sin(0.55 * t + 0.5) + 0.9 * math.sin(1.37 * t + 2.0)
+    roll = 1.4 * math.sin(0.43 * t + 2.0) + 0.5 * math.sin(1.1 * t)
+    MWa = arm.matrix_world; M3a = MWa.to_3x3(); M3ai = M3a.inverted()
+    for nm, sh in (("Neck", 0.4), ("Head", 0.6)):
+        if nm not in PBh: continue
+        pb = PBh[nm]
+        Rw = (mathutils.Matrix.Rotation(math.radians(yaw * sh), 3, "Z") @ mathutils.Matrix.Rotation(math.radians(-pitch * sh), 3, "X")
+              @ mathutils.Matrix.Rotation(math.radians(roll * sh), 3, "Y"))
+        R_ = (M3ai @ Rw @ M3a).to_4x4()
+        pb.matrix = mathutils.Matrix.Translation(pb.head) @ R_ @ mathutils.Matrix.Translation(-pb.head) @ pb.matrix
+        bpy.context.view_layer.update()
 def face(i):
     t = i / 24.0; lf = lip["frames"][i] if i < len(lip["frames"]) else [0, 0, 0]
     set_shape("MouthOpen", lf[0]); set_shape("MouthWide", lf[1]); set_shape("MouthRound", lf[2])
-    set_shape("Blink", max([0.0] + [max(0.0, 1 - abs(t - c) / 0.07) for c in blinks]))
+    set_shape("Blink", blink_v(t))
+    if HEAD_MOVE: head_move(i)
 
 os.makedirs(folder, exist_ok=True)
 if "--찍점" in a:      # 검사용: 화면 점(x,y) 아래에 무엇이 있는지 (물체·재질·겉면 그림 좌표)
