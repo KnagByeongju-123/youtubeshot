@@ -9,6 +9,7 @@
   - 몸통 울림: 낮은 쪽이 두껍게
 
 사용: python -X utf8 전통악기/아쟁.py [결과폴더] [--실측]   → 후보 3개(30초 mp3) + 전체듣기.mp3
+  --경쾌: 높은 음·빠르고 경쾌한 후보 7~9번 (평조, 박자에 맞춘 짧은 음, 장구 반주: 자진모리·휘모리·굿거리)
   --실측: 실제 아쟁 산조 녹음을 잰 값(PRESETS_REAL, 음색은 잰 배음 세기 그대로)으로 만든 후보 4~6번
 """
 import os
@@ -55,6 +56,31 @@ PRESETS_REAL = {      # 1차로 만든 뒤 다시 재서 맞춤: 떨림 더 빠�
 }
 
 
+# 빠르고 경쾌한 후보 (사용자 요청 2026-11-25): 높은 음 · 밝은 평조 · 박자에 맞춘 짧은 음 · 장구 반주 · 꾸밈음(grace: 위에서 톡 떨어지며 시작)
+#   unit: 장단 한 칸(초, 12칸 = 한 장단), beats: 한 음이 차지하는 칸 수 후보, steps: 한 마디 음 수, rest: 마디 사이 쉬는 칸 수,
+#   janggu: 장구 장단 이름 (JANGGU), grace: 꾸밈음 비율, fade: 마디 시작·끝 부드럽게(초)
+PRESETS_FAST = {
+    "7_경쾌_자진모리": dict(root=62, span=19, depth=30, rate=6.2, slow=0.0, fall=0.10, push=0.10, grace=0.20, rough=0.35,
+                        scrape=0.08, glide=0.04, mode=PYEONG, timbre="실측", vib_start=0.3, fall_st=(0.6, 1.0),
+                        push_st=(0.5, 0.9), drone=(0.0, 0.0), unit=0.17, beats=[1, 1, 2, 2, 2, 3], steps=(6, 10),
+                        rest=(2, 5), janggu="자진모리", fade=(0.03, 0.25)),
+    "8_신나는_휘모리": dict(root=64, span=17, depth=22, rate=6.8, slow=0.0, fall=0.08, push=0.08, grace=0.25, rough=0.38,
+                       scrape=0.09, glide=0.03, mode=PYEONG, timbre="실측", vib_start=0.3, fall_st=(0.5, 0.9),
+                       push_st=(0.5, 0.8), drone=(0.0, 0.0), unit=0.13, beats=[1, 1, 1, 2, 2], steps=(8, 13),
+                       rest=(2, 4), janggu="휘모리", fade=(0.02, 0.2)),
+    "9_흥겨운_굿거리": dict(root=60, span=19, depth=35, rate=5.8, slow=0.0, fall=0.12, push=0.15, grace=0.15, rough=0.32,
+                       scrape=0.07, glide=0.05, mode=PYEONG, timbre="실측", vib_start=0.3, fall_st=(0.6, 1.0),
+                       push_st=(0.5, 0.9), drone=(0.0, 0.0), unit=0.2, beats=[1, 2, 2, 3, 3], steps=(5, 8),
+                       rest=(3, 6), janggu="굿거리", fade=(0.03, 0.3)),
+}
+# 장구 장단 12칸: 덩(양손) · 쿵(북편, 낮게) · 덕(채편, 딱) · 기(채편 작게) · 르(굴림)
+JANGGU = {
+    "자진모리": {0: "덩", 3: "덕", 6: "쿵", 8: "덕", 10: "덕"},
+    "휘모리": {0: "덩", 3: "덕", 6: "쿵", 9: "덕"},
+    "굿거리": {0: "덩", 2: "기", 3: "덕", 4: "쿵", 6: "르", 9: "쿵", 11: "덕"},
+}
+
+
 def _lp_noise(rng, n, cutoff):
     """천천히 출렁이는 잡음 (-1~1 쯤)"""
     from scipy.signal import butter, lfilter
@@ -86,6 +112,8 @@ def phrase_contour(notes, p, rng):
             o = o * 0.4 - rng.uniform(*p.get("fall_st", (1.0, 2.0))) * np.clip((u - 0.6) / 0.35, 0, 1) ** 1.6
         if role == "push":                   # 추성: 아래에서 밀어 올리며 시작
             o = o - rng.uniform(*p.get("push_st", (1.0, 2.0))) * np.exp(-t / 0.18)
+        if role == "grace":                  # 꾸밈음: 2반음 위에서 톡 떨어지며 시작 (빠른 가락의 경쾌함)
+            o = o + 2.0 * (t < 0.045) * np.clip(1 - t / 0.06, 0, 1)
         orn[i0:i0 + n] = o
         # 세기: 활을 바꿀 때 살짝 줄고, 음 가운데쯤에서 부풀었다 끝에 줄어듦 (산조의 밀고 당김)
         sw = 0.55 + 0.45 * np.sin(np.pi * np.clip(u * 0.9 + 0.05, 0, 1)) ** 0.8
@@ -95,7 +123,8 @@ def phrase_contour(notes, p, rng):
     w = max(3, int(p["glide"] * SR))
     pad = np.concatenate([np.full(w, base[0]), base, np.full(w, base[-1])])
     base = fftconvolve(pad, np.ones(w) / w, "same")[w:w + total].astype(np.float32)
-    fade = np.clip(np.arange(total) / (0.35 * SR), 0, 1) * np.clip((total - np.arange(total)) / (0.9 * SR), 0, 1)
+    fi, fo = p.get("fade", (0.35, 0.9))
+    fade = np.clip(np.arange(total) / (fi * SR), 0, 1) * np.clip((total - np.arange(total)) / (fo * SR), 0, 1)
     return base + orn, amp * fade
 
 
@@ -179,6 +208,59 @@ def make_phrase(p, rng, mel, last_k):
     return notes, k
 
 
+def make_phrase_fast(p, rng, mel, k):
+    """박자에 맞춘 빠른 마디: 칸 수(beats)로 음 길이, 같은 음 되풀이·뛰는 음 섞음, 끝은 으뜸음이나 5도에서 떨며 맺음"""
+    notes = []
+    steps = int(rng.integers(*p["steps"]))
+    for j in range(steps):
+        mv = int(rng.choice([-3, -2, -1, -1, 0, 1, 1, 2, 3]))                 # 오르내림 고르게 (위로만 쏠리지 않게)
+        if k + mv < 0 or k + mv > len(mel) - 1:
+            mv = -mv
+        k = int(np.clip(k + mv, 0, len(mel) - 1))
+        last = j == steps - 1
+        d = p["unit"] * (max(p["beats"]) + 1 if last else int(rng.choice(p["beats"])))
+        r = rng.random()
+        if last:
+            root = p["root"]
+            k = min(range(len(mel)), key=lambda i: min(abs(mel[i] - root - 12), abs(mel[i] - root - 7)) + 0.3 * abs(i - k))
+            role = "fall" if rng.random() < p["fall"] * 2 else "shake"
+        elif r < p.get("grace", 0):
+            role = "grace"
+        elif r < p.get("grace", 0) + p["push"]:
+            role = "push"
+        elif r < p.get("grace", 0) + p["push"] + p["fall"]:
+            role = "fall"
+        elif d >= 2 * p["unit"]:
+            role = "shake"
+        else:
+            role = "plain"
+        notes.append((mel[k], d, role))
+    return notes, k
+
+
+def janggu_hit(kind, rng):
+    """장구 한 번: 쿵 = 북편(낮은 울림), 덕 = 채편(딱 하는 높은 소리), 덩 = 둘 다, 기 = 작은 덕, 르 = 빠른 굴림"""
+    from scipy.signal import butter, lfilter
+    if kind == "르":
+        out = np.zeros(int(0.5 * SR), np.float32)
+        for i in range(5):
+            h = janggu_hit("기", rng) * (0.5 + 0.1 * i)
+            i0 = int(i * 0.045 * SR)
+            out[i0:i0 + len(h)] += h[: len(out) - i0]
+        return out
+    n = int(0.45 * SR)
+    t = np.arange(n) / SR
+    y = np.zeros(n, np.float32)
+    if kind in ("쿵", "덩"):
+        f = 95 * (1 + 0.5 * np.exp(-t / 0.03))
+        y += np.sin(2 * np.pi * np.cumsum(f) / SR) * np.exp(-t / 0.16)
+    if kind in ("덕", "덩", "기"):
+        nz = lfilter(*butter(2, [1800 / (SR / 2), 7000 / (SR / 2)], "band"), rng.standard_normal(n))
+        tick = nz / (np.abs(nz).max() + 1e-6) * np.exp(-t / 0.018) + 0.6 * np.sin(2 * np.pi * 520 * t) * np.exp(-t / 0.03)
+        y += tick * (0.35 if kind == "기" else 0.8)
+    return (y / (np.abs(y).max() + 1e-6) * (0.5 if kind == "기" else 1.0)).astype(np.float32)
+
+
 def bed(sec, p, seed=7):
     """잔잔하게 깔리는 아쟁 독주 (스테레오) + 가끔 아주 낮은 개방현이 길게 받쳐 줌"""
     rng = np.random.default_rng(seed)
@@ -188,8 +270,18 @@ def bed(sec, p, seed=7):
     mel = [root + o * 12 + s for o in range(0, 3) for s in p["mode"] if root + o * 12 + s <= root + p["span"]]
     k = mel.index(root + 7) if root + 7 in mel else len(mel) // 2
     t = 0.4
+    fast = "unit" in p
+    if fast and p.get("janggu"):                                              # 장구 반주 (처음 한 장단은 장구만)
+        pat, u = JANGGU[p["janggu"]], p["unit"]
+        c = 0
+        while 0.4 + c * u < sec - 0.5:
+            kind = pat.get(c % 12)
+            if kind:
+                K.place(buf, janggu_hit(kind, rng), 0.4 + c * u, 0.32 if kind != "기" else 0.2, pan=-0.15)
+            c += 1
+        t = 0.4 + 12 * u
     while t < sec - 3:
-        notes, k = make_phrase(p, rng, mel, k)
+        notes, k = (make_phrase_fast if fast else make_phrase)(p, rng, mel, k)
         semis, amp = phrase_contour(notes, p, rng)
         tone = ajaeng_tone(semis, amp, p, rng)
         K.place(buf, tone, t, 0.62, pan=0.12)
@@ -199,8 +291,11 @@ def bed(sec, p, seed=7):
             low = [(root - 12 if rng.random() < 0.5 else root, ln, "plain")]
             s2, a2 = phrase_contour(low, dict(p, depth=p["depth"] * 0.5), rng)
             K.place(buf, ajaeng_tone(s2, a2 * 0.8, dict(p, scrape=p["scrape"] * 0.5), rng), t + 0.2, dg, pan=-0.25)
-        t += len(tone) / SR + rng.uniform(0.6, 2.0)                           # 숨 쉬듯 쉼
-    return K.reverb(buf, rng, sec=2.6, wet=0.33)
+        if fast:                                                              # 박자 칸에 맞춰 쉼
+            t += round(len(tone) / SR / p["unit"]) * p["unit"] + int(rng.integers(*p["rest"])) * p["unit"]
+        else:
+            t += len(tone) / SR + rng.uniform(0.6, 2.0)                       # 숨 쉬듯 쉼
+    return K.reverb(buf, rng, sec=1.6 if fast else 2.6, wet=0.22 if fast else 0.33)
 
 
 def ffmpeg():
@@ -233,8 +328,10 @@ def main(out, presets=None, listen="아쟁_전체듣기.mp3"):
 
 if __name__ == "__main__":
     here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    args = [a for a in sys.argv[1:] if a != "--실측"]
+    args = [a for a in sys.argv[1:] if a not in ("--실측", "--경쾌")]
     out = args[0] if args else os.path.join(here, "역사", "배경음샘플", "한국", "아쟁")
+    if "--경쾌" in sys.argv:          # 높은 음 · 빠르고 경쾌한 후보 7~9번 (장구 반주)
+        sys.exit(main(out, PRESETS_FAST, "아쟁_경쾌_전체듣기.mp3"))
     if "--실측" in sys.argv:          # 실제 연주를 잰 값으로 만든 후보 4~6번
         sys.exit(main(out, PRESETS_REAL, "아쟁_실측_전체듣기.mp3"))
     sys.exit(main(out))
