@@ -3,8 +3,9 @@
    핵심 낱말은 형광펜 색칠 + 밑줄, 나레이션 립싱크(아나운서 장면은 애니3D/장면_교육아나운서.html 로 따로 찍음)
    사용: python 교육/교육영상_만들기.py <내용.json> <프로젝트_시간.json> <결과.mp4>
            [--아나운서 <투명 png 폴더>] [--나레이션 <나레이션만.mp3>] [--배경음 <피아노.wav>] [--배경음크기 0.2]
-           [--크기 1280x720] [--시험 0,30,60 (그 초의 장면만 png 로)] [--동작 <결과 동작.json> (아나운서 동작표만 만들고 끝)]
+           [--그림 <장면 그림 폴더: s00.png, s01.png …>] [--크기 1280x720] [--시험 0,30,60 (그 초의 장면만 png 로)] [--동작 <결과 동작.json> (아나운서 동작표만 만들고 끝)]
    - 내용.json 의 문단 순서 = 시간.json 의 문단(kind 가 chapter 가 아닌 것) 순서
+   - 그림(--그림): 장면이 시작될 때 2.6초 동안 그 장면 그림이 화면 가득(천천히 확대, 위에 장면 제목) → 0.7초 동안 제목 옆 작은 창으로 줄어듦
    - 장(챕터)이 바뀔 때마다 아나운서 자리가 오른쪽 ↔ 왼쪽 (왼쪽일 때는 좌우를 뒤집어 늘 내용 쪽을 가리킴)"""
 import json
 import os
@@ -93,23 +94,38 @@ def background(chx):
     return im
 
 
+IMG_DIR = opt("--그림")
+_imgs = {}
+def scene_img(si):
+    if not IMG_DIR: return None
+    if si not in _imgs:
+        f = os.path.join(IMG_DIR, f"s{si:02d}.png"); _imgs[si] = Image.open(f).convert("RGB") if os.path.exists(f) else None
+    return _imgs[si]
+
+
 def build_scene(si):
     """장면 바탕(2배 크기) + 카드 자리 + 강조 낱말 자리"""
     sc = spec["장면"][si]; side = side_of[si]; ch = sc.get("장", -1)
     im = background(ch); d = ImageDraw.Draw(im, "RGBA")
     cw = int(WW * 0.62); cx0 = S(70) if side == "L" else WW - cw - S(70)
-    info = {"side": side, "cards": [], "words": {}, "content": (cx0, cx0 + cw)}
+    info = {"side": side, "cards": [], "words": {}, "content": (cx0, cx0 + cw), "thumb": None}
+    img = scene_img(si)
+    tw_ = cw
+    if img is not None and ch >= 0:          # 제목 옆(내용 칸 오른쪽 위)에 16:9 작은 그림 창
+        th_h = S(150); th_w = int(th_h * 16 / 9); info["thumb"] = (cx0 + cw - th_w, S(84), cx0 + cw, S(84) + th_h); tw_ = cw - th_w - S(24)
     if ch < 0:          # 시작·마무리: 가운데 큰 제목
-        f = font(FB, 60); tl = wrap(sc["제목"], f, cw, d); y = S(210)
+        f = font(FB, 60 if img is None else 50); tl = wrap(sc["제목"], f, cw if img is None else cw - S(360), d); y = S(210)
         for ln in tl: d.text((cx0, y), ln, font=f, fill=NAVY); y += S(78)
         if sc.get("부제"): d.text((cx0, y + S(10)), sc["부제"], font=font(FR, 28), fill=SUB); y += S(60)
         d.rectangle([cx0, y + S(24), cx0 + S(120), y + S(32)], fill=ACC); y += S(70)
         top = y
+        if img is not None:            # 시작·마무리: 제목 오른쪽 위에 그림 창
+            th_h = S(190); th_w = int(th_h * 16 / 9); info["thumb"] = (cx0 + cw - th_w, S(100), cx0 + cw, S(100) + th_h)
     else:
         d.text((cx0, S(96)), f"{ch + 1}. {spec['장'][ch]}", font=font(FB, 22), fill=ACC)
-        f = font(FB, 46); tl = wrap(sc["제목"], f, cw, d); y = S(128)
+        f = font(FB, 46 if tw_ == cw else 40); tl = wrap(sc["제목"], f, tw_, d); y = S(128)
         for ln in tl: d.text((cx0, y), ln, font=f, fill=NAVY); y += S(60)
-        d.rectangle([cx0, y + S(8), cx0 + S(90), y + S(14)], fill=ACC); top = y + S(40)
+        d.rectangle([cx0, y + S(8), cx0 + S(90), y + S(14)], fill=ACC); top = max(y + S(40), (info["thumb"][3] + S(22)) if info["thumb"] else 0)
     cards = sc["카드"]; n = len(cards)
     avail = HH - S(110) - top; gap = S(16)
     fs = 30 if n <= 3 else (27 if n == 4 else 24)
@@ -197,6 +213,13 @@ def frame(t):
         if zoom and zoom[0] is not None and p["t0"] == zoom[1]: active = zoom[0]
     if zoom and zoom[0] is not None and zoom[0] < len(info["cards"]): active = zoom[0]
     else: active = None
+    img = scene_img(si); HERO, SHR = 2.6, 0.7
+    if img is not None and info["thumb"] and t - ts >= HERO + SHR:      # 제목 옆 작은 그림 창 (그림자 + 둥근 모서리)
+        x0, y0, x1, y1 = info["thumb"]; th = img.resize((x1 - x0, y1 - y0), Image.LANCZOS)
+        mk = Image.new("L", th.size, 0); ImageDraw.Draw(mk).rounded_rectangle([0, 0, th.width - 1, th.height - 1], radius=S(14), fill=255)
+        shl = Image.new("RGBA", im.size, (0, 0, 0, 0)); ImageDraw.Draw(shl).rounded_rectangle([x0 + S(5), y0 + S(7), x1 + S(5), y1 + S(7)], radius=S(14), fill=(20, 30, 60, 45))
+        im.alpha_composite(shl)
+        im.paste(th, (x0, y0), mk)
     draw_cards(im, info, t, ts, {k: v for k, v in marks.items() if v > 0}, active, stamps)
     # 확대·축소: 카드 확대 중이면 그 카드를 내용 칸 가운데로 1.35배
     def cam_for(z):
@@ -217,6 +240,25 @@ def frame(t):
     s, cx, cy = cam; cw_, chh = WW / s, HH / s
     box = (int(cx - cw_ / 2), int(cy - chh / 2), int(cx + cw_ / 2), int(cy + chh / 2))
     fr = im.crop(box).resize((W, H), Image.LANCZOS if s > 1.01 else Image.BILINEAR)
+    # 장면 시작: 그림이 화면 가득(천천히 확대) → 제목 옆 창으로 줄어듦. 위에 장 번호·장면 제목
+    if img is not None and t - ts < HERO + SHR:
+        u = t - ts; z = 1.0 + 0.06 * min(u, HERO) / HERO
+        big = img.resize((int(W * z), int(H * z)), Image.BILINEAR).crop((int(W * (z - 1) / 2), int(H * (z - 1) / 2), int(W * (z - 1) / 2) + W, int(H * (z - 1) / 2) + H))
+        if u < HERO:
+            hero = big.convert("RGBA"); d2 = ImageDraw.Draw(hero, "RGBA")
+            d2.rectangle([0, H - int(H * 0.30), W, H], fill=(10, 16, 34, 150))
+            ch_ = sc.get("장", -1); y_ = H - int(H * 0.27)
+            if ch_ >= 0: d2.text((int(W * 0.05), y_), f"{ch_ + 1}. {spec['장'][ch_]}", font=ImageFont.truetype(FB, int(24 * H / 720)), fill=(255, 190, 120)); y_ += int(36 * H / 720)
+            d2.text((int(W * 0.05), y_), sc["제목"], font=ImageFont.truetype(FB, int(44 * H / 720)), fill=(255, 255, 255))
+            fa = ease(u / 0.35)            # 처음 0.35초 부드럽게 나타남
+            fr = Image.blend(fr.convert("RGBA"), hero, fa)
+        else:                      # 줄어들기: 화면 가득 → 제목 옆 창 자리
+            k2 = ease((u - HERO) / SHR)
+            tb = info["thumb"] or (WW // 2 - S(200), S(200), WW // 2 + S(200), S(425))
+            tx0, ty0, tx1, ty1 = [v / K for v in tb]
+            x0_ = int(0 + (tx0 - 0) * k2); y0_ = int(0 + (ty0 - 0) * k2); x1_ = int(W + (tx1 - W) * k2); y1_ = int(H + (ty1 - H) * k2)
+            if x1_ - x0_ > 4 and y1_ - y0_ > 4:
+                fr.paste(big.resize((x1_ - x0_, y1_ - y0_), Image.BILINEAR), (x0_, y0_))
     # 위 띠는 확대해도 그대로 (장 단계가 늘 보이게)
     bar = im.crop((0, 0, WW, S(64))).resize((W, S(64) // K), Image.BILINEAR); fr.paste(bar, (0, 0))
     # 장면이 바뀔 때 0.4초 부드럽게 (앞 장면이 옅어짐)
