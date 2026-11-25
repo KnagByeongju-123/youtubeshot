@@ -803,11 +803,53 @@ else:
 
 # ── 입·눈 ──
 lip = json.load(open(opt["--입"])) if opt["--입"] else {"frames": []}
-blinks = [1.3, 4.2, 7.0, 9.8, 12.6]
+# 눈 깜빡임: 영상 끝까지 2.2~5초 간격으로 불규칙하게 (예전엔 13초까지 5번뿐), 가끔 두 번 연달아 — 사용자 2026-11-25 '말할 때 눈도 깜빡이고'
+import random as _rnd
+_rg = _rnd.Random(7); blinks = []; _tb = 1.1
+while _tb < N / 24.0 + 1:
+    blinks.append(_tb)
+    if _rg.random() < 0.15: blinks.append(_tb + 0.32)
+    _tb += _rg.uniform(2.2, 5.0)
+def blink_v(t):                                   # 빨리 감고(0.06초) 조금 천천히 뜸(0.11초)
+    v = 0.0
+    for c in blinks:
+        d = t - c
+        if -0.06 < d <= 0: v = max(v, 1 + d / 0.06)
+        elif 0 < d < 0.11: v = max(v, 1 - d / 0.11)
+    return v
+# 말할 때 고개: 천천히 좌우·기울임 + 말 세기(입 벌림)에 따라 살짝 끄덕임 (--고개고정 이면 끔) — 사용자 2026-11-25 '얼굴 방향도 조금씩'
+_lo = [f[0] for f in lip["frames"]]
+def _energy(i, w=10):
+    seg = _lo[max(0, i - w): i + w + 1]; return sum(seg) / len(seg) if seg else 0.0
+_E = (sum(_lo) / len(_lo)) if _lo else 0.0
+HEAD_MOVE = bool(_lo) and "--고개고정" not in a and arm is not None and "Head" in arm.pose.bones
+_HB0 = {}
+def head_move(i):
+    t = i / 24.0; PBh = arm.pose.bones
+    static = not (WALK or DANCE or SIP)
+    for nm in ("Neck", "Head"):
+        if nm not in PBh: continue
+        if static:
+            if nm not in _HB0: _HB0[nm] = PBh[nm].matrix_basis.copy()
+            PBh[nm].matrix_basis = _HB0[nm].copy()
+    bpy.context.view_layer.update()
+    pitch = 0.9 * math.sin(1.3 * t + 0.3) + 0.5 * math.sin(2.9 * t + 1.0) + 9.0 * (_energy(i) - _E) - 0.6 * math.sin(math.pi * min(1, _energy(i, 3) * 1.2))
+    yaw = 2.0 * math.sin(0.55 * t + 0.5) + 0.9 * math.sin(1.37 * t + 2.0)
+    roll = 1.4 * math.sin(0.43 * t + 2.0) + 0.5 * math.sin(1.1 * t)
+    MWa = arm.matrix_world; M3a = MWa.to_3x3(); M3ai = M3a.inverted()
+    for nm, sh in (("Neck", 0.4), ("Head", 0.6)):
+        if nm not in PBh: continue
+        pb = PBh[nm]
+        Rw = (mathutils.Matrix.Rotation(math.radians(yaw * sh), 3, "Z") @ mathutils.Matrix.Rotation(math.radians(-pitch * sh), 3, "X")
+              @ mathutils.Matrix.Rotation(math.radians(roll * sh), 3, "Y"))
+        R_ = (M3ai @ Rw @ M3a).to_4x4()
+        pb.matrix = mathutils.Matrix.Translation(pb.head) @ R_ @ mathutils.Matrix.Translation(-pb.head) @ pb.matrix
+        bpy.context.view_layer.update()
 def face(i):
     t = i / 24.0; lf = lip["frames"][i] if i < len(lip["frames"]) else [0, 0, 0]
     set_shape("MouthOpen", lf[0]); set_shape("MouthWide", lf[1]); set_shape("MouthRound", lf[2])
-    set_shape("Blink", max([0.0] + [max(0.0, 1 - abs(t - c) / 0.07) for c in blinks]))
+    set_shape("Blink", blink_v(t))
+    if HEAD_MOVE: head_move(i)
 
 os.makedirs(folder, exist_ok=True)
 if "--찍점" in a:      # 검사용: 화면 점(x,y) 아래에 무엇이 있는지 (물체·재질·겉면 그림 좌표)
