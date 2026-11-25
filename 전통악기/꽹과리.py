@@ -46,16 +46,16 @@ def samulnori(rng, sec_jajin=10.0, sec_hwi=10.0):
     t = 1.2
     for name, unit, sec in parts:
         cyc = int(round(sec / (12 * unit)))
-        mix(buf, K.kkwaenggwari_rhythm(name, cyc, rng, unit=unit, end=False), t, 0.55)
+        mix(buf, K.kkwaenggwari_rhythm(name, cyc, rng, unit=unit, end=False), t, 0.9)
         mix(buf, K.janggu_rhythm(name, cyc, rng, end=False, unit=unit), t, 0.55)
         for c in range(cyc):
             b = t + c * 12 * unit
-            K.place(buf, K.big_drum(62 * K.BUK_LOW, 1.0, rng), b, 0.45, -0.35)
+            K.place(buf, K.big_drum(62 * K.BUK_LOW, 1.0, rng), b, 0.38, -0.35)
             K.place(buf, K.big_drum(62 * K.BUK_LOW, 0.7, rng), b + 6 * unit, 0.3, -0.35)
             if c % 2 == 0:
                 K.place(buf, K.gong(110, 2.5, bend=0.02, rng=rng), b, 0.22, 0.0)
         t += cyc * 12 * unit
-    for snd, g, pan in ((K.janggu("덩", rng), 0.6, 0.0), (K.kkwaenggwari("갱", rng), 0.6, 0.3),
+    for snd, g, pan in ((K.janggu("덩", rng), 0.6, 0.0), (K.kkwaenggwari("갱", rng), 0.85, 0.3),
                         (K.big_drum(62 * K.BUK_LOW, 2.0, rng), 0.6, -0.35), (K.gong(110, 3.5, bend=0.02, rng=rng), 0.45, 0.0)):
         K.place(buf, snd, t, g, pan)
     return buf

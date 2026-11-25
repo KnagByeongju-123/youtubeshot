@@ -307,12 +307,14 @@ def kkwaenggwari(kind="갱", rng=None, f0=705.0):
     y = np.zeros(n)
     f0 = f0 * (1 + 0.01 * rng.standard_normal())
     for r, db in KKW_PARTIALS:
-        a = 10 ** ((db + 1.6 * (min(r, 6.0) - 1)) / 20)                       # 높은 쪽을 키워 '깽' 하고 쨍하게 (녹음 구간 밝기 약 1900Hz)
+        a = 10 ** ((db + 2.4 * (min(r, 6.0) - 1)) / 20)                       # 높은 쪽을 키워 '깽' 하고 쨍하게 (사용자: 꽹과리가 약함 2026-11-25)
         dec = (0.55 / (1 + 0.25 * (r - 1))) * damp
         beat = rng.uniform(1.5, 6.0)                                           # 짝 울림이 어긋나 생기는 맥놀이
         y += a * np.sin(2 * np.pi * f0 * r * t + rng.random() * 6.28) * (1 + 0.35 * np.sin(2 * np.pi * beat * t)) * np.exp(-t / dec)
     click = lfilter(*butter(2, [2500 / (SR / 2), 9000 / (SR / 2)], "band"), rng.standard_normal(n)) * np.exp(-t / 0.004)
-    y = y / (np.abs(y).max() + 1e-6) + 0.5 * click / (np.abs(click).max() + 1e-6)
+    y = y / (np.abs(y).max() + 1e-6) + 0.8 * click / (np.abs(click).max() + 1e-6)
+    if kind != "지":                                                             # 살짝 찢어지는 쇳소리 (세게 친 맛)
+        y = np.tanh(2.2 * y / (np.abs(y).max() + 1e-6)) / np.tanh(2.2)
     if kind == "지":                                                             # 손가락에 막힌 둔한 소리
         y = y + 0.4 * lfilter(*butter(2, [300 / (SR / 2), 1200 / (SR / 2)], "band"), rng.standard_normal(n)) * np.exp(-t / 0.01)
     y = lfilter(*butter(1, 250 / (SR / 2), "high"), y) * np.clip((n / SR - t) / 0.05, 0, 1)
