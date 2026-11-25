@@ -158,48 +158,40 @@ def gong(f0=110, dur=6.0, bend=-0.03, rng=None):
 
 
 def big_drum(f0=70, dur=2.2, rng=None, phone=True):
-    """큰 북 한 번 (북·다이코·팀파니·둠): 쿵 하고 음이 떨어지며 길게 울림.
-    울림통을 크게 (사용자 결정 2026-11-25: 북은 울림통이 더 커야): 가죽의 여러 울림(원형 막 배음 1·1.59·2.14·2.30·2.65)이
-    따로 사라지고, 통 안 공기가 '우웅' 하고 울리며(낮은 잡음 띠), 나무 통이 소리를 되울림(짧은 되울림).
-    가죽이 울리는 탁한 소리 (사용자 결정 2026-11-25: 북은 가죽을 울리니 탁해야 함 — 예전 '탁하지 않게'를 바꿈):
-    가죽 여러 울림을 키우고 더 보탬(2.92·3.16·3.50배), 울리는 동안 가죽이 떨며 내는 거친 잡음, 손바닥으로 '퍽' 치는 소리"""
+    """큰 북 한 번 (북·다이코·팀파니·둠): '쿵' 하고 음이 살짝 떨어지며 울림통이 '우웅' 울리다 1초 안팎에 잦아듦.
+    사용자 결정 2026-11-25: 울림통 크게 · 낮게 · 가죽이 울리는 탁한 소리 · 폰에서도 들리게 · 현악기처럼 들리면 안 됨
+      - 가죽 울림: 원형 막의 가지런하지 않은 울림(1·1.59·2.14·2.30·2.65·2.92·3.16·3.50배)이 각자 빨리 사라짐
+        (가지런한 배음이 오래 남으면 줄 소리처럼 들림 → 짧은 되풀이 되울림(줄 소리 만드는 방법과 같음)은 쓰지 않음)
+      - 통 안 공기 '우웅', 가죽을 '퍽' 치는 소리, 울리는 동안 가죽이 떠는 거친 소리(탁함)
+      - 폰에서도 들리게: 치는 순간(0.2초)에만 눌러서 배음을 만듦 — 울림 꼬리는 깨끗한 낮은 소리 그대로
+    phone=False: 이어폰·스피커용 (낮은 울림만, 폰에서는 거의 안 들림)"""
     from scipy.signal import butter, lfilter
     rng = rng or np.random.default_rng()
     n = int(dur * SR)
     t = np.arange(n) / SR
-    f = f0 * (1 + 0.45 * np.exp(-t / 0.05))
+    k = min(1.0, dur / 2.5)                                  # 짧게 치는 작은 북은 울림도 짧게
+    f = f0 * (1 + 0.6 * np.exp(-t / 0.03))
     ph = np.cumsum(2 * np.pi * f / SR)
     body = np.zeros(n)
-    for r, a, dec in [(1.0, 1.0, 0.8), (1.59, 0.85, 0.42), (2.14, 0.7, 0.26), (2.30, 0.55, 0.2), (2.65, 0.45, 0.15),
-                      (2.92, 0.35, 0.12), (3.16, 0.3, 0.1), (3.50, 0.22, 0.08)]:
-        body += a * np.sin(r * ph * (1 + 0.004 * rng.standard_normal()) + rng.random() * 6.28) * np.exp(-t / (dur * dec))
-    air = lfilter(*butter(2, [f0 * 0.9 / (SR / 2), f0 * 3.2 / (SR / 2)], "band"), rng.standard_normal(n))
-    air = air / (np.abs(air).max() + 1e-6) * np.clip(t / 0.03, 0, 1) * np.exp(-t / (dur * 0.4)) * 0.8   # 통 안 공기 울림 ('우웅' 부풂)
-    slap = lfilter(*butter(2, [110 / (SR / 2), 1100 / (SR / 2)], "band"), rng.standard_normal(n))
-    slap = slap / (np.abs(slap).max() + 1e-6) * np.exp(-t / 0.035) * 0.9                 # 손바닥·채로 가죽을 '퍽' 치는 소리
+    for r, a, dec in [(1.0, 1.0, 0.95), (1.59, 0.6, 0.32), (2.14, 0.45, 0.18), (2.30, 0.35, 0.12), (2.65, 0.3, 0.09),
+                      (2.92, 0.25, 0.07), (3.16, 0.2, 0.06), (3.50, 0.15, 0.05)]:
+        body += a * np.sin(r * ph * (1 + 0.006 * rng.standard_normal()) + rng.random() * 6.28) * np.exp(-t / (dec * k))
+    air = lfilter(*butter(2, [f0 * 0.9 / (SR / 2), f0 * 3.0 / (SR / 2)], "band"), rng.standard_normal(n))
+    air = air / (np.abs(air).max() + 1e-6) * np.clip(t / 0.03, 0, 1) * np.exp(-t / (0.6 * k)) * 0.9   # 통 안 공기 '우웅'
+    slap = lfilter(*butter(2, [70 / (SR / 2), 450 / (SR / 2)], "band"), rng.standard_normal(n))
+    slap = slap / (np.abs(slap).max() + 1e-6) * np.exp(-t / 0.05) * 1.3                 # 가죽을 '퍽' 치는 소리
     bnorm = body / (np.abs(body).max() + 1e-6)
-    rattle = lfilter(*butter(2, [100 / (SR / 2), 900 / (SR / 2)], "band"), rng.standard_normal(n))
-    rattle = rattle / (np.abs(rattle).max() + 1e-6) * (0.35 + 0.65 * np.abs(bnorm)) * np.exp(-t / (dur * 0.22)) * 0.75   # 울리는 동안 가죽이 떠는 거친 소리
-    skin = slap + rattle
-    # 휴대폰에서도 들리게 (사용자 지적 2026-11-25: 폰 스피커는 150Hz 아래를 거의 못 냄 → 낮은 북이 안 들렸음):
-    # 북채가 가죽을 치는 '둥' (120~500Hz 짧은 소리) + 눌러서 생긴 배음(2·3·4배) — 귀는 배음만 들어도 낮은 음을 느낌
-    punch = lfilter(*butter(2, [95 / (SR / 2), 400 / (SR / 2)], "band"), rng.standard_normal(n))
-    punch = punch / (np.abs(punch).max() + 1e-6) * np.exp(-t / 0.09) * 1.3
-    y = body + air + skin
-    if not phone:                      # 이어폰·스피커용: 폰에서 들리게 하는 치는 소리·배음 없이 낮은 울림만 (폰에서는 거의 안 들림)
-        y = lfilter(*butter(2, 400 / (SR / 2)), body + air * 1.2 + skin * 0.6)
-        y = lfilter(*butter(1, 25 / (SR / 2), "high"), y) * np.clip((dur - t) / 0.3, 0, 1)
-        return (y / (np.abs(y).max() + 1e-6)).astype(np.float32)
-    y = y / (np.abs(y).max() + 1e-6)
-    sat = np.tanh(4.0 * y) + 0.5 * (y ** 2 - np.mean(y ** 2))          # 홀수 배음(tanh) + 짝수 배음(제곱)
-    y = 0.35 * y + 0.95 * sat + punch
-    d = int(SR * 0.0045)                                                                  # 나무 통 되울림 (길이 약 0.8m)
-    fb = np.zeros(d + 1)
-    fb[0], fb[d] = 1.0, -0.6
-    y = lfilter([1.0], fb, y)
-    y = lfilter(*butter(2, 1600 / (SR / 2)), y)
-    y = lfilter(*butter(1, 28 / (SR / 2), "high"), y)                     # 들리지 않는 아주 낮은 울림은 빼서 소리 크기를 들리는 쪽에
-    y = y * np.clip((dur - t) / 0.3, 0, 1)
+    rattle = lfilter(*butter(2, [60 / (SR / 2), 380 / (SR / 2)], "band"), rng.standard_normal(n))
+    rattle = rattle / (np.abs(rattle).max() + 1e-6) * (0.3 + 0.7 * np.abs(bnorm)) * np.exp(-t / (0.4 * k)) * 0.55   # 가죽이 떠는 거친 소리
+    y = body + air + slap + rattle
+    if not phone:
+        y = lfilter(*butter(2, 400 / (SR / 2)), body + air * 1.2 + (slap + rattle) * 0.6)
+    else:
+        y = y / (np.abs(y).max() + 1e-6)
+        w = np.exp(-t / 0.2)                                                     # 치는 순간에만 (꼬리는 깨끗하게)
+        y = y + w * (np.tanh(9.0 * y) + 1.0 * y ** 2 - y) * 1.0
+        y = lfilter(*butter(2, 1100 / (SR / 2)), y)
+    y = lfilter(*butter(1, 28 / (SR / 2), "high"), y) * np.clip((dur - t) / 0.3, 0, 1)
     return (y / (np.abs(y).max() + 1e-6)).astype(np.float32)
 
 
