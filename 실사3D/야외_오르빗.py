@@ -438,6 +438,7 @@ if arm is not None and "--자세없음" not in a:
         print("카페: 탁자 높이", round(ttop, 3), "컵", tuple(round(v, 3) for v in grip))
 # 모양 키(입·눈) 모으기
 keyed = [o for o in objs if o.type == "MESH" and o.data.shape_keys]
+for o in keyed: o.data.shape_keys.animation_data_clear()   # GLB 의 Idle 동작이 모양 키(입·눈)를 매 장면 0 으로 되돌려 립싱크가 안 됐음 (2026-11-25)
 def set_shape(name, v, frame=None):
     for o in keyed:
         kb = o.data.shape_keys.key_blocks.get(name)
