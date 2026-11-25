@@ -168,17 +168,25 @@ def big_drum(f0=70, dur=2.2, rng=None):
     f = f0 * (1 + 0.45 * np.exp(-t / 0.05))
     ph = np.cumsum(2 * np.pi * f / SR)
     body = np.zeros(n)
-    for r, a, dec in [(1.0, 1.0, 0.62), (1.59, 0.7, 0.36), (2.14, 0.45, 0.24), (2.30, 0.3, 0.18), (2.65, 0.18, 0.12)]:
+    for r, a, dec in [(1.0, 1.0, 0.8), (1.59, 0.7, 0.42), (2.14, 0.45, 0.24), (2.30, 0.3, 0.18), (2.65, 0.18, 0.12)]:
         body += a * np.sin(r * ph + rng.random() * 6.28) * np.exp(-t / (dur * dec))
     air = lfilter(*butter(2, [f0 * 0.9 / (SR / 2), f0 * 3.2 / (SR / 2)], "band"), rng.standard_normal(n))
-    air = air / (np.abs(air).max() + 1e-6) * np.clip(t / 0.03, 0, 1) * np.exp(-t / (dur * 0.3)) * 0.8   # 통 안 공기 울림 ('우웅' 부풂)
+    air = air / (np.abs(air).max() + 1e-6) * np.clip(t / 0.03, 0, 1) * np.exp(-t / (dur * 0.4)) * 0.8   # 통 안 공기 울림 ('우웅' 부풂)
     skin = lfilter(*butter(2, 400 / (SR / 2)), rng.standard_normal(n)) * np.exp(-t / 0.02) * 0.15   # 가죽 소리는 아주 조금 (탁하지 않게)
+    # 휴대폰에서도 들리게 (사용자 지적 2026-11-25: 폰 스피커는 150Hz 아래를 거의 못 냄 → 낮은 북이 안 들렸음):
+    # 북채가 가죽을 치는 '둥' (120~500Hz 짧은 소리) + 눌러서 생긴 배음(2·3·4배) — 귀는 배음만 들어도 낮은 음을 느낌
+    punch = lfilter(*butter(2, [120 / (SR / 2), 500 / (SR / 2)], "band"), rng.standard_normal(n))
+    punch = punch / (np.abs(punch).max() + 1e-6) * np.exp(-t / 0.09) * 1.3
     y = body + air + skin
+    y = y / (np.abs(y).max() + 1e-6)
+    sat = np.tanh(4.0 * y) + 0.5 * (y ** 2 - np.mean(y ** 2))          # 홀수 배음(tanh) + 짝수 배음(제곱)
+    y = 0.35 * y + 0.95 * sat + punch
     d = int(SR * 0.0045)                                                                  # 나무 통 되울림 (길이 약 0.8m)
     fb = np.zeros(d + 1)
     fb[0], fb[d] = 1.0, -0.6
     y = lfilter([1.0], fb, y)
     y = lfilter(*butter(2, 2200 / (SR / 2)), y)
+    y = lfilter(*butter(1, 28 / (SR / 2), "high"), y)                     # 들리지 않는 아주 낮은 울림은 빼서 소리 크기를 들리는 쪽에
     y = y * np.clip((dur - t) / 0.3, 0, 1)
     return (y / (np.abs(y).max() + 1e-6)).astype(np.float32)
 
@@ -331,6 +339,7 @@ class Region:
 
 
 OPEN_DELAY = 0.9          # 타악이 울리고 가락이 들어오기까지 (초)
+BUK_LOW = 0.85            # 북은 낮고 울림 있게 (사용자 결정 2026-11-25): 모든 북 높이를 0.85 배로 (권역 파일이 정한 높이에도)
 PERC_KINDS = ["징", "북", "연속북", "진군북", "난타"]   # 막을 여는 타악 (사용자 결정 2026-10-31: 섞지 말고 하나만, 긴장감용 연속 북·진군의 북소리·난타)
 
 
@@ -341,20 +350,20 @@ def perc(kind, rng, f0=None):
     if kind == "징":
         return opener([(lambda r: gong(f0 or 110, 6.0, bend=0.02, rng=r), 0.0, 1.0, 0.0)], rng), OPEN_DELAY
     if kind == "북":
-        return opener([(lambda r: big_drum(f0 or 62, 2.6, r), 0.0, 1.0, 0.0)], rng), OPEN_DELAY
+        return opener([(lambda r: big_drum((f0 or 62) * BUK_LOW, 4.0, r), 0.0, 1.0, 0.0)], rng), OPEN_DELAY
     if kind == "진군북":                        # 행진하듯 무거운 군대 북: 둥 · 둥 · 둥둥 둥 · (두 마디, 점점 크게) → 마지막 큰 북
-        f = f0 or 62
+        f = (f0 or 62) * BUK_LOW
         beat, hits = 60 / 100, []
         pat = [(0, 1.0, 1), (1, 0.7, 1), (2, 0.85, 1), (2.5, 0.6, 0), (3, 0.95, 1)]   # (박, 세기, 1=큰 북 0=작은 북)
         for bar in range(2):
             for b, g, big in pat:
                 t = (bar * 4 + b) * beat
                 gain = g * (0.55 + 0.25 * bar)
-                hits.append(((lambda r: big_drum(f, 1.6, r)) if big else (lambda r: big_drum(f * 1.9, 0.6, r)), t, gain, -0.1 if big else 0.2))
-        hits.append((lambda r: big_drum(f * 0.85, 3.0, r), 8 * beat, 1.0, 0.0))
-        return opener(hits, rng, sec=8 * beat + 3.2), 8 * beat + 0.4
+                hits.append(((lambda r: big_drum(f, 2.0, r)) if big else (lambda r: big_drum(f * 1.9, 0.6, r)), t, gain, -0.1 if big else 0.2))
+        hits.append((lambda r: big_drum(f * 0.85, 4.0, r), 8 * beat, 1.0, 0.0))
+        return opener(hits, rng, sec=8 * beat + 4.2), 8 * beat + 0.4
     if kind == "난타":                          # 여러 북이 빠르게 주고받다 한꺼번에 쾅
-        f = f0 or 70
+        f = (f0 or 70) * BUK_LOW
         hits, step = [], 60 / 130 / 2       # 8분음표
         seq = "X.x.Xxx.X.x.XxXx" + "XxXxXxXx"           # X=큰 북, x=작은 북, .=쉼
         for i, ch in enumerate(seq):
@@ -362,19 +371,19 @@ def perc(kind, rng, f0=None):
                 continue
             t = i * step
             g = (0.9 if ch == "X" else 0.55) * (0.6 + 0.4 * i / len(seq))
-            hits.append(((lambda r: big_drum(f, 1.2, r)) if ch == "X" else (lambda r: big_drum(f * 2.2, 0.4, r)), t, g, (-0.3 if i % 2 else 0.3)))
+            hits.append(((lambda r: big_drum(f, 1.5, r)) if ch == "X" else (lambda r: big_drum(f * 2.2, 0.4, r)), t, g, (-0.3 if i % 2 else 0.3)))
         end = len(seq) * step
-        hits.append((lambda r: big_drum(f * 0.8, 3.0, r), end, 1.0, -0.15))
-        hits.append((lambda r: big_drum(f * 1.3, 2.4, r), end, 0.8, 0.15))
-        return opener(hits, rng, sec=end + 3.2), end + 0.4
+        hits.append((lambda r: big_drum(f * 0.8, 4.0, r), end, 1.0, -0.15))
+        hits.append((lambda r: big_drum(f * 1.3, 3.0, r), end, 0.8, 0.15))
+        return opener(hits, rng, sec=end + 4.2), end + 0.4
     hits, t, gap = [], 0.0, 0.34                 # 연속북: 간격 0.34초 → 0.07초, 크기 0.25 → 0.8
     while t < 2.3:
         g = 0.25 + 0.55 * (t / 2.3)
-        hits.append((lambda r: big_drum(f0 or 70, 0.7, r), t, g, (-0.15 if len(hits) % 2 else 0.15)))
+        hits.append((lambda r: big_drum((f0 or 70) * BUK_LOW, 0.8, r), t, g, (-0.15 if len(hits) % 2 else 0.15)))
         t += gap
         gap = max(0.07, gap * 0.86)
-    hits.append((lambda r: big_drum((f0 or 70) * 0.85, 3.0, r), 2.45, 1.0, 0.0))
-    return opener(hits, rng, sec=6.0), 2.6
+    hits.append((lambda r: big_drum((f0 or 70) * BUK_LOW * 0.85, 4.0, r), 2.45, 1.0, 0.0))
+    return opener(hits, rng, sec=7.0), 2.6
 
 
 def with_opener(body, op):
