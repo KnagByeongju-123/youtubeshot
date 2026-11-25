@@ -283,6 +283,34 @@ def janggu_rhythm(name, cycles=3, rng=None, end=True, low=105.0, high=235.0, uni
     return buf
 
 
+# 태평소(호적): 실제 호적 산조 녹음(1969년 LP)을 연주분석.py --최고Hz 1800 으로 잰 배음 세기 (2026-11-25)
+#   음역 MIDI 70~86(가운데 약 82) · 긴 음은 거의 곧게, 떨림 1초 4.7번·작게 · 밝기 무게중심 2400Hz
+TAEP_HARM_DB = [-6.4, 0.0, -10.5, -19.3, -26.9, -27.8, -31.4, -32.4, -37.3, -37.9, -44.5, -39.7]
+
+
+def wind_tone(semis, amp, harm_db, rng, breath=0.05, buzz=0.18, bright_amp=0.06):
+    """겹서 관악기(태평소·피리) 소리: 잰 배음 세기대로 배음을 쌓음(세게 불수록 밝아짐) + 서(갈대 혀)가 떠는 거친 결(buzz) + 숨소리(breath)
+    semis: 음높이 곡선(MIDI 반음), amp: 세기 곡선"""
+    from scipy.signal import butter, lfilter
+    n = len(semis)
+    jit = lfilter(*butter(2, 15 / (SR / 2)), rng.standard_normal(n))
+    f = 440.0 * 2 ** ((semis - 69) / 12) * (1 + 0.0025 * jit / (np.abs(jit).max() + 1e-6))
+    ph = np.cumsum(f / SR)
+    nh = int(min(30, 10000 / max(100.0, float(f.min()))))
+    a_n = amp / (amp.max() + 1e-6)
+    y = np.zeros(n, np.float32)
+    for h in range(1, nh + 1):
+        db = harm_db[h - 1] if h <= len(harm_db) else harm_db[-1] - 3.0 * (h - len(harm_db))
+        g = 10 ** (db / 20) * (0.4 + 0.6 * a_n) ** (bright_amp * (h - 1))
+        y += (g * np.sin(2 * np.pi * h * ph + rng.uniform(0, 6.28))).astype(np.float32)
+    bz = lfilter(*butter(2, 90 / (SR / 2)), rng.standard_normal(n))
+    y = y * (1 + buzz * bz / (np.abs(bz).max() + 1e-6))                       # 서가 떠는 거친 결
+    nz = lfilter(*butter(2, [2000 / (SR / 2), 7000 / (SR / 2)], "band"), rng.standard_normal(n))
+    y = y / (np.abs(y).max() + 1e-6) + breath * nz / (np.abs(nz).max() + 1e-6)
+    y = lfilter(*butter(1, 120 / (SR / 2), "high"), y) * amp
+    return (y / (np.abs(y).max() + 1e-6)).astype(np.float32)
+
+
 def bell(f0=220, dur=6.0, rng=None):
     """종 한 번 (교회 종·놋쇠 종): 맑은 배음(낮은 울림·단3도 섞임)이 길게"""
     rng = rng or np.random.default_rng()

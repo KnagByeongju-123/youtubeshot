@@ -2,7 +2,7 @@
 가락: 위키백과 'Arirang' 문서의 악보(9/8, 바장조)를 그대로 옮김 (아래 SCORE, 렐러티브 표기)
 아쟁 소리는 아쟁.py 의 실측 음색(실제 아쟁 산조를 잰 값), 장구는 공통.py 의 janggu (사용자 확인 2026-11-25)
 
-사용: python -X utf8 전통악기/아리랑.py [결과.mp3] [--절 2] [--칸 0.2]
+사용: python -X utf8 전통악기/아리랑.py [결과.mp3] [--절 2] [--칸 0.2] [--악기 아쟁|태평소]
   --절: 몇 번 되풀이 (1절 약 29초), --칸: 8분음표 한 칸 초 (작을수록 빠름)
 """
 import argparse
@@ -64,11 +64,16 @@ def load_ajaeng():
     return mod
 
 
-def render(verses=2, unit=0.2, seed=3):
+def render(verses=2, unit=0.2, seed=3, inst="아쟁"):
+    """inst: '아쟁' 또는 '태평소'(한 옥타브 올려 연주, 떨림 작게 — 실제 호적 산조를 잰 값)"""
     aj = load_ajaeng()
     p = dict(aj.PRESETS_REAL["5_실측_느린배경"], glide=0.07, fade=(0.06, 0.35), depth=40, vib_start=0.3, rough=0.32, scrape=0.07)
+    up = 0
+    if inst == "태평소":
+        p = dict(p, timbre="태평소", depth=32, breath=0.07, bright_amp=0.02, rate=4.7, slow=0.0, vib_start=0.45, glide=0.05, fade=(0.03, 0.25))
+        up = 12
     rng = np.random.default_rng(seed)
-    notes = parse(SCORE)
+    notes = [(m + up if m is not None else None, d) for m, d in parse(SCORE)]
     bar = 9 * unit
     lead = bar                                                   # 첫 장단은 장구만
     total = lead + verses * 16 * bar + 3.0
@@ -102,8 +107,9 @@ def main():
     ap.add_argument("out", nargs="?", default=os.path.join(os.path.dirname(HERE), "역사", "배경음샘플", "한국", "아쟁", "아리랑_아쟁장구.mp3"))
     ap.add_argument("--절", type=int, default=2)
     ap.add_argument("--칸", type=float, default=0.2)
+    ap.add_argument("--악기", default="아쟁", choices=["아쟁", "태평소"])
     a = ap.parse_args()
-    x = render(a.절, a.칸)
+    x = render(a.절, a.칸, inst=a.악기)
     wp = a.out[:-4] + ".wav"
     K.write_wav(wp, x)
     try:

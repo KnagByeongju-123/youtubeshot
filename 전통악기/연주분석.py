@@ -7,7 +7,7 @@
   - 음 길이, 음 사이 미끄러짐 시간, 쉼 길이
   - 음색: 배음(1~12번째) 세기(dB, 바탕음 기준), 밝기(무게중심 Hz), 배음 사이 잡음 비율, 세기 떨림(거친 정도)
 
-사용: .sd_venv/bin/python -X utf8 전통악기/연주분석.py <소리파일> [<소리파일> ...] [--초 N] [--json 결과.json]
+사용: .sd_venv/bin/python -X utf8 전통악기/연주분석.py <소리파일> [<소리파일> ...] [--초 N] [--json 결과.json] [--최고Hz 1800]
   (librosa 필요 → .sd_venv. 앞에서 N초만 잼, 기본 240)
 """
 import argparse
@@ -41,10 +41,10 @@ def movavg(x, w):
     return np.convolve(pad, np.ones(w) / w, "same")[w:w + len(x)]
 
 
-def analyze(path, sec=240):
+def analyze(path, sec=240, fmax=900):
     import librosa
     y, _ = librosa.load(path, sr=SR, mono=True, duration=sec)
-    f0, voiced, prob = librosa.pyin(y, fmin=55, fmax=900, sr=SR, frame_length=2048, hop_length=HOP)
+    f0, voiced, prob = librosa.pyin(y, fmin=55 if fmax <= 900 else 150, fmax=fmax, sr=SR, frame_length=2048, hop_length=HOP)
     voiced = voiced & (prob > 0.15) & np.isfinite(f0)
     midi = np.where(voiced, 69 + 12 * np.log2(np.where(voiced, f0, 440) / 440), np.nan)
     r = {"파일": os.path.basename(path), "길이초": round(len(y) / SR, 1), "소리난비율": round(float(voiced.mean()), 2)}
@@ -145,10 +145,11 @@ def main():
     ap.add_argument("files", nargs="+")
     ap.add_argument("--초", type=float, default=240)
     ap.add_argument("--json")
+    ap.add_argument("--최고Hz", type=float, default=900, help="잡을 가장 높은 음 (태평소처럼 높은 악기는 1800)")
     a = ap.parse_args()
     res = []
     for f in a.files:
-        r = analyze(f, a.초)
+        r = analyze(f, a.초, a.최고Hz)
         res.append(r)
         print(json.dumps(r, ensure_ascii=False))
         sys.stdout.flush()

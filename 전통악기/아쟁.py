@@ -158,6 +158,8 @@ def ajaeng_tone(semis, amp, p, rng):
     from scipy.signal import butter, lfilter
     if p.get("timbre") == "실측":
         return real_tone(semis, amp, p, rng)
+    if p.get("timbre") == "태평소":                       # 같은 가락 짜기·꾸밈을 태평소 소리로 (태평소.py)
+        return K.wind_tone(semis, amp, K.TAEP_HARM_DB, rng, breath=p.get("breath", 0.05), buzz=p.get("buzz", 0.18), bright_amp=p.get("bright_amp", 0.06))
     n = len(semis)
     jitter = _lp_noise(rng, n, 18) * 0.004 * (0.5 + p["rough"])            # 활이 걸렸다 미끄러지며 음이 살짝 흔들림
     f = 440.0 * 2 ** ((semis - 69) / 12) * (1 + jitter)
