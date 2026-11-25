@@ -102,7 +102,7 @@ def render(unit=0.2, verses=2, seed=5):
 
     cyc = 1 + verses * bars
     add(K.janggu_rhythm("굿거리", cyc, rng, end=False, unit=unit), 0.0, 0.42)
-    add(K.kkwaenggwari_rhythm("굿거리", cyc, rng, unit=unit, end=False), 0.0, 0.34)
+    add(K.kkwaenggwari_rhythm("굿거리", cyc, rng, unit=unit, end=False), 0.0, 0.6)
     for c in range(cyc):                                                     # 북: 장단 첫 칸·가운데, 징: 네 장단마다(2절은 두 장단마다)
         b = c * bar
         K.place(buf, K.big_drum(62 * K.BUK_LOW, 1.0, rng), b, 0.32, -0.35)

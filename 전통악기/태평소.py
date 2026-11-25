@@ -49,7 +49,7 @@ def pungmul_drums(buf, unit, start, rng):
         if c % 2 == 0:
             K.place(buf, K.gong(110, 3.0, bend=0.02, rng=rng), t, 0.22, pan=0.25)
         kk = K.kkwaenggwari_rhythm("자진모리", 1, rng, unit=unit, end=False)              # 꽹과리 (2026-11-25)
-        K.place(buf, kk[:, 0] + kk[:, 1], t, 0.55, pan=0.35)
+        K.place(buf, kk[:, 0] + kk[:, 1], t, 0.9, pan=0.35)
         c += 1
         t += bar
 

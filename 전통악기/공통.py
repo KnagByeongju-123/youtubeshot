@@ -289,49 +289,63 @@ KKW_PARTIALS = [(1.0, 0.0), (1.43, -9.1), (1.84, -4.2), (2.02, -9.2), (2.28, -9.
                 (5.80, -14.1), (6.46, -13.8), (6.76, -12.2)]
 
 
-def kkwaenggwari(kind="갱", rng=None, f0=705.0):
-    """꽹과리 한 번: 갱 = 열고 쳐서 '갱~'(약 0.7초), 깨 = 반쯤 막아 짧게, 지 = 손가락으로 막아 '짓'(바로 끊김), 갠지갱 = 갱(짧게)·지·갱
+def kkwaenggwari(kind="갱", rng=None, f0=705.0, force=1.0):
+    """꽹과리 한 번: 갱 = 열고 쳐서 '갱~'(약 0.7초), 깨 = 반쯤 막아 짧게, 깻 = 스타카토(쨍한 채로 0.1초 안팎에 딱 끊김),
+    지 = 손가락으로 막아 둔한 '짓', 갠지갱 = 갱(짧게)·지·갱
+    force(0.3~1.2): 치는 세기 — 셀수록 크고 밝고(높은 울림·채 소리) 거칠게, 약하면 작고 둥글게 (사용자 2026-11-25: 강약)
     쇠판의 가지런하지 않은 울림들(KKW_PARTIALS)이 각자 사라지고, 짝지은 울림이 살짝 어긋나 '와랑와랑' 맥놀이, 채 끝이 닿는 '딱'"""
     from scipy.signal import butter, lfilter
     rng = rng or np.random.default_rng()
     if kind == "갠지갱":
         out = np.zeros(int(1.0 * SR))
         for k, t0, g in (("깨", 0.0, 0.85), ("지", 0.09, 0.6), ("갱", 0.18, 1.0)):
-            h = kkwaenggwari(k, rng, f0) * g
+            h = kkwaenggwari(k, rng, f0, force) * g
             i0 = int(t0 * SR)
             out[i0:i0 + len(h)] += h[: len(out) - i0]
-        return (out / (np.abs(out).max() + 1e-6)).astype(np.float32)
-    damp = {"갱": 1.0, "깨": 0.3, "지": 0.08}[kind]
+        return (out / (np.abs(out).max() + 1e-6) * min(1.0, force)).astype(np.float32)
+    damp = {"갱": 1.0, "깨": 0.3, "깻": 0.13, "지": 0.08}[kind]
+    damp *= 0.8 + 0.25 * force                                                    # 세게 치면 조금 더 오래
     n = int((0.9 if kind == "갱" else 0.35) * SR)
     t = np.arange(n) / SR
     y = np.zeros(n)
     f0 = f0 * (1 + 0.01 * rng.standard_normal())
+    tilt = 2.4 * (0.55 + 0.45 * force)                                            # 세게 = 높은 울림이 살아남 (쨍함)
     for r, db in KKW_PARTIALS:
-        a = 10 ** ((db + 2.4 * (min(r, 6.0) - 1)) / 20)                       # 높은 쪽을 키워 '깽' 하고 쨍하게 (사용자: 꽹과리가 약함 2026-11-25)
+        a = 10 ** ((db + tilt * (min(r, 6.0) - 1)) / 20)                       # 높은 쪽을 키워 '깽' 하고 쨍하게 (사용자: 꽹과리가 약함 2026-11-25)
         dec = (0.55 / (1 + 0.25 * (r - 1))) * damp
         beat = rng.uniform(1.5, 6.0)                                           # 짝 울림이 어긋나 생기는 맥놀이
         y += a * np.sin(2 * np.pi * f0 * r * t + rng.random() * 6.28) * (1 + 0.35 * np.sin(2 * np.pi * beat * t)) * np.exp(-t / dec)
     click = lfilter(*butter(2, [2500 / (SR / 2), 9000 / (SR / 2)], "band"), rng.standard_normal(n)) * np.exp(-t / 0.004)
-    y = y / (np.abs(y).max() + 1e-6) + 0.8 * click / (np.abs(click).max() + 1e-6)
+    y = y / (np.abs(y).max() + 1e-6) + (0.5 + 0.4 * force) * click / (np.abs(click).max() + 1e-6)
     if kind != "지":                                                             # 살짝 찢어지는 쇳소리 (세게 친 맛)
-        y = np.tanh(2.2 * y / (np.abs(y).max() + 1e-6)) / np.tanh(2.2)
+        drv = 1.2 + 1.4 * force
+        y = np.tanh(drv * y / (np.abs(y).max() + 1e-6)) / np.tanh(drv)
     if kind == "지":                                                             # 손가락에 막힌 둔한 소리
         y = y + 0.4 * lfilter(*butter(2, [300 / (SR / 2), 1200 / (SR / 2)], "band"), rng.standard_normal(n)) * np.exp(-t / 0.01)
+    if kind == "깻":                                                             # 손바닥으로 '딱' 막아 끊음 (끊기는 끝이 또렷하게)
+        y = y * np.clip((0.11 + 0.04 * force - t) / 0.015, 0, 1)
     y = lfilter(*butter(1, 250 / (SR / 2), "high"), y) * np.clip((n / SR - t) / 0.05, 0, 1)
-    return (y / (np.abs(y).max() + 1e-6) * (0.75 if kind == "지" else 1.0)).astype(np.float32)
+    vol = (0.75 if kind == "지" else 1.0) * min(force, 1.3) ** 1.7               # 세기 차이를 크게 (센 박 1.2 ↔ 잔가락 0.5 = 약 4배)
+    return (y / (np.abs(y).max() + 1e-6) * vol).astype(np.float32)
 
 
-# 꽹과리 가락 12칸 (풍물에서 흔한 느낌으로 단순하게 짠 것 — 실제 지역 가락 그대로는 아님)
+# 꽹과리 가락 12칸: 칸 → (소리, 세기). 풍물에서 흔한 느낌으로 단순하게 짠 것 — 실제 지역 가락 그대로는 아님
+#   스타카토 '깻'을 많이 (사용자 2026-11-25), 강약: 장단 첫 박 1.2 · 다른 박 0.8~0.9 · 박 사이 잔가락 0.4~0.6
 KKW_RHYTHMS = {
-    "휘모리": {0: "갱", 1: "지", 2: "갱", 3: "갱", 4: "지", 5: "갱", 6: "갱", 7: "지", 8: "갱", 9: "갱", 10: "지", 11: "갱"},
-    "자진모리": {0: "갱", 2: "지", 3: "갱", 5: "지", 6: "갱", 8: "지", 9: "갱", 10: "깨", 11: "지"},
-    "굿거리": {0: "갱", 2: "지", 3: "갱", 6: "갱", 8: "지", 9: "갱"},
-    "세마치": {0: "갱", 2: "지", 3: "갱", 5: "지", 6: "깨", 7: "갱"},
+    "휘모리": {0: ("갱", 1.2), 1: ("지", 0.45), 2: ("깻", 0.7), 3: ("갱", 0.8), 4: ("지", 0.45), 5: ("깻", 0.7),
+              6: ("갱", 0.85), 7: ("지", 0.45), 8: ("깻", 0.7), 9: ("깻", 0.85), 10: ("깻", 0.55), 11: ("깻", 0.75)},
+    "자진모리": {0: ("갱", 1.2), 2: ("깻", 0.5), 3: ("깻", 0.85), 5: ("지", 0.45), 6: ("갱", 0.85), 8: ("깻", 0.5),
+               9: ("깻", 0.85), 10: ("깻", 0.55), 11: ("지", 0.45)},
+    "굿거리": {0: ("갱", 1.2), 2: ("깻", 0.5), 3: ("깻", 0.8), 4: ("지", 0.4), 5: ("깻", 0.6), 6: ("갱", 0.85),
+              8: ("깻", 0.5), 9: ("깻", 0.8), 10: ("지", 0.4), 11: ("깻", 0.6)},
+    "세마치": {0: ("갱", 1.2), 2: ("깻", 0.5), 3: ("깻", 0.85), 5: ("지", 0.45), 6: ("깻", 0.8), 7: ("갱", 0.75)},
 }
+KKW_SWELL = [0.82, 0.9, 0.97, 1.08]           # 네 장단마다 점점 세게 (들썩이는 흐름)
 
 
-def kkwaenggwari_rhythm(name, cycles=3, rng=None, unit=None, end=True, cells=None):
-    """꽹과리 가락을 cycles 번 (unit: 한 칸 초, 없으면 장구 장단의 값) → 스테레오 (오른쪽으로 조금)"""
+def kkwaenggwari_rhythm(name, cycles=3, rng=None, unit=None, end=True, cells=None, swell=True):
+    """꽹과리 가락을 cycles 번 (unit: 한 칸 초, 없으면 장구 장단의 값) → 스테레오 (오른쪽으로 조금)
+    swell: 네 장단마다 점점 세게 (KKW_SWELL), 치는 세기마다 소리도 바뀜(kkwaenggwari force)"""
     rng = rng or np.random.default_rng()
     u0, c0, _ = JANGGU_RHYTHMS.get(name, (0.15, 12, None))
     unit, cells = unit or u0, cells or c0
@@ -339,13 +353,15 @@ def kkwaenggwari_rhythm(name, cycles=3, rng=None, unit=None, end=True, cells=Non
     total = cycles * cells * unit
     buf = np.zeros((int((total + 1.5) * SR), 2), np.float32)
     for c in range(cycles):
-        for i, k in pat.items():
+        sw = KKW_SWELL[c % 4] if swell else 1.0
+        for i, v in pat.items():
             if i >= cells:
                 continue
-            g = (1.0 if i == 0 else 0.75) * (0.9 + 0.1 * rng.random())
-            place(buf, kkwaenggwari(k, rng), max(0.0, (c * cells + i) * unit + rng.normal(0, 0.003)), g, 0.3)
+            k, f = (v, 1.0 if i == 0 else 0.75) if isinstance(v, str) else v
+            f = f * sw * (0.93 + 0.14 * rng.random())                           # 사람 손처럼 세기가 조금씩 다름
+            place(buf, kkwaenggwari(k, rng, force=f), max(0.0, (c * cells + i) * unit + rng.normal(0, 0.003)), 1.0, 0.3)
     if end:
-        place(buf, kkwaenggwari("갱", rng), total, 1.0, 0.3)
+        place(buf, kkwaenggwari("갱", rng, force=1.15), total, 1.0, 0.3)
     return buf
 
 

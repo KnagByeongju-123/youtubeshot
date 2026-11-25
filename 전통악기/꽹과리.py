@@ -1,5 +1,5 @@
 """꽹과리 샘플 + 사물놀이(꽹과리·장구·북·징) — 소리 만드는 법은 공통.py 의 kkwaenggwari · kkwaenggwari_rhythm
-→ 역사/배경음샘플/타악/꽹과리/ : 0_소리하나씩.mp3(갱·깨·지·갠지갱) · 1_꽹과리_휘모리.mp3 · 2_사물놀이.mp3(자진모리 → 휘모리로 빨라짐) · 꽹과리_전체듣기.mp3
+→ 역사/배경음샘플/타악/꽹과리/ : 0_소리하나씩.mp3(갱·깨·깻·지·갠지갱, 이어서 갱·깻을 약하게→세게) · 1_꽹과리_휘모리.mp3 · 2_사물놀이.mp3(자진모리 → 휘모리로 빨라짐) · 꽹과리_전체듣기.mp3
 사용: python -X utf8 전통악기/꽹과리.py [결과폴더]"""
 import os
 import subprocess
@@ -46,7 +46,7 @@ def samulnori(rng, sec_jajin=10.0, sec_hwi=10.0):
     t = 1.2
     for name, unit, sec in parts:
         cyc = int(round(sec / (12 * unit)))
-        mix(buf, K.kkwaenggwari_rhythm(name, cyc, rng, unit=unit, end=False), t, 0.9)
+        mix(buf, K.kkwaenggwari_rhythm(name, cyc, rng, unit=unit, end=False), t, 1.5)
         mix(buf, K.janggu_rhythm(name, cyc, rng, end=False, unit=unit), t, 0.55)
         for c in range(cyc):
             b = t + c * 12 * unit
@@ -64,10 +64,11 @@ def samulnori(rng, sec_jajin=10.0, sec_hwi=10.0):
 def main(out):
     os.makedirs(out, exist_ok=True)
     rng = np.random.default_rng(7)
-    kinds = ["갱", "깨", "지", "갠지갱"]
-    one = np.zeros((int((len(kinds) + 1) * SR), 2), np.float32)
-    for i, k in enumerate(kinds):
-        K.place(one, K.kkwaenggwari(k, rng), 0.3 + i * 1.0, 1.0)
+    kinds = [("갱", 1.0), ("깨", 1.0), ("깻", 1.0), ("지", 1.0), ("갠지갱", 1.0),     # 소리 종류
+             ("갱", 0.4), ("갱", 0.7), ("갱", 1.1), ("깻", 0.4), ("깻", 0.7), ("깻", 1.1)]   # 같은 소리를 약하게 → 세게
+    one = np.zeros((int((len(kinds) + 1) * 0.8 * SR), 2), np.float32)
+    for i, (k, f) in enumerate(kinds):
+        K.place(one, K.kkwaenggwari(k, rng, force=f), 0.3 + i * 0.8, 1.0)
     files = [os.path.join(out, "0_소리하나씩.mp3")]
     save(one, files[0])
     f = os.path.join(out, "1_꽹과리_휘모리.mp3")
