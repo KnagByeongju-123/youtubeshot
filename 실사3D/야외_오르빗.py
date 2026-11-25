@@ -450,6 +450,13 @@ area((-1.6, -2.0, 2.4), 160 * LG, 1.5, (1.0, 0.95, 0.9))
 area((1.8, -1.6, 1.8), 60 * LG, 1.5, (0.9, 0.93, 1.0))
 area((0.3, 1.8, 2.4), 120 * LG, 1.0, (0.8, 0.85, 1.0))       # 뒤 윤곽광 (도시 빛과 어울리게 살짝 푸름)
 
+# ── 해(--해 방위°,높이°,세기): 사진 배경판과 빛을 맞출 때 — 방위 0 = 인물 뒤(+y), 90 = 오른쪽(+x) (사용자 2026-11-25 '주인공 조명은 주변과 어울리게') ──
+if "--해" in a:
+    az, el, en = (float(v) for v in a[a.index("--해") + 1].split(","))
+    bpy.ops.object.light_add(type="SUN"); sun = bpy.context.object; sun.data.energy = en; sun.data.angle = math.radians(0.6)
+    sun.data.color = (1.0, 0.97, 0.92)
+    d = mathutils.Vector((math.sin(math.radians(az)) * math.cos(math.radians(el)), math.cos(math.radians(az)) * math.cos(math.radians(el)), math.sin(math.radians(el))))
+    sun.rotation_euler = (-d).to_track_quat("-Z", "Y").to_euler()      # 해에서 인물 쪽으로 비춤
 # ── 카메라: 인물 둘레를 돎 ──
 bpy.ops.object.camera_add(); cam = bpy.context.object; sc.camera = cam; cam.data.lens = 40
 a0, a1 = (math.radians(float(v)) for v in opt["--각도"].split(","))
