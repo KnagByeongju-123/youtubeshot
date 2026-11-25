@@ -101,6 +101,7 @@ for r in roots:
     r.location.x -= (min(p.x for p in pts) + max(p.x for p in pts)) / 2; r.location.y -= (min(p.y for p in pts) + max(p.y for p in pts)) / 2
     r.location.z -= min(p.z for p in pts)
 if "--인물방향" in a:     # 인물을 제자리에서 돌림(도, + = 화면 오른쪽을 봄) — 사용자 2026-11-25 '아나운서는 오른쪽 방향을 보게'
+    bpy.context.view_layer.update()                                       # 위에서 옮긴 자리를 먼저 반영 (안 하면 돌릴 때 옮기기 전 자리로 돌아감)
     Rz_ = mathutils.Matrix.Rotation(math.radians(float(a[a.index("--인물방향") + 1])), 4, "Z")
     for r in roots: r.matrix_world = Rz_ @ r.matrix_world
     bpy.context.view_layer.update()
