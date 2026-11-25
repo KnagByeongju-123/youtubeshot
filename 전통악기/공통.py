@@ -158,16 +158,28 @@ def gong(f0=110, dur=6.0, bend=-0.03, rng=None):
 
 
 def big_drum(f0=70, dur=2.2, rng=None):
-    """큰 북 한 번 (북·다이코·팀파니·둠): 쿵 하고 음이 떨어지며 길게 울림"""
+    """큰 북 한 번 (북·다이코·팀파니·둠): 쿵 하고 음이 떨어지며 길게 울림.
+    울림통을 크게 (사용자 결정 2026-11-25: 북은 울림통이 더 커야): 가죽의 여러 울림(원형 막 배음 1·1.59·2.14·2.30·2.65)이
+    따로 사라지고, 통 안 공기가 '우웅' 하고 울리며(낮은 잡음 띠), 나무 통이 소리를 되울림(짧은 되울림)"""
     from scipy.signal import butter, lfilter
     rng = rng or np.random.default_rng()
     n = int(dur * SR)
     t = np.arange(n) / SR
-    f = f0 * (1 + 0.5 * np.exp(-t / 0.04))
+    f = f0 * (1 + 0.45 * np.exp(-t / 0.05))
     ph = np.cumsum(2 * np.pi * f / SR)
-    body = (np.sin(ph) + 0.25 * np.sin(1.5 * ph)) * np.exp(-t / (dur * 0.3))
+    body = np.zeros(n)
+    for r, a, dec in [(1.0, 1.0, 0.62), (1.59, 0.7, 0.36), (2.14, 0.45, 0.24), (2.30, 0.3, 0.18), (2.65, 0.18, 0.12)]:
+        body += a * np.sin(r * ph + rng.random() * 6.28) * np.exp(-t / (dur * dec))
+    air = lfilter(*butter(2, [f0 * 0.9 / (SR / 2), f0 * 3.2 / (SR / 2)], "band"), rng.standard_normal(n))
+    air = air / (np.abs(air).max() + 1e-6) * np.clip(t / 0.03, 0, 1) * np.exp(-t / (dur * 0.3)) * 0.8   # 통 안 공기 울림 ('우웅' 부풂)
     skin = lfilter(*butter(2, 400 / (SR / 2)), rng.standard_normal(n)) * np.exp(-t / 0.02) * 0.15   # 가죽 소리는 아주 조금 (탁하지 않게)
-    y = body + skin
+    y = body + air + skin
+    d = int(SR * 0.0045)                                                                  # 나무 통 되울림 (길이 약 0.8m)
+    fb = np.zeros(d + 1)
+    fb[0], fb[d] = 1.0, -0.6
+    y = lfilter([1.0], fb, y)
+    y = lfilter(*butter(2, 2200 / (SR / 2)), y)
+    y = y * np.clip((dur - t) / 0.3, 0, 1)
     return (y / (np.abs(y).max() + 1e-6)).astype(np.float32)
 
 
