@@ -37,7 +37,7 @@ for sd in ("L", "R"):
     cuff = d[sleeve].max(); jac = tcol(cu[sleeve]).mean(0)
     col = jac * 0.55 if COLOR == "안감" else jac if COLOR == "자켓" else np.array([float(v) for v in COLOR.split(",")])
     edge = cuff + COVER
-    tris = np.where(near & (d > cuff - 0.006) & (d < edge + 0.008))[0]
+    tris = np.where(near & (br > 0.35) & (d > cuff - 0.006) & (d < edge + 0.008))[0]        # 피부 면만 (자켓 테두리에 묻지 않게)
     dv = (P - h) @ ax                                          # 점마다 축 위 거리
     for t in tris:
         i0, i1, i2 = F[t]; uv = UV[[i0, i1, i2]] * [TW - 1, TH - 1]; dd = dv[[i0, i1, i2]]
