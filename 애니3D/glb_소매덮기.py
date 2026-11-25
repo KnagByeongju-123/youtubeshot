@@ -2,7 +2,7 @@
    면 단위로 색을 바꾸면 경계가 톱니처럼 들쭉날쭉했음 → 피부 그림(텍스처)에 직접 칠함: 그림 점마다 3D 자리를 구해
    아래팔 축을 따라 소매 끝에서 --덮기 만큼까지 칠하고, 경계는 --부드럽게 폭으로 섞어 소매 끝과 나란한 매끈한 선이 되게.
    색: --색 안감(기본, 소매 겉감 평균색 × 0.55) | 자켓(겉감 평균색) | 'r,g,b'(0~1 sRGB)
-   사용: python 애니3D/glb_소매덮기.py <입력.glb> <출력.glb> [--덮기 0.012] [--부드럽게 0.0015] [--색 안감]"""
+   사용: python 애니3D/glb_소매덮기.py <입력.glb> <출력.glb> [--덮기 0.012] [--덮기L 0.02] [--부드럽게 0.0015] [--색 안감]"""
 import io, json, struct, sys
 import numpy as np
 from PIL import Image
@@ -11,6 +11,9 @@ a = sys.argv[1:]; src, dst = a[0], a[1]
 COVER = float(a[a.index("--덮기") + 1]) if "--덮기" in a else 0.012
 SOFT = float(a[a.index("--부드럽게") + 1]) if "--부드럽게" in a else 0.0015
 COLOR = a[a.index("--색") + 1] if "--색" in a else "안감"
+SIDE_COVER = {}                                                   # --덮기L 0.02 / --덮기R … : 한쪽 손만 다르게 (사용자 2026-11-25 '옆으로 펼친 손은 블라우스가 손목을 조금 더 감싸게')
+for sd_ in ("L", "R"):
+    if f"--덮기{sd_}" in a: SIDE_COVER[sd_] = float(a[a.index(f"--덮기{sd_}") + 1])
 raw = open(src, "rb").read()
 jl = struct.unpack("<I", raw[12:16])[0]; g = json.loads(raw[20:20 + jl])
 bo = 20 + jl; bl = struct.unpack("<I", raw[bo:bo + 4])[0]; binb = bytes(raw[bo + 8:bo + 8 + bl])
@@ -36,7 +39,7 @@ for sd in ("L", "R"):
     near = (d > -0.07) & (d < 0.03) & (r < 0.07); sleeve = near & (br <= 0.35) & (r > 0.02)
     cuff = d[sleeve].max(); jac = tcol(cu[sleeve]).mean(0)
     col = jac * 0.55 if COLOR == "안감" else jac if COLOR == "자켓" else np.array([float(v) for v in COLOR.split(",")])
-    edge = cuff + COVER
+    edge = cuff + SIDE_COVER.get(sd, COVER)
     tris = np.where(near & (br > 0.35) & (d > cuff - 0.006) & (d < edge + 0.008))[0]        # 피부 면만 (자켓 테두리에 묻지 않게)
     dv = (P - h) @ ax                                          # 점마다 축 위 거리
     for t in tris:
