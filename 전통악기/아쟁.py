@@ -248,17 +248,25 @@ def janggu_hit(kind, rng):
             i0 = int(i * 0.045 * SR)
             out[i0:i0 + len(h)] += h[: len(out) - i0]
         return out
-    n = int(0.45 * SR)
+    n = int(0.9 * SR)
     t = np.arange(n) / SR
     y = np.zeros(n, np.float32)
-    if kind in ("쿵", "덩"):
-        f = 95 * (1 + 0.5 * np.exp(-t / 0.03))
-        y += np.sin(2 * np.pi * np.cumsum(f) / SR) * np.exp(-t / 0.16)
-    if kind in ("덕", "덩", "기"):
-        nz = lfilter(*butter(2, [1800 / (SR / 2), 7000 / (SR / 2)], "band"), rng.standard_normal(n))
-        tick = nz / (np.abs(nz).max() + 1e-6) * np.exp(-t / 0.018) + 0.6 * np.sin(2 * np.pi * 520 * t) * np.exp(-t / 0.03)
-        y += tick * (0.35 if kind == "기" else 0.8)
-    return (y / (np.abs(y).max() + 1e-6) * (0.5 if kind == "기" else 1.0)).astype(np.float32)
+    if kind in ("쿵", "덩"):     # 북편: 큰 울림통 — 낮은 바탕음(68Hz→60Hz로 처짐) + 통 울림(130·205Hz) + 가죽 치는 둔탁한 첫소리
+        f = 60 * (1 + 0.35 * np.exp(-t / 0.04))
+        ph = np.cumsum(f) / SR
+        body = (np.sin(2 * np.pi * ph) * np.exp(-t / 0.38)
+                + 0.45 * np.sin(2 * np.pi * 2.17 * ph) * np.exp(-t / 0.20)
+                + 0.22 * np.sin(2 * np.pi * 3.4 * ph) * np.exp(-t / 0.10))
+        thud = lfilter(*butter(2, [90 / (SR / 2), 600 / (SR / 2)], "band"), rng.standard_normal(n)) * np.exp(-t / 0.025)
+        y += body + 0.9 * thud / (np.abs(thud).max() + 1e-6)
+    if kind in ("덕", "덩", "기"):  # 채편: 대나무 채가 가죽을 치는 둔탁한 '턱' — 낮춘 잡음 띠 + 나무 울림(310Hz) + 작은 통 울림
+        nz = lfilter(*butter(2, [500 / (SR / 2), 2600 / (SR / 2)], "band"), rng.standard_normal(n))
+        tick = (nz / (np.abs(nz).max() + 1e-6) * np.exp(-t / 0.03)
+                + 0.9 * np.sin(2 * np.pi * 310 * t) * np.exp(-t / 0.06)
+                + 0.4 * np.sin(2 * np.pi * 150 * t) * np.exp(-t / 0.12))
+        y += tick * (0.4 if kind == "기" else 0.85)
+    y = np.tanh(1.6 * y / (np.abs(y).max() + 1e-6)) / np.tanh(1.6)       # 살짝 눌러 두툼하게
+    return (y * (0.5 if kind == "기" else 1.0)).astype(np.float32)
 
 
 def bed(sec, p, seed=7):
@@ -277,7 +285,7 @@ def bed(sec, p, seed=7):
         while 0.4 + c * u < sec - 0.5:
             kind = pat.get(c % 12)
             if kind:
-                K.place(buf, janggu_hit(kind, rng), 0.4 + c * u, 0.32 if kind != "기" else 0.2, pan=-0.15)
+                K.place(buf, janggu_hit(kind, rng), 0.4 + c * u, 0.6 if kind != "기" else 0.32, pan=-0.12)
             c += 1
         t = 0.4 + 12 * u
     while t < sec - 3:
