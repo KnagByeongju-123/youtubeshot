@@ -167,7 +167,7 @@ if "--구두" in a:
 POSE = a[a.index('--자세') + 1] if '--자세' in a else '차렷'     # 앞나란히 / 차렷(기본, 사용자 결정 2026-11-23: 마이크 없이 자연스러운 팔) / 마이크 / 모음
 MIC_SIDE = a[a.index('--마이크손') + 1] if '--마이크손' in a else 'R'
 POINT_SIDE = a[a.index('--가리킬손') + 1] if '--가리킬손' in a else 'R'
-CUP_UP = -0.035; CUP_SIDE = 'R'; SEAT_H = float(a[a.index('--의자높이') + 1]) if '--의자높이' in a else 0.46; CAFE_DY = 0.0                          # 커피: 컵 든 손, 의자 앉는 판 높이(m)   # 가리키기: 어느 손으로 (R/L)
+WRAP = float(a[a.index('--감싸기') + 1]) if '--감싸기' in a else 0.42; CUP_MID = 0.12; CUP_UP = -0.035; CUP_SIDE = 'R'; SEAT_H = float(a[a.index('--의자높이') + 1]) if '--의자높이' in a else 0.46; CAFE_DY = 0.0                          # 커피: 컵 든 손, 의자 앉는 판 높이(m)   # 가리키기: 어느 손으로 (R/L)
 ARMUP = float(a[a.index('--팔높이') + 1]) if '--팔높이' in a else 0.0   # 팔벌려: 0 = 수평, -0.3 = 살짝 아래
 HAND_S = float(a[a.index('--손굵기') + 1]) if '--손굵기' in a else 1.0     # 손 굵기는 모델에서 직접 가늘게 함(glb_손가늘게.py) — 뼈 크기로 줄이면 손가락 틈이 벌어졌음
 MIC_F = (0.30, 0.45, 0.85); MIC_CURL = 1.25; FIST = float(a[a.index('--주먹') + 1]) if '--주먹' in a else 0.32   # 주먹 = 마디마다 굽힘(라디안)
@@ -268,17 +268,18 @@ if arm is not None and "--자세없음" not in a:
             aim_bone(fb, (sgn * 0.0, -1.0, 0.0), hb)           # 아래팔: 위팔과 한 줄
             aim_bone(hb, (0.0, -1.0, -0.02), [f"Middle1.{side}"])   # 손: 손끝이 앞으로, 손바닥은 안쪽
             curl(side, 0.08, thumb=0.05)                       # 손가락은 거의 펴고 힘만 살짝 뺌
-        elif POSE == '커피':
-            if side == CUP_SIDE:                                   # 컵을 들어 입가로
-                aim_bone(ub, (sgn * 0.30, -0.40, -0.87), fb)
-                aim_bone(fb, (-sgn * 0.45, -0.35, 0.82), hb)
-                aim_bone(hb, (-sgn * 0.55, -0.45, 0.70), [f"Middle1.{side}"])
-                curl(side, 1.1, thumb=0.15); mic_hand = None    # 약간 주먹, 엄지는 펴서 손잡이 고리에
-            else:                                                  # 다른 팔은 탁자 위에
-                aim_bone(ub, (sgn * 0.15, -0.45, -0.88), fb)
-                aim_bone(fb, (-sgn * 0.30, -0.95, -0.02), hb)
-                aim_bone(hb, (-sgn * 0.20, -0.95, -0.15), [f"Middle1.{side}"])
-                curl(side, 0.35, thumb=0.2)
+        elif POSE == '커피':                                     # 두 손으로 컵을 감싸 쥠 (사용자 2026-11-25 선택: 손잡이 대신 감싸 쥐기)
+            aim_bone(ub, (sgn * 0.26, -0.32, -0.91), fb)
+            aim_bone(fb, (-sgn * 0.55, -0.72, 0.42), hb)
+            aim_bone(hb, (-sgn * 0.30, -0.80, 0.52), [f"Middle1.{side}"])
+            if side in palm:                                       # 손바닥이 서로 마주 보게 (몸 가운데 쪽)
+                bpy.context.view_layer.update()
+                hpb_ = B(f"Hand.{side}"); ax_ = (W(B(f"Middle1.{side}")) - W(hpb_)).normalized()
+                n_ = palm_now(side); tg_ = mathutils.Vector((-sgn, 0.15, -0.1)); tg_ = (tg_ - ax_ * ax_.dot(tg_)).normalized(); n_ = (n_ - ax_ * ax_.dot(n_)).normalized()
+                ang_ = math.atan2(ax_.dot(n_.cross(tg_)), n_.dot(tg_))
+                R_ = (MWi.to_3x3() @ mathutils.Matrix.Rotation(ang_, 3, ax_) @ MW.to_3x3()).to_4x4()
+                hpb_.matrix = mathutils.Matrix.Translation(hpb_.head) @ R_ @ mathutils.Matrix.Translation(-hpb_.head) @ hpb_.matrix; bpy.context.view_layer.update()
+            curl(side, WRAP, thumb=0.25)                          # 손가락을 둥글게 (컵 몸통을 감쌈)
         elif POSE == '가리키기' and side == POINT_SIDE:          # 한쪽 팔을 들어 검지로 앞을 가리킴 (사용자 2026-11-24)
             aim_bone(ub, (sgn * 0.22, -1.0, 0.18), fb)          # 위팔: 앞으로, 어깨보다 살짝 위·바깥
             aim_bone(fb, (sgn * 0.12, -1.0, 0.22), hb)          # 아래팔: 거의 곧게
@@ -365,33 +366,21 @@ if arm is not None and "--자세없음" not in a:
         move_to(sau, mathutils.Vector((tcen.x - 0.12, tcen.y + 0.10, ttop)))
         bpy.context.view_layer.update()
         h_ = arm.pose.bones[f"Hand.{CUP_SIDE}"]
-        # 컵 손잡이 고리에 엄지를 끼움 (사용자 2026-11-24 '약간 주먹 쥔 상태에서 엄지가 컵 손잡이 고리에'):
-        #   컵 점들 중 몸통 축에서 가장 먼 점들 = 손잡이 → 손잡이가 엄지 쪽을 보게 컵을 세운 채 돌리고, 고리 가운데를 엄지 끝 둘째 마디에 맞춤
+        # 두 손바닥 가운데에 컵 몸통 (손잡이는 몸 쪽으로 돌려 숨김) — 손바닥 사이가 컵 폭과 맞게 확인
         bpy.context.view_layer.update()
-        vw = [cup.matrix_world @ v.co for v in cup.data.vertices]
-        zs = sorted(v.z for v in vw); zlo, zhi = zs[0], zs[-1]
-        body = [v for v in vw if v.z < zlo + 0.25 * (zhi - zlo)]
-        ax = mathutils.Vector((sum(v.x for v in body) / len(body), sum(v.y for v in body) / len(body), 0))
-        dist = sorted(vw, key=lambda v: -((v.x - ax.x) ** 2 + (v.y - ax.y) ** 2))
-        hnd = dist[:max(8, len(dist) // 25)]
-        hc = sum(hnd, mathutils.Vector()) / len(hnd)                       # 손잡이 고리 가운데
-        hdir = mathutils.Vector((hc.x - ax.x, hc.y - ax.y, 0)).normalized()
-        t2 = arm.matrix_world @ arm.pose.bones[f"Thumb2.{CUP_SIDE}"].head; t3 = arm.matrix_world @ arm.pose.bones[f"Thumb3.{CUP_SIDE}"].head
-        thumb_pt = t2 * 0.45 + t3 * 0.55
-        want = mathutils.Vector((0, -1, 0))                                # 컵 몸통은 엄지 앞(카메라 쪽), 손잡이는 몸 쪽 → -want 방향이 손잡이
-        ang = math.atan2(hdir.cross(-want).z, hdir.dot(-want))
-        Rz_ = mathutils.Matrix.Translation(hc) @ mathutils.Matrix.Rotation(ang, 4, "Z") @ mathutils.Matrix.Translation(-hc)
-        cup.matrix_world = Rz_ @ cup.matrix_world
-        cup.matrix_world = mathutils.Matrix.Translation(thumb_pt - hc) @ cup.matrix_world
-        # 손가락 끝이 컵 안(그릇 속)으로 들어가지 않게 컵을 손가락 끝보다 살짝 위로 올림 — 손가락은 손잡이 아래·컵 옆을 감쌈
-        bpy.context.view_layer.update()
-        tips = [arm.matrix_world @ arm.pose.bones[f"{f_}3.{CUP_SIDE}"].tail for f_ in ("Index", "Middle", "Ring", "Little") if f"{f_}3.{CUP_SIDE}" in arm.pose.bones]
-        vw2 = [cup.matrix_world @ v.co for v in cup.data.vertices]; zc0 = min(v.z for v in vw2)
-        lift = max([0.0] + [t_.z - zc0 + CUP_UP for t_ in tips if True]) if tips else 0.0
-        lift = min(lift, 0.045)
-        cup.matrix_world = mathutils.Matrix.Translation((0, 0, lift)) @ cup.matrix_world
-        print(f"컵: 손가락 끝 위로 {lift * 100:.1f}cm 올림")
-        grip = thumb_pt
+        MWc = arm.matrix_world; PBc = arm.pose.bones
+        pc = {s_: (MWc @ PBc[f"Hand.{s_}"].head) * 0.35 + (MWc @ PBc[f"Middle1.{s_}"].head) * 0.65 for s_ in ("L", "R")}
+        mid = (pc["L"] + pc["R"]) / 2
+        vw = [cup.matrix_world @ v.co for v in cup.data.vertices]; z0c, z1c = min(v.z for v in vw), max(v.z for v in vw)
+        bod = [v for v in vw if v.z < z0c + 0.25 * (z1c - z0c)]
+        axc = mathutils.Vector((sum(v.x for v in bod) / len(bod), sum(v.y for v in bod) / len(bod), z0c))
+        far = max(vw, key=lambda v: (v.x - axc.x) ** 2 + (v.y - axc.y) ** 2)
+        hdir = mathutils.Vector((far.x - axc.x, far.y - axc.y, 0)).normalized()
+        ang = math.atan2(hdir.cross(mathutils.Vector((0, 1, 0))).z, hdir.dot(mathutils.Vector((0, 1, 0))))   # 손잡이 → 몸 쪽(+y)
+        cup.matrix_world = mathutils.Matrix.Translation(axc) @ mathutils.Matrix.Rotation(ang, 4, "Z") @ mathutils.Matrix.Translation(-axc) @ cup.matrix_world
+        cup.matrix_world = mathutils.Matrix.Translation(mid - (axc + mathutils.Vector((0, 0, (z1c - z0c) * CUP_MID)))) @ cup.matrix_world
+        print(f"컵: 두 손바닥 사이 {(pc['L'] - pc['R']).length * 100:.1f}cm, 컵 폭 {2 * ((far.x - axc.x) ** 2 + (far.y - axc.y) ** 2) ** 0.5 * 100:.1f}cm(손잡이 포함)")
+        grip = mid
         mw_ = cup.matrix_world.copy(); cup.parent = arm; cup.parent_type = "BONE"; cup.parent_bone = h_.name
         bpy.context.view_layer.update(); cup.matrix_world = mw_
         print("카페: 탁자 높이", round(ttop, 3), "컵", tuple(round(v, 3) for v in grip))
@@ -661,16 +650,15 @@ if (WALK or DANCE or SIP) and arm is not None:
         bpy.context.view_layer.update()
         sm3 = lambda u: 0.0 if u <= 0 else 1.0 if u >= 1 else u * u * (3 - 2 * u)
         k = sm3((t - 1.0) / 1.2) * (1 - sm3((t - 3.4) / 1.2))                # 0 쉼 ↔ 1 입가
-        sd = CUP_SIDE; ub, fa, hb_ = f"UpperArm.{sd}", f"ForeArm.{sd}", f"Hand.{sd}"
-        sgn = 1 if (MW @ PB[ub].head).x > 0 else -1
         V = mathutils.Vector
         lerp = lambda p_, q_: (p_ * (1 - k) + q_ * k)
-        ud = lerp(V((sgn * 0.30, -0.40, -0.87)), V((sgn * 0.12, -0.92, 0.08)))
-        fd = lerp(V((-sgn * 0.45, -0.35, 0.82)), V((-sgn * 0.82, 0.02, 0.58)))
-        hd = lerp(V((-sgn * 0.55, -0.45, 0.70)), V((-sgn * 0.75, -0.55, 0.35)))
-        set_world_aim(ub, lambda: MW @ PB[fa].head, (MW @ PB[ub].head) + ud)
-        set_world_aim(fa, lambda: MW @ PB[hb_].head, (MW @ PB[fa].head) + fd)
-        set_world_aim(hb_, lambda: MW @ PB[f"Middle1.{sd}"].head, (MW @ PB[hb_].head) + hd)
+        for sd in ("L", "R"):                                       # 두 손이 함께 컵을 입으로
+            ub, fa, hb_ = f"UpperArm.{sd}", f"ForeArm.{sd}", f"Hand.{sd}"
+            sgn = 1 if (MW @ PB[ub].head).x > 0 else -1
+            ud = lerp(V((sgn * 0.26, -0.32, -0.91)), V((sgn * 0.20, -0.80, -0.20)))
+            fd = lerp(V((-sgn * 0.55, -0.72, 0.42)), V((-sgn * 0.55, -0.20, 0.82)))
+            set_world_aim(ub, lambda fa=fa: MW @ PB[fa].head, (MW @ PB[ub].head) + ud)
+            set_world_aim(fa, lambda hb_=hb_: MW @ PB[hb_].head, (MW @ PB[fa].head) + fd)
         drink = sm3((t - 2.1) / 0.4) * (1 - sm3((t - 3.2) / 0.4))
         if "Head" in PB: rot_world("Head", (1, 0, 0), -0.18 * drink)            # 마실 때 고개 살짝 뒤로
         if "Head" in PB: rot_world("Head", (0, 0, 1), 0.08 * (1 - k) * math.sin(t * 0.9))   # 쉴 때 주위를 살짝 둘러봄
