@@ -22,7 +22,7 @@ for k in list(opt):
 PLACE = opt["--장소"]; A = os.path.join(ROOT, "models", "polyhaven", "_hdri"); os.makedirs(A, exist_ok=True)
 
 
-def fetch():
+def fetch(PLACE=PLACE):
     o = urllib.request.build_opener(); o.addheaders = [("User-Agent", "asset-fetcher/1.0")]; urllib.request.install_opener(o)
     f = None
     for name, key in ((f"{PLACE}.jpg", "tonemapped"), (f"{PLACE}_1k.hdr", "hdr")):
@@ -34,6 +34,10 @@ def fetch():
 
 
 fetch()
+# 배경 바꾸기(--장소2 <HDRI> --방향2 0.5 --전환 4.0,4.9): 전환 시간 동안 사진(카메라에 보이는 것·빛 모두)이 두 번째 장소로 부드럽게 바뀜 (사용자 2026-11-24 '정면으로 돌 때 해변으로')
+PLACE2 = a[a.index("--장소2") + 1] if "--장소2" in a else None
+XF_T = [float(v) for v in a[a.index("--전환") + 1].split(",")] if "--전환" in a else [4.0, 4.9]
+if PLACE2: fetch(PLACE2)
 bpy.ops.wm.read_factory_settings(use_empty=True)
 sc = bpy.context.scene
 W_, H_ = (int(v) for v in opt["--크기"].split("x"))
@@ -52,7 +56,25 @@ e_cam = nt.nodes.new("ShaderNodeTexEnvironment"); e_cam.image = bpy.data.images.
 e_lit = nt.nodes.new("ShaderNodeTexEnvironment"); e_lit.image = bpy.data.images.load(os.path.join(A, f"{PLACE}_1k.hdr"))
 for e in (e_cam, e_lit): nt.links.new(mp.outputs["Vector"], e.inputs["Vector"])
 b_cam = nt.nodes.new("ShaderNodeBackground"); b_lit = nt.nodes.new("ShaderNodeBackground"); b_lit.inputs["Strength"].default_value = float(a[a.index("--세상빛") + 1]) if "--세상빛" in a else 0.6   # 사진에서 오는 빛 세기 (인물 밝기)
-nt.links.new(e_cam.outputs["Color"], b_cam.inputs["Color"]); nt.links.new(e_lit.outputs["Color"], b_lit.inputs["Color"])
+XF = None
+if PLACE2:
+    mp2 = nt.nodes.new("ShaderNodeMapping"); nt.links.new(tc.outputs["Generated"], mp2.inputs["Vector"])
+    mp2.inputs["Rotation"].default_value = (0, 0, math.radians((float(a[a.index("--방향2") + 1] if "--방향2" in a else 0.5) - 0.75) * 360))
+    e_cam2 = nt.nodes.new("ShaderNodeTexEnvironment"); e_cam2.image = bpy.data.images.load(os.path.join(A, f"{PLACE2}.jpg"))
+    e_lit2 = nt.nodes.new("ShaderNodeTexEnvironment"); e_lit2.image = bpy.data.images.load(os.path.join(A, f"{PLACE2}_1k.hdr"))
+    for e in (e_cam2, e_lit2): nt.links.new(mp2.outputs["Vector"], e.inputs["Vector"])
+    XF = nt.nodes.new("ShaderNodeValue"); XF.outputs[0].default_value = 0.0
+    mixes = []
+    for e1, e2, dst_ in ((e_cam, e_cam2, b_cam), (e_lit, e_lit2, b_lit)):
+        mx = nt.nodes.new("ShaderNodeMix"); mx.data_type = "RGBA"
+        nt.links.new(XF.outputs[0], mx.inputs["Factor"]); nt.links.new(e1.outputs["Color"], mx.inputs[6]); nt.links.new(e2.outputs["Color"], mx.inputs[7])
+        nt.links.new(mx.outputs[2], dst_.inputs["Color"])
+else:
+    nt.links.new(e_cam.outputs["Color"], b_cam.inputs["Color"]); nt.links.new(e_lit.outputs["Color"], b_lit.inputs["Color"])
+def set_xf(i):
+    if XF is None: return
+    t = i / 24.0; u = min(1.0, max(0.0, (t - XF_T[0]) / max(XF_T[1] - XF_T[0], 1e-6)))
+    XF.outputs[0].default_value = u * u * (3 - 2 * u)
 lp = nt.nodes.new("ShaderNodeLightPath"); mix = nt.nodes.new("ShaderNodeMixShader"); outw = nt.nodes.new("ShaderNodeOutputWorld")
 nt.links.new(lp.outputs["Is Camera Ray"], mix.inputs["Fac"]); nt.links.new(b_lit.outputs["Background"], mix.inputs[1]); nt.links.new(b_cam.outputs["Background"], mix.inputs[2])
 nt.links.new(mix.outputs["Shader"], outw.inputs["Surface"])
@@ -144,6 +166,8 @@ if "--구두" in a:
 # ── 자세: 기본 = 차렷(팔을 몸 옆에 자연스럽게 내림, 사용자 결정 2026-11-23), --자세 모음 = 손을 허리 앞에 모음 — 뼈 방향을 목표 방향으로 돌림 ──
 POSE = a[a.index('--자세') + 1] if '--자세' in a else '차렷'     # 앞나란히 / 차렷(기본, 사용자 결정 2026-11-23: 마이크 없이 자연스러운 팔) / 마이크 / 모음
 MIC_SIDE = a[a.index('--마이크손') + 1] if '--마이크손' in a else 'R'
+POINT_SIDE = a[a.index('--가리킬손') + 1] if '--가리킬손' in a else 'R'
+WRAP = float(a[a.index('--감싸기') + 1]) if '--감싸기' in a else 0.42; CUP_GRIP = a[a.index('--컵잡기') + 1] if '--컵잡기' in a else '한손'; WRAP1 = float(a[a.index('--한손감싸기') + 1]) if '--한손감싸기' in a else 0.55; CUP_MID = 0.12; CUP_UP = -0.035; CUP_SIDE = 'R'; SEAT_H = float(a[a.index('--의자높이') + 1]) if '--의자높이' in a else 0.46; CAFE_DY = 0.0                          # 커피: 컵 든 손, 의자 앉는 판 높이(m)   # 가리키기: 어느 손으로 (R/L)
 ARMUP = float(a[a.index('--팔높이') + 1]) if '--팔높이' in a else 0.0   # 팔벌려: 0 = 수평, -0.3 = 살짝 아래
 HAND_S = float(a[a.index('--손굵기') + 1]) if '--손굵기' in a else 1.0     # 손 굵기는 모델에서 직접 가늘게 함(glb_손가늘게.py) — 뼈 크기로 줄이면 손가락 틈이 벌어졌음
 MIC_F = (0.30, 0.45, 0.85); MIC_CURL = 1.25; FIST = float(a[a.index('--주먹') + 1]) if '--주먹' in a else 0.32   # 주먹 = 마디마다 굽힘(라디안)
@@ -194,10 +218,10 @@ if arm is not None and "--자세없음" not in a:
         palm[side] = (h.matrix.to_3x3().inverted() @ MWi.to_3x3() @ n)
     def palm_now(side):
         bpy.context.view_layer.update(); return (MW.to_3x3() @ B(f"Hand.{side}").matrix.to_3x3() @ palm[side]).normalized()
-    def curl(side, amt, thumb=None):
-        """손가락을 손바닥 쪽으로 굽힘 (amt = 마디마다 굽히는 각도, 라디안)"""
+    def curl(side, amt, thumb=None, only=None):
+        """손가락을 손바닥 쪽으로 굽힘 (amt = 마디마다 굽히는 각도, 라디안). only: 이 손가락들만"""
         if side not in palm: return
-        for f in ("Index", "Middle", "Ring", "Little", "Thumb"):
+        for f in (only or ("Index", "Middle", "Ring", "Little", "Thumb")):
             th0 = (thumb if thumb is not None else amt * 0.5) if f == "Thumb" else amt
             fm = {"Index": 0.92, "Middle": 1.0, "Ring": 1.05, "Little": 1.1, "Thumb": 1.0}[f]   # 새끼 쪽일수록 조금 더 (실제 주먹처럼)
             for k in (1, 2, 3):
@@ -215,6 +239,20 @@ if arm is not None and "--자세없음" not in a:
                 T1 = mathutils.Matrix.Translation(pb.head); T0 = mathutils.Matrix.Translation(-pb.head)
                 pb.matrix = T1 @ R @ T0 @ pb.matrix; bpy.context.view_layer.update()
     mic_hand = None
+    if POSE == '커피':                                          # 노천카페 의자에 앉음 (사용자 2026-11-24 '노천카페에 앉아서 커피 마시는 장면')
+        bpy.context.view_layer.update()
+        foot0 = {sd: B(f"Foot.{sd}").matrix.to_3x3().to_4x4() for sd in ("L", "R") if B(f"Foot.{sd}")}
+        hz = (W(B("UpperLeg.L")).z + W(B("UpperLeg.R")).z) / 2
+        drop = hz - (SEAT_H + 0.09)                                # 엉덩관절 = 앉는 판 위 9cm
+        hp_ = B("Hips"); hp_.matrix = mathutils.Matrix.Translation(MWi.to_3x3() @ mathutils.Vector((0, 0.04, -drop))) @ hp_.matrix
+        bpy.context.view_layer.update()
+        if "Spine" in arm.pose.bones:                              # 상체는 곧게, 아주 살짝 앞으로
+            sp = B("Spine"); R_ = (MWi.to_3x3() @ mathutils.Matrix.Rotation(math.radians(6), 3, (1, 0, 0)) @ MW.to_3x3()).to_4x4()
+            sp.matrix = mathutils.Matrix.Translation(sp.head) @ R_ @ mathutils.Matrix.Translation(-sp.head) @ sp.matrix; bpy.context.view_layer.update()
+        for sd, sx in (("L", 1), ("R", -1)):
+            aim_bone([f"UpperLeg.{sd}"], (sx * 0.06, -1.0, -0.08), [f"LowerLeg.{sd}"])   # 허벅지: 앞으로 거의 수평
+            aim_bone([f"LowerLeg.{sd}"], (sx * 0.02, -0.12, -1.0), [f"Foot.{sd}"])        # 종아리: 아래로
+            fb_ = B(f"Foot.{sd}"); fb_.matrix = mathutils.Matrix.Translation(fb_.matrix.translation) @ foot0[sd]; bpy.context.view_layer.update()
     for side in ("L", "R"):
         ub = [f"UpperArm.{side}", f"{'Left' if side == 'L' else 'Right'}UpperArm"]
         fb = [f"ForeArm.{side}", f"{'Left' if side == 'L' else 'Right'}ForeArm"]
@@ -230,6 +268,42 @@ if arm is not None and "--자세없음" not in a:
             aim_bone(fb, (sgn * 0.0, -1.0, 0.0), hb)           # 아래팔: 위팔과 한 줄
             aim_bone(hb, (0.0, -1.0, -0.02), [f"Middle1.{side}"])   # 손: 손끝이 앞으로, 손바닥은 안쪽
             curl(side, 0.08, thumb=0.05)                       # 손가락은 거의 펴고 힘만 살짝 뺌
+        elif POSE == '커피' and CUP_GRIP == '한손' and side != CUP_SIDE:   # 한손 잡기: 다른 팔은 탁자 위에
+            aim_bone(ub, (sgn * 0.15, -0.45, -0.88), fb)
+            aim_bone(fb, (-sgn * 0.30, -0.95, -0.02), hb)
+            aim_bone(hb, (-sgn * 0.20, -0.95, -0.15), [f"Middle1.{side}"])
+            curl(side, 0.35, thumb=0.2)
+        elif POSE == '커피' and CUP_GRIP == '한손':             # 한손 잡기: 손 모양을 먼저 잡고(손가락이 앞을 향해 C 자로 컵을 감쌀 모양), 컵은 그 손 안에 맞춰 놓음 (사용자 2026-11-25)
+            aim_bone(ub, (sgn * 0.28, -0.30, -0.91), fb)
+            aim_bone(fb, (-sgn * 0.30, -0.85, 0.42), hb)
+            aim_bone(hb, (-sgn * 0.10, -0.98, 0.10), [f"Middle1.{side}"])
+            if side in palm:                                       # 손바닥이 몸 가운데 쪽(컵 쪽)을 보게
+                bpy.context.view_layer.update()
+                hpb_ = B(f"Hand.{side}"); ax_ = (W(B(f"Middle1.{side}")) - W(hpb_)).normalized()
+                n_ = palm_now(side); tg_ = mathutils.Vector((-sgn, 0, -0.15)); tg_ = (tg_ - ax_ * ax_.dot(tg_)).normalized(); n_ = (n_ - ax_ * ax_.dot(n_)).normalized()
+                ang_ = math.atan2(ax_.dot(n_.cross(tg_)), n_.dot(tg_))
+                R_ = (MWi.to_3x3() @ mathutils.Matrix.Rotation(ang_, 3, ax_) @ MW.to_3x3()).to_4x4()
+                hpb_.matrix = mathutils.Matrix.Translation(hpb_.head) @ R_ @ mathutils.Matrix.Translation(-hpb_.head) @ hpb_.matrix; bpy.context.view_layer.update()
+            curl(side, WRAP1, thumb=0.45)                          # C 자로 둥글게, 엄지는 맞은편
+        elif POSE == '커피':                                     # 두 손으로 컵을 감싸 쥠 (사용자 2026-11-25 선택: 손잡이 대신 감싸 쥐기)
+            aim_bone(ub, (sgn * 0.26, -0.32, -0.91), fb)
+            aim_bone(fb, (-sgn * 0.55, -0.72, 0.42), hb)
+            aim_bone(hb, (-sgn * 0.30, -0.80, 0.52), [f"Middle1.{side}"])
+            if side in palm:                                       # 손바닥이 서로 마주 보게 (몸 가운데 쪽)
+                bpy.context.view_layer.update()
+                hpb_ = B(f"Hand.{side}"); ax_ = (W(B(f"Middle1.{side}")) - W(hpb_)).normalized()
+                n_ = palm_now(side); tg_ = mathutils.Vector((-sgn, 0.15, -0.1)); tg_ = (tg_ - ax_ * ax_.dot(tg_)).normalized(); n_ = (n_ - ax_ * ax_.dot(n_)).normalized()
+                ang_ = math.atan2(ax_.dot(n_.cross(tg_)), n_.dot(tg_))
+                R_ = (MWi.to_3x3() @ mathutils.Matrix.Rotation(ang_, 3, ax_) @ MW.to_3x3()).to_4x4()
+                hpb_.matrix = mathutils.Matrix.Translation(hpb_.head) @ R_ @ mathutils.Matrix.Translation(-hpb_.head) @ hpb_.matrix; bpy.context.view_layer.update()
+            curl(side, WRAP, thumb=0.25)                          # 손가락을 둥글게 (컵 몸통을 감쌈)
+        elif POSE == '가리키기' and side == POINT_SIDE:          # 한쪽 팔을 들어 검지로 앞을 가리킴 (사용자 2026-11-24)
+            aim_bone(ub, (sgn * 0.22, -1.0, 0.18), fb)          # 위팔: 앞으로, 어깨보다 살짝 위·바깥
+            aim_bone(fb, (sgn * 0.12, -1.0, 0.22), hb)          # 아래팔: 거의 곧게
+            aim_bone(hb, (sgn * 0.05, -1.0, 0.20), [f"Middle1.{side}"])
+            curl(side, 1.05, only=("Middle", "Ring", "Little"))   # 가운데·약지·새끼는 쥐고
+            curl(side, 0.0, thumb=0.95, only=("Thumb",))          # 엄지는 접어 가운데손가락 위로 (0.55 는 총 모양처럼 섰음)
+            curl(side, 0.06, only=("Index",))                     # 검지만 곧게 (힘 살짝 뺌)
         elif POSE == '팔벌려':                                  # 두 팔을 옆으로 어깨 높이까지 활짝 (사용자 2026-11-24 어깨 확인)
             aim_bone(ub, (sgn * 1.0, 0.0, ARMUP), fb)           # 위팔: 옆으로 (ARMUP 0 = 수평)
             aim_bone(fb, (sgn * 1.0, 0.0, ARMUP), hb)
@@ -282,6 +356,82 @@ if arm is not None and "--자세없음" not in a:
         head_ = bpy.context.object; head_.data.materials.append(mat("마이크망", (0.12, 0.12, 0.13), 0.55, 0.9)); bpy.ops.object.shade_smooth()
         print("마이크 머리 위치", tuple(round(v, 3) for v in head_.location))
     if bpy.context.object and bpy.context.object.mode != "OBJECT": bpy.ops.object.mode_set(mode="OBJECT")
+    if POSE == '커피':
+        # Poly Haven 노천카페 탁자·의자(outdoor_table_chair_set_01)와 찻잔(tea_set_01), CC0 — 사람 뒤에 의자, 앞에 탁자, 컵은 오른손에
+        MD = os.path.join(ROOT, "models", "polyhaven", "_models")
+        def imp(mid):
+            b4 = set(bpy.data.objects); bpy.ops.import_scene.gltf(filepath=os.path.join(MD, mid, f"{mid}.gltf"))
+            return {o.name: o for o in bpy.data.objects if o not in b4}
+        fur = imp("outdoor_table_chair_set_01")
+        Rz = mathutils.Matrix.Rotation(math.pi, 4, "Z")              # 의자 하나가 사람 쪽(-y 를 보게)
+        for o in fur.values():
+            if o.parent is None: o.matrix_world = mathutils.Matrix.Translation((0.03, -0.52 + CAFE_DY, 0)) @ Rz @ o.matrix_world
+        tea = imp("tea_set_01")
+        keep = {"tea_set_01_cup_small_01", "tea_set_01_saucer_circular_04"}
+        bpy.context.view_layer.update()
+        tbl = next(o for n, o in fur.items() if n.endswith("_table")); ttop = max((tbl.matrix_world @ mathutils.Vector(c)).z for c in tbl.bound_box)
+        tcen = sum((tbl.matrix_world @ mathutils.Vector(c) for c in tbl.bound_box), mathutils.Vector()) / 8
+        for n, o in tea.items():
+            if o.type != "MESH": continue
+            if not any(n.startswith(k) for k in keep): o.hide_render = True; continue
+        cup = next(o for n, o in tea.items() if n.startswith("tea_set_01_cup_small_01") and o.type == "MESH")
+        sau = next(o for n, o in tea.items() if n.startswith("tea_set_01_saucer_circular_04") and o.type == "MESH")
+        def move_to(o, p):
+            bpy.context.view_layer.update(); bb = [o.matrix_world @ mathutils.Vector(c) for c in o.bound_box]
+            c0 = mathutils.Vector((sum(q.x for q in bb) / 8, sum(q.y for q in bb) / 8, min(q.z for q in bb)))
+            o.matrix_world = mathutils.Matrix.Translation(p - c0) @ o.matrix_world
+        move_to(sau, mathutils.Vector((tcen.x - 0.12, tcen.y + 0.10, ttop)))
+        bpy.context.view_layer.update()
+        h_ = arm.pose.bones[f"Hand.{CUP_SIDE}"]
+        bpy.context.view_layer.update()
+        if CUP_GRIP == '한손':
+            # 손 모양에 컵을 맞춤: 손바닥 가운데·손가락 마디·엄지 끝을 위에서 본 점들로 원을 맞춰 그 원의 가운데 = 컵 축, 높이는 손가락 높이
+            MWc = arm.matrix_world; PBc = arm.pose.bones; sd_ = CUP_SIDE
+            pts = [(MWc @ PBc[f"Hand.{sd_}"].head) * 0.3 + (MWc @ PBc[f"Middle1.{sd_}"].head) * 0.7]
+            for f_ in ("Index", "Middle", "Ring", "Little"):
+                pts += [MWc @ PBc[f"{f_}2.{sd_}"].head, MWc @ PBc[f"{f_}3.{sd_}"].head, MWc @ PBc[f"{f_}3.{sd_}"].tail]
+            pts += [MWc @ PBc[f"Thumb3.{sd_}"].tail]
+            import numpy as _np
+            X = _np.array([[q.x, q.y] for q in pts]); A_ = _np.c_[2 * X, _np.ones(len(X))]; b_ = (X ** 2).sum(1)
+            cx, cy, c_ = _np.linalg.lstsq(A_, b_, rcond=None)[0]; rr = float(_np.sqrt(c_ + cx * cx + cy * cy))
+            # 손 모양 원이 컵보다 작으면(손가락이 컵 속으로) → 손바닥에서 손바닥 방향으로 '컵 반지름 + 1.2cm' 떨어진 곳을 컵 축으로
+            vw_ = [cup.matrix_world @ v.co for v in cup.data.vertices]; zz0 = min(v.z for v in vw_); zz1 = max(v.z for v in vw_)
+            bo_ = [v for v in vw_ if v.z < zz0 + 0.25 * (zz1 - zz0)]; ac_ = mathutils.Vector((sum(v.x for v in bo_) / len(bo_), sum(v.y for v in bo_) / len(bo_), 0))
+            rim = [v for v in vw_ if v.z > zz1 - 0.01]; Rcup = max(((v.x - ac_.x) ** 2 + (v.y - ac_.y) ** 2) ** 0.5 for v in rim)
+            Rbody = sorted(((v.x - ac_.x) ** 2 + (v.y - ac_.y) ** 2) ** 0.5 for v in vw_ if zz0 + 0.3 * (zz1 - zz0) < v.z < zz0 + 0.6 * (zz1 - zz0))[len(vw_) // 40 if False else 0]
+            pn = palm_now(sd_); pn = mathutils.Vector((pn.x, pn.y, 0)).normalized()
+            cc = pts[0] + pn * (Rcup * 0.85 + 0.012)
+            if rr < Rcup: cx, cy = cc.x, cc.y
+            zf = sum(q.z for q in pts) / len(pts)
+            vw = [cup.matrix_world @ v.co for v in cup.data.vertices]; z0c, z1c = min(v.z for v in vw), max(v.z for v in vw)
+            bod = [v for v in vw if v.z < z0c + 0.25 * (z1c - z0c)]
+            axc = mathutils.Vector((sum(v.x for v in bod) / len(bod), sum(v.y for v in bod) / len(bod), z0c))
+            far = max(vw, key=lambda v: (v.x - axc.x) ** 2 + (v.y - axc.y) ** 2)
+            hdir = mathutils.Vector((far.x - axc.x, far.y - axc.y, 0)).normalized()
+            pal = mathutils.Vector((pts[0].x - cx, pts[0].y - cy, 0)).normalized()   # 손바닥 쪽 → 손잡이는 반대(바깥)로
+            ang = math.atan2(hdir.cross(-pal).z, hdir.dot(-pal))
+            cup.matrix_world = mathutils.Matrix.Translation(axc) @ mathutils.Matrix.Rotation(ang, 4, "Z") @ mathutils.Matrix.Translation(-axc) @ cup.matrix_world
+            cup.matrix_world = mathutils.Matrix.Translation(mathutils.Vector((cx, cy, zf - (z1c - z0c) * 0.45)) - axc) @ cup.matrix_world
+            print(f"컵: 손 모양에 맞춘 원 반지름 {rr * 100:.1f}cm (컵 반지름 약 {((bod[0].x - axc.x) ** 2 + (bod[0].y - axc.y) ** 2) ** 0.5 * 100:.1f}~)")
+            grip = mathutils.Vector((cx, cy, zf))
+        # 두 손바닥 가운데에 컵 몸통 (손잡이는 몸 쪽으로 돌려 숨김) — 손바닥 사이가 컵 폭과 맞게 확인
+        if CUP_GRIP != '한손':
+            MWc = arm.matrix_world; PBc = arm.pose.bones
+            pc = {s_: (MWc @ PBc[f"Hand.{s_}"].head) * 0.35 + (MWc @ PBc[f"Middle1.{s_}"].head) * 0.65 for s_ in ("L", "R")}
+            mid = (pc["L"] + pc["R"]) / 2
+            vw = [cup.matrix_world @ v.co for v in cup.data.vertices]; z0c, z1c = min(v.z for v in vw), max(v.z for v in vw)
+            bod = [v for v in vw if v.z < z0c + 0.25 * (z1c - z0c)]
+            axc = mathutils.Vector((sum(v.x for v in bod) / len(bod), sum(v.y for v in bod) / len(bod), z0c))
+            far = max(vw, key=lambda v: (v.x - axc.x) ** 2 + (v.y - axc.y) ** 2)
+            hdir = mathutils.Vector((far.x - axc.x, far.y - axc.y, 0)).normalized()
+            ang = math.atan2(hdir.cross(mathutils.Vector((0, 1, 0))).z, hdir.dot(mathutils.Vector((0, 1, 0))))   # 손잡이 → 몸 쪽(+y)
+            cup.matrix_world = mathutils.Matrix.Translation(axc) @ mathutils.Matrix.Rotation(ang, 4, "Z") @ mathutils.Matrix.Translation(-axc) @ cup.matrix_world
+            cup.matrix_world = mathutils.Matrix.Translation(mid - (axc + mathutils.Vector((0, 0, (z1c - z0c) * CUP_MID)))) @ cup.matrix_world
+            print(f"컵: 두 손바닥 사이 {(pc['L'] - pc['R']).length * 100:.1f}cm, 컵 폭 {2 * ((far.x - axc.x) ** 2 + (far.y - axc.y) ** 2) ** 0.5 * 100:.1f}cm(손잡이 포함)")
+            grip = mid
+        mw_ = cup.matrix_world.copy(); cup.parent = arm; cup.parent_type = "BONE"; cup.parent_bone = h_.name
+        bpy.context.view_layer.update(); cup.matrix_world = mw_
+        print("카페: 탁자 높이", round(ttop, 3), "컵", tuple(round(v, 3) for v in grip))
 # 모양 키(입·눈) 모으기
 keyed = [o for o in objs if o.type == "MESH" and o.data.shape_keys]
 def set_shape(name, v, frame=None):
@@ -300,6 +450,13 @@ area((-1.6, -2.0, 2.4), 160 * LG, 1.5, (1.0, 0.95, 0.9))
 area((1.8, -1.6, 1.8), 60 * LG, 1.5, (0.9, 0.93, 1.0))
 area((0.3, 1.8, 2.4), 120 * LG, 1.0, (0.8, 0.85, 1.0))       # 뒤 윤곽광 (도시 빛과 어울리게 살짝 푸름)
 
+# ── 해(--해 방위°,높이°,세기): 사진 배경판과 빛을 맞출 때 — 방위 0 = 인물 뒤(+y), 90 = 오른쪽(+x) (사용자 2026-11-25 '주인공 조명은 주변과 어울리게') ──
+if "--해" in a:
+    az, el, en = (float(v) for v in a[a.index("--해") + 1].split(","))
+    bpy.ops.object.light_add(type="SUN"); sun = bpy.context.object; sun.data.energy = en; sun.data.angle = math.radians(0.6)
+    sun.data.color = (1.0, 0.97, 0.92)
+    d = mathutils.Vector((math.sin(math.radians(az)) * math.cos(math.radians(el)), math.cos(math.radians(az)) * math.cos(math.radians(el)), math.sin(math.radians(el))))
+    sun.rotation_euler = (-d).to_track_quat("-Z", "Y").to_euler()      # 해에서 인물 쪽으로 비춤
 # ── 카메라: 인물 둘레를 돎 ──
 bpy.ops.object.camera_add(); cam = bpy.context.object; sc.camera = cam; cam.data.lens = 40
 a0, a1 = (math.radians(float(v)) for v in opt["--각도"].split(","))
@@ -318,15 +475,26 @@ HC1 = float(a[a.index("--끝높이") + 1]) if "--끝높이" in a else HC
 WHO = [mathutils.Vector((0, 0, 0))]
 # 게임 카메라(--게임카메라): (초, 각도°, 거리, 높이, 보는 높이, 렌즈mm) — 춤 마디에 맞춰 구도가 바뀜 (사용자 2026-11-24 '게임 카메라무빙')
 #   스텝: 낮은 앵글로 크게 돌기 → 손뼉: 정면 상반신으로 밀고 들어감 → 엉덩이: 옆 낮은 높이로 쓸고 지나감 → 돌기: 높이 올라가며(크레인) 반대쪽으로 크게 돎
-GAMECAM = "--게임카메라" in a; GAMECAM_ROLL = 4.0
+GAMECAM = "--게임카메라" in a or "--트래킹오르빗" in a or "--카페카메라" in a; GAMECAM_ROLL = 0.0 if "--트래킹오르빗" in a else 4.0
 GAMECAM_KEYS = [(0.0, -40, 3.4, 0.45, 0.85, 30), (2.2, 30, 2.6, 0.55, 0.95, 34), (3.0, 5, 1.9, 1.35, 1.25, 48), (4.5, -8, 1.8, 1.3, 1.22, 50),
                 (5.1, 60, 2.6, 0.6, 0.88, 32), (6.6, 105, 2.8, 0.65, 0.9, 32), (7.3, 150, 3.3, 2.5, 0.95, 28), (9.0, 250, 3.6, 1.7, 0.95, 30),
                 (12.0, 360, 3.6, 1.4, 0.95, 32)]
+if "--카페카메라" in a:   # 노천카페: 비스듬한 앞에서 천천히 다가가며 살짝 돎 (마시는 순간 얼굴이 잘 보이게)
+    GAMECAM_KEYS = [(0.0, 42, 2.6, 1.3, 1.0, 38), (5.0, 26, 1.9, 1.28, 1.08, 44)]
+if "--트래킹오르빗" in a:   # 전진 트래킹(정면에서 곧게 다가감) → 멈추지 않고 인물 둘레를 돎 (사용자 2026-11-24)
+    # 180° 까지, 전진은 점점 빠르게 → 돌기는 빠르게 시작해 배경이 바뀐 뒤 천천히 멈춤 (사용자 2026-11-24)
+    GAMECAM_KEYS = [(0.0, 0, 7.0, 1.55, 1.25, 35), (2.6, 0, 2.7, 1.45, 1.3, 40, "점점빠르게"), (6.0, 180, 2.7, 1.5, 1.3, 40, "점점느리게"), (9.0, 180, 2.7, 1.5, 1.3, 40)]
 def place(i, who=None):
     s = i / max(1, N - 1); s = s * s * (3 - 2 * s); th = a0 + (a1 - a0) * s
     r_ = R + (R1 - R) * s; lk = LOOK + (LOOK1 - LOOK) * s; hc = HC + (HC1 - HC) * s
     c0 = who if who is not None else mathutils.Vector((0, 0, 0))
     cam.location = (c0.x + r_ * math.sin(th), c0.y - r_ * math.cos(th), hc)
+    if "--고정카메라" in a:   # 카메라가 인물을 따라가지 않고 한 자리에 (x,y,z,보는x,보는y,보는z[,렌즈mm]) — 인물이 카메라 쪽으로 걸어오는 장면용
+        v7 = [float(q) for q in a[a.index("--고정카메라") + 1].split(",")]
+        cam.location = mathutils.Vector(v7[:3]); d = mathutils.Vector(v7[3:6]) - cam.location
+        cam.rotation_euler = d.to_track_quat("-Z", "Y").to_euler()
+        if len(v7) > 6: cam.data.lens = v7[6]
+        return
     if "--카메라" in a:      # 검사용: 카메라 자리·보는 곳을 직접 (x,y,z,보는x,보는y,보는z — 인물이 걸어온 만큼 같이 옮김)
         v6 = [float(q) for q in a[a.index("--카메라") + 1].split(",")]; wv = WHO[0]
         cam.location = mathutils.Vector(v6[:3]) + wv; d = mathutils.Vector(v6[3:]) + wv - cam.location
@@ -335,7 +503,10 @@ def place(i, who=None):
         t = i / 24.0; ks = GAMECAM_KEYS
         k = max(0, min(len(ks) - 2, next((n for n in range(len(ks) - 1) if ks[n + 1][0] > t), len(ks) - 2)))
         (ta, *A), (tb, *Bk) = ks[k], ks[k + 1]
-        u = min(1.0, max(0.0, (t - ta) / max(tb - ta, 1e-6))); u = u * u * (3 - 2 * u)
+        u = min(1.0, max(0.0, (t - ta) / max(tb - ta, 1e-6)))
+        ez = Bk[5] if len(Bk) > 5 else "부드럽게"                              # 이 구간 빠르기: 점점빠르게 / 점점느리게 / 부드럽게
+        # 점점빠르게 = u³, 점점느리게 = 1-(1-u)², 부드럽게 = smoothstep — 전진(4.3m/2.6초)이 끝날 때 빠르기와 돌기(반원 8.5m/3.4초)가 시작할 때 빠르기가 같아 이음매에서 덜컥이지 않음
+        u = u ** 3 if ez == "점점빠르게" else 1 - (1 - u) ** 2 if ez == "점점느리게" else u * u * (3 - 2 * u)
         ang, rad, hgt, lz, lens = [A[q] + (Bk[q] - A[q]) * u for q in range(5)]
         sh = 0.006 * math.sin(t * 7.3) + 0.004 * math.sin(t * 12.1)           # 손으로 든 듯한 아주 작은 흔들림
         th = math.radians(ang)
@@ -357,11 +528,12 @@ def place(i, who=None):
 #   발 자리를 시간마다 정하고(오른발 → 왼발 → 오른발을 모음), 골반은 두 발 가운데, 다리는 두 마디 IK(무릎은 앞으로), 발은 바닥과 평평하게.
 #   팔은 걷는 동안 반대쪽 다리와 함께 앞뒤로 조금 흔듦
 WALK = "--걷기" in a
+SIP = "--마시기" in a        # 커피 자세에서 컵을 입으로 가져가 한 모금 마시고 내려놓음 (사용자 2026-11-24)
 DANCE = "--춤" in a          # 가벼운 춤(스텝 터치): 옆으로 한 발 내딛고 모으기를 박자에 맞춰, 무릎 반동·골반·팔 흔들기 (사용자 2026-11-24 "약간의 댄스")
 BPM = float(a[a.index("--박자") + 1]) if "--박자" in a else 112
 ROUTINE = (a[a.index("--춤순서") + 1] if "--춤순서" in a else "스텝,손뼉,엉덩이,돌기").split(",")   # 4박마다 바뀌는 동작 순서
 STEP = float(a[a.index("--보폭") + 1]) if "--보폭" in a else 0.28     # 엉덩이~발목 0.55m·몸에 붙는 치마·굽 구두 → 작은 걸음 (0.40 이면 골반이 내려가 무릎 굽은 채 걸음)
-if (WALK or DANCE) and arm is not None:
+if (WALK or DANCE or SIP) and arm is not None:
     bpy.context.view_layer.update()
     MW = arm.matrix_world.copy(); MWi = MW.inverted(); M3 = MW.to_3x3(); M3i = MWi.to_3x3()
     PB = arm.pose.bones
@@ -379,9 +551,14 @@ if (WALK or DANCE) and arm is not None:
     #   발을 6cm 들어 무릎이 계단 오르듯 높이 올라감 → 3.5cm · 골반이 두 발 가운데를 따라 걸음마다 멈칫 → 처음부터 끝까지 고르게 앞으로
     #   발이 늘 평평 → 뗄 때 뒤꿈치 들고(14°) 디딜 때 앞꿈치 살짝 듦 · 몸통이 막대처럼 → 골반 좌우 돌림·기울임, 가슴은 반대로, 살짝 앞으로 숙임
     #   팔 흔들림이 거의 없음 → 크게, 앞으로 갈 때 팔꿈치 살짝 굽힘
-    LIFT = 0.035; TEND = T0 + 2 * D1 + D3
+    LIFT = 0.035; NSTEP = int(a[a.index('--걸음수') + 1]) if '--걸음수' in a else 2; TEND = T0 + NSTEP * D1 + D3
+    # 걸음표: (시작, 길이, 발, 출발 y, 도착 y) — 오른발부터 번갈아, 첫 걸음은 반걸음, 마지막에 뒤 발을 모음 (--걸음수 N, 사용자 2026-11-25 카메라 쪽으로 걸어오기)
+    SCHED = []
+    for k_ in range(NSTEP):
+        SCHED.append((T0 + k_ * D1, D1, "R" if k_ % 2 == 0 else "L", -max(0, k_ - 1) * STEP if k_ > 0 else 0.0, -(k_ + 1) * STEP))
+    SCHED.append((T0 + NSTEP * D1, D3, "L" if NSTEP % 2 == 0 else "R", -(NSTEP - 1) * STEP, -NSTEP * STEP))
     def foot_u(sd, t):                                       # 이 발이 지금 몇 번째 걸음의 어디쯤(0~1)인지, 걸음 길이
-        segs = [(T0, D1), (T0 + 2 * D1, D3)] if sd == "R" else [(T0 + D1, D1)]
+        segs = [(s0, d) for s0, d, f_, _, _ in SCHED if f_ == sd]
         for s0, d in segs:
             if s0 <= t <= s0 + d: return (t - s0) / d
         return None
@@ -396,12 +573,14 @@ if (WALK or DANCE) and arm is not None:
         T1 = mathutils.Matrix.Translation(pb.head); T0_ = mathutils.Matrix.Translation(-pb.head)
         pb.matrix = T1 @ R_ @ T0_ @ pb.matrix; bpy.context.view_layer.update()
     def foot_y(sd, t):
-        if sd == "R":   # 오른발 먼저 한 걸음, 마지막에 왼발 옆으로 모음
-            return -STEP * sm((t - T0) / D1) - STEP * sm((t - T0 - 2 * D1) / D3)
-        return -2 * STEP * sm((t - T0 - D1) / D1)
+        y = 0.0
+        for s0, d, f_, y0, y1 in SCHED:
+            if f_ != sd: continue
+            if t >= s0 + d: y = y1
+            elif t > s0: y = y0 + (y1 - y0) * sm((t - s0) / d)
+        return y
     def foot_lift(sd, t):
-        ph = [(T0, D1, LIFT), (T0 + 2 * D1, D3, LIFT * 0.6)] if sd == "R" else [(T0 + D1, D1, LIFT)]
-        return sum(h * math.sin(math.pi * min(1, max(0, (t - s0) / d))) for s0, d, h in ph)
+        return sum((LIFT if k_ < len(SCHED) - 1 else LIFT * 0.6) * math.sin(math.pi * min(1, max(0, (t - s0) / d))) for k_, (s0, d, f_, _, _) in enumerate(SCHED) if f_ == sd)
     def set_world_aim(name, child_head_world, target_world):
         if name.startswith("UpperArm."): bpy.context.view_layer.update(); shrug(name[-1], target_world - (MW @ PB[name].head))
         pb = PB[name]; bpy.context.view_layer.update()
@@ -417,7 +596,7 @@ if (WALK or DANCE) and arm is not None:
         gap = abs(fy["L"] - fy["R"])
         drop = LL - math.sqrt(max(LL * LL - (gap / 2) ** 2, 1e-6)) + 0.004 * min(1, gap / STEP)
         def smoother(u): u = min(1.0, max(0.0, u)); return u * u * u * (u * (6 * u - 15) + 10)
-        py_ = 0.5 * (-2 * STEP * smoother((t - T0 + 0.1) / (TEND - T0 + 0.05))) + 0.5 * (fy['L'] + fy['R']) / 2   # 골반: 고르게 앞으로 + 두 발 가운데를 반씩 (멈칫도, 무릎 굽힘도 없게)
+        py_ = 0.5 * (-NSTEP * STEP * smoother((t - T0 + 0.1) / (TEND - T0 + 0.05))) + 0.5 * (fy['L'] + fy['R']) / 2   # 골반: 고르게 앞으로 + 두 발 가운데를 반씩 (멈칫도, 무릎 굽힘도 없게)
         lead = (fy["R"] - fy["L"]) / max(STEP, 1e-3)                            # -1: 오른발이 앞, +1: 왼발이 앞
         sway = 0.012 * math.sin(math.pi * (fy["R"] - fy["L"]) / max(STEP, 1e-3))   # 몸무게를 디딘 발 쪽으로 살짝
         # 골반 높이: 골반이 고르게 앞으로 가니 두 발 가운데가 아님 → 더 먼 발에 닿을 만큼만 낮춤 (가운데로 계산하면 너무 낮아 무릎이 굽은 채 걸었음)
@@ -532,7 +711,28 @@ if (WALK or DANCE) and arm is not None:
             for r in roots: r.matrix_world = Rz @ ROOT0[r.name]
             bpy.context.view_layer.update()
         return mathutils.Vector((0, 0, 0))
+    def sip(i):
+        """컵 든 팔: 가슴 앞(쉼) → 입가로 들어 올림 → 한 모금(고개 살짝 뒤로) → 내림. 박자: 0~1초 쉼, 1~2.2 올림, 2.2~3.4 마심, 3.4~4.6 내림"""
+        t = i / 24.0
+        for b in PB: b.matrix_basis = base[b.name]
+        bpy.context.view_layer.update()
+        sm3 = lambda u: 0.0 if u <= 0 else 1.0 if u >= 1 else u * u * (3 - 2 * u)
+        k = sm3((t - 1.0) / 1.2) * (1 - sm3((t - 3.4) / 1.2))                # 0 쉼 ↔ 1 입가
+        V = mathutils.Vector
+        lerp = lambda p_, q_: (p_ * (1 - k) + q_ * k)
+        for sd in ((CUP_SIDE,) if CUP_GRIP == '한손' else ("L", "R")):   # 한손: 컵 든 손만 / 두손: 두 손이 함께 입으로
+            ub, fa, hb_ = f"UpperArm.{sd}", f"ForeArm.{sd}", f"Hand.{sd}"
+            sgn = 1 if (MW @ PB[ub].head).x > 0 else -1
+            ud = lerp(V((sgn * 0.26, -0.32, -0.91)), V((sgn * 0.20, -0.80, -0.20)))
+            fd = lerp(V((-sgn * 0.55, -0.72, 0.42)), V((-sgn * 0.55, -0.20, 0.82)))
+            set_world_aim(ub, lambda fa=fa: MW @ PB[fa].head, (MW @ PB[ub].head) + ud)
+            set_world_aim(fa, lambda hb_=hb_: MW @ PB[hb_].head, (MW @ PB[fa].head) + fd)
+        drink = sm3((t - 2.1) / 0.4) * (1 - sm3((t - 3.2) / 0.4))
+        if "Head" in PB: rot_world("Head", (1, 0, 0), -0.18 * drink)            # 마실 때 고개 살짝 뒤로
+        if "Head" in PB: rot_world("Head", (0, 0, 1), 0.08 * (1 - k) * math.sin(t * 0.9))   # 쉴 때 주위를 살짝 둘러봄
+        return mathutils.Vector((0, 0, 0))
     if DANCE: walk = dance
+    if SIP: walk = sip
 else:
     walk = lambda i: mathutils.Vector((0, 0, 0))
 
@@ -562,6 +762,6 @@ if "--찍점" in a:      # 검사용: 화면 점(x,y) 아래에 무엇이 있는
     sys.exit(0)
 frames = [int(opt["--미리보기"])] if opt["--미리보기"] else range(int(opt["--시작장"]), N if int(opt["--끝장"]) < 0 else int(opt["--끝장"]))
 for i in frames:
-    who = walk(i); WHO[0] = who; place(i, who * 0.6); face(i)     # 카메라는 인물을 반쯤 따라감 (나머지는 인물이 다가오는 느낌)
+    set_xf(i); who = walk(i); WHO[0] = who; place(i, who * 0.6); face(i)     # 카메라는 인물을 반쯤 따라감 (나머지는 인물이 다가오는 느낌)
     sc.render.filepath = os.path.join(os.path.abspath(folder), f"f{i:04d}.png"); bpy.ops.render.render(write_still=True)
 print("찍음:", len(list(frames)), "장 →", folder)
