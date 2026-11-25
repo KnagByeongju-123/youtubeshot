@@ -436,6 +436,66 @@ if arm is not None and "--자세없음" not in a:
         mw_ = cup.matrix_world.copy(); cup.parent = arm; cup.parent_type = "BONE"; cup.parent_bone = h_.name
         bpy.context.view_layer.update(); cup.matrix_world = mw_
         print("카페: 탁자 높이", round(ttop, 3), "컵", tuple(round(v, 3) for v in grip))
+# ── 이(치아, --이): 모델엔 입 안이 어두운 면뿐 → 윗니·아랫니를 곡선(치열궁)을 따라 가지런히 만들어 머리에 붙임 (2026-11-25)
+#   윗니는 머리에 고정, 아랫니는 '입 벌림' 모양 키로 아랫입술을 따라 내려감. 크기는 입 너비에 맞춰 늘고 줄음
+if "--이" in a:
+    import bmesh
+    body_ = max((o for o in objs if o.type == "MESH"), key=lambda o: len(o.data.vertices))
+    mi_ = next(o for o in objs if o.type == "MESH" and o.name.startswith("Mouth_Inside"))
+    mi2 = next((o for o in objs if o.type == "MESH" and o.name.startswith("Mouth_Interior")), mi_)
+    bw = [mi_.matrix_world @ mathutils.Vector(c) for c in mi_.bound_box]; bw2 = [mi2.matrix_world @ mathutils.Vector(c) for c in mi2.bound_box]
+    S = (max(v.x for v in bw) - min(v.x for v in bw)) / 0.0417               # 입(입술 사이 구멍) 너비 4.2cm 기준 비율
+    cx = (max(v.x for v in bw) + min(v.x for v in bw)) / 2                   # 입 가운데 (얼굴 가운데보다 살짝 옆)
+    yfront = min(v.y for v in bw); zline = min(v.z for v in bw)                # 입술이 만나는 선(앞쪽)
+    kbs = body_.data.shape_keys.key_blocks; mwb = body_.matrix_world; R3 = mwb.to_3x3()
+    best = mathutils.Vector((0, 0, 0))
+    for v0, v1 in zip(kbs["Basis"].data, kbs["MouthOpen"].data):          # 아랫입술 가운데가 입 벌림 때 움직이는 양
+        w = mwb @ v0.co
+        if abs(w.x - cx) < 0.004 * S and zline - 0.008 * S < w.z < zline:
+            d = R3 @ (v1.co - v0.co)
+            if d.length > best.length: best = d
+    IA = float(a[a.index("--이밝기") + 1]) if "--이밝기" in a else 0.92
+    mat = bpy.data.materials.new("이"); mat.use_nodes = True; bs = mat.node_tree.nodes["Principled BSDF"]
+    bs.inputs["Base Color"].default_value = (0.86 * IA, 0.84 * IA, 0.78 * IA, 1); bs.inputs["Roughness"].default_value = 0.32
+    def row(name, widths, front, c, z_edge, height, up):
+        # widths: 가운데부터 한쪽 이 너비들 (좌우 대칭). 이 하나 = 둥근 모서리 상자, 곡선 y = front + c·x²
+        bm = bmesh.new(); xs = []; x = 0.0; gap = 0.00012 * S
+        for i, w in enumerate(widths):
+            for sg in (1, -1): xs.append((sg * (x + w / 2), w, i))   # 입 가운데 cx 기준
+            x += w + gap
+        for xc, w, i in xs:
+            yc = front + c * xc * xc; ang = math.atan(2 * c * xc)      # 입술 안쪽 곡선을 따라 뒤로 휨
+            h = height[i]; ze = z_edge + 0.00025 * S * i * (1 if up else -1)        # 이 끝선은 가지런하게, 옆으로 갈수록 아주 조금 올라감
+            th = 0.0042 * S * (1 - 0.1 * i)
+            r = bmesh.ops.create_cube(bm, size=1.0)["verts"]
+            for v in r:
+                lx, ly, lz = v.co.x * (w - gap), v.co.y * th, v.co.z * h
+                lx *= 1 - 0.18 * (lz / h + 0.5 if up else 0.5 - lz / h)     # 잇몸 쪽으로 살짝 좁게
+                px = cx + xc + lx * math.cos(ang) - ly * math.sin(ang); py = yc + ly * math.cos(ang) + lx * math.sin(ang)
+                pz = (ze + h / 2 + lz) if up else (ze - h / 2 + lz)
+                v.co = mathutils.Vector((px, py + th / 2, pz))
+        me = bpy.data.meshes.new(name); bm.to_mesh(me); bm.free()
+        ob = bpy.data.objects.new(name, me); bpy.context.scene.collection.objects.link(ob)
+        inv = mwb.inverted()
+        for v in me.vertices: v.co = inv @ v.co
+        ob.parent = body_.parent; ob.matrix_parent_inverse = body_.matrix_parent_inverse.copy(); ob.matrix_basis = body_.matrix_basis.copy()
+        me.materials.append(mat)
+        bv = ob.modifiers.new("둥글게", "BEVEL"); bv.width = 0.0005 * S / max(body_.matrix_world.to_scale()); bv.segments = 3; bv.limit_method = "NONE"
+        am = next((m for m in body_.modifiers if m.type == "ARMATURE"), None)
+        if am:
+            vg = ob.vertex_groups.new(name="Head"); vg.add(list(range(len(me.vertices))), 1.0, "REPLACE")
+            m2 = ob.modifiers.new("Armature", "ARMATURE"); m2.object = am.object
+        for poly in me.polygons: poly.use_smooth = True
+        objs.append(ob); return ob
+    C = 31.0 / S                                                              # 입술 안쪽 곡선 y = 앞 + C·x² (모델에서 잰 값)
+    up = row("윗니", [0.0056 * S, 0.0046 * S, 0.0046 * S, 0.0038 * S], yfront + 0.0030 * S, C * 1.15,
+             zline - 0.0014 * S, [0.0080 * S, 0.0070 * S, 0.0075 * S, 0.0065 * S], True)
+    lo = row("아랫니", [0.0040 * S, 0.0042 * S, 0.0045 * S, 0.0040 * S], yfront + 0.0055 * S, C * 1.3,
+             zline + 0.0003 * S, [0.0045 * S, 0.0045 * S, 0.0046 * S, 0.0042 * S], False)      # 짧게·뒤로: 길면 턱 피부를 뚫고 나왔음
+    lo.shape_key_add(name="Basis"); kk = lo.shape_key_add(name="MouthOpen", from_mix=False)
+    dl = mwb.to_3x3().inverted() @ (best * 0.85)
+    for v in kk.data: v.co = v.co + dl
+    print(f"이: 입 너비 비율 {S:.2f}, 입술선 z {zline:.4f}, 아랫입술 벌림 {best.length * 100:.2f}cm")
 # 모양 키(입·눈) 모으기
 keyed = [o for o in objs if o.type == "MESH" and o.data.shape_keys]
 for o in keyed: o.data.shape_keys.animation_data_clear()   # GLB 의 Idle 동작이 모양 키(입·눈)를 매 장면 0 으로 되돌려 립싱크가 안 됐음 (2026-11-25)
