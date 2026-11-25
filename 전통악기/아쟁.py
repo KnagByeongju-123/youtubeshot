@@ -8,7 +8,8 @@
   - 거친 활 소리: 막대가 줄에 걸렸다 미끄러지며 나는 떨림(rough) + 긁는 잡음(scrape)
   - 몸통 울림: 낮은 쪽이 두껍게
 
-사용: python -X utf8 전통악기/아쟁.py [결과폴더]   → 후보 3개(30초 mp3) + 전체듣기.mp3
+사용: python -X utf8 전통악기/아쟁.py [결과폴더] [--실측]   → 후보 3개(30초 mp3) + 전체듣기.mp3
+  --실측: 실제 아쟁 산조 녹음을 잰 값(PRESETS_REAL, 음색은 잰 배음 세기 그대로)으로 만든 후보 4~6번
 """
 import os
 import subprocess
@@ -35,6 +36,24 @@ PRESETS = {
                      bright=3200, grit=1.6, note=(1.8, 4.2), glide=0.20, mode=GYEMYEON),
 }
 
+# 실제 아쟁 산조 녹음(1969년 LP, 인터넷 아카이브)을 `연주분석.py` 로 잰 값 (2026-11-25) — 녹음은 숫자만 재는 데 쓰고 가락은 베끼지 않음
+#   음역 MIDI 54~73(가운데 65.5) · 농현 1초에 약 5.3번, 위아래 ±40~50센트(그래프로 확인), 음 앞은 곧게 → 뒤에서 떨림
+#   퇴성·추성은 반음 하나쯤 · 배음 세기(dB, 1~12번째) 아래 REAL_HARM_DB · 배음 사이 잡음 0.028 · 세기 빠른떨림 0.076
+REAL_HARM_DB = [0.0, -6.0, -13.0, -16.2, -18.4, -19.1, -24.9, -30.8, -33.8, -34.8, -37.1, -38.5]
+# 실측 프리셋: timbre='실측' = 위 배음 세기로 직접 쌓아 만든 음색, vib_start: 떨림이 시작되는 지점(음 길이 비율),
+# fall_st·push_st: 꺾는 폭(반음)
+PRESETS_REAL = {      # 1차로 만든 뒤 다시 재서 맞춤: 떨림 더 빠르고 고르게(slow 작게, vib_start 앞당김), 거친 결·잡음 늘림, 받침음 작게
+    "4_실측_산조그대로": dict(root=52, span=19, depth=50, rate=5.8, slow=0.06, fall=0.25, push=0.25, rough=0.42, scrape=0.09,
+                        note=(0.5, 1.5), glide=0.12, mode=GYEMYEON, timbre="실측", vib_start=0.15, fall_st=(0.8, 1.2),
+                        push_st=(0.7, 1.1), drone=(0.3, 0.12)),
+    "5_실측_느린배경": dict(root=52, span=17, depth=45, rate=5.5, slow=0.06, fall=0.20, push=0.15, rough=0.36, scrape=0.08,
+                       note=(1.1, 2.2), glide=0.14, mode=GYEMYEON, timbre="실측", vib_start=0.2, fall_st=(0.8, 1.2),
+                       push_st=(0.7, 1.0), drone=(0.3, 0.12)),
+    "6_실측_낮고애절": dict(root=50, span=19, depth=55, rate=5.2, slow=0.08, fall=0.35, push=0.20, rough=0.42, scrape=0.10,
+                       note=(1.0, 2.0), glide=0.16, mode=GYEMYEON, timbre="실측", vib_start=0.2, fall_st=(1.0, 1.5),
+                       push_st=(0.8, 1.2), drone=(0.3, 0.12)),
+}
+
 
 def _lp_noise(rng, n, cutoff):
     """천천히 출렁이는 잡음 (-1~1 쯤)"""
@@ -57,15 +76,16 @@ def phrase_contour(notes, p, rng):
         base[i0:i0 + n] = m
         u = t / d
         # 농현: 음의 15% 지점부터 커짐, 끝으로 갈수록 깊고 살짝 느려짐
-        grow = np.clip((u - 0.15) / 0.45, 0, 1) ** 1.2
+        vs = p.get("vib_start", 0.15) * (1.0 if d > 0.9 else 0.4)      # 짧은 음은 일찍 떨기 시작
+        grow = np.clip((u - vs) / 0.45, 0, 1) ** 1.2
         depth = p["depth"] / 100 * (1.0 if role == "shake" else 0.4)
-        rate = p["rate"] * (1 - 0.18 * u) * rng.uniform(0.92, 1.08)
+        rate = p["rate"] * (1 - p.get("slow", 0.18) * u) * rng.uniform(0.92, 1.08)
         ph = np.cumsum(2 * np.pi * rate / SR)
         o = depth * grow * np.sin(ph)
         if role == "fall":                   # 퇴성: 60% 지점부터 1~2 반음 아래로
-            o = o * 0.4 - rng.uniform(1.0, 2.0) * np.clip((u - 0.6) / 0.35, 0, 1) ** 1.6
+            o = o * 0.4 - rng.uniform(*p.get("fall_st", (1.0, 2.0))) * np.clip((u - 0.6) / 0.35, 0, 1) ** 1.6
         if role == "push":                   # 추성: 아래에서 밀어 올리며 시작
-            o = o - rng.uniform(1.0, 2.0) * np.exp(-t / 0.18)
+            o = o - rng.uniform(*p.get("push_st", (1.0, 2.0))) * np.exp(-t / 0.18)
         orn[i0:i0 + n] = o
         # 세기: 활을 바꿀 때 살짝 줄고, 음 가운데쯤에서 부풀었다 끝에 줄어듦 (산조의 밀고 당김)
         sw = 0.55 + 0.45 * np.sin(np.pi * np.clip(u * 0.9 + 0.05, 0, 1)) ** 0.8
@@ -79,9 +99,36 @@ def phrase_contour(notes, p, rng):
     return base + orn, amp * fade
 
 
+def real_tone(semis, amp, p, rng):
+    """실측 음색: 진짜 연주에서 잰 배음 세기(REAL_HARM_DB)대로 배음을 쌓음. 세게 켤수록 높은 배음이 살아남(밝아짐),
+    활 걸림 떨림(rough) · 배음마다 조금씩 다른 흔들림 · 소리 높이에 맞춰 박자가 붙은 긁는 잡음(scrape)"""
+    from scipy.signal import butter, lfilter
+    n = len(semis)
+    jitter = _lp_noise(rng, n, 18) * 0.003 * (0.5 + p["rough"])
+    f = 440.0 * 2 ** ((semis - 69) / 12) * (1 + jitter)
+    ph = np.cumsum(f / SR)
+    nh = int(min(40, 9000 / max(60.0, float(f.min()))))
+    a_norm = amp / (amp.max() + 1e-6)
+    y = np.zeros(n, np.float32)
+    for h in range(1, nh + 1):
+        db = REAL_HARM_DB[h - 1] if h <= len(REAL_HARM_DB) else REAL_HARM_DB[-1] - 2.5 * (h - len(REAL_HARM_DB))
+        g = 10 ** (db / 20) * (0.35 + 0.65 * a_norm) ** (0.08 * (h - 1))    # 약하게 켜면 높은 배음이 줄어 어두워짐
+        wob = 1 + 0.25 * _lp_noise(rng, n, 6) if h > 2 else 1               # 배음마다 세기가 조금씩 출렁임 (살아 있는 소리)
+        y += (g * wob * np.sin(2 * np.pi * h * ph + rng.uniform(0, 6.28))).astype(np.float32)
+    y = y * (1 + p["rough"] * 0.35 * _lp_noise(rng, n, 60))                 # 활이 걸렸다 미끄러지는 거친 결
+    pp = ph % 1
+    nz = rng.standard_normal(n).astype(np.float32) * (0.3 + 0.7 * (pp < 0.2))
+    nz = lfilter(*butter(2, [1200 / (SR / 2), 6000 / (SR / 2)], "band"), nz)
+    y = y / (np.abs(y).max() + 1e-6) + nz / (np.abs(nz).max() + 1e-6) * p["scrape"] * 2.2
+    y = lfilter(*butter(1, 50 / (SR / 2), "high"), y) * amp
+    return (y / (np.abs(y).max() + 1e-6)).astype(np.float32)
+
+
 def ajaeng_tone(semis, amp, p, rng):
     """음높이 곡선(MIDI 반음) → 아쟁 소리 (모노)"""
     from scipy.signal import butter, lfilter
+    if p.get("timbre") == "실측":
+        return real_tone(semis, amp, p, rng)
     n = len(semis)
     jitter = _lp_noise(rng, n, 18) * 0.004 * (0.5 + p["rough"])            # 활이 걸렸다 미끄러지며 음이 살짝 흔들림
     f = 440.0 * 2 ** ((semis - 69) / 12) * (1 + jitter)
@@ -146,11 +193,12 @@ def bed(sec, p, seed=7):
         semis, amp = phrase_contour(notes, p, rng)
         tone = ajaeng_tone(semis, amp, p, rng)
         K.place(buf, tone, t, 0.62, pan=0.12)
-        if rng.random() < 0.55:                                               # 낮은 받침음 (개방현)
+        dp, dg = p.get("drone", (0.55, 0.22))                                 # 받침음이 나올 확률, 크기
+        if rng.random() < dp:                                                 # 낮은 받침음 (개방현)
             ln = len(tone) / SR
             low = [(root - 12 if rng.random() < 0.5 else root, ln, "plain")]
             s2, a2 = phrase_contour(low, dict(p, depth=p["depth"] * 0.5), rng)
-            K.place(buf, ajaeng_tone(s2, a2 * 0.8, dict(p, scrape=p["scrape"] * 0.5), rng), t + 0.2, 0.22, pan=-0.25)
+            K.place(buf, ajaeng_tone(s2, a2 * 0.8, dict(p, scrape=p["scrape"] * 0.5), rng), t + 0.2, dg, pan=-0.25)
         t += len(tone) / SR + rng.uniform(0.6, 2.0)                           # 숨 쉬듯 쉼
     return K.reverb(buf, rng, sec=2.6, wet=0.33)
 
@@ -163,10 +211,10 @@ def ffmpeg():
         return "ffmpeg"
 
 
-def main(out):
+def main(out, presets=None, listen="아쟁_전체듣기.mp3"):
     os.makedirs(out, exist_ok=True)
     mp3s = []
-    for name, p in PRESETS.items():
+    for name, p in (presets or PRESETS).items():
         wp = os.path.join(out, name + ".wav")
         K.write_wav(wp, bed(30, p))
         mp = wp[:-4] + ".mp3"
@@ -178,11 +226,15 @@ def main(out):
     with open(lst, "w", encoding="utf-8") as f:
         f.writelines(f"file '{os.path.abspath(m)}'\n" for m in mp3s)
     subprocess.run([ffmpeg(), "-y", "-loglevel", "error", "-f", "concat", "-safe", "0", "-i", lst, "-b:a", "160k",
-                    os.path.join(out, "아쟁_전체듣기.mp3")], check=True)
+                    os.path.join(out, listen)], check=True)
     os.remove(lst)
     return 0
 
 
 if __name__ == "__main__":
     here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    sys.exit(main(sys.argv[1] if len(sys.argv) > 1 else os.path.join(here, "역사", "배경음샘플", "한국", "아쟁")))
+    args = [a for a in sys.argv[1:] if a != "--실측"]
+    out = args[0] if args else os.path.join(here, "역사", "배경음샘플", "한국", "아쟁")
+    if "--실측" in sys.argv:          # 실제 연주를 잰 값으로 만든 후보 4~6번
+        sys.exit(main(out, PRESETS_REAL, "아쟁_실측_전체듣기.mp3"))
+    sys.exit(main(out))
