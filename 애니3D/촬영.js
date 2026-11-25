@@ -2,6 +2,8 @@
 //   node 애니3D/촬영.js <장면.html> <프레임폴더> <장수> [시험할 장 번호: 0,24,48]
 //   장면 html 약속: 준비되면 window.READY = true, window.renderFrame(i) 가 i 번째 장(i/24초)을 그림
 //   저장소 폴더를 작은 웹 서버로 열어 씀(모델은 models/vrm/, 부품은 애니3D/node_modules/)
+//   환경 변수(선택): VW·VH = 화면 크기(기본 1280×720), ALPHA=1 = 투명 배경 png(장면도 투명으로 그려야 함),
+//     STEP=2 = 두 장마다 한 장만 찍음(애니처럼 1초 12장, 빠짐 장은 합칠 때 앞 장을 씀), FROM·TO = 이 범위의 장만
 const {chromium}=require('playwright'); const fs=require('fs'); const path=require('path'); const http=require('http');
 const [,,page,out,n,only]=process.argv; const ROOT=path.resolve(__dirname,'..');
 const TYPES={'.html':'text/html; charset=utf-8','.js':'text/javascript','.mjs':'text/javascript','.json':'application/json','.png':'image/png','.jpg':'image/jpeg','.vrm':'application/octet-stream','.glb':'model/gltf-binary'};
@@ -12,11 +14,12 @@ srv.listen(0,'127.0.0.1',async()=>{
  const url=`http://127.0.0.1:${srv.address().port}/${path.relative(ROOT,path.resolve(page)).split(path.sep).map(encodeURIComponent).join('/')}${process.env.MODEL?'?'+(process.env.MODEL.includes('=')?process.env.MODEL:'model='+process.env.MODEL):''}`;
  fs.mkdirSync(out,{recursive:true});
  const b=await chromium.launch({args:['--use-gl=swiftshader','--enable-unsafe-swiftshader']});
- const p=await b.newPage({viewport:{width:1280,height:720}});
+ const p=await b.newPage({viewport:{width:+(process.env.VW||1280),height:+(process.env.VH||720)}});
  p.on('pageerror',e=>console.log('ERR',e.message)); if(process.env.LOG) p.on('console',m=>console.log(m.text()));
  await p.goto(url); await p.waitForFunction(()=>window.READY,{timeout:180000});
  const want=only?new Set(only.split(',').map(Number)):null;
- for(let i=0;i<+n;i++){ await p.evaluate(i=>window.renderFrame(i),i);
-   if(!want||want.has(i)) await p.locator('canvas').screenshot({path:path.join(out,`f${String(i).padStart(4,'0')}.png`)}); }
+ const STEP=+(process.env.STEP||1), FROM=+(process.env.FROM||0), TO=+(process.env.TO||n);
+ for(let i=FROM;i<Math.min(+n,TO);i++){ if(STEP>1&&i%STEP) continue; await p.evaluate(i=>window.renderFrame(i),i);
+   if(!want||want.has(i)) await p.locator('canvas').screenshot({path:path.join(out,`f${String(i).padStart(4,'0')}.png`),omitBackground:!!process.env.ALPHA}); }
  await b.close(); srv.close(); console.log('done',n);
 });

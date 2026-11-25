@@ -1,0 +1,103 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><style>html,body{margin:0;background:transparent}canvas{display:block}</style>
+<script type="importmap">{"imports":{"three":"./node_modules/three/build/three.module.js","three/addons/":"./node_modules/three/examples/jsm/","@pixiv/three-vrm":"./node_modules/@pixiv/three-vrm/lib/three-vrm.module.js"}}</script>
+</head><body>
+<script type="module">
+// 교육 영상 아나운서 (애니풍 3D, 투명 배경): 화면 오른쪽에 서서 말하며 왼쪽 슬라이드를 가리키거나 손짓
+//   찍은 장면은 실사3D/교육영상_합성.py 가 슬라이드 위 오른쪽 아래에 얹음
+//   사용: VW=512 VH=720 ALPHA=1 STEP=2 MODEL="glb=여자아나운서_리깅&lip=<입모양.json>&act=<동작.json>"
+//         node 애니3D/촬영.js 애니3D/장면_교육아나운서.html <폴더> <장수>
+//   동작.json = [[시작초, 끝초, "point"|"open"|"one"|"nod"|"fold"], ...]  (나머지 시간은 기본 자세 = 손 모음)
+//     point = 오른손으로 왼쪽(슬라이드) 가리키며 고개도 그쪽 / open = 두 손 펴 설명 / one = 검지 하나 / nod = 고개 끄덕 / fold = 손 모음
+//   real=1 : 만화풍 대신 원래 색, pose=<자세> : 그 자세로 고정(검사용)
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { loadHuman } from './glb_사람.js';
+import { toonify } from './만화풍.js';
+
+const Q = new URLSearchParams(location.search);
+const W = innerWidth, H = innerHeight, FPS = 24;
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+renderer.setSize(W, H); renderer.setPixelRatio(1); renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.setClearColor(0x000000, 0);
+document.body.appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+const TOON = Q.get('real') !== '1';
+scene.add(new THREE.AmbientLight(0xffffff, TOON ? 0.85 : 0.6));
+scene.add(new THREE.HemisphereLight(0xffffff, 0x5a6a88, TOON ? 0.4 : 1.0));
+const key = new THREE.DirectionalLight(0xfff2e4, TOON ? 1.5 : 1.8); key.position.set(-1.5, 3, 4); scene.add(key);
+const fill = new THREE.DirectionalLight(0xdfe8ff, 0.5); fill.position.set(2, 1.5, 2.5); scene.add(fill);
+const camera = new THREE.PerspectiveCamera(+Q.get('fov') || 26, W / H, 0.05, 50);
+
+const human = await loadHuman(new GLTFLoader(), '../models/glb/' + (Q.get('glb') || '여자아나운서_리깅') + '.glb', { height: +Q.get('height') || 1.65 });
+scene.add(human.scene);
+if (TOON) toonify(human, { line: +Q.get('line') || 0.0035 });
+const lip = Q.get('lip') ? await (await fetch('../' + Q.get('lip'))).json() : { frames: [] };
+let acts = Q.get('act') ? await (await fetch('../' + Q.get('act'))).json() : [];
+if (acts && acts.acts) acts = acts.acts;      // 교육영상_만들기.py --동작 결과({acts, duration, sides})도 그대로
+window.READY = true;
+
+const ease = (a, b, t) => { const x = Math.min(1, Math.max(0, (t - a) / (b - a))); return x * x * (3 - 2 * x); };
+const on = (a, b, t, r = 0.5) => (b - a < 2 * r ? (r = (b - a) / 2) : 0, ease(a, a + r, t) - ease(b - r, b, t));
+const bone = (n) => human.humanoid.getNormalizedBoneNode(n);
+const em = human.expressionManager;
+const amt = (type, t) => {
+  if (Q.get('pose')) return Q.get('pose') === type ? 1 : 0;
+  let v = 0; for (const [a, b, ty] of acts) if (ty === type && t > a - 0.6 && t < b + 0.6) v = Math.max(v, on(a, b, t)); return v;
+};
+const curlAll = (side, v) => { for (const f of ['Index', 'Middle', 'Ring', 'Little', 'Thumb']) human.curl(side + f, f === 'Thumb' ? 0.15 * v / 0.3 : v); };
+
+function pose(t) {
+  for (const n of ['leftUpperArm', 'rightUpperArm', 'leftLowerArm', 'rightLowerArm', 'leftHand', 'rightHand', 'hips', 'chest', 'spine', 'head', 'neck', 'leftUpperLeg', 'rightUpperLeg']) bone(n).rotation.set(0, 0, 0);
+  bone('hips').position.set(0, 0, 0);
+  curlAll('left', 0.3); curlAll('right', 0.3);
+  const P = amt('point', t), O = amt('open', t), N1 = amt('one', t), ND = amt('nod', t);
+  const F = Math.max(0, 1 - P - O - N1) * (Q.get('pose') && Q.get('pose') !== 'fold' ? 0 : 1);   // 손 모음(기본 자세): 다른 동작을 할 때 풀림
+  // 기본: 손을 배꼽 앞에 가볍게 모음
+  const FV = (Q.get('fv') || '-0.1,-0.2,-1.2,0,-0.6').split(',').map(Number);   // 손 모음: 위팔 x·z, 아래팔 x·y·z
+  for (const [sd, sg] of [['left', 1], ['right', -1]]) {
+    bone(sd + 'UpperArm').rotation.x += FV[0] * F; bone(sd + 'UpperArm').rotation.z += sg * FV[1] * F;
+    bone(sd + 'LowerArm').rotation.x += FV[2] * F; bone(sd + 'LowerArm').rotation.y += sg * FV[3] * F; bone(sd + 'LowerArm').rotation.z += sg * FV[4] * F;
+  }
+  // 오른손이 다른 동작을 할 때 왼손은 내려 둠(차렷에 가깝게)
+  // point: 오른팔을 옆·앞으로 들고 검지로 왼쪽(슬라이드) 가리킴, 고개·가슴도 그쪽
+  bone('rightUpperArm').rotation.z += -0.72 * P; bone('rightUpperArm').rotation.x += -0.4 * P;
+  bone('rightLowerArm').rotation.x += -0.5 * P; bone('rightLowerArm').rotation.y += 0.6 * P;
+  if (P > 0) { for (const f of ['Middle', 'Ring', 'Little']) human.curl('right' + f, 0.3 + 1.05 * P); human.curl('rightThumb', 0.15 + 0.8 * P); human.curl('rightIndex', 0.3 - 0.3 * P); }
+  bone('head').rotation.y += -0.4 * P; bone('chest').rotation.y += -0.15 * P;
+  // open: 두 팔을 앞·옆으로 벌려 손바닥을 보이며 설명 (조금씩 벌렸다 모음)
+  const sway = Math.sin(t * 2.2) * 0.08;
+  for (const [sd, sg] of [['left', 1], ['right', -1]]) {
+    bone(sd + 'UpperArm').rotation.x += -0.1 * O; bone(sd + 'UpperArm').rotation.z += sg * -0.2 * O;
+    bone(sd + 'LowerArm').rotation.x += -1.2 * O; bone(sd + 'LowerArm').rotation.z += sg * (0.6 + sway) * O;
+    if (O > 0) for (const f of ['Index', 'Middle', 'Ring', 'Little']) human.curl(sd + f, 0.3 - 0.2 * O);
+  }
+  // one: 오른손 검지를 가슴 높이로
+  bone('rightUpperArm').rotation.x += -0.4 * N1; bone('rightUpperArm').rotation.z += -0.12 * N1;
+  bone('rightLowerArm').rotation.x += -1.75 * N1; bone('rightLowerArm').rotation.y += 0.3 * N1;
+  if (N1 > 0) { for (const f of ['Middle', 'Ring', 'Little']) human.curl('right' + f, 0.3 + 1.05 * N1); human.curl('rightThumb', 0.15 + 0.8 * N1); human.curl('rightIndex', 0.3 - 0.3 * N1); }
+  // nod / 말할 때 작은 고개 움직임 / 숨쉬기
+  bone('head').rotation.x += 0.07 * Math.max(0, Math.sin(t * 5)) * ND;
+  bone('head').rotation.x += 0.018 * Math.sin(t * 1.7); bone('head').rotation.y += 0.022 * Math.sin(t * 0.9 + 1); bone('head').rotation.z += 0.015 * Math.sin(t * 0.6);
+  bone('chest').rotation.x += 0.012 * Math.sin(t * 2 * Math.PI / 3.6);
+  // 자주 움직이게: 체중을 좌우로 옮기고(엉덩이 기울기·옆으로), 몸 방향도 천천히 바뀜
+  const shift = Math.sin(t * 0.42) + 0.4 * Math.sin(t * 0.97 + 2);
+  bone('hips').rotation.y = 0.05 * Math.sin(t * 0.31); bone('hips').rotation.z = 0.025 * shift;
+  bone('hips').position.x = 0.018 * shift; bone('spine').rotation.z = -0.02 * shift;
+  bone('leftUpperLeg').rotation.z = -0.02 * shift; bone('rightUpperLeg').rotation.z = -0.02 * shift;
+}
+
+window.renderFrame = (i) => {
+  const t = i / FPS;
+  pose(t);
+  human.scene.rotation.y = +(Q.get('turn') || -0.22) + 0.12 * Math.sin(t * 0.23) + 0.06 * Math.sin(t * 0.61 + 1);   // 몸을 슬라이드(왼쪽) 쪽으로, 천천히 방향이 바뀜
+  const lf = lip.frames[i]; em.setValue('MouthOpen', lf ? lf[0] : 0); em.setValue('MouthWide', lf ? lf[1] : 0); em.setValue('MouthRound', lf ? lf[2] : 0);
+  let bl = 0; for (let c = 1.3; c < t + 1; c += 3.1 + 1.6 * Math.abs(Math.sin(c * 7.3))) bl = Math.max(bl, 1 - Math.abs(t - c) / 0.07);
+  em.setValue('Blink', bl);
+  human.update();
+  // 카메라: 무릎 위 (세로 화면), 아주 천천히 흔들림
+  const cz = +(Q.get('dist') || 3.3);
+  const CX = +(Q.get('cx') || -0.32);   // 아나운서를 화면 오른쪽으로 (왼쪽에 가리키는 팔이 들어갈 자리)
+  camera.position.set(CX + 0.04 * Math.sin(t * 0.13), 1.18, cz); camera.lookAt(CX, +(Q.get('look') || 1.02), 0);
+  renderer.render(scene, camera);
+};
+</script></body></html>
