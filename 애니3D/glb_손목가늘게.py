@@ -1,7 +1,8 @@
 """손목 가늘게 (사용자 2026-11-25 '손목이 굵음' — 손을 들어 안내할 때 소매에서 나온 손목이 손바닥만큼 넓어 보였음)
    잰 것(GLB 단위): 손목 관절 근처 단면 폭 85~96 × 두께 55 — 손바닥 폭(엄지 포함 약 120)의 3/4 이 넘음
    고침: 피부(밝은 그림) 점만, 아래팔 축 둘레로 단면의 넓은 쪽은 --폭(기본 0.80), 좁은 쪽은 --두께(기본 0.92) 배로 줄임.
-         관절 앞 1.5cm ~ 관절 0.5cm 뒤가 가장 많이, 소매 속 3.5cm·손바닥 3.5cm 까지 부드럽게 줄어듦. 소매(어두운 그림) 점은 그대로.
+         소매 밖으로 나온 손목만: 소매 끝에서 0 → 0.8cm 밖에서 가장 많이 → 손바닥 3.5cm 에서 0. 소매 속·소매(어두운 그림) 점은 그대로
+         (소매 속까지 줄이면 소매 끝에 틈이 생기고 테두리가 들쭉날쭉했음, 사용자 지적 2026-11-25)
    사용: python 애니3D/glb_손목가늘게.py <입력.glb> <출력.glb> [--폭 0.80] [--두께 0.92]"""
 import io, json, struct, sys
 import numpy as np
@@ -28,17 +29,18 @@ im = g["images"][g["textures"][ti]["source"]]; bv = g["bufferViews"][im["bufferV
 tex = np.asarray(Image.open(io.BytesIO(bytes(binb[o_:o_ + bv["byteLength"]]))).convert("RGB")).astype(float) / 255; TH, TW = tex.shape[:2]
 Pw = view(p["attributes"]["POSITION"], write=True); P = Pw.astype(float); UV = view(p["attributes"]["TEXCOORD_0"]).astype(float)
 br = tex[(UV[:, 1] * (TH - 1)).astype(int).clip(0, TH - 1), (UV[:, 0] * (TW - 1)).astype(int).clip(0, TW - 1)].mean(1)
-def bump(d):                                                   # 1: -0.015~+0.005, 0: -0.035 이하·+0.035 이상
-    u = np.where(d < -0.015, (d + 0.035) / 0.02, np.where(d > 0.005, (0.035 - d) / 0.03, 1.0)); u = np.clip(u, 0, 1); return u * u * (3 - 2 * u)
+def bump(d, c):                                                # 소매 끝 c 까지는 0(소매 끝과 피부가 틈 없이 맞닿게), c+0.8cm 에서 1, +3.5cm 에서 다시 0
+    u = np.where(d < c + 0.008, (d - c) / 0.008, (0.035 - d) / (0.027 - c)); u = np.clip(u, 0, 1); return u * u * (3 - 2 * u)
 for sd in ("L", "R"):
     h, f = pos[f"Hand.{sd}"], pos[f"ForeArm.{sd}"]; ax = (h - f) / np.linalg.norm(h - f)
     d = (P - h) @ ax; v = (P - h) - np.outer(d, ax); r = np.linalg.norm(v, axis=1)
     sl = (np.abs(d + 0.005) < 0.006) & (r < 0.07) & (br > 0.35)
     e, vec = np.linalg.eigh(np.cov(v[sl].T)); wide, thin = vec[:, 2], vec[:, 1]       # 단면의 넓은 쪽·좁은 쪽
-    sel = (d > -0.035) & (d < 0.035) & (r < 0.07) & (br > 0.35)
-    w = bump(d[sel]); vw = v[sel] @ wide; vt = v[sel] @ thin
+    cuff = d[(d > -0.07) & (d < 0.03) & (r > 0.02) & (r < 0.07) & (br <= 0.35)].max()     # 소매가 끝나는 자리
+    sel = (d > cuff) & (d < 0.035) & (r < 0.07) & (br > 0.35)
+    w = bump(d[sel], cuff); vw = v[sel] @ wide; vt = v[sel] @ thin
     P[sel] += np.outer(vw * (SW - 1) * w, wide) + np.outer(vt * (ST - 1) * w, thin)
-    print(f"{sd}: 피부 점 {sel.sum()}개, 폭 ×{SW} 두께 ×{ST} (가장 많이 줄인 곳)")
+    print(f"{sd}: 소매 끝 d={cuff:+.4f}, 피부 점 {sel.sum()}개, 폭 ×{SW} 두께 ×{ST} (가장 많이 줄인 곳)")
 Pw[:] = P.astype(np.float32)
 acc = g["accessors"][p["attributes"]["POSITION"]]; acc["min"] = P.min(0).tolist(); acc["max"] = P.max(0).tolist()
 js = json.dumps(g, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
