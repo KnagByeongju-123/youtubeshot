@@ -1,7 +1,8 @@
 """교육 영상 합성: 슬라이드(문장마다) + 투명 배경 아나운서 장면 + 한 줄 자막 → 장면 png (그다음 ffmpeg 로 나레이션과 묶음)
    문장 시각은 '시각표.json' = [[시작초, 끝초, "문장"], ...] (영상 기준, 나레이션 시작 지연 포함). 문장 k 가 시작하면 슬라이드 k.
    자막은 문장을 쉼표에서 나눠 글자 수 비율로 시간을 나눔 (한 줄씩, 사용자 결정)
-   사용: python 실사3D/교육영상_합성.py <슬라이드 폴더> <아나운서 장면 폴더> <시각표.json> <결과 폴더> [--자리 0.6]"""
+   사용: python 실사3D/교육영상_합성.py <슬라이드 폴더> <아나운서 장면 폴더> <시각표.json> <결과 폴더> [--바탕 <전신 png> --영역 x0,y0,x1,y1]
+   --바탕: 아나운서 장면 폴더가 야외_오르빗 --영역 으로 얼굴만 찍은 조각일 때, 전신 한 장(바탕) 위 그 자리에 붙여 씀 (렌더 시간 약 1/2)"""
 import glob, json, os, sys
 from PIL import Image, ImageDraw, ImageFont
 a = sys.argv[1:]; sdir, pdir, tfile, out = a[:4]
@@ -16,12 +17,20 @@ for s0, s1, txt in tl:
     for p in parts:
         d = (s1 - s0) * len(p) / tot; subs.append((t, t + d, p.rstrip(","))); t += d
 font = ImageFont.truetype("/usr/share/fonts/truetype/nanum/NanumBarunGothicBold.ttf", int(30 * H / 720))
+base = None
+if "--바탕" in a:
+    base = Image.open(a[a.index("--바탕") + 1]).convert("RGBA")
+    rx0, ry0 = (float(v) for v in a[a.index("--영역") + 1].split(",")[:2])
+    boff = (int(rx0 * base.width), int(ry0 * base.height))
 fs = sorted(glob.glob(os.path.join(pdir, "*.png")))
 for i, f in enumerate(fs):
-    t = i / 24.0
+    num = "".join(c for c in os.path.basename(f) if c.isdigit()); t = (int(num) if num else i) / 24.0   # 파일 이름의 장면 번호로 시각
     k = max([j for j, (s0, _, _) in enumerate(tl) if s0 <= t] or [0]); k = min(k, len(slides) - 1)
     im = slides[k].copy()
-    p = Image.open(f).convert("RGBA"); pw, ph = p.size
+    p = Image.open(f).convert("RGBA")
+    if base is not None:
+        b = base.copy(); b.paste(p, boff); p = b
+    pw, ph = p.size
     al = p.getchannel("A").point(lambda v: 0 if v < 12 else v); p.putalpha(al)      # 바닥(그림자 받는 판)의 아주 옅은 알파가 사각형 자국으로 보였음
     im.alpha_composite(p, (W - pw - int(W * 0.03), H - ph))
     sub = next((x for x in subs if x[0] <= t < x[1]), None)
