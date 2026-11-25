@@ -195,6 +195,92 @@ def big_drum(f0=70, dur=2.2, rng=None, phone=True):
     return (y / (np.abs(y).max() + 1e-6)).astype(np.float32)
 
 
+def _membrane(f0, n, rng, decs, amps=(1.0, 0.6, 0.45, 0.35, 0.28, 0.22), drop=0.25):
+    """가죽 한 장의 울림: 원형 막의 가지런하지 않은 울림(1·1.59·2.14·2.30·2.65·2.92배)이 각자 빨리 사라짐 (오래 남으면 줄 소리처럼 들림)"""
+    t = np.arange(n) / SR
+    ph = np.cumsum(2 * np.pi * f0 * (1 + drop * np.exp(-t / 0.02)) / SR)
+    y = np.zeros(n)
+    for r, a, dec in zip((1.0, 1.59, 2.14, 2.30, 2.65, 2.92), amps, decs):
+        y += a * np.sin(r * ph * (1 + 0.006 * rng.standard_normal()) + rng.random() * 6.28) * np.exp(-t / dec)
+    return y
+
+
+def _band_noise(n, lo, hi, rng):
+    from scipy.signal import butter, lfilter
+    x = lfilter(*butter(2, [lo / (SR / 2), hi / (SR / 2)], "band"), rng.standard_normal(n))
+    return x / (np.abs(x).max() + 1e-6)
+
+
+def _phone_attack(y, t, drive=7.0, sec=0.08, lp=2500):
+    """치는 순간에만 눌러서 배음을 만듦 (폰 스피커에서도 들리게), 꼬리는 깨끗하게"""
+    from scipy.signal import butter, lfilter
+    y = y / (np.abs(y).max() + 1e-6)
+    w = np.exp(-t / sec)
+    y = y + w * (np.tanh(drive * y) + 0.6 * y ** 2 - y)
+    return lfilter(*butter(2, lp / (SR / 2)), y)
+
+
+def janggu(kind, rng=None, low=105.0, high=235.0):
+    """장구 한 번 (사용자 요청 2026-11-25, 북에서 배운 것: 폰에서도 들리게 · 길게 고르게 울리지 않게 · 가죽의 탁한 소리)
+      쿵 = 북편(왼쪽, 두꺼운 가죽을 손바닥으로): 낮고 둔탁, 0.3초쯤 '웅' 울림
+      덕 = 채편(오른쪽, 얇은 가죽을 대나무 채로): 짧고 또렷한 '덕' — 날카롭지 않게 (사용자: 장구는 둔탁하게)
+      덩 = 둘 다 · 기 = 작은 덕 · 기덕 = 기 바로 뒤 덕 · 더러러러 = 채를 굴림(작은 덕 5번, 점점 작게)"""
+    from scipy.signal import butter, lfilter
+    rng = rng or np.random.default_rng()
+    if kind in ("기덕", "더러러러"):
+        parts = [("기", 0.0, 0.55), ("덕", 0.07, 1.0)] if kind == "기덕" else \
+                [("기", i * 0.05, 0.9 - 0.13 * i) for i in range(5)]
+        out = np.zeros(int(0.7 * SR))
+        for k, t0, g in parts:
+            h = janggu(k, rng, low, high) * g
+            i0 = int(t0 * SR)
+            out[i0:i0 + len(h)] += h[: len(out) - i0]
+        return (out / (np.abs(out).max() + 1e-6)).astype(np.float32)
+    n = int(0.7 * SR)
+    t = np.arange(n) / SR
+    y = np.zeros(n)
+    if kind in ("쿵", "덩"):
+        body = _membrane(low, n, rng, (0.30, 0.14, 0.09, 0.07, 0.05, 0.04))
+        palm = _band_noise(n, 90, 700, rng) * np.exp(-t / 0.03) * 0.9                  # 손바닥이 가죽을 덮치는 소리
+        rattle = _band_noise(n, 80, 450, rng) * np.abs(body / (np.abs(body).max() + 1e-6)) * np.exp(-t / 0.15) * 0.5
+        air = _band_noise(n, low * 0.8, low * 2.6, rng) * np.clip(t / 0.02, 0, 1) * np.exp(-t / 0.2) * 0.6   # 허리 잘록한 통 울림
+        k_ = _phone_attack(body + palm + rattle + air, t, drive=7.0, sec=0.1, lp=1400)
+        y += k_ / (np.abs(k_).max() + 1e-6)
+    if kind in ("덕", "덩", "기"):
+        skin = _membrane(high, n, rng, (0.10, 0.06, 0.045, 0.035, 0.03, 0.025), amps=(1.0, 0.7, 0.55, 0.45, 0.35, 0.3), drop=0.15)
+        stick = _band_noise(n, 700, 3200, rng) * np.exp(-t / 0.009) * 0.9                # 대나무 채 끝이 닿는 소리 (짧게)
+        wood = np.sin(2 * np.pi * 330 * t) * np.exp(-t / 0.04) * 0.6                     # 채·통의 나무 울림 (둔탁함)
+        d_ = _phone_attack(skin + stick + wood, t, drive=5.0, sec=0.05, lp=3500)
+        y += d_ / (np.abs(d_).max() + 1e-6) * (0.85 if kind == "덩" else 1.0)
+    y = lfilter(*butter(1, 40 / (SR / 2), "high"), y) * np.clip((0.7 - t) / 0.1, 0, 1)
+    return (y / (np.abs(y).max() + 1e-6) * (0.45 if kind == "기" else 1.0)).astype(np.float32)
+
+
+# 장구 장단: (한 칸 초, 칸 수, {칸: 소리}). 덩·쿵·덕·기덕·더러러러
+JANGGU_RHYTHMS = {
+    "굿거리": (0.21, 12, {0: "덩", 2: "기덕", 3: "쿵", 5: "더러러러", 6: "쿵", 8: "기덕", 9: "쿵", 11: "더러러러"}),
+    "자진모리": (0.15, 12, {0: "덩", 3: "덕", 5: "쿵", 6: "쿵", 8: "덕", 9: "쿵", 11: "덕"}),
+    "휘모리": (0.12, 12, {0: "덩", 3: "덕", 6: "쿵", 9: "덕"}),
+    "세마치": (0.19, 9, {0: "덩", 3: "덩", 5: "덕", 6: "쿵", 7: "덕"}),
+}
+
+
+def janggu_rhythm(name, cycles=3, rng=None, end=True, low=105.0, high=235.0):
+    """장구 장단을 cycles 번 치고(end 면 마지막에 '덩' 하나로 맺음) → 스테레오. 북편은 왼쪽, 채편은 오른쪽으로 조금"""
+    rng = rng or np.random.default_rng()
+    unit, cells, pat = JANGGU_RHYTHMS[name]
+    total = cycles * cells * unit
+    buf = np.zeros((int((total + 1.2) * SR), 2), np.float32)
+    for c in range(cycles):
+        for i, k in pat.items():
+            g = (1.0 if i == 0 else 0.8) * (0.9 + 0.1 * rng.random())
+            pan = -0.25 if k == "쿵" else 0.25 if k in ("덕", "기덕", "더러러러") else 0.0
+            place(buf, janggu(k, rng, low, high), max(0.0, (c * cells + i) * unit + rng.normal(0, 0.004)), g, pan)
+    if end:
+        place(buf, janggu("덩", rng, low, high), total, 1.0, 0.0)
+    return buf
+
+
 def bell(f0=220, dur=6.0, rng=None):
     """종 한 번 (교회 종·놋쇠 종): 맑은 배음(낮은 울림·단3도 섞임)이 길게"""
     rng = rng or np.random.default_rng()
