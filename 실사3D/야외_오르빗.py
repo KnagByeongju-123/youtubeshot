@@ -983,10 +983,19 @@ def head_move(i):
         pb.matrix = mathutils.Matrix.Translation(pb.head) @ R_ @ mathutils.Matrix.Translation(-pb.head) @ pb.matrix
         bpy.context.view_layer.update()
 EXPR = [(kv.split('=')[0], float(kv.split('=')[1])) for kv in a[a.index('--표정') + 1].split(',')] if '--표정' in a else []
+VISEME = '--입방식' in a and a[a.index('--입방식') + 1] == '15'      # --입방식 15 : Rocketbox 15가지 입 모양(AA_VI_*)
 MOUTH_SCALE = float(a[a.index('--입세기') + 1]) if '--입세기' in a else 1.0     # Rocketbox 는 '아' 입이 커서 O 자로 벌어졌음 (사용자 2026-11-26 '입 벌림 작게')
 def face(i):
     t = i / 24.0; lf = lip["frames"][i] if i < len(lip["frames"]) else [0, 0, 0]
-    MS = MOUTH_SCALE; set_shape("MouthOpen", lf[0] * MS); set_shape("MouthWide", lf[1] * MS); set_shape("MouthRound", lf[2] * MS)   # --입세기 0.5: 입 벌림 줄이기
+    MS = MOUTH_SCALE
+    if VISEME and len(lf) >= 15:      # Rocketbox 15가지 입 모양: 모음 aa·ih·ou·ee·oh(배운 표) + 자음 pp·dd·nn·rr·ss·ch·kk (사용자 2026-11-26 '15가지 입 모양으로')
+        aa, ih, ou, ee, oh, pp, dd, nn, rr, ss, ch, kk = lf[3:15]
+        set_shape("MouthOpen", aa * MS); set_shape("MouthWide", ih * MS); set_shape("MouthRound", ou * MS)
+        set_shape("AA_VI_11_E", ee * MS); set_shape("AA_VI_13_O", oh * MS)
+        set_shape("AA_VI_01_PP", pp * 0.9); set_shape("AA_VI_04_DD", dd * 0.6 * MS); set_shape("AA_VI_08_nn", nn * 0.6 * MS)
+        set_shape("AA_VI_09_RR", rr * 0.6 * MS); set_shape("AA_VI_07_SS", ss * 0.7 * MS); set_shape("AA_VI_06_CH", ch * 0.7 * MS); set_shape("AA_VI_05_KK", kk * 0.5 * MS)
+    else:
+        set_shape("MouthOpen", lf[0] * MS); set_shape("MouthWide", lf[1] * MS); set_shape("MouthRound", lf[2] * MS)   # --입세기 0.5: 입 벌림 줄이기
     set_shape("Blink", blink_v(t))
     for nm_, v_ in EXPR: set_shape(nm_, v_)               # --표정 mouthSmileLeft=0.6,… : 늘 띄울 얼굴 표정(모양 키 이름=값)
     GWN[0] = guide_apply(i)
