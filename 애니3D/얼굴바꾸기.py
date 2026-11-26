@@ -5,7 +5,7 @@
    - 옮긴 머리는 B 뼈대에 묶음: 목 아래쪽은 Neck, 위로 갈수록 Head (--목섞기 z0,z1, B 좌표)
    - 모양 키(MouthOpen·MouthWide·MouthRound·Blink)는 A 것을 그대로 가져감
    사용: .bpy_venv/bin/python -I 애니3D/얼굴바꾸기.py <A.glb> <B.glb> <결과.glb> --자르기 0.625 --턱 0.663,1.508 --코앞 -0.116,-0.072 --배율 0.92
-         [--지우기 1.478] [--지울재질 head] [--지울재질2 opacity] [--지우기2 1.45] [--목섞기 1.48,1.53] [--머리카락아래 0.55] [--옷위 0.06] [--목색 on|off] [--옆자르기 0.655 --옆x 0.06] [--목조이기 0.85] [--조각 3000] [--이음 0.016] [--안으로 on|off] [--목색보정 1.02,1.125,1.18] [--목띠 0.025] [--목걸이 on|off] [--몸색보정 1.08,1.14,1.18] [--깃띠 1.455] [--머리뼈 Head] [--목뼈 Neck]"""
+         [--지우기 1.478] [--지울재질 head] [--지울재질2 opacity] [--지우기2 1.45] [--목섞기 1.48,1.53] [--머리카락아래 0.55] [--옷위 0.06] [--목색 on|off] [--옆자르기 0.655 --옆x 0.06] [--목조이기 0.85] [--조각 3000] [--이음 0.016] [--안으로 on|off] [--목색보정 1.02,1.125,1.18] [--목띠 0.025] [--목걸이 on|off] [--몸색보정 1.08,1.14,1.18] [--목색분석 on] [--깃띠 1.455] [--머리뼈 Head] [--목뼈 Neck]"""
 import os, sys
 import bpy, bmesh
 import numpy as np
@@ -36,6 +36,7 @@ BISECT = opt("--반듯", "on") != "off"
 CLOTHCO = set()
 NECKCY = 0.036
 BODYFIX = np.array([float(v) for v in opt("--몸색보정", "").split(",")]) if "--몸색보정" in a else None
+ANALYZE = opt("--목색분석", "off") != "off"
 PUSHIN = opt("--안으로", "on") != "off"       # A 목 아래 끝 이만큼(A 좌표)을 B 목 표면에 붙임
 CLOTHUP = float(opt("--옷위", "0.06"))      # 자르기 위 이만큼까지 옷 색 점을 지움
 NECKCOL = []
@@ -320,7 +321,26 @@ if NECKCOL and opt("--목색", "on") != "off":
     if cols:
         ga = np.median(np.array(NECKCOL), 0); gb = np.median(np.array(cols), 0); k = np.clip(ga / np.maximum(gb, 1e-3), 0.5, 2.0) * FIXCOL
         rgb_ = px[..., :3]; skin_ = ((rgb_[..., 0] > rgb_[..., 1]) & (rgb_[..., 1] > rgb_[..., 2]) & (rgb_[..., 0] > 0.3))[..., None]   # 피부만 (목걸이·옷은 그대로)
-        px[..., :3] = np.where(skin_, np.clip(rgb_ * k, 0, 1), rgb_); img.pixels.foreach_set(px.ravel())
+        if ANALYZE:
+            # 1번 목 피부 색 분석 → 2번 목·가슴에 적용 (사용자 2026-11-26 '1번 목 색상분석해서 2번 목부분 적용'):
+            # Lab 색 공간에서 2번 피부의 평균·퍼짐(표준편차)을 1번 목 피부의 평균·퍼짐으로 옮김(밝기·붉은 기·노란 기와 얼룩 정도까지) → 그 위에 --목색보정(촬영 차이)
+            def _lab(c):
+                c = np.where(c > 0.04045, ((c + 0.055) / 1.055) ** 2.4, c / 12.92)
+                X = c @ np.array([[0.4124, 0.2126, 0.0193], [0.3576, 0.7152, 0.1192], [0.1805, 0.0722, 0.9505]])
+                X = X / np.array([0.9505, 1.0, 1.089]); f_ = np.where(X > 0.008856, np.cbrt(X), 7.787 * X + 16 / 116)
+                return np.stack([116 * f_[..., 1] - 16, 500 * (f_[..., 0] - f_[..., 1]), 200 * (f_[..., 1] - f_[..., 2])], -1)
+            def _rgb(L):
+                fy = (L[..., 0] + 16) / 116; fx = fy + L[..., 1] / 500; fz = fy - L[..., 2] / 200
+                F = np.stack([fx, fy, fz], -1); X = np.where(F ** 3 > 0.008856, F ** 3, (F - 16 / 116) / 7.787) * np.array([0.9505, 1.0, 1.089])
+                c = X @ np.linalg.inv(np.array([[0.4124, 0.2126, 0.0193], [0.3576, 0.7152, 0.1192], [0.1805, 0.0722, 0.9505]]))
+                c = np.clip(c, 0, 1); return np.where(c > 0.0031308, 1.055 * c ** (1 / 2.4) - 0.055, 12.92 * c)
+            la = _lab(np.array(NECKCOL)); lb = _lab(np.array(cols)); ma, sa = la.mean(0), la.std(0) + 1e-3; mb, sb = lb.mean(0), lb.std(0) + 1e-3
+            sc_ = np.clip(sa / sb, 0.5, 2.0); m2 = skin_[..., 0]
+            Lp = _lab(rgb_[m2]); Lp = (Lp - mb) * sc_ + ma; new_ = np.clip(_rgb(Lp) * FIXCOL, 0, 1)
+            out_ = rgb_.copy(); out_[m2] = new_; px[..., :3] = out_; img.pixels.foreach_set(px.ravel())
+            print("목색 분석 1번 Lab 평균", ma.round(1), "퍼짐", sa.round(1), "/ 2번", mb.round(1), lb.std(0).round(1))
+        else:
+            px[..., :3] = np.where(skin_, np.clip(rgb_ * k, 0, 1), rgb_); img.pixels.foreach_set(px.ravel())
         tmp = os.path.join(os.path.dirname(os.path.abspath(dst)), "_목색맞춤.png"); img.filepath_raw = tmp; img.file_format = "PNG"; img.save(); img.pack()
         print("목색 맞춤 A", ga.round(3), "B", gb.round(3), "배율", k.round(3))
 # 몸 재질(손 등) 피부도 밝기·색조 맞춤 (사용자 2026-11-26 '2번 몸색을 조금 밝게, 색조를 조금 조절') — --몸색보정 r,g,b
