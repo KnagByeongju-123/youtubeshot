@@ -9,7 +9,8 @@
    - 첫소리 ㅁㅂㅃㅍ = 입술을 꼭 다묾(조금 눌러 오므림 0), 받침 ㅁㅂㅍ = 끝에서 다묾, 받침 ㄴㄷㄹ·ㅇ 은 조금 덜 벌림. 0.15초 넘는 쉼은 닫음
    - 받아쓰기 모델의 글자 시각은 실제 입보다 약 0.2초 늦음 → --앞당김 (실사3D 사용자 확인 2026-11-21)
    - --시작: 영상에서 소리가 시작하는 초 (그만큼 뒤로 밀어 둠), --세기: 전체 벌림 배율
-   결과: {"fps":24, "frames":[[open, wide, round, aa, ih, ou, ee, oh], ...]}  (앞 셋 = GLB 모양 키, 뒤 다섯 = VRM 입 모양)  → 장면_입검사.html ?lip=<결과.json>"""
+   - 자음 칸(2026-11-26, Rocketbox 15가지 입 모양용): 첫소리마다 pp(ㅁㅂㅃㅍ)·dd(ㄷㄸㅌ)·nn(ㄴ)·rr(ㄹ)·ss(ㅅㅆ)·ch(ㅈㅉㅊ)·kk(ㄱㄲㅋㅎ)를 짧게(음절 앞 0.05초~앞 35%) 띄움, 받침 ㄴ·ㅁ·ㅂ도
+   결과: {"fps":24, "frames":[[open, wide, round, aa, ih, ou, ee, oh, pp, dd, nn, rr, ss, ch, kk], ...]}  (앞 셋 = GLB 모양 키, 뒤 다섯 = VRM 입 모양)  → 장면_입검사.html ?lip=<결과.json>"""
 import json, os, subprocess, sys
 import numpy as np
 
@@ -62,6 +63,9 @@ if sound:
     loud = np.clip(0.7 + 0.45 * (loud / med - 0.6), 0.7, 1.25)
 
 items = []        # (t0, t1, 첫소리 다묾, 받침 종류, 앞 모양, 뒤 모양)
+CONS = []         # (t0, t1, 첫소리 칸, 받침 칸) — 자음 칸 번호 0 pp 1 dd 2 nn 3 rr 4 ss 5 ch 6 kk
+CHO_C = {6: 0, 7: 0, 8: 0, 17: 0, 3: 1, 4: 1, 16: 1, 2: 2, 5: 3, 9: 4, 10: 4, 12: 5, 13: 5, 14: 5, 0: 6, 1: 6, 15: 6, 18: 6}
+JONG_C = {4: 2, 16: 0, 17: 0, 26: 0, 8: 3, 7: 1}
 for k, (ch, t0, t1) in enumerate(syl):
     if not ("가" <= ch <= "힣"): continue
     c = ord(ch) - 0xAC00; cho, jung, jong = c // 588, (c % 588) // 28, c % 28
@@ -70,6 +74,7 @@ for k, (ch, t0, t1) in enumerate(syl):
     if jong in SOFT_JONG: g2 = g * 0.8
     else: g2 = g
     items.append((t0 + START - LEAD, t1 + START - LEAD, cho in CLOSE_CHO, jong, shape(v1, g), shape(v2, g2)))
+    CONS.append((t0 + START - LEAD, t1 + START - LEAD, CHO_C.get(cho), JONG_C.get(jong)))
 
 Z = np.zeros(8)
 keys = [(0.0, Z)]
@@ -96,5 +101,11 @@ fr = np.stack([np.interp(tt, ts, vs[:, j]) for j in range(vs.shape[1])], 1)
 ker = np.array([1, 2, 1]) / 4.0
 fr = np.stack([np.convolve(np.pad(fr[:, j], 1, mode="edge"), ker, "valid") for j in range(fr.shape[1])], 1)
 fr = np.clip(fr, 0, 1.2)
+cc = np.zeros((n, 7))                                                     # 자음 칸: 삼각형으로 잠깐
+for t0, t1, c0, c1 in CONS:
+    d = max(t1 - t0, 0.06)
+    if c0 is not None: cc[:, c0] = np.maximum(cc[:, c0], np.interp(tt, [t0 - 0.06, t0 + 0.01, t0 + 0.35 * d], [0, 1, 0], left=0, right=0))
+    if c1 is not None: cc[:, c1] = np.maximum(cc[:, c1], np.interp(tt, [t1 - 0.12, t1 - 0.03, t1 + 0.04], [0, 0.8, 0], left=0, right=0))
+fr = np.concatenate([fr, cc], 1)
 json.dump({"fps": FPS, "frames": np.round(fr, 3).tolist()}, open(a[1], "w"))
 print(f"입 모양 {n}장 ({n / FPS:.1f}초), 음절 {len(items)}개, 앞당김 {LEAD}초{', 소리 크기 반영' if loud is not None else ''} → {a[1]}")
