@@ -549,6 +549,35 @@ elif "--이" in a:
     dl = mwb.to_3x3().inverted() @ (best * 0.85)
     for v in kk.data: v.co = v.co + dl
     print(f"이: 입 너비 비율 {S:.2f}, 입술선 z {zline:.4f}, 아랫입술 벌림 {best.length * 100:.2f}cm")
+# ── 입속 막(--입속 R,G,B): 입 안 그물이 없는 인물(Rocketbox Female_Adult_12 등)은 입을 벌리면 머리 안쪽 뒷면이 보여 새까맸음
+#   → 입술 바로 뒤에 짙은 선홍색 둥근 막을 넣고 머리 뼈에 붙임 (사용자 2026-11-26 '입 속이 너무 검은색, 짙은 선홍색이 나을 듯')
+if "--입속" in a:
+    import bmesh
+    col_ = [float(v) / 255 for v in a[a.index("--입속") + 1].split(",")]
+    bodyM = max((o for o in objs if o.type == "MESH" and o.data.shape_keys and "MouthOpen" in o.data.shape_keys.key_blocks), key=lambda o: len(o.data.vertices), default=None)
+    if bodyM is not None:
+        kb_ = bodyM.data.shape_keys.key_blocks; mw_ = bodyM.matrix_world
+        mv = [mw_ @ b.co for b, k in zip(kb_["Basis"].data, kb_["MouthOpen"].data) if (k.co - b.co).length > 0.002 * (1 / max(mw_.to_scale()))]
+        if mv:
+            fy0 = min(v.y for v in mv); lp = [v for v in mv if v.y < fy0 + 0.010]          # 입술 앞쪽만 (턱까지 잡으면 막이 커져 턱 밖으로 나왔음)
+            cx_ = sum(v.x for v in lp) / len(lp); cz_ = sum(v.z for v in lp) / len(lp); fy_ = fy0
+            wd_ = (max(v.x for v in lp) - min(v.x for v in lp)) * 0.40
+            bm = bmesh.new(); bmesh.ops.create_uvsphere(bm, u_segments=24, v_segments=12, radius=1.0)
+            for v in bm.verts: v.co = mathutils.Vector((cx_ + v.co.x * wd_, fy_ + 0.024 + v.co.y * 0.014, cz_ + v.co.z * 0.012))
+            me_ = bpy.data.meshes.new("입속"); bm.to_mesh(me_); bm.free()
+            ob_ = bpy.data.objects.new("입속", me_); bpy.context.scene.collection.objects.link(ob_)
+            mt_ = bpy.data.materials.new("입속"); mt_.use_nodes = True; bs_ = mt_.node_tree.nodes["Principled BSDF"]
+            bs_.inputs["Base Color"].default_value = (*[c ** 2.2 for c in col_], 1); bs_.inputs["Roughness"].default_value = 0.55
+            bs_.inputs["Emission Color"].default_value = (*[c ** 2.2 for c in col_], 1); bs_.inputs["Emission Strength"].default_value = 0.35   # 그늘에서도 색이 보이게 아주 살짝 빛
+            me_.materials.append(mt_)
+            am_ = next((m for m in bodyM.modifiers if m.type == "ARMATURE"), None)
+            inv_ = mw_.inverted()                                   # 이(치아)처럼: 몸 그물과 같은 자리·같은 부모, 머리 뼈 무게 1
+            for v in me_.vertices: v.co = inv_ @ v.co
+            ob_.parent = bodyM.parent; ob_.matrix_parent_inverse = bodyM.matrix_parent_inverse.copy(); ob_.matrix_basis = bodyM.matrix_basis.copy()
+            if am_:
+                vg_ = ob_.vertex_groups.new(name="Head"); vg_.add(list(range(len(me_.vertices))), 1.0, "REPLACE")
+                m2_ = ob_.modifiers.new("Armature", "ARMATURE"); m2_.object = am_.object
+            objs.append(ob_); print("입속 막:", tuple(round(c, 3) for c in (cx_, fy_, cz_)), "폭", round(wd_ * 2, 3))
 # 모양 키(입·눈) 모으기
 keyed = [o for o in objs if o.type == "MESH" and o.data.shape_keys]
 for o in keyed: o.data.shape_keys.animation_data_clear()   # GLB 의 Idle 동작이 모양 키(입·눈)를 매 장면 0 으로 되돌려 립싱크가 안 됐음 (2026-11-25)
@@ -647,7 +676,7 @@ def place(i, who=None):
 #   팔은 걷는 동안 반대쪽 다리와 함께 앞뒤로 조금 흔듦
 WALK = "--걷기" in a
 SIP = "--마시기" in a        # 커피 자세에서 컵을 입으로 가져가 한 모금 마시고 내려놓음 (사용자 2026-11-24)
-DANCE = "--춤" in a          # 가벼운 춤(스텝 터치): 옆으로 한 발 내딛고 모으기를 박자에 맞춰, 무릎 반동·골반·팔 흔들기 (사용자 2026-11-24 "약간의 댄스")
+DANCE = "--춤" in a or "--조지아" in a          # 가벼운 춤(스텝 터치): 옆으로 한 발 내딛고 모으기를 박자에 맞춰, 무릎 반동·골반·팔 흔들기 (사용자 2026-11-24 "약간의 댄스")
 BPM = float(a[a.index("--박자") + 1]) if "--박자" in a else 112
 ROUTINE = (a[a.index("--춤순서") + 1] if "--춤순서" in a else "스텝,손뼉,엉덩이,돌기").split(",")   # 4박마다 바뀌는 동작 순서
 STEP = float(a[a.index("--보폭") + 1]) if "--보폭" in a else 0.28     # 엉덩이~발목 0.55m·몸에 붙는 치마·굽 구두 → 작은 걸음 (0.40 이면 골반이 내려가 무릎 굽은 채 걸음)
@@ -757,7 +786,62 @@ if (WALK or DANCE or SIP) and arm is not None:
         return mathutils.Vector((0, py_, 0))
     ROOT0 = {r.name: r.matrix_world.copy() for r in roots}
     sm2_ = lambda u: u * u * (3 - 2 * u)
+    GEORGIA = "--조지아" in a      # 조지아 여성 전통무용 느낌(사용자 2026-11-26 샘플): 꼿꼿한 몸·잔걸음으로 원을 그리며 미끄러지듯, 한 팔 위로 둥글게·한 팔 옆으로, 손목을 굴림
+    GR = float(a[a.index("--조지아") + 1]) if "--조지아" in a and a.index("--조지아") + 1 < len(a) and a[a.index("--조지아") + 1][0].isdigit() else 0.45   # 원 반지름(m)
+    def georgia(i):
+        t = i / 24.0; t0 = 0.3
+        for b in PB: b.matrix_basis = base[b.name]
+        for r in roots: r.matrix_world = ROOT0[r.name]
+        bpy.context.view_layer.update()
+        on = sm2_(min(1.0, max(0.0, (t - t0) / 1.0)))
+        tt = max(0.0, t - t0); per = 9.0                                    # 한 바퀴 9초
+        th = 2 * math.pi * sm2_(min(1.0, tt / 1.5)) * 0 + 2 * math.pi * max(0.0, tt - 0.75) / per * on
+        # 몸: 꼿꼿, 가슴 살짝 펴고 고개 들기, 아주 작은 오르내림(잔걸음)
+        step = 0.006 * (0.5 - 0.5 * math.cos(2 * math.pi * 3.0 * tt)) * on
+        hp = PB["Hips"]; hp.matrix = mathutils.Matrix.Translation(M3i @ mathutils.Vector((0, 0, -step))) @ hp.matrix; bpy.context.view_layer.update()
+        if "Chest" in PB: rot_world("Chest", (1, 0, 0), -0.04 * on)
+        if "Head" in PB: rot_world("Head", (1, 0, 0), -0.03 * on); rot_world("Head", (0, 1, 0), 0.06 * math.sin(2 * math.pi * tt / 6) * on)
+        # 발: 번갈아 아주 조금 듦 (치마 아래 잔걸음, 초당 3번)
+        for k, sd in enumerate(("L", "R")):
+            g = leg[sd]; H = MW @ PB[f"UpperLeg.{sd}"].head
+            lift = 0.014 * max(0.0, math.sin(2 * math.pi * 3.0 * tt + k * math.pi)) * on
+            F = g["F0"] + mathutils.Vector((0, 0, lift))
+            d = F - H; dl = min(d.length, g["L1"] + g["L2"] - 1e-4)
+            ca = (g["L1"] ** 2 + dl ** 2 - g["L2"] ** 2) / (2 * g["L1"] * dl); ang = math.acos(max(-1, min(1, ca)))
+            dn = d.normalized(); fwd = mathutils.Vector((0, -1, 0)); sidev = dn.cross(fwd).normalized(); perp = sidev.cross(dn).normalized()
+            if perp.dot(fwd) < 0: perp = -perp
+            knee = H + (dn * math.cos(ang) + perp * math.sin(ang)) * g["L1"]
+            set_world_aim(f"UpperLeg.{sd}", lambda sd=sd: MW @ PB[f"LowerLeg.{sd}"].head, knee)
+            set_world_aim(f"LowerLeg.{sd}", lambda sd=sd: MW @ PB[f"Foot.{sd}"].head, F)
+            fb = PB[f"Foot.{sd}"]; fb.matrix = mathutils.Matrix.Translation(fb.matrix.translation) @ FOOT0[sd]; bpy.context.view_layer.update()
+        # 팔: 4.5초마다 위로 든 팔이 바뀜 (1.2초에 걸쳐 부드럽게)
+        V = mathutils.Vector
+        cyc = tt / 4.5; k_ = int(cyc); fr = cyc - k_; bl = sm2_(min(1.0, max(0.0, (fr - 0.73) / 0.27)))
+        def dirs(high, sgn):
+            if high: return V((sgn * 0.62, -0.22, 0.75)), V((-sgn * 0.88, -0.18, 0.40))   # 팔꿈치를 굽혀 머리 위로 둥글게 감쌈 (곧게 뻗으면 체조 같았음)
+            return V((sgn * 0.95, -0.22, 0.05)), V((sgn * 0.85, -0.42, 0.30))             # 옆으로, 앞으로 살짝 휘게
+        for sd in ("L", "R"):
+            ub, fa, hb_ = f"UpperArm.{sd}", f"ForeArm.{sd}", f"Hand.{sd}"
+            if ub not in PB or hb_ not in PB: continue
+            sgn = 1 if (MW @ PB[ub].head).x > 0 else -1
+            hi_now = ((k_ % 2 == 0) == (sd == "R")); u1, f1 = dirs(hi_now, sgn); u2, f2 = dirs(not hi_now, sgn)
+            u0, f0 = V((sgn * CH_U, -0.03, -1.0)), V((sgn * CH_F, -0.10, -1.0))
+            ud = (u1 * (1 - bl) + u2 * bl) * on + u0 * (1 - on); fd = (f1 * (1 - bl) + f2 * bl) * on + f0 * (1 - on)
+            set_world_aim(ub, lambda fa=fa: MW @ PB[fa].head, (MW @ PB[ub].head) + ud)
+            set_world_aim(fa, lambda hb_=hb_: MW @ PB[hb_].head, (MW @ PB[fa].head) + fd)
+            if hb_ in PB:                                                    # 손목을 살랑 굴림
+                hpb = PB[hb_]; ax = ((MW @ hpb.head) - (MW @ PB[fa].head)).normalized()
+                R_ = (M3i @ mathutils.Matrix.Rotation(0.35 * math.sin(2 * math.pi * tt / 1.5 + (0 if sd == "L" else 1.5)) * on, 3, ax) @ M3).to_4x4()
+                hpb.matrix = mathutils.Matrix.Translation(hpb.head) @ R_ @ mathutils.Matrix.Translation(-hpb.head) @ hpb.matrix; bpy.context.view_layer.update()
+        # 원을 그리며 미끄러지듯: 반지름 GR, 몸은 가는 쪽을 봄
+        if on > 0:
+            pos = mathutils.Vector((GR * math.sin(th), -GR * math.cos(th) + GR, 0)) * 1.0
+            Rz = mathutils.Matrix.Rotation(th, 4, "Z")
+            for r in roots: r.matrix_world = mathutils.Matrix.Translation(pos) @ Rz @ ROOT0[r.name]
+            bpy.context.view_layer.update()
+        return mathutils.Vector((0, 0, 0))
     def dance(i):
+        if GEORGIA: return georgia(i)
         """4박 한 마디씩 동작을 바꿈 (사용자 2026-11-24 '손뼉, 한 바퀴 돌기, 엉덩이 흔들기'):
            마디1 스텝 터치 → 마디2 손뼉(2·4박에 짝) → 마디3 엉덩이 흔들기 → 마디4 한 바퀴 돌기 → 다시 처음.
            박마다 무릎 반동, 팔은 마디 사이에서 부드럽게 바뀜"""
@@ -899,9 +983,10 @@ def head_move(i):
         pb.matrix = mathutils.Matrix.Translation(pb.head) @ R_ @ mathutils.Matrix.Translation(-pb.head) @ pb.matrix
         bpy.context.view_layer.update()
 EXPR = [(kv.split('=')[0], float(kv.split('=')[1])) for kv in a[a.index('--표정') + 1].split(',')] if '--표정' in a else []
+MOUTH_SCALE = float(a[a.index('--입세기') + 1]) if '--입세기' in a else 1.0     # Rocketbox 는 '아' 입이 커서 O 자로 벌어졌음 (사용자 2026-11-26 '입 벌림 작게')
 def face(i):
     t = i / 24.0; lf = lip["frames"][i] if i < len(lip["frames"]) else [0, 0, 0]
-    set_shape("MouthOpen", lf[0]); set_shape("MouthWide", lf[1]); set_shape("MouthRound", lf[2])
+    MS = MOUTH_SCALE; set_shape("MouthOpen", lf[0] * MS); set_shape("MouthWide", lf[1] * MS); set_shape("MouthRound", lf[2] * MS)   # --입세기 0.5: 입 벌림 줄이기
     set_shape("Blink", blink_v(t))
     for nm_, v_ in EXPR: set_shape(nm_, v_)               # --표정 mouthSmileLeft=0.6,… : 늘 띄울 얼굴 표정(모양 키 이름=값)
     GWN[0] = guide_apply(i)
@@ -924,6 +1009,28 @@ if "--찍점" in a:      # 검사용: 화면 점(x,y) 아래에 무엇이 있는
         o = loc + d * 1e-4
     sys.exit(0)
 frames = [int(opt["--미리보기"])] if opt["--미리보기"] else range(int(opt["--시작장"]), N if int(opt["--끝장"]) < 0 else int(opt["--끝장"]))
+if "--애니저장" in a:   # 찍지 않고, 장면마다 뼈 자세·인물 자리·모양 키를 기록해 움직이는 GLB 로 내보냄 (사용자 2026-11-26 조지아 춤 'GLB로 저장')
+    dst_ = os.path.abspath(a[a.index("--애니저장") + 1]); sc.render.fps = 24; sc.frame_start = 0; sc.frame_end = N - 1
+    keep_ = [o for o in objs if o.type in ("ARMATURE", "MESH") and o.name != "Icosphere"]
+    for i in range(N):
+        sc.frame_set(i); set_xf(i); who = walk(i); WHO[0] = who; face(i); bpy.context.view_layer.update()
+        if arm is not None:
+            for pb in arm.pose.bones:
+                pb.keyframe_insert("location", frame=i); pb.keyframe_insert("rotation_quaternion", frame=i); pb.keyframe_insert("scale", frame=i)
+        for r in roots:
+            if r.type == "ARMATURE" or r in keep_:
+                r.keyframe_insert("location", frame=i); r.keyframe_insert("rotation_euler", frame=i); r.keyframe_insert("scale", frame=i)
+        for o in keyed: 
+            for k in o.data.shape_keys.key_blocks[1:]:
+                if abs(k.value) > 1e-4 or i == 0: k.keyframe_insert("value", frame=i)
+    for pb in (arm.pose.bones if arm else []): pb.rotation_mode = "QUATERNION"
+    bpy.ops.object.select_all(action="DESELECT")
+    for o in keep_: o.select_set(True)
+    if arm: arm.select_set(True)
+    if bpy.context.object and bpy.context.object.mode != "OBJECT": bpy.ops.object.mode_set(mode="OBJECT")
+    bpy.ops.export_scene.gltf(filepath=dst_, export_format="GLB", use_selection=True, export_animations=True, export_frame_range=True,
+                              export_force_sampling=True, export_morph=True, export_skins=True, export_image_format="AUTO", export_animation_mode="SCENE")
+    print("움직이는 GLB:", dst_, os.path.getsize(dst_) // 1024, "KB,", N, "장면"); sys.exit(0)
 for i in frames:
     set_xf(i); who = walk(i); WHO[0] = who; place(i, who * 0.6); face(i)     # 카메라는 인물을 반쯤 따라감 (나머지는 인물이 다가오는 느낌)
     sc.render.filepath = os.path.join(os.path.abspath(folder), f"f{i:04d}.png"); bpy.ops.render.render(write_still=True)
