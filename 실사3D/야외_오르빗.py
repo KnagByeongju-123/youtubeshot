@@ -92,7 +92,8 @@ bpy.ops.import_scene.gltf(filepath=os.path.abspath(glb))
 objs = [o for o in bpy.data.objects if o not in before]; roots = [o for o in objs if o.parent is None]
 bpy.context.view_layer.update()
 def bbox():
-    pts = [o.matrix_world @ mathutils.Vector(c) for o in objs if o.type == "MESH" for c in o.bound_box]
+    sc_objs = set(bpy.context.scene.objects)          # 불러오기가 만든 숨은 뼈 모양(Icosphere)은 빼고 (Rocketbox 인물이 1m 떠 있었음, 2026-11-26)
+    pts = [o.matrix_world @ mathutils.Vector(c) for o in objs if o.type == "MESH" and o in sc_objs and o.name != "Icosphere" for c in o.bound_box]
     return pts
 pts = bbox(); k = float(opt["--키"]) / (max(p.z for p in pts) - min(p.z for p in pts))
 for r in roots: r.scale = (r.scale[0] * k, r.scale[1] * k, r.scale[2] * k)
@@ -897,10 +898,12 @@ def head_move(i):
         R_ = (M3ai @ Rw @ M3a).to_4x4()
         pb.matrix = mathutils.Matrix.Translation(pb.head) @ R_ @ mathutils.Matrix.Translation(-pb.head) @ pb.matrix
         bpy.context.view_layer.update()
+EXPR = [(kv.split('=')[0], float(kv.split('=')[1])) for kv in a[a.index('--표정') + 1].split(',')] if '--표정' in a else []
 def face(i):
     t = i / 24.0; lf = lip["frames"][i] if i < len(lip["frames"]) else [0, 0, 0]
     set_shape("MouthOpen", lf[0]); set_shape("MouthWide", lf[1]); set_shape("MouthRound", lf[2])
     set_shape("Blink", blink_v(t))
+    for nm_, v_ in EXPR: set_shape(nm_, v_)               # --표정 mouthSmileLeft=0.6,… : 늘 띄울 얼굴 표정(모양 키 이름=값)
     GWN[0] = guide_apply(i)
     if HEAD_MOVE: head_move(i)
 
