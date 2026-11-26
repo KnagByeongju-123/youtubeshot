@@ -92,7 +92,8 @@ bpy.ops.import_scene.gltf(filepath=os.path.abspath(glb))
 objs = [o for o in bpy.data.objects if o not in before]; roots = [o for o in objs if o.parent is None]
 bpy.context.view_layer.update()
 def bbox():
-    pts = [o.matrix_world @ mathutils.Vector(c) for o in objs if o.type == "MESH" for c in o.bound_box]
+    sc_objs = set(bpy.context.scene.objects)          # 불러오기가 만든 숨은 뼈 모양(Icosphere)은 빼고 (Rocketbox 인물이 1m 떠 있었음, 2026-11-26)
+    pts = [o.matrix_world @ mathutils.Vector(c) for o in objs if o.type == "MESH" and o in sc_objs and o.name != "Icosphere" for c in o.bound_box]
     return pts
 pts = bbox(); k = float(opt["--키"]) / (max(p.z for p in pts) - min(p.z for p in pts))
 for r in roots: r.scale = (r.scale[0] * k, r.scale[1] * k, r.scale[2] * k)
