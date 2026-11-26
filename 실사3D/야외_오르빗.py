@@ -1000,7 +1000,8 @@ def face(i):
         set_shape("AA_VI_13_O", 0.4 * ro); set_shape("AK_32_MouthFunnel", 0.5 * ro)
         set_shape("AU_18_LipPuckerer", 0.75 * ru); set_shape("AU_22_LipFunneler", 0.3 * ro + 0.5 * ru)
         set_shape("MouthOpen", aa * MS * (1 - 0.5 * rr_)); set_shape("MouthRound", 0.0)
-        set_shape("AA_VI_01_PP", pp * 0.9); set_shape("AA_VI_04_DD", dd * 0.6 * MS); set_shape("AA_VI_08_nn", nn * 0.6 * MS)
+        set_shape("AA_VI_01_PP", pp * 0.6); set_shape("AU_24_LipPressor", pp * 0.5);   # 입술 닫기: 미소 바탕은 이가 살짝 보여 PP 만으론 덜 닫혔음 → 입술 누르기 더함(받침 ㅂㅁㅍㅅㅆㅈㅊㅌ, 사용자 2026-11-26)
+        set_shape("AA_VI_04_DD", dd * 0.6 * MS); set_shape("AA_VI_08_nn", nn * 0.6 * MS)
         set_shape("AA_VI_09_RR", rr * 0.6 * MS); set_shape("AA_VI_07_SS", ss * 0.7 * MS); set_shape("AA_VI_06_CH", ch * 0.7 * MS); set_shape("AA_VI_05_KK", kk * 0.5 * MS)
     else:
         set_shape("MouthOpen", lf[0] * MS); set_shape("MouthWide", lf[1] * MS); set_shape("MouthRound", lf[2] * MS)   # --입세기 0.5: 입 벌림 줄이기
