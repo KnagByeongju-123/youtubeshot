@@ -29,7 +29,8 @@ hi.update({"name": "아나운서", "phenotype": ph, "rig": cfg.get("rig", "game_
            "hair": f"{cfg.get('hair', 'bob01')}/{cfg.get('hair', 'bob01')}.mhclo",
            "skin_mhmat": f"{cfg.get('skin', 'young_asian_female')}/{cfg.get('skin', 'young_asian_female')}.mhmat", "skin_material_type": "ENHANCED",
            "clothes": [f"{c}/{c}.mhclo" if "/" not in c else c for c in cfg.get("clothes", ["female_elegantsuit01", "shoes06"])],
-           "alternative_materials": {}})
+           "alternative_materials": {},
+           "targets": [{"target": t, "value": v} for t, v in cfg.get("targets", {}).items()]})      # 얼굴 조절(예: "head-oval": 0.6)
 st = HumanService.get_default_deserialization_settings(); st["subdiv_levels"] = 0
 basemesh = HumanService.deserialize_from_dict(hi, st)
 FaceService.load_targets(basemesh, load_microsoft_visemes=True, load_meta_visemes=False, load_arkit_faceunits=True)
@@ -60,7 +61,7 @@ for o in bpy.data.objects:
 import numpy as np
 kb = basemesh.data.shape_keys.key_blocks; nv = len(basemesh.data.vertices)
 def co(k): arr = np.zeros(nv * 3, np.float32); k.data.foreach_get("co", arr); return arr
-basis = co(kb[0]); body = [k for k in kb[1:] if k.name.startswith("$md") or k.name.startswith("$") ]
+basis = co(kb[0]); body = [k for k in kb[1:] if abs(k.value) > 1e-6]      # 값이 들어간 키 = 몸·얼굴 조절(입 모양·표정 키는 0)
 mix = basis.copy()
 for k in body: mix += (co(k) - basis) * k.value
 for k in kb[1:]:

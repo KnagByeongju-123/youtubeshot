@@ -1,0 +1,9 @@
+{"hair": "long01", "clothes": ["toigo_female_suit", "shoes04"], "eyebrows": "eyebrow001",
+ "phenotype": {"age": 0.38, "weight": 0.38, "muscle": 0.35, "proportions": 1.0, "cupsize": 0.5},
+ "targets": {"head-oval": 0.6, "head-scale-horiz-decr": 0.12,
+   "chin-width-decr": 0.5, "chin-prominent-decr": 0.3, "chin-bones-decr": 0.4, "chin-height-decr": 0.15,
+   "l-cheek-bones-decr": 0.3, "r-cheek-bones-decr": 0.3, "l-cheek-volume-incr": 0.25, "r-cheek-volume-incr": 0.25,
+   "l-eye-scale-incr": 0.2, "r-eye-scale-incr": 0.2, "l-eye-height2-incr": 0.2, "r-eye-height2-incr": 0.2,
+   "nose-scale-horiz-decr": 0.2, "nose-width1-decr": 0.25, "nose-point-width-decr": 0.3, "nose-volume-decr": 0.2,
+   "mouth-upperlip-volume-incr": 0.25, "mouth-lowerlip-volume-incr": 0.3, "mouth-angles-up": 0.25,
+   "neck-scale-horiz-decr": 0.3}}
