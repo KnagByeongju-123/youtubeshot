@@ -16,6 +16,27 @@ nm = os.path.basename(folder.rstrip("/"))
 bpy.ops.wm.read_factory_settings(use_empty=True)
 bpy.ops.import_scene.fbx(filepath=os.path.join(folder, "Export", f"{nm}_facial.fbx"))
 arm = next(o for o in bpy.data.objects if o.type == "ARMATURE")
+if "--머리" in a:   # 다른 인물의 얼굴·머리카락을 이 인물(몸·옷)에 합침 — Rocketbox 는 뼈대 자리가 모두 같아 그대로 옮겨 붙음 (사용자 2026-11-26 '정장 몸에 합쳐줘')
+    import bmesh
+    hf = a[a.index("--머리") + 1].rstrip("/"); hn = os.path.basename(hf)
+    base = next(o for o in bpy.data.objects if o.type == "MESH")
+    def keep_only(o, mats):                                   # 재질 번호(0 몸·옷, 1 얼굴·목, 2 머리카락·속눈썹) 중 mats 만 남김
+        bm = bmesh.new(); bm.from_mesh(o.data)
+        bmesh.ops.delete(bm, geom=[f for f in bm.faces if f.material_index not in mats], context="FACES")
+        bmesh.ops.delete(bm, geom=[v for v in bm.verts if not v.link_faces], context="VERTS"); bm.to_mesh(o.data); bm.free()
+    keep_only(base, {0})
+    before = set(bpy.data.objects)
+    bpy.ops.import_scene.fbx(filepath=os.path.join(hf, "Export", f"{hn}_facial.fbx"))
+    new_objs = [o for o in bpy.data.objects if o not in before]
+    head = next(o for o in new_objs if o.type == "MESH"); arm2 = next(o for o in new_objs if o.type == "ARMATURE")
+    keep_only(head, {1, 2})
+    mw = head.matrix_world.copy(); head.parent = arm; head.matrix_world = mw
+    for m in head.modifiers:
+        if m.type == "ARMATURE": m.object = arm
+    bpy.ops.object.select_all(action="DESELECT"); base.select_set(True); head.select_set(True)
+    bpy.context.view_layer.objects.active = head; bpy.ops.object.join()          # 얼굴 쪽 모양 키(입 모양·표정)를 살림
+    bpy.data.objects.remove(arm2, do_unlink=True)
+    print("머리 합침:", hn, "→ 몸", nm)
 FING = {"0": "Thumb", "1": "Index", "2": "Middle", "3": "Ring", "4": "Little"}
 def newname(b):
     m = re.match(r"Bip01 ([LR]) (\w+)$", b)
@@ -57,10 +78,12 @@ if "--부품지우기" in a:                                        # 작은 따
         best = min(parts, key=lambda c: ((sum((M @ v.co for v in c), mathutils.Vector()) / len(c)) - tgt).length)
         kill += best; print("부품 지움: 점", len(best))
     bmesh.ops.delete(bm, geom=list(set(kill)), context="VERTS"); bm.to_mesh(o.data); bm.free()
-tex = a[a.index("--그림폴더") + 1] if "--그림폴더" in a else os.path.join(folder, "Textures")
+texs = [a[a.index("--그림폴더") + 1]] if "--그림폴더" in a else []
+texs += [os.path.join(folder, "Textures")] + ([os.path.join(a[a.index("--머리") + 1], "Textures")] if "--머리" in a else [])
 for im in bpy.data.images:
     base = os.path.basename(im.filepath.replace("\\", "/"))
-    if os.path.exists(os.path.join(tex, base)): im.filepath = os.path.join(tex, base); im.reload()
+    for tex in texs:
+        if os.path.exists(os.path.join(tex, base)): im.filepath = os.path.join(tex, base); im.reload(); break
 for o in bpy.data.objects:
     if o.type != "MESH": continue
     for m in o.data.materials:
