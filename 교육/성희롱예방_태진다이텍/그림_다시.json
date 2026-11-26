@@ -1,0 +1,43 @@
+{
+ "items": [
+  {
+   "id": "s06",
+   "prompt": "Clean modern Korean webtoon illustration, soft pastel colors, gentle cel shading, clear outlines, no text, no letters, no logos, no signs with writing, full-bleed image, no border, no frame, no paper edges. Night, inside a small cozy apartment bedroom (no office, no other people, only one person in the whole image): a young Korean woman in casual pajamas sitting on her bed holding a smartphone with a glowing chat screen (no readable text), worried troubled face, dim warm bedside lamp, window with night sky.",
+   "width": 1024,
+   "height": 576,
+   "seed": 61,
+   "steps": 4
+  },
+  {
+   "id": "s10",
+   "prompt": "Clean modern Korean webtoon illustration, soft pastel colors, gentle cel shading, clear outlines, no text, no letters, no logos, no signs with writing, full-bleed image, no border, no frame, no paper edges. A Korean female office worker sitting at her desk, exactly two arms and two hands: her right hand holds a pen and writes in an open notebook on the desk, her left hand holds a smartphone up to look at it, determined calm expression, plain pastel wall behind her with no calendar and no posters, coworkers softly blurred in the background.",
+   "width": 1024,
+   "height": 576,
+   "seed": 71,
+   "steps": 4
+  },
+  {
+   "id": "s15",
+   "prompt": "Clean modern Korean webtoon illustration, soft pastel colors, gentle cel shading, clear outlines, no text, no letters, no logos, no signs with writing, full-bleed image, no border, no frame, no paper edges. Bright Korean office: a distressed female employee sitting at her desk, a female coworker standing beside her and bending down to talk kindly without touching her, another female coworker offering a cup of tea from the other side, caring supportive atmosphere, nobody touches anyone.",
+   "width": 1024,
+   "height": 576,
+   "seed": 81,
+   "steps": 4
+  }
+ ],
+ "fixes": [
+  {
+   "id": "s08_도장",
+   "image": "s08.png",
+   "box": [
+    405,
+    445,
+    515,
+    505
+   ],
+   "prompt": "a plain red ink circle stamp mark on white paper, empty inside, no characters, no letters",
+   "seed": 5
+  }
+ ],
+ "crop_border": true
+}
