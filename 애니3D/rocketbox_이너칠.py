@@ -1,6 +1,7 @@
 """Rocketbox 얼굴(재질 1, 목·윗가슴 포함) 그림에서 둥근 목선(U자) 아래 가슴을 흰 이너 색으로 칠함 — 정장 V넥이 깊어 가슴이 많이 보였음 (사용자 2026-11-26 '2번')
    그림 점마다 3D 자리를 구해(면을 그림 좌표로 펼쳐 채움) 높이 z < 목선(가운데 --높이, 옆으로 갈수록 올라감) 이고 앞쪽인 곳만 칠함, 경계는 부드럽게
    정장 몸(재질 0)의 가슴 피부도 칠할 수 있음: --재질 0 --그림 _body_color (가슴 V 사이 피부는 몸 그림에 있었음, Business_Female_04)
+   어깨 칠하기: --z최소 1.36 --x최소 0.05 --높이 9 --색 26,26,30 (얼굴을 바꾸면 몸 그림의 어깨 윗부분 피부가 깃 옆으로 비쳤음, Sports_Female_02 + Female_Adult_15)
    사용: .bpy_venv/bin/python -I 애니3D/rocketbox_이너칠.py <인물 폴더> <그림 폴더(없으면 원본 복사, 덮어씀)> [--재질 0|1] [--그림 _body_color|_head_color]
          [--높이 1.375] [--휨 2.0] [--색 236,236,238]"""
 import os, sys
@@ -12,6 +13,8 @@ a = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else sys.argv[1:]
 folder, texdir = a[0].rstrip("/"), a[1]; nm = os.path.basename(folder)
 Z0 = float(a[a.index("--높이") + 1]) if "--높이" in a else 1.375
 BEND = float(a[a.index("--휨") + 1]) if "--휨" in a else 2.0
+ZMIN = float(a[a.index("--z최소") + 1]) if "--z최소" in a else -9.0      # 이 높이보다 위만 (어깨 칠하기용)
+XMIN = float(a[a.index("--x최소") + 1]) if "--x최소" in a else -1.0      # 가운데에서 이만큼 옆만
 COL = np.array([float(v) for v in (a[a.index("--색") + 1] if "--색" in a else "236,236,238").split(",")]) / 255
 bpy.ops.wm.read_factory_settings(use_empty=True)
 bpy.ops.import_scene.fbx(filepath=os.path.join(folder, "Export", f"{nm}_facial.fbx"))
@@ -45,7 +48,7 @@ for t in me.loop_triangles:
     p = pts[ins].astype(int); p[:, 0] = p[:, 0].clip(0, TW - 1); p[:, 1] = p[:, 1].clip(0, TH - 1)
     yy, xx = p[:, 1], p[:, 0]; cur = out[yy, xx]
     skin = (cur[:, 0] > cur[:, 1]) & (cur[:, 1] > cur[:, 2]) & (cur[:, 0] - cur[:, 2] > 0.06) & (cur[:, 0] > 0.18)   # 피부만 (재킷 깃은 그대로)
-    w = np.clip((zc - q[:, 2]) / SOFT + 0.5, 0, 1) * (q[:, 1] < 0.03) * skin
+    w = np.clip((zc - q[:, 2]) / SOFT + 0.5, 0, 1) * (q[:, 1] < 0.03) * skin * (q[:, 2] > ZMIN) * (np.abs(q[:, 0]) > XMIN)
     shade = (cur.mean(1, keepdims=True) / max(cur.mean(), 1e-3)) ** 0.3          # 원래 그림자 조금 살림
     out[yy, xx] = cur * (1 - w[:, None]) + np.clip(COL * shade, 0, 1) * w[:, None]; n += int((w > 0).sum())
 Image.fromarray((out * 255 + 0.5).clip(0, 255).astype(np.uint8)).save(os.path.join(texdir, head))

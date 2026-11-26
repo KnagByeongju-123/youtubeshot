@@ -30,6 +30,12 @@ if "--머리" in a:   # 다른 인물의 얼굴·머리카락을 이 인물(몸�
     new_objs = [o for o in bpy.data.objects if o not in before]
     head = next(o for o in new_objs if o.type == "MESH"); arm2 = next(o for o in new_objs if o.type == "ARMATURE")
     keep_only(head, {1, 2})
+    if "--어깨자르기" in a:   # 얼굴 쪽 그물이 어깨까지 내려온 인물(민소매 Sports_Female_02 등): 목에서 옆으로 떨어진 낮은 곳의 면을 지움 (블라우스를 뚫고 살이 비쳤음, 2026-11-26)
+        zc, xc = (float(t) for t in a[a.index("--어깨자르기") + 1].split(","))
+        Mh = head.matrix_world; bm = bmesh.new(); bm.from_mesh(head.data)
+        kill = [f for f in bm.faces if f.material_index == 1 and (lambda c: c.z < zc and abs(c.x) > xc)(Mh @ f.calc_center_median())]
+        bmesh.ops.delete(bm, geom=kill, context="FACES"); bmesh.ops.delete(bm, geom=[v for v in bm.verts if not v.link_faces], context="VERTS")
+        bm.to_mesh(head.data); bm.free(); print("어깨 면 지움", len(kill))
     mw = head.matrix_world.copy(); head.parent = arm; head.matrix_world = mw
     for m in head.modifiers:
         if m.type == "ARMATURE": m.object = arm
