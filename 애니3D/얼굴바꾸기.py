@@ -5,7 +5,7 @@
    - 옮긴 머리는 B 뼈대에 묶음: 목 아래쪽은 Neck, 위로 갈수록 Head (--목섞기 z0,z1, B 좌표)
    - 모양 키(MouthOpen·MouthWide·MouthRound·Blink)는 A 것을 그대로 가져감
    사용: .bpy_venv/bin/python -I 애니3D/얼굴바꾸기.py <A.glb> <B.glb> <결과.glb> --자르기 0.625 --턱 0.663,1.508 --코앞 -0.116,-0.072 --배율 0.92
-         [--지우기 1.478] [--지울재질 head] [--지울재질2 opacity] [--지우기2 1.45] [--목섞기 1.48,1.53] [--머리카락아래 0.55] [--옷위 0.06] [--목색 on|off] [--옆자르기 0.655 --옆x 0.06] [--목조이기 0.85] [--조각 3000] [--이음 0] [--안으로 on|off] [--목색보정 1.02,1.125,1.18] [--목띠 0.025] [--깃띠 1.455] [--머리뼈 Head] [--목뼈 Neck]"""
+         [--지우기 1.478] [--지울재질 head] [--지울재질2 opacity] [--지우기2 1.45] [--목섞기 1.48,1.53] [--머리카락아래 0.55] [--옷위 0.06] [--목색 on|off] [--옆자르기 0.655 --옆x 0.06] [--목조이기 0.85] [--조각 3000] [--이음 0] [--안으로 on|off] [--목색보정 1.02,1.125,1.18] [--목띠 0.025] [--목걸이 on|off] [--깃띠 1.455] [--머리뼈 Head] [--목뼈 Neck]"""
 import os, sys
 import bpy, bmesh
 import numpy as np
@@ -30,6 +30,7 @@ COLLAR = float(opt("--깃띠", "0"))          # 몸 재질 중 이 높이(B 좌�
 SNAP = float(opt("--이음", "0"))
 FIXCOL = np.array([float(v) for v in opt("--목색보정", "1,1,1").split(",")])   # 촬영해 보니 B 목이 더 붉게 나옴 → 그림 색에 더 곱함 (예: 1.02,1.125,1.18)
 FEATHER = float(opt("--목띠", "0.025"))     # A 목 아래 이 높이(A 좌표)를 깨끗한 목 색으로 섞음 (0 = 끔)
+NECKLACE = opt("--목걸이", "on") != "off"
 BISECT = opt("--반듯", "on") != "off"
 CLOTHCO = set()
 PUSHIN = opt("--안으로", "on") != "off"       # A 목 아래 끝 이만큼(A 좌표)을 B 목 표면에 붙임
@@ -172,6 +173,55 @@ for o in list(objsA):
 mainA = max(keep, key=lambda x: len(x.data.vertices))
 bvhA = BVHTree.FromPolygons([v.co.copy() for v in mainA.data.vertices], [list(f.vertices) for f in mainA.data.polygons])   # A 는 세상 좌표로 굳혀 둠
 ZBOT = CB + (CUT - CA) * S
+
+def tex_of(obj, pick_skin=True):
+    """그 그물의 겉면 색 그림(여러 개면 피부색이 가장 많은 것)"""
+    ims = [n.image for m in obj.data.materials if m and m.node_tree for n in m.node_tree.nodes if n.type == "TEX_IMAGE" and n.image]
+    def sk(im):
+        q = np.empty(im.size[0] * im.size[1] * 4, np.float32); im.pixels.foreach_get(q); q = q.reshape(-1, 4)[::97, :3]
+        return float(((q[:, 0] > q[:, 1]) & (q[:, 1] > q[:, 2])).mean())
+    if not ims: return None
+    return max(ims, key=sk) if pick_skin else ims[0]      # A 는 첫 그림(목띠 섞기와 같은 그림) — 피부 비율로 고르면 다른 그림이 잡혔음
+
+if NECKLACE:   # 목걸이 줄 살리기 (사용자 2026-11-26 '목걸이 선을 살려줘'): B 그림에 그려진 줄 중 A 목에 가려지는 곳(목 옆·뒤)을 A 목 그림의 같은 자리에 옮겨 그림
+    mwB_ = bodyB.matrix_world; matsB_ = [m.name.lower() if m else "" for m in bodyB.data.materials]
+    miB = next(i for i, m in enumerate(matsB_) if M1 in m)
+    imB = tex_of(bodyB); WB, HB = imB.size; pxB = np.empty(WB * HB * 4, np.float32); imB.pixels.foreach_get(pxB); pxB = pxB.reshape(HB, WB, 4)
+    uvB = bodyB.data.uv_layers.active.data; VB = bodyB.data.vertices; chain = []
+    for poly in bodyB.data.polygons:
+        if poly.material_index != miB: continue
+        zs_ = [(mwB_ @ VB[i].co).z for i in poly.vertices]
+        if max(zs_) < ZBOT - 0.01 or min(zs_) > DEL + 0.04: continue
+        lis = list(poly.loop_indices)
+        for t_ in range(1, len(lis) - 1):
+            tri = [lis[0], lis[t_], lis[t_ + 1]]
+            uv = np.array([tuple(uvB[li].uv) for li in tri]) * [WB, HB]; xyz = np.array([tuple(mwB_ @ VB[bodyB.data.loops[li].vertex_index].co) for li in tri])
+            x0, y0 = np.floor(uv.min(0)).astype(int); x1, y1 = np.ceil(uv.max(0)).astype(int)
+            xs, ys = np.meshgrid(np.arange(x0, x1 + 1), np.arange(y0, y1 + 1)); P = np.stack([xs.ravel() + 0.5, ys.ravel() + 0.5], 1)
+            Tm = np.array([[uv[0, 0] - uv[2, 0], uv[1, 0] - uv[2, 0]], [uv[0, 1] - uv[2, 1], uv[1, 1] - uv[2, 1]]])
+            if abs(np.linalg.det(Tm)) < 1e-12: continue
+            l_ = np.linalg.solve(Tm, (P - uv[2]).T).T; L = np.column_stack([l_, 1 - l_.sum(1)]); ins = (L >= 0).all(1)
+            q = L[ins] @ xyz; pp = P[ins].astype(int); c = pxB[pp[:, 1].clip(0, HB - 1), pp[:, 0].clip(0, WB - 1), :3]
+            mx, mn = c.max(1), c.min(1); ok = (mx - mn < 0.10) & (mx < 0.62) & (mx > 0.15) & (q[:, 1] < 0.12) & (q[:, 2] > ZBOT - 0.006)
+            chain += [(tuple(q[k]), c[k]) for k in np.where(ok)[0]]
+    imA = tex_of(mainA, False); WA, HA = imA.size; pxA = np.empty(WA * HA * 4, np.float32); imA.pixels.foreach_get(pxA); pxA = pxA.reshape(HA, WA, 4)
+    uvA = mainA.data.uv_layers.active.data; nA = 0
+    from mathutils import Vector as _V2
+    from mathutils.geometry import barycentric_transform
+    for co_, c in chain:
+        hit = bvhA.find_nearest(_V2(co_))
+        if hit[0] is None or hit[3] > 0.015: continue
+        poly = mainA.data.polygons[hit[2]]; vi = list(poly.vertices)[:3]; li = list(poly.loop_indices)[:3]
+        P3 = [mainA.data.vertices[i].co for i in vi]; U3 = [_V2((*uvA[k].uv, 0)) for k in li]
+        uvp = barycentric_transform(hit[0], P3[0], P3[1], P3[2], U3[0], U3[1], U3[2])
+        x_, y_ = int(uvp.x * WA), int(uvp.y * HA)
+        for dx in (0, 1):
+            for dy in (0, 1):
+                if 0 <= x_ + dx < WA and 0 <= y_ + dy < HA: pxA[y_ + dy, x_ + dx, :3] = c * 0.9; nA += 1
+    if nA:
+        imA.pixels.foreach_set(pxA.ravel()); tmpN = os.path.join(os.path.dirname(os.path.abspath(dst)), "_목걸이.png")
+        imA.filepath_raw = tmpN; imA.file_format = "PNG"; imA.save(); imA.pack()
+    print("목걸이 줄 옮겨 그린 점", len(chain), "→ 그림 칸", nA)
 
 # B 머리 지우기
 mw = bodyB.matrix_world; mats = [m.name.lower() if m else "" for m in bodyB.data.materials]
