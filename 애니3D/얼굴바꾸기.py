@@ -9,7 +9,7 @@
 import os, sys
 import bpy, bmesh
 import numpy as np
-from mathutils import Matrix
+from mathutils import Matrix, Vector as _V
 
 a = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else sys.argv[1:]
 srcA, srcB, dst = a[0], a[1], a[2]
@@ -31,8 +31,10 @@ SNAP = float(opt("--이음", "0.016"))
 FIXCOL = np.array([float(v) for v in opt("--목색보정", "1,1,1").split(",")])   # 촬영해 보니 B 목이 더 붉게 나옴 → 그림 색에 더 곱함 (예: 1.02,1.125,1.18)
 FEATHER = float(opt("--목띠", "0.025"))     # A 목 아래 이 높이(A 좌표)를 깨끗한 목 색으로 섞음 (0 = 끔)
 NECKLACE = opt("--목걸이", "on") != "off"
+FILLHOLE = opt("--구멍메우기", "on") != "off"
 BISECT = opt("--반듯", "on") != "off"
 CLOTHCO = set()
+NECKCY = 0.036
 PUSHIN = opt("--안으로", "on") != "off"       # A 목 아래 끝 이만큼(A 좌표)을 B 목 표면에 붙임
 CLOTHUP = float(opt("--옷위", "0.06"))      # 자르기 위 이만큼까지 옷 색 점을 지움
 NECKCOL = []
@@ -71,11 +73,11 @@ for o in sorted(objsA, key=lambda x: x.name):
                 if v in hairv or z > max(CUT + CLOTHUP, SIDECUT) or (z < CUT and z < HAIRLOW): continue
                 u, w = uvd[lp.index].uv; r, g, b = px[min(int(w * H_), H_ - 1) % H_, min(int(u * W_), W_ - 1) % W_, :3]
                 mx, mn = max(r, g, b), min(r, g, b)
-                if CUT <= z < SIDECUT and co_.y > 0.0 and abs(co_.x) <= SIDEX and mx < 0.6 and r >= g >= b and not (mx > 0.45 and r - b > 0.15 and mn > 0.3):
+                if CUT <= z < SIDECUT and (co_.y > 0.0 or abs(co_.x) > SIDEX) and mx < 0.6 and r >= g >= b and not (mx > 0.45 and r - b > 0.15 and mn > 0.3):
                     clothv.add(v); continue     # 뒤 가운데 머리카락도 옆과 같은 높이로 (안쪽으로 말린 뒷머리가 따로 늘어져 보였음)
                 if z >= CUT:                    # 자르기 위 옷(남색 재킷 깃·흰 셔츠)은 빼고, 목 앞 피부색은 모음
                     frontneck = abs(co_.x) < 0.065 and co_.y < -0.005      # 목 앞쪽은 피부 — 색으로 지우면 끝이 들쭉날쭉했음
-                    darkcloth = mx < 0.4 and b >= r - 0.02                 # 짙은 남색 재킷 깃(머리카락은 r>g>b 갈색이라 빠짐)
+                    darkcloth = mx < 0.4 and b >= r - 0.02 and not (abs(co_.x) < 0.07 and co_.y < 0.03)   # 짙은 남색 재킷 깃 — 목 앞·옆 피부의 어두운 자국은 빼고(지웠더니 목 옆에 구멍)
                     if darkcloth or (not frontneck and ((b > r + 0.01) or (mn > 0.75 and mx - mn < 0.06 and abs(co_.x) > 0.04))): clothv.add(v)
                     elif abs(co_.x) < 0.035 and co_.y < 0 and CUT + 0.03 < z < CUT + 0.06: NECKCOL.append((r, g, b))   # 깨끗한 목 피부(아래 띠는 셔츠 깃 그림자 얼룩)
                     continue
@@ -117,7 +119,7 @@ for o in sorted(objsA, key=lambda x: x.name):
         hairv = {v.index for v in bm.verts if v.co.z < CUT - 1e-5 and False}   # (머리카락 남기기는 끔: 번호가 바뀜)
         clothv = {v.index for v in bm.verts if v.co.z >= CUT and v.co.z <= max(CUT + CLOTHUP, SIDECUT) and tuple(round(c, 5) for c in v.co) in CLOTHCO}
     gone = [v for v in bm.verts if (v.co.z < CUT - 1e-5 and v.index not in hairv) or v.index in clothv
-            or (v.co.z < SIDECUT - 1e-5 and abs(v.co.x) > SIDEX)]          # 어깨 위 머리카락 끝(바깥으로 말린 곳): B 어깨가 좁아 떠 보여서 단발 끝을 고르게 자름
+            ]   # 단발 끝은 머리카락 색 점만 자름(위 clothv) — 높이만 보고 자르면 목 옆 피부까지 잘려 깃 뒤로 구멍이 났음 (사용자 2026-11-26 '오른쪽 목 옆 구멍')          # 어깨 위 머리카락 끝(바깥으로 말린 곳): B 어깨가 좁아 떠 보여서 단발 끝을 고르게 자름
     bmesh.ops.delete(bm, geom=gone, context="VERTS")
     # 예전에 구멍을 메운 어두운 덧댐(재질 이름 '틈막음')은 목 둘레에 검은 띠로 보였음 → 지움 (사용자 2026-11-26 '목 이음매')
     fill_mi = {i for i, m in enumerate(o.data.materials) if m and "틈막음" in m.name}
@@ -145,6 +147,49 @@ for o in sorted(objsA, key=lambda x: x.name):
         for i, c in enumerate(smallco): kd.insert(c, i)
         kd.balance(); small = [v for v in bm.verts if kd.find(v.co)[2] < 2e-4]
     if small: bmesh.ops.delete(bm, geom=small, context="VERTS"); print("  목 근처 작은 조각 점", len(small))
+    if FILLHOLE and len(bm.verts) > 10000:
+        # 목 옆 구멍 메우기 (사용자 2026-11-26 '오른쪽 목 옆에 구멍도 메워주고'): 1번은 목 옆에 머리카락이 붙어 있던 자리에 피부가 없어
+        # 머리카락 조각을 지우면 구멍이 남음 → 같은 자리 점을 붙여 본 진짜 테두리 고리 중 목 높이의 작은 고리를 면으로 메우고 깨끗한 목 피부 그림 자리를 입힘
+        b3 = bm.copy(); bmesh.ops.remove_doubles(b3, verts=b3.verts, dist=1e-4); b3.edges.ensure_lookup_table()
+        bnd = [e for e in b3.edges if e.is_boundary]; used = set(); loops_ = []
+        adj = {}
+        for e in bnd:
+            for v in e.verts: adj.setdefault(v.index, []).append(e)
+        for e0 in bnd:
+            if e0.index in used: continue
+            ring_ = [e0.verts[0]]; cur = e0.verts[1]; prev = e0; used.add(e0.index); ok = True
+            while cur.index != ring_[0].index:
+                ring_.append(cur); nx_ = [e for e in adj.get(cur.index, []) if e.index not in used]
+                if not nx_: ok = False; break
+                prev = nx_[0]; used.add(prev.index); cur = prev.other_vert(cur)
+                if len(ring_) > 400: ok = False; break
+            if ok: loops_.append([v.co.copy() for v in ring_])
+        from mathutils.kdtree import KDTree as _KD
+        kd2 = _KD(len(bm.verts))
+        for v in bm.verts: kd2.insert(v.co, v.index)
+        kd2.balance(); bm.verts.ensure_lookup_table(); uvl = bm.loops.layers.uv.active; nf = 0
+        skin_uv = None
+        for f in bm.faces:      # 깨끗한 목 피부 자리(앞 가운데, 자른 곳 위 4cm)의 그림 좌표
+            c = f.calc_center_median()
+            if abs(c.x) < 0.01 and c.y < 0 and CUT + 0.035 < c.z < CUT + 0.045: skin_uv = f.loops[0][uvl].uv.copy(); break
+        for ring_ in loops_:
+            zs_ = [c.z for c in ring_]; xs_ = [c.x for c in ring_]
+            per = sum((ring_[i] - ring_[i - 1]).length for i in range(len(ring_)))
+            if min(zs_) < CUT + 0.004 or max(zs_) > CUT + 0.12 or per > 0.12 or max(abs(x) for x in xs_) > 0.085: continue   # 자른 목 끝 고리·큰 고리는 아님
+            vs_ = []
+            for c in ring_:
+                _, i_, d_ = kd2.find(c)
+                if d_ < 2e-4 and bm.verts[i_] not in vs_: vs_.append(bm.verts[i_])
+            if len(vs_) < 3: continue
+            try: nfc = bm.faces.new(vs_)
+            except ValueError: continue
+            res = bmesh.ops.triangulate(bm, faces=[nfc]); nf += 1
+            cen = sum((v.co for v in vs_), vs_[0].co * 0) / len(vs_)
+            for tf in res["faces"]:
+                if tf.normal.dot(tf.calc_center_median() - _V((0, cen.y + 0.03, tf.calc_center_median().z))) < 0: tf.normal_flip()
+                if skin_uv is not None:
+                    for lp in tf.loops: lp[uvl].uv = skin_uv
+        b3.free(); print("  목 옆 구멍 메움", nf, "곳")
     bm.to_mesh(o.data); bm.free()
     if not len(o.data.vertices): bpy.data.objects.remove(o); continue
     o.data.transform(T, shape_keys=True)
@@ -168,7 +213,7 @@ for o in sorted(objsA, key=lambda x: x.name):
             tuck = 0.0015 * max(0.0, 1 - t / 0.35)     # 맨 아래 끝은 2번 겉면 1.5mm 안으로 숨김 — 두 겉면이 딱 겹치면 검은 줄(그림자 자국)이 생겼음
             dd = d * ((rB - tuck - rA) * w_); v.co += dd; n_ += 1
             for kb in kb_: kb.data[v.index].co += dd
-        print("  목 끝 띠를 B 겉면에 맞춘 점", n_, "가운데 y", round(cy_, 3))
+        print("  목 끝 띠를 B 겉면에 맞춘 점", n_, "가운데 y", round(cy_, 3)); NECKCY = cy_
     o.vertex_groups.clear()
     gh, gn = o.vertex_groups.new(name=HEAD), o.vertex_groups.new(name=NECK)
     for v in o.data.vertices:
@@ -245,6 +290,16 @@ for f in bm.faces:
         if COLLAR > 0:
             ps_ = [mw @ v.co for v in f.verts]
             if min(p.z for p in ps_) > COLLAR and max(abs(p.x) for p in ps_) < 0.075 and min(p.y for p in ps_) < 0.06: gone.add(f)
+        # 옷 조각 중 A 목 겉면 안쪽·바로 위(2mm)에 있는 것 = 원래 B 목 속에 숨어 있던 깃 안쪽 → A 목 밖으로 검은 점처럼 튀어나옴 → 지움 (사용자 '오른쪽 목 옆 구멍')
+        ps_ = [mw @ v.co for v in f.verts]; cz = sum(p.z for p in ps_) / len(ps_)
+        if cz > ZBOT + 0.003 and abs(sum(p.x for p in ps_) / len(ps_)) < 0.08:
+            from mathutils import Vector as _V4
+            cx_, cyy = sum(p.x for p in ps_) / len(ps_), sum(p.y for p in ps_) / len(ps_)
+            d4 = _V4((cx_, cyy - NECKCY, 0));
+            if d4.length > 1e-6:
+                d4.normalize(); o4 = _V4((0, NECKCY, cz)); h4 = neckB.ray_cast(o4, d4, 0.2) if neckB else (None,)
+                # 원래 B 목 겉면 안쪽·바로 바깥(4mm)에 있던 옷 = B 목에 가려 안 보이던 깃 안쪽 → 이제 드러나 검은 점
+                if h4[0] is not None and _V4((cx_, cyy - NECKCY, 0)).length < (h4[0] - o4).length + 0.004: gone.add(f)
         continue
     ps_ = [mw @ v.co for v in f.verts]
     if max(p.z for p in ps_) > lim or (min(p.y for p in ps_) > BACKY and max(p.z for p in ps_) > 1.2): gone.add(f)   # 뒷머리(묶은 머리)도
@@ -268,6 +323,19 @@ if NECKCOL and opt("--목색", "on") != "off":
         tmp = os.path.join(os.path.dirname(os.path.abspath(dst)), "_목색맞춤.png"); img.filepath_raw = tmp; img.file_format = "PNG"; img.save(); img.pack()
         print("목색 맞춤 A", ga.round(3), "B", gb.round(3), "배율", k.round(3))
 bmesh.ops.delete(bm, geom=list(gone), context="FACES")
+# 머리를 지운 뒤 목 근처에 떨어져 남은 작은 옷 조각(깃 안쪽 끄트머리 몇 면)은 1번 목 앞에 검은 점처럼 보였음 → 지움 (사용자 '오른쪽 목 옆 구멍')
+bm.faces.ensure_lookup_table(); seenf = set(); lone = []
+for f0 in bm.faces:
+    if f0.index in seenf: continue
+    st = [f0]; isl = []; seenf.add(f0.index)
+    while st:
+        f = st.pop(); isl.append(f)
+        for e in f.edges:
+            for g in e.link_faces:
+                if g.index not in seenf: seenf.add(g.index); st.append(g)
+    if len(isl) < 40 and max((mw @ v.co).z for f in isl for v in f.verts) > ZBOT - 0.01 and min((mw @ v.co).z for f in isl for v in f.verts) > 1.3:
+        lone += isl
+if lone: bmesh.ops.delete(bm, geom=lone, context="FACES"); print("B 목 근처 작은 조각 면 지움", len(lone))
 if PUSHIN:   # 겹친 곳의 B 목을 A 목 안쪽으로 밀어 넣음 → 틈 없이 겹치고 B 가 A 밖으로 삐져나오지 않음
     # 목 가운데 축에서 바깥으로 같은 높이의 A 겉면을 찾아(광선) 그보다 3mm 안쪽으로 (A 목 끝 바로 아래 3mm 도 — 경계 위로 물결처럼 튀어나왔음)
     from mathutils import Vector as _V
