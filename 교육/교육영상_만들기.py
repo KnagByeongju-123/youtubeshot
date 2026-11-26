@@ -47,18 +47,26 @@ for si, sc in enumerate(spec["장면"]):
     if ch != prev_ch and prev_ch is not None: flip = not flip
     prev_ch = ch; side_of[si] = "R" if flip else "L"     # L = 내용 왼쪽·아나운서 오른쪽
 
-# ── 아나운서 동작표 (--동작): 강조가 있는 문단 = 가리키기, '동작' 칸이 있으면 그것, 나머지는 손짓을 번갈아 → 자주 움직임 ──
+# ── 아나운서 동작표 (--동작): 강조가 있는 문단 = 가리키기(가끔 손바닥 내보이기), '동작' 칸이 있으면 그 느낌, 나머지는 여러 손짓을 돌려 씀
+#    같은 동작이 잇달아 나오지 않게(바로 앞 두 개와 다른 것), 두 팔 벌리기(open)는 안 씀(사용자 결정 2026-11-26), 길이도 조금씩 다르게
 if "--동작" in a:
-    acts = []; cyc = ["open", "nod", "one", "open"]; c = 0
+    import random
+    rnd = random.Random(11); acts = []; hist = []
+    POOL = ["palm", "nod", "lpalm", "one", "tilt", "chest"]
+    SAME = {"open": ["palm", "lpalm"], "one": ["one", "palm"], "nod": ["nod", "tilt", "chest"]}
+    def pick(cands):
+        ok = [c for c in cands if c not in hist[-2:]] or [c for c in POOL if c not in hist[-2:]]
+        g = rnd.choice(ok); hist.append(g); return g
     for p in P:
         pa = spec["장면"][p["si"]]["문단"][p["pi"]]; d = p["t1"] - p["t0"]
+        ln = rnd.uniform(2.6, 3.8)
         if pa.get("동작"):
-            acts.append([p["t0"] + 0.1, p["t0"] + min(d, 3.2), pa["동작"]])
+            acts.append([p["t0"] + 0.1, p["t0"] + min(d, ln), pick(SAME.get(pa["동작"], POOL))])
         elif "강조" in pa:
-            acts.append([p["t0"] + 0.25, p["t0"] + min(d, 2.8), "point"])
-            if d > 5.5: acts.append([p["t0"] + 3.6, p["t0"] + min(d - 0.3, 6.2), cyc[c % 4]]); c += 1
+            acts.append([p["t0"] + 0.25, p["t0"] + min(d, ln), pick(["point", "point", "palm"])])
+            if d > 5.5: acts.append([p["t0"] + ln + 0.8, p["t0"] + min(d - 0.3, ln + 3.6), pick(POOL)])
         else:
-            acts.append([p["t0"] + 0.3, p["t0"] + min(d, 3.4), cyc[c % 4]]); c += 1
+            acts.append([p["t0"] + 0.3, p["t0"] + min(d, ln), pick(POOL)])
     json.dump({"acts": acts, "duration": DUR, "sides": [[scene_t0.get(si, 0), side_of[si]] for si in range(len(spec["장면"]))]},
               open(opt("--동작"), "w", encoding="utf-8"), ensure_ascii=False)
     print("동작표:", opt("--동작"), len(acts), "개"); sys.exit()

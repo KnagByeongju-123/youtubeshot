@@ -7,8 +7,8 @@
 //   찍은 장면은 실사3D/교육영상_합성.py 가 슬라이드 위 오른쪽 아래에 얹음
 //   사용: VW=512 VH=720 ALPHA=1 STEP=2 MODEL="glb=여자아나운서_리깅&lip=<입모양.json>&act=<동작.json>"
 //         node 애니3D/촬영.js 애니3D/장면_교육아나운서.html <폴더> <장수>
-//   동작.json = [[시작초, 끝초, "point"|"open"|"one"|"nod"|"fold"], ...]  (나머지 시간은 기본 자세 = 자연스러운 차렷, 사용자 결정 2026-11-26)
-//     point = 오른손으로 왼쪽(슬라이드) 가리키며 고개도 그쪽 / open = 두 손 펴 설명 / one = 검지 하나 / nod = 고개 끄덕 / fold = 차렷(기본)
+//   동작.json = [[시작초, 끝초, "point"|"palm"|"lpalm"|"chest"|"one"|"tilt"|"nod"|"fold"(|"open" 안 씀)], ...]  (나머지 시간은 기본 자세 = 자연스러운 차렷, 사용자 결정 2026-11-26)
+//     point = 오른손으로 왼쪽(슬라이드) 가리키며 고개도 그쪽 / palm·lpalm = 한 손 손바닥 펴 내보임 / chest = 손을 가슴에 / tilt = 고개 갸웃 / open = 두 팔 벌림(사용자: 빼기 2026-11-26) / one = 검지 하나 / nod = 고개 끄덕 / fold = 차렷(기본)
 //   real=1 : 만화풍 대신 원래 색, pose=<자세> : 그 자세로 고정(검사용)
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
@@ -40,9 +40,10 @@ const ease = (a, b, t) => { const x = Math.min(1, Math.max(0, (t - a) / (b - a))
 const on = (a, b, t, r = 0.5) => (b - a < 2 * r ? (r = (b - a) / 2) : 0, ease(a, a + r, t) - ease(b - r, b, t));
 const bone = (n) => human.humanoid.getNormalizedBoneNode(n);
 const em = human.expressionManager;
+let VAR = {};   // 동작마다 조금씩 다른 높이·각도(-1~1): 같은 손짓이 똑같이 되풀이되지 않게
 const amt = (type, t) => {
-  if (Q.get('pose')) return Q.get('pose') === type ? 1 : 0;
-  let v = 0; for (const [a, b, ty] of acts) if (ty === type && t > a - 0.6 && t < b + 0.6) v = Math.max(v, on(a, b, t)); return v;
+  if (Q.get('pose')) { VAR[type] = +(Q.get('var') || 0); return Q.get('pose') === type ? 1 : 0; }
+  let v = 0; for (const [a, b, ty] of acts) if (ty === type && t > a - 0.6 && t < b + 0.6) { const x = on(a, b, t); if (x >= v) { v = x; VAR[type] = Math.sin(a * 12.9898) * 0.5 + Math.sin(a * 4.1414) * 0.5; } } return v;
 };
 const curlAll = (side, v) => { for (const f of ['Index', 'Middle', 'Ring', 'Little', 'Thumb']) human.curl(side + f, f === 'Thumb' ? 0.15 * v / 0.3 : v); };
 
@@ -51,9 +52,11 @@ function pose(t) {
   bone('hips').position.set(0, 0, 0);
   curlAll('left', 0.3); curlAll('right', 0.3);
   const P = amt('point', t), O = amt('open', t), N1 = amt('one', t), ND = amt('nod', t);
+  const PM = amt('palm', t), CH = amt('chest', t), LP = amt('lpalm', t), TL = amt('tilt', t);
+  const R = Math.min(1, P + O + N1 + PM + CH);   // 오른팔을 쓰는 정도
   const TEST = Q.get('pose') && Q.get('pose') !== 'fold';
-  const F = Math.max(0, 1 - P - O - N1) * (TEST ? 0 : 1);   // 차렷(기본 자세): 다른 동작을 할 때 풀림
-  const FL = TEST ? (Q.get('pose') === 'open' ? 0 : 1) : Math.max(0, 1 - O);   // 왼팔: 오른손만 쓰는 동작(가리키기·검지) 때도 차렷 그대로
+  const F = Math.max(0, 1 - R) * (TEST ? 0 : 1);   // 차렷(기본 자세): 다른 동작을 할 때 풀림
+  const FL = TEST ? (['open', 'lpalm'].includes(Q.get('pose')) ? 0 : 1) : Math.max(0, 1 - O - LP);   // 왼팔: 오른손만 쓰는 동작(가리키기·검지) 때도 차렷 그대로
   // 기본: 자연스러운 차렷 — 팔을 옆구리에 내리고 팔꿈치를 살짝 굽혀 손이 허벅지 옆에 (예전 손 모음 = fv=-0.1,-0.2,-1.2,0,-0.6)
   const FV = (Q.get('fv') || '0.15,-0.3,-0.2,0,0.1').split(',').map(Number);   // 차렷: 위팔 x·z, 아래팔 x·y·z
   for (const [sd, sg, w] of [['left', 1, FL], ['right', -1, F]]) {
@@ -62,10 +65,11 @@ function pose(t) {
     bone(sd + 'LowerArm').rotation.x += FV[2] * F; bone(sd + 'LowerArm').rotation.y += sg * FV[3] * F; bone(sd + 'LowerArm').rotation.z += sg * FV[4] * F;
   }
   // point: 오른팔을 옆·앞으로 들고 검지로 왼쪽(슬라이드) 가리킴, 고개·가슴도 그쪽
-  bone('rightUpperArm').rotation.z += -0.72 * P; bone('rightUpperArm').rotation.x += -0.4 * P;
+  const pv = VAR.point || 0;
+  bone('rightUpperArm').rotation.z += (-0.72 - 0.12 * pv) * P; bone('rightUpperArm').rotation.x += (-0.4 + 0.1 * pv) * P;
   bone('rightLowerArm').rotation.x += -0.5 * P; bone('rightLowerArm').rotation.y += 0.6 * P;
   if (P > 0) { for (const f of ['Middle', 'Ring', 'Little']) human.curl('right' + f, 0.3 + 1.05 * P); human.curl('rightThumb', 0.15 + 0.8 * P); human.curl('rightIndex', 0.3 - 0.3 * P); }
-  bone('head').rotation.y += -0.4 * P; bone('chest').rotation.y += -0.15 * P;
+  bone('head').rotation.y += (-0.4 + 0.08 * pv) * P; bone('head').rotation.z += 0.05 * pv * P; bone('chest').rotation.y += -0.15 * P;
   // open: 두 팔을 앞·옆으로 벌려 손바닥을 보이며 설명 (조금씩 벌렸다 모음)
   const sway = Math.sin(t * 2.2) * 0.08;
   for (const [sd, sg] of [['left', 1], ['right', -1]]) {
@@ -77,6 +81,28 @@ function pose(t) {
   bone('rightUpperArm').rotation.x += -0.4 * N1; bone('rightUpperArm').rotation.z += -0.12 * N1;
   bone('rightLowerArm').rotation.x += -1.75 * N1; bone('rightLowerArm').rotation.y += 0.3 * N1;
   if (N1 > 0) { for (const f of ['Middle', 'Ring', 'Little']) human.curl('right' + f, 0.3 + 1.05 * N1); human.curl('rightThumb', 0.15 + 0.8 * N1); human.curl('rightIndex', 0.3 - 0.3 * N1); }
+  // palm: 오른손 손바닥을 위로 펴서 슬라이드 쪽을 '이것' 하고 내보임 (한 손만)
+  const mv = VAR.palm || 0;
+  bone('rightUpperArm').rotation.x += (-0.3 - 0.08 * mv) * PM; bone('rightUpperArm').rotation.z += (-0.35 - 0.1 * mv) * PM;
+  bone('rightLowerArm').rotation.x += (-0.9 + 0.15 * mv) * PM; bone('rightLowerArm').rotation.z += -0.3 * PM; bone('rightHand').rotation.y += -1.2 * PM;
+  if (PM > 0) for (const f of ['Index', 'Middle', 'Ring', 'Little']) human.curl('right' + f, 0.3 - 0.2 * PM);
+  bone('head').rotation.y += -0.18 * PM; bone('chest').rotation.y += -0.08 * PM;
+  // lpalm: 왼손 손바닥을 위로 펴서 몸 앞(보는 사람 쪽)으로 내밂
+  const lv = VAR.lpalm || 0;
+  bone('leftUpperArm').rotation.x += (-0.45 - 0.08 * lv) * LP; bone('leftUpperArm').rotation.z += (0.15 + 0.06 * lv) * LP;
+  bone('leftLowerArm').rotation.x += -1.1 * LP; bone('leftLowerArm').rotation.z += 0.2 * LP; bone('leftHand').rotation.y += 1.2 * LP;
+  if (LP > 0) for (const f of ['Index', 'Middle', 'Ring', 'Little']) human.curl('left' + f, 0.3 - 0.2 * LP);
+  bone('head').rotation.y += 0.08 * LP;
+  // chest: 오른손을 가슴에 얹음 (진심을 담아 말할 때)
+  bone('rightUpperArm').rotation.x += -0.2 * CH; bone('rightUpperArm').rotation.z += 0.15 * CH;
+  bone('rightLowerArm').rotation.x += -1.6 * CH; bone('rightLowerArm').rotation.y += -0.5 * CH; bone('rightLowerArm').rotation.z += 1.2 * CH;
+  if (CH > 0) for (const f of ['Index', 'Middle', 'Ring', 'Little']) human.curl('right' + f, 0.3 - 0.15 * CH);
+  bone('head').rotation.x += 0.05 * CH;
+  // tilt: 손은 차렷 그대로, 고개를 갸웃하고 몸을 살짝 기울임
+  const tv = VAR.tilt || 0;
+  bone('head').rotation.z += (0.15 + 0.04 * tv) * TL; bone('head').rotation.y += 0.08 * tv * TL; bone('spine').rotation.z += 0.03 * TL;
+  // 검사용: bones={"rightLowerArm":[x,y,z],...} 를 더함
+  if (Q.get('bones')) for (const [n, v] of Object.entries(JSON.parse(Q.get('bones')))) { bone(n).rotation.x += v[0]; bone(n).rotation.y += v[1]; bone(n).rotation.z += v[2]; }
   // nod / 말할 때 작은 고개 움직임 / 숨쉬기
   bone('head').rotation.x += 0.07 * Math.max(0, Math.sin(t * 5)) * ND;
   bone('head').rotation.x += 0.018 * Math.sin(t * 1.7); bone('head').rotation.y += 0.022 * Math.sin(t * 0.9 + 1); bone('head').rotation.z += 0.015 * Math.sin(t * 0.6);
