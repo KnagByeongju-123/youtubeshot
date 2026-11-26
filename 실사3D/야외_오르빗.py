@@ -549,6 +549,35 @@ elif "--이" in a:
     dl = mwb.to_3x3().inverted() @ (best * 0.85)
     for v in kk.data: v.co = v.co + dl
     print(f"이: 입 너비 비율 {S:.2f}, 입술선 z {zline:.4f}, 아랫입술 벌림 {best.length * 100:.2f}cm")
+# ── 입속 막(--입속 R,G,B): 입 안 그물이 없는 인물(Rocketbox Female_Adult_12 등)은 입을 벌리면 머리 안쪽 뒷면이 보여 새까맸음
+#   → 입술 바로 뒤에 짙은 선홍색 둥근 막을 넣고 머리 뼈에 붙임 (사용자 2026-11-26 '입 속이 너무 검은색, 짙은 선홍색이 나을 듯')
+if "--입속" in a:
+    import bmesh
+    col_ = [float(v) / 255 for v in a[a.index("--입속") + 1].split(",")]
+    bodyM = max((o for o in objs if o.type == "MESH" and o.data.shape_keys and "MouthOpen" in o.data.shape_keys.key_blocks), key=lambda o: len(o.data.vertices), default=None)
+    if bodyM is not None:
+        kb_ = bodyM.data.shape_keys.key_blocks; mw_ = bodyM.matrix_world
+        mv = [mw_ @ b.co for b, k in zip(kb_["Basis"].data, kb_["MouthOpen"].data) if (k.co - b.co).length > 0.002 * (1 / max(mw_.to_scale()))]
+        if mv:
+            fy0 = min(v.y for v in mv); lp = [v for v in mv if v.y < fy0 + 0.010]          # 입술 앞쪽만 (턱까지 잡으면 막이 커져 턱 밖으로 나왔음)
+            cx_ = sum(v.x for v in lp) / len(lp); cz_ = sum(v.z for v in lp) / len(lp); fy_ = fy0
+            wd_ = (max(v.x for v in lp) - min(v.x for v in lp)) * 0.40
+            bm = bmesh.new(); bmesh.ops.create_uvsphere(bm, u_segments=24, v_segments=12, radius=1.0)
+            for v in bm.verts: v.co = mathutils.Vector((cx_ + v.co.x * wd_, fy_ + 0.024 + v.co.y * 0.014, cz_ + v.co.z * 0.012))
+            me_ = bpy.data.meshes.new("입속"); bm.to_mesh(me_); bm.free()
+            ob_ = bpy.data.objects.new("입속", me_); bpy.context.scene.collection.objects.link(ob_)
+            mt_ = bpy.data.materials.new("입속"); mt_.use_nodes = True; bs_ = mt_.node_tree.nodes["Principled BSDF"]
+            bs_.inputs["Base Color"].default_value = (*[c ** 2.2 for c in col_], 1); bs_.inputs["Roughness"].default_value = 0.55
+            bs_.inputs["Emission Color"].default_value = (*[c ** 2.2 for c in col_], 1); bs_.inputs["Emission Strength"].default_value = 0.35   # 그늘에서도 색이 보이게 아주 살짝 빛
+            me_.materials.append(mt_)
+            am_ = next((m for m in bodyM.modifiers if m.type == "ARMATURE"), None)
+            inv_ = mw_.inverted()                                   # 이(치아)처럼: 몸 그물과 같은 자리·같은 부모, 머리 뼈 무게 1
+            for v in me_.vertices: v.co = inv_ @ v.co
+            ob_.parent = bodyM.parent; ob_.matrix_parent_inverse = bodyM.matrix_parent_inverse.copy(); ob_.matrix_basis = bodyM.matrix_basis.copy()
+            if am_:
+                vg_ = ob_.vertex_groups.new(name="Head"); vg_.add(list(range(len(me_.vertices))), 1.0, "REPLACE")
+                m2_ = ob_.modifiers.new("Armature", "ARMATURE"); m2_.object = am_.object
+            objs.append(ob_); print("입속 막:", tuple(round(c, 3) for c in (cx_, fy_, cz_)), "폭", round(wd_ * 2, 3))
 # 모양 키(입·눈) 모으기
 keyed = [o for o in objs if o.type == "MESH" and o.data.shape_keys]
 for o in keyed: o.data.shape_keys.animation_data_clear()   # GLB 의 Idle 동작이 모양 키(입·눈)를 매 장면 0 으로 되돌려 립싱크가 안 됐음 (2026-11-25)
@@ -899,9 +928,10 @@ def head_move(i):
         pb.matrix = mathutils.Matrix.Translation(pb.head) @ R_ @ mathutils.Matrix.Translation(-pb.head) @ pb.matrix
         bpy.context.view_layer.update()
 EXPR = [(kv.split('=')[0], float(kv.split('=')[1])) for kv in a[a.index('--표정') + 1].split(',')] if '--표정' in a else []
+MOUTH_SCALE = float(a[a.index('--입세기') + 1]) if '--입세기' in a else 1.0     # Rocketbox 는 '아' 입이 커서 O 자로 벌어졌음 (사용자 2026-11-26 '입 벌림 작게')
 def face(i):
     t = i / 24.0; lf = lip["frames"][i] if i < len(lip["frames"]) else [0, 0, 0]
-    set_shape("MouthOpen", lf[0]); set_shape("MouthWide", lf[1]); set_shape("MouthRound", lf[2])
+    MS = MOUTH_SCALE; set_shape("MouthOpen", lf[0] * MS); set_shape("MouthWide", lf[1] * MS); set_shape("MouthRound", lf[2] * MS)   # --입세기 0.5: 입 벌림 줄이기
     set_shape("Blink", blink_v(t))
     for nm_, v_ in EXPR: set_shape(nm_, v_)               # --표정 mouthSmileLeft=0.6,… : 늘 띄울 얼굴 표정(모양 키 이름=값)
     GWN[0] = guide_apply(i)
