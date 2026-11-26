@@ -7,8 +7,8 @@
 //   찍은 장면은 실사3D/교육영상_합성.py 가 슬라이드 위 오른쪽 아래에 얹음
 //   사용: VW=512 VH=720 ALPHA=1 STEP=2 MODEL="glb=여자아나운서_리깅&lip=<입모양.json>&act=<동작.json>"
 //         node 애니3D/촬영.js 애니3D/장면_교육아나운서.html <폴더> <장수>
-//   동작.json = [[시작초, 끝초, "point"|"open"|"one"|"nod"|"fold"], ...]  (나머지 시간은 기본 자세 = 손 모음)
-//     point = 오른손으로 왼쪽(슬라이드) 가리키며 고개도 그쪽 / open = 두 손 펴 설명 / one = 검지 하나 / nod = 고개 끄덕 / fold = 손 모음
+//   동작.json = [[시작초, 끝초, "point"|"open"|"one"|"nod"|"fold"], ...]  (나머지 시간은 기본 자세 = 자연스러운 차렷, 사용자 결정 2026-11-26)
+//     point = 오른손으로 왼쪽(슬라이드) 가리키며 고개도 그쪽 / open = 두 손 펴 설명 / one = 검지 하나 / nod = 고개 끄덕 / fold = 차렷(기본)
 //   real=1 : 만화풍 대신 원래 색, pose=<자세> : 그 자세로 고정(검사용)
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
@@ -51,14 +51,16 @@ function pose(t) {
   bone('hips').position.set(0, 0, 0);
   curlAll('left', 0.3); curlAll('right', 0.3);
   const P = amt('point', t), O = amt('open', t), N1 = amt('one', t), ND = amt('nod', t);
-  const F = Math.max(0, 1 - P - O - N1) * (Q.get('pose') && Q.get('pose') !== 'fold' ? 0 : 1);   // 손 모음(기본 자세): 다른 동작을 할 때 풀림
-  // 기본: 손을 배꼽 앞에 가볍게 모음
-  const FV = (Q.get('fv') || '-0.1,-0.2,-1.2,0,-0.6').split(',').map(Number);   // 손 모음: 위팔 x·z, 아래팔 x·y·z
-  for (const [sd, sg] of [['left', 1], ['right', -1]]) {
+  const TEST = Q.get('pose') && Q.get('pose') !== 'fold';
+  const F = Math.max(0, 1 - P - O - N1) * (TEST ? 0 : 1);   // 차렷(기본 자세): 다른 동작을 할 때 풀림
+  const FL = TEST ? (Q.get('pose') === 'open' ? 0 : 1) : Math.max(0, 1 - O);   // 왼팔: 오른손만 쓰는 동작(가리키기·검지) 때도 차렷 그대로
+  // 기본: 자연스러운 차렷 — 팔을 옆구리에 내리고 팔꿈치를 살짝 굽혀 손이 허벅지 옆에 (예전 손 모음 = fv=-0.1,-0.2,-1.2,0,-0.6)
+  const FV = (Q.get('fv') || '0.15,-0.3,-0.2,0,0.1').split(',').map(Number);   // 차렷: 위팔 x·z, 아래팔 x·y·z
+  for (const [sd, sg, w] of [['left', 1, FL], ['right', -1, F]]) {
+    const F = w;
     bone(sd + 'UpperArm').rotation.x += FV[0] * F; bone(sd + 'UpperArm').rotation.z += sg * FV[1] * F;
     bone(sd + 'LowerArm').rotation.x += FV[2] * F; bone(sd + 'LowerArm').rotation.y += sg * FV[3] * F; bone(sd + 'LowerArm').rotation.z += sg * FV[4] * F;
   }
-  // 오른손이 다른 동작을 할 때 왼손은 내려 둠(차렷에 가깝게)
   // point: 오른팔을 옆·앞으로 들고 검지로 왼쪽(슬라이드) 가리킴, 고개·가슴도 그쪽
   bone('rightUpperArm').rotation.z += -0.72 * P; bone('rightUpperArm').rotation.x += -0.4 * P;
   bone('rightLowerArm').rotation.x += -0.5 * P; bone('rightLowerArm').rotation.y += 0.6 * P;
