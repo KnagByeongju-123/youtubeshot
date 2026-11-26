@@ -585,6 +585,7 @@ def set_shape(name, v, frame=None):
     for o in keyed:
         kb = o.data.shape_keys.key_blocks.get(name)
         if kb is not None:
+            if v < kb.slider_min: kb.slider_min = -1.0      # 음수 = 굳힌 미소 풀기(입 오므릴 때)
             kb.value = v
             if frame is not None: kb.keyframe_insert("value", frame=frame)
 
@@ -990,8 +991,15 @@ def face(i):
     MS = MOUTH_SCALE
     if VISEME and len(lf) >= 15:      # Rocketbox 15가지 입 모양: 모음 aa·ih·ou·ee·oh(배운 표) + 자음 pp·dd·nn·rr·ss·ch·kk (사용자 2026-11-26 '15가지 입 모양으로')
         aa, ih, ou, ee, oh, pp, dd, nn, rr, ss, ch, kk = lf[3:15]
-        set_shape("MouthOpen", aa * MS); set_shape("MouthWide", ih * MS); set_shape("MouthRound", ou * MS)
-        set_shape("AA_VI_11_E", ee * MS); set_shape("AA_VI_13_O", oh * MS)
+        set_shape("MouthWide", ih * MS)
+        set_shape("AA_VI_11_E", ee * MS)
+        # ㅗ·ㅜ 는 입을 오므림(사용자 2026-11-26 'ㅗ(아래로 입을 모음), ㅜ(위로 입을 모음)는 입을 오므려야'): 굳힌 미소가 입을 옆으로 당겨
+        #   MouthRound·Pucker 가 거의 안 보였음 → 오므릴 때 미소를 풀고(음수), ㅗ = 깔때기+O(조금 벌림), ㅜ = 입술 내밀어 작게 모음
+        ro, ru = min(1.0, oh * 1.3), min(1.0, ou * 1.3); rr_ = max(ro, ru)
+        set_shape("HB_07_MouthSmile", -0.45 * rr_); set_shape("AU_06_CheekRaiser", -0.3 * rr_)
+        set_shape("AA_VI_13_O", 0.4 * ro); set_shape("AK_32_MouthFunnel", 0.5 * ro)
+        set_shape("AU_18_LipPuckerer", 0.75 * ru); set_shape("AU_22_LipFunneler", 0.3 * ro + 0.5 * ru)
+        set_shape("MouthOpen", aa * MS * (1 - 0.5 * rr_)); set_shape("MouthRound", 0.0)
         set_shape("AA_VI_01_PP", pp * 0.9); set_shape("AA_VI_04_DD", dd * 0.6 * MS); set_shape("AA_VI_08_nn", nn * 0.6 * MS)
         set_shape("AA_VI_09_RR", rr * 0.6 * MS); set_shape("AA_VI_07_SS", ss * 0.7 * MS); set_shape("AA_VI_06_CH", ch * 0.7 * MS); set_shape("AA_VI_05_KK", kk * 0.5 * MS)
     else:
