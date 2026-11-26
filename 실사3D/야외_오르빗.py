@@ -676,7 +676,7 @@ def place(i, who=None):
 #   팔은 걷는 동안 반대쪽 다리와 함께 앞뒤로 조금 흔듦
 WALK = "--걷기" in a
 SIP = "--마시기" in a        # 커피 자세에서 컵을 입으로 가져가 한 모금 마시고 내려놓음 (사용자 2026-11-24)
-DANCE = "--춤" in a          # 가벼운 춤(스텝 터치): 옆으로 한 발 내딛고 모으기를 박자에 맞춰, 무릎 반동·골반·팔 흔들기 (사용자 2026-11-24 "약간의 댄스")
+DANCE = "--춤" in a or "--조지아" in a          # 가벼운 춤(스텝 터치): 옆으로 한 발 내딛고 모으기를 박자에 맞춰, 무릎 반동·골반·팔 흔들기 (사용자 2026-11-24 "약간의 댄스")
 BPM = float(a[a.index("--박자") + 1]) if "--박자" in a else 112
 ROUTINE = (a[a.index("--춤순서") + 1] if "--춤순서" in a else "스텝,손뼉,엉덩이,돌기").split(",")   # 4박마다 바뀌는 동작 순서
 STEP = float(a[a.index("--보폭") + 1]) if "--보폭" in a else 0.28     # 엉덩이~발목 0.55m·몸에 붙는 치마·굽 구두 → 작은 걸음 (0.40 이면 골반이 내려가 무릎 굽은 채 걸음)
@@ -786,7 +786,62 @@ if (WALK or DANCE or SIP) and arm is not None:
         return mathutils.Vector((0, py_, 0))
     ROOT0 = {r.name: r.matrix_world.copy() for r in roots}
     sm2_ = lambda u: u * u * (3 - 2 * u)
+    GEORGIA = "--조지아" in a      # 조지아 여성 전통무용 느낌(사용자 2026-11-26 샘플): 꼿꼿한 몸·잔걸음으로 원을 그리며 미끄러지듯, 한 팔 위로 둥글게·한 팔 옆으로, 손목을 굴림
+    GR = float(a[a.index("--조지아") + 1]) if "--조지아" in a and a.index("--조지아") + 1 < len(a) and a[a.index("--조지아") + 1][0].isdigit() else 0.45   # 원 반지름(m)
+    def georgia(i):
+        t = i / 24.0; t0 = 0.3
+        for b in PB: b.matrix_basis = base[b.name]
+        for r in roots: r.matrix_world = ROOT0[r.name]
+        bpy.context.view_layer.update()
+        on = sm2_(min(1.0, max(0.0, (t - t0) / 1.0)))
+        tt = max(0.0, t - t0); per = 9.0                                    # 한 바퀴 9초
+        th = 2 * math.pi * sm2_(min(1.0, tt / 1.5)) * 0 + 2 * math.pi * max(0.0, tt - 0.75) / per * on
+        # 몸: 꼿꼿, 가슴 살짝 펴고 고개 들기, 아주 작은 오르내림(잔걸음)
+        step = 0.006 * (0.5 - 0.5 * math.cos(2 * math.pi * 3.0 * tt)) * on
+        hp = PB["Hips"]; hp.matrix = mathutils.Matrix.Translation(M3i @ mathutils.Vector((0, 0, -step))) @ hp.matrix; bpy.context.view_layer.update()
+        if "Chest" in PB: rot_world("Chest", (1, 0, 0), -0.04 * on)
+        if "Head" in PB: rot_world("Head", (1, 0, 0), -0.03 * on); rot_world("Head", (0, 1, 0), 0.06 * math.sin(2 * math.pi * tt / 6) * on)
+        # 발: 번갈아 아주 조금 듦 (치마 아래 잔걸음, 초당 3번)
+        for k, sd in enumerate(("L", "R")):
+            g = leg[sd]; H = MW @ PB[f"UpperLeg.{sd}"].head
+            lift = 0.014 * max(0.0, math.sin(2 * math.pi * 3.0 * tt + k * math.pi)) * on
+            F = g["F0"] + mathutils.Vector((0, 0, lift))
+            d = F - H; dl = min(d.length, g["L1"] + g["L2"] - 1e-4)
+            ca = (g["L1"] ** 2 + dl ** 2 - g["L2"] ** 2) / (2 * g["L1"] * dl); ang = math.acos(max(-1, min(1, ca)))
+            dn = d.normalized(); fwd = mathutils.Vector((0, -1, 0)); sidev = dn.cross(fwd).normalized(); perp = sidev.cross(dn).normalized()
+            if perp.dot(fwd) < 0: perp = -perp
+            knee = H + (dn * math.cos(ang) + perp * math.sin(ang)) * g["L1"]
+            set_world_aim(f"UpperLeg.{sd}", lambda sd=sd: MW @ PB[f"LowerLeg.{sd}"].head, knee)
+            set_world_aim(f"LowerLeg.{sd}", lambda sd=sd: MW @ PB[f"Foot.{sd}"].head, F)
+            fb = PB[f"Foot.{sd}"]; fb.matrix = mathutils.Matrix.Translation(fb.matrix.translation) @ FOOT0[sd]; bpy.context.view_layer.update()
+        # 팔: 4.5초마다 위로 든 팔이 바뀜 (1.2초에 걸쳐 부드럽게)
+        V = mathutils.Vector
+        cyc = tt / 4.5; k_ = int(cyc); fr = cyc - k_; bl = sm2_(min(1.0, max(0.0, (fr - 0.73) / 0.27)))
+        def dirs(high, sgn):
+            if high: return V((sgn * 0.62, -0.22, 0.75)), V((-sgn * 0.88, -0.18, 0.40))   # 팔꿈치를 굽혀 머리 위로 둥글게 감쌈 (곧게 뻗으면 체조 같았음)
+            return V((sgn * 0.95, -0.22, 0.05)), V((sgn * 0.85, -0.42, 0.30))             # 옆으로, 앞으로 살짝 휘게
+        for sd in ("L", "R"):
+            ub, fa, hb_ = f"UpperArm.{sd}", f"ForeArm.{sd}", f"Hand.{sd}"
+            if ub not in PB or hb_ not in PB: continue
+            sgn = 1 if (MW @ PB[ub].head).x > 0 else -1
+            hi_now = ((k_ % 2 == 0) == (sd == "R")); u1, f1 = dirs(hi_now, sgn); u2, f2 = dirs(not hi_now, sgn)
+            u0, f0 = V((sgn * CH_U, -0.03, -1.0)), V((sgn * CH_F, -0.10, -1.0))
+            ud = (u1 * (1 - bl) + u2 * bl) * on + u0 * (1 - on); fd = (f1 * (1 - bl) + f2 * bl) * on + f0 * (1 - on)
+            set_world_aim(ub, lambda fa=fa: MW @ PB[fa].head, (MW @ PB[ub].head) + ud)
+            set_world_aim(fa, lambda hb_=hb_: MW @ PB[hb_].head, (MW @ PB[fa].head) + fd)
+            if hb_ in PB:                                                    # 손목을 살랑 굴림
+                hpb = PB[hb_]; ax = ((MW @ hpb.head) - (MW @ PB[fa].head)).normalized()
+                R_ = (M3i @ mathutils.Matrix.Rotation(0.35 * math.sin(2 * math.pi * tt / 1.5 + (0 if sd == "L" else 1.5)) * on, 3, ax) @ M3).to_4x4()
+                hpb.matrix = mathutils.Matrix.Translation(hpb.head) @ R_ @ mathutils.Matrix.Translation(-hpb.head) @ hpb.matrix; bpy.context.view_layer.update()
+        # 원을 그리며 미끄러지듯: 반지름 GR, 몸은 가는 쪽을 봄
+        if on > 0:
+            pos = mathutils.Vector((GR * math.sin(th), -GR * math.cos(th) + GR, 0)) * 1.0
+            Rz = mathutils.Matrix.Rotation(th, 4, "Z")
+            for r in roots: r.matrix_world = mathutils.Matrix.Translation(pos) @ Rz @ ROOT0[r.name]
+            bpy.context.view_layer.update()
+        return mathutils.Vector((0, 0, 0))
     def dance(i):
+        if GEORGIA: return georgia(i)
         """4박 한 마디씩 동작을 바꿈 (사용자 2026-11-24 '손뼉, 한 바퀴 돌기, 엉덩이 흔들기'):
            마디1 스텝 터치 → 마디2 손뼉(2·4박에 짝) → 마디3 엉덩이 흔들기 → 마디4 한 바퀴 돌기 → 다시 처음.
            박마다 무릎 반동, 팔은 마디 사이에서 부드럽게 바뀜"""
