@@ -5,7 +5,7 @@
    - 옮긴 머리는 B 뼈대에 묶음: 목 아래쪽은 Neck, 위로 갈수록 Head (--목섞기 z0,z1, B 좌표)
    - 모양 키(MouthOpen·MouthWide·MouthRound·Blink)는 A 것을 그대로 가져감
    사용: .bpy_venv/bin/python -I 애니3D/얼굴바꾸기.py <A.glb> <B.glb> <결과.glb> --자르기 0.625 --턱 0.663,1.508 --코앞 -0.116,-0.072 --배율 0.92
-         [--지우기 1.478] [--지울재질 head] [--지울재질2 opacity] [--지우기2 1.45] [--목섞기 1.48,1.53] [--머리카락아래 0.55] [--옷위 0.06] [--목색 on|off] [--옆자르기 0.655 --옆x 0.06] [--목조이기 0.85] [--조각 3000] [--이음 0] [--안으로 on|off] [--목색보정 1.02,1.125,1.18] [--깃띠 1.455] [--머리뼈 Head] [--목뼈 Neck]"""
+         [--지우기 1.478] [--지울재질 head] [--지울재질2 opacity] [--지우기2 1.45] [--목섞기 1.48,1.53] [--머리카락아래 0.55] [--옷위 0.06] [--목색 on|off] [--옆자르기 0.655 --옆x 0.06] [--목조이기 0.85] [--조각 3000] [--이음 0] [--안으로 on|off] [--목색보정 1.02,1.125,1.18] [--목띠 0.025] [--깃띠 1.455] [--머리뼈 Head] [--목뼈 Neck]"""
 import os, sys
 import bpy, bmesh
 import numpy as np
@@ -29,6 +29,7 @@ SHRINK = float(opt("--목조이기", "1.0"))    # B 목 아래쪽(머리 재질,
 COLLAR = float(opt("--깃띠", "0"))          # 몸 재질 중 이 높이(B 좌표) 위, 목 둘레 안쪽 띠를 지움 (예: 1.455)
 SNAP = float(opt("--이음", "0"))
 FIXCOL = np.array([float(v) for v in opt("--목색보정", "1,1,1").split(",")])   # 촬영해 보니 B 목이 더 붉게 나옴 → 그림 색에 더 곱함 (예: 1.02,1.125,1.18)
+FEATHER = float(opt("--목띠", "0.025"))     # A 목 아래 이 높이(A 좌표)를 깨끗한 목 색으로 섞음 (0 = 끔)
 BISECT = opt("--반듯", "on") != "off"
 CLOTHCO = set()
 PUSHIN = opt("--안으로", "on") != "off"       # A 목 아래 끝 이만큼(A 좌표)을 B 목 표면에 붙임
@@ -73,12 +74,40 @@ for o in sorted(objsA, key=lambda x: x.name):
                     clothv.add(v); continue     # 뒤 가운데 머리카락도 옆과 같은 높이로 (안쪽으로 말린 뒷머리가 따로 늘어져 보였음)
                 if z >= CUT:                    # 자르기 위 옷(남색 재킷 깃·흰 셔츠)은 빼고, 목 앞 피부색은 모음
                     frontneck = abs(co_.x) < 0.065 and co_.y < -0.005      # 목 앞쪽은 피부 — 색으로 지우면 끝이 들쭉날쭉했음
-                    if not frontneck and ((b > r + 0.01) or (mn > 0.75 and mx - mn < 0.06 and abs(co_.x) > 0.04)): clothv.add(v)
-                    elif abs(co_.x) < 0.035 and co_.y < 0 and z < CUT + 0.03: NECKCOL.append((r, g, b))
+                    darkcloth = mx < 0.4 and b >= r - 0.02                 # 짙은 남색 재킷 깃(머리카락은 r>g>b 갈색이라 빠짐)
+                    if darkcloth or (not frontneck and ((b > r + 0.01) or (mn > 0.75 and mx - mn < 0.06 and abs(co_.x) > 0.04))): clothv.add(v)
+                    elif abs(co_.x) < 0.035 and co_.y < 0 and CUT + 0.03 < z < CUT + 0.06: NECKCOL.append((r, g, b))   # 깨끗한 목 피부(아래 띠는 셔츠 깃 그림자 얼룩)
                     continue
                 if r >= g >= b and mx < 0.55 and mx - mn > 0.04 and mx > 0.04 and not (r > 0.35 and (r - b) > 0.12 and mx > 0.45): hairv.add(v)
             print("  자르기 아래 머리카락 점", len(hairv), "· 자르기 위 옷 점", len(clothv))
             CLOTHCO = {tuple(round(c, 5) for c in o.data.vertices[i].co) for i in clothv}
+            if FEATHER > 0 and NECKCOL:      # 목 아래 띠(--목띠 높이)의 그림 색을 깨끗한 목 색으로 점점 섞음 — 하얀 얼룩·경계선 없앰 (사용자 2026-11-26 앞목 경계 표시)
+                tgt = np.median(np.array(NECKCOL), 0); n_ = 0; done_ = np.zeros((H_, W_), bool)
+                V_ = o.data.vertices
+                for poly in o.data.polygons:
+                    zs_ = [V_[i].co.z for i in poly.vertices]
+                    if min(zs_) > CUT + FEATHER or max(zs_) < CUT - 0.01: continue
+                    lis = list(poly.loop_indices)
+                    for t_ in range(1, len(lis) - 1):
+                        tri = [lis[0], lis[t_], lis[t_ + 1]]
+                        uv = np.array([tuple(uvd[li].uv) for li in tri]) * [W_, H_]
+                        xyz = np.array([tuple(V_[o.data.loops[li].vertex_index].co) for li in tri])
+                        x0, y0 = np.floor(uv.min(0)).astype(int); x1, y1 = np.ceil(uv.max(0)).astype(int)
+                        if x1 - x0 > 200 or y1 - y0 > 200: continue
+                        xs, ys = np.meshgrid(np.arange(x0, x1 + 1), np.arange(y0, y1 + 1)); pts = np.stack([xs.ravel() + 0.5, ys.ravel() + 0.5], 1)
+                        Tm = np.array([[uv[0, 0] - uv[2, 0], uv[1, 0] - uv[2, 0]], [uv[0, 1] - uv[2, 1], uv[1, 1] - uv[2, 1]]])
+                        if abs(np.linalg.det(Tm)) < 1e-9: continue
+                        l12 = np.linalg.solve(Tm, (pts - uv[2]).T).T; L = np.column_stack([l12, 1 - l12.sum(1)]); ins = (L >= -0.05).all(1)
+                        if not ins.any(): continue
+                        q = L[ins] @ xyz; pp = pts[ins].astype(int); xx = pp[:, 0].clip(0, W_ - 1); yy = pp[:, 1].clip(0, H_ - 1)
+                        keep_ = ~done_[yy, xx]; xx, yy, q = xx[keep_], yy[keep_], q[keep_]
+                        t = np.clip((q[:, 2] - CUT) / FEATHER, 0, 1); w = 1 - t * t * (3 - 2 * t)
+                        cur = px[yy, xx, :3]; skin = (cur[:, 0] > cur[:, 1]) & (cur[:, 1] > cur[:, 2]) & (cur[:, 0] > 0.5)
+                        w = w * skin
+                        px[yy, xx, :3] = cur * (1 - w[:, None]) + tgt * w[:, None]; done_[yy, xx] = True; n_ += int((w > 0).sum())
+                img.pixels.foreach_set(px.ravel())
+                tmpA = os.path.join(os.path.dirname(os.path.abspath(dst)), "_목띠.png"); img.filepath_raw = tmpA; img.file_format = "PNG"; img.save(); img.pack()
+                print("  목 아래 띠 섞은 그림 점", n_, "색", tgt.round(3))
     bm = bmesh.new(); bm.from_mesh(o.data)
     if BISECT and len(bm.verts) > 10000:      # 자르는 높이에서 면을 반듯하게 갈라 끝이 톱니처럼 들쭉날쭉하지 않게 (사용자 2026-11-26 '목경계와 뒷머리카락')
         for zc in [CUT] + ([SIDECUT] if SIDECUT > CUT else []):
@@ -179,15 +208,22 @@ if NECKCOL and opt("--목색", "on") != "off":
         tmp = os.path.join(os.path.dirname(os.path.abspath(dst)), "_목색맞춤.png"); img.filepath_raw = tmp; img.file_format = "PNG"; img.save(); img.pack()
         print("목색 맞춤 A", ga.round(3), "B", gb.round(3), "배율", k.round(3))
 bmesh.ops.delete(bm, geom=list(gone), context="FACES")
-if PUSHIN:   # 겹친 곳의 B 목을 A 목 안쪽(2mm)으로 밀어 넣음 → 틈 없이 겹치고 B 가 A 밖으로 삐져나오지 않음
+if PUSHIN:   # 겹친 곳의 B 목을 A 목 안쪽으로 밀어 넣음 → 틈 없이 겹치고 B 가 A 밖으로 삐져나오지 않음
+    # 목 가운데 축에서 바깥으로 같은 높이의 A 겉면을 찾아(광선) 그보다 3mm 안쪽으로 (A 목 끝 바로 아래 3mm 도 — 경계 위로 물결처럼 튀어나왔음)
+    from mathutils import Vector as _V
     mi = next(i for i, m in enumerate(mats) if M1 in m); inv = mw.inverted(); n_ = 0
-    for v in {v for f in bm.faces if f.material_index == mi for v in f.verts}:
-        p = mw @ v.co
-        if p.z < ZBOT - 0.004: continue
-        hit = bvhA.find_nearest(p)
-        if hit[0] is None or hit[3] > 0.06: continue
-        nrm = hit[1]
-        if (p - hit[0]).dot(nrm) > -0.002: v.co = inv @ (hit[0] - nrm * 0.002); n_ += 1
+    vs = [v for v in {v for f in bm.faces if f.material_index == mi for v in f.verts} if (mw @ v.co).z > ZBOT - 0.003]
+    if vs:
+        cy = sum((mw @ v.co).y for v in vs) / len(vs)
+        for v in vs:
+            p = mw @ v.co; zz = max(p.z, ZBOT + 0.0015)
+            d = _V((p.x, p.y - cy, 0.0))
+            if d.length < 1e-6: continue
+            d.normalize(); hit = bvhA.ray_cast(_V((0.0, cy, zz)), d, 0.2)
+            if hit[0] is None: continue
+            rA = (hit[0] - _V((0.0, cy, zz))).length; rB = _V((p.x, p.y - cy, 0)).length
+            if rB > rA - 0.003:
+                k = (rA - 0.003) / rB; p.x *= k; p.y = cy + (p.y - cy) * k; v.co = inv @ p; n_ += 1
     print("B 목 안으로 넣은 점", n_)
 if SHRINK < 1.0:      # A 목보다 굵은 B 목 윗부분이 A 목 밖으로 삐져나와 들쭉날쭉한 띠로 보였음 → 안쪽으로 오므림
     mi = next(i for i, m in enumerate(mats) if M1 in m); inv = mw.inverted()
