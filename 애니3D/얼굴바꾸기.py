@@ -29,6 +29,8 @@ SHRINK = float(opt("--목조이기", "1.0"))    # B 목 아래쪽(머리 재질,
 COLLAR = float(opt("--깃띠", "0"))          # 몸 재질 중 이 높이(B 좌표) 위, 목 둘레 안쪽 띠를 지움 (예: 1.455)
 SNAP = float(opt("--이음", "0"))
 FIXCOL = np.array([float(v) for v in opt("--목색보정", "1,1,1").split(",")])   # 촬영해 보니 B 목이 더 붉게 나옴 → 그림 색에 더 곱함 (예: 1.02,1.125,1.18)
+BISECT = opt("--반듯", "on") != "off"
+CLOTHCO = set()
 PUSHIN = opt("--안으로", "on") != "off"       # A 목 아래 끝 이만큼(A 좌표)을 B 목 표면에 붙임
 CLOTHUP = float(opt("--옷위", "0.06"))      # 자르기 위 이만큼까지 옷 색 점을 지움
 NECKCOL = []
@@ -64,9 +66,11 @@ for o in sorted(objsA, key=lambda x: x.name):
             uvd = o.data.uv_layers.active.data
             for lp in o.data.loops:
                 v = lp.vertex_index; co_ = o.data.vertices[v].co; z = co_.z
-                if v in hairv or z > CUT + CLOTHUP or (z < CUT and z < HAIRLOW): continue
+                if v in hairv or z > max(CUT + CLOTHUP, SIDECUT) or (z < CUT and z < HAIRLOW): continue
                 u, w = uvd[lp.index].uv; r, g, b = px[min(int(w * H_), H_ - 1) % H_, min(int(u * W_), W_ - 1) % W_, :3]
                 mx, mn = max(r, g, b), min(r, g, b)
+                if CUT <= z < SIDECUT and co_.y > 0.0 and abs(co_.x) <= SIDEX and mx < 0.6 and r >= g >= b and not (mx > 0.45 and r - b > 0.15 and mn > 0.3):
+                    clothv.add(v); continue     # 뒤 가운데 머리카락도 옆과 같은 높이로 (안쪽으로 말린 뒷머리가 따로 늘어져 보였음)
                 if z >= CUT:                    # 자르기 위 옷(남색 재킷 깃·흰 셔츠)은 빼고, 목 앞 피부색은 모음
                     frontneck = abs(co_.x) < 0.065 and co_.y < -0.005      # 목 앞쪽은 피부 — 색으로 지우면 끝이 들쭉날쭉했음
                     if not frontneck and ((b > r + 0.01) or (mn > 0.75 and mx - mn < 0.06 and abs(co_.x) > 0.04)): clothv.add(v)
@@ -74,9 +78,16 @@ for o in sorted(objsA, key=lambda x: x.name):
                     continue
                 if r >= g >= b and mx < 0.55 and mx - mn > 0.04 and mx > 0.04 and not (r > 0.35 and (r - b) > 0.12 and mx > 0.45): hairv.add(v)
             print("  자르기 아래 머리카락 점", len(hairv), "· 자르기 위 옷 점", len(clothv))
+            CLOTHCO = {tuple(round(c, 5) for c in o.data.vertices[i].co) for i in clothv}
     bm = bmesh.new(); bm.from_mesh(o.data)
-    gone = [v for v in bm.verts if (v.co.z < CUT and v.index not in hairv) or v.index in clothv
-            or (v.co.z < SIDECUT and abs(v.co.x) > SIDEX)]          # 어깨 위 머리카락 끝(바깥으로 말린 곳): B 어깨가 좁아 떠 보여서 단발 끝을 고르게 자름
+    if BISECT and len(bm.verts) > 10000:      # 자르는 높이에서 면을 반듯하게 갈라 끝이 톱니처럼 들쭉날쭉하지 않게 (사용자 2026-11-26 '목경계와 뒷머리카락')
+        for zc in [CUT] + ([SIDECUT] if SIDECUT > CUT else []):
+            bmesh.ops.bisect_plane(bm, geom=bm.verts[:] + bm.edges[:] + bm.faces[:], dist=1e-6, plane_co=(0, 0, zc), plane_no=(0, 0, 1))
+        bm.verts.ensure_lookup_table(); bm.verts.index_update()
+        hairv = {v.index for v in bm.verts if v.co.z < CUT - 1e-5 and False}   # (머리카락 남기기는 끔: 번호가 바뀜)
+        clothv = {v.index for v in bm.verts if v.co.z >= CUT and v.co.z <= max(CUT + CLOTHUP, SIDECUT) and tuple(round(c, 5) for c in v.co) in CLOTHCO}
+    gone = [v for v in bm.verts if (v.co.z < CUT - 1e-5 and v.index not in hairv) or v.index in clothv
+            or (v.co.z < SIDECUT - 1e-5 and abs(v.co.x) > SIDEX)]          # 어깨 위 머리카락 끝(바깥으로 말린 곳): B 어깨가 좁아 떠 보여서 단발 끝을 고르게 자름
     bmesh.ops.delete(bm, geom=gone, context="VERTS")
     # 예전에 구멍을 메운 어두운 덧댐(재질 이름 '틈막음')은 목 둘레에 검은 띠로 보였음 → 지움 (사용자 2026-11-26 '목 이음매')
     fill_mi = {i for i, m in enumerate(o.data.materials) if m and "틈막음" in m.name}
