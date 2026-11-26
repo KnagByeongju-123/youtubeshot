@@ -5,7 +5,7 @@
    - 옮긴 머리는 B 뼈대에 묶음: 목 아래쪽은 Neck, 위로 갈수록 Head (--목섞기 z0,z1, B 좌표)
    - 모양 키(MouthOpen·MouthWide·MouthRound·Blink)는 A 것을 그대로 가져감
    사용: .bpy_venv/bin/python -I 애니3D/얼굴바꾸기.py <A.glb> <B.glb> <결과.glb> --자르기 0.625 --턱 0.663,1.508 --코앞 -0.116,-0.072 --배율 0.92
-         [--지우기 1.478] [--지울재질 head] [--지울재질2 opacity] [--지우기2 1.45] [--목섞기 1.48,1.53] [--머리카락아래 0.55] [--옷위 0.06] [--목색 on|off] [--옆자르기 0.655 --옆x 0.06] [--목조이기 0.85] [--조각 3000] [--이음 0.016] [--안으로 on|off] [--목색보정 1.02,1.125,1.18] [--목띠 0.025] [--목걸이 on|off] [--깃띠 1.455] [--머리뼈 Head] [--목뼈 Neck]"""
+         [--지우기 1.478] [--지울재질 head] [--지울재질2 opacity] [--지우기2 1.45] [--목섞기 1.48,1.53] [--머리카락아래 0.55] [--옷위 0.06] [--목색 on|off] [--옆자르기 0.655 --옆x 0.06] [--목조이기 0.85] [--조각 3000] [--이음 0.016] [--안으로 on|off] [--목색보정 1.02,1.125,1.18] [--목띠 0.025] [--목걸이 on|off] [--몸색보정 1.08,1.14,1.18] [--깃띠 1.455] [--머리뼈 Head] [--목뼈 Neck]"""
 import os, sys
 import bpy, bmesh
 import numpy as np
@@ -35,6 +35,7 @@ FILLHOLE = opt("--구멍메우기", "on") != "off"
 BISECT = opt("--반듯", "on") != "off"
 CLOTHCO = set()
 NECKCY = 0.036
+BODYFIX = np.array([float(v) for v in opt("--몸색보정", "").split(",")]) if "--몸색보정" in a else None
 PUSHIN = opt("--안으로", "on") != "off"       # A 목 아래 끝 이만큼(A 좌표)을 B 목 표면에 붙임
 CLOTHUP = float(opt("--옷위", "0.06"))      # 자르기 위 이만큼까지 옷 색 점을 지움
 NECKCOL = []
@@ -322,6 +323,20 @@ if NECKCOL and opt("--목색", "on") != "off":
         px[..., :3] = np.where(skin_, np.clip(rgb_ * k, 0, 1), rgb_); img.pixels.foreach_set(px.ravel())
         tmp = os.path.join(os.path.dirname(os.path.abspath(dst)), "_목색맞춤.png"); img.filepath_raw = tmp; img.file_format = "PNG"; img.save(); img.pack()
         print("목색 맞춤 A", ga.round(3), "B", gb.round(3), "배율", k.round(3))
+# 몸 재질(손 등) 피부도 밝기·색조 맞춤 (사용자 2026-11-26 '2번 몸색을 조금 밝게, 색조를 조금 조절') — --몸색보정 r,g,b
+if BODYFIX is not None:
+    for mi_, m_ in enumerate(bodyB.data.materials):
+        if not m_ or M1 in m_.name.lower() or M2 in m_.name.lower(): continue
+        ims_ = [n.image for n in m_.node_tree.nodes if n.type == "TEX_IMAGE" and n.image]
+        if not ims_: continue
+        def _sk(im):
+            q = np.empty(im.size[0] * im.size[1] * 4, np.float32); im.pixels.foreach_get(q); q = q.reshape(-1, 4)[::97, :3]
+            return float(((q[:, 0] > q[:, 1]) & (q[:, 1] > q[:, 2]) & (q[:, 0] > 0.4)).mean())
+        imb = max(ims_, key=_sk); Wb, Hb = imb.size; pb = np.empty(Wb * Hb * 4, np.float32); imb.pixels.foreach_get(pb); pb = pb.reshape(Hb, Wb, 4)
+        rgb_ = pb[..., :3]; sk_ = ((rgb_[..., 0] > rgb_[..., 1]) & (rgb_[..., 1] > rgb_[..., 2]) & (rgb_[..., 0] > 0.3) & (rgb_[..., 0] - rgb_[..., 2] > 0.08))[..., None]
+        pb[..., :3] = np.where(sk_, np.clip(rgb_ * BODYFIX, 0, 1), rgb_); imb.pixels.foreach_set(pb.ravel())
+        tmpb = os.path.join(os.path.dirname(os.path.abspath(dst)), f"_몸색_{mi_}.png"); imb.filepath_raw = tmpb; imb.file_format = "PNG"; imb.save(); imb.pack()
+        print("몸 재질 피부 색 보정", m_.name, BODYFIX)
 bmesh.ops.delete(bm, geom=list(gone), context="FACES")
 # 머리를 지운 뒤 목 근처에 떨어져 남은 작은 옷 조각(깃 안쪽 끄트머리 몇 면)은 1번 목 앞에 검은 점처럼 보였음 → 지움 (사용자 '오른쪽 목 옆 구멍')
 bm.faces.ensure_lookup_table(); seenf = set(); lone = []
