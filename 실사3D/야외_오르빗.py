@@ -898,10 +898,12 @@ def head_move(i):
         R_ = (M3ai @ Rw @ M3a).to_4x4()
         pb.matrix = mathutils.Matrix.Translation(pb.head) @ R_ @ mathutils.Matrix.Translation(-pb.head) @ pb.matrix
         bpy.context.view_layer.update()
+EXPR = [(kv.split('=')[0], float(kv.split('=')[1])) for kv in a[a.index('--표정') + 1].split(',')] if '--표정' in a else []
 def face(i):
     t = i / 24.0; lf = lip["frames"][i] if i < len(lip["frames"]) else [0, 0, 0]
     set_shape("MouthOpen", lf[0]); set_shape("MouthWide", lf[1]); set_shape("MouthRound", lf[2])
     set_shape("Blink", blink_v(t))
+    for nm_, v_ in EXPR: set_shape(nm_, v_)               # --표정 mouthSmileLeft=0.6,… : 늘 띄울 얼굴 표정(모양 키 이름=값)
     GWN[0] = guide_apply(i)
     if HEAD_MOVE: head_move(i)
 
