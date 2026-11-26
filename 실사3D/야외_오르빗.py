@@ -1009,6 +1009,28 @@ if "--찍점" in a:      # 검사용: 화면 점(x,y) 아래에 무엇이 있는
         o = loc + d * 1e-4
     sys.exit(0)
 frames = [int(opt["--미리보기"])] if opt["--미리보기"] else range(int(opt["--시작장"]), N if int(opt["--끝장"]) < 0 else int(opt["--끝장"]))
+if "--애니저장" in a:   # 찍지 않고, 장면마다 뼈 자세·인물 자리·모양 키를 기록해 움직이는 GLB 로 내보냄 (사용자 2026-11-26 조지아 춤 'GLB로 저장')
+    dst_ = os.path.abspath(a[a.index("--애니저장") + 1]); sc.render.fps = 24; sc.frame_start = 0; sc.frame_end = N - 1
+    keep_ = [o for o in objs if o.type in ("ARMATURE", "MESH") and o.name != "Icosphere"]
+    for i in range(N):
+        sc.frame_set(i); set_xf(i); who = walk(i); WHO[0] = who; face(i); bpy.context.view_layer.update()
+        if arm is not None:
+            for pb in arm.pose.bones:
+                pb.keyframe_insert("location", frame=i); pb.keyframe_insert("rotation_quaternion", frame=i); pb.keyframe_insert("scale", frame=i)
+        for r in roots:
+            if r.type == "ARMATURE" or r in keep_:
+                r.keyframe_insert("location", frame=i); r.keyframe_insert("rotation_euler", frame=i); r.keyframe_insert("scale", frame=i)
+        for o in keyed: 
+            for k in o.data.shape_keys.key_blocks[1:]:
+                if abs(k.value) > 1e-4 or i == 0: k.keyframe_insert("value", frame=i)
+    for pb in (arm.pose.bones if arm else []): pb.rotation_mode = "QUATERNION"
+    bpy.ops.object.select_all(action="DESELECT")
+    for o in keep_: o.select_set(True)
+    if arm: arm.select_set(True)
+    if bpy.context.object and bpy.context.object.mode != "OBJECT": bpy.ops.object.mode_set(mode="OBJECT")
+    bpy.ops.export_scene.gltf(filepath=dst_, export_format="GLB", use_selection=True, export_animations=True, export_frame_range=True,
+                              export_force_sampling=True, export_morph=True, export_skins=True, export_image_format="AUTO", export_animation_mode="SCENE")
+    print("움직이는 GLB:", dst_, os.path.getsize(dst_) // 1024, "KB,", N, "장면"); sys.exit(0)
 for i in frames:
     set_xf(i); who = walk(i); WHO[0] = who; place(i, who * 0.6); face(i)     # 카메라는 인물을 반쯤 따라감 (나머지는 인물이 다가오는 느낌)
     sc.render.filepath = os.path.join(os.path.abspath(folder), f"f{i:04d}.png"); bpy.ops.render.render(write_still=True)
