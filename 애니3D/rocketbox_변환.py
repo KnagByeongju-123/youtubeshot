@@ -37,6 +37,39 @@ if "--머리" in a:   # 다른 인물의 얼굴·머리카락을 이 인물(몸�
     bpy.context.view_layer.objects.active = head; bpy.ops.object.join()          # 얼굴 쪽 모양 키(입 모양·표정)를 살림
     bpy.data.objects.remove(arm2, do_unlink=True)
     print("머리 합침:", hn, "→ 몸", nm)
+if "--머리카락" in a:   # 다른 인물의 머리카락 조각(재질 2 중 얼굴 뒤·옆 = 중심 y > -0.015)만 가져오고, 지금 머리카락 조각은 뺌 — 속눈썹·이(얼굴 앞)는 그대로 (사용자 2026-11-26 '긴 머리카락으로')
+    import bmesh, mathutils
+    hf2 = a[a.index("--머리카락") + 1].rstrip("/"); hn2 = os.path.basename(hf2)
+    def hair_parts(o, keep_hair):
+        M_ = o.matrix_world; bm = bmesh.new(); bm.from_mesh(o.data); bm.verts.ensure_lookup_table(); seen = set(); kill = []
+        for v in bm.verts:
+            if v.index in seen: continue
+            st = [v]; comp = []; seen.add(v.index)
+            while st:
+                x = st.pop(); comp.append(x)
+                for e in x.link_edges:
+                    y = e.other_vert(x)
+                    if y.index not in seen: seen.add(y.index); st.append(y)
+            mats = {f.material_index for x in comp for f in x.link_faces}
+            mat2 = mats == {len(o.material_slots) - 1} or all("opacity" in (o.material_slots[m].material.name if o.material_slots[m].material else "") for m in mats)
+            ctr = sum((M_ @ x.co for x in comp), mathutils.Vector()) / len(comp)
+            is_hair = mat2 and len(comp) < 600 and ctr.y > -0.015
+            if is_hair != keep_hair: kill += comp
+        bmesh.ops.delete(bm, geom=list(set(kill)), context="VERTS"); bm.to_mesh(o.data); bm.free()
+    body_o = next(o for o in bpy.data.objects if o.type == "MESH")
+    hair_parts(body_o, keep_hair=False)                       # 지금 머리카락(묶은 머리 등) 뺌
+    before = set(bpy.data.objects)
+    bpy.ops.import_scene.fbx(filepath=os.path.join(hf2, "Export", f"{hn2}_facial.fbx"))
+    new_objs = [o for o in bpy.data.objects if o not in before]
+    hair = next(o for o in new_objs if o.type == "MESH"); arm3 = next(o for o in new_objs if o.type == "ARMATURE")
+    hair_parts(hair, keep_hair=True)
+    mw = hair.matrix_world.copy(); hair.parent = arm; hair.matrix_world = mw
+    for m in hair.modifiers:
+        if m.type == "ARMATURE": m.object = arm
+    bpy.ops.object.select_all(action="DESELECT"); hair.select_set(True); body_o.select_set(True)
+    bpy.context.view_layer.objects.active = body_o; bpy.ops.object.join()
+    bpy.data.objects.remove(arm3, do_unlink=True)
+    print("머리카락 바꿈:", hn2, "점", len(body_o.data.vertices))
 FING = {"0": "Thumb", "1": "Index", "2": "Middle", "3": "Ring", "4": "Little"}
 def newname(b):
     m = re.match(r"Bip01 ([LR]) (\w+)$", b)
@@ -79,7 +112,7 @@ if "--부품지우기" in a:                                        # 작은 따
         kill += best; print("부품 지움: 점", len(best))
     bmesh.ops.delete(bm, geom=list(set(kill)), context="VERTS"); bm.to_mesh(o.data); bm.free()
 texs = [a[a.index("--그림폴더") + 1]] if "--그림폴더" in a else []
-texs += [os.path.join(folder, "Textures")] + ([os.path.join(a[a.index("--머리") + 1], "Textures")] if "--머리" in a else [])
+texs += [os.path.join(folder, "Textures")] + ([os.path.join(a[a.index("--머리") + 1], "Textures")] if "--머리" in a else []) + ([os.path.join(a[a.index("--머리카락") + 1], "Textures")] if "--머리카락" in a else [])
 for im in bpy.data.images:
     base = os.path.basename(im.filepath.replace("\\", "/"))
     for tex in texs:
