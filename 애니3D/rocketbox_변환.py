@@ -5,7 +5,8 @@
       Pelvis→Hips, Spine2→Chest, Thigh→UpperLeg, Calf→LowerLeg)
    - 모양 키: AA_VI_10_aa→MouthOpen, AA_VI_12_I→MouthWide, AA_VI_14_U→MouthRound, 두 눈 깜빡임 합쳐 Blink
    - 그림: FBX 안의 경로(D:/temp/...)가 틀려 Textures 폴더의 tga 로 다시 연결, 반사(specular) 그림은 뺌
-   사용: .bpy_venv/bin/python -I 애니3D/rocketbox_변환.py <인물 폴더(…/Business_Female_03)> <출력.glb>"""
+   --그림폴더 <폴더> : 다시 칠한 그림(rocketbox_옷칠하기.py 결과)을 씀, --부품지우기 x,y,z[;…] : 그 자리 가장 가까운 작은 따로 떨어진 부품(점 120개 미만, 예: 입술 피어싱)을 지움
+   사용: .bpy_venv/bin/python -I 애니3D/rocketbox_변환.py <인물 폴더(…/Business_Female_03)> <출력.glb> [--그림폴더 …] [--부품지우기 …]"""
 import os, re, sys
 import bpy
 
@@ -37,7 +38,26 @@ for o in bpy.data.objects:                                    # 정점 그룹 �
 for b in arm.data.bones:
     if b.name in ren: b.name = ren[b.name]
 print("뼈 이름 바꿈", len(ren))
-tex = os.path.join(folder, "Textures")
+if "--부품지우기" in a:                                        # 작은 따로 떨어진 부품(피어싱 등) 지우기
+    import bmesh, mathutils
+    o = next(x for x in bpy.data.objects if x.type == "MESH"); M = o.matrix_world
+    bm = bmesh.new(); bm.from_mesh(o.data); bm.verts.ensure_lookup_table(); seen = set(); parts = []
+    for v in bm.verts:
+        if v.index in seen: continue
+        st = [v]; comp = []; seen.add(v.index)
+        while st:
+            x = st.pop(); comp.append(x)
+            for e in x.link_edges:
+                y = e.other_vert(x)
+                if y.index not in seen: seen.add(y.index); st.append(y)
+        if len(comp) < 120: parts.append(comp)
+    kill = []
+    for p_ in a[a.index("--부품지우기") + 1].split(";"):
+        tgt = mathutils.Vector([float(t) for t in p_.split(",")])
+        best = min(parts, key=lambda c: ((sum((M @ v.co for v in c), mathutils.Vector()) / len(c)) - tgt).length)
+        kill += best; print("부품 지움: 점", len(best))
+    bmesh.ops.delete(bm, geom=list(set(kill)), context="VERTS"); bm.to_mesh(o.data); bm.free()
+tex = a[a.index("--그림폴더") + 1] if "--그림폴더" in a else os.path.join(folder, "Textures")
 for im in bpy.data.images:
     base = os.path.basename(im.filepath.replace("\\", "/"))
     if os.path.exists(os.path.join(tex, base)): im.filepath = os.path.join(tex, base); im.reload()
