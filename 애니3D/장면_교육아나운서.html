@@ -84,13 +84,13 @@ function pose(t) {
   // palm: 오른손 손바닥을 위로 펴서 슬라이드 쪽을 '이것' 하고 내보임 (한 손만)
   const mv = VAR.palm || 0;
   bone('rightUpperArm').rotation.x += (-0.3 - 0.08 * mv) * PM; bone('rightUpperArm').rotation.z += (-0.35 - 0.1 * mv) * PM;
-  bone('rightLowerArm').rotation.x += (-0.9 + 0.15 * mv) * PM; bone('rightLowerArm').rotation.z += -0.3 * PM; bone('rightHand').rotation.y += -1.2 * PM;
+  bone('rightLowerArm').rotation.x += (-0.9 + 0.15 * mv) * PM; bone('rightLowerArm').rotation.z += -0.3 * PM; bone('rightLowerArm').rotation.y += -0.6 * PM; bone('rightHand').rotation.y += -0.6 * PM;
   if (PM > 0) for (const f of ['Index', 'Middle', 'Ring', 'Little']) human.curl('right' + f, 0.3 - 0.2 * PM);
   bone('head').rotation.y += -0.18 * PM; bone('chest').rotation.y += -0.08 * PM;
   // lpalm: 왼손 손바닥을 위로 펴서 몸 앞(보는 사람 쪽)으로 내밂
   const lv = VAR.lpalm || 0;
   bone('leftUpperArm').rotation.x += (-0.45 - 0.08 * lv) * LP; bone('leftUpperArm').rotation.z += (0.15 + 0.06 * lv) * LP;
-  bone('leftLowerArm').rotation.x += -1.1 * LP; bone('leftLowerArm').rotation.z += 0.2 * LP; bone('leftHand').rotation.y += 1.2 * LP;
+  bone('leftLowerArm').rotation.x += -1.1 * LP; bone('leftLowerArm').rotation.z += 0.2 * LP; bone('leftLowerArm').rotation.y += 0.6 * LP; bone('leftHand').rotation.y += 0.6 * LP;
   if (LP > 0) for (const f of ['Index', 'Middle', 'Ring', 'Little']) human.curl('left' + f, 0.3 - 0.2 * LP);
   bone('head').rotation.y += 0.08 * LP;
   // chest: 오른손을 가슴에 얹음 (진심을 담아 말할 때)
