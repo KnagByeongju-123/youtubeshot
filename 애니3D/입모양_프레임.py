@@ -103,10 +103,13 @@ ker = np.array([1, 2, 1]) / 4.0
 fr = np.stack([np.convolve(np.pad(fr[:, j], 1, mode="edge"), ker, "valid") for j in range(fr.shape[1])], 1)
 fr = np.clip(fr, 0, 1.2)
 cc = np.zeros((n, 7))                                                     # 자음 칸: 삼각형으로 잠깐
-for t0, t1, c0, c1 in CONS:
-    d = max(t1 - t0, 0.06)
+for k_, (t0, t1, c0, c1) in enumerate(CONS):
+    d = max(t1 - t0, 0.06); nx = CONS[k_ + 1][0] if k_ + 1 < len(CONS) else t1 + 1.0
     if c0 is not None: cc[:, c0] = np.maximum(cc[:, c0], np.interp(tt, [t0 - 0.06, t0 + 0.01, t0 + 0.35 * d], [0, 1, 0], left=0, right=0))
-    if c1 is not None: cc[:, c1] = np.maximum(cc[:, c1], np.interp(tt, [t1 - 0.12, t1 - 0.03, t1 + 0.04], [0, 0.8, 0], left=0, right=0))
+    if c1 == 0:                       # 받침 입술 닫기는 닫은 채 잠깐 머묾(0.15초, 다음 음절 전까지) — 한 장만 닫혀 안 보였음(사용자 2026-11-26)
+        hold = max(min(0.15, nx - t1 - 0.04), 0.02)
+        cc[:, 0] = np.maximum(cc[:, 0], np.interp(tt, [t1 - 0.10, t1 - 0.02, t1 + hold, t1 + hold + 0.08], [0, 1, 1, 0], left=0, right=0))
+    elif c1 is not None: cc[:, c1] = np.maximum(cc[:, c1], np.interp(tt, [t1 - 0.12, t1 - 0.03, t1 + 0.04], [0, 0.8, 0], left=0, right=0))
 fr = np.concatenate([fr, cc], 1)
 json.dump({"fps": FPS, "frames": np.round(fr, 3).tolist()}, open(a[1], "w"))
 print(f"입 모양 {n}장 ({n / FPS:.1f}초), 음절 {len(items)}개, 앞당김 {LEAD}초{', 소리 크기 반영' if loud is not None else ''} → {a[1]}")
