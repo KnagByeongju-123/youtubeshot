@@ -83,7 +83,7 @@ for f in range(N):
 # ---------- 자세 (손목 자리 → 팔꿈치 계산) ----------
 P=lambda bn: ar.matrix_world@ar.pose.bones[bn].head
 def reset():
-    for pb in ar.pose.bones: pb.rotation_mode='QUATERNION'; pb.rotation_quaternion=(1,0,0,0); pb.location=(0,0,0)
+    for pb in ar.pose.bones: pb.rotation_mode='QUATERNION'; pb.rotation_quaternion=(1,0,0,0); pb.location=(0,0,0); pb.scale=(1,1,1)   # 크기도 되돌림 — 안 하면 장면마다 계산 오차가 쌓여 팔이 막대처럼 늘어남(2026-11-27)
     bpy.context.view_layer.update()
 def rotw(bn,axis,deg):                 # 뼈를 세계 축 둘레로 돌림 (자식도 따라감)
     pb=ar.pose.bones[bn]; M=ar.matrix_world@pb.matrix; h=M.to_translation()
@@ -133,6 +133,7 @@ def pose(nm,s,sd,hip,t,br):
         return (V((sd*0.26,hip.y-0.24,hip.z+0.16)),V((sd*0.2,0.3,-1.0)),V((sd*0.55,-0.6,0.1)))
     return rest
 FR=[opt['still']] if opt.get('still') else range(opt.get('from',1),opt.get('to',N)+1)   # 찍을 프레임만 자세 계산
+KEEP={}
 for f in FR:
     t=(f-1)/FPS; reset()
     br=0.5-0.5*math.cos(2*math.pi*t/4.2)
@@ -149,8 +150,12 @@ for f in FR:
         for nm,wt in W.items():
             a_,b_,c_=pose(nm,s,sd,hip,t,br); T+=a_*wt; pole+=b_*wt; hd+=c_*wt
         arm(s,T,pole,hd)
-    for bn in BONES:
-        pb=ar.pose.bones[bn]; pb.keyframe_insert('rotation_quaternion',frame=f); pb.keyframe_insert('location',frame=f)
+    KEEP[f]={bn:(ar.pose.bones[bn].rotation_quaternion.copy(),ar.pose.bones[bn].location.copy()) for bn in BONES}
+# 키는 자세 계산이 다 끝난 뒤에 넣음 — 계산 도중에 키를 넣으면 다음 장면 계산 때 앞 키가 끼어들어 팔이 막대처럼 늘어남(2026-11-27)
+for f,d in KEEP.items():
+    for bn,(q,l) in d.items():
+        pb=ar.pose.bones[bn]; pb.rotation_quaternion=q; pb.location=l
+        pb.keyframe_insert('rotation_quaternion',frame=f); pb.keyframe_insert('location',frame=f)
 # 금형 쪽으로 몸을 돌림 (얼굴 방향 +는 화면 오른쪽)
 for x in sc.objects:
     if x.parent is None: x.rotation_euler.z+=math.radians(opt.get('turn',12))
