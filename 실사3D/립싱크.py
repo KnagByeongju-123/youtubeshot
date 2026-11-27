@@ -6,8 +6,8 @@
                     여러 개로 나눠 동시에 찍음(--나누기, 메모리 15GB 서버는 2 까지)
      ④ 합치기     : ffmpeg 로 소리를 --시작 초만큼 늦춰 붙임
    사용: .supertonic_venv/bin/python 실사3D/립싱크.py <인물.glb> <나레이션.mp3|wav> <대본.txt 또는 "글"> <출력.mp4>
-         [--크기 640x360] [--카메라 "0,-0.75,1.47,0,0,1.45,50"] [--입세기 0.5] [--입속 100,16,28] [--내밀기 0.85,0.8,0.6]
-         [--시작 0.5] [--나누기 2] [--샘플 6] [--장소 kloofendal_48d_partly_cloudy_puresky] [--소리마디] [--입방식 15|3|auto]
+         [--크기 640x360] [--카메라 "0,-0.75,1.47,0,0,1.45,50"] [--입세기 0.5] [--입속 100,16,28|없음(입 안 그물이 있는 모델, 여자아나운서1)] [--내밀기 0.85,0.8,0.6]
+         [--시작 0.5] [--나누기 2] [--샘플 6] [--장소 kloofendal_48d_partly_cloudy_puresky] [--소리마디] [--시각 <음절시각.json>] [--입방식 15|3|auto]
          [--애니저장 <출력.glb>]   (영상 대신, 입·눈 움직임을 기록한 움직이는 GLB 로 저장)
    예: .supertonic_venv/bin/python 실사3D/립싱크.py models/glb/여자아나운서3.glb voice.mp3 "안녕하세요. 3D 아나운서입니다." output/립싱크.mp4
    작은 시험 영상은 640x360 (사용자 결정), 완성본만 1920x1080"""
@@ -32,7 +32,8 @@ dur = float(subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=d
 print(f"소리 {dur:.1f}초")
 # ① 음절 시각
 tim = os.path.join(work, "시각.json")
-if "--소리마디" in a: run([PY_ST, os.path.join(HERE, "소리마디_시각.py"), audio, "".join(c for c in text if "가" <= c <= "힣"), tim])
+if "--시각" in a: shutil.copy(os.path.abspath(opt("--시각", "")), tim)          # 이미 재 둔 음절 시각을 씀 (받아쓰기 모델 1.3GB 를 못 받을 때 — 디스크 부족 2026-11-27)
+elif "--소리마디" in a: run([PY_ST, os.path.join(HERE, "소리마디_시각.py"), audio, "".join(c for c in text if "가" <= c <= "힣"), tim])
 else: run([PY_SD, "-X", "utf8", os.path.join(HERE, "발음시각.py"), audio, text, tim])
 # ② 입 모양 값
 lip = os.path.join(work, "입.json")
@@ -42,7 +43,7 @@ if MODE == "auto": MODE = "15" if b"AA_VI_11_E" in open(glb, "rb").read() else "
 N = int(math.ceil((dur + START + 0.6) * 24))
 base = [PY_BPY, "-I", os.path.join(HERE, "야외_오르빗.py"), glb, os.path.join(work, "fr"), "--장소", PLACE, "--세상빛", "0.5", "--조명", "0.45",
         "--자세", "모음", "--입", lip, "--입세기", MS, "--장수", str(N), "--샘플", SAMPLES, "--크기", SIZE, "--고정카메라", " " + CAM]
-if MODE == "15": base += ["--입방식", "15", "--입속", MOUTH] + (["--내밀기", opt("--내밀기", "")] if "--내밀기" in a else [])
+if MODE == "15": base += ["--입방식", "15"] + (["--입속", MOUTH] if MOUTH != "없음" else []) + (["--내밀기", opt("--내밀기", "")] if "--내밀기" in a else [])
 if ANIM:
     run(["xvfb-run", "-a"] + base + ["--애니저장", os.path.abspath(ANIM)]); print("→", ANIM); shutil.rmtree(work, ignore_errors=True); sys.exit(0)
 print(f"촬영 {N}장 ({MODE}가지 입 모양), {NSPLIT}개로 나눠 동시에")
