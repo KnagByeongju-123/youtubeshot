@@ -822,8 +822,8 @@ if (WALK or DANCE or SIP) and arm is not None:
         cyc = tt / 4.5; k_ = int(cyc); fr = cyc - k_; bl = sm2_(min(1.0, max(0.0, (fr - 0.73) / 0.27)))
         def dirs(high, sgn):
             if VAINAKH:      # 니이사르호(체첸·인구시 여성 춤, 사용자 캡처 2026-11-27): 한 팔은 어깨 높이로 앞쪽 옆, 팔꿈치 살짝 굽힘 / 다른 팔은 옆으로 조금 벌려 아래로
-                if high: return V((sgn * 0.70, -0.60, -0.12)), V((-sgn * 0.05, -0.93, 0.30))   # 위팔은 옆·앞으로 조금 아래, 아래팔은 안쪽 앞으로 살짝 올려 팔꿈치가 굽게 (곧게 뻗으면 가리키는 듯 뻣뻣했음)
-                return V((sgn * 0.32, -0.08, -0.94)), V((sgn * 0.22, -0.40, -0.89))
+                if high: return V((sgn * 0.42, -0.88, -0.20)), V((-sgn * 0.15, -0.50, 0.85))   # 위팔 앞·옆으로 들고 아래팔을 세워 손이 얼굴 높이 앞 (사용자 녹화 영상 2026-11-27)
+                return V((sgn * 0.48, -0.05, -0.88)), V((sgn * 0.50, -0.22, -0.84))            # 옆으로 비스듬히 아래로 뻗음, 손바닥 아래
             if high: return V((sgn * 0.62, -0.22, 0.75)), V((-sgn * 0.88, -0.18, 0.40))   # 팔꿈치를 굽혀 머리 위로 둥글게 감쌈 (곧게 뻗으면 체조 같았음)
             return V((sgn * 0.95, -0.22, 0.05)), V((sgn * 0.85, -0.42, 0.30))             # 옆으로, 앞으로 살짝 휘게
         for sd in ("L", "R"):
@@ -846,7 +846,12 @@ if (WALK or DANCE or SIP) and arm is not None:
             if VAINAKH:   # 앞(보는 사람·상대)을 보며 좌우로 미끄러지듯 오가고, 몸은 가는 쪽으로 살짝(±25°)만 돎
                 w_ = 2 * math.pi * tt / 8.0
                 pos = mathutils.Vector((0.40 * math.sin(w_) * on, 0.10 * (1 - math.cos(w_)) * on, 0))
-                Rz = mathutils.Matrix.Rotation(0.45 * math.cos(w_) * on, 4, "Z")
+                spin_ = 0.0
+                cyc9 = (tt - 3.4) / 9.0                 # 9초마다 1.2초에 걸쳐 빠르게 한 바퀴 (머리카락이 날리는 돌기)
+                if cyc9 >= 0:
+                    u_ = (cyc9 - int(cyc9)) * 9.0 / 1.2
+                    if u_ < 1: spin_ = 2 * math.pi * sm2_(u_)
+                Rz = mathutils.Matrix.Rotation(0.45 * math.cos(w_) * on + spin_, 4, "Z")
             for r in roots: r.matrix_world = mathutils.Matrix.Translation(pos) @ Rz @ ROOT0[r.name]
             bpy.context.view_layer.update()
         return mathutils.Vector((0, 0, 0))
