@@ -10,7 +10,7 @@ COL = np.array([float(v) for v in opt("--색", "24,20,20").split(",")]); CON = f
 im = np.array(Image.open(src)); rgb = im[..., :3].astype(np.float32)
 L = cv2.cvtColor(im[..., :3], cv2.COLOR_RGB2LAB)[..., 0].astype(np.float32)
 cool = ((rgb[..., 1] + rgb[..., 2]) / 2 - rgb[..., 0]) if DARK > 0 else None   # 푸른 기(초록·파랑 > 빨강): 피부엔 없음 → 머리카락
-m = np.ones(L.shape, bool) if DARK <= 0 else (L < DARK) | ((cool > 4) & (L < 130))
+m = np.ones(L.shape, bool) if DARK <= 0 else ((L < DARK) | ((cool > 4) & (L < 130))) & (rgb[..., 0] - rgb[..., 1] < 12)   # 붉은 입속·잇몸은 빼고 (입 벌리면 회색으로 보였음)
 if im.shape[2] == 4: m &= im[..., 3] > 8
 med = np.median(L[m]) + 1e-6
 new = np.clip(COL * np.clip((L / med) ** CON, 0, 4)[..., None], 0, 255)

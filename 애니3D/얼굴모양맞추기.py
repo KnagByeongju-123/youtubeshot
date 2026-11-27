@@ -3,7 +3,7 @@
    - 얇은 판 휨(TPS)으로 정면 평면(x 좌우, z 위아래)만 옮김 — 앞뒤 깊이는 사진 한 장으로 알 수 없어 그대로
    - 얼굴 앞쪽만(뒤통수·귀·목 아래는 0), 얼굴 둘레 바깥 고리 점은 움직이지 않게 묶어 부드럽게 이어짐
    - 모양 키(입 모양 15가지·표정 52가지)는 같은 만큼 함께 옮김 → 립싱크·눈 깜빡임 그대로
-   사용: .bpy_venv/bin/python -I 애니3D/얼굴모양맞추기.py <입력.glb> <shape_lm.npz> <출력.glb> [--세기 1.0] [--최대 0.012] [--앞 0.0,0.06]"""
+   사용: .bpy_venv/bin/python -I 애니3D/얼굴모양맞추기.py <입력.glb> <shape_lm.npz> <출력.glb> [--세기 1.0] [--최대 0.015] [--2D] [--앞 0.0,0.06]"""
 import sys
 import bpy
 import numpy as np
@@ -12,9 +12,22 @@ from mathutils import Matrix
 a = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else sys.argv[1:]
 src, lm_p, dst = a[0], a[1], a[2]
 def opt(k, d): return a[a.index(k) + 1] if k in a else d
-K = float(opt("--세기", "1.0")); CAP = float(opt("--최대", "0.012"))
+K = float(opt("--세기", "1.0")); CAP = float(opt("--최대", "0.015"))
 Y0, Y1 = (float(v) for v in opt("--앞", "0.0,0.06").split(","))   # y 가 Y0 보다 앞(작음)이면 다 옮기고 Y1 에서 0 (얼굴은 -Y 쪽)
 L = np.load(lm_p); S, D, OV = L["src"], L["dst"], L["oval"]
+MODE3 = "src3" in L.files and "--2D" not in a        # 3D: 사진의 깊이 추정(MediaPipe)까지 써서 코 높이·광대·턱 앞뒤도 옮김 (사용자 2026-11-27 '얼굴 모양을 사진에서 만든 3D 모양으로')
+if MODE3:
+    S3, D3, ANC = L["src3"], L["dst3"], L["anchor"]
+    C3 = np.vstack([S3, ANC]); V3 = np.vstack([(D3 - S3) * K, np.zeros_like(ANC)]); n3 = len(C3)
+    A3 = np.zeros((n3 + 4, n3 + 4)); A3[:n3, :n3] = np.linalg.norm(C3[:, None] - C3[None], axis=2) + np.eye(n3) * 1e-4
+    A3[:n3, n3] = 1; A3[:n3, n3 + 1:] = C3; A3[n3, :n3] = 1; A3[n3 + 1:, :n3] = C3.T
+    W3 = np.linalg.solve(A3, np.vstack([V3, np.zeros((4, 3))]))
+    def field3(P):
+        out = np.linalg.norm(P[:, None] - C3[None], axis=2) @ W3[:n3] + W3[n3] + P @ W3[n3 + 1:]
+        dn = np.min(np.linalg.norm(P[:, None] - S3[None, ::3], axis=2), axis=1)
+        out *= np.clip((0.07 - dn) / 0.035, 0, 1)[:, None]                  # 얼굴에서 먼 곳은 0
+        m = np.linalg.norm(out, axis=1, keepdims=True); return out * np.minimum(1, CAP / (m + 1e-12))
+    print("3D 모드: 표지점 %d, 고정점 %d, 깊이 옮김 평균 %.1fmm" % (len(S3), len(ANC), np.abs(D3 - S3)[:, 1].mean() * 1000))
 d = (D - S) * K
 c0 = OV.mean(0); R = np.linalg.norm(OV - c0, axis=1).max()
 ang = np.linspace(0, 2 * np.pi, 40, endpoint=False)
@@ -37,11 +50,17 @@ for o in [o for o in bpy.data.objects if o.type == "MESH"]:
     me = o.data; mw = np.array(o.matrix_world); inv3 = np.linalg.inv(mw[:3, :3])
     kbs = list(me.shape_keys.key_blocks) if me.shape_keys else []
     co = np.array([v.co for v in me.vertices]); Wd = co @ mw[:3, :3].T + mw[:3, 3]
-    wgt = np.clip((Y1 - Wd[:, 1]) / (Y1 - Y0), 0, 1) * np.clip((Wd[:, 2] - (c0[1] - R * 1.6)) / 0.04, 0, 1)
-    sel = wgt > 0
+    if MODE3:
+        sel = (Wd[:, 2] > S3[:, 2].min() - 0.08) & (np.abs(Wd[:, 0]) < 0.15)
+        dd = np.zeros((len(co), 3)); dd[sel] = field3(Wd[sel])
+        sel = np.linalg.norm(dd, axis=1) > 1e-6
+    else:
+        wgt = np.clip((Y1 - Wd[:, 1]) / (Y1 - Y0), 0, 1) * np.clip((Wd[:, 2] - (c0[1] - R * 1.6)) / 0.04, 0, 1)
+        sel = wgt > 0
+        dd = np.zeros((len(co), 3))
+        if sel.any():
+            f = field(Wd[sel][:, [0, 2]]) * wgt[sel, None]; dd[sel, 0], dd[sel, 2] = f[:, 0], f[:, 1]
     if not sel.any(): continue
-    dd = np.zeros((len(co), 3)); f = field(Wd[sel][:, [0, 2]]) * wgt[sel, None]
-    dd[sel, 0], dd[sel, 2] = f[:, 0], f[:, 1]
     dl = dd @ inv3.T                                                     # 세상 좌표 → 물체 좌표
     for i, v in enumerate(me.vertices):
         if sel[i]: v.co += type(v.co)(dl[i])

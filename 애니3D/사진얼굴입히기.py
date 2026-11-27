@@ -3,7 +3,7 @@
          ③ 사진을 표지점끼리 맞도록 휘어(조각별 아핀) 정면 그림 자리로 옮김 ④ 얼굴 그림의 점(텍셀)마다 3D 자리 → 정면 화면 자리에서 사진 색을 가져와
          얼굴 윤곽 안쪽만 부드럽게 섞음(눈 안·입 안·머리카락에 가려진 곳·옆을 향한 곳은 원래 그림) ⑤ 나머지 피부색은 사진 피부색 쪽으로 옮겨 이음매를 줄임
    먼저: .bpy_venv/bin/python -I 애니3D/rocketbox_얼굴정보.py <인물 폴더> <정보폴더>
-   사용: <mediapipe 가 있는 파이썬> 애니3D/사진얼굴입히기.py <사진> <정보폴더> <출력 그림폴더> [--크기 1024] [--위자르기 0.18] [--피부맞춤 1.0] [--섞기폭 0.06] [--눈꺼풀 1.3] [--옆줄이기 0.9] [--밝기 1.25] [--채도 1.0]
+   사용: <mediapipe 가 있는 파이썬> 애니3D/사진얼굴입히기.py <사진> <정보폴더> <출력 그림폴더> [--크기 1024] [--위자르기 0.18] [--피부맞춤 1.0] [--섞기폭 0.06] [--눈꺼풀 1.3] [--옆줄이기 0.9] [--밝기 1.25] [--채도 1.0] [--깊이세기 0.7]
    결과: <출력 그림폴더>/<원래 이름>_head_color.tga (rocketbox_변환.py --그림폴더 로 씀) + 확인 그림 _확인_*.png"""
 import os, sys, json
 import numpy as np, cv2
@@ -72,13 +72,13 @@ def landmarks(bgr):
     r = fm.process(cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB))
     if not r.multi_face_landmarks: return None
     h, w = bgr.shape[:2]
-    return np.array([[l.x * w, l.y * h] for l in r.multi_face_landmarks[0].landmark])
+    return np.array([[l.x * w, l.y * h, l.z * w] for l in r.multi_face_landmarks[0].landmark])   # z: 깊이(화면 너비 단위, 음수 = 카메라 쪽)
 photo = cv2.imread(photo_p)
 LP = landmarks(photo)
 bg = front.copy(); bg[np.isinf(depth)] = (200, 200, 200)
 LR = landmarks(bg)
 if LP is None or LR is None: sys.exit(f"얼굴 표지점을 못 찾음: 사진 {LP is not None}, 정면 그림 {LR is not None}")
-LP, LR = LP[:468], LR[:468]
+LP3, LR3 = LP[:468], LR[:468]; LP, LR = LP3[:, :2], LR3[:, :2]
 INNER_LIP_ = [78, 95, 88, 178, 87, 14, 317, 402, 318, 324, 308, 415, 310, 311, 312, 13, 82, 81, 80, 191]
 # 사진에서 웃을 때 보이는 이·입속을 지움: 입 안쪽을 입술 색으로 메움 (모델 입은 다문 입이라 이가 입술에 하얀 줄로 남음)
 mm = np.zeros(photo.shape[:2], np.uint8); cv2.fillPoly(mm, [LP[INNER_LIP_].astype(np.int32)], 255)
@@ -113,7 +113,38 @@ lip_ids = sorted({i for c in FMs.FACEMESH_LIPS for i in c})
 for ids in (LEYE, REYE, lip_ids):
     ids = list(ids); TGT[ids] = LR[ids] + (TGT[ids].mean(0) - LR[ids].mean(0))
 toM = lambda P: np.stack([(P[:, 0] - RES / 2) / RES * SC + CX, (RES / 2 - P[:, 1]) / RES * SC + CZ], 1)
-np.savez(os.path.join(out_d, "shape_lm.npz"), src=toM(LR), dst=toM(TGT), oval=toM(LR[OVAL]))
+# 3D(깊이까지): 모델 표지점의 실제 3D 자리(정면 그림의 깊이 버퍼) ← 사진 표지점 3D(MediaPipe 깊이 추정)를 크기·회전·이동 맞춤
+def sim_fit3(A, B):
+    ma, mb = A.mean(0), B.mean(0); A0, B0 = A - ma, B - mb
+    U, S_, Vt = np.linalg.svd(B0.T @ A0); dd = np.sign(np.linalg.det(U @ Vt)); Dg = np.diag([1, 1, dd])
+    R = U @ Dg @ Vt; sc = (S_ * np.diag(Dg)).sum() / (A0 ** 2).sum(); return lambda P: (P - ma) @ (sc * R).T + mb
+ix, iy = np.clip(LR[:, 0].astype(int), 0, RES - 1), np.clip(LR[:, 1].astype(int), 0, RES - 1)
+dep = depth[iy, ix]
+ok = np.isfinite(dep)
+M3 = np.zeros((468, 3)); M3[:, [0, 2]] = toM(LR); M3[:, 1] = np.where(ok, dep, np.nan)
+P3 = np.stack([LP3[:, 0], LP3[:, 2], -LP3[:, 1]], 1)          # 사진: x 오른쪽, 깊이(앞 = 음수 = 모델 -Y), 위
+fitm = ok.copy()
+for ids in (LEYE, REYE, lip_ids): fitm[list(ids)] = False     # 맞춤은 눈·입(웃음·눈 크기 차이) 빼고
+for _ in range(3):                                            # 튀는 점(모델 깊이가 머리카락·속눈썹에 걸림) 빼고 다시 맞춤
+    T3 = sim_fit3(P3[fitm], M3[fitm])(P3)
+    res = np.linalg.norm(T3 - np.nan_to_num(M3), axis=1); thr = max(0.006, np.median(res[fitm]) * 3)
+    fitm &= res < thr
+ok &= res < max(0.012, thr * 1.5)                              # 모델 깊이가 크게 튀는 점은 모양 바꾸기에서도 뺌
+# MediaPipe 깊이는 실제보다 크게 나옴(코가 뾰족·길어졌음) → 모델 깊이에 맞춰 깊이 폭을 줄임(회귀 기울기), --깊이세기 로 더 줄임
+yy_m, yy_t = M3[fitm, 1], T3[fitm, 1]
+slope = np.cov(yy_m, yy_t)[0, 1] / np.var(yy_t) * float(opt("--깊이세기", "0.7"))
+T3[:, 1] = yy_m.mean() + (T3[:, 1] - yy_t.mean()) * slope + (yy_t.mean() - yy_m.mean()) * 0
+print("깊이 폭 배율 %.2f" % slope)
+print("깊이 맞춤에 쓴 점", int(fitm.sum()), "/ 모양 바꿀 점", int(ok.sum()))
+for ids in (LEYE, REYE, lip_ids):
+    ids = [i for i in ids if ok[i]]; T3[ids] = M3[ids] + (T3[ids].mean(0) - M3[ids].mean(0))
+HV = XYZ[MAT == HEAD].reshape(-1, 3); HV = np.unique(np.round(HV, 4), axis=0)
+dmin = np.min(np.linalg.norm(HV[:, None, [0, 2]] - M3[None, ::4, [0, 2]], axis=2), axis=1)
+far = HV[(dmin > 0.03) | (HV[:, 1] > 0.02)]                   # 얼굴에서 먼 곳(뒤통수·귀·목)은 고정
+anc = far[np.random.default_rng(0).choice(len(far), min(400, len(far)), replace=False)]
+dz = (T3 - M3)[ok]
+print("3D 맞춤: 표지점 옮김 평균 %.1fmm, 깊이(앞뒤) 평균 %.1fmm 최대 %.1fmm" % (np.linalg.norm(dz, axis=1).mean() * 1000, np.abs(dz[:, 1]).mean() * 1000, np.abs(dz[:, 1]).max() * 1000))
+np.savez(os.path.join(out_d, "shape_lm.npz"), src=toM(LR), dst=toM(TGT), oval=toM(LR[OVAL]), src3=M3[ok], dst3=T3[ok], anchor=anc)
 vis = bg.copy()
 for x, y in LR: cv2.circle(vis, (int(x), int(y)), 2, (0, 255, 0), -1)
 cv2.imwrite(os.path.join(out_d, "_확인_정면표지점.png"), vis)
@@ -204,6 +235,31 @@ lab[..., 0] = np.minimum(lab[..., 0] * (1 + (BRT - 1) * Lw), 250 - (250 - lab[..
 lab[..., 1:] = 128 + (lab[..., 1:] - 128) * (1 - (1 - SAT) * Lw[..., None])
 outc = cv2.cvtColor(np.clip(lab, 0, 255).astype(np.uint8), cv2.COLOR_LAB2BGR)
 res = tex.copy(); res[..., :3] = np.clip(outc, 0, 255).astype(np.uint8)
+# 입속(이·잇몸·혀: 입술보다 뒤에 있는 세모)은 원래 그림 그대로 — 피부색 옮기기·밝히기로 청회색이 됐었음 (2026-11-27)
+LIP3 = np.zeros((len(lip_ids), 3)); LIP3[:, [0, 2]] = toM(LR[lip_ids]); LIP3[:, 1] = depth[np.clip(LR[lip_ids, 1].astype(int), 0, RES - 1), np.clip(LR[lip_ids, 0].astype(int), 0, RES - 1)]
+LIP3 = LIP3[np.isfinite(LIP3[:, 1])]
+cen = XYZ.mean(1)
+inmouth = (MAT == HEAD) & (np.abs(cen[:, 0] - LIP3[:, 0].mean()) < (np.ptp(LIP3[:, 0]) / 2 + 0.006)) \
+    & (np.abs(cen[:, 2] - LIP3[:, 2].mean()) < 0.03) & (cen[:, 1] > LIP3[:, 1].max() + 0.002)
+hid = np.where(MAT == HEAD)[0]                                  # 그림(UV) 조각 단위로 넓힘: 입속 세모가 하나라도 든 조각은 통째로
+uvk = np.round(UV[hid] * 4096).astype(np.int64); uvk = uvk[..., 0] * 10000 + uvk[..., 1]
+par = {}
+def fnd(x):
+    while par.setdefault(x, x) != x: par[x] = par[par[x]]; x = par[x]
+    return x
+for t in uvk:
+    r0 = fnd(t[0]); par[fnd(t[1])] = r0; par[fnd(t[2])] = r0
+isl = np.array([fnd(t[0]) for t in uvk])
+uq, cnt = np.unique(isl, return_counts=True); big = set(uq[cnt > len(hid) * 0.15])   # 얼굴·머리 큰 조각은 빼고 작은 입속 조각만
+hit = set(isl[inmouth[hid]]) - big
+inmouth[hid] &= ~np.isin(isl, list(big))
+inmouth[hid] |= np.isin(isl, list(hit))
+keep = np.zeros((th, tw), np.uint8)
+for k in np.where(inmouth)[0]:
+    pts = np.stack([UV[k, :, 0] * tw, (1 - UV[k, :, 1]) * th], 1).astype(np.int32); cv2.fillConvexPoly(keep, pts, 1)
+keep = cv2.dilate(keep, np.ones((5, 5), np.uint8)).astype(bool)
+res[keep] = tex[keep]
+print("입속 세모", int(inmouth.sum()), "그림 점", int(keep.sum()), "은 원래대로")
 name = os.path.basename(info["materials"][HEAD]["color"])
 Image.fromarray(res[..., [2, 1, 0, 3]] if has_a else res[..., ::-1].copy()).save(os.path.join(out_d, name))
 cv2.imwrite(os.path.join(out_d, "_확인_얼굴그림.png"), cv2.resize(res[..., :3], (1024, 1024)))
