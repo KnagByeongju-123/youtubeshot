@@ -11,8 +11,8 @@ im = np.array(Image.open(src)); rgb = im[..., :3].astype(np.float32)
 L = cv2.cvtColor(im[..., :3], cv2.COLOR_RGB2LAB)[..., 0].astype(np.float32)
 cool = ((rgb[..., 1] + rgb[..., 2]) / 2 - rgb[..., 0]) if DARK > 0 else None   # 푸른 기(초록·파랑 > 빨강): 피부엔 없음 → 머리카락
 m = np.ones(L.shape, bool) if DARK <= 0 else ((L < DARK) | ((cool > 4) & (L < 130))) & (rgb[..., 0] - rgb[..., 1] < 12)   # 붉은 입속·잇몸은 빼고 (입 벌리면 회색으로 보였음)
-if im.shape[2] == 4: m &= im[..., 3] > 8
-med = np.median(L[m]) + 1e-6
+if im.shape[2] == 4 and DARK > 0: m &= im[..., 3] > 8          # 머리카락 그림(DARK=0)은 투명한 곳 색도 바꿈 — 가장자리에 옛 색(밝은 색)이 비쳐 흰 줄이 보였음
+med = np.median(L[m & (im[..., 3] > 8)] if im.shape[2] == 4 else L[m]) + 1e-6
 new = np.clip(COL * np.clip((L / med) ** CON, 0, 4)[..., None], 0, 255)
 w = m.astype(np.float32) if DARK <= 0 else np.maximum(np.clip((DARK - L) / 20, 0, 1), np.clip((cool - 4) / 8, 0, 1) * (L < 130)) * m
 w = w[..., None]

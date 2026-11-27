@@ -43,7 +43,7 @@ if "--머리" in a:   # 다른 인물의 얼굴·머리카락을 이 인물(몸�
     bpy.context.view_layer.objects.active = head; bpy.ops.object.join()          # 얼굴 쪽 모양 키(입 모양·표정)를 살림
     bpy.data.objects.remove(arm2, do_unlink=True)
     print("머리 합침:", hn, "→ 몸", nm)
-if "--머리카락" in a:   # 다른 인물의 머리카락 조각(재질 2 중 얼굴 뒤·옆 = 중심 y > -0.015)만 가져오고, 지금 머리카락 조각은 뺌 — 속눈썹·이(얼굴 앞)는 그대로 (사용자 2026-11-26 '긴 머리카락으로')
+if "--머리카락" in a:   # [--앞머리포함: 앞머리도 바꿈] 다른 인물의 머리카락 조각(재질 2 중 얼굴 뒤·옆 = 중심 y > -0.015)만 가져오고, 지금 머리카락 조각은 뺌 — 속눈썹·이(얼굴 앞)는 그대로 (사용자 2026-11-26 '긴 머리카락으로')
     import bmesh, mathutils
     hf2 = a[a.index("--머리카락") + 1].rstrip("/"); hn2 = os.path.basename(hf2)
     def hair_parts(o, keep_hair):
@@ -59,7 +59,11 @@ if "--머리카락" in a:   # 다른 인물의 머리카락 조각(재질 2 중 
             mats = {f.material_index for x in comp for f in x.link_faces}
             mat2 = mats == {len(o.material_slots) - 1} or all("opacity" in (o.material_slots[m].material.name if o.material_slots[m].material else "") for m in mats)
             ctr = sum((M_ @ x.co for x in comp), mathutils.Vector()) / len(comp)
-            is_hair = mat2 and len(comp) < 600 and ctr.y > -0.015
+            if "--앞머리포함" in a:   # 앞머리까지 통째로 바꿈 — 속눈썹(눈 높이의 얇은 띠: 높이 폭 3cm 미만)만 남김 (사용자 2026-11-27 '긴 생머리', 원래 옆으로 넘긴 앞머리가 남았음)
+                zs = [(M_ @ x.co).z for x in comp]
+                is_hair = mat2 and len(comp) < 600 and (max(zs) - min(zs) >= 0.03 or ctr.y > -0.015)
+            else:
+                is_hair = mat2 and len(comp) < 600 and ctr.y > -0.015
             if is_hair != keep_hair: kill += comp
         bmesh.ops.delete(bm, geom=list(set(kill)), context="VERTS"); bm.to_mesh(o.data); bm.free()
     body_o = next(o for o in bpy.data.objects if o.type == "MESH")
