@@ -118,15 +118,15 @@ for f in FR:
     hip=P('Hips')
     for s in('L','R'):
         sd=SIDE[s]
-        Tc=V((sd*opt.get('hand_gap',0.085),hip.y-opt.get('hand_front',0.20),hip.z+0.10+0.004*br))   # 두 손을 배 앞에 (사용자 2026-11-27 '손이 겹치거나 몸을 통과하지 않게': 손 사이를 띄우고 배에서 20cm 앞)
+        Tc=V((sd*opt.get('hand_gap',0.10),hip.y-opt.get('hand_front',0.20),hip.z+0.10+0.004*br))   # 두 손을 배 앞에 (사용자 2026-11-27 '손이 겹치거나 몸을 통과하지 않게': 손 사이를 띄우고 배에서 20cm 앞)
         # 소개 팔 = 화면 오른쪽(금형 쪽, x>0) 팔
         if sd>0 and g>0:
             Sh=P('UpperArm.'+s); wob=0.012*math.sin(t*1.6)*g
             Tg=Sh+V((0.40,-0.30,-0.30+wob))
             T=Tc.lerp(Tg,g); pole=V((0.3,0.6,-0.6)).lerp(V((0.0,0.4,-1.0)),g)
-            hd=V((-sd*0.3,-0.4,-0.87)).lerp(V((0.55,-0.55,0.05)),g)
+            hd=V((-sd*0.15,-0.4,-0.9)).lerp(V((0.55,-0.55,0.05)),g)
         else:
-            T=Tc; pole=V((sd*0.3,0.6,-0.6)); hd=V((-sd*0.3,-0.4,-0.87))
+            T=Tc; pole=V((sd*0.3,0.6,-0.6)); hd=V((-sd*0.15,-0.4,-0.9))
         arm(s,T,pole,hd)
     for bn in BONES:
         pb=ar.pose.bones[bn]; pb.keyframe_insert('rotation_quaternion',frame=f); pb.keyframe_insert('location',frame=f)
