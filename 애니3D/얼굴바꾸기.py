@@ -5,7 +5,7 @@
    - 옮긴 머리는 B 뼈대에 묶음: 목 아래쪽은 Neck, 위로 갈수록 Head (--목섞기 z0,z1, B 좌표)
    - 모양 키(MouthOpen·MouthWide·MouthRound·Blink)는 A 것을 그대로 가져감
    사용: .bpy_venv/bin/python -I 애니3D/얼굴바꾸기.py <A.glb> <B.glb> <결과.glb> --자르기 0.625 --턱 0.663,1.508 --코앞 -0.116,-0.072 --배율 0.92
-         [--지우기 1.478] [--지울재질 head] [--지울재질2 opacity] [--지우기2 1.45] [--목섞기 1.48,1.53] [--머리카락아래 0.55] [--옷위 0.06] [--목색 on|off] [--옆자르기 0.655 --옆x 0.06] [--목조이기 0.85] [--조각 3000] [--이음 0.016] [--안으로 on|off] [--목색보정 1.02,1.125,1.18] [--목띠 0.025] [--목걸이 on|off] [--몸색보정 1.08,1.14,1.18] [--목색분석 on] [--깃띠 1.455] [--머리뼈 Head] [--목뼈 Neck]"""
+         [--지우기 1.478] [--지울재질 head] [--지울재질2 opacity] [--지우기2 1.45] [--목섞기 1.48,1.53] [--머리카락아래 0.55] [--옷위 0.06] [--목색 on|off] [--옆자르기 0.655 --옆x 0.06] [--목조이기 0.85] [--조각 3000] [--이음 0.016] [--안으로 on|off] [--목색보정 1.02,1.125,1.18] [--목띠 0.025] [--목걸이 on|off] [--몸색보정 1.08,1.14,1.18] [--목색분석 on] [--목걸이경계 on] [--깃띠 1.455] [--머리뼈 Head] [--목뼈 Neck]"""
 import os, sys
 import bpy, bmesh
 import numpy as np
@@ -32,6 +32,7 @@ FIXCOL = np.array([float(v) for v in opt("--목색보정", "1,1,1").split(",")])
 FEATHER = float(opt("--목띠", "0.025"))     # A 목 아래 이 높이(A 좌표)를 깨끗한 목 색으로 섞음 (0 = 끔)
 NECKLACE = opt("--목걸이", "on") != "off"
 FILLHOLE = opt("--구멍메우기", "on") != "off"
+CHAINSEAM = opt("--목걸이경계", "off") != "off"
 BISECT = opt("--반듯", "on") != "off"
 CLOTHCO = set()
 NECKCY = 0.036
@@ -54,6 +55,47 @@ _mwB = bodyB.matrix_world; _matsB = [m.name.lower() if m else "" for m in bodyB.
 _vB = [_mwB @ v.co for v in bodyB.data.vertices]
 _fB = [list(f.vertices) for f in bodyB.data.polygons if M1 in _matsB[f.material_index] and 1.38 < _vB[f.vertices[0]].z < 1.52 and _vB[f.vertices[0]].y < 0.13]
 neckB = BVHTree.FromPolygons(_vB, _fB) if _fB else None      # A 목 아래 끝을 붙일 B 목 표면
+_ring0 = [p_ for p_ in _vB if 1.43 < p_.z < 1.48 and abs(p_.x) < 0.08 and p_.y < 0.13]
+CY0 = sum(p_.y for p_ in _ring0) / len(_ring0) if _ring0 else 0.036       # B 목 가운데(앞뒤) y
+ZSIDE = CB + (CUT - CA) * S
+CHAIN_X = CHAIN_Z = None
+if CHAINSEAM:
+    # 목걸이 줄을 경계로 (사용자 2026-11-26 '목걸이선을 경계로 결합하는게 낫겠어'): B 그림에서 줄(회색) 점을 찾아 앞쪽 U자 줄의 높이 곡선 z(x)를 만듦
+    _matsB = [m.name.lower() if m else "" for m in bodyB.data.materials]; _mi = next(i for i, m in enumerate(_matsB) if M1 in m)
+    _ims = [n.image for n in bodyB.data.materials[_mi].node_tree.nodes if n.type == "TEX_IMAGE" and n.image]
+    def _skf(im):
+        q = np.empty(im.size[0] * im.size[1] * 4, np.float32); im.pixels.foreach_get(q); q = q.reshape(-1, 4)[::97, :3]
+        return float(((q[:, 0] > q[:, 1]) & (q[:, 1] > q[:, 2])).mean())
+    _im = max(_ims, key=_skf); _W, _H = _im.size; _px = np.empty(_W * _H * 4, np.float32); _im.pixels.foreach_get(_px); _px = _px.reshape(_H, _W, 4)
+    _uv = bodyB.data.uv_layers.active.data; _pts = []
+    for poly in bodyB.data.polygons:
+        if poly.material_index != _mi: continue
+        zz_ = [_vB[i].z for i in poly.vertices]
+        if max(zz_) < 1.40 or min(zz_) > 1.50: continue
+        lis = list(poly.loop_indices)
+        for t_ in range(1, len(lis) - 1):
+            tri = [lis[0], lis[t_], lis[t_ + 1]]
+            uv = np.array([tuple(_uv[li].uv) for li in tri]) * [_W, _H]; xyz = np.array([tuple(_vB[bodyB.data.loops[li].vertex_index]) for li in tri])
+            x0, y0 = np.floor(uv.min(0)).astype(int); x1, y1 = np.ceil(uv.max(0)).astype(int)
+            xs, ys = np.meshgrid(np.arange(x0, x1 + 1), np.arange(y0, y1 + 1)); P = np.stack([xs.ravel() + 0.5, ys.ravel() + 0.5], 1)
+            Tm = np.array([[uv[0, 0] - uv[2, 0], uv[1, 0] - uv[2, 0]], [uv[0, 1] - uv[2, 1], uv[1, 1] - uv[2, 1]]])
+            if abs(np.linalg.det(Tm)) < 1e-12: continue
+            l_ = np.linalg.solve(Tm, (P - uv[2]).T).T; L = np.column_stack([l_, 1 - l_.sum(1)]); ins = (L >= 0).all(1)
+            q = L[ins] @ xyz; pp = P[ins].astype(int); c = _px[pp[:, 1].clip(0, _H - 1), pp[:, 0].clip(0, _W - 1), :3]
+            mx, mn = c.max(1), c.min(1); ok = (mx - mn < 0.10) & (mx < 0.62) & (mx > 0.15) & (q[:, 1] < CY0)
+            _pts += list(q[ok])
+    _pts = np.array(_pts); CHAIN_X = np.arange(-0.064, 0.0641, 0.004); CHAIN_Z = []
+    for x_ in CHAIN_X:
+        s_ = _pts[np.abs(_pts[:, 0] - x_) < 0.003] if len(_pts) else []
+        CHAIN_Z.append(float(np.median(s_[:, 2])) if len(s_) > 5 else np.nan)
+    CHAIN_Z = np.array(CHAIN_Z); ok_ = ~np.isnan(CHAIN_Z)
+    CHAIN_Z = np.interp(CHAIN_X, CHAIN_X[ok_], CHAIN_Z[ok_]); CHAIN_Z = np.convolve(np.pad(CHAIN_Z, 2, mode="edge"), np.ones(5) / 5, "valid")
+    print("목걸이 줄 높이(B):", dict(zip(np.round(CHAIN_X[::4], 3), np.round(CHAIN_Z[::4], 3))))
+
+def ZB(x, y):
+    """B 좌표 (x,y) 에서 1번 목이 끝나는 높이: 앞쪽은 목걸이 줄 가운데, 옆·뒤는 자르기 높이"""
+    if CHAIN_X is None or y > CY0 or abs(x) > CHAIN_X[-1]: return ZSIDE
+    return min(float(np.interp(x, CHAIN_X, CHAIN_Z)), ZSIDE)
 bpy.context.view_layer.update()
 
 # A 머리 조각: 모든 그물(얼굴·몸, 이, 입속)을 세상 좌표로 굳히고 자르기 아래를 지움 → 배율·이동 → B 뼈대에 묶음
@@ -120,7 +162,9 @@ for o in sorted(objsA, key=lambda x: x.name):
         bm.verts.ensure_lookup_table(); bm.verts.index_update()
         hairv = {v.index for v in bm.verts if v.co.z < CUT - 1e-5 and False}   # (머리카락 남기기는 끔: 번호가 바뀜)
         clothv = {v.index for v in bm.verts if v.co.z >= CUT and v.co.z <= max(CUT + CLOTHUP, SIDECUT) and tuple(round(c, 5) for c in v.co) in CLOTHCO}
-    gone = [v for v in bm.verts if (v.co.z < CUT - 1e-5 and v.index not in hairv) or v.index in clothv
+    def _below(co):    # A 좌표 점이 1번 목 끝(B 좌표 ZB)보다 아래인가
+        return (co.z - CA) * S + CB < ZB(co.x * S, co.y * S + NB - NA * S) - 1e-5
+    gone = [v for v in bm.verts if (v.co.z < CUT - 1e-5 and _below(v.co) and v.index not in hairv) or v.index in clothv
             ]   # 단발 끝은 머리카락 색 점만 자름(위 clothv) — 높이만 보고 자르면 목 옆 피부까지 잘려 깃 뒤로 구멍이 났음 (사용자 2026-11-26 '오른쪽 목 옆 구멍')          # 어깨 위 머리카락 끝(바깥으로 말린 곳): B 어깨가 좁아 떠 보여서 단발 끝을 고르게 자름
     bmesh.ops.delete(bm, geom=gone, context="VERTS")
     # 예전에 구멍을 메운 어두운 덧댐(재질 이름 '틈막음')은 목 둘레에 검은 띠로 보였음 → 지움 (사용자 2026-11-26 '목 이음매')
@@ -204,6 +248,7 @@ for o in sorted(objsA, key=lambda x: x.name):
         cy_ = sum(p_.y for p_ in ring) / len(ring) if ring else 0.0
         kb_ = o.data.shape_keys.key_blocks if o.data.shape_keys else []
         for v in o.data.vertices:
+            zb = ZB(v.co.x, v.co.y)
             if v.co.z >= zb + band: continue
             d = _V3((v.co.x, v.co.y - cy_, 0.0))
             if d.length < 1e-6: continue
@@ -248,7 +293,7 @@ if NECKLACE:   # 목걸이 줄 살리기 (사용자 2026-11-26 '목걸이 선을
     for poly in bodyB.data.polygons:
         if poly.material_index != miB: continue
         zs_ = [(mwB_ @ VB[i].co).z for i in poly.vertices]
-        if max(zs_) < ZBOT - 0.01 or min(zs_) > DEL + 0.04: continue
+        if max(zs_) < 1.40 or min(zs_) > DEL + 0.04: continue
         lis = list(poly.loop_indices)
         for t_ in range(1, len(lis) - 1):
             tri = [lis[0], lis[t_], lis[t_ + 1]]
@@ -259,7 +304,7 @@ if NECKLACE:   # 목걸이 줄 살리기 (사용자 2026-11-26 '목걸이 선을
             if abs(np.linalg.det(Tm)) < 1e-12: continue
             l_ = np.linalg.solve(Tm, (P - uv[2]).T).T; L = np.column_stack([l_, 1 - l_.sum(1)]); ins = (L >= 0).all(1)
             q = L[ins] @ xyz; pp = P[ins].astype(int); c = pxB[pp[:, 1].clip(0, HB - 1), pp[:, 0].clip(0, WB - 1), :3]
-            mx, mn = c.max(1), c.min(1); ok = (mx - mn < 0.10) & (mx < 0.62) & (mx > 0.15) & (q[:, 1] < 0.12) & (q[:, 2] > ZBOT + 0.002)
+            mx, mn = c.max(1), c.min(1); ok = (mx - mn < 0.10) & (mx < 0.62) & (mx > 0.15) & (q[:, 1] < 0.12) & (q[:, 2] > min(ZBOT, 1.40) - 0.01)
             chain += [(tuple(q[k]), c[k]) for k in np.where(ok)[0]]
     imA = tex_of(mainA, False); WA, HA = imA.size; pxA = np.empty(WA * HA * 4, np.float32); imA.pixels.foreach_get(pxA); pxA = pxA.reshape(HA, WA, 4)
     uvA = mainA.data.uv_layers.active.data; nA = 0
@@ -267,7 +312,7 @@ if NECKLACE:   # 목걸이 줄 살리기 (사용자 2026-11-26 '목걸이 선을
     from mathutils.geometry import barycentric_transform
     for co_, c in chain:
         hit = bvhA.find_nearest(_V2(co_))
-        if hit[0] is None or hit[3] > 0.006 or hit[0].z < ZBOT + 0.002: continue   # 1번 목 겉면에 닿는 점만 (아래 점이 목 끝 가장자리에 몰려 가로줄이 됐음)
+        if hit[0] is None or hit[3] > 0.004 or hit[0].z < ZB(hit[0].x, hit[0].y) - 0.0005: continue   # 1번 목 겉면에 닿는 점만 (아래 점이 목 끝 가장자리에 몰려 가로줄이 됐음)
         poly = mainA.data.polygons[hit[2]]; vi = list(poly.vertices)[:3]; li = list(poly.loop_indices)[:3]
         P3 = [mainA.data.vertices[i].co for i in vi]; U3 = [_V2((*uvA[k].uv, 0)) for k in li]
         uvp = barycentric_transform(hit[0], P3[0], P3[1], P3[2], U3[0], U3[1], U3[2])
@@ -375,18 +420,18 @@ if PUSHIN:   # 겹친 곳의 B 목을 A 목 안쪽으로 밀어 넣음 → 틈 �
     # 목 가운데 축에서 바깥으로 같은 높이의 A 겉면을 찾아(광선) 그보다 3mm 안쪽으로 (A 목 끝 바로 아래 3mm 도 — 경계 위로 물결처럼 튀어나왔음)
     from mathutils import Vector as _V
     mi = next(i for i, m in enumerate(mats) if M1 in m); inv = mw.inverted(); n_ = 0
-    vs = [v for v in {v for f in bm.faces if f.material_index == mi for v in f.verts} if (mw @ v.co).z > ZBOT - 0.001]
+    vs = [v for v in {v for f in bm.faces if f.material_index == mi for v in f.verts} if (mw @ v.co).z > min(ZBOT, ZB((mw @ v.co).x, (mw @ v.co).y)) - 0.001]
     if vs:
         cy = sum((mw @ v.co).y for v in vs) / len(vs)
         for v in vs:
-            p = mw @ v.co; zz = max(p.z, ZBOT + 0.0015)
+            p = mw @ v.co; zbl = ZB(p.x, p.y); zz = max(p.z, zbl + 0.0015)
             d = _V((p.x, p.y - cy, 0.0))
             if d.length < 1e-6: continue
             d.normalize(); hit = bvhA.ray_cast(_V((0.0, cy, zz)), d, 0.2)
             if hit[0] is None: continue
             rA = (hit[0] - _V((0.0, cy, zz))).length; rB = _V((p.x, p.y - cy, 0)).length
-            if p.z < ZBOT + 0.6 * SNAP * S: continue        # 1번 목 끝 띠(2번 겉면에 맞춘 곳)의 2번 목은 그대로 — 넣으면 접혀서 검은 줄
-            dep = 0.003
+            if p.z < zbl + (0.001 if CHAINSEAM and zbl < ZSIDE - 1e-4 else 0.6 * SNAP * S): continue   # 목걸이 경계 앞쪽은 줄이 이음매를 덮으니 바로 위부터 안으로        # 1번 목 끝 띠(2번 겉면에 맞춘 곳)의 2번 목은 그대로 — 넣으면 접혀서 검은 줄
+            dep = 0.004
             if rB > rA - dep:
                 k = (rA - dep) / rB; p.x *= k; p.y = cy + (p.y - cy) * k; v.co = inv @ p; n_ += 1
     print("B 목 안으로 넣은 점", n_)
