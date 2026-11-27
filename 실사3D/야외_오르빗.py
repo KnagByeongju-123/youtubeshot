@@ -1061,7 +1061,7 @@ def head_move(i):
         pb.matrix = mathutils.Matrix.Translation(pb.head) @ R_ @ mathutils.Matrix.Translation(-pb.head) @ pb.matrix
         bpy.context.view_layer.update()
 EXPR = [(kv.split('=')[0], float(kv.split('=')[1])) for kv in a[a.index('--표정') + 1].split(',')] if '--표정' in a else []
-PUCK = [float(v) for v in (a[a.index('--내밀기') + 1] if '--내밀기' in a else '0.85,0.8,0.6').split(',')]   # ㅜ 오므림 세기: LipPuckerer, LipFunneler, MouthPucker
+PUCK = [float(v) for v in (a[a.index('--내밀기') + 1] if '--내밀기' in a else '0.75,0.5,0.9').split(',')]   # ㅜ 오므림 세기: LipPuckerer, LipFunneler, MouthPucker
 VISEME = '--입방식' in a and a[a.index('--입방식') + 1] == '15'      # --입방식 15 : Rocketbox 15가지 입 모양(AA_VI_*)
 MOUTH_SCALE = float(a[a.index('--입세기') + 1]) if '--입세기' in a else 1.0     # Rocketbox 는 '아' 입이 커서 O 자로 벌어졌음 (사용자 2026-11-26 '입 벌림 작게')
 def face(i):
