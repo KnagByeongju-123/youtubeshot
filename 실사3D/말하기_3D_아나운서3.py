@@ -103,30 +103,51 @@ reset()
 SIDE={s:(1 if P('UpperArm.'+s).x>0 else -1) for s in('L','R')}
 HIP=P('Hips'); CH=P('Chest') if 'Chest' in ar.pose.bones else P('Spine1')
 BONES=[b.name for b in ar.pose.bones if b.name in('Hips','Spine','Spine1','Chest','Neck','Head') or b.name.split('.')[0] in('Shoulder','UpperArm','ForeArm','Hand')]
-GEST=opt.get('gestures',[[9.9,17.0]]); RP=opt.get('gesture_ramp',1.2)
+# 동작 순서 (사용자 2026-11-27 '동일한 자세는 가급적 자제'): [시작초, 끝초, 자세] — 자세 사이는 RP초 동안 부드럽게 넘어감
+#   rest=손 모음, rest2=조금 낮고 넓게 모음, present=금형 쪽(화면 오른쪽) 팔로 소개, beat=반대 손을 가슴 앞으로 올려 손바닥 보이며 강조, open=두 손을 바깥으로 펼침
+TL=opt.get('timeline',[[0,2.0,'rest2'],[2.0,9.3,'rest'],[9.9,17.0,'present'],[18.9,21.6,'beat'],[22.2,25.8,'rest2'],[27.1,29.6,'open'],[30.0,40,'rest']])
+BOW=opt.get('bows',[[2.0,3.1,8],[7.3,8.4,5],[31.6,33.0,9]])   # [시작, 끝, 숙이는 각도] 인사
+RP=opt.get('ramp',0.7)
+def sm(x): x=min(1.0,max(0.0,x)); return x*x*(3-2*x)
+def weights(t):
+    w={}
+    for a_,b_,nm in TL:
+        v=sm(min((t-a_)/RP+1,(b_-t)/RP+1)) if a_-RP<=t<=b_+RP else 0.0     # 앞뒤로 RP초씩 겹치며 넘어감
+        w[nm]=max(w.get(nm,0.0),v)
+    tot=sum(w.values())
+    if tot<1e-6: return {'rest':1.0}
+    return {k:v/tot for k,v in w.items() if v>0}
+def pose(nm,s,sd,hip,t,br):
+    """자세 이름 → (손목 자리, 팔꿈치 방향, 손끝 방향)"""
+    Sh=P('UpperArm.'+s)
+    rest=(V((sd*0.10,hip.y-0.20,hip.z+0.10+0.004*br)),V((sd*0.3,0.6,-0.6)),V((-sd*0.15,-0.4,-0.9)))
+    if nm=='rest': return rest
+    if nm=='rest2': return (V((sd*0.13,hip.y-0.19,hip.z+0.05+0.004*br)),V((sd*0.35,0.6,-0.6)),V((-sd*0.1,-0.35,-0.93)))
+    if nm=='present':
+        if sd>0: return (Sh+V((0.40,-0.30,-0.30+0.012*math.sin(t*1.6))),V((0.0,0.4,-1.0)),V((0.55,-0.55,0.05)))
+        return rest
+    if nm=='beat':       # 금형 반대쪽 손을 가슴 앞으로 (손바닥 위)
+        if sd<0: return (Sh+V((0.12,-0.32,-0.22+0.015*math.sin(t*2.4))),V((-0.4,0.3,-1.0)),V((0.25,-0.85,0.25)))
+        return rest
+    if nm=='open':       # 두 손을 바깥으로 펼쳐 맞이함
+        return (V((sd*0.26,hip.y-0.24,hip.z+0.16)),V((sd*0.2,0.3,-1.0)),V((sd*0.55,-0.6,0.1)))
+    return rest
 FR=[opt['still']] if opt.get('still') else range(opt.get('from',1),opt.get('to',N)+1)   # 찍을 프레임만 자세 계산
 for f in FR:
     t=(f-1)/FPS; reset()
     br=0.5-0.5*math.cos(2*math.pi*t/4.2)
-    g=0.0
-    for g0,g1 in GEST: g=max(g,min(1.0,max(0.0,(t-g0)/RP),max(0.0,(g1-t)/RP)))
-    g=g*g*(3-2*g)
-    # 몸: 천천히 몸무게 옮기듯 + 소개할 때 금형 쪽으로 몸을 조금 돌림
-    rotw('Spine',(0,0,1),1.0*math.sin(t*0.5)+7*g); rotw('Spine',(0,1,0),0.8*math.sin(t*0.37+1))
-    rotw('Chest' if 'Chest' in ar.pose.bones else 'Spine1',(1,0,0),0.6*br)
-    rotw('Head',(1,0,0),1.2*math.sin(t*1.9)+0.6*math.sin(t*3.1)); rotw('Head',(0,0,1),1.0*math.sin(t*0.9)-4*g); rotw('Head',(0,1,0),1.0*math.sin(t*0.7))
+    W=weights(t); g=W.get('present',0.0); op=W.get('open',0.0)
+    bow=sum(d_*sm(min((t-a_)/0.45,(b_-t)/0.45)) for a_,b_,d_ in BOW if a_<=t<=b_)
+    # 몸: 천천히 몸무게 옮기듯 + 소개할 때 금형 쪽으로 몸을 조금 돌림 + 인사
+    rotw('Spine',(0,0,1),1.0*math.sin(t*0.5)+7*g-2*W.get('beat',0)); rotw('Spine',(0,1,0),0.8*math.sin(t*0.37+1))
+    rotw('Spine',(1,0,0),0.55*bow)
+    rotw('Chest' if 'Chest' in ar.pose.bones else 'Spine1',(1,0,0),0.6*br+0.3*bow-1.5*op)
+    rotw('Head',(1,0,0),1.2*math.sin(t*1.9)+0.6*math.sin(t*3.1)+0.4*bow); rotw('Head',(0,0,1),1.0*math.sin(t*0.9)-4*g); rotw('Head',(0,1,0),1.0*math.sin(t*0.7)+2.5*W.get('beat',0))
     hip=P('Hips')
     for s in('L','R'):
-        sd=SIDE[s]
-        Tc=V((sd*opt.get('hand_gap',0.10),hip.y-opt.get('hand_front',0.20),hip.z+0.10+0.004*br))   # 두 손을 배 앞에 (사용자 2026-11-27 '손이 겹치거나 몸을 통과하지 않게': 손 사이를 띄우고 배에서 20cm 앞)
-        # 소개 팔 = 화면 오른쪽(금형 쪽, x>0) 팔
-        if sd>0 and g>0:
-            Sh=P('UpperArm.'+s); wob=0.012*math.sin(t*1.6)*g
-            Tg=Sh+V((0.40,-0.30,-0.30+wob))
-            T=Tc.lerp(Tg,g); pole=V((0.3,0.6,-0.6)).lerp(V((0.0,0.4,-1.0)),g)
-            hd=V((-sd*0.15,-0.4,-0.9)).lerp(V((0.55,-0.55,0.05)),g)
-        else:
-            T=Tc; pole=V((sd*0.3,0.6,-0.6)); hd=V((-sd*0.15,-0.4,-0.9))
+        sd=SIDE[s]; T=V((0,0,0)); pole=V((0,0,0)); hd=V((0,0,0))
+        for nm,wt in W.items():
+            a_,b_,c_=pose(nm,s,sd,hip,t,br); T+=a_*wt; pole+=b_*wt; hd+=c_*wt
         arm(s,T,pole,hd)
     for bn in BONES:
         pb=ar.pose.bones[bn]; pb.keyframe_insert('rotation_quaternion',frame=f); pb.keyframe_insert('location',frame=f)
@@ -147,6 +168,18 @@ tg=bpy.data.objects.new("t",None); sc.collection.objects.link(tg); tg.location=(
 c=cam.constraints.new('TRACK_TO'); c.target=tg; c.track_axis='TRACK_NEGATIVE_Z'; c.up_axis='UP_Y'; cam.location=(0,-3.1,0)
 if opt.get('view')=='side': cam.location=(3.1,0,0)      # 검수용: 옆에서 (손이 몸을 뚫는지)
 if opt.get('view')=='top': cam.location=(0,-0.6,3.0)     # 검수용: 위에서 (두 손이 겹치는지)
+# 카메라 오르빗 (사용자 2026-11-27 '게임 카메라 무빙'): orbit=[[초,각도],...] — 카메라·조명이 함께 아나운서 둘레를 돎(+ = 화면 오른쪽에서 보는 쪽)
+#   이어지는 두 점 사이는 부드럽게(시작·끝 느리게) → 짧은 구간 = 빠른 휙, 긴 구간 = 천천히
+ORB=opt.get('orbit')
+if ORB:
+    pv=bpy.data.objects.new("돌림축",None); sc.collection.objects.link(pv)
+    for x in [cam]+[l for l in sc.objects if l.type=='LIGHT']:
+        x.parent=pv
+    for f in range(1,N+1):
+        t=(f-1)/FPS; a_=ORB[0][1]
+        for (t0,d0),(t1,d1) in zip(ORB[:-1],ORB[1:]):
+            if t>=t0: u=min(1.0,(t-t0)/max(t1-t0,1e-6)); u=u*u*(3-2*u); a_=d0+(d1-d0)*u
+        pv.rotation_euler=(0,0,math.radians(a_)); pv.keyframe_insert('rotation_euler',frame=f)
 sc.render.engine='CYCLES'; sc.cycles.device='CPU'; sc.cycles.samples=opt.get('samples',16); sc.cycles.use_denoising=True
 sc.view_settings.view_transform='Standard'
 sc.render.resolution_x,sc.render.resolution_y=map(int,opt.get('size','640x800').split('x'))
