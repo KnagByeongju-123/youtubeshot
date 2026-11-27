@@ -3,7 +3,7 @@
          ③ 사진을 표지점끼리 맞도록 휘어(조각별 아핀) 정면 그림 자리로 옮김 ④ 얼굴 그림의 점(텍셀)마다 3D 자리 → 정면 화면 자리에서 사진 색을 가져와
          얼굴 윤곽 안쪽만 부드럽게 섞음(눈 안·입 안·머리카락에 가려진 곳·옆을 향한 곳은 원래 그림) ⑤ 나머지 피부색은 사진 피부색 쪽으로 옮겨 이음매를 줄임
    먼저: .bpy_venv/bin/python -I 애니3D/rocketbox_얼굴정보.py <인물 폴더> <정보폴더>
-   사용: <mediapipe 가 있는 파이썬> 애니3D/사진얼굴입히기.py <사진> <정보폴더> <출력 그림폴더> [--크기 1024] [--위자르기 0.18] [--피부맞춤 1.0] [--섞기폭 0.06] [--눈꺼풀 1.3] [--옆줄이기 0.9] [--밝기 1.25] [--채도 1.0] [--깊이세기 0.7] [--이마늘리기 0.35 --위자르기 0]
+   사용: <mediapipe 가 있는 파이썬> 애니3D/사진얼굴입히기.py <사진> <정보폴더> <출력 그림폴더> [--크기 1024] [--위자르기 0.18] [--피부맞춤 1.0] [--섞기폭 0.06] [--눈꺼풀 1.3] [--옆줄이기 0.9] [--밝기 1.25] [--채도 1.0] [--깊이세기 0.7] [--이마늘리기 0.35 --위자르기 0] [--가장자리 0.6] [--그린속눈썹]
    결과: <출력 그림폴더>/<원래 이름>_head_color.tga (rocketbox_변환.py --그림폴더 로 씀) + 확인 그림 _확인_*.png"""
 import os, sys, json
 import numpy as np, cv2
@@ -195,6 +195,13 @@ for poly in (LEYE, REYE):                     # 눈: 위 눈꺼풀(쌍꺼풀 선
     cv2.fillPoly(hole, [cv2.convexHull(Q.astype(np.int32))], 255)
 hole = cv2.dilate(hole, np.ones((5, 5), np.uint8))
 hole[cv2.dilate(brow_z, np.ones((3, 3), np.uint8)) > 0] = 0          # 눈썹 칸은 꼭 사진 (눈꺼풀 칸과 겹쳐도)
+rim_z = np.zeros((RES, RES), np.uint8)       # 윗눈꺼풀 가장자리 띠: 원래 그림에 그려진 속눈썹 — 눈 감을 때 늘어나 빗살 무늬 (2026-11-27 '속눈썹은 정상이야?')
+for poly in (LEYE, REYE):
+    P = LR[poly]; up = P[:, 1] < P[:, 1].mean(); eh = np.ptp(P[:, 1])
+    U = P[up][np.argsort(P[up][:, 0])]
+    top = U.copy(); top[:, 1] -= eh * float(opt("--가장자리", "0.45"))
+    bot = U.copy(); bot[:, 1] += eh * 0.05
+    cv2.fillPoly(rim_z, [np.vstack([top, bot[::-1]]).astype(np.int32)], 1)
 lid = hole.copy(); cv2.fillPoly(lid, [LR[INNER_LIP].astype(np.int32)], 0)
 for poly in (LEYE, REYE): cv2.fillPoly(lid, [LR[poly].astype(np.int32)], 0)
 lid = cv2.GaussianBlur(cv2.dilate(lid, np.ones((9, 9), np.uint8)).astype(np.float32) / 255, (15, 15), 0)   # 눈꺼풀(원래 그림을 쓰는 곳): 화장 색을 피부색으로
@@ -218,7 +225,7 @@ th, tw = tex.shape[:2]
 lab = cv2.cvtColor(tex[..., :3], cv2.COLOR_BGR2LAB).astype(np.float32)
 lab += shift
 base = cv2.cvtColor(np.clip(lab, 0, 255).astype(np.uint8), cv2.COLOR_LAB2BGR).astype(np.float32)
-browt = np.zeros((th, tw), np.uint8); lidw = np.zeros((th, tw)); acc = np.zeros((th, tw)); col = np.zeros((th, tw, 3))
+rimt = np.zeros((th, tw), np.uint8); browt = np.zeros((th, tw), np.uint8); lidw = np.zeros((th, tw)); acc = np.zeros((th, tw)); col = np.zeros((th, tw, 3))
 FN = np.cross(XYZ[:, 1] - XYZ[:, 0], XYZ[:, 2] - XYZ[:, 0])            # 면 법선(넓이 무게)
 key = np.round(XYZ.reshape(-1, 3) * 2000).astype(np.int64)             # 같은 자리 점끼리 법선을 평균 → 부드러운 법선(각진 경계 없앰)
 _, inv = np.unique(key, axis=0, return_inverse=True); inv = inv.ravel()
@@ -243,6 +250,7 @@ for k in np.where(MAT == HEAD)[0]:
     acc[yy, xx] = wgt; col[yy, xx] = c
     lidw[yy, xx] = lid[iy, ix] * seen
     browt[yy, xx] = np.maximum(browt[yy, xx], brow_e[iy, ix] * seen)
+    rimt[yy, xx] = np.maximum(rimt[yy, xx], rim_z[iy, ix] * seen)
 # 그림 조각 가장자리에서 원래 색이 비치지 않게 칠한 곳을 3칸 넓힘
 for _ in range(3):
     grow = (acc == 0)
@@ -266,6 +274,14 @@ if "--원래눈썹" not in a and browt.any():                       # 원래 눈
     soft_b = cv2.GaussianBlur(bm_.astype(np.float32), (0, 0), 4)[..., None]
     base = base * (1 - soft_b) + (fillc + grain * 0.5) * soft_b
     print("원래 눈썹 지움: 그림 점", int(bm_.sum()))
+if "--그린속눈썹" not in a and rimt.any():                        # 그려진 속눈썹(가장자리 띠 안의 어두운 점) 지우기
+    Lr = cv2.cvtColor(np.clip(base, 0, 255).astype(np.uint8), cv2.COLOR_BGR2LAB)[..., 0].astype(np.float32)
+    rz = cv2.dilate(rimt, np.ones((5, 5), np.uint8)).astype(bool)
+    brightL = cv2.dilate(Lr, np.ones((17, 17)))
+    dk = (rz & (Lr < brightL - 22) & (Lr < 120)).astype(np.uint8)
+    dk = cv2.dilate(dk, np.ones((3, 3), np.uint8))
+    base = cv2.inpaint(np.clip(base, 0, 255).astype(np.uint8), dk, 5, cv2.INPAINT_TELEA).astype(np.float32)
+    print("그려진 속눈썹 지움: 그림 점", int(dk.sum()), "(띠", int(rz.sum()), ")")
 lidw = cv2.GaussianBlur(cv2.dilate(lidw, np.ones((5, 5))), (9, 9), 0)
 blab = cv2.cvtColor(np.clip(base, 0, 255).astype(np.uint8), cv2.COLOR_BGR2LAB).astype(np.float32)
 blab[..., 1:] = blab[..., 1:] * (1 - lidw[..., None]) + mp_[1:] * lidw[..., None]        # 눈꺼풀 화장(보라·분홍) → 사진 피부의 색조
