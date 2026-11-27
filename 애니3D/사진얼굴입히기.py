@@ -3,7 +3,7 @@
          ③ 사진을 표지점끼리 맞도록 휘어(조각별 아핀) 정면 그림 자리로 옮김 ④ 얼굴 그림의 점(텍셀)마다 3D 자리 → 정면 화면 자리에서 사진 색을 가져와
          얼굴 윤곽 안쪽만 부드럽게 섞음(눈 안·입 안·머리카락에 가려진 곳·옆을 향한 곳은 원래 그림) ⑤ 나머지 피부색은 사진 피부색 쪽으로 옮겨 이음매를 줄임
    먼저: .bpy_venv/bin/python -I 애니3D/rocketbox_얼굴정보.py <인물 폴더> <정보폴더>
-   사용: <mediapipe 가 있는 파이썬> 애니3D/사진얼굴입히기.py <사진> <정보폴더> <출력 그림폴더> [--크기 1024] [--위자르기 0.18] [--피부맞춤 1.0] [--섞기폭 0.06] [--눈꺼풀 1.3] [--옆줄이기 0.9] [--밝기 1.25] [--채도 1.0] [--깊이세기 0.7]
+   사용: <mediapipe 가 있는 파이썬> 애니3D/사진얼굴입히기.py <사진> <정보폴더> <출력 그림폴더> [--크기 1024] [--위자르기 0.18] [--피부맞춤 1.0] [--섞기폭 0.06] [--눈꺼풀 1.3] [--옆줄이기 0.9] [--밝기 1.25] [--채도 1.0] [--깊이세기 0.7] [--이마늘리기 0.35 --위자르기 0]
    결과: <출력 그림폴더>/<원래 이름>_head_color.tga (rocketbox_변환.py --그림폴더 로 씀) + 확인 그림 _확인_*.png"""
 import os, sys, json
 import numpy as np, cv2
@@ -150,7 +150,15 @@ for x, y in LR: cv2.circle(vis, (int(x), int(y)), 2, (0, 255, 0), -1)
 cv2.imwrite(os.path.join(out_d, "_확인_정면표지점.png"), vis)
 
 # ---------- ③ 사진을 정면 그림 자리로 휘기 ----------
-tf = PiecewiseAffineTransform(); tf.estimate(LR, LP)            # 정면 그림 자리 → 사진 자리
+EXT = float(opt("--이마늘리기", "0"))     # 0.35 등: 얼굴 윤곽 위쪽(눈썹 위) 점을 바깥으로 늘린 점을 더해 이마 위·머리선(가르마)까지 사진으로 (사용자 2026-11-27 '가르마' — 원래 그림의 옆 앞머리가 이마에 그려져 있었음)
+LRw, LPw = LR, LP
+if EXT > 0:
+    ey = LR[[33, 263], 1].mean()
+    top_ids = [i for i in OVAL if LR[i, 1] < ey]
+    cR, cP = LR[OVAL].mean(0), LP[OVAL].mean(0)
+    xR = LR[top_ids] + (LR[top_ids] - cR) * EXT; xP = LP[top_ids] + (LP[top_ids] - cP) * EXT
+    LRw, LPw = np.vstack([LR, xR]), np.vstack([LP, xP])
+tf = PiecewiseAffineTransform(); tf.estimate(LRw, LPw)          # 정면 그림 자리 → 사진 자리
 warped = warp(photo[..., ::-1] / 255.0, tf, output_shape=(RES, RES), order=1, mode="constant", cval=-1)
 valid = warped[..., 0] >= 0
 warped = (np.clip(warped, 0, 1)[..., ::-1] * 255).astype(np.uint8)
@@ -160,7 +168,9 @@ face_w = LR[:, 0].max() - LR[:, 0].min()
 mask = np.zeros((RES, RES), np.uint8)
 ovc = LR[OVAL].mean(0); ovp = LR[OVAL].copy(); ovp[:, 0] = ovc[0] + (ovp[:, 0] - ovc[0]) * float(opt("--옆줄이기", "0.9"))   # 사진 얼굴 가장자리의 머리카락이 볼에 묻지 않게
 cv2.fillPoly(mask, [ovp.astype(np.int32)], 255)
-ytop, ybot = LR[OVAL, 1].min(), LR[OVAL, 1].max()
+if EXT > 0:   # 늘린 이마 칸도 섞음 (윤곽 위쪽 점들과 늘린 점들 사이)
+    cv2.fillPoly(mask, [cv2.convexHull(np.vstack([LR[top_ids], xR]).astype(np.int32))], 255)
+ytop, ybot = (min(LR[OVAL, 1].min(), xR[:, 1].min()) if EXT > 0 else LR[OVAL, 1].min()), LR[OVAL, 1].max()
 mask[: int(ytop + (ybot - ytop) * TOPCUT)] = 0
 hole = np.zeros_like(mask)
 cv2.fillPoly(hole, [LR[INNER_LIP].astype(np.int32)], 255)
