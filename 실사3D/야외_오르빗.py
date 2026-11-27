@@ -788,6 +788,8 @@ if (WALK or DANCE or SIP) and arm is not None:
     ROOT0 = {r.name: r.matrix_world.copy() for r in roots}
     sm2_ = lambda u: u * u * (3 - 2 * u)
     GEORGIA = "--조지아" in a      # 조지아 여성 전통무용 느낌(사용자 2026-11-26 샘플): 꼿꼿한 몸·잔걸음으로 원을 그리며 미끄러지듯, 한 팔 위로 둥글게·한 팔 옆으로, 손목을 굴림
+    VAINAKH = "--니이사르호" in a
+    if VAINAKH and "--조지아" not in a: a.append("--조지아")
     GR = float(a[a.index("--조지아") + 1]) if "--조지아" in a and a.index("--조지아") + 1 < len(a) and a[a.index("--조지아") + 1][0].isdigit() else 0.45   # 원 반지름(m)
     def georgia(i):
         t = i / 24.0; t0 = 0.3
@@ -801,7 +803,7 @@ if (WALK or DANCE or SIP) and arm is not None:
         step = 0.006 * (0.5 - 0.5 * math.cos(2 * math.pi * 3.0 * tt)) * on
         hp = PB["Hips"]; hp.matrix = mathutils.Matrix.Translation(M3i @ mathutils.Vector((0, 0, -step))) @ hp.matrix; bpy.context.view_layer.update()
         if "Chest" in PB: rot_world("Chest", (1, 0, 0), -0.04 * on)
-        if "Head" in PB: rot_world("Head", (1, 0, 0), -0.03 * on); rot_world("Head", (0, 1, 0), 0.06 * math.sin(2 * math.pi * tt / 6) * on)
+        if "Head" in PB: rot_world("Head", (1, 0, 0), (0.14 if VAINAKH else -0.03) * on); rot_world("Head", (0, 1, 0), 0.06 * math.sin(2 * math.pi * tt / 6) * on)   # 니이사르호: 고개를 살짝 숙여 눈을 내리깖
         # 발: 번갈아 아주 조금 듦 (치마 아래 잔걸음, 초당 3번)
         for k, sd in enumerate(("L", "R")):
             g = leg[sd]; H = MW @ PB[f"UpperLeg.{sd}"].head
@@ -819,6 +821,9 @@ if (WALK or DANCE or SIP) and arm is not None:
         V = mathutils.Vector
         cyc = tt / 4.5; k_ = int(cyc); fr = cyc - k_; bl = sm2_(min(1.0, max(0.0, (fr - 0.73) / 0.27)))
         def dirs(high, sgn):
+            if VAINAKH:      # 니이사르호(체첸·인구시 여성 춤, 사용자 캡처 2026-11-27): 한 팔은 어깨 높이로 앞쪽 옆, 팔꿈치 살짝 굽힘 / 다른 팔은 옆으로 조금 벌려 아래로
+                if high: return V((sgn * 0.70, -0.60, -0.12)), V((-sgn * 0.05, -0.93, 0.30))   # 위팔은 옆·앞으로 조금 아래, 아래팔은 안쪽 앞으로 살짝 올려 팔꿈치가 굽게 (곧게 뻗으면 가리키는 듯 뻣뻣했음)
+                return V((sgn * 0.32, -0.08, -0.94)), V((sgn * 0.22, -0.40, -0.89))
             if high: return V((sgn * 0.62, -0.22, 0.75)), V((-sgn * 0.88, -0.18, 0.40))   # 팔꿈치를 굽혀 머리 위로 둥글게 감쌈 (곧게 뻗으면 체조 같았음)
             return V((sgn * 0.95, -0.22, 0.05)), V((sgn * 0.85, -0.42, 0.30))             # 옆으로, 앞으로 살짝 휘게
         for sd in ("L", "R"):
@@ -838,6 +843,10 @@ if (WALK or DANCE or SIP) and arm is not None:
         if on > 0:
             pos = mathutils.Vector((GR * math.sin(th), -GR * math.cos(th) + GR, 0)) * 1.0
             Rz = mathutils.Matrix.Rotation(th, 4, "Z")
+            if VAINAKH:   # 앞(보는 사람·상대)을 보며 좌우로 미끄러지듯 오가고, 몸은 가는 쪽으로 살짝(±25°)만 돎
+                w_ = 2 * math.pi * tt / 8.0
+                pos = mathutils.Vector((0.40 * math.sin(w_) * on, 0.10 * (1 - math.cos(w_)) * on, 0))
+                Rz = mathutils.Matrix.Rotation(0.45 * math.cos(w_) * on, 4, "Z")
             for r in roots: r.matrix_world = mathutils.Matrix.Translation(pos) @ Rz @ ROOT0[r.name]
             bpy.context.view_layer.update()
         return mathutils.Vector((0, 0, 0))
