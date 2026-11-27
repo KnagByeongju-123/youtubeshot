@@ -180,6 +180,7 @@ POINT_SIDE = a[a.index('--가리킬손') + 1] if '--가리킬손' in a else 'R'
 WRAP = float(a[a.index('--감싸기') + 1]) if '--감싸기' in a else 0.42; CUP_GRIP = a[a.index('--컵잡기') + 1] if '--컵잡기' in a else '한손'; WRAP1 = float(a[a.index('--한손감싸기') + 1]) if '--한손감싸기' in a else 0.55; CUP_MID = 0.12; CUP_UP = -0.035; CUP_SIDE = 'R'; SEAT_H = float(a[a.index('--의자높이') + 1]) if '--의자높이' in a else 0.46; CAFE_DY = 0.0                          # 커피: 컵 든 손, 의자 앉는 판 높이(m)   # 가리키기: 어느 손으로 (R/L)
 ARMUP = float(a[a.index('--팔높이') + 1]) if '--팔높이' in a else 0.0   # 팔벌려: 0 = 수평, -0.3 = 살짝 아래
 HAND_S = float(a[a.index('--손굵기') + 1]) if '--손굵기' in a else 1.0     # 손 굵기는 모델에서 직접 가늘게 함(glb_손가늘게.py) — 뼈 크기로 줄이면 손가락 틈이 벌어졌음
+TIP_GAP = float(a[a.index('--손끝간격') + 1]) if '--손끝간격' in a else 0.012   # '모음' 자세: 두 가운뎃손가락 끝 뼈 사이 거리(m) — 손가락 살 두께만큼 남겨 맞닿게
 MIC_F = (0.30, 0.45, 0.85); MIC_CURL = 1.25; FIST = float(a[a.index('--주먹') + 1]) if '--주먹' in a else 0.32   # 주먹 = 마디마다 굽힘(라디안)
 CH_U, CH_F = (float(v) for v in (a[a.index('--팔벌림') + 1] if '--팔벌림' in a else '0.12,0.10').split(','))   # 차렷 팔이 몸에서 떨어진 정도(위팔,아래팔)
 arm = next((o for o in objs if o.type == "ARMATURE"), None)
@@ -344,6 +345,25 @@ if arm is not None and "--자세없음" not in a:
         hpb = next((arm.pose.bones[n] for n in hb if n in arm.pose.bones), None)
         if hpb is not None and HAND_S != 1:                    # 손이 너무 굵다는 지적(2026-11-23) → 손 두께·폭만 줄임(뼈 길이 방향 y 는 조금만)
             hpb.scale = (HAND_S, 0.5 + 0.5 * HAND_S, HAND_S)
+    if POSE == '모음' and B("Middle3.L") is not None and B("Middle3.R") is not None:
+        # 손끝이 닿게 (사용자 2026-11-27: 손을 88%로 줄인 뒤 두 손끝이 떨어짐) — 아래팔을 안쪽으로 얼마나 돌릴지(k)를 반씩 좁혀 찾음
+        def tip_gap(k):
+            for sd in ("L", "R"):
+                ub_ = B(f"UpperArm.{sd}"); sg = 1 if (MW @ ub_.head).x > 0 else -1
+                aim_bone([f"ForeArm.{sd}"], (-sg * k, -0.72, -0.30), [f"Hand.{sd}"])
+            bpy.context.view_layer.update()
+            def tip(sd):                                       # 손끝 = 끝 마디 머리 + 앞 마디 길이의 0.8 (뼈 꼬리 방향은 믿지 않음)
+                h3, h2 = MW @ B(f"Middle3.{sd}").head, MW @ B(f"Middle2.{sd}").head; return h3 + (h3 - h2) * 0.8
+            sL = 1 if (MW @ B("UpperArm.L").head).x > 0 else -1
+            return (tip("L").x - tip("R").x) * sL                  # + = 떨어짐, - = 겹침
+        lo, hi = 0.62, 1.4; g0 = tip_gap(lo)
+        if g0 > TIP_GAP:
+            for _ in range(14):
+                mid = (lo + hi) / 2
+                if tip_gap(mid) > TIP_GAP: lo = mid
+                else: hi = mid
+            print("모음: 손끝 간격", round(g0, 3), "→", round(tip_gap(lo), 3), "m (아래팔 안쪽", round(lo, 3), ")")
+        else: tip_gap(lo)
     # 무선 마이크: 손 안(손바닥 쪽)에 세워 쥐고, 머리(공 모양 망)는 입 쪽으로
     if mic_hand:
         bpy.context.view_layer.update(); bpy.ops.object.mode_set(mode="OBJECT")
@@ -676,12 +696,15 @@ def place(i, who=None):
 #   발 자리를 시간마다 정하고(오른발 → 왼발 → 오른발을 모음), 골반은 두 발 가운데, 다리는 두 마디 IK(무릎은 앞으로), 발은 바닥과 평평하게.
 #   팔은 걷는 동안 반대쪽 다리와 함께 앞뒤로 조금 흔듦
 WALK = "--걷기" in a
+BOW = "--인사" in a         # 고개 숙여 인사: 허리부터 앞으로 숙였다가 폄 (사용자 2026-11-27 '머리숙여 인사하는 영상, 안녕하세요') — --인사 <숙이기 시작 초> [--인사각 30]
+BOW_T = float(a[a.index("--인사") + 1]) if BOW and a.index("--인사") + 1 < len(a) and a[a.index("--인사") + 1].replace(".", "", 1).isdigit() else 1.7
+BOW_A = math.radians(float(a[a.index("--인사각") + 1]) if "--인사각" in a else 30.0)
 SIP = "--마시기" in a        # 커피 자세에서 컵을 입으로 가져가 한 모금 마시고 내려놓음 (사용자 2026-11-24)
 DANCE = "--춤" in a or "--조지아" in a          # 가벼운 춤(스텝 터치): 옆으로 한 발 내딛고 모으기를 박자에 맞춰, 무릎 반동·골반·팔 흔들기 (사용자 2026-11-24 "약간의 댄스")
 BPM = float(a[a.index("--박자") + 1]) if "--박자" in a else 112
 ROUTINE = (a[a.index("--춤순서") + 1] if "--춤순서" in a else "스텝,손뼉,엉덩이,돌기").split(",")   # 4박마다 바뀌는 동작 순서
 STEP = float(a[a.index("--보폭") + 1]) if "--보폭" in a else 0.28     # 엉덩이~발목 0.55m·몸에 붙는 치마·굽 구두 → 작은 걸음 (0.40 이면 골반이 내려가 무릎 굽은 채 걸음)
-if (WALK or DANCE or SIP) and arm is not None:
+if (WALK or DANCE or SIP or BOW) and arm is not None:
     bpy.context.view_layer.update()
     MW = arm.matrix_world.copy(); MWi = MW.inverted(); M3 = MW.to_3x3(); M3i = MWi.to_3x3()
     PB = arm.pose.bones
@@ -934,8 +957,21 @@ if (WALK or DANCE or SIP) and arm is not None:
         if "Head" in PB: rot_world("Head", (1, 0, 0), -0.18 * drink)            # 마실 때 고개 살짝 뒤로
         if "Head" in PB: rot_world("Head", (0, 0, 1), 0.08 * (1 - k) * math.sin(t * 0.9))   # 쉴 때 주위를 살짝 둘러봄
         return mathutils.Vector((0, 0, 0))
+    def bow(i):
+        """인사: 바로 선 채 말함 → BOW_T 초부터 0.7초 동안 허리(Spine)·가슴·고개를 앞으로 숙임 → 0.5초 멈춤 → 0.8초 동안 폄.
+           숙이는 각도는 허리 70%·가슴 20%·고개 10% 로 나눠 등이 둥글게 (한 마디만 꺾으면 막대처럼 보임)"""
+        t = i / 24.0
+        for b in PB: b.matrix_basis = base[b.name]
+        bpy.context.view_layer.update()
+        sm3 = lambda u: 0.0 if u <= 0 else 1.0 if u >= 1 else u * u * (3 - 2 * u)
+        k = sm3((t - BOW_T) / 0.7) * (1 - sm3((t - BOW_T - 1.2) / 0.8))
+        for nm, w in (("Spine", 0.7), ("Chest", 0.2), ("Head", 0.1)):
+            if nm in PB and k > 0: rot_world(nm, (1, 0, 0), BOW_A * w * k)     # + = 앞으로 (- 면 뒤로 젖혀졌음)
+        if "Head" in PB and k > 0: rot_world("Head", (1, 0, 0), -0.10 * k * (1 - k) * 4 * 0.5)   # 숙이는 도중 고개가 살짝 늦게 따라옴
+        return mathutils.Vector((0, 0, 0))
     if DANCE: walk = dance
     if SIP: walk = sip
+    if BOW: walk = bow
 else:
     walk = lambda i: mathutils.Vector((0, 0, 0))
 
