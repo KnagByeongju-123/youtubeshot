@@ -1,0 +1,15 @@
+<!doctype html><html><head><meta charset="utf-8"><style>html,body{margin:0}canvas{display:block}</style>
+<script type="importmap">{"imports":{"three":"./node_modules/three/build/three.module.js","three/addons/":"./node_modules/three/examples/jsm/"}}</script></head><body>
+<script type="module">const Q0=new URLSearchParams(location.search);
+import * as THREE from 'three'; import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+const r=new THREE.WebGLRenderer({antialias:true,preserveDrawingBuffer:true}); r.setSize(+(Q0.get("w")||800),+(Q0.get("h")||800)); r.outputColorSpace=THREE.SRGBColorSpace; document.body.appendChild(r.domElement);
+const s=new THREE.Scene(); s.background=new THREE.Color(0xcccccc); s.add(new THREE.AmbientLight(0xffffff,1.7)); const d=new THREE.DirectionalLight(0xffffff,2); d.position.set(1,1.5,3); s.add(d);
+const OS=+(Q0.get("os")||0); const cam=OS?new THREE.OrthographicCamera(-OS,OS,OS,-OS,0.01,100):new THREE.PerspectiveCamera(25,(+(Q0.get("w")||800))/(+(Q0.get("h")||800)),0.01,100);
+new GLTFLoader().load(new URLSearchParams(location.search).get('g'),g=>{ s.add(g.scene); g.scene.updateMatrixWorld(true);
+ const Q=new URLSearchParams(location.search); const c=new THREE.Vector3(0,+(Q.get("cy")||1.6),0.03), z=new THREE.Vector3(0.1,0.1,0.1);
+ window.INFO={size:z.toArray(),center:c.toArray(),anim:g.animations.map(a=>[a.name,a.duration,a.tracks.map(t=>t.name)])};
+ const meshes=[]; g.scene.traverse(o=>{if(o.isMesh)meshes.push(o)});
+ window.render=(az,el,morph,val,dist)=>{ meshes.forEach(m=>{ if(m.morphTargetInfluences){m.morphTargetInfluences.fill(0); if(morph){const i=m.morphTargetDictionary[morph]; if(i!==undefined)m.morphTargetInfluences[i]=val;}}});
+  const k=Math.max(z.x,z.y,z.z)*(dist||2.6); const a=az*Math.PI/180,e=el*Math.PI/180; cam.position.set(c.x+Math.sin(a)*Math.cos(e)*k,c.y+Math.sin(e)*k,c.z+Math.cos(a)*Math.cos(e)*k); cam.lookAt(c); r.render(s,cam); };
+ window.READY=true; });
+</script></body></html>

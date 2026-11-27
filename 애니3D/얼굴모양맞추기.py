@@ -69,5 +69,20 @@ for o in [o for o in bpy.data.objects if o.type == "MESH"]:
         kb.data.foreach_set("co", arr.ravel())
     me.update()
     print(o.name, "옮긴 점", int(sel.sum()), "최대 %.1fmm" % (np.linalg.norm(dd, axis=1).max() * 1000))
+# 눈알을 돌리는 뼈(이름에 Eye)도 얼굴과 같이 옮김 — 눈 사이를 좁히면 눈알 회전 중심이 어긋나지 않게 (2026-11-27)
+arm = next((o for o in bpy.data.objects if o.type == "ARMATURE"), None)
+if arm:
+    bpy.context.view_layer.objects.active = arm; bpy.ops.object.mode_set(mode="EDIT")
+    Ma = np.array(arm.matrix_world); Mai = np.linalg.inv(Ma)
+    for eb in arm.data.edit_bones:
+        if "Eye" not in eb.name: continue
+        hw = Ma[:3, :3] @ np.array(eb.head) + Ma[:3, 3]
+        if MODE3: dv = field3(hw[None])[0]
+        else:
+            w = np.clip((Y1 - hw[1]) / (Y1 - Y0), 0, 1); f = field(hw[None, [0, 2]])[0] * w; dv = np.array([f[0], 0, f[1]])
+        dl_b = Mai[:3, :3] @ dv
+        eb.head = eb.head + type(eb.head)(dl_b); eb.tail = eb.tail + type(eb.tail)(dl_b)
+        print("뼈 옮김", eb.name, "%.1fmm" % (np.linalg.norm(dv) * 1000))
+    bpy.ops.object.mode_set(mode="OBJECT")
 bpy.ops.export_scene.gltf(filepath=dst, export_format="GLB", export_morph=True, export_skins=True, export_animations=False, export_image_format="AUTO")
 print("→", dst)
