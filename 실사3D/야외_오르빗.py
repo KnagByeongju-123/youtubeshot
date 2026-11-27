@@ -1061,6 +1061,7 @@ def head_move(i):
         pb.matrix = mathutils.Matrix.Translation(pb.head) @ R_ @ mathutils.Matrix.Translation(-pb.head) @ pb.matrix
         bpy.context.view_layer.update()
 EXPR = [(kv.split('=')[0], float(kv.split('=')[1])) for kv in a[a.index('--표정') + 1].split(',')] if '--표정' in a else []
+PUCK = [float(v) for v in (a[a.index('--내밀기') + 1] if '--내밀기' in a else '0.85,0.8,0.6').split(',')]   # ㅜ 오므림 세기: LipPuckerer, LipFunneler, MouthPucker
 VISEME = '--입방식' in a and a[a.index('--입방식') + 1] == '15'      # --입방식 15 : Rocketbox 15가지 입 모양(AA_VI_*)
 MOUTH_SCALE = float(a[a.index('--입세기') + 1]) if '--입세기' in a else 1.0     # Rocketbox 는 '아' 입이 커서 O 자로 벌어졌음 (사용자 2026-11-26 '입 벌림 작게')
 def face(i):
@@ -1075,7 +1076,7 @@ def face(i):
         ro, ru = min(1.0, oh * 1.3), min(1.0, ou * 1.3); rr_ = max(ro, ru)
         set_shape("HB_07_MouthSmile", -0.45 * rr_); set_shape("AU_06_CheekRaiser", -0.3 * rr_)
         set_shape("AA_VI_13_O", 0.4 * ro); set_shape("AK_32_MouthFunnel", 0.5 * ro)
-        set_shape("AU_18_LipPuckerer", 0.75 * ru); set_shape("AU_22_LipFunneler", 0.3 * ro + 0.5 * ru)
+        set_shape("AU_18_LipPuckerer", PUCK[0] * ru); set_shape("AU_22_LipFunneler", 0.3 * ro + PUCK[1] * ru); set_shape("AK_38_MouthPucker", PUCK[2] * ru)   # ㅜ·ㅠ: 입술을 앞으로 살짝 내밂(사용자 2026-11-27 "우, 유 발음 시 입술을 살짝 내밀어야")
         set_shape("MouthOpen", aa * MS * (1 - 0.5 * rr_)); set_shape("MouthRound", 0.0)
         set_shape("AA_VI_01_PP", pp * 0.6); set_shape("AU_24_LipPressor", pp * 0.5);   # 입술 닫기: 미소 바탕은 이가 살짝 보여 PP 만으론 덜 닫혔음 → 입술 누르기 더함(받침 ㅂㅁㅍㅅㅆㅈㅊㅌ, 사용자 2026-11-26)
         set_shape("AA_VI_04_DD", dd * 0.6 * MS); set_shape("AA_VI_08_nn", nn * 0.6 * MS)
