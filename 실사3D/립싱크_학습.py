@@ -4,6 +4,7 @@
 3D 가 쓰는 입 모양 표(실사3D/입모양표_LS.json)의 모음별 값(open_3d·wide_3d)·앞당김·세기를 선생님 쪽으로 고침. 문장이 늘수록 쌓여서 정확해짐.
 
 학습 기록(다른 세션과 나눔, 깃에 올림): 실사3D/립싱크학습/<번호>/ = 문장.txt · 시각.json · 선생.json(LatentSync 입 곡선 숫자, 1/25초)
+  · 선생_입술점.json(입술 둘레 40점 위치, 장마다 — 나중에 입술 모양까지 배울 때)
   → 선생님 영상(LatentSync, 1초에 약 25분)은 한 번만 만들고, 다른 세션은 선생.json 만 읽어 3D 를 다시 맞춤 (영상·소리 파일은 깃에 안 올림)
 사용 (LatentSync 환경의 파이썬 — MediaPipe 가 들어 있음):
   models/latentsync/.venv/bin/python 실사3D/립싱크_학습.py <선생님.mp4 또는 -> <3D.mp4> <음절시각.json 또는 -> --기록 실사3D/립싱크학습/<번호>
@@ -36,6 +37,11 @@ VOWEL = {0: "아", 2: "아", 9: "아", 4: "어", 6: "어", 14: "어", 8: "오", 
 CLOSE_CHO = (6, 7, 8, 17)
 
 
+LIP_PTS = [61, 146, 91, 181, 84, 17, 314, 405, 321, 375, 291, 185, 40, 39, 37, 0, 267, 269, 270, 409,
+           78, 95, 88, 178, 87, 14, 317, 402, 318, 324, 308, 191, 80, 81, 82, 13, 312, 311, 310, 415]   # MediaPipe 입술 바깥 20 + 안쪽 20
+PTS = []
+
+
 def measure(video):
     import mediapipe as mp
     from mediapipe.tasks.python import vision, BaseOptions
@@ -44,14 +50,17 @@ def measure(video):
     w, h = (int(v) for v in subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height",
                                             "-of", "csv=p=0", video], capture_output=True, text=True).stdout.strip().split(","))
     p = subprocess.Popen(["ffmpeg", "-v", "error", "-i", video, "-vf", f"fps={FPS}", "-f", "rawvideo", "-pix_fmt", "rgb24", "-"], stdout=subprocess.PIPE)
-    rows = []
+    rows = []; PTS.clear()
     while True:
         buf = p.stdout.read(w * h * 3)
         if len(buf) < w * h * 3: break
         r = det.detect(mp.Image(image_format=mp.ImageFormat.SRGB, data=np.frombuffer(buf, np.uint8).reshape(h, w, 3).copy()))
-        if not r.face_landmarks: rows.append([np.nan, np.nan]); continue
+        if not r.face_landmarks: rows.append([np.nan, np.nan]); PTS.append(None); continue
         q = np.array([[l.x * w, l.y * h] for l in r.face_landmarks[0]])
         eye = np.linalg.norm(q[33] - q[263]) + 1e-6
+        # 입술 점(나중에 입술 모양까지 배울 때 씀): 두 눈꼬리 가운데를 0, 눈꼬리 사이를 1, 눈 선을 가로로 맞춘 좌표
+        c = (q[33] + q[263]) / 2; ex = (q[263] - q[33]) / eye; R = np.array([ex, [-ex[1], ex[0]]])
+        PTS.append(np.round((q[LIP_PTS] - c) @ R.T / eye, 4).tolist())
         rows.append([np.linalg.norm(q[13] - q[14]) / eye, np.linalg.norm(q[61] - q[291]) / eye])
     r = np.array(rows, np.float64)
     for k in range(2):                                     # 못 찾은 장은 앞뒤로 메움
@@ -67,6 +76,8 @@ else:
     if REC:
         json.dump({"fps": FPS, "teacher": "LatentSync 1.6, guidance 1.0, 여자아나운서1 정면 사진(1024x576, 카메라 0,-0.75,1.47,0,0,1.45,50)",
                    "cols": ["open/eye", "width/eye"], "curve": np.round(T, 4).tolist()}, open(os.path.join(REC, "선생.json"), "w", encoding="utf-8"))
+        json.dump({"fps": FPS, "mediapipe_index": LIP_PTS, "coord": "눈꼬리 가운데=0, 눈꼬리 사이=1, 눈 선 가로", "frames": PTS},
+                  open(os.path.join(REC, "선생_입술점.json"), "w", encoding="utf-8"))
         if os.path.abspath(SYL) != os.path.abspath(os.path.join(REC, "시각.json")):
             import shutil; shutil.copy(SYL, os.path.join(REC, "시각.json"))
 S = measure(STU)
