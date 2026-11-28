@@ -8,7 +8,7 @@
   → 선생님 영상(LatentSync, 1초에 약 25분)은 한 번만 만들고, 다른 세션은 선생.json 만 읽어 3D 를 다시 맞춤 (영상·소리 파일은 깃에 안 올림)
 사용 (LatentSync 환경의 파이썬 — MediaPipe 가 들어 있음):
   models/latentsync/.venv/bin/python 실사3D/립싱크_학습.py <선생님.mp4 또는 -> <3D.mp4> <음절시각.json 또는 -> --기록 실사3D/립싱크학습/<번호>
-      [--표 실사3D/입모양표_LS.json] [--보고 <폴더>] [--배우기 0.7]
+      [--표 실사3D/입모양표_LS.json] [--보고 <폴더>] [--배우기 0.7] [--소리 <소리.wav> (없으면 기록 폴더의 소리.wav — 시간 어긋남을 소리 기준으로 잼)]
     선생님 자리에 - 를 주면 기록의 선생.json, 음절시각 자리에 - 를 주면 기록의 시각.json 을 씀
     음절시각.json = 실사3D/발음시각.py 결과(소리 시작 = 영상 0초), 3D 는 립싱크.py --시작 0 으로 찍은 것
     --배우기: 한 번에 고치는 정도(0~1, 1 이면 차이를 한 번에 다 고침) / --재기만: 표를 고치지 않고 비교만
@@ -85,7 +85,8 @@ n = min(len(T), len(S)); T, S = T[:n], S[:n]
 syl = sorted(json.load(open(SYL, encoding="utf-8")), key=lambda x: x[1])
 syl = [s for s in syl if 0 <= ord(s[0]) - 0xAC00 < 11172]
 f_on = max(0, int(syl[0][1] * FPS) - 3); f_off = min(n, int((syl[-1][2] if len(syl[-1]) > 2 else syl[-1][1] + 0.3) * FPS) + 6)
-rest_T, rest_S = np.median(T[:max(3, f_on), 0]), np.median(S[:max(3, f_on), 0])   # 말하기 전 다문 입
+# 다문 입 = 영상 전체에서 가장 작게 다문 값(아래 5%) — 앞 몇 장은 이미 말이 시작돼 입이 벌어져 있을 수 있음(01번: 앞 0.021, 실제 다문 입 0.003, 2026-11-28)
+rest_T, rest_S = np.percentile(T[:, 0], 5), np.percentile(S[:, 0], 5)
 oT, oS = T[:, 0] - rest_T, S[:, 0] - rest_S
 
 # ① 시간 어긋남: 3D 곡선을 몇 장 밀면 선생님과 가장 닮는지 (+ = 3D 가 늦음 → 더 앞당겨야 함)
@@ -93,8 +94,24 @@ seg = slice(f_on, f_off)
 def corr(k):
     s = np.roll(oS, -k)[seg]; t = oT[seg]
     return float(np.corrcoef(s, t)[0, 1]) if s.std() > 1e-6 and t.std() > 1e-6 else -1
-lags = {k: corr(k) for k in range(-6, 7)}
+lags = {k: corr(k) for k in range(-8, 9)}
 lag = max(lags, key=lags.get)
+# 소리를 기준으로 각각 시간을 잼(2026-11-28, 01번): 선생님·3D 를 직접 맞대면 모양이 달라 닮음이 낮게 나옴(0.11) →
+#   소리 크기(1/25초)와 가장 닮게 밀리는 장 수를 선생님·3D 따로 구해 그 차이를 시간 어긋남으로 씀 (선생님은 소리보다 약 2장 먼저 = 사람과 같음)
+AUD = opt("--소리", os.path.join(REC, "소리.wav") if REC else None)
+lag_src = "선생님과 직접"
+if AUD and os.path.exists(AUD):
+    import wave
+    w = wave.open(AUD); sr = w.getframerate(); y = np.frombuffer(w.readframes(w.getnframes()), np.int16).astype(np.float64)
+    if w.getnchannels() > 1: y = y.reshape(-1, w.getnchannels()).mean(1)
+    hop = sr // FPS; env = np.array([np.sqrt(np.mean(y[i * hop:(i + 1) * hop] ** 2)) for i in range(len(y) // hop)])
+    m = min(n, len(env)); env = np.pad(env, (0, max(0, n - len(env))))[:n]
+    def best(x):
+        c = {k: np.corrcoef(np.roll(x, -k)[:m], env[:m])[0, 1] for k in range(-10, 11)}
+        k = max(c, key=c.get); return k, c[k]
+    kT, cT = best(oT); kS, cS = best(oS)
+    if min(cT, cS) >= 0.25:
+        lag = kS - kT; lags[lag] = max(lags.get(lag, -1), min(cT, cS)); lag_src = f"소리 기준(선생님 {kT:+d}장 닮음 {cT:.2f}, 3D {kS:+d}장 닮음 {cS:.2f})"
 oS2 = np.roll(oS, -lag)
 # ② 전체 크기 (말하는 동안 벌림 평균)
 amp = float(np.mean(np.clip(oT[seg], 0, None)) / max(np.mean(np.clip(oS2[seg], 0, None)), 1e-6))
@@ -113,7 +130,7 @@ for k, s in enumerate(syl):
 
 lines = [f"선생님 {TEACH}", f"3D {STU}", f"장 수 {n} (1/25초), 말하는 구간 {f_on/FPS:.2f}~{f_off/FPS:.2f}초",
          f"다문 입 벌림: 선생님 {rest_T:.3f}, 3D {rest_S:.3f}",
-         f"① 시간: 3D 가 {lag:+d}장({lag/FPS:+.2f}초) {'늦음' if lag > 0 else '빠름' if lag < 0 else '맞음'} (닮음 {lags[lag]:.2f}, 밀기 전 {lags[0]:.2f})",
+         f"① 시간: 3D 가 {lag:+d}장({lag/FPS:+.2f}초) {'늦음' if lag > 0 else '빠름' if lag < 0 else '맞음'} (닮음 {lags[lag]:.2f}, 밀기 전 {lags[0]:.2f}, {lag_src})",
          f"② 전체 벌림: 선생님이 3D 의 {amp:.2f} 배", "③ 모음별 (벌림 선생님/3D, 너비 선생님/3D, 장 수):"]
 for c, d in sorted(cls.items(), key=lambda x: -np.mean(x[1]["T"])):
     lines.append(f"   {c}: 벌림 {np.mean(d['T']):.3f}/{np.mean(d['S']):.3f}  너비 {np.mean(d['Tw']):.3f}/{np.mean(d['Sw']):.3f}  ({len(d['T'])})")
@@ -128,7 +145,7 @@ if not ONLY:
     #  (예전: 세기를 0.12배로 줄이고 모음은 /amp 로 7배 키워 '우'를 거꾸로 크게 만들었음, 16번 2026-11-28)
     vn = {c: len(d["T"]) for c, d in cls.items() if c in tab["open_3d"]}
     one = max(vn, key=vn.get) if vn and max(vn.values()) >= 0.8 * sum(vn.values()) else None
-    if lags[lag] >= 0.5:                                                    # 닮음이 낮으면(선생님 입이 거의 안 움직임) 시간 어긋남은 믿지 않음
+    if lags[lag] >= 0.5 or lag_src.startswith("소리 기준"):     # 소리 기준으로 잰 것은 두 쪽 다 닮음 0.25 이상일 때만 쓰임                                                    # 닮음이 낮으면(선생님 입이 거의 안 움직임) 시간 어긋남은 믿지 않음
         tab["lead"] = round(float(np.clip(tab["lead"] + RATE * lag / FPS, 0.0, 0.45)), 3)
     if not one:
         tab["gain"] = round(float(np.clip(tab["gain"] * amp ** RATE, 0.4, 2.5)), 3)
