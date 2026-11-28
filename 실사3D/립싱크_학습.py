@@ -113,7 +113,7 @@ else:
                   open(os.path.join(REC, "선생_입술점.json"), "w", encoding="utf-8"))
         if os.path.abspath(SYL) != os.path.abspath(os.path.join(REC, "시각.json")):
             import shutil; shutil.copy(SYL, os.path.join(REC, "시각.json"))
-S = measure(STU)
+S = np.array(json.load(open(os.path.join(REC, "3D.json"), encoding="utf-8"))["curve"], np.float64) if STU == "-" else measure(STU)   # - = 기록의 3D.json
 n = min(len(T), len(S)); T, S = T[:n], S[:n]
 syl = sorted(json.load(open(SYL, encoding="utf-8")), key=lambda x: x[1])
 syl = [s for s in syl if 0 <= ord(s[0]) - 0xAC00 < 11172]
@@ -171,11 +171,13 @@ for c, d in sorted(cls.items(), key=lambda x: -np.mean(x[1]["T"])):
 # 표 만들기 (2026-11-28 바꿈 — 세션 I 지적: 차례로 곱해 고치면 3D 를 찍은 뒤 다른 세션이 표를 바꿨을 때 두 번 셈):
 #  3D 는 늘 '학습 전 기본값'(립싱크.py 에 --표 없이)으로 찍고, 이 번호가 본 '맞는 값 제안'을 기록 폴더의 제안.json 에 남김 →
 #  표 = 모든 번호의 제안을 장 수로 무게를 둔 평균 (순서·겹침과 상관없이 늘 같은 결과)
-vn = {c: len(d["T"]) for c, d in cls.items() if c in OPEN0 or c == "닫음"}
-one = max(vn, key=vn.get) if vn and max(vn.values()) >= 0.8 * sum(vn.values()) else None    # 한 가지 묶음(13~20번, '닫음' 포함)
+# 한 가지 묶음(13~20번): 모음끼리만 비교해 한 모음이 80% 넘거나(ㅁㅂ 이 섞여도 됨 — 19번 '메뉴·제비'), '닫음'이 40% 넘으면(20번) 세기는 안 고침
+vn = {c: len(d["T"]) for c, d in cls.items() if c in OPEN0}
+one = max(vn, key=vn.get) if vn and max(vn.values()) >= 0.8 * sum(vn.values()) else None
+close_group = "닫음" in cls and len(cls["닫음"]["T"]) >= 0.4 * sum(len(d["T"]) for d in cls.values())
 timing_ok = lags[lag] >= 0.5 or lag_src.startswith("소리 기준")
 sug = {"lead": round(LEAD0 + lag / FPS, 3) if timing_ok else None,
-       "gain": round(GAIN0 * amp, 3) if not one else None, "open": {}, "wide": {}, "n": {}}
+       "gain": round(GAIN0 * amp, 3) if not (one or close_group) else None, "open": {}, "wide": {}, "n": {}}
 for c, d in cls.items():
     if c not in OPEN0 or len(d["T"]) < 2: continue
     r = amp if c == one else (np.mean(d["T"]) + 0.02) / (np.mean(d["S"]) + 0.02) / amp     # 전체 크기를 뺀 모음별 차이
@@ -187,6 +189,9 @@ sug["corr"] = round(float(lags[lag]), 3); sug["lag_frames"] = lag; sug["amp"] = 
 lines.append(f"→ 이 번호의 제안: 앞당김 {sug['lead']}, 세기 {sug['gain']}, 벌림 {sug['open']}, 옆으로 {sug['wide']}")
 if REC and not ONLY:
     json.dump(sug, open(os.path.join(REC, "제안.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+    # 3D(학습 전 기본값으로 찍은 것) 입 곡선도 남김 → 나중에 계산 방법을 바꿔도 영상 없이 다시 계산 가능
+    json.dump({"fps": FPS, "3d": "학습 전 기본값(립싱크.py --표 없이), 여자아나운서1, 카메라 0,-0.75,1.47,0,0,1.45,50, 1024x576",
+               "cols": ["open/eye", "width/eye"], "curve": np.round(S, 4).tolist()}, open(os.path.join(REC, "3D.json"), "w", encoding="utf-8"))
 
 
 if not ONLY:
