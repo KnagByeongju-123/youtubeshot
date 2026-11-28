@@ -24,12 +24,12 @@ def put_same(i, arr):
 
 
 nodes = j["nodes"]; NI = {nd.get("name"): k for k, nd in enumerate(nodes)}
-if "Shoulder.L" in NI: sys.exit("이미 어깨 뼈가 있음")
+HAVE = "Shoulder.L" in NI          # 이미 어깨 뼈가 있으면(뼈대옮기기로 1번 뼈대를 받은 모델) 뼈는 두고 살 무게만 (2026-11-28 여자아나운서5)
 sk = j["skins"][0]; names = [nodes[q]["name"] for q in sk["joints"]]
 ibm = get(sk["inverseBindMatrices"]).reshape(-1, 4, 4); JP = {nm: np.linalg.inv(m.T)[:3, 3] for nm, m in zip(names, ibm)}
 # ① 뼈 노드
 new_ibm = []
-for s in ("L", "R"):
+for s in (() if HAVE else ("L", "R")):
     ua, ch = NI[f"UpperArm.{s}"], NI["Chest"]
     U = JP[f"UpperArm.{s}"]; S = np.array([0.3 * U[0], U[1] + 0.01, U[2]])
     nodes.append({"name": f"Shoulder.{s}", "translation": [float(v) for v in (S - JP["Chest"])], "children": [ua]}); si = len(nodes) - 1
@@ -38,6 +38,7 @@ for s in ("L", "R"):
     sk["joints"].append(si); m = np.eye(4); m[:3, 3] = -S; new_ibm.append(m.T.reshape(-1))
     JP[f"Shoulder.{s}"] = S; names.append(f"Shoulder.{s}")
 iac = j["accessors"][sk["inverseBindMatrices"]]
+if HAVE: print("어깨 뼈 있음 → 살 무게만"); new_ibm = np.zeros((0, 16))
 allm = np.concatenate([ibm.reshape(-1, 16), np.array(new_ibm)]).astype(np.float32)
 views[iac["bufferView"]] = allm.tobytes(); iac["byteOffset"] = 0; iac["count"] = len(allm); j["bufferViews"][iac["bufferView"]].pop("byteStride", None)
 JI = {nm: k for k, nm in enumerate(names)}
