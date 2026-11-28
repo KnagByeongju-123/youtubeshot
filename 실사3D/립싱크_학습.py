@@ -124,12 +124,18 @@ tab = json.load(open(TABLE, encoding="utf-8")) if os.path.exists(TABLE) else {
     "open_3d": dict(OPEN0), "wide_3d": dict(WIDE0), "history": []}
 if not ONLY:
     fps3 = 24.0
-    tab["lead"] = round(float(np.clip(tab["lead"] + RATE * lag / FPS, 0.0, 0.45)), 3)
-    tab["gain"] = round(float(np.clip(tab["gain"] * amp ** RATE, 0.4, 2.5)), 3)
+    # 모음 한 가지 묶음(13~19번 '우유, 구두…'): 문장 전체 크기 = 그 모음 크기 → 세기(모든 모음 공통)는 그대로 두고 그 모음만 고침
+    #  (예전: 세기를 0.12배로 줄이고 모음은 /amp 로 7배 키워 '우'를 거꾸로 크게 만들었음, 16번 2026-11-28)
+    vn = {c: len(d["T"]) for c, d in cls.items() if c in tab["open_3d"]}
+    one = max(vn, key=vn.get) if vn and max(vn.values()) >= 0.8 * sum(vn.values()) else None
+    if lags[lag] >= 0.5:                                                    # 닮음이 낮으면(선생님 입이 거의 안 움직임) 시간 어긋남은 믿지 않음
+        tab["lead"] = round(float(np.clip(tab["lead"] + RATE * lag / FPS, 0.0, 0.45)), 3)
+    if not one:
+        tab["gain"] = round(float(np.clip(tab["gain"] * amp ** RATE, 0.4, 2.5)), 3)
     m_ratio = []
     for c, d in cls.items():
         if c not in tab["open_3d"] or len(d["T"]) < 2: continue
-        r = (np.mean(d["T"]) + 0.02) / (np.mean(d["S"]) + 0.02) / amp        # 전체 크기를 뺀 모음별 차이
+        r = amp if c == one else (np.mean(d["T"]) + 0.02) / (np.mean(d["S"]) + 0.02) / amp   # 전체 크기를 뺀 모음별 차이
         tab["open_3d"][c] = round(float(np.clip(tab["open_3d"][c] * r ** RATE, 0.05, 1.3)), 3); m_ratio.append(r)
         wr = np.mean(d["Tw"]) / max(np.mean(d["Sw"]), 1e-6)                  # 너비: 선생님이 더 넓으면 옆으로(wide) 키움
         tab["wide_3d"][c] = round(float(np.clip(tab["wide_3d"][c] + RATE * (wr - 1) * 4, 0.0, 1.0)), 3)
