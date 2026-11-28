@@ -261,8 +261,8 @@ if "--원래눈썹" not in a and browt.any():                       # 원래 눈
     Lb = cv2.cvtColor(np.clip(base, 0, 255).astype(np.uint8), cv2.COLOR_BGR2LAB)[..., 0].astype(np.float32)
     bm_ = cv2.dilate(browt, np.ones((7, 7), np.uint8))
     bb = np.clip(base, 0, 255); coolb = (bb[..., 0] + bb[..., 1]) / 2 - bb[..., 2]      # BGR: 푸른 기(머리카락), 갈색 눈썹 꼬리는 따뜻한 색 (2026-11-27 '오른쪽 끝 눈썹 진한 것')
-    dk = ((Lb < 70) & (coolb > -4)).astype(np.float32)
-    hairish = ((cv2.blur(dk, (81, 81)) > float(opt("--머리판정", "0.8"))) & (dk > 0)).astype(np.uint8)          # 넓게 어두운 곳 = 그려진 머리카락(그대로), 가는 어두운 띠 = 눈썹(지움)
+    dk = ((Lb < 95) & (coolb > -4)).astype(np.float32)
+    hairish = (dk > 0).astype(np.uint8)                          # 어둡고 푸른 기 = 그려진 머리카락 → 지우지 않음 (넓이 상관없이 — 관자놀이 머리가 살색 네모로 지워졌음)
     hairish = cv2.dilate(hairish, np.ones((5, 5), np.uint8))
     bm_ = (bm_.astype(bool) & ~hairish.astype(bool)).astype(np.uint8)
     big = 61
