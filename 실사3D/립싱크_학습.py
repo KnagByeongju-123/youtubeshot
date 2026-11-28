@@ -53,8 +53,11 @@ def rebuild(table_path):
            "lead": round(float(np.clip(lead if lead is not None else LEAD0, -0.3, 0.45)), 3),   # 음수 = 입을 소리보다 늦게(받아쓰기 시각이 이미 이른 경우)
            "gain": round(float(np.clip(gain if gain is not None else GAIN0, 0.4, 2.5)), 3), "open_3d": {}, "wide_3d": {},
            "records": [k for k, _ in S_]}
+    g_ = tab["gain"]
     for c in OPEN0:
-        o = wmean([(x["open"].get(c), x["n"].get(c, 0)) for _, x in S_], geo=True)
+        # 한 가지 묶음 번호(세기 제안 없음)의 벌림 제안은 전체 크기까지 담은 값 → 표의 세기로 나눠 맞춤 (세기가 두 번 곱해지지 않게, 세션 A 2026-11-28)
+        o = wmean([((x["open"].get(c) / g_ if x.get("gain") is None else x["open"].get(c)) if x["open"].get(c) is not None else None,
+                    x["n"].get(c, 0)) for _, x in S_], geo=True)
         w_ = wmean([(x["wide"].get(c), x["n"].get(c, 0)) for _, x in S_])
         tab["open_3d"][c] = round(float(np.clip(o if o is not None else OPEN0[c], 0.05, 1.3)), 3)
         tab["wide_3d"][c] = round(float(np.clip(w_ if w_ is not None else WIDE0[c], 0.0, 1.0)), 3)
