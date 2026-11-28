@@ -34,11 +34,13 @@ if table and os.path.exists(table) and cl:
     OPEN = {k: float(np.clip(0.12 + 0.88 * (cl[k]["open"] - lo) / (hi - lo), 0.1, 1.0)) for k in OPEN if k in cl}
     print("배운 표의 벌림:", {k: round(v, 2) for k, v in OPEN.items()})
 WIDE = {"아": 0.15, "에": 0.5, "이": 0.8, "어": 0.0, "으": 0.45, "오": 0.0, "우": 0.0}
+OPEN_BASE, WIDE_BASE = dict(OPEN), dict(WIDE)     # 학습 전 값 (15가지 입 모양 배율 계산용)
+LS_TABLE = False
 # LatentSync 에게서 배운 표(실사3D/입모양표_LS.json, 실사3D/립싱크_학습.py): 3D 에 바로 넣을 모음별 벌림·옆으로·앞당김·세기
 if table and os.path.exists(table):
     _t = json.load(open(table, encoding="utf-8"))
     if "open_3d" in _t:
-        OPEN.update(_t["open_3d"]); WIDE.update(_t.get("wide_3d", {}))
+        OPEN.update(_t["open_3d"]); WIDE.update(_t.get("wide_3d", {})); LS_TABLE = True
         if "--앞당김" not in sys.argv: LEAD = float(_t.get("lead", LEAD))
         if "--세기" not in sys.argv: GAIN = float(_t.get("gain", GAIN))
         print("LatentSync 학습 표:", table, "앞당김", LEAD, "세기", GAIN)
@@ -58,7 +60,15 @@ VIS = {"아": [1, 0, 0, 0, 0], "이": [0, 1, 0, 0, 0], "우": [0, 0, 1, 0, 0], "
        "어": [0.55, 0, 0, 0, 0.35], "으": [0, 0.45, 0.15, 0, 0]}
 
 
-def shape(v, k=1.0): return np.array([OPEN[v] * k, WIDE[v], ROUND[v]] + [w_ * min(k, 1.15) * 0.9 for w_ in VIS[v]])
+def shape(v, k=1.0):
+    if not LS_TABLE:
+        return np.array([OPEN[v] * k, WIDE[v], ROUND[v]] + [w_ * min(k, 1.15) * 0.9 for w_ in VIS[v]])
+    # LatentSync 학습 표(2026-11-28, 세션 B 발견): 15가지 입 모양(--입방식 15)은 open·wide 칸을 안 쓰고 aa·ih·ou·ee·oh 무게만 씀
+    #  → 모음별 벌림 배율(학습 값/학습 전 값)과 세기를 입 모양 무게에 곱하고, 옆으로가 늘면 ih(옆으로 당김)를 더함. 한 키는 1 을 넘지 않게
+    vs = OPEN[v] / max(OPEN_BASE.get(v, OPEN[v]), 1e-3)
+    vis = [w_ * vs * k * 0.9 for w_ in VIS[v]]
+    vis[1] += 0.6 * (WIDE[v] - WIDE_BASE.get(v, WIDE[v]))
+    return np.array([OPEN[v] * k, WIDE[v], ROUND[v]] + [float(np.clip(w_, 0.0, 1.0)) for w_ in vis])
 
 
 # 소리 크기: 음절 구간의 소리 세기(RMS)를 중간값 대비로
