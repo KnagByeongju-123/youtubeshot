@@ -26,12 +26,22 @@ syl = json.load(open(a[0], encoding="utf-8"))
 
 # 모음 무리별 벌림 (표의 open 비율 → 0~1: 아 1.0 … 우 0.1)
 OPEN = {"아": 1.0, "에": 0.8, "이": 0.45, "어": 0.55, "으": 0.25, "오": 0.3, "우": 0.12}
+cl = None
 if table and os.path.exists(table):
-    cl = json.load(open(table, encoding="utf-8"))["classes"]
+    cl = json.load(open(table, encoding="utf-8")).get("classes")
+if table and os.path.exists(table) and cl:
     lo, hi = cl["우"]["open"], cl["아"]["open"]
     OPEN = {k: float(np.clip(0.12 + 0.88 * (cl[k]["open"] - lo) / (hi - lo), 0.1, 1.0)) for k in OPEN if k in cl}
     print("배운 표의 벌림:", {k: round(v, 2) for k, v in OPEN.items()})
 WIDE = {"아": 0.15, "에": 0.5, "이": 0.8, "어": 0.0, "으": 0.45, "오": 0.0, "우": 0.0}
+# LatentSync 에게서 배운 표(실사3D/입모양표_LS.json, 실사3D/립싱크_학습.py): 3D 에 바로 넣을 모음별 벌림·옆으로·앞당김·세기
+if table and os.path.exists(table):
+    _t = json.load(open(table, encoding="utf-8"))
+    if "open_3d" in _t:
+        OPEN.update(_t["open_3d"]); WIDE.update(_t.get("wide_3d", {}))
+        if "--앞당김" not in sys.argv: LEAD = float(_t.get("lead", LEAD))
+        if "--세기" not in sys.argv: GAIN = float(_t.get("gain", GAIN))
+        print("LatentSync 학습 표:", table, "앞당김", LEAD, "세기", GAIN)
 ROUND = {"아": 0.0, "에": 0.0, "이": 0.0, "어": 0.25, "으": 0.0, "오": 0.75, "우": 1.0}
 # 중성 → (앞 모양, 뒤 모양)  (단모음은 같은 것 둘)
 J = {"ㅏ": "아아", "ㅐ": "에에", "ㅑ": "이아", "ㅒ": "이에", "ㅓ": "어어", "ㅔ": "에에", "ㅕ": "이어", "ㅖ": "이에", "ㅗ": "오오", "ㅘ": "오아",
