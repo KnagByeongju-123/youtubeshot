@@ -179,7 +179,7 @@ mask[: int(ytop + (ybot - ytop) * TOPCUT)] = 0
 brow_z = np.zeros((RES, RES), np.uint8)
 for conn in (FMs.FACEMESH_LEFT_EYEBROW, FMs.FACEMESH_RIGHT_EYEBROW):
     ids_b = sorted({i for e in conn for i in e}); Pb = LR[ids_b]; cb = Pb.mean(0)
-    Pb2 = cb + (Pb - cb) * np.array([1.15, 1.8])                  # 가로 1.3배·세로 1.8배로 넓힘 (꼬리·위아래 여유)
+    Pb2 = cb + (Pb - cb) * np.array([1.3, 1.8])                  # 가로 1.3배·세로 1.8배로 넓힘 (꼬리·위아래 여유)
     cv2.fillPoly(brow_z, [cv2.convexHull(Pb2.astype(np.int32))], 1)
 _Lf = cv2.cvtColor(front, cv2.COLOR_BGR2LAB)[..., 0].astype(np.float32); _dk = (_Lf < 90).astype(np.float32)
 skin_f = ~((cv2.blur(_dk, (41, 41)) > 0.55) & (_dk > 0))        # 넓게 어두운 곳(그려진 앞머리)만 빼고 — 가는 눈썹은 피부 쪽 (원래 눈썹이 빠져 사진 눈썹이 안 들어갔음)
@@ -260,8 +260,9 @@ for _ in range(3):
 if "--원래눈썹" not in a and browt.any():                       # 원래 눈썹 지우기 (--원래눈썹 을 붙이면 그대로 둠)
     Lb = cv2.cvtColor(np.clip(base, 0, 255).astype(np.uint8), cv2.COLOR_BGR2LAB)[..., 0].astype(np.float32)
     bm_ = cv2.dilate(browt, np.ones((7, 7), np.uint8))
-    dk = (Lb < 70).astype(np.float32)
-    hairish = ((cv2.blur(dk, (81, 81)) > 0.55) & (dk > 0)).astype(np.uint8)          # 넓게 어두운 곳 = 그려진 머리카락(그대로), 가는 어두운 띠 = 눈썹(지움)
+    bb = np.clip(base, 0, 255); coolb = (bb[..., 0] + bb[..., 1]) / 2 - bb[..., 2]      # BGR: 푸른 기(머리카락), 갈색 눈썹 꼬리는 따뜻한 색 (2026-11-27 '오른쪽 끝 눈썹 진한 것')
+    dk = ((Lb < 70) & (coolb > -4)).astype(np.float32)
+    hairish = ((cv2.blur(dk, (81, 81)) > float(opt("--머리판정", "0.8"))) & (dk > 0)).astype(np.uint8)          # 넓게 어두운 곳 = 그려진 머리카락(그대로), 가는 어두운 띠 = 눈썹(지움)
     hairish = cv2.dilate(hairish, np.ones((5, 5), np.uint8))
     bm_ = (bm_.astype(bool) & ~hairish.astype(bool)).astype(np.uint8)
     big = 61
@@ -286,6 +287,13 @@ lidw = cv2.GaussianBlur(cv2.dilate(lidw, np.ones((5, 5))), (9, 9), 0)
 blab = cv2.cvtColor(np.clip(base, 0, 255).astype(np.uint8), cv2.COLOR_BGR2LAB).astype(np.float32)
 blab[..., 1:] = blab[..., 1:] * (1 - lidw[..., None]) + mp_[1:] * lidw[..., None]        # 눈꺼풀 화장(보라·분홍) → 사진 피부의 색조
 base = cv2.cvtColor(np.clip(blab, 0, 255).astype(np.uint8), cv2.COLOR_LAB2BGR).astype(np.float32)
+# 칠한 칸 안의 가는 빈 줄(가린 판정에 걸린 틈 — 원래 그림의 진한 줄이 눈썹 꼬리처럼 비쳤음, 2026-11-27) 메우기
+accC = cv2.morphologyEx(acc.astype(np.float32), cv2.MORPH_CLOSE, np.ones((17, 17), np.uint8))
+gap = (accC > 0.7) & (acc < accC - 0.2)
+if gap.any():
+    colf = cv2.inpaint(np.clip(col, 0, 255).astype(np.uint8), gap.astype(np.uint8), 5, cv2.INPAINT_TELEA).astype(np.float64)
+    col[gap] = colf[gap]; acc[gap] = accC[gap]
+    print("빈 줄 메움: 그림 점", int(gap.sum()))
 if "--디버그" in a:
     cv2.imwrite(os.path.join(out_d, "_dbg_base.png"), np.clip(base, 0, 255).astype(np.uint8)); cv2.imwrite(os.path.join(out_d, "_dbg_acc.png"), (acc * 255).astype(np.uint8)); cv2.imwrite(os.path.join(out_d, "_dbg_col.png"), col.astype(np.uint8))
 outc = base * (1 - acc[..., None]) + col * acc[..., None]
