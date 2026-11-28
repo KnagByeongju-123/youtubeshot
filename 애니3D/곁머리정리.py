@@ -1,7 +1,7 @@
 """GLB 인물의 옆으로 튀어나온 곁머리 조각을 지움 (사용자 2026-11-28 '곁머리 튀어나온 것 제거')
    머리카락 조각(opacity 재질, 높이 폭 3cm 이상) 중 머리 가운데에서 옆으로 --옆 m 넘게 나간 점이 있는 조각,
    또는 머리 겉(가장 가까운 얼굴·두피 점)에서 --뜸 m 넘게 떠 있는 점이 --뜸비율 넘는 조각을 지움. 뒤 머리(가운데 뒤, |x|<0.03)는 그대로
-   사용: .bpy_venv/bin/python -I 애니3D/곁머리정리.py <입력.glb> <출력.glb> [--옆 0.108] [--뜸 0.03] [--뜸비율 0.4] [--보기]"""
+   사용: .bpy_venv/bin/python -I 애니3D/곁머리정리.py <입력.glb> <출력.glb> [--옆 0.108] [--뜸 0.03] [--뜸비율 0.4] [--보기] [--뒤꽁지]"""
 import sys
 import bpy, bmesh
 import numpy as np
@@ -42,6 +42,8 @@ for v in bm.verts:
     if np.ptp(P[:, 2]) < 0.03: continue
     side = np.abs(P[:, 0] - cx).max()
     fl = np.mean([kd.find(tuple(p))[2] > FL for p in P])
+    if "--뒤꽁지" in a and P[:, 1].min() > 0.08:                  # 뒤통수 뒤로 내려오는 꽁지 가닥(뒤쪽 머리카락 판) — 단발 아래로 삐져나와 보였음 (2026-11-28 '뒤 꽁지머리카락 삭제')
+        kill += c; print("뒤 꽁지 지움: 점 %d, x %.3f" % (len(c), P[:, 0].mean())); continue
     if np.abs(P[:, 0] - cx).max() < 0.03: continue
     if side > XS or fl > FR:
         kill += c
