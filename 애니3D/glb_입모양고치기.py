@@ -7,7 +7,7 @@
      · MouthWide  : 입꼬리를 옆으로·조금 위로
      · MouthRound : 입술을 가운데로 모으고 앞으로 내밈
      · Blink 등 다른 키는 그대로
-   사용: python 애니3D/glb_입모양고치기.py <입력.glb> <결과.glb> [--벌림 0.012] [--확인 <그림.png>] [--입술칠]
+   사용: python 애니3D/glb_입모양고치기.py <입력.glb> <결과.glb> [--벌림 0.012] [--확인 <그림.png>] [--입술칠] [--선올림 0.002]
      --입술칠: 입술선 바로 위·아래 띠를 겉면 그림에서 아랫입술 색으로 칠함 (입을 벌리면 윗입술 안쪽이 살색·흰 점으로 보일 때, 여자 아나운서 2026-11-23)
    (모양 키 이름이 MouthOpen/MouthWide/MouthRound 인 모델. 정점 수·순서는 그대로라 리깅과 함께 써도 됨)"""
 import io, json, struct, sys
@@ -19,6 +19,8 @@ OPEN = 0.012; check = None; PAINT = False
 if "--입술칠" in a: a.remove("--입술칠"); PAINT = True
 if "--벌림" in a: i = a.index("--벌림"); OPEN = float(a[i + 1]); del a[i:i + 2]
 if "--확인" in a: i = a.index("--확인"); check = a[i + 1]; del a[i:i + 2]
+LIFT = 0.0
+if "--선올림" in a: i = a.index("--선올림"); LIFT = float(a[i + 1]); del a[i:i + 2]   # 입 틈을 이만큼(m) 위로 — 그려진 윗입술 주름보다 틈이 낮으면 윗입술이 2단으로 보였음 (2026-11-28 여자아나운서5)
 src, dst = a
 raw = open(src, "rb").read()
 n = struct.unpack("<I", raw[12:16])[0]; j = json.loads(raw[20:20 + n]); bin0 = 20 + n + 8
@@ -94,7 +96,7 @@ HWP = max(0.016, float(xs[lipm & (xs > 0)].max())) if (lipm & (xs > 0)).any() el
 HWN = max(0.016, float(-xs[lipm & (xs < 0)].min())) if (lipm & (xs < 0)).any() else HW
 XC = (HWP - HWN) / 2; HWH = (HWP + HWN) / 2          # 입 가운데·반너비 = 그려진 두 입꼬리의 가운데·반 (얼굴이 x=0 에서 몇 mm 비켜 있기도 함, 남자 아나운서 -7mm)
 HWP, HWN = max(HWP, 0.8 * HW), max(HWN, 0.8 * HW)                           # 한쪽만 너무 좁게 재지면(그늘 탓) 입이 비뚤게 벌어지므로 80% 아래로는 안 줄임
-ys = np.convolve(np.pad(ys, 2, mode="edge"), np.ones(5) / 5, "valid")         # 입술선을 살짝 매끈하게
+ys = np.convolve(np.pad(ys, 2, mode="edge"), np.ones(5) / 5, "valid") + LIFT  # 입술선을 살짝 매끈하게 (+ --선올림)
 print(f"코끝 높이 {nose_y:.3f} · 입술선 가운데 {LY0:.3f} (코끝 아래 {100 * (nose_y - LY0):.1f}cm) · 입 가운데 x {100 * XC:+.1f}cm · 반너비 {100 * HWH:.1f}cm")
 
 
