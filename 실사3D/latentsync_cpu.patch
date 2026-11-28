@@ -1,0 +1,278 @@
+diff --git a/latentsync/models/attention.py b/latentsync/models/attention.py
+index 8cee890..fbe9b2d 100644
+--- a/latentsync/models/attention.py
++++ b/latentsync/models/attention.py
+@@ -268,7 +268,7 @@ class Attention(nn.Module):
+                 attention_mask = attention_mask.repeat_interleave(self.heads, dim=0)
+ 
+         # Use PyTorch native implementation of FlashAttention-2
+-        hidden_states = F.scaled_dot_product_attention(query, key, value, attn_mask=attention_mask)
++        hidden_states = _sdpa_chunked(query, key, value, attn_mask=attention_mask)
+ 
+         hidden_states = self.concat_heads(hidden_states)
+ 
+@@ -278,3 +278,16 @@ class Attention(nn.Module):
+         # dropout
+         hidden_states = self.to_out[1](hidden_states)
+         return hidden_states
++
++
++def _sdpa_chunked(q, k, v, attn_mask=None, budget=6e8):
++    """CPU 메모리 아낌: 배치를 나눠 계산 (한 조각의 주의 행렬이 약 0.6GB 넘지 않게)"""
++    per = q.shape[1] * q.shape[2] * k.shape[2] * 4 if q.dim() == 4 else q.shape[1] * k.shape[1] * 4
++    n = max(1, int(budget // max(per, 1)))
++    if n >= q.shape[0]:
++        return F.scaled_dot_product_attention(q, k, v, attn_mask=attn_mask)
++    outs = []
++    for i in range(0, q.shape[0], n):
++        m = attn_mask[i:i + n] if attn_mask is not None and attn_mask.shape[0] == q.shape[0] else attn_mask
++        outs.append(F.scaled_dot_product_attention(q[i:i + n], k[i:i + n], v[i:i + n], attn_mask=m))
++    return torch.cat(outs, 0)
+diff --git a/latentsync/models/motion_module.py b/latentsync/models/motion_module.py
+index 7290493..5926afa 100644
+--- a/latentsync/models/motion_module.py
++++ b/latentsync/models/motion_module.py
+@@ -297,7 +297,7 @@ class VersatileAttention(Attention):
+                 attention_mask = attention_mask.repeat_interleave(self.heads, dim=0)
+ 
+         # Use PyTorch native implementation of FlashAttention-2
+-        hidden_states = F.scaled_dot_product_attention(query, key, value, attn_mask=attention_mask)
++        hidden_states = _sdpa_chunked(query, key, value, attn_mask=attention_mask)
+ 
+         hidden_states = self.concat_heads(hidden_states)
+ 
+@@ -311,3 +311,16 @@ class VersatileAttention(Attention):
+             hidden_states = rearrange(hidden_states, "(b s) f c -> (b f) s c", s=s)
+ 
+         return hidden_states
++
++
++def _sdpa_chunked(q, k, v, attn_mask=None, budget=6e8):
++    """CPU 메모리 아낌: 배치를 나눠 계산 (한 조각의 주의 행렬이 약 0.6GB 넘지 않게)"""
++    per = q.shape[1] * q.shape[2] * k.shape[2] * 4 if q.dim() == 4 else q.shape[1] * k.shape[1] * 4
++    n = max(1, int(budget // max(per, 1)))
++    if n >= q.shape[0]:
++        return F.scaled_dot_product_attention(q, k, v, attn_mask=attn_mask)
++    outs = []
++    for i in range(0, q.shape[0], n):
++        m = attn_mask[i:i + n] if attn_mask is not None and attn_mask.shape[0] == q.shape[0] else attn_mask
++        outs.append(F.scaled_dot_product_attention(q[i:i + n], k[i:i + n], v[i:i + n], attn_mask=m))
++    return torch.cat(outs, 0)
+diff --git a/latentsync/models/unet.py b/latentsync/models/unet.py
+index 13722e0..7d46a3d 100644
+--- a/latentsync/models/unet.py
++++ b/latentsync/models/unet.py
+@@ -496,7 +496,7 @@ class UNet3DConditionModel(ModelMixin, ConfigMixin):
+         unet = cls.from_config(model_config).to(device)
+         if ckpt_path != "":
+             zero_rank_log(logger, f"Load from checkpoint: {ckpt_path}")
+-            ckpt = torch.load(ckpt_path, map_location=device, weights_only=True)
++            ckpt = torch.load(ckpt_path, map_location=device, weights_only=True, mmap=True)  # 메모리 아낌(CPU)
+             if "global_step" in ckpt:
+                 zero_rank_log(logger, f"resume from global_step: {ckpt['global_step']}")
+                 resume_global_step = ckpt["global_step"]
+diff --git a/latentsync/pipelines/lipsync_pipeline.py b/latentsync/pipelines/lipsync_pipeline.py
+index 693155e..90f2b76 100644
+--- a/latentsync/pipelines/lipsync_pipeline.py
++++ b/latentsync/pipelines/lipsync_pipeline.py
+@@ -339,7 +339,7 @@ class LipsyncPipeline(DiffusionPipeline):
+         # 0. Define call parameters
+         device = self._execution_device
+         mask_image = load_fixed_mask(height, mask_image_path)
+-        self.image_processor = ImageProcessor(height, device="cuda", mask_image=mask_image)
++        self.image_processor = ImageProcessor(height, device="cpu", mask_image=mask_image)
+         self.set_progress_bar_config(desc=f"Sample frames: {num_frames}")
+ 
+         # 1. Default height and width to unet
+diff --git a/latentsync/utils/face_detector.py b/latentsync/utils/face_detector.py
+index faa55c9..1dd97d7 100644
+--- a/latentsync/utils/face_detector.py
++++ b/latentsync/utils/face_detector.py
+@@ -1,115 +1,26 @@
+-from insightface.app import FaceAnalysis
++# InsightFace(상업 금지 모델) 대신 MediaPipe 얼굴 점(Apache-2.0)으로 바꿔 끼움 — 그래픽카드 없이 CPU
++# image_processor 가 쓰는 106점 번호(43,48~51 = 화면 왼쪽 눈썹, 101~105 = 오른쪽 눈썹, 74,77,83,86 = 코 가운데)에 MediaPipe 점을 넣어 줌
+ import numpy as np
+-import torch
++import mediapipe as mp
+ 
+-INSIGHTFACE_DETECT_SIZE = 512
++_L_BROW = [70, 63, 105, 66, 107]      # 화면 왼쪽 눈썹 (사람 오른쪽)
++_R_BROW = [336, 296, 334, 293, 300]   # 화면 오른쪽 눈썹
++_NOSE = [197, 195, 5, 4]              # 콧등 가운데 ~ 코끝
+ 
+ 
+ class FaceDetector:
+-    def __init__(self, device="cuda"):
+-        self.app = FaceAnalysis(
+-            allowed_modules=["detection", "landmark_2d_106"],
+-            root="checkpoints/auxiliary",
+-            providers=["CUDAExecutionProvider"],
+-        )
+-        self.app.prepare(ctx_id=cuda_to_int(device), det_size=(INSIGHTFACE_DETECT_SIZE, INSIGHTFACE_DETECT_SIZE))
++    def __init__(self, device="cpu"):
++        self.mesh = mp.solutions.face_mesh.FaceMesh(static_image_mode=True, max_num_faces=1, refine_landmarks=False)
+ 
+     def __call__(self, frame, threshold=0.5):
+-        f_h, f_w, _ = frame.shape
+-
+-        faces = self.app.get(frame)
+-
+-        get_face_store = None
+-        max_size = 0
+-
+-        if len(faces) == 0:
++        h, w, _ = frame.shape
++        r = self.mesh.process(np.ascontiguousarray(frame))
++        if not r.multi_face_landmarks:
+             return None, None
+-        else:
+-            for face in faces:
+-                bbox = face.bbox.astype(np.int_).tolist()
+-                w, h = bbox[2] - bbox[0], bbox[3] - bbox[1]
+-                if w < 50 or h < 80:
+-                    continue
+-                if w / h > 1.5 or w / h < 0.2:
+-                    continue
+-                if face.det_score < threshold:
+-                    continue
+-                size_now = w * h
+-
+-                if size_now > max_size:
+-                    max_size = size_now
+-                    get_face_store = face
+-
+-        if get_face_store is None:
+-            return None, None
+-        else:
+-            face = get_face_store
+-            lmk = np.round(face.landmark_2d_106).astype(np.int_)
+-
+-            halk_face_coord = np.mean([lmk[74], lmk[73]], axis=0)  # lmk[73]
+-
+-            sub_lmk = lmk[LMK_ADAPT_ORIGIN_ORDER]
+-            halk_face_dist = np.max(sub_lmk[:, 1]) - halk_face_coord[1]
+-            upper_bond = halk_face_coord[1] - halk_face_dist  # *0.94
+-
+-            x1, y1, x2, y2 = (np.min(sub_lmk[:, 0]), int(upper_bond), np.max(sub_lmk[:, 0]), np.max(sub_lmk[:, 1]))
+-
+-            if y2 - y1 <= 0 or x2 - x1 <= 0 or x1 < 0:
+-                x1, y1, x2, y2 = face.bbox.astype(np.int_).tolist()
+-
+-            y2 += int((x2 - x1) * 0.1)
+-            x1 -= int((x2 - x1) * 0.05)
+-            x2 += int((x2 - x1) * 0.05)
+-
+-            x1 = max(0, x1)
+-            y1 = max(0, y1)
+-            x2 = min(f_w, x2)
+-            y2 = min(f_h, y2)
+-
+-            return (x1, y1, x2, y2), lmk
+-
+-
+-def cuda_to_int(cuda_str: str) -> int:
+-    """
+-    Convert the string with format "cuda:X" to integer X.
+-    """
+-    if cuda_str == "cuda":
+-        return 0
+-    device = torch.device(cuda_str)
+-    if device.type != "cuda":
+-        raise ValueError(f"Device type must be 'cuda', got: {device.type}")
+-    return device.index
+-
+-
+-LMK_ADAPT_ORIGIN_ORDER = [
+-    1,
+-    10,
+-    12,
+-    14,
+-    16,
+-    3,
+-    5,
+-    7,
+-    0,
+-    23,
+-    21,
+-    19,
+-    32,
+-    30,
+-    28,
+-    26,
+-    17,
+-    43,
+-    48,
+-    49,
+-    51,
+-    50,
+-    102,
+-    103,
+-    104,
+-    105,
+-    101,
+-    73,
+-    74,
+-    86,
+-]
++        pts = np.array([[p.x * w, p.y * h] for p in r.multi_face_landmarks[0].landmark])
++        lmk = np.zeros((106, 2))
++        for i, k in zip([43, 48, 49, 51, 50], _L_BROW): lmk[i] = pts[k]
++        for i, k in zip(range(101, 106), _R_BROW): lmk[i] = pts[k]
++        for i, k in zip([74, 77, 83, 86], _NOSE): lmk[i] = pts[k]
++        x1, y1 = pts.min(0).astype(int); x2, y2 = pts.max(0).astype(int)
++        return (max(0, x1), max(0, y1), min(w, x2), min(h, y2)), lmk
+diff --git a/latentsync/utils/image_processor.py b/latentsync/utils/image_processor.py
+index 5ac9f4e..aaf839d 100644
+--- a/latentsync/utils/image_processor.py
++++ b/latentsync/utils/image_processor.py
+@@ -39,17 +39,14 @@ class ImageProcessor:
+         )
+         self.normalize = transforms.Normalize([0.5], [0.5], inplace=True)
+ 
+-        self.restorer = AlignRestore(resolution=resolution, device=device)
++        self.restorer = AlignRestore(resolution=resolution, device=device, dtype=torch.float32)
+ 
+         if mask_image is None:
+             self.mask_image = load_fixed_mask(resolution)
+         else:
+             self.mask_image = mask_image
+ 
+-        if device == "cpu":
+-            self.face_detector = None
+-        else:
+-            self.face_detector = FaceDetector(device=device)
++        self.face_detector = FaceDetector(device=device)
+ 
+     def affine_transform(self, image: torch.Tensor) -> np.ndarray:
+         if self.face_detector is None:
+diff --git a/scripts/inference.py b/scripts/inference.py
+index ae2ff67..57c6f92 100644
+--- a/scripts/inference.py
++++ b/scripts/inference.py
+@@ -49,7 +49,7 @@ def main(config, args):
+ 
+     audio_encoder = Audio2Feature(
+         model_path=whisper_model_path,
+-        device="cuda",
++        device="cpu",
+         num_frames=config.data.num_frames,
+         audio_feat_length=config.data.audio_feat_length,
+     )
+@@ -57,6 +57,7 @@ def main(config, args):
+     vae = AutoencoderKL.from_pretrained("stabilityai/sd-vae-ft-mse", torch_dtype=dtype)
+     vae.config.scaling_factor = 0.18215
+     vae.config.shift_factor = 0
++    vae.enable_slicing()  # CPU 메모리 아낌: 한 장씩 부호화
+ 
+     unet, _ = UNet3DConditionModel.from_pretrained(
+         OmegaConf.to_container(config.model),
+@@ -71,7 +72,7 @@ def main(config, args):
+         audio_encoder=audio_encoder,
+         unet=unet,
+         scheduler=scheduler,
+-    ).to("cuda")
++    ).to("cpu")
+ 
+     # use DeepCache
+     if args.enable_deepcache:
