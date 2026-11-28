@@ -48,5 +48,11 @@ edge = box(420, 600, 420, 565) & (hv2[..., 1] < 60) & (hv2[..., 2] > 40) & (hv2[
 edge = cv2.dilate(edge.astype(np.uint8), np.ones((3, 3), np.uint8)).astype(bool) & ~skin & (hv2[..., 1] < 70)
 out[edge] = SHIRT * 0.9
 print("셔츠 검은 칸 → 흰색: %.2f%%" % (blk.mean() * 100))
-Image.fromarray(out.astype(np.uint8)).save(dst)
+# 목둘레 셔츠 깃(그림 맨 위 띠, 1024 기준 x 365~660 · y 0~67): 남색으로 칠해져 목 옆에 남색 띠 → 흰 셔츠 깃 (2026-11-28 '와이셔츠는 흰색')
+o8 = out.astype(np.uint8); vv = cv2.cvtColor(o8, cv2.COLOR_RGB2HSV_FULL)[..., 2].astype(np.float32)
+cb = box(365, 660, 0, 67)
+med = np.median(vv[cb]) + 1e-3
+f = np.clip((vv / med) ** 0.35, 0.75, 1.1)[..., None]
+out = np.where(cb[..., None], SHIRT * f, out)
+Image.fromarray(np.clip(out, 0, 255).astype(np.uint8)).save(dst)
 print("정장 %.0f%% 셔츠 %.1f%% 구두 %.1f%% →" % (suit.mean() * 100, shirt.mean() * 100, shoe.mean() * 100), dst)
