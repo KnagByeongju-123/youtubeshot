@@ -50,7 +50,7 @@ def rebuild(table_path):
         return float(np.exp((np.log(np.maximum(v, 1e-3)) * w).sum() / w.sum())) if geo else float((v * w).sum() / w.sum())
     lead = wmean([(x["lead"], 1) for _, x in S_]); gain = wmean([(x["gain"], 1) for _, x in S_], geo=True)
     tab = {"source": "LatentSync 1.6 (여자아나운서1 사진) 선생님 → 3D 립싱크. 3D 는 학습 전 기본값으로 찍고 번호마다 제안.json, 표 = 제안의 평균 (실사3D/립싱크_학습.py --모으기)",
-           "lead": round(float(np.clip(lead if lead is not None else LEAD0, 0.0, 0.45)), 3),
+           "lead": round(float(np.clip(lead if lead is not None else LEAD0, -0.3, 0.45)), 3),   # 음수 = 입을 소리보다 늦게(받아쓰기 시각이 이미 이른 경우)
            "gain": round(float(np.clip(gain if gain is not None else GAIN0, 0.4, 2.5)), 3), "open_3d": {}, "wide_3d": {},
            "records": [k for k, _ in S_]}
     for c in OPEN0:
