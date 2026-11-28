@@ -37,5 +37,16 @@ def paint(m, col, con):
 paint(suit, NAVY, CON)
 paint(shirt, SHIRT, 0.35)                      # 흰 셔츠: 그림자 결은 약하게
 paint(shoe, SHOE, 0.8)
+# 셔츠 깃 안쪽·가장자리의 검은 칸(원래 그림의 짙은 갈색 깃 안쪽 — 칠한 뒤 검게 남아 목 옆 셔츠에 검은 얼룩, 2026-11-28 '검게 물든 곳')을 셔츠 흰색(그늘 조금)으로
+o8 = out.astype(np.uint8); hv = cv2.cvtColor(o8, cv2.COLOR_RGB2HSV_FULL)
+blk = box(420, 600, 420, 565) & (hv[..., 2] < 32) & ~skin
+blk = cv2.morphologyEx(blk.astype(np.uint8), cv2.MORPH_CLOSE, np.ones((7, 7), np.uint8))
+blk = cv2.dilate(blk, np.ones((3, 3), np.uint8)).astype(bool) & ~skin & (hv[..., 2] < 50)
+out[blk] = SHIRT * 0.82
+o8 = out.astype(np.uint8); hv2 = cv2.cvtColor(o8, cv2.COLOR_RGB2HSV_FULL)
+edge = box(420, 600, 420, 565) & (hv2[..., 1] < 60) & (hv2[..., 2] > 40) & (hv2[..., 2] < 200) & ~skin   # 깃 가장자리 회색 테두리 → 셔츠색
+edge = cv2.dilate(edge.astype(np.uint8), np.ones((3, 3), np.uint8)).astype(bool) & ~skin & (hv2[..., 1] < 70)
+out[edge] = SHIRT * 0.9
+print("셔츠 검은 칸 → 흰색: %.2f%%" % (blk.mean() * 100))
 Image.fromarray(out.astype(np.uint8)).save(dst)
 print("정장 %.0f%% 셔츠 %.1f%% 구두 %.1f%% →" % (suit.mean() * 100, shirt.mean() * 100, shoe.mean() * 100), dst)
