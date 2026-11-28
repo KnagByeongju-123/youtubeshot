@@ -40,7 +40,8 @@ window.renderFrame = (i) => {
   bone('leftUpperArm').rotation.z += 1.25 * side; bone('rightUpperArm').rotation.z -= 1.25 * side;
   // 어깨 뼈가 있으면 팔을 든 만큼 같이 듦 (야외_오르빗.py --어깨들기 0.7 과 같은 약속, 2026-11-28 '팔 좌우로 폈을 때 어깨선 맞춤')
   const SL = +(new URLSearchParams(location.search).get('shoulder') || 0.7);
-  for (const [nm, sg] of [['leftShoulder', 1], ['rightShoulder', -1]]) { try { const b = bone(nm); if (b) { b.rotation.set(0, 0, 0); b.rotation.z += sg * Math.max(0, 1.25 * side - 0.7) * SL; } } catch (e) {} }
+  for (const [nm, sg] of [['leftShoulder', 1], ['rightShoulder', -1]]) { try { const b = bone(nm); if (b) { b.rotation.set(0, 0, 0); const lift = Math.max(0, 1.25 * side - 0.7) * SL; b.rotation.z += sg * lift;
+      bone(nm === 'leftShoulder' ? 'leftUpperArm' : 'rightUpperArm').rotation.z -= sg * lift; } } catch (e) {} }   // 팔 전체 각도는 그대로(어깨가 든 만큼 위팔은 덜)
   // 5.4~7.4초: 팔꿈치 굽히기 (손이 가슴 앞으로)
   const el = on(5.4, 7.4, t);
   bone('leftUpperArm').rotation.x -= 0.35 * el; bone('rightUpperArm').rotation.x -= 0.35 * el;
