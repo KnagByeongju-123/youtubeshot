@@ -21,10 +21,14 @@ HERE = os.path.dirname(os.path.abspath(__file__)); ROOT = os.path.dirname(HERE)
 FPS = 25
 a = sys.argv[1:]
 def opt(k, d): return a[a.index(k) + 1] if k in a else d
+if a and a[0] == "--모으기":     # 영상 없이 모든 기록의 제안.json 으로 표만 다시 만듦
+    a = ["-", "-", "-"] + a; MODE_COLLECT = True
+else:
+    MODE_COLLECT = False
 TEACH, STU, SYL = a[0], a[1], a[2]
 REC = opt("--기록", None)
 if REC: os.makedirs(REC, exist_ok=True)
-if SYL == "-": SYL = os.path.join(REC, "시각.json")
+if SYL == "-" and REC: SYL = os.path.join(REC, "시각.json")
 TABLE = opt("--표", os.path.join(HERE, "입모양표_LS.json")); REP = opt("--보고", os.path.dirname(os.path.abspath(STU)))
 RATE = float(opt("--배우기", "0.7")); ONLY = "--재기만" in a
 os.makedirs(REP, exist_ok=True)
@@ -32,6 +36,35 @@ os.makedirs(REP, exist_ok=True)
 # 학습 시작값 = 3D 가 지금까지 쓰던 값 (입모양_프레임.py 가 실사3D/입모양표.json 에서 만든 벌림)
 OPEN0 = {"아": 1.0, "에": 0.87, "이": 0.66, "어": 0.5, "으": 0.46, "오": 0.17, "우": 0.12}
 WIDE0 = {"아": 0.15, "에": 0.5, "이": 0.8, "어": 0.0, "으": 0.45, "오": 0.0, "우": 0.0}
+LEAD0, GAIN0 = 0.2, 1.0
+
+
+def rebuild(table_path):
+    """실사3D/립싱크학습/*/제안.json 을 모두 모아 표를 새로 만듦"""
+    import glob
+    S_ = [(os.path.basename(os.path.dirname(f)), json.load(open(f, encoding="utf-8"))) for f in sorted(glob.glob(os.path.join(HERE, "립싱크학습", "*", "제안.json")))]
+    def wmean(vals, geo=False):
+        vals = [(v, w) for v, w in vals if v is not None and w > 0]
+        if not vals: return None
+        v, w = np.array([x[0] for x in vals], float), np.array([x[1] for x in vals], float)
+        return float(np.exp((np.log(np.maximum(v, 1e-3)) * w).sum() / w.sum())) if geo else float((v * w).sum() / w.sum())
+    lead = wmean([(x["lead"], 1) for _, x in S_]); gain = wmean([(x["gain"], 1) for _, x in S_], geo=True)
+    tab = {"source": "LatentSync 1.6 (여자아나운서1 사진) 선생님 → 3D 립싱크. 3D 는 학습 전 기본값으로 찍고 번호마다 제안.json, 표 = 제안의 평균 (실사3D/립싱크_학습.py --모으기)",
+           "lead": round(float(np.clip(lead if lead is not None else LEAD0, 0.0, 0.45)), 3),
+           "gain": round(float(np.clip(gain if gain is not None else GAIN0, 0.4, 2.5)), 3), "open_3d": {}, "wide_3d": {},
+           "records": [k for k, _ in S_]}
+    for c in OPEN0:
+        o = wmean([(x["open"].get(c), x["n"].get(c, 0)) for _, x in S_], geo=True)
+        w_ = wmean([(x["wide"].get(c), x["n"].get(c, 0)) for _, x in S_])
+        tab["open_3d"][c] = round(float(np.clip(o if o is not None else OPEN0[c], 0.05, 1.3)), 3)
+        tab["wide_3d"][c] = round(float(np.clip(w_ if w_ is not None else WIDE0[c], 0.0, 1.0)), 3)
+    json.dump(tab, open(table_path, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+    return tab
+
+
+
+if MODE_COLLECT:
+    t_ = rebuild(TABLE); print(f"표 새로 모음({len(t_['records'])}개 번호):", json.dumps(t_, ensure_ascii=False)); sys.exit(0)
 VOWEL = {0: "아", 2: "아", 9: "아", 4: "어", 6: "어", 14: "어", 8: "오", 12: "오", 10: "오", 11: "오",
          13: "우", 17: "우", 15: "우", 16: "우", 18: "으", 19: "으", 20: "이", 1: "에", 3: "에", 5: "에", 7: "에"}
 CLOSE_CHO = (6, 7, 8, 17)
@@ -135,30 +168,30 @@ lines = [f"선생님 {TEACH}", f"3D {STU}", f"장 수 {n} (1/25초), 말하는 �
 for c, d in sorted(cls.items(), key=lambda x: -np.mean(x[1]["T"])):
     lines.append(f"   {c}: 벌림 {np.mean(d['T']):.3f}/{np.mean(d['S']):.3f}  너비 {np.mean(d['Tw']):.3f}/{np.mean(d['Sw']):.3f}  ({len(d['T'])})")
 
-# 표 고치기 (쌓아 가며): 모음마다 '선생님 벌림 / 3D 벌림' 비율을 배우기 정도만큼 곱함
-tab = json.load(open(TABLE, encoding="utf-8")) if os.path.exists(TABLE) else {
-    "source": "LatentSync 1.6 (여자아나운서1 사진) 선생님 → 3D 립싱크", "lead": 0.2, "gain": 1.0,
-    "open_3d": dict(OPEN0), "wide_3d": dict(WIDE0), "history": []}
+# 표 만들기 (2026-11-28 바꿈 — 세션 I 지적: 차례로 곱해 고치면 3D 를 찍은 뒤 다른 세션이 표를 바꿨을 때 두 번 셈):
+#  3D 는 늘 '학습 전 기본값'(립싱크.py 에 --표 없이)으로 찍고, 이 번호가 본 '맞는 값 제안'을 기록 폴더의 제안.json 에 남김 →
+#  표 = 모든 번호의 제안을 장 수로 무게를 둔 평균 (순서·겹침과 상관없이 늘 같은 결과)
+vn = {c: len(d["T"]) for c, d in cls.items() if c in OPEN0 or c == "닫음"}
+one = max(vn, key=vn.get) if vn and max(vn.values()) >= 0.8 * sum(vn.values()) else None    # 한 가지 묶음(13~20번, '닫음' 포함)
+timing_ok = lags[lag] >= 0.5 or lag_src.startswith("소리 기준")
+sug = {"lead": round(LEAD0 + lag / FPS, 3) if timing_ok else None,
+       "gain": round(GAIN0 * amp, 3) if not one else None, "open": {}, "wide": {}, "n": {}}
+for c, d in cls.items():
+    if c not in OPEN0 or len(d["T"]) < 2: continue
+    r = amp if c == one else (np.mean(d["T"]) + 0.02) / (np.mean(d["S"]) + 0.02) / amp     # 전체 크기를 뺀 모음별 차이
+    wr = np.mean(d["Tw"]) / max(np.mean(d["Sw"]), 1e-6)
+    sug["open"][c] = round(float(OPEN0[c] * r), 3); sug["wide"][c] = round(float(np.clip(WIDE0[c] + (wr - 1) * 4, 0, 1)), 3); sug["n"][c] = len(d["T"])
+if "닫음" in cls:
+    sug["close"] = {"teacher": round(float(np.mean(cls["닫음"]["T"])), 4), "3d": round(float(np.mean(cls["닫음"]["S"])), 4), "n": len(cls["닫음"]["T"])}
+sug["corr"] = round(float(lags[lag]), 3); sug["lag_frames"] = lag; sug["amp"] = round(amp, 3)
+lines.append(f"→ 이 번호의 제안: 앞당김 {sug['lead']}, 세기 {sug['gain']}, 벌림 {sug['open']}, 옆으로 {sug['wide']}")
+if REC and not ONLY:
+    json.dump(sug, open(os.path.join(REC, "제안.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+
+
 if not ONLY:
-    fps3 = 24.0
-    # 모음 한 가지 묶음(13~19번 '우유, 구두…'): 문장 전체 크기 = 그 모음 크기 → 세기(모든 모음 공통)는 그대로 두고 그 모음만 고침
-    #  (예전: 세기를 0.12배로 줄이고 모음은 /amp 로 7배 키워 '우'를 거꾸로 크게 만들었음, 16번 2026-11-28)
-    vn = {c: len(d["T"]) for c, d in cls.items() if c in tab["open_3d"]}
-    one = max(vn, key=vn.get) if vn and max(vn.values()) >= 0.8 * sum(vn.values()) else None
-    if lags[lag] >= 0.5 or lag_src.startswith("소리 기준"):     # 소리 기준으로 잰 것은 두 쪽 다 닮음 0.25 이상일 때만 쓰임                                                    # 닮음이 낮으면(선생님 입이 거의 안 움직임) 시간 어긋남은 믿지 않음
-        tab["lead"] = round(float(np.clip(tab["lead"] + RATE * lag / FPS, 0.0, 0.45)), 3)
-    if not one:
-        tab["gain"] = round(float(np.clip(tab["gain"] * amp ** RATE, 0.4, 2.5)), 3)
-    m_ratio = []
-    for c, d in cls.items():
-        if c not in tab["open_3d"] or len(d["T"]) < 2: continue
-        r = amp if c == one else (np.mean(d["T"]) + 0.02) / (np.mean(d["S"]) + 0.02) / amp   # 전체 크기를 뺀 모음별 차이
-        tab["open_3d"][c] = round(float(np.clip(tab["open_3d"][c] * r ** RATE, 0.05, 1.3)), 3); m_ratio.append(r)
-        wr = np.mean(d["Tw"]) / max(np.mean(d["Sw"]), 1e-6)                  # 너비: 선생님이 더 넓으면 옆으로(wide) 키움
-        tab["wide_3d"][c] = round(float(np.clip(tab["wide_3d"][c] + RATE * (wr - 1) * 4, 0.0, 1.0)), 3)
-    tab["history"].append({"teacher": os.path.basename(os.path.normpath(REC)) if REC else os.path.basename(TEACH), "lag_frames": lag, "amp": round(amp, 3), "corr": round(lags[lag], 3)})
-    json.dump(tab, open(TABLE, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
-    lines.append(f"→ 표 고침 {TABLE}: 앞당김 {tab['lead']}초, 세기 {tab['gain']}, 벌림 {tab['open_3d']}, 옆으로 {tab['wide_3d']}")
+    tab = rebuild(TABLE)
+    lines.append(f"→ 표 새로 모음({len(tab['records'])}개 번호) {TABLE}: 앞당김 {tab['lead']}초, 세기 {tab['gain']}, 벌림 {tab['open_3d']}, 옆으로 {tab['wide_3d']}")
 open(os.path.join(REP, "비교.txt"), "w", encoding="utf-8").write("\n".join(lines) + "\n")
 print("\n".join(lines))
 
