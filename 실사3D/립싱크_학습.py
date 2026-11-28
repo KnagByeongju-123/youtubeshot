@@ -176,14 +176,20 @@ for c, d in sorted(cls.items(), key=lambda x: -np.mean(x[1]["T"])):
 #  표 = 모든 번호의 제안을 장 수로 무게를 둔 평균 (순서·겹침과 상관없이 늘 같은 결과)
 # 한 가지 묶음(13~20번): 모음끼리만 비교해 한 모음이 80% 넘거나(ㅁㅂ 이 섞여도 됨 — 19번 '메뉴·제비'), '닫음'이 40% 넘으면(20번) 세기는 안 고침
 vn = {c: len(d["T"]) for c, d in cls.items() if c in OPEN0}
-one = max(vn, key=vn.get) if vn and max(vn.values()) >= 0.8 * sum(vn.values()) else None
+# 낱말 묶음(쉼표로 이은 짧은 낱말 4개 이상, 13~20번)은 50% 넘으면 그 모음 묶음 — 15번 '오리·모자' 처럼 다른 모음이 섞여 54% 인데 세기를 0.25 로 줄이자고 했음 (세션 E)
+_txt = open(os.path.join(REC, "문장.txt"), encoding="utf-8").read().strip().rstrip(".") if REC and os.path.exists(os.path.join(REC, "문장.txt")) else ""
+_words = [w.strip(" .") for w in _txt.replace(".", ",").split(",") if w.strip(" .")]
+word_list = len(_words) >= 4 and all(len(w) <= 3 and " " not in w for w in _words)
+one = max(vn, key=vn.get) if vn and max(vn.values()) >= (0.5 if word_list else 0.8) * sum(vn.values()) else None
 close_group = "닫음" in cls and len(cls["닫음"]["T"]) >= 0.4 * sum(len(d["T"]) for d in cls.values())
 timing_ok = lags[lag] >= 0.5 or lag_src.startswith("소리 기준")
 sug = {"lead": round(LEAD0 + lag / FPS, 3) if timing_ok else None,
        "gain": round(GAIN0 * amp, 3) if not (one or close_group) else None, "open": {}, "wide": {}, "n": {}}
 for c, d in cls.items():
     if c not in OPEN0 or len(d["T"]) < 2: continue
-    r = amp if c == one else (np.mean(d["T"]) + 0.02) / (np.mean(d["S"]) + 0.02) / amp     # 전체 크기를 뺀 모음별 차이
+    r = (np.mean(d["T"]) + 0.02) / (np.mean(d["S"]) + 0.02)      # 모음별 차이
+    if c == one: r = amp
+    elif sug["gain"] is not None: r /= amp    # 세기를 고칠 때만 전체 크기를 뺌 (세기를 안 고치는 묶음은 --모으기 가 표 세기로 나눔, 세션 E)
     wr = np.mean(d["Tw"]) / max(np.mean(d["Sw"]), 1e-6)
     sug["open"][c] = round(float(OPEN0[c] * r), 3); sug["wide"][c] = round(float(np.clip(WIDE0[c] + (wr - 1) * 4, 0, 1)), 3); sug["n"][c] = len(d["T"])
 if "닫음" in cls:
