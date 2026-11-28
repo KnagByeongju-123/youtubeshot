@@ -1,6 +1,6 @@
 """머리카락 그림(opacity_color, 투명도 유지)과 얼굴 그림의 머리 부분을 검은 머리로 (사용자 2026-11-27 '이 모습' — 금속 끄기 뒤 Rocketbox 머리카락 그림의 푸른 기가 드러나 청록색으로 보였음)
    새 색 = 목표색 × (원래 밝기 ÷ 머리 중간 밝기)^대비 → 결은 살림. 얼굴 그림(head_color)은 어두운 곳(L<--어두움)만 바꿈 → 피부·눈썹 결 그대로
-   사용: python 애니3D/머리색바꾸기.py <그림.tga> <출력.tga> [--색 24,20,20] [--대비 1.0] [--어두움 0] (얼굴 그림이면 --어두움 70) [--밝은줄 61] [--넓게] [--칸 x0,y0,x1,y1] [--칸어둡게 x0,y0,x1,y1]"""
+   사용: python 애니3D/머리색바꾸기.py <그림.tga> <출력.tga> [--색 24,20,20] [--대비 1.0] [--어두움 0] (얼굴 그림이면 --어두움 70) [--밝은줄 61] [--넓게] [--칸 x0,y0,x1,y1] [--칸어둡게 x0,y0,x1,y1] [--피부로 x0,y0,x1,y1]"""
 import sys
 import numpy as np, cv2
 from PIL import Image
@@ -55,4 +55,11 @@ if "--칸어둡게" in a:   # 네모(x0,y0,x1,y1) 안의 푸른 기 도는 옅�
     grain = np.clip(Lk / (cv2.GaussianBlur(Lk, (0, 0), 3) + 1e-3), 0.4, 2.2)[..., None]   # 머리카락 결(밝고 어두운 가닥)은 살림
     im[..., :3] = np.clip(rg * (1 - wk) + hairc * grain * wk, 0, 255).astype(np.uint8)
     print("칸 어둡게: 바뀐 점", int((wk[..., 0] > 0.3).sum()))
+if "--피부로" in a:   # 네모(x0,y0,x1,y1) 안의 어두운 점(그려진 머리카락 끝)을 둘레 피부로 메움 (2026-11-28 턱 밑 목에 그려진 머리카락 끝이 검은 얼룩으로 보였음)
+    x0, y0, x1, y1 = (int(v) for v in opt("--피부로", "0,0,0,0").split(","))
+    Ls = cv2.cvtColor(im[..., :3], cv2.COLOR_RGB2LAB)[..., 0]
+    bx = np.zeros(Ls.shape, np.uint8); bx[y0:y1, x0:x1] = 1
+    mk = cv2.dilate(((Ls < 120) & (bx > 0)).astype(np.uint8), np.ones((7, 7), np.uint8))
+    im[..., :3] = cv2.inpaint(np.ascontiguousarray(im[..., :3]), mk, 15, cv2.INPAINT_TELEA)
+    print("피부로 메움: 점", int(mk.sum()))
 Image.fromarray(im).save(dst); print("머리색 바꿈 %.0f%% →" % (m.mean() * 100), dst)
