@@ -8,7 +8,7 @@
    사용: .supertonic_venv/bin/python 실사3D/립싱크.py <인물.glb> <나레이션.mp3|wav> <대본.txt 또는 "글"> <출력.mp4>
          [--크기 640x360] [--카메라 "0,-0.75,1.47,0,0,1.45,50"] [--입세기 0.5] [--입속 100,16,28|없음(입 안 그물이 있는 모델, 여자아나운서1)] [--내밀기 0.85,0.8,0.6]
          [--시작 0.5] [--나누기 2] [--샘플 6] [--장소 kloofendal_48d_partly_cloudy_puresky] [--소리마디] [--시각 <음절시각.json>] [--입방식 15|3|auto]
-         [--표 실사3D/입모양표_LS.json]  (LatentSync 에게서 배운 입 모양 표 — 실사3D/립싱크_학습.py, 없으면 실사3D/입모양표.json)
+         [--표 <표>]  (기본 = LatentSync 에게서 배운 실사3D/입모양표_LS.json, 사용자 결정 2026-11-28. 학습 전 값으로 찍으려면 --표 실사3D/입모양표.json — 학습용 3D 는 이것으로)
          [--애니저장 <출력.glb>]   (영상 대신, 입·눈 움직임을 기록한 움직이는 GLB 로 저장)
          [--자세 모음] [--추가 "--인사 1.9"]  (야외_오르빗.py 에 그대로 넘길 옵션, 예: 말한 뒤 고개 숙여 인사) [--길이 <초>] (영상 전체 길이, 말이 끝난 뒤 동작이 이어질 때)
    예: .supertonic_venv/bin/python 실사3D/립싱크.py models/glb/여자아나운서3.glb voice.mp3 "안녕하세요. 3D 아나운서입니다." output/립싱크.mp4
@@ -39,7 +39,7 @@ elif "--소리마디" in a: run([PY_ST, os.path.join(HERE, "소리마디_시각.
 else: run([PY_SD, "-X", "utf8", os.path.join(HERE, "발음시각.py"), audio, text, tim])
 # ② 입 모양 값
 lip = os.path.join(work, "입.json")
-run([PY_ST, os.path.join(ROOT, "애니3D/입모양_프레임.py"), tim, lip, "--소리", audio, "--표", os.path.abspath(opt("--표", os.path.join(HERE, "입모양표.json"))), "--시작", str(START)])
+run([PY_ST, os.path.join(ROOT, "애니3D/입모양_프레임.py"), tim, lip, "--소리", audio, "--표", os.path.abspath(opt("--표", os.path.join(HERE, "입모양표_LS.json") if os.path.exists(os.path.join(HERE, "입모양표_LS.json")) else os.path.join(HERE, "입모양표.json"))), "--시작", str(START)])
 # ③ 촬영
 if MODE == "auto": MODE = "15" if b"AA_VI_11_E" in open(glb, "rb").read() else "3"
 N = int(math.ceil(max(dur + START + 0.6, LEN) * 24))
