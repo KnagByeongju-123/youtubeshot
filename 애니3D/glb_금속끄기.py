@@ -12,6 +12,8 @@ if "--점색남김" not in a:      # 점마다 칠한 색(COLOR_0/1, Rocketbox �
     for me in j.get("meshes", []):
         for pr in me["primitives"]:
             for k in [k for k in pr["attributes"] if k.startswith("COLOR_")]: del pr["attributes"][k]; nc += 1
+for me_ in j.get("meshes", []):        # 모양 키 기본값을 0 으로 — 블렌더로 빈 키를 더하면 1 로 저장되어 다른 보기 프로그램에서 입이 벌어져 보였음 (2026-11-28 여자아나운서5)
+    if any(w != 0 for w in me_.get("weights", [])): me_["weights"] = [0.0] * len(me_["weights"]); print("모양 키 기본값 0:", me_.get("name"))
 for m in j.get("materials", []):
     pbr = m.setdefault("pbrMetallicRoughness", {})
     if "metallicFactor" not in pbr or "--모두" in a: pbr["metallicFactor"] = 0.0; n += 1
